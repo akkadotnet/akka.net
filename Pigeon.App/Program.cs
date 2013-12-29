@@ -51,7 +51,6 @@ namespace Pigeon.App
 
     public class LogActor : TypedActor , IHandle<LogMessage>
     {
-
         public void Handle(LogMessage message)
         {
             Console.WriteLine("Log {0}", message.Timestamp);

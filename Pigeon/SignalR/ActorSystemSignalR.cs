@@ -26,7 +26,7 @@ namespace Pigeon.SignalR
 
         private void CreateHost(string name,string url)
         {
-            PigeonHostSignalR.Start(name,"http://localhost:8080/");
+            PigeonHostSignalR.Start(name,url);
         }       
 
         public ActorRef GetActor<TActor>() where TActor : ActorBase, new()

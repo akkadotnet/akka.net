@@ -13,20 +13,15 @@ namespace Pigeon
         void Handle(TMessage message);
     }
 
-    public abstract class TypedActor : ActorBase , IHandle<IMessage>
+    public abstract class TypedActor : ActorBase 
     {
         protected sealed override void OnReceive(IMessage message)
-        {
-            this.Handle(message);
-        }
-
-        public void Handle(IMessage message)
         {
             var method = this.GetType().GetMethod("Handle", new[] { message.GetType() });
             if (method == null)
                 throw new ArgumentException("Actor does not handle messages of type " + message.GetType().Name);
 
-            method.Invoke(this, new [] {message});
+            method.Invoke(this, new[] { message });
         }
     }
 
@@ -36,7 +31,6 @@ namespace Pigeon
             : base()
         {
         }
-
     }
 
     public abstract class ActorBase : IObserver<IMessage>

@@ -41,6 +41,15 @@ namespace Pigeon.SignalR
             app.MapSignalR();
         }
     }
+
+    public class ActorHub : Hub
+    {
+        public void Post(string receiver, IMessage message)
+        {
+            Console.WriteLine("Got message {0}", message);
+        }
+    }
+
     public class MyHub : Hub
     {
         public void Ping()
