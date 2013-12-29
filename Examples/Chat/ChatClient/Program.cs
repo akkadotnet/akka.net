@@ -73,16 +73,18 @@ namespace ChatClient
             Console.WriteLine(message.Message);
         }
 
+        public void Handle(NickRequest message)
+        {
+            message.OldUsername = this.nick;
+            Console.WriteLine("Changing nick to {0}", message.NewUsername);
+            this.nick = message.NewUsername;
+            server.Tell(message);
+        }
+
         public void Handle(NickResponse message)
         {
-            if (message.NewUsername == nick)
-            {
-            }
-            else
-            {
-                Console.WriteLine("Your nick is now : {0}", message.NewUsername);
-                this.nick = message.NewUsername;
-            }
+            Console.WriteLine("{0} is now known as {1}", message.OldUsername, message.NewUsername);
+            this.nick = message.NewUsername;
         }
 
         public void Handle(SayResponse message)
@@ -102,10 +104,5 @@ namespace ChatClient
             server.Tell(message);
         }
 
-        public void Handle(NickRequest message)
-        {
-            Console.WriteLine("Changing nick to {0}", message.NewUsername);
-            server.Tell(message);
-        }
     }
 }

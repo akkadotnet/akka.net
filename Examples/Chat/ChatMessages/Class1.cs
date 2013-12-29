@@ -19,6 +19,7 @@ namespace ChatMessages
 
     public class NickRequest : IMessage
     {
+        public string OldUsername { get; set; }
         public string NewUsername { get; set; }
     }
 

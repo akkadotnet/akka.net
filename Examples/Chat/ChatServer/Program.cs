@@ -60,7 +60,7 @@ namespace ChatServer
         {
             var response = new NickResponse
             {
-                OldUsername = message.NewUsername,
+                OldUsername = message.OldUsername,
                 NewUsername = message.NewUsername,
             };
 
