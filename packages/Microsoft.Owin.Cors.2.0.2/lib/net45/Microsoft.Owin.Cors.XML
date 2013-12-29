@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Microsoft.Owin.Cors</name>
+    </assembly>
+    <members>
+        <member name="M:Owin.CorsExtensions.UseCors(Owin.IAppBuilder,Microsoft.Owin.Cors.CorsOptions)">
+            <summary>
+            Adds a CORS middleware to your web application pipeline to allow cross domain requests.
+            </summary>
+            <param name="app">The IAppBuilder passed to your configuration method</param>
+            <param name="options">An options class that controls the middleware behavior</param>
+            <returns>The original app parameter</returns>
+        </member>
+        <member name="T:Microsoft.Owin.Cors.CorsOptions">
+            <summary>
+            Contains the options used by the CorsMiddleware
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Cors.CorsOptions.AllowAll">
+            <summary>
+            A policy that allows all headers, all methods, any origin and supports credentials
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Cors.CorsOptions.PolicyProvider">
+            <summary>
+            The cors policy to apply
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Cors.CorsOptions.CorsEngine">
+            <summary>
+            The cors engine
+            </summary>
+        </member>
+    </members>
+</doc>

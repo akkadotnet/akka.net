@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon", "Pigeon\Pigeon.csproj", "{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon.App", "Pigeon.App\Pigeon.App.csproj", "{956F7D26-4505-4A26-86D0-73135BD35A93}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}.Release|Any CPU.Build.0 = Release|Any CPU
+		{956F7D26-4505-4A26-86D0-73135BD35A93}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{956F7D26-4505-4A26-86D0-73135BD35A93}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{956F7D26-4505-4A26-86D0-73135BD35A93}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{956F7D26-4505-4A26-86D0-73135BD35A93}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,580 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Microsoft.Owin.Diagnostics</name>
+    </assembly>
+    <members>
+        <member name="T:System.Reflection.AssemblyMetadataAttribute">
+            <summary>
+            Provided as a down-level stub for the 4.5 AssemblyMetaDataAttribute class.
+            All released assemblies should define [AssemblyMetadata("Serviceable", "True")].
+            </summary>
+        </member>
+        <member name="T:Microsoft.Owin.Diagnostics.Views.ErrorDetails">
+            <summary>
+            Contains details for individual exception messages.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.ErrorDetails.Error">
+            <summary>
+            An individual exception
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.ErrorDetails.StackFrames">
+            <summary>
+            The generated stack frames
+            </summary>
+        </member>
+        <member name="T:Microsoft.Owin.Diagnostics.ErrorPageOptions">
+            <summary>
+            Options for the ErrorPageMiddleware
+            </summary>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.ErrorPageOptions.#ctor">
+            <summary>
+            Create an instance with the default options settings.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.ErrorPageOptions.SetDefaultVisibility(System.Boolean)">
+            <summary>
+            Sets the default visibility for options not otherwise specified.
+            </summary>
+            <param name="isVisible"></param>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.ErrorPageOptions.ShowAll">
+            <summary>
+            Returns a new instance of ErrorPageOptions with all visibility options enabled by default.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.ErrorPageOptions.ShowExceptionDetails">
+            <summary>
+            Enables the display of exception types, messages, and stack traces.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.ErrorPageOptions.ShowSourceCode">
+            <summary>
+            Enabled the display of local source code around exception stack frames.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.ErrorPageOptions.SourceCodeLineCount">
+            <summary>
+            Determines how many lines of code to include before and after the line of code
+            present in an exception's stack frame. Only applies when symbols are available and 
+            source code referenced by the exception stack trace is present on the server.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.ErrorPageOptions.ShowQuery">
+            <summary>
+            Enables the enumeration of any parsed query values.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.ErrorPageOptions.ShowCookies">
+            <summary>
+            Enables the enumeration of any parsed request cookies.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.ErrorPageOptions.ShowHeaders">
+            <summary>
+            Enables the enumeration of the request headers.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.ErrorPageOptions.ShowEnvironment">
+            <summary>
+            Enables the enumeration of the OWIN environment values.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Owin.Diagnostics.Resources">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.DiagnosticsPageHtml_Information">
+            <summary>
+              Looks up a localized string similar to You are seeing this page because DiagnosticsPageMiddleware was added to your web application..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.DiagnosticsPageHtml_TestErrorMessage">
+            <summary>
+              Looks up a localized string similar to Test Error Message.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.DiagnosticsPageHtml_TestErrorSection">
+            <summary>
+              Looks up a localized string similar to Test Error Page.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.DiagnosticsPageHtml_Title">
+            <summary>
+              Looks up a localized string similar to Diagnostics Page.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ErrorPageHtml_CookiesButton">
+            <summary>
+              Looks up a localized string similar to Cookies.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ErrorPageHtml_EnableShowExceptions">
+            <summary>
+              Looks up a localized string similar to Enable development mode or ErrorPageOptions.ShowExceptionDetails for additional information..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ErrorPageHtml_EnvironmentButton">
+            <summary>
+              Looks up a localized string similar to Environment.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ErrorPageHtml_HeadersButton">
+            <summary>
+              Looks up a localized string similar to Headers.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ErrorPageHtml_NoCookieData">
+            <summary>
+              Looks up a localized string similar to No cookie data..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ErrorPageHtml_NoHeaderData">
+            <summary>
+              Looks up a localized string similar to No header data..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ErrorPageHtml_NoQueryStringData">
+            <summary>
+              Looks up a localized string similar to No QueryString data..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ErrorPageHtml_QueryButton">
+            <summary>
+              Looks up a localized string similar to Query.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ErrorPageHtml_StackButton">
+            <summary>
+              Looks up a localized string similar to Stack.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ErrorPageHtml_Title">
+            <summary>
+              Looks up a localized string similar to Internal Server Error.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ErrorPageHtml_UnhandledException">
+            <summary>
+              Looks up a localized string similar to An unhandled exception occurred while processing the request..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ErrorPageHtml_UnknownLocation">
+            <summary>
+              Looks up a localized string similar to Unknown location.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ErrorPageHtml_ValueColumn">
+            <summary>
+              Looks up a localized string similar to Value.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.ErrorPageHtml_VariableColumn">
+            <summary>
+              Looks up a localized string similar to Variable.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.Exception_PathMustStartWithSlash">
+            <summary>
+              Looks up a localized string similar to The path must start with a &apos;/&apos;..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.WelcomeHeader">
+            <summary>
+              Looks up a localized string similar to Welcome.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.WelcomeLearnMicrosoftOwin">
+            <summary>
+              Looks up a localized string similar to Learn more about the Microsoft OWIN components.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.WelcomeLearnOwin">
+            <summary>
+              Looks up a localized string similar to Learn more about OWIN.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.WelcomePageImageText_Browser">
+            <summary>
+              Looks up a localized string similar to Browser.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.WelcomePageImageText_LearnMore">
+            <summary>
+              Looks up a localized string similar to Learn More.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.WelcomePageImageText_LightBulb">
+            <summary>
+              Looks up a localized string similar to Light Bulb.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.WelcomePageImageText_Skyline">
+            <summary>
+              Looks up a localized string similar to Skyline.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.WelcomeStarted">
+            <summary>
+              Looks up a localized string similar to Your OWIN application has been successfully started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Resources.WelcomeTitle">
+            <summary>
+              Looks up a localized string similar to Your OWIN application has been successfully started..
+            </summary>
+        </member>
+        <member name="T:Microsoft.Owin.Diagnostics.Views.BaseView">
+            <summary>
+            Infrastructure
+            </summary>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.Views.BaseView.Execute(Microsoft.Owin.IOwinContext)">
+            <summary>
+            Execute an individual request
+            </summary>
+            <param name="context"></param>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.Views.BaseView.Execute">
+            <summary>
+            Execute an individual request
+            </summary>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.Views.BaseView.WriteLiteral(System.String)">
+            <summary>
+            Write the given value directly to the output
+            </summary>
+            <param name="value"></param>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.Views.BaseView.WriteAttribute``1(System.String,System.Tuple{System.String,System.Int32},System.Tuple{System.String,System.Int32},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``0,System.Int32},System.Boolean})">
+            <summary>
+            
+            </summary>
+            <typeparam name="T1"></typeparam>
+            <param name="name"></param>
+            <param name="leader"></param>
+            <param name="trailer"></param>
+            <param name="part1"></param>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.Views.BaseView.WriteAttribute``2(System.String,System.Tuple{System.String,System.Int32},System.Tuple{System.String,System.Int32},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``0,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``1,System.Int32},System.Boolean})">
+            <summary>
+            
+            </summary>
+            <typeparam name="T1"></typeparam>
+            <typeparam name="T2"></typeparam>
+            <param name="name"></param>
+            <param name="leader"></param>
+            <param name="trailer"></param>
+            <param name="part1"></param>
+            <param name="part2"></param>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.Views.BaseView.WriteAttribute``3(System.String,System.Tuple{System.String,System.Int32},System.Tuple{System.String,System.Int32},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``0,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``1,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``2,System.Int32},System.Boolean})">
+            <summary>
+            
+            </summary>
+            <typeparam name="T1"></typeparam>
+            <typeparam name="T2"></typeparam>
+            <typeparam name="T3"></typeparam>
+            <param name="name"></param>
+            <param name="leader"></param>
+            <param name="trailer"></param>
+            <param name="part1"></param>
+            <param name="part2"></param>
+            <param name="part3"></param>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.Views.BaseView.WriteAttribute``4(System.String,System.Tuple{System.String,System.Int32},System.Tuple{System.String,System.Int32},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``0,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``1,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``2,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``3,System.Int32},System.Boolean})">
+            <summary>
+            
+            </summary>
+            <typeparam name="T1"></typeparam>
+            <typeparam name="T2"></typeparam>
+            <typeparam name="T3"></typeparam>
+            <typeparam name="T4"></typeparam>
+            <param name="name"></param>
+            <param name="leader"></param>
+            <param name="trailer"></param>
+            <param name="part1"></param>
+            <param name="part2"></param>
+            <param name="part3"></param>
+            <param name="part4"></param>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.Views.BaseView.WriteAttribute``5(System.String,System.Tuple{System.String,System.Int32},System.Tuple{System.String,System.Int32},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``0,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``1,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``2,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``3,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``4,System.Int32},System.Boolean})">
+            <summary>
+            
+            </summary>
+            <typeparam name="T1"></typeparam>
+            <typeparam name="T2"></typeparam>
+            <typeparam name="T3"></typeparam>
+            <typeparam name="T4"></typeparam>
+            <typeparam name="T5"></typeparam>
+            <param name="name"></param>
+            <param name="leader"></param>
+            <param name="trailer"></param>
+            <param name="part1"></param>
+            <param name="part2"></param>
+            <param name="part3"></param>
+            <param name="part4"></param>
+            <param name="part5"></param>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.Views.BaseView.WriteAttribute``6(System.String,System.Tuple{System.String,System.Int32},System.Tuple{System.String,System.Int32},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``0,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``1,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``2,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``3,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``4,System.Int32},System.Boolean},System.Tuple{System.Tuple{System.String,System.Int32},System.Tuple{``5,System.Int32},System.Boolean})">
+            <summary>
+            
+            </summary>
+            <typeparam name="T1"></typeparam>
+            <typeparam name="T2"></typeparam>
+            <typeparam name="T3"></typeparam>
+            <typeparam name="T4"></typeparam>
+            <typeparam name="T5"></typeparam>
+            <typeparam name="T6"></typeparam>
+            <param name="name"></param>
+            <param name="leader"></param>
+            <param name="trailer"></param>
+            <param name="part1"></param>
+            <param name="part2"></param>
+            <param name="part3"></param>
+            <param name="part4"></param>
+            <param name="part5"></param>
+            <param name="part6"></param>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.Views.BaseView.WriteEncoded(System.String)">
+            <summary>
+            Html encode and write
+            </summary>
+            <param name="value"></param>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.Views.BaseView.Write(System.Object)">
+            <summary>
+            Convert to string and html encode
+            </summary>
+            <param name="value"></param>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.Views.BaseView.Write(System.String)">
+            <summary>
+            Html encode and write
+            </summary>
+            <param name="value"></param>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.BaseView.Context">
+            <summary>
+            The request context
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.BaseView.Request">
+            <summary>
+            The request
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.BaseView.Response">
+            <summary>
+            The response
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.BaseView.Output">
+            <summary>
+            The output stream
+            </summary>
+        </member>
+        <member name="T:Microsoft.Owin.Diagnostics.Views.StackFrame">
+            <summary>
+            Detailed exception stack information used to generate a view
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.StackFrame.Function">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.StackFrame.File">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.StackFrame.Line">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.StackFrame.PreContextLine">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.StackFrame.PreContextCode">
+             <summary>
+            
+             </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.StackFrame.ContextCode">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.StackFrame.PostContextCode">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="T:Microsoft.Owin.Diagnostics.Views.ErrorPageModel">
+            <summary>
+            Holds data to be displayed on the error page.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.ErrorPageModel.Options">
+            <summary>
+            Options for what output to display.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.ErrorPageModel.ErrorDetails">
+            <summary>
+            Detailed information about each exception in the stack
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.ErrorPageModel.Query">
+            <summary>
+            Parsed query data
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.ErrorPageModel.Cookies">
+            <summary>
+            Request cookies
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.ErrorPageModel.Headers">
+            <summary>
+            Request headers
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.ErrorPageModel.Environment">
+            <summary>
+            The request environment
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.Views.ErrorPage.Model">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="T:Owin.WelcomePageExtensions">
+            <summary>
+            IAppBuilder extensions for the WelcomePageMiddleware.
+            </summary>
+        </member>
+        <member name="M:Owin.WelcomePageExtensions.UseWelcomePage(Owin.IAppBuilder,Microsoft.Owin.Diagnostics.WelcomePageOptions)">
+            <summary>
+            Adds the WelcomePageMiddleware to the pipeline with the given options.
+            </summary>
+            <param name="builder"></param>
+            <param name="options"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Owin.WelcomePageExtensions.UseWelcomePage(Owin.IAppBuilder,Microsoft.Owin.PathString)">
+            <summary>
+            Adds the WelcomePageMiddleware to the pipeline with the given path.
+            </summary>
+            <param name="builder"></param>
+            <param name="path"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Owin.WelcomePageExtensions.UseWelcomePage(Owin.IAppBuilder,System.String)">
+            <summary>
+            Adds the WelcomePageMiddleware to the pipeline with the given path.
+            </summary>
+            <param name="builder"></param>
+            <param name="path"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Owin.WelcomePageExtensions.UseWelcomePage(Owin.IAppBuilder)">
+            <summary>
+            Adds the WelcomePageMiddleware to the pipeline.
+            </summary>
+            <param name="builder"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Microsoft.Owin.Diagnostics.WelcomePageMiddleware">
+            <summary>
+            This middleware provides a default web page for new applications.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.WelcomePageMiddleware.#ctor(Microsoft.Owin.OwinMiddleware,Microsoft.Owin.Diagnostics.WelcomePageOptions)">
+            <summary>
+            Creates a default web page for new applications.
+            </summary>
+            <param name="next"></param>
+            <param name="options"></param>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.WelcomePageMiddleware.Invoke(Microsoft.Owin.IOwinContext)">
+             <summary>
+            
+             </summary>
+             <param name="context"></param>
+             <returns></returns>
+        </member>
+        <member name="T:Owin.ErrorPageExtensions">
+            <summary>
+            IAppBuilder extension methods for the ErrorPageMiddleware.
+            </summary>
+        </member>
+        <member name="M:Owin.ErrorPageExtensions.UseErrorPage(Owin.IAppBuilder)">
+            <summary>
+            Captures synchronous and asynchronous exceptions from the pipeline and generates HTML error responses.
+            Full error details are only displayed by default if 'host.AppMode' is set to 'development' in the IAppBuilder.Properties.
+            </summary>
+            <param name="builder"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Owin.ErrorPageExtensions.UseErrorPage(Owin.IAppBuilder,Microsoft.Owin.Diagnostics.ErrorPageOptions)">
+            <summary>
+            Captures synchronous and asynchronous exceptions from the pipeline and generates HTML error responses.
+            Full error details are only displayed by default if 'host.AppMode' is set to 'development' in the IAppBuilder.Properties.
+            </summary>
+            <param name="builder"></param>
+            <param name="options"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Microsoft.Owin.Diagnostics.ErrorPageMiddleware">
+            <summary>
+            Captures synchronous and asynchronous exceptions from the pipeline and generates HTML error responses.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.ErrorPageMiddleware.#ctor(Microsoft.Owin.OwinMiddleware,Microsoft.Owin.Diagnostics.ErrorPageOptions,System.Boolean)">
+            <summary>
+            
+            </summary>
+            <param name="next"></param>
+            <param name="options"></param>
+            <param name="isDevMode"></param>
+        </member>
+        <member name="M:Microsoft.Owin.Diagnostics.ErrorPageMiddleware.Invoke(Microsoft.Owin.IOwinContext)">
+            <summary>
+            
+            </summary>
+            <param name="context"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Microsoft.Owin.Diagnostics.WelcomePageOptions">
+            <summary>
+            Options for the WelcomePageMiddleware.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Owin.Diagnostics.WelcomePageOptions.Path">
+            <summary>
+            Specifies which requests paths will be responded to. Exact matches only. Leave null to handle all requests.
+            </summary>
+        </member>
+    </members>
+</doc>

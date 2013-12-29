@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>Microsoft.Owin.SelfHost</id>
+    <version>2.0.2</version>
+    <title>Microsoft.Owin.SelfHost</title>
+    <authors>Microsoft</authors>
+    <owners>Microsoft</owners>
+    <licenseUrl>http://www.microsoft.com/web/webpi/eula/aspnetcomponent_rtw_enu.htm</licenseUrl>
+    <projectUrl>http://katanaproject.codeplex.com/</projectUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <description>Includes components needed to host an OWIN-based application in a custom process.</description>
+    <tags>Microsoft OWIN Katana</tags>
+    <dependencies>
+      <dependency id="Owin" version="1.0" />
+      <dependency id="Microsoft.Owin" version="2.0.2" />
+      <dependency id="Microsoft.Owin.Diagnostics" version="2.0.2" />
+      <dependency id="Microsoft.Owin.Hosting" version="2.0.2" />
+      <dependency id="Microsoft.Owin.Host.HttpListener" version="2.0.2" />
+    </dependencies>
+  </metadata>
+</package>

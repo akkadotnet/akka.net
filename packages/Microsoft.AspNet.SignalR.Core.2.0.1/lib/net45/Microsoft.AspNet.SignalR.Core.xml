@@ -1,0 +1,3116 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Microsoft.AspNet.SignalR.Core</name>
+    </assembly>
+    <members>
+        <member name="M:Microsoft.AspNet.SignalR.Configuration.ConfigurationExtensions.KeepAliveTimeout(Microsoft.AspNet.SignalR.Configuration.IConfigurationManager)">
+            <summary>
+            The amount of time the client should wait without seeing a keep alive before trying to reconnect.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Configuration.ConfigurationExtensions.HeartbeatInterval(Microsoft.AspNet.SignalR.Configuration.IConfigurationManager)">
+            <summary>
+            The interval between successively checking connection states.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Configuration.ConfigurationExtensions.TopicTtl(Microsoft.AspNet.SignalR.Configuration.IConfigurationManager)">
+            <summary>
+            The amount of time a Topic should stay in memory after its last subscriber is removed.
+            </summary>
+            <param name="config"></param>
+            <returns></returns>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.ConnectionConfiguration.Resolver">
+            <summary>
+            The dependency resolver to use for the hub connection.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.ConnectionConfiguration.EnableJSONP">
+            <summary>
+            Gets of sets a boolean that determines if JSONP is enabled.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hosting.IResponse">
+            <summary>
+            Represents a connection to the client.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hosting.IResponse.Write(System.ArraySegment{System.Byte})">
+            <summary>
+            Writes buffered data.
+            </summary>
+            <param name="data">The data to write to the buffer.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hosting.IResponse.Flush">
+            <summary>
+            Flushes the buffered response to the client.
+            </summary>
+            <returns>A task that represents when the data has been flushed.</returns>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hosting.IResponse.CancellationToken">
+            <summary>
+            Gets a cancellation token that represents the client's lifetime.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hosting.IResponse.ContentType">
+            <summary>
+            Gets or sets the content type of the response.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.HubConfiguration.EnableJavaScriptProxies">
+            <summary>
+            Determines whether JavaScript proxies for the server-side hubs should be auto generated at {Path}/hubs or {Path}/js.
+            Defaults to true.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.HubConfiguration.EnableDetailedErrors">
+            <summary>
+            Determines whether detailed exceptions thrown in Hub methods get reported back the invoking client.
+            Defaults to false.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IClientProxy">
+            <summary>
+            A server side proxy for the client side hub.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IClientProxy.Invoke(System.String,System.Object[])">
+            <summary>
+            Invokes a method on the connection(s) represented by the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IClientProxy"/> instance.
+            </summary>
+            <param name="method">name of the method to invoke</param>
+            <param name="args">argumetns to pass to the client</param>
+            <returns>A task that represents when the data has been sent to the client.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IHubConnectionContext">
+            <summary>
+            Encapsulates all information about a SignalR connection for an <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubConnectionContextBase.AllExcept(System.String[])">
+            <summary>
+            Returns a dynamic representation of all clients except the calling client ones specified.
+            </summary>
+            <param name="excludeConnectionIds">The list of connection ids to exclude</param>
+            <returns>A dynamic representation of all clients except the calling client ones specified.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubConnectionContextBase.Client(System.String)">
+            <summary>
+            Returns a dynamic representation of the connection with the specified connectionid.
+            </summary>
+            <param name="connectionId">The connection id</param>
+            <returns>A dynamic representation of the specified client.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubConnectionContextBase.Clients(System.Collections.Generic.IList{System.String})">
+            <summary>
+            Returns a dynamic representation of the connections with the specified connectionids.
+            </summary>
+            <param name="connectionIds">The connection ids.</param>
+            <returns>A dynamic representation of the specified clients.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubConnectionContextBase.Group(System.String,System.String[])">
+            <summary>
+            Returns a dynamic representation of the specified group.
+            </summary>
+            <param name="groupName">The name of the group</param>
+            <param name="excludeConnectionIds">The list of connection ids to exclude</param>
+            <returns>A dynamic representation of the specified group.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubConnectionContextBase.Groups(System.Collections.Generic.IList{System.String},System.String[])">
+            <summary>
+            Returns a dynamic representation of the specified groups.
+            </summary>
+            <param name="groupNames">The names of the groups.</param>
+            <param name="excludeConnectionIds">The list of connection ids to exclude</param>
+            <returns>A dynamic representation of the specified groups.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IHubCallerConnectionContext">
+            <summary>
+            Encapsulates all information about an individual SignalR connection for an <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.MethodDescriptor">
+            <summary>
+            Holds information about a single hub method.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.Descriptor.Name">
+            <summary>
+            Name of Descriptor.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.Descriptor.NameSpecified">
+            <summary>
+            Flags whether the name was specified.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.MethodDescriptor.ReturnType">
+            <summary>
+            The return type of this method.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.MethodDescriptor.Hub">
+            <summary>
+            Hub descriptor object, target to this method.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.MethodDescriptor.Parameters">
+            <summary>
+            Available method parameters.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.MethodDescriptor.Invoker">
+            <summary>
+            Method invocation delegate.
+            Takes a target hub and an array of invocation arguments as it's arguments.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.MethodDescriptor.Attributes">
+            <summary>
+            Attributes attached to this method.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.ExceptionContext.Error">
+            <summary>
+            The exception to be sent to the calling client.
+            This will be overridden by a generic Exception unless Error is a <see cref="T:Microsoft.AspNet.SignalR.HubException"/>
+            or <see cref="P:Microsoft.AspNet.SignalR.HubConfiguration.EnableDetailedErrors"/> is set to true.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.ExceptionContext.Result">
+            <summary>
+            The value to return in lieu of throwing Error. Whenever Result is set, Error will be set to null.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Configuration.IConfigurationManager">
+            <summary>
+            Provides access to server configuration.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Configuration.IConfigurationManager.TransportConnectTimeout">
+            <summary>
+            Gets or sets a <see cref="T:System.TimeSpan"/> representing the amount of time a client should allow to connect before falling
+            back to another transport or failing.
+            The default value is 5 seconds.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Configuration.IConfigurationManager.ConnectionTimeout">
+            <summary>
+            Gets or sets a <see cref="T:System.TimeSpan"/> representing the amount of time to leave a connection open before timing out.
+            The default value is 110 seconds.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Configuration.IConfigurationManager.DisconnectTimeout">
+            <summary>
+            Gets or sets a <see cref="T:System.TimeSpan"/> representing the amount of time to wait after a connection goes away before raising the disconnect event.
+            The default value is 30 seconds.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Configuration.IConfigurationManager.KeepAlive">
+            <summary>
+            Gets or sets a <see cref="T:System.TimeSpan"/> representing the amount of time between send keep alive messages.
+            If enabled, this value must be at least two seconds. Set to null to disable.
+            The default value is 10 seconds.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Configuration.IConfigurationManager.DefaultMessageBufferSize">
+            <summary>
+            Gets of sets the number of messages to buffer for a specific signal.
+            The default value is 1000.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Configuration.IConfigurationManager.LongPollDelay">
+            <summary>
+            Gets or sets a <see cref="T:System.TimeSpan"/> representing tell the client to wait before restablishing a
+            long poll connection after data is sent from the server. 
+            The default value is 0.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.BinaryTextWriter">
+            <summary>
+            A buffering text writer that supports writing binary directly as well
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.BufferTextWriter">
+            <summary>
+            TextWriter implementation over a write delegate optimized for writing in small chunks
+            we don't need to write to a long lived buffer. This saves massive amounts of memory
+            as the number of connections grows.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.IBinaryWriter">
+            <summary>
+            Implemented on anything that has the ability to write raw binary data
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.ConnectionManager">
+            <summary>
+            Default <see cref="T:Microsoft.AspNet.SignalR.Infrastructure.IConnectionManager"/> implementation.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.IConnectionManager">
+            <summary>
+            Provides access to hubs and persistent connections references.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.IConnectionManager.GetHubContext``1">
+            <summary>
+            Returns a <see cref="T:Microsoft.AspNet.SignalR.IHubContext"/> for the specified <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>.
+            </summary>
+            <typeparam name="T">Type of the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/></typeparam>
+            <returns>a <see cref="T:Microsoft.AspNet.SignalR.IHubContext"/> for the specified <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/></returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.IConnectionManager.GetHubContext(System.String)">
+            <summary>
+            Returns a <see cref="T:Microsoft.AspNet.SignalR.IHubContext"/>for the specified hub.
+            </summary>
+            <param name="hubName">Name of the hub</param>
+            <returns>a <see cref="T:Microsoft.AspNet.SignalR.IHubContext"/> for the specified hub</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.IConnectionManager.GetConnectionContext``1">
+            <summary>
+            Returns a <see cref="T:Microsoft.AspNet.SignalR.IPersistentConnectionContext"/> for the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.
+            </summary>
+            <typeparam name="T">Type of the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/></typeparam>
+            <returns>A <see cref="T:Microsoft.AspNet.SignalR.IPersistentConnectionContext"/> for the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.ConnectionManager.#ctor(Microsoft.AspNet.SignalR.IDependencyResolver)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.AspNet.SignalR.Infrastructure.ConnectionManager"/> class.
+            </summary>
+            <param name="resolver">The <see cref="T:Microsoft.AspNet.SignalR.IDependencyResolver"/>.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.ConnectionManager.GetConnectionContext``1">
+            <summary>
+            Returns a <see cref="T:Microsoft.AspNet.SignalR.IPersistentConnectionContext"/> for the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.
+            </summary>
+            <typeparam name="T">Type of the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/></typeparam>
+            <returns>A <see cref="T:Microsoft.AspNet.SignalR.IPersistentConnectionContext"/> for the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.ConnectionManager.GetConnection(System.Type)">
+            <summary>
+            Returns a <see cref="T:Microsoft.AspNet.SignalR.IPersistentConnectionContext"/> for the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.
+            </summary>
+            <param name="type">Type of the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/></param>
+            <returns>A <see cref="T:Microsoft.AspNet.SignalR.IPersistentConnectionContext"/> for the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.ConnectionManager.GetHubContext``1">
+            <summary>
+            Returns a <see cref="T:Microsoft.AspNet.SignalR.IHubContext"/> for the specified <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>.
+            </summary>
+            <typeparam name="T">Type of the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/></typeparam>
+            <returns>a <see cref="T:Microsoft.AspNet.SignalR.IHubContext"/> for the specified <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/></returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.ConnectionManager.GetHubContext(System.String)">
+            <summary>
+            Returns a <see cref="T:Microsoft.AspNet.SignalR.IHubContext"/>for the specified hub.
+            </summary>
+            <param name="hubName">Name of the hub</param>
+            <returns>a <see cref="T:Microsoft.AspNet.SignalR.IHubContext"/> for the specified hub</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.ConnectionMessage">
+            <summary>
+            A message sent to one more connections.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.ConnectionMessage.#ctor(System.String,System.Object,System.Collections.Generic.IList{System.String})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.AspNet.SignalR.ConnectionMessage"/> class.
+            </summary>
+            <param name="signal">The signal</param>
+            <param name="value">The payload of the message</param>
+            <param name="excludedSignals">The signals to exclude.</param>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.ConnectionMessage.Signal">
+            <summary>
+            The signal to this message should be sent to. Connections subscribed to this signal
+            will receive the message payload.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.ConnectionMessage.Signals">
+            <summary>
+            A list of signals this message should be delivered to. If this is used
+            the Signal cannot be used.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.ConnectionMessage.Value">
+            <summary>
+            The payload of the message.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.ConnectionMessage.ExcludedSignals">
+            <summary>
+            Represents a list of signals that should be used to filter what connections
+            receive this message.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.GlobalHost">
+            <summary>
+            Provides access to default host information.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.GlobalHost.DependencyResolver">
+            <summary>
+            Gets or sets the the default <see cref="T:Microsoft.AspNet.SignalR.IDependencyResolver"/>
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.GlobalHost.Configuration">
+            <summary>
+            Gets the default <see cref="T:Microsoft.AspNet.SignalR.Configuration.IConfigurationManager"/>
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.GlobalHost.ConnectionManager">
+            <summary>
+            Gets the default <see cref="T:Microsoft.AspNet.SignalR.Infrastructure.IConnectionManager"/>
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.GlobalHost.TraceManager">
+            <summary>
+            Gets the default <see cref="T:Microsoft.AspNet.SignalR.Tracing.ITraceManager"/>
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.GlobalHost.HubPipeline">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.IRequest">
+            <summary>
+            Represents a SignalR request
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.IRequest.ReadForm">
+            <summary>
+            Reads the form of the http request
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.IRequest.Url">
+            <summary>
+            Gets the url for this request.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.IRequest.LocalPath">
+            <summary>
+            The local path part of the url
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.IRequest.QueryString">
+            <summary>
+            Gets the querystring for this request.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.IRequest.Headers">
+            <summary>
+            Gets the headers for this request.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.IRequest.Cookies">
+            <summary>
+            Gets the cookies for this request.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.IRequest.User">
+            <summary>
+            Gets security information for the current HTTP request.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.IRequest.Environment">
+            <summary>
+            Gets the owin enviornment
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Json.SipHashBasedDictionaryConverter">
+            <summary>
+            A converter for dictionaries that uses a SipHash comparer
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hosting.IWebSocket">
+            <summary>
+            Represents a web socket.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hosting.IWebSocket.Send(System.String)">
+            <summary>
+            Sends data over the websocket.
+            </summary>
+            <param name="value">The value to send.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that represents the send is complete.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hosting.IWebSocket.SendChunk(System.ArraySegment{System.Byte})">
+            <summary>
+            Sends a chunk of data over the websocket ("endOfMessage" flag set to false.)
+            </summary>
+            <param name="message"></param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that represents the send is complete.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hosting.IWebSocket.Flush">
+            <summary>
+            Sends a zero byte data chunk with the "endOfMessage" flag set to true.
+            </summary>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that represents the flush is complete.</returns>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hosting.IWebSocket.OnMessage">
+            <summary>
+            Invoked when data is sent over the websocket
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hosting.IWebSocket.OnClose">
+            <summary>
+            Invoked when the websocket closes
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hosting.IWebSocket.OnError">
+            <summary>
+            Invoked when there is an error
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hosting.ResponseExtensions">
+            <summary>
+            Extension methods for <see cref="T:Microsoft.AspNet.SignalR.Hosting.IResponse"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hosting.ResponseExtensions.End(Microsoft.AspNet.SignalR.Hosting.IResponse,System.String)">
+            <summary>
+            Closes the connection to a client with optional data.
+            </summary>
+            <param name="response">The <see cref="T:Microsoft.AspNet.SignalR.Hosting.IResponse"/>.</param>
+            <param name="data">The data to write to the connection.</param>
+            <returns>A task that represents when the connection is closed.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.HubConnectionContext">
+            <summary>
+            Encapsulates all information about an individual SignalR connection for an <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubConnectionContext.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubConnectionContext"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubConnectionContext.#ctor(Microsoft.AspNet.SignalR.Hubs.IHubPipelineInvoker,Microsoft.AspNet.SignalR.IConnection,System.String,System.String,Microsoft.AspNet.SignalR.Hubs.StateChangeTracker)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubConnectionContext"/>.
+            </summary>
+            <param name="pipelineInvoker">The pipeline invoker.</param>
+            <param name="connection">The connection.</param>
+            <param name="hubName">The hub name.</param>
+            <param name="connectionId">The connection id.</param>
+            <param name="tracker">The connection hub state.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubConnectionContext.OthersInGroup(System.String)">
+            <summary>
+            Returns a dynamic representation of all clients in a group except the calling client.
+            </summary>
+            <param name="groupName">The name of the group</param>
+            <returns>A dynamic representation of all clients in a group except the calling client.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubConnectionContext.OthersInGroups(System.Collections.Generic.IList{System.String})">
+            <summary>
+            Returns a dynamic representation of all clients in the specified groups except the calling client.
+            </summary>
+            <param name="groupNames">The name of the groups</param>
+            <returns>A dynamic representation of all clients in a group except the calling client.</returns>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubConnectionContext.Others">
+            <summary>
+            All connected clients except the calling client.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubConnectionContext.Caller">
+            <summary>
+            Represents the calling client.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.AuthorizeModule">
+             <summary>
+             This module is added the the HubPipeline by default.
+             
+             Hub level attributes that implement <see cref="T:Microsoft.AspNet.SignalR.Hubs.IAuthorizeHubConnection"/> such as <see cref="T:Microsoft.AspNet.SignalR.AuthorizeAttribute"/> are applied to determine
+             whether to allow potential clients to receive messages sent from that hub using a <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubContext"/> or a <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubConnectionContext"/>
+             All applicable hub attributes must allow hub connection for the connection to be authorized.
+             
+             Hub and method level attributes that implement <see cref="T:Microsoft.AspNet.SignalR.Hubs.IAuthorizeHubMethodInvocation"/> such as <see cref="T:Microsoft.AspNet.SignalR.AuthorizeAttribute"/> are applied
+             to determine whether to allow callers to invoke hub methods.
+             All applicable hub level AND method level attributes must allow hub method invocation for the invocation to be authorized.
+            
+             Optionally, this module may be instantiated with <see cref="T:Microsoft.AspNet.SignalR.Hubs.IAuthorizeHubConnection"/> and <see cref="T:Microsoft.AspNet.SignalR.Hubs.IAuthorizeHubMethodInvocation"/>
+             authorizers that will be applied globally to all hubs and hub methods.
+             </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule">
+            <summary>
+            Common base class to simplify the implementation of IHubPipelineModules.
+            A module can intercept and customize various stages of hub processing such as connecting, reconnecting, disconnecting,
+            invoking server-side hub methods, invoking client-side hub methods, authorizing hub clients and rejoining hub groups.
+            A module can be activated by calling <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHubPipeline.AddModule(Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule)"/>.
+            The combined modules added to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/> are invoked via the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipelineInvoker"/>
+            interface.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule">
+            <summary>
+            An <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule"/> can intercept and customize various stages of hub processing such as connecting,
+            reconnecting, disconnecting, invoking server-side hub methods, invoking client-side hub methods, authorizing hub
+            clients and rejoining hub groups.
+            Modules can be be activated by calling <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHubPipeline.AddModule(Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule)"/>.
+            The combined modules added to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/> are invoked via the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipelineInvoker"/>
+            interface.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule.BuildIncoming(System.Func{Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext,System.Threading.Tasks.Task{System.Object}})">
+            <summary>
+            Wraps a function that invokes a server-side hub method. Even if a client has not been authorized to connect
+            to a hub, it will still be authorized to invoke server-side methods on that hub unless it is prevented in
+            <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule.BuildIncoming(System.Func{Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext,System.Threading.Tasks.Task{System.Object}})"/> by not executing the invoke parameter.
+            </summary>
+            <param name="invoke">A function that invokes a server-side hub method.</param>
+            <returns>A wrapped function that invokes a server-side hub method.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule.BuildOutgoing(System.Func{Microsoft.AspNet.SignalR.Hubs.IHubOutgoingInvokerContext,System.Threading.Tasks.Task})">
+            <summary>
+            Wraps a function that invokes a client-side hub method.
+            </summary>
+            <param name="send">A function that invokes a client-side hub method.</param>
+            <returns>A wrapped function that invokes a client-side hub method.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule.BuildConnect(System.Func{Microsoft.AspNet.SignalR.Hubs.IHub,System.Threading.Tasks.Task})">
+            <summary>
+            Wraps a function that is called when a client connects to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDispatcher"/> for each
+            <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> the client connects to. By default, this results in the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>'s
+            OnConnected method being invoked.
+            </summary>
+            <param name="connect">A function to be called when a client connects to a hub.</param>
+            <returns>A wrapped function to be called when a client connects to a hub.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule.BuildReconnect(System.Func{Microsoft.AspNet.SignalR.Hubs.IHub,System.Threading.Tasks.Task})">
+            <summary>
+            Wraps a function that is called when a client reconnects to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDispatcher"/> for each
+            <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> the client connects to. By default, this results in the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>'s
+            OnReconnected method being invoked.
+            </summary>
+            <param name="reconnect">A function to be called when a client reconnects to a hub.</param>
+            <returns>A wrapped function to be called when a client reconnects to a hub.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule.BuildDisconnect(System.Func{Microsoft.AspNet.SignalR.Hubs.IHub,System.Threading.Tasks.Task})">
+            <summary>
+            Wraps a function that is called  when a client disconnects from the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDispatcher"/> for each
+            <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> the client was connected to. By default, this results in the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>'s
+            OnDisconnected method being invoked.
+            </summary>
+            <param name="disconnect">A function to be called when a client disconnects from a hub.</param>
+            <returns>A wrapped function to be called when a client disconnects from a hub.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule.BuildAuthorizeConnect(System.Func{Microsoft.AspNet.SignalR.Hubs.HubDescriptor,Microsoft.AspNet.SignalR.IRequest,System.Boolean})">
+            <summary>
+            Wraps a function to be called before a client subscribes to signals belonging to the hub described by the
+            <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDescriptor"/>. By default, the <see cref="T:Microsoft.AspNet.SignalR.Hubs.AuthorizeModule"/> will look for attributes on the
+            <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> to help determine if the client is authorized to subscribe to method invocations for the
+            described hub.
+            The function returns true if the client is authorized to subscribe to client-side hub method
+            invocations; false, otherwise.
+            </summary>
+            <param name="authorizeConnect">
+            A function that dictates whether or not the client is authorized to connect to the described Hub.
+            </param>
+            <returns>
+            A wrapped function that dictates whether or not the client is authorized to connect to the described Hub.
+            </returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule.BuildRejoiningGroups(System.Func{Microsoft.AspNet.SignalR.Hubs.HubDescriptor,Microsoft.AspNet.SignalR.IRequest,System.Collections.Generic.IList{System.String},System.Collections.Generic.IList{System.String}})">
+            <summary>
+            Wraps a function that determines which of the groups belonging to the hub described by the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDescriptor"/>
+            the client should be allowed to rejoin.
+            By default, clients will rejoin all the groups they were in prior to reconnecting.
+            </summary>
+            <param name="rejoiningGroups">A function that determines which groups the client should be allowed to rejoin.</param>
+            <returns>A wrapped function that determines which groups the client should be allowed to rejoin.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.BuildIncoming(System.Func{Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext,System.Threading.Tasks.Task{System.Object}})">
+            <summary>
+            Wraps a function that invokes a server-side hub method. Even if a client has not been authorized to connect
+            to a hub, it will still be authorized to invoke server-side methods on that hub unless it is prevented in
+            <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule.BuildIncoming(System.Func{Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext,System.Threading.Tasks.Task{System.Object}})"/> by not executing the invoke parameter.
+            </summary>
+            <param name="invoke">A function that invokes a server-side hub method.</param>
+            <returns>A wrapped function that invokes a server-side hub method.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.BuildConnect(System.Func{Microsoft.AspNet.SignalR.Hubs.IHub,System.Threading.Tasks.Task})">
+            <summary>
+            Wraps a function that is called when a client connects to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDispatcher"/> for each
+            <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> the client connects to. By default, this results in the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>'s
+            OnConnected method being invoked.
+            </summary>
+            <param name="connect">A function to be called when a client connects to a hub.</param>
+            <returns>A wrapped function to be called when a client connects to a hub.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.BuildReconnect(System.Func{Microsoft.AspNet.SignalR.Hubs.IHub,System.Threading.Tasks.Task})">
+            <summary>
+            Wraps a function that is called when a client reconnects to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDispatcher"/> for each
+            <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> the client connects to. By default, this results in the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>'s
+            OnReconnected method being invoked.
+            </summary>
+            <param name="reconnect">A function to be called when a client reconnects to a hub.</param>
+            <returns>A wrapped function to be called when a client reconnects to a hub.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.BuildDisconnect(System.Func{Microsoft.AspNet.SignalR.Hubs.IHub,System.Threading.Tasks.Task})">
+            <summary>
+            Wraps a function that is called  when a client disconnects from the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDispatcher"/> for each
+            <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> the client was connected to. By default, this results in the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>'s
+            OnDisconnected method being invoked.
+            </summary>
+            <param name="disconnect">A function to be called when a client disconnects from a hub.</param>
+            <returns>A wrapped function to be called when a client disconnects from a hub.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.BuildAuthorizeConnect(System.Func{Microsoft.AspNet.SignalR.Hubs.HubDescriptor,Microsoft.AspNet.SignalR.IRequest,System.Boolean})">
+            <summary>
+            Wraps a function to be called before a client subscribes to signals belonging to the hub described by the
+            <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDescriptor"/>. By default, the <see cref="T:Microsoft.AspNet.SignalR.Hubs.AuthorizeModule"/> will look for attributes on the
+            <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> to help determine if the client is authorized to subscribe to method invocations for the
+            described hub.
+            The function returns true if the client is authorized to subscribe to client-side hub method
+            invocations; false, otherwise.
+            </summary>
+            <param name="authorizeConnect">
+            A function that dictates whether or not the client is authorized to connect to the described Hub.
+            </param>
+            <returns>
+            A wrapped function that dictates whether or not the client is authorized to connect to the described Hub.
+            </returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.BuildRejoiningGroups(System.Func{Microsoft.AspNet.SignalR.Hubs.HubDescriptor,Microsoft.AspNet.SignalR.IRequest,System.Collections.Generic.IList{System.String},System.Collections.Generic.IList{System.String}})">
+            <summary>
+            Wraps a function that determines which of the groups belonging to the hub described by the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDescriptor"/>
+            the client should be allowed to rejoin.
+            By default, clients will rejoin all the groups they were in prior to reconnecting.
+            </summary>
+            <param name="rejoiningGroups">A function that determines which groups the client should be allowed to rejoin.</param>
+            <returns>A wrapped function that determines which groups the client should be allowed to rejoin.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.BuildOutgoing(System.Func{Microsoft.AspNet.SignalR.Hubs.IHubOutgoingInvokerContext,System.Threading.Tasks.Task})">
+            <summary>
+            Wraps a function that invokes a client-side hub method.
+            </summary>
+            <param name="send">A function that invokes a client-side hub method.</param>
+            <returns>A wrapped function that invokes a client-side hub method.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.OnBeforeAuthorizeConnect(Microsoft.AspNet.SignalR.Hubs.HubDescriptor,Microsoft.AspNet.SignalR.IRequest)">
+            <summary>
+            This method is called before the AuthorizeConnect components of any modules added later to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/>
+            are executed. If this returns false, then those later-added modules will not run and the client will not be allowed
+            to subscribe to client-side invocations of methods belonging to the hub defined by the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDescriptor"/>.
+            </summary>
+            <param name="hubDescriptor">A description of the hub the client is trying to subscribe to.</param>
+            <param name="request">The connect request of the client trying to subscribe to the hub.</param>
+            <returns>true, if the client is authorized to connect to the hub, false otherwise.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.OnBeforeConnect(Microsoft.AspNet.SignalR.Hubs.IHub)">
+            <summary>
+            This method is called before the connect components of any modules added later to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/> are
+            executed. If this returns false, then those later-added modules and the <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHub.OnConnected"/> method will
+            not be run.
+            </summary>
+            <param name="hub">The hub the client has connected to.</param>
+            <returns>
+            true, if the connect components of later added modules and the <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHub.OnConnected"/> method should be executed;
+            false, otherwise.
+            </returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.OnAfterConnect(Microsoft.AspNet.SignalR.Hubs.IHub)">
+            <summary>
+            This method is called after the connect components of any modules added later to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/> are
+            executed and after <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHub.OnConnected"/> is executed, if at all.
+            </summary>
+            <param name="hub">The hub the client has connected to.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.OnBeforeReconnect(Microsoft.AspNet.SignalR.Hubs.IHub)">
+            <summary>
+            This method is called before the reconnect components of any modules added later to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/> are
+            executed. If this returns false, then those later-added modules and the <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHub.OnReconnected"/> method will
+            not be run.
+            </summary>
+            <param name="hub">The hub the client has reconnected to.</param>
+            <returns>
+            true, if the reconnect components of later added modules and the <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHub.OnReconnected"/> method should be executed;
+            false, otherwise.
+            </returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.OnAfterReconnect(Microsoft.AspNet.SignalR.Hubs.IHub)">
+            <summary>
+            This method is called after the reconnect components of any modules added later to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/> are
+            executed and after <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHub.OnReconnected"/> is executed, if at all.
+            </summary>
+            <param name="hub">The hub the client has reconnected to.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.OnBeforeOutgoing(Microsoft.AspNet.SignalR.Hubs.IHubOutgoingInvokerContext)">
+            <summary>
+            This method is called before the outgoing components of any modules added later to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/> are
+            executed. If this returns false, then those later-added modules and the client-side hub method invocation(s) will not
+            be executed.
+            </summary>
+            <param name="context">A description of the client-side hub method invocation.</param>
+            <returns>
+            true, if the outgoing components of later added modules and the client-side hub method invocation(s) should be executed;
+            false, otherwise.
+            </returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.OnAfterOutgoing(Microsoft.AspNet.SignalR.Hubs.IHubOutgoingInvokerContext)">
+            <summary>
+            This method is called after the outgoing components of any modules added later to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/> are
+            executed. This does not mean that all the clients have received the hub method invocation, but it does indicate indicate
+            a hub invocation message has successfully been published to a message bus.
+            </summary>
+            <param name="context">A description of the client-side hub method invocation.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.OnBeforeDisconnect(Microsoft.AspNet.SignalR.Hubs.IHub)">
+            <summary>
+            This method is called before the disconnect components of any modules added later to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/> are
+            executed. If this returns false, then those later-added modules and the <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHub.OnDisconnected"/> method will
+            not be run.
+            </summary>
+            <param name="hub">The hub the client has disconnected from.</param>
+            <returns>
+            true, if the disconnect components of later added modules and the <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHub.OnDisconnected"/> method should be executed;
+            false, otherwise.
+            </returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.OnAfterDisconnect(Microsoft.AspNet.SignalR.Hubs.IHub)">
+            <summary>
+            This method is called after the disconnect components of any modules added later to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/> are
+            executed and after <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHub.OnDisconnected"/> is executed, if at all.
+            </summary>
+            <param name="hub">The hub the client has disconnected from.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.OnBeforeIncoming(Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext)">
+            <summary>
+            This method is called before the incoming components of any modules added later to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/> are
+            executed. If this returns false, then those later-added modules and the server-side hub method invocation will not
+            be executed. Even if a client has not been authorized to connect to a hub, it will still be authorized to invoke
+            server-side methods on that hub unless it is prevented in <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule.BuildIncoming(System.Func{Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext,System.Threading.Tasks.Task{System.Object}})"/> by not
+            executing the invoke parameter or prevented in <see cref="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.OnBeforeIncoming(Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext)"/> by returning false.
+            </summary>
+            <param name="context">A description of the server-side hub method invocation.</param>
+            <returns>
+            true, if the incoming components of later added modules and the server-side hub method invocation should be executed;
+            false, otherwise.
+            </returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.OnAfterIncoming(System.Object,Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext)">
+            <summary>
+            This method is called after the incoming components of any modules added later to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/>
+            and the server-side hub method have completed execution.
+            </summary>
+            <param name="result">The return value of the server-side hub method</param>
+            <param name="context">A description of the server-side hub method invocation.</param>
+            <returns>The possibly new or updated return value of the server-side hub method</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubPipelineModule.OnIncomingError(Microsoft.AspNet.SignalR.Hubs.ExceptionContext,Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext)">
+            <summary>
+            This is called when an uncaught exception is thrown by a server-side hub method or the incoming component of a
+            module added later to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/>. Observing the exception using this method will not prevent
+            it from bubbling up to other modules.
+            </summary>
+            <param name="exceptionContext">
+            Represents the exception that was thrown during the server-side invocation.
+            It is possible to change the error or set a result using this context.
+            </param>
+            <param name="invokerContext">A description of the server-side hub method invocation.</param>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.AuthorizeAttribute">
+            <summary>
+            Apply to Hubs and Hub methods to authorize client connections to Hubs and authorize client invocations of Hub methods.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IAuthorizeHubConnection">
+            <summary>
+            Interface to be implemented by <see cref="T:System.Attribute"/>s that can authorize client to connect to a <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IAuthorizeHubConnection.AuthorizeHubConnection(Microsoft.AspNet.SignalR.Hubs.HubDescriptor,Microsoft.AspNet.SignalR.IRequest)">
+            <summary>
+            Given a <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubCallerContext"/>, determine whether client is authorized to connect to <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>.
+            </summary>
+            <param name="hubDescriptor">Description of the hub client is attempting to connect to.</param>
+            <param name="request">The connection request from the client.</param>
+            <returns>true if the caller is authorized to connect to the hub; otherwise, false.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IAuthorizeHubMethodInvocation">
+            <summary>
+            Interface to be implemented by <see cref="T:System.Attribute"/>s that can authorize the invocation of <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> methods.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IAuthorizeHubMethodInvocation.AuthorizeHubMethodInvocation(Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext,System.Boolean)">
+            <summary>
+            Given a <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext"/>, determine whether client is authorized to invoke the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> method.
+            </summary>
+            <param name="hubIncomingInvokerContext">An <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext"/> providing details regarding the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> method invocation.</param>
+            <param name="appliesToMethod">Indicates whether the interface instance is an attribute applied directly to a method.</param>
+            <returns>true if the caller is authorized to invoke the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> method; otherwise, false.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.AuthorizeAttribute.AuthorizeHubConnection(Microsoft.AspNet.SignalR.Hubs.HubDescriptor,Microsoft.AspNet.SignalR.IRequest)">
+            <summary>
+            Determines whether client is authorized to connect to <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>.
+            </summary>
+            <param name="hubDescriptor">Description of the hub client is attempting to connect to.</param>
+            <param name="request">The (re)connect request from the client.</param>
+            <returns>true if the caller is authorized to connect to the hub; otherwise, false.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.AuthorizeAttribute.AuthorizeHubMethodInvocation(Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext,System.Boolean)">
+            <summary>
+            Determines whether client is authorized to invoke the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> method.
+            </summary>
+            <param name="hubIncomingInvokerContext">An <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext"/> providing details regarding the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> method invocation.</param>
+            <param name="appliesToMethod">Indicates whether the interface instance is an attribute applied directly to a method.</param>
+            <returns>true if the caller is authorized to invoke the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> method; otherwise, false.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.AuthorizeAttribute.UserAuthorized(System.Security.Principal.IPrincipal)">
+            <summary>
+            When overridden, provides an entry point for custom authorization checks.
+            Called by <see cref="M:Microsoft.AspNet.SignalR.AuthorizeAttribute.AuthorizeHubConnection(Microsoft.AspNet.SignalR.Hubs.HubDescriptor,Microsoft.AspNet.SignalR.IRequest)"/> and <see cref="M:Microsoft.AspNet.SignalR.AuthorizeAttribute.AuthorizeHubMethodInvocation(Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext,System.Boolean)"/>.
+            </summary>
+            <param name="user">The <see cref="T:System.Security.Principal.IPrincipal"/> for the client being authorize</param>
+            <returns>true if the user is authorized, otherwise, false</returns>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.AuthorizeAttribute.RequireOutgoing">
+            <summary>
+            Set to false to apply authorization only to the invocations of any of the Hub's server-side methods.
+            This property only affects attributes applied to the Hub class.
+            This property cannot be read.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.AuthorizeAttribute.Roles">
+            <summary>
+            Gets or sets the user roles.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.AuthorizeAttribute.Users">
+            <summary>
+            Gets or sets the authorized users.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IHubOutgoingInvokerContext">
+            <summary>
+            A description of a client-side hub method invocation originating from the server.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.IHubOutgoingInvokerContext.Connection">
+            <summary>
+            The <see cref="T:Microsoft.AspNet.SignalR.IConnection"/>, if any, corresponding to the client that invoked the server-side hub method
+            that is invoking the client-side hub method.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.IHubOutgoingInvokerContext.Invocation">
+            <summary>
+            A description of the method call to be made on the client.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.IHubOutgoingInvokerContext.Signal">
+            <summary>
+            The signal (ConnectionId, hub type name or hub type name + "." + group name) belonging to clients that
+            receive the method invocation.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.IHubOutgoingInvokerContext.Signals">
+            <summary>
+            The signals (ConnectionId, hub type name or hub type name + "." + group name) belonging to clients that
+            receive the method invocation.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.IHubOutgoingInvokerContext.ExcludedSignals">
+            <summary>
+            The signals (ConnectionId, hub type name or hub type name + "." + group name) belonging to clients that should
+            not receive the method invocation regardless of the <see cref="P:Microsoft.AspNet.SignalR.Hubs.IHubOutgoingInvokerContext.Signal"/>. 
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.ClientHubInvocation">
+            <summary>
+            A description of a client-side hub method invocation.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.ClientHubInvocation.Hub">
+            <summary>
+            The name of the hub that the method being invoked belongs to.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.ClientHubInvocation.Method">
+            <summary>
+            The name of the client-side hub method be invoked.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.ClientHubInvocation.Args">
+            <summary>
+            The argument list the client-side hub method will be called with.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.ClientHubInvocation.State">
+            <summary>
+            A key-value store representing the hub state on the server that has changed since the last time the hub
+            state was sent to the client.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.IHubContext">
+            <summary>
+            Provides access to information about a <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.IHubContext.Clients">
+            <summary>
+            Encapsulates all information about a SignalR connection for an <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.IHubContext.Groups">
+            <summary>
+            Gets the <see cref="T:Microsoft.AspNet.SignalR.IGroupManager"/> the hub.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.HubPipelineExtensions.RequireAuthentication(Microsoft.AspNet.SignalR.Hubs.IHubPipeline)">
+            <summary>
+            Requiring Authentication adds an <see cref="T:Microsoft.AspNet.SignalR.Hubs.AuthorizeModule"/> to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/> with <see cref="T:Microsoft.AspNet.SignalR.Hubs.IAuthorizeHubConnection"/>
+            and <see cref="T:Microsoft.AspNet.SignalR.Hubs.IAuthorizeHubMethodInvocation"/> authorizers that will be applied globally to all hubs and hub methods.
+            These authorizers require that the <see cref="T:System.Security.Principal.IPrincipal"/>'s <see cref="T:System.Security.Principal.IIdentity"/> 
+            IsAuthenticated for any clients that invoke server-side hub methods or receive client-side hub method invocations. 
+            </summary>
+            <param name="pipeline">The <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/> to which the <see cref="T:Microsoft.AspNet.SignalR.Hubs.AuthorizeModule"/> will be added.</param>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IHubPipelineInvoker">
+            <summary>
+            Implementations of this interface are responsible for executing operation required to complete various stages
+            hub processing such as connecting, reconnecting, disconnecting, invoking server-side hub methods, invoking
+            client-side hub methods, authorizing hub clients and rejoining hub groups.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineInvoker.Invoke(Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext)">
+            <summary>
+            Invokes a server-side hub method.
+            </summary>
+            <param name="context">A description of the server-side hub method invocation.</param>
+            <returns>An asynchronous operation giving the return value of the server-side hub method invocation.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineInvoker.Send(Microsoft.AspNet.SignalR.Hubs.IHubOutgoingInvokerContext)">
+            <summary>
+            Invokes a client-side hub method.
+            </summary>
+            <param name="context">A description of the client-side hub method invocation.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineInvoker.Connect(Microsoft.AspNet.SignalR.Hubs.IHub)">
+            <summary>
+            To be called when a client connects to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDispatcher"/> for each <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> the client
+            connects to. By default, this results in the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>'s OnConnected method being invoked.
+            </summary>
+            <param name="hub">A <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> the client is connected to.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineInvoker.Reconnect(Microsoft.AspNet.SignalR.Hubs.IHub)">
+            <summary>
+            To be called when a client reconnects to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDispatcher"/> for each <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> the client
+            connects to. By default, this results in the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>'s OnReconnected method being invoked.
+            </summary>
+            <param name="hub">A <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> the client is reconnected to.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineInvoker.Disconnect(Microsoft.AspNet.SignalR.Hubs.IHub)">
+            <summary>
+            To be called when a client disconnects from the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDispatcher"/> for each <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> the client
+            was connected to. By default, this results in the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>'s OnDisconnected method being invoked.
+            </summary>
+            <param name="hub">A <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> the client was disconnected from.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineInvoker.AuthorizeConnect(Microsoft.AspNet.SignalR.Hubs.HubDescriptor,Microsoft.AspNet.SignalR.IRequest)">
+            <summary>
+            To be called before a client subscribes to signals belonging to the hub described by the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDescriptor"/>.
+            By default, the <see cref="T:Microsoft.AspNet.SignalR.Hubs.AuthorizeModule"/> will look for attributes on the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> to help determine if
+            the client is authorized to subscribe to method invocations for the described hub.
+            </summary>
+            <param name="hubDescriptor">A description of the hub the client is attempting to connect to.</param>
+            <param name="request">
+            The connect request being made by the client which should include the client's
+            <see cref="T:System.Security.Principal.IPrincipal"/> User.
+            </param>
+            <returns>true, if the client is authorized to subscribe to client-side hub method invocations; false, otherwise.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipelineInvoker.RejoiningGroups(Microsoft.AspNet.SignalR.Hubs.HubDescriptor,Microsoft.AspNet.SignalR.IRequest,System.Collections.Generic.IList{System.String})">
+            <summary>
+            This method determines which of the groups belonging to the hub described by the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDescriptor"/> the client should be
+            allowed to rejoin.
+            By default, clients that are reconnecting to the server will be removed from all groups they may have previously been a member of,
+            because untrusted clients may claim to be a member of groups they were never authorized to join.
+            </summary>
+            <param name="hubDescriptor">A description of the hub for which the client is attempting to rejoin groups.</param>
+            <param name="request">The reconnect request being made by the client that is attempting to rejoin groups.</param>
+            <param name="groups">
+            The list of groups belonging to the relevant hub that the client claims to have been a member of before the reconnect.
+            </param>
+            <returns>A list of groups the client is allowed to rejoin.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext">
+            <summary>
+            A description of a server-side hub method invocation originating from a client.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext.Hub">
+            <summary>
+            A hub instance that contains the invoked method as a member.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext.MethodDescriptor">
+            <summary>
+            A description of the method being invoked by the client.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext.Args">
+            <summary>
+            The arguments to be passed to the invoked method.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.IHubIncomingInvokerContext.StateTracker">
+            <summary>
+            A key-value store representing the hub state on the client at the time of the invocation.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IHubRequestParser">
+            <summary>
+            Handles parsing incoming requests through the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDispatcher"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubRequestParser.Parse(System.String,Newtonsoft.Json.JsonSerializer)">
+            <summary>
+            Parses the incoming hub payload into a <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubRequest"/>.
+            </summary>
+            <param name="data">The raw hub payload.</param>
+            <param name="serializer">The JsonSerializer used to parse the data.</param>
+            <returns>The resulting <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubRequest"/>.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.HubResponse">
+            <summary>
+            The response returned from an incoming hub request.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubResponse.State">
+            <summary>
+            The changes made the the round tripped state.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubResponse.Result">
+            <summary>
+            The result of the invocation.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubResponse.Id">
+            <summary>
+            The id of the operation.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubResponse.IsHubException">
+            <summary>
+            Indicates whether the Error is a see <see cref="T:Microsoft.AspNet.SignalR.HubException"/>.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubResponse.Error">
+            <summary>
+            The exception that occurs as a result of invoking the hub method.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubResponse.StackTrace">
+            <summary>
+            The stack trace of the exception that occurs as a result of invoking the hub method.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubResponse.ErrorData">
+            <summary>
+            Extra error data contained in the <see cref="T:Microsoft.AspNet.SignalR.HubException"/>
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.StateChangeTracker">
+            <summary>
+            A change tracking dictionary.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline">
+            <summary>
+            A collection of modules that can intercept and customize various stages of hub processing such as connecting,
+            reconnecting, disconnecting, invoking server-side hub methods, invoking client-side hub methods, authorizing
+            hub clients and rejoining hub groups.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubPipeline.AddModule(Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule)">
+            <summary>
+            Adds an <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule"/> to the hub pipeline. Modules added to the pipeline first will wrap
+            modules that are added to the pipeline later. All modules must be added to the pipeline before any methods
+            on the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipelineInvoker"/> are invoked.
+            </summary>
+            <param name="pipelineModule">
+            A module that may intercept and customize various stages of hub processing such as connecting,
+            reconnecting, disconnecting, invoking server-side hub methods, invoking client-side hub methods, authorizing
+            hub clients and rejoining hub groups.
+            </param>
+            <returns>
+            The <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHubPipeline"/> itself with the newly added module allowing
+            <see cref="M:Microsoft.AspNet.SignalR.Hubs.IHubPipeline.AddModule(Microsoft.AspNet.SignalR.Hubs.IHubPipelineModule)"/> calls to be chained.
+            This method mutates the pipeline it is invoked on so it is not necessary to store its result.
+            </returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.IConnectionGroupManager">
+            <summary>
+            Manages groups for a connection and allows sending messages to the group.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.IGroupManager">
+            <summary>
+            Manages groups for a connection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.IGroupManager.Add(System.String,System.String)">
+            <summary>
+            Adds a connection to the specified group. 
+            </summary>
+            <param name="connectionId">The connection id to add to the group.</param>
+            <param name="groupName">The name of the group</param>
+            <returns>A task that represents the connection id being added to the group.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.IGroupManager.Remove(System.String,System.String)">
+            <summary>
+            Removes a connection from the specified group.
+            </summary>
+            <param name="connectionId">The connection id to remove from the group.</param>
+            <param name="groupName">The name of the group</param>
+            <returns>A task that represents the connection id being removed from the group.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.IConnectionGroupManager.Send(System.String,System.Object,System.String[])">
+            <summary>
+            Sends a value to the specified group.
+            </summary>
+            <param name="groupName">The name of the group.</param>
+            <param name="value">The value to send.</param>
+            <param name="excludeConnectionIds">The list of connection ids to exclude</param>
+            <returns>A task that represents when send is complete.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.IConnectionGroupManager.Send(System.Collections.Generic.IList{System.String},System.Object,System.String[])">
+            <summary>
+            Sends a value to the specified groups.
+            </summary>
+            <param name="groupNames">The names of the groups.</param>
+            <param name="value">The value to send.</param>
+            <param name="excludeConnectionIds">The list of connection ids to exclude</param>
+            <returns>A task that represents when send is complete.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager">
+            <summary>
+            Provides access to performance counters.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.Initialize(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Initializes the performance counters.
+            </summary>
+            <param name="instanceName">The host instance name.</param>
+            <param name="hostShutdownToken">The CancellationToken representing the host shutdown.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.LoadCounter(System.String,System.String,System.String,System.Boolean)">
+            <summary>
+            Loads a performance counter.
+            </summary>
+            <param name="categoryName">The category name.</param>
+            <param name="counterName">The counter name.</param>
+            <param name="instanceName">The instance name.</param>
+            <param name="isReadOnly">Whether the counter is read-only.</param>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ConnectionsConnected">
+            <summary>
+            Gets the performance counter representing the total number of connection Connect events since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ConnectionsReconnected">
+            <summary>
+            Gets the performance counter representing the total number of connection Reconnect events since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ConnectionsDisconnected">
+            <summary>
+            Gets the performance counter representing the total number of connection Disconnect events since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ConnectionsCurrent">
+            <summary>
+            Gets the performance counter representing the number of connections currently connected.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ConnectionMessagesReceivedTotal">
+            <summary>
+            Gets the performance counter representing the total number of messages received by connections (server to client) since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ConnectionMessagesSentTotal">
+            <summary>
+            Gets the performance counter representing the total number of messages received by connections (server to client) since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ConnectionMessagesReceivedPerSec">
+            <summary>
+            Gets the performance counter representing the number of messages received by connections (server to client) per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ConnectionMessagesSentPerSec">
+            <summary>
+            Gets the performance counter representing the number of messages sent by connections (client to server) per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.MessageBusMessagesReceivedTotal">
+            <summary>
+            Gets the performance counter representing the total number of messages received by subscribers since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.MessageBusMessagesReceivedPerSec">
+            <summary>
+            Gets the performance counter representing the number of messages received by a subscribers per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ScaleoutMessageBusMessagesReceivedPerSec">
+            <summary>
+            Gets the performance counter representing the number of messages received by the scaleout message bus per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.MessageBusMessagesPublishedTotal">
+            <summary>
+            Gets the performance counter representing the total number of messages published to the message bus since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.MessageBusMessagesPublishedPerSec">
+            <summary>
+            Gets the performance counter representing the number of messages published to the message bus per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.MessageBusSubscribersCurrent">
+            <summary>
+            Gets the performance counter representing the current number of subscribers to the message bus.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.MessageBusSubscribersTotal">
+            <summary>
+            Gets the performance counter representing the total number of subscribers to the message bus since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.MessageBusSubscribersPerSec">
+            <summary>
+            Gets the performance counter representing the number of new subscribers to the message bus per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.MessageBusAllocatedWorkers">
+            <summary>
+            Gets the performance counter representing the number of workers allocated to deliver messages in the message bus.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.MessageBusBusyWorkers">
+            <summary>
+            Gets the performance counter representing the number of workers currently busy delivering messages in the message bus.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.MessageBusTopicsCurrent">
+            <summary>
+            Gets the performance counter representing representing the current number of topics in the message bus.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ErrorsAllTotal">
+            <summary>
+            Gets the performance counter representing the total number of all errors processed since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ErrorsAllPerSec">
+            <summary>
+            Gets the performance counter representing the number of all errors processed per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ErrorsHubResolutionTotal">
+            <summary>
+            Gets the performance counter representing the total number of hub resolution errors processed since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ErrorsHubResolutionPerSec">
+            <summary>
+            Gets the performance counter representing the number of hub resolution errors per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ErrorsHubInvocationTotal">
+            <summary>
+            Gets the performance counter representing the total number of hub invocation errors processed since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ErrorsHubInvocationPerSec">
+            <summary>
+            Gets the performance counter representing the number of hub invocation errors per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ErrorsTransportTotal">
+            <summary>
+            Gets the performance counter representing the total number of transport errors processed since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ErrorsTransportPerSec">
+            <summary>
+            Gets the performance counter representing the number of transport errors per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ScaleoutStreamCountTotal">
+            <summary>
+            Gets the performance counter representing the number of logical streams in the currently configured scaleout message bus provider.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ScaleoutStreamCountOpen">
+            <summary>
+            Gets the performance counter representing the number of logical streams in the currently configured scaleout message bus provider that are in the open state.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ScaleoutStreamCountBuffering">
+            <summary>
+            Gets the performance counter representing the number of logical streams in the currently configured scaleout message bus provider that are in the buffering state.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ScaleoutErrorsTotal">
+            <summary>
+            Gets the performance counter representing the total number of scaleout errors since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ScaleoutErrorsPerSec">
+            <summary>
+            Gets the performance counter representing the number of scaleout errors per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager.ScaleoutSendQueueLength">
+            <summary>
+            Gets the performance counter representing the current scaleout send queue length.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager">
+            <summary>
+            Manages performance counters using Windows performance counters.
+            </summary>
+        </member>
+        <member name="F:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.CategoryName">
+            <summary>
+            The performance counter category name for SignalR counters.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.#ctor(Microsoft.AspNet.SignalR.Tracing.ITraceManager)">
+            <summary>
+            Creates a new instance.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.Initialize(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Initializes the performance counters.
+            </summary>
+            <param name="instanceName">The host instance name.</param>
+            <param name="hostShutdownToken">The CancellationToken representing the host shutdown.</param>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ConnectionsConnected">
+            <summary>
+            Gets the performance counter representing the total number of connection Connect events since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ConnectionsReconnected">
+            <summary>
+            Gets the performance counter representing the total number of connection Reconnect events since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ConnectionsDisconnected">
+            <summary>
+            Gets the performance counter representing the total number of connection Disconnect events since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ConnectionsCurrent">
+            <summary>
+            Gets the performance counter representing the number of connections currently connected.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ConnectionMessagesReceivedTotal">
+            <summary>
+            Gets the performance counter representing the toal number of messages received by connections (server to client) since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ConnectionMessagesSentTotal">
+            <summary>
+            Gets the performance counter representing the total number of messages sent by connections (client to server) since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ConnectionMessagesReceivedPerSec">
+            <summary>
+            Gets the performance counter representing the number of messages received by connections (server to client) per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ConnectionMessagesSentPerSec">
+            <summary>
+            Gets the performance counter representing the number of messages sent by connections (client to server) per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.MessageBusMessagesReceivedTotal">
+            <summary>
+            Gets the performance counter representing the total number of messages received by subscribers since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.MessageBusMessagesReceivedPerSec">
+            <summary>
+            Gets the performance counter representing the number of messages received by a subscribers per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ScaleoutMessageBusMessagesReceivedPerSec">
+            <summary>
+            Gets the performance counter representing the number of messages received by the scaleout message bus per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.MessageBusMessagesPublishedTotal">
+            <summary>
+            Gets the performance counter representing the total number of messages published to the message bus since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.MessageBusMessagesPublishedPerSec">
+            <summary>
+            Gets the performance counter representing the number of messages published to the message bus per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.MessageBusSubscribersCurrent">
+            <summary>
+            Gets the performance counter representing the current number of subscribers to the message bus.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.MessageBusSubscribersTotal">
+            <summary>
+            Gets the performance counter representing the total number of subscribers to the message bus since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.MessageBusSubscribersPerSec">
+            <summary>
+            Gets the performance counter representing the number of new subscribers to the message bus per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.MessageBusAllocatedWorkers">
+            <summary>
+            Gets the performance counter representing the number of workers allocated to deliver messages in the message bus.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.MessageBusBusyWorkers">
+            <summary>
+            Gets the performance counter representing the number of workers currently busy delivering messages in the message bus.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.MessageBusTopicsCurrent">
+            <summary>
+            Gets the performance counter representing representing the current number of topics in the message bus.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ErrorsAllTotal">
+            <summary>
+            Gets the performance counter representing the total number of all errors processed since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ErrorsAllPerSec">
+            <summary>
+            Gets the performance counter representing the number of all errors processed per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ErrorsHubResolutionTotal">
+            <summary>
+            Gets the performance counter representing the total number of hub resolution errors processed since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ErrorsHubResolutionPerSec">
+            <summary>
+            Gets the performance counter representing the number of hub resolution errors per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ErrorsHubInvocationTotal">
+            <summary>
+            Gets the performance counter representing the total number of hub invocation errors processed since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ErrorsHubInvocationPerSec">
+            <summary>
+            Gets the performance counter representing the number of hub invocation errors per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ErrorsTransportTotal">
+            <summary>
+            Gets the performance counter representing the total number of transport errors processed since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ErrorsTransportPerSec">
+            <summary>
+            Gets the performance counter representing the number of transport errors per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ScaleoutStreamCountTotal">
+            <summary>
+            Gets the performance counter representing the number of logical streams in the currently configured scaleout message bus provider.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ScaleoutStreamCountOpen">
+            <summary>
+            Gets the performance counter representing the number of logical streams in the currently configured scaleout message bus provider that are in the open state.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ScaleoutStreamCountBuffering">
+            <summary>
+            Gets the performance counter representing the number of logical streams in the currently configured scaleout message bus provider that are in the buffering state.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ScaleoutErrorsTotal">
+            <summary>
+            Gets the performance counter representing the total number of scaleout errors since the application was started.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ScaleoutErrorsPerSec">
+            <summary>
+            Gets the performance counter representing the number of scaleout errors per second.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.PerformanceCounterManager.ScaleoutSendQueueLength">
+            <summary>
+            Gets the performance counter representing the current scaleout send queue length.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.Disposer">
+            <summary>
+            Helper class to manage disposing a resource at an arbirtary time
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.SafeCancellationTokenSource">
+            <summary>
+            Thread safe cancellation token source. Allows the following:
+            - Cancel will no-op if the token is disposed.
+            - Dispose may be called after Cancel.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Json.IJsonValue">
+            <summary>
+            Represents a JSON value.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Json.IJsonValue.ConvertTo(System.Type)">
+            <summary>
+            Converts the parameter value to the specified <see cref="T:System.Type"/>.
+            </summary>
+            <param name="type">The <see cref="T:System.Type"/> to convert the parameter to.</param>
+            <returns>The converted parameter value.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Json.IJsonValue.CanConvertTo(System.Type)">
+            <summary>
+            Determines if the parameter can be converted to the specified <see cref="T:System.Type"/>.
+            </summary>
+            <param name="type">The <see cref="T:System.Type"/> to check.</param>
+            <returns>True if the parameter can be converted to the specified <see cref="T:System.Type"/>, false otherwise.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Json.IJsonWritable">
+            <summary>
+            Implementations handle their own serialization to JSON.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Json.IJsonWritable.WriteJson(System.IO.TextWriter)">
+            <summary>
+            Serializes itself to JSON via a <see cref="T:System.IO.TextWriter"/>.
+            </summary>
+            <param name="writer">The <see cref="T:System.IO.TextWriter"/> that receives the JSON serialized object.</param>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Json.JRawValue">
+            <summary>
+            An implementation of IJsonValue over JSON.NET
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.ConnectionExtensions.Send(Microsoft.AspNet.SignalR.IConnection,System.String,System.Object)">
+            <summary>
+            Sends a message to all connections subscribed to the specified signal. An example of signal may be a
+            specific connection id.
+            </summary>
+            <param name="connection">The connection</param>
+            <param name="connectionId">The connectionId to send to.</param>
+            <param name="value">The value to publish.</param>
+            <returns>A task that represents when the broadcast is complete.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.ConnectionExtensions.Send(Microsoft.AspNet.SignalR.IConnection,System.Collections.Generic.IList{System.String},System.Object)">
+            <summary>
+            Sends a message to all connections subscribed to the specified signal. An example of signal may be a
+            specific connection id.
+            </summary>
+            <param name="connection">The connection</param>
+            <param name="connectionIds">The connection ids to send to.</param>
+            <param name="value">The value to publish.</param>
+            <returns>A task that represents when the broadcast is complete.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.ConnectionExtensions.Broadcast(Microsoft.AspNet.SignalR.IConnection,System.Object,System.String[])">
+            <summary>
+            Broadcasts a value to all connections, excluding the connection ids specified.
+            </summary>
+            <param name="connection">The connection</param>
+            <param name="value">The value to broadcast.</param>
+            <param name="excludeConnectionIds">The list of connection ids to exclude</param>
+            <returns>A task that represents when the broadcast is complete.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IParameterResolver">
+            <summary>
+            Describes a parameter resolver for resolving parameter-matching values based on provided information.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IParameterResolver.ResolveMethodParameters(Microsoft.AspNet.SignalR.Hubs.MethodDescriptor,System.Collections.Generic.IList{Microsoft.AspNet.SignalR.Json.IJsonValue})">
+            <summary>
+            Resolves method parameter values based on provided objects.
+            </summary>
+            <param name="method">Method descriptor.</param>
+            <param name="values">List of values to resolve parameter values from.</param>
+            <returns>Array of parameter values.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.DefaultParameterResolver.ResolveParameter(Microsoft.AspNet.SignalR.Hubs.ParameterDescriptor,Microsoft.AspNet.SignalR.Json.IJsonValue)">
+            <summary>
+            Resolves a parameter value based on the provided object.
+            </summary>
+            <param name="descriptor">Parameter descriptor.</param>
+            <param name="value">Value to resolve the parameter value from.</param>
+            <returns>The parameter value.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.DefaultParameterResolver.ResolveMethodParameters(Microsoft.AspNet.SignalR.Hubs.MethodDescriptor,System.Collections.Generic.IList{Microsoft.AspNet.SignalR.Json.IJsonValue})">
+            <summary>
+            Resolves method parameter values based on provided objects.
+            </summary>
+            <param name="method">Method descriptor.</param>
+            <param name="values">List of values to resolve parameter values from.</param>
+            <returns>Array of parameter values.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.ParameterDescriptor">
+            <summary>
+            Holds information about a single hub method parameter.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.ParameterDescriptor.Name">
+            <summary>
+            Parameter name.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.ParameterDescriptor.ParameterType">
+            <summary>
+            Parameter type.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IMethodDescriptorProvider">
+            <summary>
+            Describes a hub method provider that builds a collection of available methods on a given hub.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IMethodDescriptorProvider.GetMethods(Microsoft.AspNet.SignalR.Hubs.HubDescriptor)">
+            <summary>
+            Retrieve all methods on a given hub.
+            </summary>
+            <param name="hub">Hub descriptor object.</param>
+            <returns>Available methods.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IMethodDescriptorProvider.TryGetMethod(Microsoft.AspNet.SignalR.Hubs.HubDescriptor,System.String,Microsoft.AspNet.SignalR.Hubs.MethodDescriptor@,System.Collections.Generic.IList{Microsoft.AspNet.SignalR.Json.IJsonValue})">
+            <summary>
+            Tries to retrieve a method.
+            </summary>
+            <param name="hub">Hub descriptor object</param>
+            <param name="method">Name of the method.</param>
+            <param name="descriptor">Descriptor of the method, if found. Null otherwise.</param>
+            <param name="parameters">Method parameters to match.</param>
+            <returns>True, if a method has been found.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.ReflectedMethodDescriptorProvider.FetchMethodsFor(Microsoft.AspNet.SignalR.Hubs.HubDescriptor)">
+            <summary>
+            Retrieves an existing dictionary of all available methods for a given hub from cache.
+            If cache entry does not exist - it is created automatically by BuildMethodCacheFor.
+            </summary>
+            <param name="hub"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.ReflectedMethodDescriptorProvider.BuildMethodCacheFor(Microsoft.AspNet.SignalR.Hubs.HubDescriptor)">
+            <summary>
+            Builds a dictionary of all possible methods on a given hub.
+            Single entry contains a collection of available overloads for a given method name (key).
+            This dictionary is being cached afterwards.
+            </summary>
+            <param name="hub">Hub to build cache for</param>
+            <returns>Dictionary of available methods</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.ReflectedMethodDescriptorProvider.TryGetMethod(Microsoft.AspNet.SignalR.Hubs.HubDescriptor,System.String,Microsoft.AspNet.SignalR.Hubs.MethodDescriptor@,System.Collections.Generic.IList{Microsoft.AspNet.SignalR.Json.IJsonValue})">
+            <summary>
+            Searches the specified <paramref name="hub">Hub</paramref> for the specified <paramref name="method"/>.
+            </summary>
+            <remarks>
+            In the case that there are multiple overloads of the specified <paramref name="method"/>, the <paramref name="parameters">parameter set</paramref> helps determine exactly which instance of the overload should be resolved. 
+            If there are multiple overloads found with the same number of matching parameters, none of the methods will be returned because it is not possible to determine which overload of the method was intended to be resolved.
+            </remarks>
+            <param name="hub">Hub to search for the specified <paramref name="method"/> on.</param>
+            <param name="method">The method name to search for.</param>
+            <param name="descriptor">If successful, the <see cref="T:Microsoft.AspNet.SignalR.Hubs.MethodDescriptor"/> that was resolved.</param>
+            <param name="parameters">The set of parameters that will be used to help locate a specific overload of the specified <paramref name="method"/>.</param>
+            <returns>True if the method matching the name/parameter set is found on the hub, otherwise false.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.HubDescriptor">
+            <summary>
+            Holds information about a single hub.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubDescriptor.HubType">
+            <summary>
+            Hub type.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IHubManager">
+            <summary>
+            Describes a hub manager - main point in the whole hub and method lookup process.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubManager.GetHub(System.String)">
+            <summary>
+            Retrieves a single hub descriptor.
+            </summary>
+            <param name="hubName">Name of the hub.</param>
+            <returns>Hub descriptor, if found. Null, otherwise.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubManager.GetHubs(System.Func{Microsoft.AspNet.SignalR.Hubs.HubDescriptor,System.Boolean})">
+            <summary>
+            Retrieves all available hubs matching the given predicate.
+            </summary>
+            <returns>List of hub descriptors.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubManager.ResolveHub(System.String)">
+            <summary>
+            Resolves a given hub name to a concrete object.
+            </summary>
+            <param name="hubName">Name of the hub.</param>
+            <returns>Hub implementation instance, if found. Null otherwise.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubManager.ResolveHubs">
+            <summary>
+            Resolves all available hubs to their concrete objects.
+            </summary>
+            <returns>List of hub instances.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubManager.GetHubMethod(System.String,System.String,System.Collections.Generic.IList{Microsoft.AspNet.SignalR.Json.IJsonValue})">
+            <summary>
+            Retrieves a method with a given name on a given hub.
+            </summary>
+            <param name="hubName">Name of the hub.</param>
+            <param name="method">Name of the method to find.</param>
+            <param name="parameters">Method parameters to match.</param>
+            <returns>Descriptor of the method, if found. Null otherwise.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubManager.GetHubMethods(System.String,System.Func{Microsoft.AspNet.SignalR.Hubs.MethodDescriptor,System.Boolean})">
+            <summary>
+            Gets all methods available to call on a given hub.
+            </summary>
+            <param name="hubName">Name of the hub,</param>
+            <param name="predicate">Optional predicate for filtering results.</param>
+            <returns>List of available methods.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.IServerIdManager">
+            <summary>
+            Generates a server id
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IServerIdManager.ServerId">
+            <summary>
+            The id of the server.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.ServerIdManager">
+            <summary>
+            Default <see cref="T:Microsoft.AspNet.SignalR.Infrastructure.IServerIdManager"/> implementation.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.ServerIdManager.ServerId">
+            <summary>
+            The id of the server.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.IPersistentConnectionContext">
+            <summary>
+            Provides access to information about a <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.IPersistentConnectionContext.Connection">
+            <summary>
+            Gets the <see cref="T:Microsoft.AspNet.SignalR.IConnection"/> for the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.IPersistentConnectionContext.Groups">
+            <summary>
+            Gets the <see cref="T:Microsoft.AspNet.SignalR.IConnectionGroupManager"/> for the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.IServerCommandHandler">
+            <summary>
+            Handles commands from server to server.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.IServerCommandHandler.SendCommand(Microsoft.AspNet.SignalR.Infrastructure.ServerCommand)">
+            <summary>
+            Sends a command to all connected servers.
+            </summary>
+            <param name="command"></param>
+            <returns></returns>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.IServerCommandHandler.Command">
+            <summary>
+            Gets or sets a callback that is invoked when a command is received.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Json.JsonSerializerExtensions">
+            <summary>
+            Extensions for <see cref="T:Newtonsoft.Json.JsonSerializer"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Json.JsonSerializerExtensions.Parse``1(Newtonsoft.Json.JsonSerializer,System.String)">
+            <summary>
+            Deserializes the JSON to a .NET object.
+            </summary>
+            <param name="serializer">The serializer</param>
+            <typeparam name="T">The <see cref="T:System.Type"/> of object being deserialized.</typeparam>
+            <param name="json">The JSON to deserialize</param>
+            <returns>The deserialized object from the JSON string.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Json.JsonSerializerExtensions.Parse``1(Newtonsoft.Json.JsonSerializer,System.ArraySegment{System.Byte},System.Text.Encoding)">
+            <summary>
+            Deserializes the JSON to a .NET object.
+            </summary>
+            <param name="serializer">The serializer</param>
+            <typeparam name="T">The <see cref="T:System.Type"/> of object being deserialized.</typeparam>
+            <param name="jsonBuffer">The JSON buffer to deserialize</param>
+            <param name="encoding">The encoding to use.</param>
+            <returns>The deserialized object from the JSON string.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Json.JsonSerializerExtensions.Serialize(Newtonsoft.Json.JsonSerializer,System.Object,System.IO.TextWriter)">
+            <summary>
+            Serializes the specified object to a <see cref="T:System.IO.TextWriter"/>.
+            </summary>
+            <param name="serializer">The JSON serializer</param>
+            <param name="value">The object to serialize</param>
+            <param name="writer">The <see cref="T:System.IO.TextWriter"/> to serialize the object to.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Json.JsonSerializerExtensions.Stringify(Newtonsoft.Json.JsonSerializer,System.Object)">
+            <summary>
+            Serializes the specified object to a JSON string.
+            </summary>
+            <param name="serializer">The serializer</param>
+            <param name="value">The object to serailize.</param>
+            <returns>A JSON string representation of the object.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier.Minify(System.String)">
+            <summary>
+            Minifies a string in a way that can be reversed by this instance of <see cref="T:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier"/>.
+            </summary>
+            <param name="value">The string to be minified</param>
+            <returns>A minified representation of the <paramref name="value"/> without the following characters:,|\</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier.Unminify(System.String)">
+            <summary>
+            Reverses a <see cref="M:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier.Minify(System.String)"/> call that was executed at least once previously on this instance of
+            <see cref="T:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier"/> without any subsequent calls to <see cref="M:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier.RemoveUnminified(System.String)"/> sharing the
+            same argument as the <see cref="M:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier.Minify(System.String)"/> call that returned <paramref name="value"/>.
+            </summary>
+            <param name="value">
+            A minified string that was returned by a previous call to <see cref="M:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier.Minify(System.String)"/>.
+            </param>
+            <returns>
+            The argument of all previous calls to <see cref="M:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier.Minify(System.String)"/> that returned <paramref name="value"/>.
+            If every call to <see cref="M:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier.Minify(System.String)"/> on this instance of <see cref="T:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier"/> has never
+            returned <paramref name="value"/> or if the most recent call to <see cref="M:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier.Minify(System.String)"/> that did
+            return <paramref name="value"/> was followed by a call to <see cref="M:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier.RemoveUnminified(System.String)"/> sharing 
+            the same argument, <see cref="M:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier.Unminify(System.String)"/> may return null but must not throw.
+            </returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier.RemoveUnminified(System.String)">
+            <summary>
+            A call to this function indicates that any future attempt to unminify strings that were previously minified
+            from <paramref name="value"/> may be met with a null return value. This provides an opportunity clean up
+            any internal data structures that reference <paramref name="value"/>.
+            </summary>
+            <param name="value">The string that may have previously have been minified.</param>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Messaging.MessageBroker">
+            <summary>
+            This class is the main coordinator. 
+            It schedules work to be done for a particular subscription. 
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Messaging.ScaleoutMessage">
+            <summary>
+            Represents a message to the scaleout backplane
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.ScaleoutMessage.Messages">
+            <summary>
+            The messages from SignalR
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.ScaleoutMessage.ServerCreationTime">
+            <summary>
+            The time the message was created on the origin server
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Messaging.ScaleoutMessageBus">
+            <summary>
+            Common base class for scaleout message bus implementations.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Messaging.MessageBus">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Messaging.IMessageBus.Publish(Microsoft.AspNet.SignalR.Messaging.Message)">
+            <summary>
+            
+            </summary>
+            <param name="message"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Messaging.IMessageBus.Subscribe(Microsoft.AspNet.SignalR.Messaging.ISubscriber,System.String,System.Func{Microsoft.AspNet.SignalR.Messaging.MessageResult,System.Object,System.Threading.Tasks.Task{System.Boolean}},System.Int32,System.Object)">
+            <summary>
+            
+            </summary>
+            <param name="subscriber"></param>
+            <param name="cursor"></param>
+            <param name="callback"></param>
+            <param name="maxMessages"></param>
+            <param name="state"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Messaging.MessageBus.#ctor(Microsoft.AspNet.SignalR.IDependencyResolver)">
+            <summary>
+            
+            </summary>
+            <param name="resolver"></param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Messaging.MessageBus.#ctor(Microsoft.AspNet.SignalR.Infrastructure.IStringMinifier,Microsoft.AspNet.SignalR.Tracing.ITraceManager,Microsoft.AspNet.SignalR.Infrastructure.IPerformanceCounterManager,Microsoft.AspNet.SignalR.Configuration.IConfigurationManager,System.Int32)">
+            <summary>
+            
+            </summary>
+            <param name="stringMinifier"></param>
+            <param name="traceManager"></param>
+            <param name="performanceCounterManager"></param>
+            <param name="configurationManager"></param>
+            <param name="maxTopicsWithNoSubscriptions"></param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Messaging.MessageBus.Publish(Microsoft.AspNet.SignalR.Messaging.Message)">
+            <summary>
+            Publishes a new message to the specified event on the bus.
+            </summary>
+            <param name="message">The message to publish.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Messaging.MessageBus.Subscribe(Microsoft.AspNet.SignalR.Messaging.ISubscriber,System.String,System.Func{Microsoft.AspNet.SignalR.Messaging.MessageResult,System.Object,System.Threading.Tasks.Task{System.Boolean}},System.Int32,System.Object)">
+            <summary>
+            
+            </summary>
+            <param name="subscriber"></param>
+            <param name="cursor"></param>
+            <param name="callback"></param>
+            <param name="maxMessages"></param>
+            <param name="state"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Messaging.MessageBus.CreateTopic(System.String)">
+            <summary>
+            Creates a topic for the specified key.
+            </summary>
+            <param name="key">The key to create the topic for.</param>
+            <returns>A <see cref="T:Microsoft.AspNet.SignalR.Messaging.Topic"/> for the specified key.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Messaging.ScaleoutMessageBus.Open(System.Int32)">
+            <summary>
+            Opens the specified queue for sending messages.
+            <param name="streamIndex">The index of the stream to open.</param>
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Messaging.ScaleoutMessageBus.Close(System.Int32)">
+            <summary>
+            Closes the specified queue.
+            <param name="streamIndex">The index of the stream to close.</param>
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Messaging.ScaleoutMessageBus.OnError(System.Int32,System.Exception)">
+            <summary>
+            Closes the specified queue for sending messages making all sends fail asynchronously.
+            </summary>
+            <param name="streamIndex">The index of the stream to close.</param>
+            <param name="exception">The error that occurred.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Messaging.ScaleoutMessageBus.Send(System.Collections.Generic.IList{Microsoft.AspNet.SignalR.Messaging.Message})">
+            <summary>
+            Sends messages to the backplane
+            </summary>
+            <param name="messages">The list of messages to send</param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Messaging.ScaleoutMessageBus.OnReceived(System.Int32,System.UInt64,Microsoft.AspNet.SignalR.Messaging.ScaleoutMessage)">
+            <summary>
+            Invoked when a payload is received from the backplane. There should only be one active call at any time.
+            </summary>
+            <param name="streamIndex">id of the stream.</param>
+            <param name="id">id of the payload within that stream.</param>
+            <param name="message">The scaleout message.</param>
+            <returns></returns>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.ScaleoutMessageBus.StreamCount">
+            <summary>
+            The number of streams can't change for the lifetime of this instance.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Messaging.MessageResult">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Messaging.MessageResult.#ctor(System.Collections.Generic.IList{System.ArraySegment{Microsoft.AspNet.SignalR.Messaging.Message}},System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.AspNet.SignalR.Messaging.MessageResult"/> struct.
+            </summary>
+            <param name="messages">The array of messages associated with this <see cref="T:Microsoft.AspNet.SignalR.Messaging.MessageResult"/>.</param>
+            <param name="totalCount">The amount of messages populated in the messages array.</param>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.MessageResult.Messages">
+            <summary>
+            Gets an <see cref="T:IList{Message}"/> associated with the result.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Messaging.ScaleoutConfiguration">
+            <summary>
+            Common settings for scale-out message bus implementations.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.ScaleoutConfiguration.MaxQueueLength">
+            <summary>
+            The maximum length of the outgoing send queue. Messages being sent to the backplane are queued
+            up to this length. After the max length is reached, further sends will throw an <see cref="T:System.InvalidOperationException">InvalidOperationException</see>.
+            Set to <see cref="F:Microsoft.AspNet.SignalR.Messaging.ScaleoutConfiguration.DisableQueuing">ScaleoutConfiguration.DisableQueuing</see> to disable queing.
+            Defaults to disabled.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hosting.PersistentConnectionFactory">
+            <summary>
+            Responsible for creating <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/> instances.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hosting.PersistentConnectionFactory.#ctor(Microsoft.AspNet.SignalR.IDependencyResolver)">
+            <summary>
+            Creates a new instance of the <see cref="T:Microsoft.AspNet.SignalR.Hosting.PersistentConnectionFactory"/> class.
+            </summary>
+            <param name="resolver">The dependency resolver to use for when creating the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hosting.PersistentConnectionFactory.CreateInstance(System.Type)">
+            <summary>
+            Creates an instance of the specified type using the dependency resolver or the type's default constructor.
+            </summary>
+            <param name="connectionType">The type of <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/> to create.</param>
+            <returns>An instance of a <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>. </returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHub.OnConnected">
+            <summary>
+            Called when a new connection is made to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHub.OnReconnected">
+            <summary>
+            Called when a connection reconnects to the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> after a timeout.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHub.OnDisconnected">
+            <summary>
+            Called when a connection is disconnected from the <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/>.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.IHub.Context">
+            <summary>
+            Gets a <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubCallerContext"/>. Which contains information about the calling client.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.IHub.Clients">
+            <summary>
+            Gets a dynamic object that represents all clients connected to this hub (not hub instance).
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.IHub.Groups">
+            <summary>
+            Gets the <see cref="T:Microsoft.AspNet.SignalR.IGroupManager"/> the hub instance.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.UrlDecoder">
+            <summary>
+            Helpers for decoding URI query components.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Owin.WebSocketConstants">
+            <summary>
+            Standard keys and values for use within the OWIN interfaces
+            </summary>
+        </member>
+        <member name="M:Owin.OwinExtensions.MapSignalR(Owin.IAppBuilder)">
+            <summary>
+            Maps SignalR hubs to the app builder pipeline at "/signalr".
+            </summary>
+            <param name="builder">The app builder</param>
+        </member>
+        <member name="M:Owin.OwinExtensions.MapSignalR(Owin.IAppBuilder,Microsoft.AspNet.SignalR.HubConfiguration)">
+            <summary>
+            Maps SignalR hubs to the app builder pipeline at "/signalr".
+            </summary>
+            <param name="builder">The app builder</param>
+            <param name="configuration">The <see cref="T:Microsoft.AspNet.SignalR.HubConfiguration"/> to use</param>
+        </member>
+        <member name="M:Owin.OwinExtensions.MapSignalR(Owin.IAppBuilder,System.String,Microsoft.AspNet.SignalR.HubConfiguration)">
+            <summary>
+            Maps SignalR hubs to the app builder pipeline at the specified path.
+            </summary>
+            <param name="builder">The app builder</param>
+            <param name="path">The path to map signalr hubs</param>
+            <param name="configuration">The <see cref="T:Microsoft.AspNet.SignalR.HubConfiguration"/> to use</param>
+        </member>
+        <member name="M:Owin.OwinExtensions.RunSignalR(Owin.IAppBuilder)">
+            <summary>
+            Adds SignalR hubs to the app builder pipeline.
+            </summary>
+            <param name="builder">The app builder</param>
+        </member>
+        <member name="M:Owin.OwinExtensions.RunSignalR(Owin.IAppBuilder,Microsoft.AspNet.SignalR.HubConfiguration)">
+            <summary>
+            Adds SignalR hubs to the app builder pipeline.
+            </summary>
+            <param name="builder">The app builder</param>
+            <param name="configuration">The <see cref="T:Microsoft.AspNet.SignalR.HubConfiguration"/> to use</param>
+        </member>
+        <member name="M:Owin.OwinExtensions.MapSignalR``1(Owin.IAppBuilder,System.String)">
+            <summary>
+            Maps the specified SignalR <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/> to the app builder pipeline at 
+            the specified path.
+            </summary>
+            <typeparam name="TConnection">The type of <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/></typeparam>
+            <param name="builder">The app builder</param>
+            <param name="path">The path to map the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/></param>
+        </member>
+        <member name="M:Owin.OwinExtensions.MapSignalR``1(Owin.IAppBuilder,System.String,Microsoft.AspNet.SignalR.ConnectionConfiguration)">
+            <summary>
+            Maps the specified SignalR <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/> to the app builder pipeline at 
+            the specified path.
+            </summary>
+            <typeparam name="TConnection">The type of <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/></typeparam>
+            <param name="builder">The app builder</param>
+            <param name="path">The path to map the persistent connection</param>
+            <param name="configuration">The <see cref="T:Microsoft.AspNet.SignalR.ConnectionConfiguration"/> to use</param>
+            <returns></returns>
+        </member>
+        <member name="M:Owin.OwinExtensions.MapSignalR(Owin.IAppBuilder,System.String,System.Type,Microsoft.AspNet.SignalR.ConnectionConfiguration)">
+            <summary>
+            Maps the specified SignalR <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/> to the app builder pipeline at 
+            the specified path.
+            </summary>
+            <param name="builder">The app builder</param>
+            <param name="path">The path to map the persistent connection</param>
+            <param name="connectionType">The type of <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/></param>
+            <param name="configuration">The <see cref="T:Microsoft.AspNet.SignalR.ConnectionConfiguration"/> to use</param>
+        </member>
+        <member name="M:Owin.OwinExtensions.RunSignalR``1(Owin.IAppBuilder)">
+            <summary>
+            Adds the specified SignalR <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/> to the app builder.
+            </summary>
+            <typeparam name="TConnection">The type of <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/></typeparam>
+            <param name="builder">The app builder</param>
+        </member>
+        <member name="M:Owin.OwinExtensions.RunSignalR``1(Owin.IAppBuilder,Microsoft.AspNet.SignalR.ConnectionConfiguration)">
+            <summary>
+            Adds the specified SignalR <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/> to the app builder.
+            </summary>
+            <typeparam name="TConnection">The type of <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/></typeparam>
+            <param name="builder">The app builder</param>
+            <param name="configuration">The <see cref="T:Microsoft.AspNet.SignalR.ConnectionConfiguration"/> to use</param>
+            <returns></returns>
+        </member>
+        <member name="M:Owin.OwinExtensions.RunSignalR(Owin.IAppBuilder,System.Type,Microsoft.AspNet.SignalR.ConnectionConfiguration)">
+            <summary>
+            Adds the specified SignalR <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/> to the app builder.
+            </summary>
+            <param name="builder">The app builder</param>
+            <param name="connectionType">The type of <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/></param>
+            <param name="configuration">The <see cref="T:Microsoft.AspNet.SignalR.ConnectionConfiguration"/> to use</param>
+            <returns></returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.IHubDescriptorProvider">
+            <summary>
+            Describes hub descriptor provider, which provides information about available hubs.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubDescriptorProvider.GetHubs">
+            <summary>
+            Retrieve all avaiable hubs.
+            </summary>
+            <returns>Collection of hub descriptors.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.IHubDescriptorProvider.TryGetHub(System.String,Microsoft.AspNet.SignalR.Hubs.HubDescriptor@)">
+            <summary>
+            Tries to retrieve hub with a given name.
+            </summary>
+            <param name="hubName">Name of the hub.</param>
+            <param name="descriptor">Retrieved descriptor object.</param>
+            <returns>True, if hub has been found</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hub">
+            <summary>
+            Provides methods that communicate with SignalR connections that connected to a <see cref="T:Microsoft.AspNet.SignalR.Hub"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hub.OnDisconnected">
+            <summary>
+            Called when a connection disconnects from this hub instance.
+            </summary>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/></returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hub.OnConnected">
+            <summary>
+            Called when the connection connects to this hub instance.
+            </summary>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/></returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hub.OnReconnected">
+            <summary>
+            Called when the connection reconnects to this hub instance.
+            </summary>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/></returns>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hub.Clients">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hub.Context">
+            <summary>
+            Provides information about the calling client.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hub.Groups">
+            <summary>
+            The group manager for this hub instance.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubCallerContext.ConnectionId">
+            <summary>
+            Gets the connection id of the calling client.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubCallerContext.RequestCookies">
+            <summary>
+            Gets the cookies for the request.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubCallerContext.Headers">
+            <summary>
+            Gets the headers for the request.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubCallerContext.QueryString">
+            <summary>
+            Gets the querystring for the request.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubCallerContext.User">
+            <summary>
+            Gets the <see cref="T:System.Security.Principal.IPrincipal"/> for the request.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Hubs.HubCallerContext.Request">
+            <summary>
+            Gets the <see cref="T:Microsoft.AspNet.SignalR.IRequest"/> for the current HTTP request.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Hubs.HubDispatcher">
+            <summary>
+            Handles all communication over the hubs persistent connection.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.PersistentConnection">
+            <summary>
+            Represents a connection between client and server.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.PersistentConnection.ProcessRequest(System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            OWIN entry point.
+            </summary>
+            <param name="environment"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.PersistentConnection.ProcessRequest(Microsoft.AspNet.SignalR.Hosting.HostContext)">
+            <summary>
+            Handles all requests for <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>s.
+            </summary>
+            <param name="context">The <see cref="T:Microsoft.AspNet.SignalR.Hosting.HostContext"/> for the current request.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that completes when the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/> pipeline is complete.</returns>
+            <exception cref="T:System.InvalidOperationException">
+            Thrown if connection wasn't initialized.
+            Thrown if the transport wasn't specified.
+            Thrown if the connection id wasn't specified.
+            </exception>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.PersistentConnection.GetSignals(System.String,System.String)">
+            <summary>
+            Returns the signals used in the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.
+            </summary>
+            <param name="userId">The user id for the current connection.</param>
+            <param name="connectionId">The id of the incoming connection.</param>
+            <returns>The signals used for this <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.PersistentConnection.AuthorizeRequest(Microsoft.AspNet.SignalR.IRequest)">
+            <summary>
+            Called before every request and gives the user a authorize the user.
+            </summary>
+            <param name="request">The <see cref="T:Microsoft.AspNet.SignalR.IRequest"/> for the current connection.</param>
+            <returns>A boolean value that represents if the request is authorized.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.PersistentConnection.OnRejoiningGroups(Microsoft.AspNet.SignalR.IRequest,System.Collections.Generic.IList{System.String},System.String)">
+            <summary>
+            Called when a connection reconnects after a timeout to determine which groups should be rejoined.
+            </summary>
+            <param name="request">The <see cref="T:Microsoft.AspNet.SignalR.IRequest"/> for the current connection.</param>
+            <param name="groups">The groups the calling connection claims to be part of.</param>
+            <param name="connectionId">The id of the reconnecting client.</param>
+            <returns>A collection of group names that should be joined on reconnect</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.PersistentConnection.OnConnected(Microsoft.AspNet.SignalR.IRequest,System.String)">
+            <summary>
+            Called when a new connection is made.
+            </summary>
+            <param name="request">The <see cref="T:Microsoft.AspNet.SignalR.IRequest"/> for the current connection.</param>
+            <param name="connectionId">The id of the connecting client.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that completes when the connect operation is complete.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.PersistentConnection.OnReconnected(Microsoft.AspNet.SignalR.IRequest,System.String)">
+            <summary>
+            Called when a connection reconnects after a timeout.
+            </summary>
+            <param name="request">The <see cref="T:Microsoft.AspNet.SignalR.IRequest"/> for the current connection.</param>
+            <param name="connectionId">The id of the re-connecting client.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that completes when the re-connect operation is complete.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.PersistentConnection.OnReceived(Microsoft.AspNet.SignalR.IRequest,System.String,System.String)">
+            <summary>
+            Called when data is received from a connection.
+            </summary>
+            <param name="request">The <see cref="T:Microsoft.AspNet.SignalR.IRequest"/> for the current connection.</param>
+            <param name="connectionId">The id of the connection sending the data.</param>
+            <param name="data">The payload sent to the connection.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that completes when the receive operation is complete.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.PersistentConnection.OnDisconnected(Microsoft.AspNet.SignalR.IRequest,System.String)">
+            <summary>
+            Called when a connection disconnects.
+            </summary>
+            <param name="request">The <see cref="T:Microsoft.AspNet.SignalR.IRequest"/> for the current connection.</param>
+            <param name="connectionId">The id of the disconnected connection.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that completes when the disconnect operation is complete.</returns>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.PersistentConnection.Connection">
+            <summary>
+            Gets the <see cref="T:Microsoft.AspNet.SignalR.IConnection"/> for the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.PersistentConnection.Groups">
+            <summary>
+            Gets the <see cref="T:Microsoft.AspNet.SignalR.IConnectionGroupManager"/> for the <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubDispatcher.#ctor(Microsoft.AspNet.SignalR.HubConfiguration)">
+            <summary>
+            Initializes an instance of the <see cref="T:Microsoft.AspNet.SignalR.Hubs.HubDispatcher"/> class.
+            </summary>
+            <param name="configuration">Configuration settings determining whether to enable JS proxies and provide clients with detailed hub errors.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Hubs.HubDispatcher.OnReceived(Microsoft.AspNet.SignalR.IRequest,System.String,System.String)">
+            <summary>
+            Processes the hub's incoming method calls.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Json.JsonUtility">
+            <summary>
+            Helper class for common JSON operations.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Json.JsonUtility.CamelCase(System.String)">
+            <summary>
+            Converts the specified name to camel case.
+            </summary>
+            <param name="name">The name to convert.</param>
+            <returns>A camel cased version of the specified name.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Json.JsonUtility.CreateDefaultSerializerSettings">
+            <summary>
+            Creates a default <see cref="T:Newtonsoft.Json.JsonSerializerSettings"/> instance.
+            </summary>
+            <returns>The newly created <see cref="T:Newtonsoft.Json.JsonSerializerSettings"/>.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Json.JsonUtility.CreateDefaultSerializer">
+            <summary>
+            Creates a <see cref="T:Newtonsoft.Json.JsonSerializer"/> instance with the default setting. 
+            </summary>
+            <returns>The newly created <see cref="T:Newtonsoft.Json.JsonSerializerSettings"/>.</returns>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Json.JsonUtility.JsonMimeType">
+            <summary>
+            Gets a string that returns JSON mime type "application/json; charset=UTF-8".
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Json.JsonUtility.JavaScriptMimeType">
+            <summary>
+            Gets a string that returns JSONP mime type "application/javascript; charset=UTF-8".
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.GroupManager">
+            <summary>
+            The default <see cref="T:Microsoft.AspNet.SignalR.IGroupManager"/> implementation.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.GroupManager.#ctor(Microsoft.AspNet.SignalR.IConnection,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.AspNet.SignalR.GroupManager"/> class.
+            </summary>
+            <param name="connection">The <see cref="T:Microsoft.AspNet.SignalR.IConnection"/> this group resides on.</param>
+            <param name="groupPrefix">The prefix for this group. Either a <see cref="T:Microsoft.AspNet.SignalR.Hubs.IHub"/> name or <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/> type name.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.GroupManager.Send(System.String,System.Object,System.String[])">
+            <summary>
+            Sends a value to the specified group.
+            </summary>
+            <param name="groupName">The name of the group.</param>
+            <param name="value">The value to send.</param>
+            <param name="excludeConnectionIds">The list of connection ids to exclude</param>
+            <returns>A task that represents when send is complete.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.GroupManager.Send(System.Collections.Generic.IList{System.String},System.Object,System.String[])">
+            <summary>
+            Sends a value to the specified group.
+            </summary>
+            <param name="groupNames">The names of the groups.</param>
+            <param name="value">The value to send.</param>
+            <param name="excludeConnectionIds">The list of connection ids to exclude</param>
+            <returns>A task that represents when send is complete.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.GroupManager.Add(System.String,System.String)">
+            <summary>
+            Adds a connection to the specified group. 
+            </summary>
+            <param name="connectionId">The connection id to add to the group.</param>
+            <param name="groupName">The name of the group</param>
+            <returns>A task that represents the connection id being added to the group.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.GroupManager.Remove(System.String,System.String)">
+            <summary>
+            Removes a connection from the specified group.
+            </summary>
+            <param name="connectionId">The connection id to remove from the group.</param>
+            <param name="groupName">The name of the group</param>
+            <returns>A task that represents the connection id being removed from the group.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.ServerCommand">
+            <summary>
+            A server to server command.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.ServerCommand.ServerId">
+            <summary>
+            Gets or sets the id of the command where this message originated from.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.ServerCommand.ServerCommandType">
+            <summary>
+            Gets of sets the command type.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Infrastructure.ServerCommand.Value">
+            <summary>
+            Gets or sets the value for this command.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Infrastructure.ServerCommandHandler">
+            <summary>
+            Default <see cref="T:Microsoft.AspNet.SignalR.Infrastructure.IServerCommandHandler"/> implementation.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Resources">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.DynamicComment_CallsMethodOnServerSideDeferredPromise">
+            <summary>
+              Looks up a localized string similar to             /// &lt;summary&gt;Calls the {0} method on the server-side {1} hub.&amp;#10;Returns a jQuery.Deferred() promise.&lt;/summary&gt;.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.DynamicComment_ServerSideTypeIs">
+            <summary>
+              Looks up a localized string similar to             /// &lt;param name=\&quot;{0}\&quot; type=\&quot;{1}\&quot;&gt;Server side type is {2}&lt;/param&gt;.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_AmbiguousMessage">
+            <summary>
+              Looks up a localized string similar to Ambiguous message. Unable to send to both &apos;{0}&apos; and &apos;{1}&apos;..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_ArgumentNullOrEmpty">
+            <summary>
+              Looks up a localized string similar to Argument cannot be null or empty.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_BufferSizeOutOfRange">
+            <summary>
+              Looks up a localized string similar to The buffer size &apos;{0}&apos; is out of range..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_CallerNotAuthorizedToInvokeMethodOn">
+            <summary>
+              Looks up a localized string similar to Caller is not authorized to invoke the {0} method on {1}..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_ConnectionIdIncorrectFormat">
+            <summary>
+              Looks up a localized string similar to The ConnectionId is in the incorrect format..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_ConnectionNotInitialized">
+            <summary>
+              Looks up a localized string similar to The PersistentConnection is not initialized..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_DisconnectTimeoutCannotBeConfiguredAfterKeepAlive">
+            <summary>
+              Looks up a localized string similar to DisconnectTimeout cannot be configured after the KeepAlive..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_DisconnectTimeoutMustBeAtLeastSixSeconds">
+            <summary>
+              Looks up a localized string similar to DisconnectTimeout must be at least six seconds..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_DoNotReadRequireOutgoing">
+            <summary>
+              Looks up a localized string similar to Do not read RequireOutgoing. Use protected _requireOutgoing instead..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_DuplicateHubs">
+            <summary>
+              Looks up a localized string similar to Duplicate Hub names found..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_DuplicatePayloadsForStream">
+            <summary>
+              Looks up a localized string similar to Duplicate payload id detected for stream &apos;{0}&apos;..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_ErrorCreatingHub">
+            <summary>
+              Looks up a localized string similar to Error creating Hub {0}. .
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_ExceptionContextCanOnlyBeModifiedOnce">
+            <summary>
+              Looks up a localized string similar to The ExceptionContext has already been modified once and cannot be modified again..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_HubCouldNotBeResolved">
+            <summary>
+              Looks up a localized string similar to &apos;{0}&apos; Hub could not be resolved..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_HubInvocationFailed">
+            <summary>
+              Looks up a localized string similar to There was an error invoking Hub method &apos;{0}.{1}&apos;..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_InvalidCursorFormat">
+            <summary>
+              Looks up a localized string similar to Invalid cursor..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_InvalidForeverFrameId">
+            <summary>
+              Looks up a localized string similar to The supplied frameId is in the incorrect format..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_IsNotA">
+            <summary>
+              Looks up a localized string similar to &apos;{0}&apos; is not a {1}..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_JavaScriptProxyDisabled">
+            <summary>
+              Looks up a localized string similar to SignalR: JavaScript Hub proxy generation has been disabled..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_KeepAliveMustBeGreaterThanTwoSeconds">
+            <summary>
+              Looks up a localized string similar to KeepAlive value must be greater than two seconds..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_KeepAliveMustBeNoMoreThanAThirdOfTheDisconnectTimeout">
+            <summary>
+              Looks up a localized string similar to KeepAlive value must be no more than a third of the DisconnectTimeout..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_MethodCouldNotBeResolved">
+            <summary>
+              Looks up a localized string similar to &apos;{0}&apos; method could not be resolved..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_MethodLevelOutgoingAuthorization">
+            <summary>
+              Looks up a localized string similar to Outgoing authorization can only be required for an entire Hub, not a specific method..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_MultipleActivatorsAreaRegisteredCallGetServices">
+            <summary>
+              Looks up a localized string similar to Multiple activators for type {0} are registered. Please call GetServices instead..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_NoConfiguration">
+            <summary>
+              Looks up a localized string similar to A configuration object must be specified..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_NoDepenendeyResolver">
+            <summary>
+              Looks up a localized string similar to A dependency resolver must be specified..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_NotWebSocketRequest">
+            <summary>
+              Looks up a localized string similar to Not a valid web socket request..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_ParseObjectFailed">
+            <summary>
+              Looks up a localized string similar to Unexpected end when reading object..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_ProtocolErrorMissingConnectionToken">
+            <summary>
+              Looks up a localized string similar to Protocol error: Missing connection token..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_ProtocolErrorUnknownTransport">
+            <summary>
+              Looks up a localized string similar to Protocol error: Unknown transport..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_StateExceededMaximumLength">
+            <summary>
+              Looks up a localized string similar to State has exceeded the maximum length of 4096 bytes..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_StreamClosed">
+            <summary>
+              Looks up a localized string similar to The stream has been closed..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_StreamNotOpen">
+            <summary>
+              Looks up a localized string similar to The stream is not open..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_TaskQueueFull">
+            <summary>
+              Looks up a localized string similar to The queue is full..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_UnableToAddModulePiplineAlreadyInvoked">
+            <summary>
+              Looks up a localized string similar to Unable to add module. The HubPipeline has already been invoked..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_UnrecognizedUserIdentity">
+            <summary>
+              Looks up a localized string similar to Unrecognized user identity.  The user identity cannot change during an active SignalR connection..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_UsingHubInstanceNotCreatedUnsupported">
+            <summary>
+              Looks up a localized string similar to Using a Hub instance not created by the HubPipeline is unsupported..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Error_WebSocketsNotSupported">
+            <summary>
+              Looks up a localized string similar to WebSockets is not supported..
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Resources.Forbidden_JSONPDisabled">
+            <summary>
+              Looks up a localized string similar to Forbidden: JSONP is disabled..
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Transports.ITrackingConnection">
+            <summary>
+            Represents a connection that can be tracked by an <see cref="T:Microsoft.AspNet.SignalR.Transports.ITransportHeartbeat"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.ITrackingConnection.ApplyState(Microsoft.AspNet.SignalR.Transports.TransportConnectionStates)">
+            <summary>
+            Applies a new state to the connection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.ITrackingConnection.Disconnect">
+            <summary>
+            Causes the connection to disconnect.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.ITrackingConnection.Timeout">
+            <summary>
+            Causes the connection to timeout.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.ITrackingConnection.KeepAlive">
+            <summary>
+            Sends a keep alive ping over the connection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.ITrackingConnection.End">
+            <summary>
+            Kills the connection.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ITrackingConnection.ConnectionId">
+            <summary>
+            Gets the id of the connection.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ITrackingConnection.CancellationToken">
+            <summary>
+            Gets a cancellation token that represents the connection's lifetime.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ITrackingConnection.ConnectTask">
+            <summary>
+            Gets the task that completes when the task returned by PersistentConnection.OnConnected does.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ITrackingConnection.IsAlive">
+            <summary>
+            Gets a value that represents if the connection is alive.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ITrackingConnection.IsTimedOut">
+            <summary>
+            Gets a value that represents if the connection is timed out.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ITrackingConnection.SupportsKeepAlive">
+            <summary>
+            Gets a value that represents if the connection supprots keep alive.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ITrackingConnection.DisconnectThreshold">
+            <summary>
+            Gets a value indicating the amount of time to wait after the connection dies before firing the disconnecting the connection.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ITrackingConnection.Url">
+            <summary>
+            Gets the uri of the connection.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Transports.ITransport">
+            <summary>
+            Represents a transport that communicates
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.ITransport.ProcessRequest(Microsoft.AspNet.SignalR.Transports.ITransportConnection)">
+            <summary>
+            Processes the specified <see cref="T:Microsoft.AspNet.SignalR.Transports.ITransportConnection"/> for this transport.
+            </summary>
+            <param name="connection">The <see cref="T:Microsoft.AspNet.SignalR.Transports.ITransportConnection"/> to process.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that completes when the transport has finished processing the connection.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.ITransport.Send(System.Object)">
+            <summary>
+            Sends data over the transport.
+            </summary>
+            <param name="value">The value to be sent.</param>
+            <returns>A <see cref="T:System.Threading.Tasks.Task"/> that completes when the send is complete.</returns>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ITransport.Received">
+            <summary>
+            Gets or sets a callback that is invoked when the transport receives data.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ITransport.Connected">
+            <summary>
+            Gets or sets a callback that is invoked when the initial connection connects to the transport.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ITransport.TransportConnected">
+            <summary>
+            Gets or sets a callback that is invoked when the transport connects.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ITransport.Reconnected">
+            <summary>
+            Gets or sets a callback that is invoked when the transport reconnects.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ITransport.Disconnected">
+            <summary>
+            Gets or sets a callback that is invoked when the transport disconnects.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ITransport.ConnectionId">
+            <summary>
+            Gets or sets the connection id for the transport.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.ForeverFrameTransport.OutputWriter">
+            <summary>
+            Pointed to the HTMLOutputWriter to wrap output stream with an HTML friendly one
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Transports.ITransportHeartbeat">
+            <summary>
+            Manages tracking the state of connections.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.ITransportHeartbeat.AddOrUpdateConnection(Microsoft.AspNet.SignalR.Transports.ITrackingConnection)">
+            <summary>
+            Adds a new connection to the list of tracked connections.
+            </summary>
+            <param name="connection">The connection to be added.</param>
+            <returns>The connection it replaced, if any.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.ITransportHeartbeat.MarkConnection(Microsoft.AspNet.SignalR.Transports.ITrackingConnection)">
+            <summary>
+            Marks an existing connection as active.
+            </summary>
+            <param name="connection">The connection to mark.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.ITransportHeartbeat.RemoveConnection(Microsoft.AspNet.SignalR.Transports.ITrackingConnection)">
+            <summary>
+            Removes a connection from the list of tracked connections.
+            </summary>
+            <param name="connection">The connection to remove.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.ITransportHeartbeat.GetConnections">
+            <summary>
+            Gets a list of connections being tracked.
+            </summary>
+            <returns>A list of connections.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Transports.ITransportManager">
+            <summary>
+            Manages the transports for connections.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.ITransportManager.GetTransport(Microsoft.AspNet.SignalR.Hosting.HostContext)">
+            <summary>
+            Gets the specified transport for the specified <see cref="T:Microsoft.AspNet.SignalR.Hosting.HostContext"/>.
+            </summary>
+            <param name="hostContext">The <see cref="T:Microsoft.AspNet.SignalR.Hosting.HostContext"/> for the current request.</param>
+            <returns>The <see cref="T:Microsoft.AspNet.SignalR.Transports.ITransport"/> for the specified <see cref="T:Microsoft.AspNet.SignalR.Hosting.HostContext"/>.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.ITransportManager.SupportsTransport(System.String)">
+            <summary>
+            Determines whether the specified transport is supported.
+            </summary>
+            <param name="transportName">The name of the transport to test.</param>
+            <returns>True if the transport is supported, otherwise False.</returns>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Transports.TransportHeartbeat">
+            <summary>
+            Default implementation of <see cref="T:Microsoft.AspNet.SignalR.Transports.ITransportHeartbeat"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.TransportHeartbeat.#ctor(Microsoft.AspNet.SignalR.IDependencyResolver)">
+            <summary>
+            Initializes and instance of the <see cref="T:Microsoft.AspNet.SignalR.Transports.TransportHeartbeat"/> class.
+            </summary>
+            <param name="resolver">The <see cref="T:Microsoft.AspNet.SignalR.IDependencyResolver"/>.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.TransportHeartbeat.AddOrUpdateConnection(Microsoft.AspNet.SignalR.Transports.ITrackingConnection)">
+            <summary>
+            Adds a new connection to the list of tracked connections.
+            </summary>
+            <param name="connection">The connection to be added.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.TransportHeartbeat.RemoveConnection(Microsoft.AspNet.SignalR.Transports.ITrackingConnection)">
+            <summary>
+            Removes a connection from the list of tracked connections.
+            </summary>
+            <param name="connection">The connection to remove.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.TransportHeartbeat.MarkConnection(Microsoft.AspNet.SignalR.Transports.ITrackingConnection)">
+            <summary>
+            Marks an existing connection as active.
+            </summary>
+            <param name="connection">The connection to mark.</param>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Transports.PersistentResponse">
+            <summary>
+            Represents a response to a connection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.PersistentResponse.#ctor(System.Func{Microsoft.AspNet.SignalR.Messaging.Message,System.Boolean},System.Action{System.IO.TextWriter})">
+            <summary>
+            Creates a new instance of <see cref="T:Microsoft.AspNet.SignalR.Transports.PersistentResponse"/>.
+            </summary>
+            <param name="exclude">A filter that determines whether messages should be written to the client.</param>
+            <param name="writeCursor">The cursor writer.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.PersistentResponse.Microsoft#AspNet#SignalR#Json#IJsonWritable#WriteJson(System.IO.TextWriter)">
+            <summary>
+            Serializes only the necessary components of the <see cref="T:Microsoft.AspNet.SignalR.Transports.PersistentResponse"/> to JSON
+            using Json.NET's JsonTextWriter to improve performance.
+            </summary>
+            <param name="writer">The <see cref="T:System.IO.TextWriter"/> that receives the JSON serialization.</param>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.PersistentResponse.Messages">
+            <summary>
+            The list of messages to be sent to the receiving connection.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.PersistentResponse.TotalCount">
+            <summary>
+            The total count of the messages sent the receiving connection.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.PersistentResponse.Initializing">
+            <summary>
+            True if the connection is in process of initializing
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.PersistentResponse.Disconnect">
+            <summary>
+            True if the connection receives a disconnect command.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.PersistentResponse.Aborted">
+            <summary>
+            True if the connection was forcibly closed. 
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.PersistentResponse.Reconnect">
+            <summary>
+            True if the client should try reconnecting.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.PersistentResponse.GroupsToken">
+            <summary>
+            Signed token representing the list of groups. Updates on change.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Transports.PersistentResponse.LongPollDelay">
+            <summary>
+            The time the long polling client should wait before reestablishing a connection if no data is received.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.IConnection">
+            <summary>
+            A communication channel for a <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/> and its connections.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.IConnection.Send(Microsoft.AspNet.SignalR.ConnectionMessage)">
+            <summary>
+            Sends a message to connections subscribed to the signal.
+            </summary>
+            <param name="message">The message to send.</param>
+            <returns>A task that returns when the message has be sent.</returns>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.IConnection.DefaultSignal">
+            <summary>
+            The main signal for this connection. This is the main signalr for a <see cref="T:Microsoft.AspNet.SignalR.PersistentConnection"/>.
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.Message.Source">
+            <summary>
+            Which connection the message originated from
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.Message.Key">
+            <summary>
+            The signal for the message (connection id, group, etc)
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.Message.Value">
+            <summary>
+            The message payload
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.Message.CommandId">
+            <summary>
+            The command id if this message is a command
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.Message.WaitForAck">
+            <summary>
+            Determines if the caller should wait for acknowledgement for this message
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.Message.IsAck">
+            <summary>
+            Determines if this message is itself an ACK
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.Message.Filter">
+            <summary>
+            A list of connection ids to filter out
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.Message.Encoding">
+            <summary>
+            The encoding of the message
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.Message.MappingId">
+            <summary>
+            The payload id. Only used in scaleout scenarios
+            </summary>
+        </member>
+        <member name="P:Microsoft.AspNet.SignalR.Messaging.Message.StreamIndex">
+            <summary>
+            The stream index this message came from. Only used the scaleout scenarios.
+            </summary>
+        </member>
+        <member name="T:Microsoft.AspNet.SignalR.Transports.TransportManager">
+            <summary>
+            The default <see cref="T:Microsoft.AspNet.SignalR.Transports.ITransportManager"/> implementation.
+            </summary>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.TransportManager.#ctor(Microsoft.AspNet.SignalR.IDependencyResolver)">
+            <summary>
+            Initializes a new instance of <see cref="T:Microsoft.AspNet.SignalR.Transports.TransportManager"/> class.
+            </summary>
+            <param name="resolver">The default <see cref="T:Microsoft.AspNet.SignalR.IDependencyResolver"/>.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.TransportManager.Register(System.String,System.Func{Microsoft.AspNet.SignalR.Hosting.HostContext,Microsoft.AspNet.SignalR.Transports.ITransport})">
+            <summary>
+            Adds a new transport to the list of supported transports.
+            </summary>
+            <param name="transportName">The specified transport.</param>
+            <param name="transportFactory">The factory method for the specified transport.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.TransportManager.Remove(System.String)">
+            <summary>
+            Removes a transport from the list of supported transports.
+            </summary>
+            <param name="transportName">The specified transport.</param>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.TransportManager.GetTransport(Microsoft.AspNet.SignalR.Hosting.HostContext)">
+            <summary>
+            Gets the specified transport for the specified <see cref="T:Microsoft.AspNet.SignalR.Hosting.HostContext"/>.
+            </summary>
+            <param name="hostContext">The <see cref="T:Microsoft.AspNet.SignalR.Hosting.HostContext"/> for the current request.</param>
+            <returns>The <see cref="T:Microsoft.AspNet.SignalR.Transports.ITransport"/> for the specified <see cref="T:Microsoft.AspNet.SignalR.Hosting.HostContext"/>.</returns>
+        </member>
+        <member name="M:Microsoft.AspNet.SignalR.Transports.TransportManager.SupportsTransport(System.String)">
+            <summary>
+            Determines whether the specified transport is supported.
+            </summary>
+            <param name="transportName">The name of the transport to test.</param>
+            <returns>True if the transport is supported, otherwise False.</returns>
+        </member>
+    </members>
+</doc>
