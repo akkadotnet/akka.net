@@ -20,13 +20,8 @@ namespace Pigeon.SignalR
 
         private void CreateHost(string name,string url)
         {
-            PigeonHostSignalR.Start(name,url);
+            PigeonHostSignalR.Start(this,url);
         }       
-
-        public ActorRef GetActor<TActor>() where TActor : ActorBase, new()
-        {
-            return new LocalActorRef(new TActor());
-        }
 
         public void Dispose()
         {

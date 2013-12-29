@@ -32,7 +32,7 @@ namespace ChatServer
     {
         public void Handle(SayRequest message)
         {
-            
+            Console.WriteLine("User said {0}", message.Text);
         }
 
         public void Handle(ConnectRequest message)

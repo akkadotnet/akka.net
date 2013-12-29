@@ -14,18 +14,25 @@ namespace Pigeon.SignalR
 {
     public class PigeonHostSignalR : IDisposable
     {
+        private ActorSystem system;
         private IDisposable app;
 
-        public static PigeonHostSignalR Start(string systemname,string url)
+        public static PigeonHostSignalR Start(ActorSystem system,string url)
         {
             var t = typeof(OwinHttpListener);
 
-            var host = new PigeonHostSignalR();
-            host.app = WebApp.Start<Startup>(new StartOptions
+            var host = new PigeonHostSignalR
             {
-                Urls = { url },
-                ServerFactory = "Microsoft.Owin.Host.HttpListener",
-            });
+                system = system,
+                app = WebApp.Start(url, app =>
+                {
+                    app.UseCors(CorsOptions.AllowAll);
+                    app.MapSignalR();
+                    GlobalHost.DependencyResolver.Register(typeof(ActorHub), () => new ActorHub(system));
+                    app.MapSignalR();
+
+                })
+            };
             return host;
         }
 
@@ -33,23 +40,23 @@ namespace Pigeon.SignalR
         {
             app.Dispose();
         }
-    }
-    class Startup
-    {
-        public void Configuration(IAppBuilder app)
-        {
-            app.UseCors(CorsOptions.AllowAll);
-            app.MapSignalR();
-        }
-    }
+    }   
 
     public class ActorHub : Hub
     {
-        public void Post(string receiver, string data,string typeName)
+        private ActorSystem system;
+
+        public ActorHub(ActorSystem system)
+        {
+            this.system = system;
+        }
+        public void Post(string actorName, string data,string typeName)
         {
             var type = Type.GetType(typeName);
-            var message = JsonConvert.DeserializeObject(data, type);
+            var message = (IMessage)JsonConvert.DeserializeObject(data, type);
             Console.WriteLine("Got message {0}", message);
+            var actor = system.GetActor(actorName);
+            actor.Tell(message);
         }
     }
 }
