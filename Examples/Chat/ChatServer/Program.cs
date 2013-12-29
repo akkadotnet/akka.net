@@ -42,7 +42,7 @@ namespace ChatServer
 
         public void Handle(ConnectRequest message)
         {
-            Sender.Tell(ActorRef.NoSender, new ConnectResponse
+            Sender.Tell(new ConnectResponse
             {
                 Message = "Hello and welcome to Pigeon chat example",
             });
@@ -50,7 +50,7 @@ namespace ChatServer
 
         public void Handle(NickRequest message)
         {
-            Sender.Tell(ActorRef.NoSender, new NickResponse
+            Sender.Tell(new NickResponse
             {
                 Username = message.Username,
             });

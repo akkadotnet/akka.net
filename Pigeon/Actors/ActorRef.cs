@@ -10,7 +10,16 @@ namespace Pigeon
     {
         public string Name { get;protected set; }
 
-        public abstract void Tell(ActorRef sender, IMessage message);
+        public ActorRef Owner { get; set; }
+
+        public void Tell(IMessage message)
+        {
+            if (Owner == null)
+                throw new ArgumentNullException("Owner");
+
+            this.Tell(message, Owner);
+        }
+        public abstract void Tell(IMessage message, ActorRef sender);
 
         public static readonly ActorRef NoSender = new NoSender();
     }
@@ -22,7 +31,7 @@ namespace Pigeon
             this.Name = "NoSender";
         }
 
-        public override void Tell(ActorRef sender, IMessage message)
+        public override void Tell(IMessage message, ActorRef sender)
         {
             
         }

@@ -34,10 +34,17 @@ namespace Pigeon.Actors
             }
         }
 
-        public override void Tell(ActorRef sender, IMessage message)
+        public override void Tell(IMessage message, ActorRef sender)
         {
             var data = JsonConvert.SerializeObject(message);
-            hub.Invoke("Post",system.Url + "|" + sender.Name, actorName, data, message.GetType().AssemblyQualifiedName);
+            if (sender == ActorRef.NoSender)
+            {
+                hub.Invoke("Post", "", actorName, data, message.GetType().AssemblyQualifiedName);
+            }
+            else
+            {
+                hub.Invoke("Post", system.Url + "|" + sender.Name, actorName, data, message.GetType().AssemblyQualifiedName);
+            }
         }
     }
 }

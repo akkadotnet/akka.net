@@ -57,7 +57,7 @@ namespace Pigeon.SignalR
             Console.WriteLine("Got message {0}", message);
             var actor = system.GetActor(actorName);
             var remoteActor = system.GetRemoteActor(remoteActorName);
-            actor.Tell(remoteActor, message);
+            actor.Tell(message, remoteActor);
         }
     }
 }

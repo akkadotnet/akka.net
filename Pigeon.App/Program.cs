@@ -18,14 +18,14 @@ namespace Pigeon.App
 
                 for (int i = 0; i < 1000; i++)
                 {
-                    actor.Tell(ActorRef.NoSender, new Greet
+                    actor.Tell(new Greet
                     {
                         Name = "Roger",
-                    });
-                    actor.Tell(ActorRef.NoSender, new Greet
+                    }, ActorRef.NoSender);
+                    actor.Tell(new Greet
                     {
                         Name = "Olle",
-                    });
+                    }, ActorRef.NoSender);
                 }
 
                 Console.ReadLine();

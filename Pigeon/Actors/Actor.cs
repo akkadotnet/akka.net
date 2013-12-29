@@ -76,6 +76,7 @@ namespace Pigeon
         void IObserver<Message>.OnNext(Message value)
         {
             this.Sender = value.Sender;
+            this.Sender.Owner = new LocalActorRef(this);
             OnReceive(value.Payload);
         }
 

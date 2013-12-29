@@ -11,42 +11,50 @@ namespace Pigeon
 {
     public class ActorSystem : IDisposable
     {
-        private System.Collections.Concurrent.ConcurrentDictionary<string, ActorRef> actors = new System.Collections.Concurrent.ConcurrentDictionary<string, ActorRef>();
+        private System.Collections.Concurrent.ConcurrentDictionary<string, ActorBase> actors = new System.Collections.Concurrent.ConcurrentDictionary<string, ActorBase>();
         public string Url { get; private set; }
         protected ActorSystem(string url)
         {
             this.Url = url;
         }       
 
-        public ActorRef GetActor<TActor>() where TActor : ActorBase
+        public ActorRef GetActor<TActor>(ActorBase owner = null) where TActor : ActorBase
         {
             var actorName = typeof(TActor).Name;
             if (actorName.EndsWith("Actor"))
                 actorName = actorName.Substring(0, actorName.Length - 5);
 
-            return GetActor<TActor>(actorName);
+            return GetActor<TActor>(actorName,owner);
         }
 
-        public ActorRef GetActor<TActor>(string actorName) where TActor : ActorBase
+        public ActorRef GetActor<TActor>(string actorName,ActorBase owner = null) where TActor : ActorBase
         {
             if (actors.ContainsKey(actorName))
             {
-                return actors[actorName];
+                return new LocalActorRef(actors[actorName]);
             }
             else
             {
                 var actor = (ActorBase)Activator.CreateInstance(typeof(TActor), new object[] { this });
-                var actorref = new LocalActorRef(actor);
-                actors.TryAdd(actorName, actorref);
-                return actorref;
+                actors.TryAdd(actorName, actor);
+
+                var actorRef = new LocalActorRef(actor);
+                if (owner != null)
+                    actorRef.Owner = new LocalActorRef(owner);
+
+                return actorRef;                
             }
         }
-        public ActorRef GetRemoteActor(string remoteUrl, string remoteActor)
+        public ActorRef GetRemoteActor(string remoteUrl, string remoteActor,ActorBase owner = null)
         {
-            return new RemoteActorRef(this, remoteUrl, remoteActor);
+            var actorRef = new RemoteActorRef(this, remoteUrl, remoteActor);
+            if (owner != null)
+                actorRef.Owner = new LocalActorRef(owner);
+
+            return actorRef;
         }
 
-        public ActorRef GetRemoteActor(string remoteActorPath)
+        public ActorRef GetRemoteActor(string remoteActorPath,ActorBase owner = null)
         {
             if (string.IsNullOrWhiteSpace(remoteActorPath))
                 return null;
@@ -61,9 +69,13 @@ namespace Pigeon
         {            
         }
 
-        public ActorRef GetActor(string localActor)
+        public ActorRef GetActor(string localActor, ActorBase owner = null)
         {
-            return actors[localActor];
+            var actorRef = new LocalActorRef(actors[localActor]);
+            if (owner != null)
+                actorRef.Owner = new LocalActorRef(owner);
+
+            return actorRef;
         }
     }
 }
