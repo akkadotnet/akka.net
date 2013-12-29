@@ -16,8 +16,8 @@ namespace Pigeon
 
     public abstract class TypedActor : ActorBase 
     {
-        protected TypedActor(ActorSystem system)
-            : base(system)
+        protected TypedActor(ActorStart start)
+            : base(start)
         {
         }
         protected sealed override void OnReceive(IMessage message)
@@ -32,8 +32,8 @@ namespace Pigeon
 
     public abstract class UntypedActor : ActorBase
     {
-        public UntypedActor(ActorSystem system)
-            : base(system)
+        public UntypedActor(ActorStart start)
+            : base(start)
         {
         }
     }
@@ -46,11 +46,14 @@ namespace Pigeon
             TaskScheduler = TaskScheduler.Default,
         });
 
+        public string Name { get;private set; }
+
         protected ActorRef Sender { get; private set; }
 
-        protected ActorBase(ActorSystem system)
+        protected ActorBase(ActorStart start)
         {
-            this.Context = system;
+            this.Context = start.System;
+            this.Name = start.Name;
             messages.AsObservable().Subscribe(this);
         }
         protected abstract void OnReceive(IMessage message);
@@ -81,5 +84,12 @@ namespace Pigeon
         }
 
         protected ActorSystem Context { get;private set; }      
+    }
+
+
+    public class ActorStart
+    {
+        public ActorSystem System { get; set; }
+        public string Name { get; set; }
     }
 }

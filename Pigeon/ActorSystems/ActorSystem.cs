@@ -35,10 +35,14 @@ namespace Pigeon
             }
             else
             {
-                var actor = (ActorBase)Activator.CreateInstance(typeof(TActor), new object[] { this });
+                var actor = (ActorBase)Activator.CreateInstance(typeof(TActor), new object[] { new ActorStart{
+                  System = this,
+                  Name = actorName,
+                }});
                 actors.TryAdd(actorName, actor);
 
                 var actorRef = new LocalActorRef(actor);
+                
                 if (owner != null)
                     actorRef.Owner = new LocalActorRef(owner);
 
@@ -71,7 +75,7 @@ namespace Pigeon
 
         public ActorRef GetActor(string localActor, ActorBase owner = null)
         {
-            var actorRef = new LocalActorRef(actors[localActor]);
+            var actorRef = new LocalActorRef(actors[localActor]);           
             if (owner != null)
                 actorRef.Owner = new LocalActorRef(owner);
 

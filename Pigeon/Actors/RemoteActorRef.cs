@@ -16,6 +16,7 @@ namespace Pigeon.Actors
 
         public RemoteActorRef(ActorSystem system, string remoteUrl, string remoteActor)
         {
+            this.Name = remoteActor;
             this.system = system;
             var hubConnection = new HubConnection(remoteUrl);
             this.actorName = remoteActor;
@@ -27,11 +28,7 @@ namespace Pigeon.Actors
         }
 
         void hubConnection_StateChanged(StateChange obj)
-        {
-            if (obj.NewState == ConnectionState.Connected)
-            {
-                Console.WriteLine("Remote Actor ref {0} connected", actorName);
-            }
+        {           
         }
 
         public override void Tell(IMessage message, ActorRef sender)

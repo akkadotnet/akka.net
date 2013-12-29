@@ -54,7 +54,7 @@ namespace Pigeon.SignalR
         {
             var type = Type.GetType(typeName);
             var message = (IMessage)JsonConvert.DeserializeObject(data, type);
-            Console.WriteLine("Got message {0}", message);
+            //Console.WriteLine("Got message {0}", message);
             var actor = system.GetActor(actorName);
             var remoteActor = system.GetRemoteActor(remoteActorName);
             actor.Tell(message, remoteActor);

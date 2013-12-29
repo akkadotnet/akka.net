@@ -43,10 +43,10 @@ namespace ChatClient
         private string nick = "User";
         private ActorRef server;
 
-        public ChatClientActor(ActorSystem system)
-            : base(system)
+        public ChatClientActor(ActorStart start)
+            : base(start)
         {
-            server = system.GetRemoteActor("http://localhost:8090", "ChatServer", this);
+            server = Context.GetRemoteActor("http://localhost:8090", "ChatServer", this);
         }        
         
         public void Handle(ConnectResponse message)
@@ -73,7 +73,7 @@ namespace ChatClient
 
         public void Handle(ConnectRequest message)
         {
-            Console.WriteLine("connecting....");
+            Console.WriteLine("Connecting....");
             server.Tell(message);
         }
 

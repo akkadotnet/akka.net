@@ -30,8 +30,8 @@ namespace ChatServer
         IHandle<ChannelsRequest>
 
     {
-        public ChatServerActor(ActorSystem system)
-            : base(system)
+        public ChatServerActor(ActorStart start)
+            : base(start)
         {
         }
 
