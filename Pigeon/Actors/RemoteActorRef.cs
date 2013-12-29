@@ -21,6 +21,13 @@ namespace Pigeon.Actors
             var hubConnection = new HubConnection(remoteUrl);
             this.actorName = remoteActor;
             hub = hubConnection.CreateHubProxy("ActorHub");
+            hub.On("Reply", (string actorName, string data, string messageType) =>
+            {
+                var actor = system.GetActor(actorName);
+                var type = Type.GetType(messageType);
+                var message = (IMessage)JsonConvert.DeserializeObject(data, type);
+                actor.Tell(message, this);
+            });
             hubConnection.StateChanged += hubConnection_StateChanged;
             hubConnection
                 .Start()
@@ -40,7 +47,7 @@ namespace Pigeon.Actors
             }
             else
             {
-                hub.Invoke("Post", system.Url + "|" + sender.Name, actorName, data, message.GetType().AssemblyQualifiedName);
+                hub.Invoke("Post", sender.Name, actorName, data, message.GetType().AssemblyQualifiedName);
             }
         }
     }

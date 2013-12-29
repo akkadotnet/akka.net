@@ -54,10 +54,28 @@ namespace Pigeon.SignalR
         {
             var type = Type.GetType(typeName);
             var message = (IMessage)JsonConvert.DeserializeObject(data, type);
-            //Console.WriteLine("Got message {0}", message);
             var actor = system.GetActor(actorName);
-            var remoteActor = system.GetRemoteActor(remoteActorName);
+            var connectionId = this.Context.ConnectionId;
+            var remoteActor = new SignalRResponseActorRef(remoteActorName, this, connectionId);
             actor.Tell(message, remoteActor);
+        }
+    }
+
+    public class SignalRResponseActorRef : ActorRef
+    {
+        private string remoteActorName;
+        private Hub hub;
+        private string connectionId;
+        public SignalRResponseActorRef(string remoteActorName,Hub hub,string connectionId)
+        {
+            this.remoteActorName = remoteActorName;
+            this.hub = hub;
+            this.connectionId = connectionId;
+        }
+        public override void Tell(IMessage message, ActorRef sender)
+        {
+            var data = JsonConvert.SerializeObject(message);
+            hub.Clients.Client(connectionId).Reply(remoteActorName,data,message.GetType().AssemblyQualifiedName);
         }
     }
 }

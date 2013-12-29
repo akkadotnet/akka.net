@@ -13,7 +13,7 @@ namespace Pigeon
     {
         private System.Collections.Concurrent.ConcurrentDictionary<string, ActorBase> actors = new System.Collections.Concurrent.ConcurrentDictionary<string, ActorBase>();
         public string Url { get; private set; }
-        protected ActorSystem(string url)
+        public ActorSystem(string url)
         {
             this.Url = url;
         }       

@@ -13,7 +13,7 @@ namespace ChatClient
     {
         static void Main(string[] args)
         {
-            using (var system = ActorSystemSignalR.Create("Chat client", "http://localhost:8080"))
+            using (var system = new ActorSystem(""))
             {
                 var chatClient = system.GetActor<ChatClientActor>();
                 chatClient.Tell(new ConnectRequest()
@@ -24,10 +24,27 @@ namespace ChatClient
                 while (true)
                 {
                     var input = Console.ReadLine();
-                    chatClient.Tell(new SayRequest()
+                    if (input.StartsWith("/"))
                     {
-                        Text = input,
-                    }, ActorRef.NoSender);
+                        var parts = input.Split(' ');
+                        var cmd = parts[0].ToLowerInvariant();
+                        var rest = string.Join(" ",parts.Skip(1));
+
+                        if (cmd == "/nick")
+                        {
+                            chatClient.Tell(new NickRequest
+                            {
+                                Username = rest
+                            }, ActorRef.NoSender);
+                        }                        
+                    }
+                    else
+                    {
+                        chatClient.Tell(new SayRequest()
+                        {
+                            Text = input,
+                        }, ActorRef.NoSender);
+                    }
                 }
             }
         }
@@ -36,6 +53,7 @@ namespace ChatClient
     class ChatClientActor : TypedActor,
         IHandle<ConnectRequest>,
         IHandle<ConnectResponse>,
+        IHandle<NickRequest>,
         IHandle<NickResponse>,
         IHandle<SayRequest>,
         IHandle<SayResponse>
@@ -63,6 +81,7 @@ namespace ChatClient
             else
             {
                 Console.WriteLine("Your nick is now : {0}", message.Username);
+                this.nick = message.Username;
             }
         }
 
@@ -80,6 +99,12 @@ namespace ChatClient
         public void Handle(SayRequest message)
         {
             message.Username = this.nick;
+            server.Tell(message);
+        }
+
+        public void Handle(NickRequest message)
+        {
+            Console.WriteLine("Changing nick to {0}", message.Username);
             server.Tell(message);
         }
     }
