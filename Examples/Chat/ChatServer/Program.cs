@@ -37,7 +37,12 @@ namespace ChatServer
 
         public void Handle(SayRequest message)
         {
-            Console.WriteLine("User said {0}", message.Text);
+            Console.WriteLine("User {0} said {1}",message.Username , message.Text);
+            Sender.Tell(new SayResponse
+            {
+                Username = message.Username,
+                Text = message.Text,
+            });
         }
 
         public void Handle(ConnectRequest message)

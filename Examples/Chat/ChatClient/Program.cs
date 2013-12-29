@@ -40,7 +40,7 @@ namespace ChatClient
         IHandle<SayRequest>,
         IHandle<SayResponse>
     {
-        private string nick = "User";
+        private string nick = "Roggan";
         private ActorRef server;
 
         public ChatClientActor(ActorStart start)
@@ -51,7 +51,7 @@ namespace ChatClient
         
         public void Handle(ConnectResponse message)
         {
-            Console.WriteLine("Connected");
+            Console.WriteLine("Connected!");
             Console.WriteLine(message.Message);
         }
 
@@ -79,6 +79,7 @@ namespace ChatClient
 
         public void Handle(SayRequest message)
         {
+            message.Username = this.nick;
             server.Tell(message);
         }
     }
