@@ -18,11 +18,11 @@ namespace Pigeon.App
 
                 for (int i = 0; i < 1000; i++)
                 {
-                    actor.Tell(new Greet
+                    actor.Tell(ActorRef.NoSender, new Greet
                     {
                         Name = "Roger",
                     });
-                    actor.Tell(new Greet
+                    actor.Tell(ActorRef.NoSender, new Greet
                     {
                         Name = "Olle",
                     });
@@ -59,7 +59,12 @@ namespace Pigeon.App
 
     public class MyActor : UntypedActor
     {
-        private ActorRef logger = Context.GetActor<LogActor>();
+        protected MyActor(ActorSystem system)
+            : base(system)
+        {
+        }
+
+        
         protected override void OnReceive(IMessage message)
         {
             //Console.Write(System.Threading.Thread.CurrentThread.GetHashCode());

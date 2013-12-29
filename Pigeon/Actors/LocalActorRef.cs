@@ -13,9 +13,9 @@ namespace Pigeon
             _actor = actor;
         }
 
-        public override void Tell(IMessage message) 
+        public override void Tell(ActorRef sender, IMessage message)
         {
-            _actor.Tell(message);
+            _actor.Tell(sender,message);
         }
     }
 }

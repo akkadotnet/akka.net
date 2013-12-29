@@ -30,6 +30,11 @@ namespace ChatServer
         IHandle<ChannelsRequest>
 
     {
+        public ChatServerActor(ActorSystem system)
+            : base(system)
+        {
+        }
+
         public void Handle(SayRequest message)
         {
             Console.WriteLine("User said {0}", message.Text);
@@ -37,12 +42,18 @@ namespace ChatServer
 
         public void Handle(ConnectRequest message)
         {
-            
+            Sender.Tell(ActorRef.NoSender, new ConnectResponse
+            {
+                Message = "Hello and welcome to Pigeon chat example",
+            });
         }
 
         public void Handle(NickRequest message)
         {
-            
+            Sender.Tell(ActorRef.NoSender, new NickResponse
+            {
+                Username = message.Username,
+            });
         }
 
         public void Handle(Disconnect message)

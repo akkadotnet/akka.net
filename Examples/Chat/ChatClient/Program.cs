@@ -16,7 +16,7 @@ namespace ChatClient
             using (var system = ActorSystemSignalR.Create("Chat client", "http://localhost:8080"))
             {
                 var chatClient = system.GetActor<ChatClientActor>();
-                chatClient.Tell(new ConnectRequest()
+                chatClient.Tell(ActorRef.NoSender, new ConnectRequest()
                 {
                     Username = "Roggan",
                 });
@@ -24,7 +24,7 @@ namespace ChatClient
                 while (true)
                 {
                     var input = Console.ReadLine();
-                    chatClient.Tell(new SayRequest()
+                    chatClient.Tell(ActorRef.NoSender, new SayRequest()
                     {
                         Text = input,
                     });
@@ -41,7 +41,15 @@ namespace ChatClient
         IHandle<SayResponse>
     {
         private string nick = "User";
-        private ActorRef server = Context.GetActor("http://localhost:8090", "ChatServer");
+        private ActorRef server;
+
+        public ChatClientActor(ActorSystem system)
+            : base(system)
+        {
+            server = system.GetRemoteActor("http://localhost:8090", "ChatServer");
+        }
+        
+        
         public void Handle(ConnectResponse message)
         {
             Console.WriteLine("Connected");
@@ -67,12 +75,12 @@ namespace ChatClient
         public void Handle(ConnectRequest message)
         {
             Console.WriteLine("connecting....");
-            server.Tell(message);
+            server.Tell(ActorRef.NoSender, message);
         }
 
         public void Handle(SayRequest message)
         {
-            server.Tell(message);
+            server.Tell(ActorRef.NoSender, message);
         }
     }
 }

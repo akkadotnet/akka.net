@@ -9,16 +9,5 @@ using Pigeon.Actors;
 
 namespace Pigeon
 {
-    public class Context
-    {
-        public static ActorRef GetActor<TActor>() where TActor : ActorBase, new()
-        {
-            return new LocalActorRef(new TActor());
-        }
-
-        public static ActorRef GetActor(string url, string actorName)
-        {
-            return new RemoteActorRef(url,actorName);
-        }
-    }
+    
 }

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Reactive.Linq;
+using Pigeon.Messaging;
 
 namespace Pigeon
 {
@@ -15,6 +16,10 @@ namespace Pigeon
 
     public abstract class TypedActor : ActorBase 
     {
+        protected TypedActor(ActorSystem system)
+            : base(system)
+        {
+        }
         protected sealed override void OnReceive(IMessage message)
         {
             var method = this.GetType().GetMethod("Handle", new[] { message.GetType() });
@@ -27,43 +32,53 @@ namespace Pigeon
 
     public abstract class UntypedActor : ActorBase
     {
-        public UntypedActor()
-            : base()
+        public UntypedActor(ActorSystem system)
+            : base(system)
         {
         }
     }
 
-    public abstract class ActorBase : IObserver<IMessage>
+    public abstract class ActorBase : IObserver<Message>
     {
-        protected static Context Context = new Context();
-        private BufferBlock<IMessage> messages = new BufferBlock<IMessage>(new DataflowBlockOptions()
+        private BufferBlock<Message> messages = new BufferBlock<Message>(new DataflowBlockOptions()
         {
             BoundedCapacity = 100,
             TaskScheduler = TaskScheduler.Default,
         });
 
-        protected ActorBase()
+        protected ActorRef Sender { get; private set; }
+
+        protected ActorBase(ActorSystem system)
         {
+            this.Context = system;
             messages.AsObservable().Subscribe(this);
         }
         protected abstract void OnReceive(IMessage message);
 
-        public void Tell(IMessage message)
+        public void Tell(ActorRef sender, IMessage message)
         {
-            messages.SendAsync(message);
+            var m = new Message
+            {
+                Sender = sender,
+                Payload = message,
+            };
+            messages.SendAsync(m);
         }
 
-        void IObserver<IMessage>.OnCompleted()
+        void IObserver<Message>.OnCompleted()
         {
         }
 
-        void IObserver<IMessage>.OnError(Exception error)
+        void IObserver<Message>.OnError(Exception error)
         {
         }
 
-        void IObserver<IMessage>.OnNext(IMessage value)
+        void IObserver<Message>.OnNext(Message value)
         {
-            OnReceive(value);
+            this.Sender = value.Sender;
+            OnReceive(value.Payload);
         }
+
+        protected ActorSystem Context { get;private set; }      
     }
 }

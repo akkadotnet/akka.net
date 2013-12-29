@@ -98,6 +98,7 @@
     <Compile Include="Context.cs" />
     <Compile Include="Messaging\IMessage.cs" />
     <Compile Include="Actors\LocalActorRef.cs" />
+    <Compile Include="Messaging\Message.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SignalR\ActorSystemSignalR.cs" />
     <Compile Include="SignalR\ClientSignalR.cs" />

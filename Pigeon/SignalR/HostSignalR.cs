@@ -50,13 +50,14 @@ namespace Pigeon.SignalR
         {
             this.system = system;
         }
-        public void Post(string actorName, string data,string typeName)
+        public void Post(string remoteActorName, string actorName, string data,string typeName)
         {
             var type = Type.GetType(typeName);
             var message = (IMessage)JsonConvert.DeserializeObject(data, type);
             Console.WriteLine("Got message {0}", message);
             var actor = system.GetActor(actorName);
-            actor.Tell(message);
+            var remoteActor = system.GetRemoteActor(remoteActorName);
+            actor.Tell(remoteActor, message);
         }
     }
 }

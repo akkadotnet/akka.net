@@ -12,15 +12,13 @@ namespace Pigeon.Actors
     {
         private IHubProxy hub;
         private string actorName;
-        public RemoteActorRef(string url, string actorName)
-        {
-            Connect(url, actorName);
-        }
+        private ActorSystem system;
 
-        private void Connect(string url, string actorName)
+        public RemoteActorRef(ActorSystem system, string remoteUrl, string remoteActor)
         {
-            var hubConnection = new HubConnection(url);
-            this.actorName = actorName;
+            this.system = system;
+            var hubConnection = new HubConnection(remoteUrl);
+            this.actorName = remoteActor;
             hub = hubConnection.CreateHubProxy("ActorHub");
             hubConnection.StateChanged += hubConnection_StateChanged;
             hubConnection
@@ -35,10 +33,11 @@ namespace Pigeon.Actors
                 Console.WriteLine("Remote Actor ref {0} connected", actorName);
             }
         }
-        public override void Tell(IMessage message)
+
+        public override void Tell(ActorRef sender, IMessage message)
         {
             var data = JsonConvert.SerializeObject(message);
-            hub.Invoke("Post", actorName, data,message.GetType().AssemblyQualifiedName);
+            hub.Invoke("Post",system.Url + "|" + sender.Name, actorName, data, message.GetType().AssemblyQualifiedName);
         }
     }
 }
