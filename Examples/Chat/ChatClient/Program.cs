@@ -13,7 +13,7 @@ namespace ChatClient
     {
         static void Main(string[] args)
         {
-            using (var system = new ActorSystem(""))
+            using (var system = new ActorSystem())
             {
                 var chatClient = system.GetActor<ChatClientActor>();
                 chatClient.Tell(new ConnectRequest()
