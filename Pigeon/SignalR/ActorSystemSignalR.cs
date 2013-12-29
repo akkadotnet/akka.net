@@ -13,7 +13,7 @@ namespace Pigeon.SignalR
             return new ActorSystemSignalR(name, url);
         }
 
-        public ActorSystemSignalR(string name, string url) : base(url)
+        public ActorSystemSignalR(string name, string url) 
         {
             CreateHost(name,url);
         }

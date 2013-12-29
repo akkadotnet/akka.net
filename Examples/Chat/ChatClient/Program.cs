@@ -34,7 +34,7 @@ namespace ChatClient
                         {
                             chatClient.Tell(new NickRequest
                             {
-                                Username = rest
+                                NewUsername = rest
                             }, ActorRef.NoSender);
                         }                        
                     }
@@ -75,13 +75,13 @@ namespace ChatClient
 
         public void Handle(NickResponse message)
         {
-            if (message.Username == nick)
+            if (message.NewUsername == nick)
             {
             }
             else
             {
-                Console.WriteLine("Your nick is now : {0}", message.Username);
-                this.nick = message.Username;
+                Console.WriteLine("Your nick is now : {0}", message.NewUsername);
+                this.nick = message.NewUsername;
             }
         }
 
@@ -104,7 +104,7 @@ namespace ChatClient
 
         public void Handle(NickRequest message)
         {
-            Console.WriteLine("Changing nick to {0}", message.Username);
+            Console.WriteLine("Changing nick to {0}", message.NewUsername);
             server.Tell(message);
         }
     }

@@ -30,6 +30,7 @@ namespace ChatServer
         IHandle<ChannelsRequest>
 
     {
+        private List<ActorRef> clients = new List<ActorRef>();
         public ChatServerActor(ActorStart start)
             : base(start)
         {
@@ -38,15 +39,17 @@ namespace ChatServer
         public void Handle(SayRequest message)
         {
             Console.WriteLine("User {0} said {1}",message.Username , message.Text);
-            Sender.Tell(new SayResponse
+            var response = new SayResponse
             {
                 Username = message.Username,
                 Text = message.Text,
-            });
+            };
+            clients.ForEach(c => c.Tell(response));
         }
 
         public void Handle(ConnectRequest message)
         {
+            clients.Add(this.Sender);
             Sender.Tell(new ConnectResponse
             {
                 Message = "Hello and welcome to Pigeon chat example",
@@ -55,10 +58,13 @@ namespace ChatServer
 
         public void Handle(NickRequest message)
         {
-            Sender.Tell(new NickResponse
+            var response = new NickResponse
             {
-                Username = message.Username,
-            });
+                OldUsername = message.NewUsername,
+                NewUsername = message.NewUsername,
+            };
+
+            clients.ForEach(c => c.Tell(response));            
         }
 
         public void Handle(Disconnect message)

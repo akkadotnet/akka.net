@@ -12,10 +12,9 @@ namespace Pigeon
     public class ActorSystem : IDisposable
     {
         private System.Collections.Concurrent.ConcurrentDictionary<string, ActorBase> actors = new System.Collections.Concurrent.ConcurrentDictionary<string, ActorBase>();
-        public string Url { get; private set; }
-        public ActorSystem(string url)
+
+        public ActorSystem()
         {
-            this.Url = url;
         }       
 
         public ActorRef GetActor<TActor>(ActorBase owner = null) where TActor : ActorBase
