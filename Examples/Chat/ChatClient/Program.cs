@@ -84,7 +84,6 @@ namespace ChatClient
         public void Handle(NickResponse message)
         {
             Console.WriteLine("{0} is now known as {1}", message.OldUsername, message.NewUsername);
-            this.nick = message.NewUsername;
         }
 
         public void Handle(SayResponse message)
@@ -103,6 +102,5 @@ namespace ChatClient
             message.Username = this.nick;
             server.Tell(message);
         }
-
     }
 }
