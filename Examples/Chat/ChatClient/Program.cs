@@ -67,7 +67,7 @@ namespace ChatClient
         public void Handle(ConnectRequest message)
         {
             Console.WriteLine("connecting....");
-
+            server.Tell(message);
         }
 
         public void Handle(SayRequest message)

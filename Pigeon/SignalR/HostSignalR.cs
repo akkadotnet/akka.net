@@ -2,6 +2,7 @@
 using Microsoft.Owin.Cors;
 using Microsoft.Owin.Host.HttpListener;
 using Microsoft.Owin.Hosting;
+using Newtonsoft.Json;
 using Owin;
 using System;
 using System.Collections.Generic;
@@ -44,17 +45,11 @@ namespace Pigeon.SignalR
 
     public class ActorHub : Hub
     {
-        public void Post(string receiver, IMessage message)
+        public void Post(string receiver, string data,string typeName)
         {
+            var type = Type.GetType(typeName);
+            var message = JsonConvert.DeserializeObject(data, type);
             Console.WriteLine("Got message {0}", message);
-        }
-    }
-
-    public class MyHub : Hub
-    {
-        public void Ping()
-        {
-            Clients.Caller.Pong();
         }
     }
 }

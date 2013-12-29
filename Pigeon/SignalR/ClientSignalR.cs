@@ -7,11 +7,4 @@ using System.Threading.Tasks;
 
 namespace Pigeon.SignalR
 {
-    internal static class PigeonClientSignalR
-    {
-        internal static void Start(string name, string url)
-        {
-            
-        }
-    }
 }

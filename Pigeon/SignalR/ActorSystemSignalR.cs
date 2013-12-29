@@ -16,12 +16,6 @@ namespace Pigeon.SignalR
         public ActorSystemSignalR(string name, string url)
         {
             CreateHost(name,url);
-            CreateClient(name, url);
-        }
-
-        protected void CreateClient(string name, string url)
-        {
-            PigeonClientSignalR.Start(name, url);
         }
 
         private void CreateHost(string name,string url)
