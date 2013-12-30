@@ -14,7 +14,7 @@ namespace Pigeon.App
         {
             using (var system = ActorSystemSignalR.Create("System A", "http://localhost:8080"))
             {
-                var actor = system.GetActor<MyActor>();
+                var actor = system.ActorOf<MyActor>();
 
                 for (int i = 0; i < 1000; i++)
                 {

@@ -1,5 +1,6 @@
 ﻿using ChatMessages;
 using Pigeon;
+using Pigeon.Actor;
 using Pigeon.SignalR;
 using System;
 using System.Collections.Generic;
@@ -15,7 +16,7 @@ namespace ChatClient
         {
             using (var system = new ActorSystem())
             {
-                var chatClient = system.GetActor<ChatClientActor>();
+                var chatClient = system.ActorOf<ChatClientActor>();
                 chatClient.Tell(new ConnectRequest()
                 {
                     Username = "Roggan",
@@ -61,10 +62,10 @@ namespace ChatClient
         private string nick = "Roggan";
         private ActorRef server;
 
-        public ChatClientActor(ActorStart start)
+        public ChatClientActor(ActorContext start)
             : base(start)
         {
-            server = Context.GetRemoteActor("http://localhost:8090", "ChatServer", this);
+            server = Context.System.ActorSelection("http://localhost:8090", "ChatServer", this);
         }        
         
         public void Handle(ConnectResponse message)

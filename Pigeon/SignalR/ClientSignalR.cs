@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNet.SignalR.Client;
+using Pigeon.Actor;
 using System;
 using System.Collections.Generic;
 using System.Linq;

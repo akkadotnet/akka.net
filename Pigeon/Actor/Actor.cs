@@ -7,7 +7,7 @@ using System.Threading.Tasks.Dataflow;
 using System.Reactive.Linq;
 using Pigeon.Messaging;
 
-namespace Pigeon
+namespace Pigeon.Actor
 {
     public interface IHandle<TMessage> where TMessage : IMessage
     {
@@ -16,8 +16,8 @@ namespace Pigeon
 
     public abstract class TypedActor : ActorBase 
     {
-        protected TypedActor(ActorStart start)
-            : base(start)
+        protected TypedActor(ActorContext context)
+            : base(context)
         {
         }
         protected sealed override void OnReceive(IMessage message)
@@ -32,7 +32,7 @@ namespace Pigeon
 
     public abstract class UntypedActor : ActorBase
     {
-        public UntypedActor(ActorStart start)
+        public UntypedActor(ActorContext start)
             : base(start)
         {
         }
@@ -47,15 +47,17 @@ namespace Pigeon
         });
 
         public string Name { get;private set; }
-
         protected ActorRef Sender { get; private set; }
+        protected ActorRef Self { get; private set; }
 
-        protected ActorBase(ActorStart start)
+        protected ActorBase(ActorContext context)
         {
-            this.Context = start.System;
-            this.Name = start.Name;
+            this.Context = context;
+            this.Name = context.Name;
+            this.Self = context.Self;
             messages.AsObservable().Subscribe(this);
         }
+
         protected abstract void OnReceive(IMessage message);
 
         public void Tell(ActorRef sender, IMessage message)
@@ -83,13 +85,25 @@ namespace Pigeon
             OnReceive(value.Payload);
         }
 
-        protected ActorSystem Context { get;private set; }      
+        protected ActorContext Context { get;private set; }      
     }
 
 
-    public class ActorStart
+    public class ActorContext
     {
         public ActorSystem System { get; set; }
         public string Name { get; set; }
+
+        public ActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
+        {
+            return this.System.ActorOf<TActor>(name, null);
+        }
+
+        public ActorRef ActorSelection(string remoteActorPath) 
+        {
+            return this.System.ActorSelection(remoteActorPath, null);
+        }
+
+        public ActorRef Self { get; private set; }
     }
 }

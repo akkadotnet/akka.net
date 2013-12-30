@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Pigeon
+namespace Pigeon.Actor
 {
     public class LocalActorRef : ActorRef
     {

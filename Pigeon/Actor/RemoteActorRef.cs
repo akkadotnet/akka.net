@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Actors
+namespace Pigeon.Actor
 {
     public class RemoteActorRef: ActorRef
     {
@@ -23,7 +23,7 @@ namespace Pigeon.Actors
             hub = hubConnection.CreateHubProxy("ActorHub");
             hub.On("Reply", (string actorName, string data, string messageType) =>
             {
-                var actor = system.GetActor(actorName);
+                var actor = system.ActorOf(actorName);
                 var type = Type.GetType(messageType);
                 var message = (IMessage)JsonConvert.DeserializeObject(data, type);
                 actor.Tell(message, this);

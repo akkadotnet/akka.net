@@ -1,5 +1,6 @@
 ﻿using ChatMessages;
 using Pigeon;
+using Pigeon.Actor;
 using Pigeon.SignalR;
 using System;
 using System.Collections.Generic;
@@ -15,7 +16,7 @@ namespace ChatServer
         {
             using (var system = ActorSystemSignalR.Create("Chat Server", "http://localhost:8090"))
             {
-                var server = system.GetActor<ChatServerActor>();
+                var server = system.ActorOf<ChatServerActor>();
 
                 Console.ReadLine();
             }
@@ -31,7 +32,7 @@ namespace ChatServer
 
     {
         private List<ActorRef> clients = new List<ActorRef>();
-        public ChatServerActor(ActorStart start)
+        public ChatServerActor(ActorContext start)
             : base(start)
         {
         }

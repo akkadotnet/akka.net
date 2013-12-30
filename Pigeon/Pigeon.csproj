@@ -91,13 +91,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Actors\Actor.cs" />
-    <Compile Include="Actors\ActorRef.cs" />
-    <Compile Include="ActorSystems\ActorSystem.cs" />
-    <Compile Include="Actors\RemoteActorRef.cs" />
+    <Compile Include="Actor\Actor.cs" />
+    <Compile Include="Actor\ActorRef.cs" />
+    <Compile Include="Actor\ActorSystem.cs" />
+    <Compile Include="Actor\RemoteActorRef.cs" />
     <Compile Include="Context.cs" />
     <Compile Include="Messaging\IMessage.cs" />
-    <Compile Include="Actors\LocalActorRef.cs" />
+    <Compile Include="Actor\LocalActorRef.cs" />
     <Compile Include="Messaging\Message.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SignalR\ActorSystemSignalR.cs" />
