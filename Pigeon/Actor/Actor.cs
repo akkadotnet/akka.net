@@ -46,14 +46,14 @@ namespace Pigeon.Actor
             TaskScheduler = TaskScheduler.Default,
         });
 
-        public string Name { get;private set; }
+        public string Path { get;private set; }
         protected ActorRef Sender { get; private set; }
         protected ActorRef Self { get; private set; }
 
         protected ActorBase(ActorContext context)
         {
             this.Context = context;
-            this.Name = context.Name;
+            this.Path = context.Name;
             this.Self = context.Self;
             messages.AsObservable().Subscribe(this);
         }

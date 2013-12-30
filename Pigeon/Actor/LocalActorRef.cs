@@ -11,7 +11,7 @@ namespace Pigeon.Actor
         public LocalActorRef(ActorBase actor)
         {
             _actor = actor;
-            this.Name = actor.Name;
+            this.Path = actor.Path;
         }
 
         public override void Tell(IMessage message, ActorRef sender)

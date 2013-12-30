@@ -16,7 +16,7 @@ namespace Pigeon.Actor
 
         public RemoteActorRef(ActorSystem system, string remoteUrl, string remoteActor)
         {
-            this.Name = remoteActor;
+            this.Path = remoteActor;
             this.system = system;
             var hubConnection = new HubConnection(remoteUrl);
             this.actorName = remoteActor;
@@ -47,7 +47,7 @@ namespace Pigeon.Actor
             }
             else
             {
-                hub.Invoke("Post", sender.Name, actorName, data, message.GetType().AssemblyQualifiedName);
+                hub.Invoke("Post", sender.Path, actorName, data, message.GetType().AssemblyQualifiedName);
             }
         }
     }
