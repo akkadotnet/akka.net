@@ -8,7 +8,7 @@ namespace Pigeon.Actor
 {
     public abstract class ActorRef
     {
-        public string Path { get;protected set; }
+        public ActorPath Path { get;protected set; }
 
         public ActorRef Owner { get; set; }
 
@@ -28,7 +28,7 @@ namespace Pigeon.Actor
     {
         public NoSender()
         {
-            this.Path = "NoSender";
+            this.Path = new ActorPath("NoSender");
         }
 
         public override void Tell(IMessage message, ActorRef sender)

@@ -11,12 +11,12 @@ namespace Pigeon.Actor
         private List<string> parts = new List<string>();
         public ActorPath(string path)
         {
-            var parts = path.Split('/').ToList();
+            parts = path.Split('/').ToList();
         }
 
         public ActorPath(string parentPath,string name)
         {
-            var parts = parentPath.Split('/').ToList();
+            parts = parentPath.Split('/').ToList();
             parts.Add(name);
         }
 
@@ -24,6 +24,10 @@ namespace Pigeon.Actor
         {
             parts.AddRange(parentPath.parts);
             parts.Add(name);
+        }
+        public override string ToString()
+        {
+            return string.Join("/", parts);
         }
     }
 }

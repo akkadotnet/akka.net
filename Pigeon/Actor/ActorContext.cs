@@ -16,7 +16,7 @@ namespace Pigeon.Actor
         private IEnumerable<ActorRef> Children { get; set; }
         public ActorRef Child(string name)
         {
-            return Children.Where(actorRef => actorRef.Path == name).FirstOrDefault();
+            return Children.Where(actorRef => actorRef.Path.ToString() == name).FirstOrDefault();
         }
     }    
 }
