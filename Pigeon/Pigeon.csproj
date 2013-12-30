@@ -92,6 +92,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Actor\Actor.cs" />
+    <Compile Include="Actor\ActorContext.cs" />
     <Compile Include="Actor\ActorRef.cs" />
     <Compile Include="Actor\ActorSystem.cs" />
     <Compile Include="Actor\RemoteActorRef.cs" />
