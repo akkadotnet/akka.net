@@ -24,7 +24,7 @@ namespace Pigeon.SignalR
             PigeonHostSignalR.Start(this,url);
         }       
 
-        public void Dispose()
+        public new void Dispose()
         {
             
         }

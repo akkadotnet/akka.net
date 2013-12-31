@@ -8,10 +8,16 @@ namespace Pigeon.Actor
     public class LocalActorRef : ActorRef
     {
         private ActorBase _actor;
-        public LocalActorRef(ActorBase actor)
+
+
+        public LocalActorRef(ActorPath path)
         {
-            _actor = actor;
-            this.Path = actor.Path;
+            this.Path = path;
+        }
+
+        public void SetActor(ActorBase actor)
+        {
+            this._actor = actor;
         }
 
         public override void Tell(IMessage message, ActorRef sender)

@@ -46,14 +46,13 @@ namespace Pigeon.Actor
             TaskScheduler = TaskScheduler.Default,
         });
 
-        public ActorPath Path { get;private set; }
         protected ActorRef Sender { get; private set; }
         protected ActorRef Self { get; private set; }
 
         protected ActorBase(ActorContext context)
         {
             this.Context = context;
-            this.Path = new ActorPath(context.Name);
+            this.Context.Self.SetActor(this);
             this.Self = context.Self;
             messages.AsObservable().Subscribe(this);
         }
@@ -81,13 +80,10 @@ namespace Pigeon.Actor
         void IObserver<Message>.OnNext(Message value)
         {
             this.Sender = value.Sender;
-            this.Sender.Owner = new LocalActorRef(this);
+            //this.Sender = this.Context.Self;
             OnReceive(value.Payload);
         }
 
-        protected ActorContext Context { get;private set; }      
+        internal protected ActorContext Context { get;private set; }      
     }
-
-
-   
 }

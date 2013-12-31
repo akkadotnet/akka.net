@@ -12,18 +12,18 @@ namespace Pigeon.Actor
     {
         private IHubProxy hub;
         private string actorName;
-        private ActorSystem system;
+        private ActorRefFactory actorRefFactory;
 
-        public RemoteActorRef(ActorSystem system, string remoteUrl, string remoteActor)
+        public RemoteActorRef(ActorRefFactory actorRefFactory, string remoteActorPath)
         {
-            this.Path = new ActorPath(remoteActor);
-            this.system = system;
-            var hubConnection = new HubConnection(remoteUrl);
-            this.actorName = remoteActor;
+            this.Path = new ActorPath(remoteActorPath);
+            this.actorRefFactory = actorRefFactory;
+            var hubConnection = new HubConnection(this.Path.ToString().Substring(0,this.Path.ToString().Length-this.Path.Name.Length));
+            this.actorName = this.Path.Name;
             hub = hubConnection.CreateHubProxy("ActorHub");
             hub.On("Reply", (string actorName, string data, string messageType) =>
             {
-                var actor = system.ActorOf(actorName);
+                var actor = actorRefFactory.System.Child(actorName);
                 var type = Type.GetType(messageType);
                 var message = (IMessage)JsonConvert.DeserializeObject(data, type);
                 actor.Tell(message, this);

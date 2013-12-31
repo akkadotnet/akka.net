@@ -65,7 +65,7 @@ namespace ChatClient
         public ChatClientActor(ActorContext start)
             : base(start)
         {
-            server = Context.System.ActorSelection("http://localhost:8090", "ChatServer", this);
+            server = Context.ActorSelection("http://localhost:8090/ChatServer");
         }        
         
         public void Handle(ConnectResponse message)

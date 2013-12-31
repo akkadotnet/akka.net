@@ -6,75 +6,56 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Pigeon.Actor;
+using System.Collections.Concurrent;
 
 namespace Pigeon.Actor
 {
-    public class ActorSystem : IDisposable
+    public class ActorSystem : ActorRefFactory, IDisposable
     {
-        private System.Collections.Concurrent.ConcurrentDictionary<string, ActorBase> actors = new System.Collections.Concurrent.ConcurrentDictionary<string, ActorBase>();
-
+       
         public ActorSystem()
         {
-        }              
+        }
 
-        public ActorRef ActorOf<TActor>(string name = null,ActorBase owner = null) where TActor : ActorBase
+        protected ConcurrentBag<ActorRef> Children = new ConcurrentBag<ActorRef>();
+
+        public override ActorRef ActorOf<TActor>(string name = null)
         {
             name = name ?? typeof(TActor).Name;
             if (name.EndsWith("Actor"))
                 name = name.Substring(0, name.Length - 5);
 
-            if (actors.ContainsKey(name))
+            var existing = Child(name);
+            if (existing != null)
+                return existing;
+
+            var context = new ActorContext
             {
-                return new LocalActorRef(actors[name]);
-            }
-            else
-            {
-                var actor = (ActorBase)Activator.CreateInstance(typeof(TActor), new object[] { new ActorContext{
-                  System = this,
-                  Name = name,
-                }});
-                actors.TryAdd(name, actor);
-
-                var actorRef = new LocalActorRef(actor);
-                
-                if (owner != null)
-                    actorRef.Owner = new LocalActorRef(owner);
-
-                return actorRef;                
-            }
+                System = this,
+                Self = new LocalActorRef(new ActorPath(name))
+            };
+            Children.Add(context.Self);
+            var actor = (ActorBase)Activator.CreateInstance(typeof(TActor), new object[] { context });
+            return context.Self;
         }
-
-        public ActorRef ActorOf(string localActor, ActorBase owner = null)
+        public override ActorRef Child(string name)
         {
-            var actorRef = new LocalActorRef(actors[localActor]);
-            if (owner != null)
-                actorRef.Owner = new LocalActorRef(owner);
-
-            return actorRef;
-        }
-
-        public ActorRef ActorSelection(string remoteUrl, string remoteActor,ActorBase owner = null)
-        {
-            var actorRef = new RemoteActorRef(this, remoteUrl, remoteActor);
-            if (owner != null)
-                actorRef.Owner = new LocalActorRef(owner);
-
-            return actorRef;
+            return Children.Where(actorRef => actorRef.Path.Name == name).FirstOrDefault();
         }
 
         public ActorRef ActorSelection(string remoteActorPath,ActorBase owner = null)
         {
-            if (string.IsNullOrWhiteSpace(remoteActorPath))
-                return null;
-
-            var parts = remoteActorPath.Split('|');
-            string remoteUrl = parts[0];
-            string remoteActor = parts[1];
-            return this.ActorSelection(remoteUrl, remoteActor);
+            var actorRef = new RemoteActorRef(this, remoteActorPath);
+            return actorRef;
         }
 
         public void Dispose()
         {            
-        }       
+        }
+
+        public override ActorRef ActorSelection(string remoteActorPath)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

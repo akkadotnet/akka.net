@@ -55,9 +55,9 @@ namespace Pigeon.SignalR
         {
             var type = Type.GetType(typeName);
             var message = (IMessage)JsonConvert.DeserializeObject(data, type);
-            var actor = system.ActorOf(actorName);
+            var actor = system.Child(actorName);
             var connectionId = this.Context.ConnectionId;
-            var remoteActor = new SignalRResponseActorRef(remoteActorName, this, connectionId);
+            var remoteActor = new SignalRResponseActorRef(remoteActorName, this, connectionId,actor);
             actor.Tell(message, remoteActor);
         }
 
@@ -66,11 +66,12 @@ namespace Pigeon.SignalR
             private string remoteActorName;
             private Hub hub;
             private string connectionId;
-            public SignalRResponseActorRef(string remoteActorName, Hub hub, string connectionId)
+            public SignalRResponseActorRef(string remoteActorName, Hub hub, string connectionId,ActorRef owner)
             {
                 this.remoteActorName = remoteActorName;
                 this.hub = hub;
                 this.connectionId = connectionId;
+                this.Owner = owner;
             }
             public override void Tell(IMessage message, ActorRef sender)
             {

@@ -8,6 +8,14 @@ namespace Pigeon.Actor
 {
     public class ActorPath
     {
+        public string Name
+        {
+            get
+            {
+                return this.parts.LastOrDefault();
+            }
+        }       
+
         private List<string> parts = new List<string>();
         public ActorPath(string path)
         {

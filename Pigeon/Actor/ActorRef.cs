@@ -8,7 +8,7 @@ namespace Pigeon.Actor
 {
     public abstract class ActorRef
     {
-        public ActorPath Path { get;protected set; }
+        public virtual ActorPath Path { get;protected set; }
 
         public ActorRef Owner { get; set; }
 
