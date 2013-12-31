@@ -1,4 +1,5 @@
 ﻿
+using Pigeon.Actor;
 using Pigeon.SignalR;
 using System;
 using System.Collections.Generic;
@@ -59,8 +60,8 @@ namespace Pigeon.App
 
     public class MyActor : UntypedActor
     {
-        protected MyActor(ActorSystem system)
-            : base(system)
+        protected MyActor(ActorContext context)
+            : base(context)
         {
         }
 

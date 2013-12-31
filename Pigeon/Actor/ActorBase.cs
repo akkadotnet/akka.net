@@ -8,36 +8,7 @@ using System.Reactive.Linq;
 using Pigeon.Messaging;
 
 namespace Pigeon.Actor
-{
-    public interface IHandle<TMessage> where TMessage : IMessage
-    {
-        void Handle(TMessage message);
-    }
-
-    public abstract class TypedActor : ActorBase 
-    {
-        protected TypedActor(ActorContext context)
-            : base(context)
-        {
-        }
-        protected sealed override void OnReceive(IMessage message)
-        {
-            var method = this.GetType().GetMethod("Handle", new[] { message.GetType() });
-            if (method == null)
-                throw new ArgumentException("Actor does not handle messages of type " + message.GetType().Name);
-
-            method.Invoke(this, new[] { message });
-        }
-    }
-
-    public abstract class UntypedActor : ActorBase
-    {
-        public UntypedActor(ActorContext start)
-            : base(start)
-        {
-        }
-    }
-
+{   
     public abstract class ActorBase : IObserver<Message>
     {
         private BufferBlock<Message> messages = new BufferBlock<Message>(new DataflowBlockOptions()
@@ -84,6 +55,6 @@ namespace Pigeon.Actor
             OnReceive(value.Payload);
         }
 
-        internal protected ActorContext Context { get;private set; }      
+        protected ActorContext Context { get;private set; }      
     }
 }

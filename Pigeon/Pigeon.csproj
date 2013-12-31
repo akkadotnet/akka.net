@@ -91,13 +91,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Actor\Actor.cs" />
+    <Compile Include="Actor\ActorBase.cs" />
     <Compile Include="Actor\ActorContext.cs" />
     <Compile Include="Actor\ActorPath.cs" />
     <Compile Include="Actor\ActorRef.cs" />
     <Compile Include="Actor\ActorRefFactory.cs" />
+    <Compile Include="Actor\ActorSelection.cs" />
     <Compile Include="Actor\ActorSystem.cs" />
     <Compile Include="Actor\RemoteActorRef.cs" />
+    <Compile Include="Actor\UntypedActor.cs" />
     <Compile Include="Context.cs" />
     <Compile Include="Messaging\IMessage.cs" />
     <Compile Include="Actor\LocalActorRef.cs" />
@@ -106,6 +108,7 @@
     <Compile Include="SignalR\ActorSystemSignalR.cs" />
     <Compile Include="SignalR\ClientSignalR.cs" />
     <Compile Include="SignalR\HostSignalR.cs" />
+    <Compile Include="Actor\TypedActor.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
