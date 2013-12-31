@@ -79,7 +79,7 @@ namespace ChatClient
             message.OldUsername = this.nick;
             Console.WriteLine("Changing nick to {0}", message.NewUsername);
             this.nick = message.NewUsername;
-            server.Tell(message);
+            server.Tell(message,Self);
         }
 
         public void Handle(NickResponse message)
@@ -95,13 +95,13 @@ namespace ChatClient
         public void Handle(ConnectRequest message)
         {
             Console.WriteLine("Connecting....");
-            server.Tell(message);
+            server.Tell(message,Self);
         }
 
         public void Handle(SayRequest message)
         {
             message.Username = this.nick;
-            server.Tell(message);
+            server.Tell(message,Self);
         }
     }
 }

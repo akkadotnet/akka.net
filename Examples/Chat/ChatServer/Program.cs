@@ -45,7 +45,7 @@ namespace ChatServer
                 Username = message.Username,
                 Text = message.Text,
             };
-            clients.ForEach(c => c.Tell(response));
+            clients.ForEach(c => c.Tell(response, Self));
         }
 
         public void Handle(ConnectRequest message)
@@ -54,7 +54,7 @@ namespace ChatServer
             Sender.Tell(new ConnectResponse
             {
                 Message = "Hello and welcome to Pigeon chat example",
-            });
+            }, Self);
         }
 
         public void Handle(NickRequest message)
@@ -65,7 +65,7 @@ namespace ChatServer
                 NewUsername = message.NewUsername,
             };
 
-            clients.ForEach(c => c.Tell(response));            
+            clients.ForEach(c => c.Tell(response, Self));            
         }
 
         public void Handle(Disconnect message)

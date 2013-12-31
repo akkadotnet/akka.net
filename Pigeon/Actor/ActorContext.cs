@@ -41,7 +41,6 @@ namespace Pigeon.Actor
         public override ActorRef ActorSelection(string remoteActorPath)
         {
             var actorRef = new RemoteActorRef(this, remoteActorPath);
-            actorRef.Owner = this.Self;
             return actorRef;
         }
     }    

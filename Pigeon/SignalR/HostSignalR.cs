@@ -71,7 +71,6 @@ namespace Pigeon.SignalR
                 this.remoteActorName = remoteActorName;
                 this.hub = hub;
                 this.connectionId = connectionId;
-                this.Owner = owner;
             }
             public override void Tell(IMessage message, ActorRef sender)
             {
