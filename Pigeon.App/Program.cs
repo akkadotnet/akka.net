@@ -17,6 +17,10 @@ namespace Pigeon.App
             {
                 var actor = system.ActorOf<MyActor>();
                 actor.Tell(new TimeRequest(), ActorRef.NoSender);
+                actor.Tell(new TimeRequest(), ActorRef.NoSender);
+                actor.Tell(new TimeRequest(), ActorRef.NoSender);
+                actor.Tell(new TimeRequest(), ActorRef.NoSender); 
+                actor.Tell(new TimeRequest(), ActorRef.NoSender);
                 //for (int i = 0; i < 1000; i++)
                 //{
                 //    actor.Tell(new Greet
@@ -87,8 +91,7 @@ namespace Pigeon.App
         
         protected override void OnReceive(IMessage message)
         {
-            Console.WriteLine(System.Threading.Thread.CurrentThread.GetHashCode());
-            //Console.Write(System.Threading.Thread.CurrentThread.GetHashCode());
+            Console.WriteLine("actor thread: {0}", System.Threading.Thread.CurrentThread.GetHashCode());
             message.Match()
                 .With<Greet>(m => Console.WriteLine("Hello {0}", m.Name))
                 .With<TimeRequest>(async m => {
@@ -96,7 +99,7 @@ namespace Pigeon.App
                     var result = await Ask(logger, m);
                     result.Match()
                         .With<TimeResponse>(t => {
-                            Console.WriteLine(System.Threading.Thread.CurrentThread.GetHashCode());
+                            Console.WriteLine("await thread {0}", System.Threading.Thread.CurrentThread.GetHashCode());
                             Console.WriteLine("its {0} o'clock", t.DateTime);
                         })
                         .Default(_ => Console.WriteLine("Unknown message"));
@@ -104,7 +107,7 @@ namespace Pigeon.App
                 })
                 .Default(m => Console.WriteLine("Unknown message {0}",m));
 
-            logger.Tell(new LogMessage(message));
+        //    logger.Tell(new LogMessage(message));
         }
     }
 }

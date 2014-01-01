@@ -16,9 +16,14 @@ namespace Pigeon.Actor
 
         public override ActorRef ActorOf<TActor>(string name = null) 
         {
-            name = name ?? typeof(TActor).Name;
-            if (name.EndsWith("Actor"))
-                name = name.Substring(0, name.Length - 5);
+            if (name == null)
+            {
+                name = typeof(TActor).Name;
+                if (name.EndsWith("Actor"))
+                    name = name.Substring(0, name.Length - 5);
+
+                name = name + "#" + Guid.NewGuid();
+            }
 
             var existing = Child(name);
             if (existing != null)

@@ -27,14 +27,20 @@ namespace Pigeon.Actor
     public class FutureActorRef : ActorRef
     {
         private TaskCompletionSource<IMessage> result;
+        private ActorRef owner;
 
-        public FutureActorRef(TaskCompletionSource<IMessage> result)
+        public FutureActorRef(TaskCompletionSource<IMessage> result,ActorRef owner)
         {
             this.result = result;
+            this.owner = owner;
         }
         public override void Tell(IMessage message, ActorRef sender = null)
         {
-            result.SetResult(message);   
+            var ownerMessage = new AwaitResult
+            {
+                Action = () => result.SetResult(message),
+            };
+            owner.Tell(ownerMessage);
         }
     }
 

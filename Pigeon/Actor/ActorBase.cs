@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Reactive.Linq;
 using Pigeon.Messaging;
+using System.Threading;
 
 namespace Pigeon.Actor
 {   
@@ -26,6 +27,13 @@ namespace Pigeon.Actor
             this.Context.Self.SetActor(this);
             this.Self = context.Self;
             messages.AsObservable().Subscribe(this);
+        }
+
+        private void OnReceiveInternal(IMessage message)
+        {
+            message.Match()
+                .With<AwaitResult>(m => m.Action())
+                .Default(m => OnReceive(m));
         }
 
         protected abstract void OnReceive(IMessage message);
@@ -52,20 +60,24 @@ namespace Pigeon.Actor
         {
             this.Sender = value.Sender;
             //this.Sender = this.Context.Self;
-            OnReceive(value.Payload);
+            OnReceiveInternal(value.Payload);
         }
 
         public Task<IMessage> Ask(ActorRef actor, IMessage message)
         {
-            TaskCompletionSource<IMessage> result = new TaskCompletionSource<IMessage>(TaskCreationOptions.AttachedToParent);
-            var future = Context.ActorOf<FutureActor>();
-            var futureActorRef = new FutureActorRef(result);
+            TaskCompletionSource<IMessage> result = new TaskCompletionSource<IMessage>();
+            var future = Context.ActorOf<FutureActor>(name : Guid.NewGuid().ToString());
+            var futureActorRef = new FutureActorRef(result,this.Context.Self);
             future.Tell(new SetRespondTo(), futureActorRef); //the future actor will respond to this fake ref
             actor.Tell(message, future); //ask the actor a message, the actor will respond to the future actor, which in tur will respond to our actor ref
-            
             return result.Task;
         }
 
         protected ActorContext Context { get;private set; }      
+    }
+
+    public class AwaitResult : IMessage
+    {
+        public Action Action { get; set; }
     }
 }
