@@ -13,7 +13,7 @@ namespace Pigeon.App
     class Program
     {
         static void Main(string[] args)
-        {
+        {           
             using (var system = ActorSystemSignalR.Create("System A", "http://localhost:8080"))
             {
                 var actor = system.ActorOf<MyActor>();
@@ -42,7 +42,16 @@ namespace Pigeon.App
 
     public class Greet : IMessage
     {
-        public string Name { get; set; }
+        public string Who { get; set; }
+    }
+
+    public class GreetingActor : UntypedActor
+    {
+        protected override void OnReceive(IMessage message)
+        {
+            message.Match()
+                .With<Greet>(m => Console.WriteLine("Hello {0}", m.Who));
+        }
     }
 
     public class LogMessage : IMessage
@@ -93,7 +102,7 @@ namespace Pigeon.App
         {
             Console.WriteLine("actor thread: {0}", System.Threading.Thread.CurrentThread.GetHashCode());
             message.Match()
-                .With<Greet>(m => Console.WriteLine("Hello {0}", m.Name))
+                .With<Greet>(m => Console.WriteLine("Hello {0}", m.Who))
                 .With<TimeRequest>(async m => {
                     //TODO: this will execute in another thread, fix
                     var result = await Ask(logger, m);
