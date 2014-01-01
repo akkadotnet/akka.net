@@ -18,6 +18,7 @@ namespace Pigeon.Actor
             TaskScheduler = TaskScheduler.Default,
         });
 
+
         protected ActorRef Sender { get; private set; }
         protected ActorRef Self { get; private set; }
 
