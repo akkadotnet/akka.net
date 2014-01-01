@@ -19,32 +19,24 @@ namespace Pigeon.Actor
         {
             message
                 .Match()
-                .With<SetRespondTo>(m => this.RespondTo = this.Sender)
-                .Default(m => this.RespondTo.Tell(m));
-        }
-    }
-
-    public class FutureActorRef : ActorRef
-    {
-        private TaskCompletionSource<IMessage> result;
-        private ActorRef owner;
-
-        public FutureActorRef(TaskCompletionSource<IMessage> result,ActorRef owner)
-        {
-            this.result = result;
-            this.owner = owner;
-        }
-        public override void Tell(IMessage message, ActorRef sender = null)
-        {
-            var ownerMessage = new ActorAction
-            {
-                Action = () => result.SetResult(message),
-            };
-            owner.Tell(ownerMessage);
+                .With<SetRespondTo>(m =>
+                {
+                    this.result = m.Result;
+                    this.RespondTo = this.Sender;
+                })
+                .Default(m =>
+                {
+                    var ownerMessage = new ActorAction
+                    {
+                        Action = () => result.SetResult(message),
+                    };
+                    RespondTo.Tell(ownerMessage);
+                });
         }
     }
 
     public class SetRespondTo : IMessage
     {
+        public TaskCompletionSource<IMessage> Result { get; set; }
     }
 }

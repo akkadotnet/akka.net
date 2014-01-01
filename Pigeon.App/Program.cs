@@ -3,6 +3,7 @@ using Pigeon.Actor;
 using Pigeon.SignalR;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,11 +17,12 @@ namespace Pigeon.App
             using (var system = ActorSystemSignalR.Create("System A", "http://localhost:8080"))
             {
                 var actor = system.ActorOf<MyActor>();
-                for (int i = 0; i < 100; i++)
+                Stopwatch sw = Stopwatch.StartNew();
+                for (int i = 0; i < 10; i++)
                 {
                     actor.Tell(new TimeRequest());
                 }
-               
+                Console.WriteLine(sw.Elapsed);
                 //for (int i = 0; i < 1000; i++)
                 //{
                 //    actor.Tell(new Greet
