@@ -22,7 +22,10 @@ namespace Pigeon.Actor
         protected ActorRef Self { get; private set; }
 
         protected ActorBase()
-        {            
+        {
+            if (ActorContext.Current == null)
+                throw new Exception("Do not create actors using 'new', always create them using an ActorContext/System");
+
             this.Context.Self.SetActor(this);
             this.Self = Context.Self;
             messages.AsObservable().Subscribe(this);
@@ -85,7 +88,11 @@ namespace Pigeon.Actor
         {
             get
             {
-                return ActorContext.Current;
+                var context = ActorContext.Current;
+                if (context == null)
+                    throw new NotSupportedException("There is no active ActorContext, this is most likely due to use of async operations from within this actor.");
+
+                return context;
             }
         }
     }

@@ -16,9 +16,6 @@ namespace Pigeon.Actor
         {
             get
             {
-                if (current == null)
-                    throw new NotSupportedException("There is no active ActorContext, this is most likely due to use of async operations from within an actor");
-
                 return current;
             }
             set
@@ -32,6 +29,11 @@ namespace Pigeon.Actor
 
         protected ConcurrentDictionary<string, ActorRef> Children = new ConcurrentDictionary<string,ActorRef>();
 
+        public ActorRef ActorFor(string name)
+        {
+            return Child(name); 
+        }
+
         public override ActorRef ActorOf<TActor>(string name = null) 
         {
             if (name == null)
@@ -41,11 +43,7 @@ namespace Pigeon.Actor
                     name = name.Substring(0, name.Length - 5);
 
                 name = name + "#" + Guid.NewGuid();
-            }
-
-            var existing = Child(name);
-            if (existing != null)
-                return existing;
+            }          
 
             var context = new ActorContext();            
             context.Parent = this;
