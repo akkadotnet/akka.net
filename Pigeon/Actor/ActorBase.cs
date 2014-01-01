@@ -55,6 +55,17 @@ namespace Pigeon.Actor
             OnReceive(value.Payload);
         }
 
+        public Task<IMessage> Ask(ActorRef actor, IMessage message)
+        {
+            TaskCompletionSource<IMessage> result = new TaskCompletionSource<IMessage>(TaskCreationOptions.AttachedToParent);
+            var future = Context.ActorOf<FutureActor>();
+            var futureActorRef = new FutureActorRef(result);
+            future.Tell(new SetRespondTo(), futureActorRef); //the future actor will respond to this fake ref
+            actor.Tell(message, future); //ask the actor a message, the actor will respond to the future actor, which in tur will respond to our actor ref
+            
+            return result.Task;
+        }
+
         protected ActorContext Context { get;private set; }      
     }
 }

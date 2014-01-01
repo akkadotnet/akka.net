@@ -10,7 +10,7 @@ namespace Pigeon.Actor
     {
         public virtual ActorPath Path { get;protected set; }
 
-        public abstract void Tell(IMessage message, ActorRef sender = null);
+        public abstract void Tell(IMessage message, ActorRef sender = null);        
 
         public static readonly ActorRef NoSender = new NoSender();
     }

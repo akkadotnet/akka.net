@@ -10,7 +10,7 @@ namespace Pigeon.Actor
     public class ActorContext : ActorRefFactory
     {             
         public LocalActorRef Self { get;  set; }
-        public ActorRef Parent { get; set; }
+        public ActorRefFactory Parent { get; set; }
 
         protected ConcurrentBag<ActorRef> Children = new ConcurrentBag<ActorRef>();
 
@@ -27,7 +27,8 @@ namespace Pigeon.Actor
             var context = new ActorContext
             {
                 System = this.System,
-                Self = new LocalActorRef(new ActorPath(name))
+                Self = new LocalActorRef(new ActorPath(name)),
+                Parent = this,
             };
             Children.Add(context.Self);
             var actor = (ActorBase)Activator.CreateInstance(typeof(TActor), new object[] {context});

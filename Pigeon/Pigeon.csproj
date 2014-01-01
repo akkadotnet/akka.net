@@ -98,6 +98,8 @@
     <Compile Include="Actor\ActorRefFactory.cs" />
     <Compile Include="Actor\ActorSelection.cs" />
     <Compile Include="Actor\ActorSystem.cs" />
+    <Compile Include="Actor\AskSupport.cs" />
+    <Compile Include="Actor\FutureActor.cs" />
     <Compile Include="Actor\RemoteActorRef.cs" />
     <Compile Include="Actor\UntypedActor.cs" />
     <Compile Include="Context.cs" />
