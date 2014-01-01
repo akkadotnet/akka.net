@@ -59,13 +59,12 @@ namespace Pigeon.Actor
         void IObserver<Message>.OnNext(Message value)
         {
             this.Sender = value.Sender;
-            //this.Sender = this.Context.Self;
             OnReceiveInternal(value.Payload);
         }
 
         public Task<IMessage> Ask(ActorRef actor, IMessage message)
         {
-            TaskCompletionSource<IMessage> result = new TaskCompletionSource<IMessage>();            
+            var result = new TaskCompletionSource<IMessage>();            
             var future = Context.ActorOf<FutureActor>();
             future.Tell(new SetRespondTo { Result = result }, Self);
             actor.Tell(message, future);
