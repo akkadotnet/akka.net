@@ -13,10 +13,6 @@ namespace Pigeon.Actor
 
     public abstract class TypedActor : ActorBase
     {
-        protected TypedActor(ActorContext context)
-            : base(context)
-        {
-        }
         protected sealed override void OnReceive(IMessage message)
         {
             var method = this.GetType().GetMethod("Handle", new[] { message.GetType() });

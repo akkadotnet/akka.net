@@ -62,8 +62,7 @@ namespace ChatClient
         private string nick = "Roggan";
         private ActorRef server;
 
-        public ChatClientActor(ActorContext start)
-            : base(start)
+        public ChatClientActor()
         {
             server = Context.ActorSelection("http://localhost:8090/ChatServer");
         }        

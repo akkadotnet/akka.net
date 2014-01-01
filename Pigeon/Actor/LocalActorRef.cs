@@ -8,11 +8,11 @@ namespace Pigeon.Actor
     public class LocalActorRef : ActorRef
     {
         private ActorBase _actor;
-
-
-        public LocalActorRef(ActorPath path)
+        public ActorContext Context { get;private set; }
+        public LocalActorRef(ActorPath path,ActorContext context)
         {
             this.Path = path;
+            this.Context = context;
         }
 
         public void SetActor(ActorBase actor)
@@ -22,7 +22,7 @@ namespace Pigeon.Actor
 
         public override void Tell(IMessage message, ActorRef sender)
         {
-            _actor.Post(sender,message);
+            _actor.Post(sender,this,message);
         }
     }
 }

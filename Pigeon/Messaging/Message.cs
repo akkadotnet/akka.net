@@ -11,5 +11,7 @@ namespace Pigeon.Messaging
     {
         public ActorRef Sender { get; set; }
         public IMessage Payload { get; set; }
+
+        public LocalActorRef Target { get; set; }
     }
 }

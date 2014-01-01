@@ -67,7 +67,6 @@ namespace Pigeon.App
 
     public class LogActor : TypedActor , IHandle<LogMessage> , IHandle<TimeRequest>
     {
-        public LogActor(ActorContext context) : base(context) { }
         public void Handle(LogMessage message)
         {
             Console.WriteLine("Log {0}", message.Timestamp);
@@ -85,10 +84,9 @@ namespace Pigeon.App
     public class MyActor : UntypedActor
     {
         private ActorRef logger;
-        public MyActor(ActorContext context)
-            : base(context)
+        public MyActor()
         {
-            this.logger = context.ActorOf<LogActor>();
+            this.logger = Context.ActorOf<LogActor>();
         }
         
         protected override void OnReceive(IMessage message)

@@ -10,10 +10,6 @@ namespace Pigeon.Actor
     {
         private TaskCompletionSource<IMessage> result;
         private ActorRef RespondTo;
-        public FutureActor(ActorContext context)
-            : base(context)
-        {
-        }
 
         protected override void OnReceive(IMessage message)
         {

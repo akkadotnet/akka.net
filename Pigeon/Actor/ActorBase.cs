@@ -21,11 +21,10 @@ namespace Pigeon.Actor
         protected ActorRef Sender { get; private set; }
         protected ActorRef Self { get; private set; }
 
-        protected ActorBase(ActorContext context)
-        {
-            this.Context = context;
+        protected ActorBase()
+        {            
             this.Context.Self.SetActor(this);
-            this.Self = context.Self;
+            this.Self = Context.Self;
             messages.AsObservable().Subscribe(this);
         }
 
@@ -39,11 +38,12 @@ namespace Pigeon.Actor
         protected abstract void OnReceive(IMessage message);
 
 
-        internal void Post(ActorRef sender, IMessage message)
+        internal void Post(ActorRef sender,LocalActorRef target, IMessage message)
         {
             var m = new Message
             {
                 Sender = sender,
+                Target = target,
                 Payload = message,
             };
             messages.SendAsync(m);
@@ -60,7 +60,11 @@ namespace Pigeon.Actor
         void IObserver<Message>.OnNext(Message value)
         {
             this.Sender = value.Sender;
+            //set the current context
+            ActorContext.Current = value.Target.Context;
             OnReceiveInternal(value.Payload);
+            //clear the current context
+            ActorContext.Current = null;
         }
 
         public void Tell(ActorRef actor, IMessage message)
@@ -77,7 +81,13 @@ namespace Pigeon.Actor
             return result.Task;
         }
 
-        protected ActorContext Context { get;private set; }      
+        protected ActorContext Context
+        {
+            get
+            {
+                return ActorContext.Current;
+            }
+        }
     }
 
     public class ActorAction : IMessage

@@ -9,7 +9,7 @@ namespace Pigeon.Actor
 {
     public abstract class ActorRefFactory
     {
-        public ActorSystem System { get; set; }
+        public virtual ActorSystem System { get; set; }
 
         public abstract ActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase;
 

@@ -32,8 +32,7 @@ namespace ChatServer
 
     {
         private List<ActorRef> clients = new List<ActorRef>();
-        public ChatServerActor(ActorContext start)
-            : base(start)
+        public ChatServerActor()
         {
         }
 

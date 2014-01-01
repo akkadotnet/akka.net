@@ -8,9 +8,5 @@ namespace Pigeon.Actor
 {
     public abstract class UntypedActor : ActorBase
     {
-        public UntypedActor(ActorContext start)
-            : base(start)
-        {
-        }
     }
 }

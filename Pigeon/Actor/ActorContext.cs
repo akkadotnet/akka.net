@@ -7,8 +7,26 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Actor
 {
+
     public class ActorContext : ActorRefFactory
-    {             
+    {
+        [ThreadStatic]
+        private static ActorContext current;
+        internal static ActorContext Current
+        {
+            get
+            {
+                if (current == null)
+                    throw new NotSupportedException("There is no active ActorContext, this is most likely due to use of async operations from within an actor");
+
+                return current;
+            }
+            set
+            {
+                current = value;
+            }
+        }
+        
         public LocalActorRef Self { get;  set; }
         public ActorRefFactory Parent { get; set; }
 
@@ -29,14 +47,15 @@ namespace Pigeon.Actor
             if (existing != null)
                 return existing;
 
-            var context = new ActorContext
-            {
-                System = this.System,
-                Self = new LocalActorRef(new ActorPath(name)),
-                Parent = this,
-            };
+            var context = new ActorContext();            
+            context.Parent = this;
+            context.System = this.System;
+            context.Self = new LocalActorRef(new ActorPath(name), context);
+            //set the thread static context or things will break
+            ActorContext.Current = context;
             Children.TryAdd(name, context.Self);
-            var actor = (ActorBase)Activator.CreateInstance(typeof(TActor), new object[] {context});
+            var actor = (ActorBase)Activator.CreateInstance(typeof(TActor), new object[] {});
+            ActorContext.Current = null;
             return context.Self;
         }
         public override ActorRef Child(string name)
