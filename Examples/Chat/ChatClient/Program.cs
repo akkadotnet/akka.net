@@ -1,6 +1,7 @@
 ﻿using ChatMessages;
 using Pigeon;
 using Pigeon.Actor;
+using Pigeon.Messaging;
 using Pigeon.SignalR;
 using System;
 using System.Collections.Generic;
@@ -57,20 +58,26 @@ namespace ChatClient
         IHandle<NickRequest>,
         IHandle<NickResponse>,
         IHandle<SayRequest>,
-        IHandle<SayResponse>
+        IHandle<SayResponse>,
+        IHandle<Pong>
     {
         private string nick = "Roggan";
         private ActorRef server;
 
         public ChatClientActor()
         {
-            server = Context.ActorSelection("http://localhost:8090/ChatServer");
+            server = Context.ActorSelection("http://localhost:8090/ChatServer");                       
         }        
         
         public void Handle(ConnectResponse message)
         {
             Console.WriteLine("Connected!");
             Console.WriteLine(message.Message);
+
+            Tell(server, new Ping
+            {
+                LocalUtcNow = DateTime.UtcNow,
+            });
         }
 
         public void Handle(NickRequest message)
@@ -101,6 +108,13 @@ namespace ChatClient
         {
             message.Username = this.nick;
             server.Tell(message,Self);
+        }
+
+        public void Handle(Pong message)
+        {
+            var now = DateTime.UtcNow;
+            var ping = now - message.LocalUtcNow;
+            Console.WriteLine("Ping is: {0}", ping);
         }
     }
 }
