@@ -18,7 +18,6 @@ namespace Pigeon.Actor
             TaskScheduler = TaskScheduler.Default,
         });
 
-
         protected ActorRef Sender { get; private set; }
         protected ActorRef Self { get; private set; }
 
@@ -33,14 +32,22 @@ namespace Pigeon.Actor
         }
 
         private void OnReceiveInternal(IMessage message)
-        {           
+        {
             message.Match()
+                //execute async callbacks within the actor thread
                 .With<ActorAction>(m => m.Action())
+                //resolve time distance to actor
+                .With<Ping>(m => Sender.Tell(
+                    new Pong
+                    {
+                        LocalUtcNow = m.LocalUtcNow,
+                        RemoteUtcNow = DateTime.UtcNow
+                    }))
+                //handle any other message
                 .Default(m => OnReceive(m));
         }
 
         protected abstract void OnReceive(IMessage message);
-
 
         internal void Post(ActorRef sender,LocalActorRef target, IMessage message)
         {
@@ -96,10 +103,5 @@ namespace Pigeon.Actor
                 return context;
             }
         }
-    }
-
-    public class ActorAction : IMessage
-    {
-        public Action Action { get; set; }
-    }
+    }    
 }

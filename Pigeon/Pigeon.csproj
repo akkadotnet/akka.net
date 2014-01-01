@@ -103,6 +103,7 @@
     <Compile Include="Actor\RemoteActorRef.cs" />
     <Compile Include="Actor\UntypedActor.cs" />
     <Compile Include="Context.cs" />
+    <Compile Include="Messaging\BuiltInMessages.cs" />
     <Compile Include="Messaging\IMessage.cs" />
     <Compile Include="Actor\LocalActorRef.cs" />
     <Compile Include="Messaging\Message.cs" />
