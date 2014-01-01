@@ -32,13 +32,14 @@ Remoting
 ========
 
     //Server Program.CS 
-    var system = ActorSystemSignalR.Create("My server", "http://localhost:8080
+    var system = ActorSystemSignalR.Create("myserver", "http://localhost:8080);
     var greeter = system.ActorOf<GreetingActor>("greeter");
     Console.ReadLine();
     
     //Client Program.CS
     var system = new ActorSystem();
     var greeter = system.ActorSelection("http://localhost:8090/greeter");    
+    //pass a message to the remote actor
     greeter.Tell(new Greet { Who = "Roger" }, ActorRef.NoSender);
 
     
