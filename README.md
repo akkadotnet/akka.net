@@ -27,3 +27,18 @@ Usage:
     var system = new ActorSystem();
     var greeter = system.ActorOf<GreetingActor>("greeter");
     greeter.Tell(new Greet { Who = "Roger" }, ActorRef.NoSender);
+
+Remoting
+========
+
+    //Server Program.CS 
+    var system = ActorSystemSignalR.Create("My server", "http://localhost:8080
+    var greeter = system.ActorOf<GreetingActor>("greeter");
+    Console.ReadLine();
+    
+    //Client Program.CS
+    var system = new ActorSystem();
+    var greeter = system.ActorSelection("http://localhost:8090/greeter");    
+    greeter.Tell(new Greet { Who = "Roger" }, ActorRef.NoSender);
+
+    
