@@ -17,7 +17,7 @@ namespace Pigeon.Actor
         {
         }
 
-        protected ConcurrentBag<ActorRef> Children = new ConcurrentBag<ActorRef>();
+        protected ConcurrentDictionary<string, ActorRef> Children = new ConcurrentDictionary<string, ActorRef>();
 
         public override ActorRef ActorOf<TActor>(string name = null)
         {
@@ -34,13 +34,15 @@ namespace Pigeon.Actor
                 System = this,
                 Self = new LocalActorRef(new ActorPath(name))
             };
-            Children.Add(context.Self);
+            Children.TryAdd(name, context.Self);
             var actor = (ActorBase)Activator.CreateInstance(typeof(TActor), new object[] { context });
             return context.Self;
         }
         public override ActorRef Child(string name)
         {
-            return Children.Where(actorRef => actorRef.Path.Name == name).FirstOrDefault();
+            ActorRef actorRef = null; ;
+            Children.TryGetValue(name, out actorRef);
+            return actorRef;
         }
 
         public ActorRef ActorSelection(string remoteActorPath,ActorBase owner = null)
@@ -56,6 +58,12 @@ namespace Pigeon.Actor
         public override ActorRef ActorSelection(string remoteActorPath)
         {
             throw new NotImplementedException();
+        }
+
+        public override void Stop(ActorRef actor)
+        {
+            ActorRef value = null;
+            Children.TryRemove(actor.Path.Name, out value);
         }
     }
 }

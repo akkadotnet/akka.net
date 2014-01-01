@@ -38,7 +38,8 @@ namespace Pigeon.Actor
 
         protected abstract void OnReceive(IMessage message);
 
-        public void Tell(ActorRef sender, IMessage message)
+
+        internal void Post(ActorRef sender, IMessage message)
         {
             var m = new Message
             {
@@ -60,6 +61,11 @@ namespace Pigeon.Actor
         {
             this.Sender = value.Sender;
             OnReceiveInternal(value.Payload);
+        }
+
+        public void Tell(ActorRef actor, IMessage message)
+        {
+            actor.Tell(message, Self);
         }
 
         public Task<IMessage> Ask(ActorRef actor, IMessage message)

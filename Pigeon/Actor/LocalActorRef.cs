@@ -22,7 +22,7 @@ namespace Pigeon.Actor
 
         public override void Tell(IMessage message, ActorRef sender)
         {
-            _actor.Tell(sender,message);
+            _actor.Post(sender,message);
         }
     }
 }

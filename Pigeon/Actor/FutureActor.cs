@@ -26,11 +26,15 @@ namespace Pigeon.Actor
                 })
                 .Default(m =>
                 {
-                    var ownerMessage = new ActorAction
+                    var futureCompleteResponse = new ActorAction
                     {
-                        Action = () => result.SetResult(message),
+                        Action = () => 
+                        {
+                            this.Context.Parent.Stop(Self); //kill self
+                            result.SetResult(message); //notify .NET that task is complete
+                        },
                     };
-                    RespondTo.Tell(ownerMessage);
+                    RespondTo.Tell(futureCompleteResponse);
                 });
         }
     }

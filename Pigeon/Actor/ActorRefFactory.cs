@@ -12,6 +12,8 @@ namespace Pigeon.Actor
         public ActorSystem System { get; set; }
 
         public abstract ActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase;
+
+        public abstract void Stop(ActorRef actor);
         
         public abstract ActorRef ActorSelection(string remoteActorPath);
 
