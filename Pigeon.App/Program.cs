@@ -16,11 +16,11 @@ namespace Pigeon.App
             using (var system = ActorSystemSignalR.Create("System A", "http://localhost:8080"))
             {
                 var actor = system.ActorOf<MyActor>();
-                actor.Tell(new TimeRequest(), ActorRef.NoSender);
-                actor.Tell(new TimeRequest(), ActorRef.NoSender);
-                actor.Tell(new TimeRequest(), ActorRef.NoSender);
-                actor.Tell(new TimeRequest(), ActorRef.NoSender); 
-                actor.Tell(new TimeRequest(), ActorRef.NoSender);
+                for (int i = 0; i < 100; i++)
+                {
+                    actor.Tell(new TimeRequest());
+                }
+               
                 //for (int i = 0; i < 1000; i++)
                 //{
                 //    actor.Tell(new Greet
@@ -100,7 +100,7 @@ namespace Pigeon.App
                     result.Match()
                         .With<TimeResponse>(t => {
                             Console.WriteLine("await thread {0}", System.Threading.Thread.CurrentThread.GetHashCode());
-                            Console.WriteLine("its {0} o'clock", t.DateTime);
+                       //     Console.WriteLine("its {0} o'clock", t.DateTime);
                         })
                         .Default(_ => Console.WriteLine("Unknown message"));
 

@@ -30,9 +30,9 @@ namespace Pigeon.Actor
         }
 
         private void OnReceiveInternal(IMessage message)
-        {
+        {           
             message.Match()
-                .With<AwaitResult>(m => m.Action())
+                .With<ActorAction>(m => m.Action())
                 .Default(m => OnReceive(m));
         }
 
@@ -76,7 +76,7 @@ namespace Pigeon.Actor
         protected ActorContext Context { get;private set; }      
     }
 
-    public class AwaitResult : IMessage
+    public class ActorAction : IMessage
     {
         public Action Action { get; set; }
     }

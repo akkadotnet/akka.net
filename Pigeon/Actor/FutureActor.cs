@@ -36,7 +36,7 @@ namespace Pigeon.Actor
         }
         public override void Tell(IMessage message, ActorRef sender = null)
         {
-            var ownerMessage = new AwaitResult
+            var ownerMessage = new ActorAction
             {
                 Action = () => result.SetResult(message),
             };

@@ -16,7 +16,7 @@ namespace ChatServer
         {
             using (var system = ActorSystemSignalR.Create("Chat Server", "http://localhost:8090"))
             {
-                var server = system.ActorOf<ChatServerActor>();
+                var server = system.ActorOf<ChatServerActor>("ChatServer");
 
                 Console.ReadLine();
             }
