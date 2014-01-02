@@ -62,12 +62,7 @@ namespace ChatClient
         IHandle<Pong>
     {
         private string nick = "Roggan";
-        private ActorRef server;
-
-        public ChatClientActor()
-        {
-            server = Context.ActorSelection("http://localhost:8090/ChatServer");                       
-        }        
+        private ActorRef server = Context.ActorSelection("http://localhost:8090/ChatServer");
         
         public void Handle(ConnectResponse message)
         {

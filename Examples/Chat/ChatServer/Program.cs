@@ -31,10 +31,7 @@ namespace ChatServer
         IHandle<ChannelsRequest>
 
     {
-        private List<ActorRef> clients = new List<ActorRef>();
-        public ChatServerActor()
-        {
-        }
+        private BroadcastActorRef clients = new BroadcastActorRef();
 
         public void Handle(SayRequest message)
         {
@@ -44,7 +41,7 @@ namespace ChatServer
                 Username = message.Username,
                 Text = message.Text,
             };
-            clients.ForEach(c => c.Tell(response, Self));
+            clients.Tell(response, Self);
         }
 
         public void Handle(ConnectRequest message)
@@ -64,7 +61,7 @@ namespace ChatServer
                 NewUsername = message.NewUsername,
             };
 
-            clients.ForEach(c => c.Tell(response, Self));            
+            clients.Tell(response, Self);
         }
 
         public void Handle(Disconnect message)

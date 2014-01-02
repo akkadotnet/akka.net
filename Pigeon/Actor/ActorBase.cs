@@ -26,7 +26,7 @@ namespace Pigeon.Actor
             if (ActorContext.Current == null)
                 throw new Exception("Do not create actors using 'new', always create them using an ActorContext/System");
 
-            this.Context.Self.SetActor(this);
+            Context.Self.SetActor(this);
             this.Self = Context.Self;
             messages.AsObservable().Subscribe(this);
         }
@@ -92,7 +92,7 @@ namespace Pigeon.Actor
             return result.Task;
         }
 
-        protected ActorContext Context
+        protected static ActorContext Context
         {
             get
             {

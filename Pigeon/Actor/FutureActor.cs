@@ -27,7 +27,7 @@ namespace Pigeon.Actor
                     {
                         Action = () => 
                         {
-                            this.Context.Parent.Stop(Self); //kill self
+                            Context.Parent.Stop(Self); //kill self
                             result.SetResult(message); //notify .NET that task is complete
                         },
                     };

@@ -9,4 +9,23 @@ namespace Pigeon.Actor
     public class ActorSelection
     {
     }
+
+    public class BroadcastActorRef : ActorRef
+    {
+        private List<ActorRef> actors = new List<ActorRef>();
+        public BroadcastActorRef(params ActorRef[] actors)
+        {
+            this.actors.AddRange(actors); 
+        }
+
+        public void Add(ActorRef actor)
+        {
+            this.actors.Add(actor);
+        }
+
+        public override void Tell(IMessage message, ActorRef sender = null)
+        {
+            actors.ForEach(a => a.Tell(message, sender));
+        }
+    }
 }

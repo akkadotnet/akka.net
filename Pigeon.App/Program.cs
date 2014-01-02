@@ -105,13 +105,13 @@ namespace Pigeon.App
                 .With<Greet>(m => Console.WriteLine("Hello {0}", m.Who))
                 .With<TimeRequest>(async m => {
                     //TODO: this will execute in another thread, fix
-                    var result = await Ask(logger, m);
-                    result.Match()
-                        .With<TimeResponse>(t => {
-                            Console.WriteLine("await thread {0}", System.Threading.Thread.CurrentThread.GetHashCode());
-                       //     Console.WriteLine("its {0} o'clock", t.DateTime);
-                        })
-                        .Default(_ => Console.WriteLine("Unknown message"));
+var result = await Ask(logger, m);
+result.Match()
+    .With<TimeResponse>(t => {
+        Console.WriteLine("await thread {0}", System.Threading.Thread.CurrentThread.GetHashCode());
+    //     Console.WriteLine("its {0} o'clock", t.DateTime);
+    })
+    .Default(_ => Console.WriteLine("Unknown message"));
 
                 })
                 .Default(m => Console.WriteLine("Unknown message {0}",m));
