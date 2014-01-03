@@ -1,5 +1,4 @@
-﻿using Pigeon.Messaging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -24,7 +23,7 @@ namespace Pigeon
             _message = message;
         }
 
-        public Case With<TMessage>(Action<TMessage> action) 
+        public Case With<TMessage>(Action<TMessage> action)
         {
             if (!_handled && _message is TMessage)
             {

@@ -74,11 +74,12 @@ namespace Pigeon.Actor
 
         private void ActorOfInternal(ActorContext context)
         {
+            var prev = ActorContext.Current;
             //set the thread static context or things will break
             ActorContext.Current = context;
             Children.TryAdd(context.Self.Path.Name, context.Self);
             var actor = (ActorBase)Activator.CreateInstance(context.Props.Type, new object[] { });
-            ActorContext.Current = null;
+            ActorContext.Current = prev;
         }
 
         internal void Post(ActorRef sender, LocalActorRef target, object message)

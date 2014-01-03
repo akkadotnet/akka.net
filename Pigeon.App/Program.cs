@@ -18,7 +18,7 @@ namespace Pigeon.App
             {
                 var actor = system.ActorOf<MyActor>();
                 Stopwatch sw = Stopwatch.StartNew();
-                for (int i = 0; i < 10; i++)
+                for (int i = 0; i < 20; i++)
                 {
                     actor.Tell(new TimeRequest());
                 }
@@ -49,7 +49,7 @@ namespace Pigeon.App
     {
         protected override void OnReceive(object message)
         {
-            message.Match()
+            Pattern.Match(message)
                 .With<Greet>(m => Console.WriteLine("Hello {0}", m.Who));
         }
     }
@@ -92,31 +92,28 @@ namespace Pigeon.App
 
     public class MyActor : UntypedActor
     {
-        private ActorRef logger;
-        public MyActor()
-        {
-            this.logger = Context.ActorOf<LogActor>();
-        }
-        
+        private ActorRef logger = Context.ActorOf<LogActor>();
+
         protected override void OnReceive(object message)
         {
             Console.WriteLine("actor thread: {0}", System.Threading.Thread.CurrentThread.GetHashCode());
-            message.Match()
+            Pattern.Match(message)
                 .With<Greet>(m => Console.WriteLine("Hello {0}", m.Who))
-                .With<TimeRequest>(async m => {
+                .With<TimeRequest>(async m =>
+                {
                     //TODO: this will execute in another thread, fix
-            var result = await Ask(logger, m);
-            result.Match()
-                .With<TimeResponse>(t => {
-                    Console.WriteLine("await thread {0}", System.Threading.Thread.CurrentThread.GetHashCode());
-                //     Console.WriteLine("its {0} o'clock", t.DateTime);
-                })
-                .Default(_ => Console.WriteLine("Unknown message"));
+                    Pattern.Match(await Ask(logger, m))
+                        .With<TimeResponse>(t =>
+                        {
+                            Console.WriteLine("await thread {0}", System.Threading.Thread.CurrentThread.GetHashCode());
+                            //     Console.WriteLine("its {0} o'clock", t.DateTime);
+                        })
+                        .Default(_ => Console.WriteLine("Unknown message"));
 
                 })
-                .Default(m => Console.WriteLine("Unknown message {0}",m));
+                .Default(m => Console.WriteLine("Unknown message {0}", m));
 
-        //    logger.Tell(new LogMessage(message));
+            //    logger.Tell(new LogMessage(message));
         }
     }
 }

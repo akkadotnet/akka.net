@@ -35,18 +35,39 @@ namespace Pigeon.Actor
 
         private void OnReceiveInternal(object message)
         {
-            Pattern.Match(message)
-                //execute async callbacks within the actor thread
-                .With<ActorAction>(m => m.Action())
-                //resolve time distance to actor
-                .With<Ping>(m => Sender.Tell(
-                    new Pong
-                    {
-                        LocalUtcNow = m.LocalUtcNow,
-                        RemoteUtcNow = DateTime.UtcNow
-                    }))
-                //handle any other message
-                .Default(m => Context.CurrentBehavior(m));
+            try
+            {
+                Pattern.Match(message)
+                    //execute async callbacks within the actor thread
+                    .With<ActorAction>(m => m.Action())
+                    //resolve time distance to actor
+                    .With<Ping>(m => Sender.Tell(
+                        new Pong
+                        {
+                            LocalUtcNow = m.LocalUtcNow,
+                            RemoteUtcNow = DateTime.UtcNow
+                        }))
+                    .With<Stop>(m => Context.Stop())
+                    .With<Restart>(m => Context.Restart())
+                    .With<Resume>(m => {})
+                    .With<Kill>(m => { throw new ActorKilledException(); })
+                    .With<SuperviceMe>(m => this.SupervisorStrategy().Handle(Sender,m.Reason))
+                    //handle any other message
+                    .Default(m => Context.CurrentBehavior(m));
+            }
+            catch (Exception x)
+            {
+                Context.Parent.Self.Tell(new SuperviceMe
+                {
+                    Reason = x,
+                });
+            }
+        }
+
+        private readonly SupervisorStrategy supervisorStrategy = new OneForOneStrategy(10, TimeSpan.FromSeconds(30), OneForOneStrategy.DefaultDecider);
+        protected virtual SupervisorStrategy SupervisorStrategy()
+        {
+            return supervisorStrategy;
         }
 
         protected abstract void OnReceive(object message);
