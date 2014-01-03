@@ -63,3 +63,32 @@ public class GreetingActor : UntypedActor
     }
 }
 ```
+
+##Supervision
+```csharp
+public class MyActor : UntypedActor
+{
+    private ActorRef logger = Context.ActorOf<LogActor>();
+
+    // if any child, e.g. the logger above. throws an exception
+    // apply the rules below
+    // e.g. Restart the child if 10 exceptions occur in 30 seconds or less
+    protected override SupervisorStrategy SupervisorStrategy()
+    {
+        return new OneForOneStrategy(
+            maxNumberOfRetries: 10, 
+            duration: TimeSpan.FromSeconds(30), 
+            decider: x =>
+            {
+                if (x is ArithmeticException)
+                    return Directive.Resume;
+                if (x is NotSupportedException)
+                    return Directive.Stop;
+
+                return Directive.Restart;
+            });
+    }
+    
+    ...
+}
+```
