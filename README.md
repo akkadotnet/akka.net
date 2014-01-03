@@ -8,7 +8,7 @@ Getting started
 
 Write your first actor:
 
-    public class Greet : IMessage
+    public class Greet
     {
         public string Who { get; set; }
     }
@@ -17,7 +17,7 @@ Write your first actor:
     {
         protected override void OnReceive(IMessage message)
         {
-            message.Match()
+            Pattern.Match(message)
                 .With<Greet>(m => Console.WriteLine("Hello {0}", m.Who));
         }
     }
@@ -26,7 +26,7 @@ Usage:
 
     var system = new ActorSystem();
     var greeter = system.ActorOf<GreetingActor>("greeter");
-    greeter.Tell(new Greet { Who = "Roger" }, ActorRef.NoSender);
+    greeter.Tell(new Greet { Who = "Roger" });
 
 Remoting
 ========
@@ -40,6 +40,6 @@ Remoting
     var system = new ActorSystem();
     var greeter = system.ActorSelection("http://localhost:8080/greeter");    
     //pass a message to the remote actor
-    greeter.Tell(new Greet { Who = "Roger" }, ActorRef.NoSender);
+    greeter.Tell(new Greet { Who = "Roger" });
 
     
