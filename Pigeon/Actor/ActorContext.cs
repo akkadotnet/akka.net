@@ -115,9 +115,9 @@ namespace Pigeon.Actor
             this.Children.TryRemove(name, out tmp);           
         }
 
-        public Action<object> CurrentBehavior { get; private set; }
-        private Stack<Action<object>> behaviorStack = new Stack<Action<object>>();
-        public void Become(Action<object> receive)
+        public MessageHandler CurrentBehavior { get; private set; }
+        private Stack<MessageHandler> behaviorStack = new Stack<MessageHandler>();
+        public void Become(MessageHandler receive)
         {
             behaviorStack.Push(receive);
             CurrentBehavior = receive;

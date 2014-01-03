@@ -72,7 +72,7 @@ namespace Pigeon.Actor
             }
         }
 
-        protected void Become(Action<object> receive)
+        protected void Become(MessageHandler receive)
         {
             Context.Become(receive);
         }
