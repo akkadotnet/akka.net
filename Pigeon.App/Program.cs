@@ -18,9 +18,10 @@ namespace Pigeon.App
             {
                 var actor = system.ActorOf<MyActor>();
                 Stopwatch sw = Stopwatch.StartNew();
-                for (int i = 0; i < 20; i++)
+                for (int i = 0; i < 2000; i++)
                 {
                     actor.Tell(new Greet{Who ="Roger"});
+              //      System.Threading.Thread.Sleep(5);
                 }
                 Console.WriteLine(sw.Elapsed);
                 //for (int i = 0; i < 1000; i++)
@@ -118,7 +119,10 @@ namespace Pigeon.App
         {
         //    Console.WriteLine("actor thread: {0}", System.Threading.Thread.CurrentThread.GetHashCode());
             Pattern.Match(message)
-                .With<Greet>(m => Console.WriteLine("Hello {0}", m.Who))
+                .With<Greet>(m => 
+                {
+                    //Console.WriteLine("Hello {0}", m.Who); 
+                })
                 .With<TimeRequest>(async m =>
                 {
                     //TODO: this will execute in another thread, fix

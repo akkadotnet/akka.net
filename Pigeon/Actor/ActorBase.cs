@@ -47,7 +47,9 @@ namespace Pigeon.Actor
                             LocalUtcNow = m.LocalUtcNow,
                             RemoteUtcNow = DateTime.UtcNow
                         }))
-                    .With<Stop>(m => Context.Stop())
+                    .With<Stop>(m => {
+                        Context.Stop();
+                    })
                     .With<Restart>(m => Context.Restart())
                     .With<Resume>(m => {})
                     .With<Kill>(m => { throw new ActorKilledException(); })

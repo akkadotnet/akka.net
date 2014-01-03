@@ -16,6 +16,8 @@ namespace Pigeon.Actor
         {
         }
 
+        public readonly NoSender Deadletters = new NoSender();
+
         public override ActorSystem System
         {
             get

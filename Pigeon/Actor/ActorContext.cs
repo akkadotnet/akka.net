@@ -96,6 +96,14 @@ namespace Pigeon.Actor
 
         public void Stop()
         {
+            foreach (var child in Children.Values)
+                child.Tell(new Stop());
+
+            this.Become(m =>
+            {
+                System.Deadletters.Tell(m);
+            });
+
             this.Parent.StopChild(this);
         }
 

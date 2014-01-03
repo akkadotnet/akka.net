@@ -34,7 +34,7 @@ namespace Pigeon.Actor
 
         public override void Post(Message message)
         {
-            bufferblock.SendAsync(message);
+            bufferblock.Post(message);
         }
     }
 }
