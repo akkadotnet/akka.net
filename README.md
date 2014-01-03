@@ -70,6 +70,9 @@ public class MyActor : UntypedActor
 {
     private ActorRef logger = Context.ActorOf<LogActor>();
 
+    // if any child, e.g. the logger above. throws an exception
+    // apply the rules below
+    // e.g. Restart the child if 10 exceptions occur in 30 seconds or less
     protected override SupervisorStrategy SupervisorStrategy()
     {
         return new OneForOneStrategy(
