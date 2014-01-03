@@ -10,7 +10,7 @@ namespace Pigeon.Messaging
     {
     }
 
-    public class SuperviceMe : BuiltInMessage
+    public class SuperviceChild : BuiltInMessage
     {
         public Exception Reason { get; set; }
     }

@@ -51,23 +51,30 @@ namespace Pigeon.Actor
                     .With<Restart>(m => Context.Restart())
                     .With<Resume>(m => {})
                     .With<Kill>(m => { throw new ActorKilledException(); })
-                    .With<SuperviceMe>(m => this.SupervisorStrategy().Handle(Sender,m.Reason))
+                    .With<SuperviceChild>(m => this.SupervisorStrategyLazy().Handle(Sender, m.Reason))
                     //handle any other message
                     .Default(m => Context.CurrentBehavior(m));
             }
             catch (Exception x)
             {
-                Context.Parent.Self.Tell(new SuperviceMe
+                Context.Parent.Self.Tell(new SuperviceChild
                 {
                     Reason = x,
                 });
             }
         }
 
-        private readonly SupervisorStrategy supervisorStrategy = new OneForOneStrategy(10, TimeSpan.FromSeconds(30), OneForOneStrategy.DefaultDecider);
+        private SupervisorStrategy supervisorStrategy = null;
+        private SupervisorStrategy SupervisorStrategyLazy()
+        {
+            if (supervisorStrategy == null)
+                supervisorStrategy = SupervisorStrategy();
+
+            return supervisorStrategy;
+        }
         protected virtual SupervisorStrategy SupervisorStrategy()
         {
-            return supervisorStrategy;
+            return new OneForOneStrategy(10, TimeSpan.FromSeconds(30), OneForOneStrategy.DefaultDecider);
         }
 
         protected abstract void OnReceive(object message);

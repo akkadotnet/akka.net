@@ -76,7 +76,6 @@ namespace Pigeon.App
 
     public class LogActor : UntypedActor 
     {
-  
         protected override void OnReceive(object message)
         {
             Pattern.Match(message)
@@ -98,6 +97,22 @@ namespace Pigeon.App
     public class MyActor : UntypedActor
     {
         private ActorRef logger = Context.ActorOf<LogActor>();
+
+        protected override SupervisorStrategy SupervisorStrategy()
+        {
+            return new OneForOneStrategy(
+                maxNumberOfRetries: 10, 
+                duration: TimeSpan.FromSeconds(30), 
+                decider: x =>
+                {
+                    if (x is ArithmeticException)
+                        return Directive.Resume;
+                    if (x is NotSupportedException)
+                        return Directive.Stop;
+
+                    return Directive.Restart;
+                });
+        }
 
         protected override void OnReceive(object message)
         {

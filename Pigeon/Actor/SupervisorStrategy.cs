@@ -86,7 +86,7 @@ namespace Pigeon.Actor
         }
     }
 
-    public sealed class OneForAllStrategy : SupervisorStrategy
+    public sealed class AllForOneStrategy : SupervisorStrategy
     {
         public override void Handle(ActorRef child, Exception x)
         {
