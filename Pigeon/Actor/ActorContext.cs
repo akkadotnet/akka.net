@@ -108,15 +108,15 @@ namespace Pigeon.Actor
 
         private void RestartChild(ActorContext actorContext)
         {
-            StopChild(actorContext);            
+            StopChild(actorContext);
+            ActorOfInternal(actorContext);
         }
 
         private void StopChild(ActorContext actorContext)
         {
             ActorRef tmp;
             var name = actorContext.Self.Path.Name;
-            this.Children.TryRemove(name, out tmp);
-            ActorOfInternal(actorContext);
+            this.Children.TryRemove(name, out tmp);           
         }
     }    
 }
