@@ -16,9 +16,11 @@ namespace Pigeon.Actor
 
     public class BufferBlockMailbox : Mailbox
     {
-        private BufferBlock<Message> bufferblock = new BufferBlock<Message>(new DataflowBlockOptions()
+        private BufferBlock<Message> bufferblock = new BufferBlock<Message>(new ExecutionDataflowBlockOptions()
         {
-            BoundedCapacity = 100,
+     //       MaxDegreeOfParallelism = 1,
+     //       MaxMessagesPerTask = 1,
+            BoundedCapacity = 100000,
             TaskScheduler = TaskScheduler.Default,
         });
 

@@ -82,7 +82,7 @@ namespace Pigeon.App
             Pattern.Match(message)
                 .With<LogMessage>(m =>
                 {
-                    throw new NotSupportedException("Some exception");
+               //     throw new NotSupportedException("Some exception");
                     Console.WriteLine("Log {0}", m.Timestamp);
                 })
                 .With<TimeRequest>(m =>
@@ -121,7 +121,7 @@ namespace Pigeon.App
             Pattern.Match(message)
                 .With<Greet>(m => 
                 {
-                    //Console.WriteLine("Hello {0}", m.Who); 
+                    Console.WriteLine("Hello {0}", m.Who); 
                 })
                 .With<TimeRequest>(async m =>
                 {
