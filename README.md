@@ -58,7 +58,7 @@ Code Hotswap
                 });
         }
         
-        protected override void OtherReceive(IMessage message)
+        void OtherReceive(IMessage message)
         {
             Pattern.Match(message)
                 .With<Greet>(m => {
