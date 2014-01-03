@@ -1,5 +1,9 @@
 # Pigeon
-Actor based framework inspired by Akka
+
+*Pre alpha stage, do not use in production.*
+
+Pigeon is an Actor Model framework for the .NET platform based on the concepts and API found in the Java/Scala framework AKKA.
+
 
 ## Getting started
 Write your first actor:
