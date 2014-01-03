@@ -43,3 +43,26 @@ Remoting
     greeter.Tell(new Greet { Who = "Roger" });
 
     
+Code Hotswap
+============
+
+    public class GreetingActor : UntypedActor
+    {
+        protected override void OnReceive(IMessage message)
+        {
+            Pattern.Match(message)
+                .With<Greet>(m => {
+                    Console.WriteLine("Hello {0}", m.Who);
+                    //this could also be a lambda
+                    Become(OtherReceive);
+                });
+        }
+        
+        void OtherReceive(IMessage message)
+        {
+            Pattern.Match(message)
+                .With<Greet>(m => {
+                    Console.WriteLine("You already said hello!");
+                });
+        }
+    }
