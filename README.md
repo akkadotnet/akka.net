@@ -38,7 +38,7 @@ Remoting
     
     //Client Program.CS
     var system = new ActorSystem();
-    var greeter = system.ActorSelection("http://localhost:8090/greeter");    
+    var greeter = system.ActorSelection("http://localhost:8080/greeter");    
     //pass a message to the remote actor
     greeter.Tell(new Greet { Who = "Roger" }, ActorRef.NoSender);
 
