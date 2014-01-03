@@ -18,8 +18,8 @@ namespace Pigeon.Actor
     {
         private BufferBlock<Message> bufferblock = new BufferBlock<Message>(new ExecutionDataflowBlockOptions()
         {
-     //       MaxDegreeOfParallelism = 1,
-     //       MaxMessagesPerTask = 1,
+            MaxDegreeOfParallelism = 1,
+            MaxMessagesPerTask = 1,
             BoundedCapacity = 100000,
             TaskScheduler = TaskScheduler.Default,
         });

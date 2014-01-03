@@ -28,7 +28,7 @@ namespace Pigeon.Actor
                         Action = () => 
                         {
                             //if we dont close over a var here, we will stop the wrong actor
-                            context.Stop(); //kill self
+                            context.Parent.Stop((LocalActorRef)this.Self); //kill self
                             result.SetResult(message); //notify .NET that task is complete
                         },
                     };

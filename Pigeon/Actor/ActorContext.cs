@@ -94,36 +94,37 @@ namespace Pigeon.Actor
             Mailbox.Post(m);
         }
 
-        public void Stop()
-        {
-            foreach (var child in Children.Values)
-                child.Tell(new Stop());
+        //public void Stop()
+        //{
+        //    foreach (var child in Children.Values)
+        //        child.Tell(new Stop());
 
-            this.Become(m =>
+        //    this.Become(m =>
+        //    {
+        //        System.Deadletters.Tell(m);
+        //    });
+
+        //    this.Parent.StopChild(this);
+        //}
+
+
+
+        public void Restart(LocalActorRef child)
+        {           
+            Stop(child);
+            Debug.WriteLine("restarting child: {0}", child.Path);
+            ActorOfInternal(child.Context);
+        }
+
+        public void Stop(LocalActorRef child)
+        {
+            Debug.WriteLine("stopping child: {0}", child.Path);
+            child.Context.Become(m =>
             {
                 System.Deadletters.Tell(m);
             });
-
-            this.Parent.StopChild(this);
-        }
-
-        public void Restart()
-        {
-            this.Parent.RestartChild(this);
-        }
-
-        private void RestartChild(ActorContext actorContext)
-        {           
-            StopChild(actorContext);
-            Debug.WriteLine("restarting child: {0}", actorContext.Self.Path);
-            ActorOfInternal(actorContext);
-        }
-
-        private void StopChild(ActorContext actorContext)
-        {
-            Debug.WriteLine("stopping child: {0}", actorContext.Self.Path);
             ActorRef tmp;
-            var name = actorContext.Self.Path.Name;
+            var name = child.Path.Name;
             this.Children.TryRemove(name, out tmp);           
         }
 

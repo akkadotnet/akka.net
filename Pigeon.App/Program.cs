@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Pigeon.App
@@ -13,12 +14,13 @@ namespace Pigeon.App
     class Program
     {
         static void Main(string[] args)
-        {           
+        {
+      //      ThreadPool.SetMinThreads(2000, 2000);
             using (var system = ActorSystemSignalR.Create("System A", "http://localhost:8080"))
             {
                 var actor = system.ActorOf<MyActor>();
                 Stopwatch sw = Stopwatch.StartNew();
-                for (int i = 0; i < 2000; i++)
+                for (int i = 0; i < 20000; i++)
                 {
                     actor.Tell(new Greet{Who ="Roger"});
               //      System.Threading.Thread.Sleep(5);
@@ -82,8 +84,8 @@ namespace Pigeon.App
             Pattern.Match(message)
                 .With<LogMessage>(m =>
                 {
-               //     throw new NotSupportedException("Some exception");
                     Console.WriteLine("Log {0}", m.Timestamp);
+                    throw new NotSupportedException("Some exception");                    
                 })
                 .With<TimeRequest>(m =>
                 {

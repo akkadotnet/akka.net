@@ -66,22 +66,17 @@ namespace Pigeon.Actor
                 failures.Entries.Clear();
                 var whatToDo = Decider(x);
                 if (whatToDo == Directive.Escalate)
-                    child.Tell(new Escalate
-                    {
-                        Reason = x,
-                    });
+                {
+                }
                 if (whatToDo == Directive.Resume)
-                    child.Tell(new Resume
-                    {
-                    });
+                {
+                }
                 if (whatToDo == Directive.Restart)
-                    child.Tell(new Restart
-                    {
-                    });
+                {
+                    ActorContext.Current.Restart((LocalActorRef)child);
+                }
                 if (whatToDo == Directive.Stop)
-                    child.Tell(new Stop
-                    {
-                    });
+                    ActorContext.Current.Stop((LocalActorRef)child);
             }
         }
     }

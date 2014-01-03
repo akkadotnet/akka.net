@@ -47,13 +47,10 @@ namespace Pigeon.Actor
                             LocalUtcNow = m.LocalUtcNow,
                             RemoteUtcNow = DateTime.UtcNow
                         }))
-                    .With<Stop>(m => {
-                        Context.Stop();
+                    .With<SuperviceChild>(m =>
+                    {
+                        this.SupervisorStrategyLazy().Handle(Sender, m.Reason);
                     })
-                    .With<Restart>(m => Context.Restart())
-                    .With<Resume>(m => {})
-                    .With<Kill>(m => { throw new ActorKilledException(); })
-                    .With<SuperviceChild>(m => this.SupervisorStrategyLazy().Handle(Sender, m.Reason))
                     //handle any other message
                     .Default(m => Context.CurrentBehavior(m));
             }
