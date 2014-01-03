@@ -38,7 +38,7 @@ namespace Pigeon.Actor
         {           
         }
 
-        public override void Tell(object message, ActorRef sender)
+        protected override void TellInternal(object message, ActorRef sender)
         {
             var data = JsonConvert.SerializeObject(message);
             if (sender == ActorRef.NoSender)

@@ -20,9 +20,9 @@ namespace Pigeon.Actor
             this._actor = actor;
         }
 
-        public override void Tell(object message, ActorRef sender)
+        protected override void TellInternal(object message, ActorRef sender)
         {
-            this.Context.Post(sender,this,message);
+            this.Context.Post(sender, this, message);
         }
     }
 }

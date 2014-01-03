@@ -10,7 +10,24 @@ namespace Pigeon.Actor
     {
         public virtual ActorPath Path { get;protected set; }
 
-        public abstract void Tell(object message, ActorRef sender = null);        
+        public void Tell(object message, ActorRef sender = null)
+        {
+            if (sender != null)
+            {
+            }
+            else if (ActorContext.Current != null)
+            {
+                sender = ActorContext.Current.Self;
+            }
+            else
+            {
+                sender = ActorRef.NoSender;
+            }
+
+            TellInternal(message, sender);
+        }
+
+        protected abstract void TellInternal(object message,ActorRef sender);     
 
         public static readonly ActorRef NoSender = new NoSender();
     }
@@ -22,9 +39,9 @@ namespace Pigeon.Actor
             this.Path = new ActorPath("NoSender");
         }
 
-        public override void Tell(object message, ActorRef sender)
+        protected override void TellInternal(object message, ActorRef sender)
         {
-            
+
         }
     }
 }

@@ -21,7 +21,7 @@ namespace ChatClient
                 chatClient.Tell(new ConnectRequest()
                 {
                     Username = "Roggan",
-                }, ActorRef.NoSender);
+                });
 
                 while (true)
                 {
@@ -37,7 +37,7 @@ namespace ChatClient
                             chatClient.Tell(new NickRequest
                             {
                                 NewUsername = rest
-                            }, ActorRef.NoSender);
+                            });
                         }                        
                     }
                     else
@@ -45,7 +45,7 @@ namespace ChatClient
                         chatClient.Tell(new SayRequest()
                         {
                             Text = input,
-                        }, ActorRef.NoSender);
+                        });
                     }
                 }
             }
@@ -80,7 +80,7 @@ namespace ChatClient
             message.OldUsername = this.nick;
             Console.WriteLine("Changing nick to {0}", message.NewUsername);
             this.nick = message.NewUsername;
-            server.Tell(message,Self);
+            server.Tell(message);
         }
 
         public void Handle(NickResponse message)
@@ -96,13 +96,13 @@ namespace ChatClient
         public void Handle(ConnectRequest message)
         {
             Console.WriteLine("Connecting....");
-            server.Tell(message,Self);
+            server.Tell(message);
         }
 
         public void Handle(SayRequest message)
         {
             message.Username = this.nick;
-            server.Tell(message,Self);
+            server.Tell(message);
         }
 
         public void Handle(Pong message)

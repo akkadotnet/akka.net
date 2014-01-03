@@ -72,7 +72,8 @@ namespace Pigeon.SignalR
                 this.hub = hub;
                 this.connectionId = connectionId;
             }
-            public override void Tell(object message, ActorRef sender)
+
+            protected override void TellInternal(object message, ActorRef sender)
             {
                 var data = JsonConvert.SerializeObject(message);
                 hub.Clients.Client(connectionId).Reply(remoteActorName, data, message.GetType().AssemblyQualifiedName);
