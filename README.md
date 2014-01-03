@@ -1,68 +1,65 @@
-Pigeon
-======
-
+# Pigeon
 Actor based framework inspired by Akka
 
-Getting started
-===============
-
+## Getting started
 Write your first actor:
+```csharp
+public class Greet
+{
+    public string Who { get; set; }
+}
 
-    public class Greet
+public class GreetingActor : UntypedActor
+{
+    protected override void OnReceive(IMessage message)
     {
-        public string Who { get; set; }
+        Pattern.Match(message)
+            .With<Greet>(m => Console.WriteLine("Hello {0}", m.Who));
     }
-    
-    public class GreetingActor : UntypedActor
-    {
-        protected override void OnReceive(IMessage message)
-        {
-            Pattern.Match(message)
-                .With<Greet>(m => Console.WriteLine("Hello {0}", m.Who));
-        }
-    }
-    
+}
+```
 Usage:
-
-    var system = new ActorSystem();
-    var greeter = system.ActorOf<GreetingActor>("greeter");
-    greeter.Tell(new Greet { Who = "Roger" });
-
-Remoting
-========
-
-    //Server Program.CS 
-    var system = ActorSystemSignalR.Create("myserver", "http://localhost:8080);
-    var greeter = system.ActorOf<GreetingActor>("greeter");
-    Console.ReadLine();
+```csharp
+var system = new ActorSystem();
+var greeter = system.ActorOf<GreetingActor>("greeter");
+greeter.Tell(new Greet { Who = "Roger" });
+```
+##Remoting
+Server:
+```csharp
+var system = ActorSystemSignalR.Create("myserver", "http://localhost:8080);
+var greeter = system.ActorOf<GreetingActor>("greeter");
+Console.ReadLine();
+```
+Client:
+```csharp
+var system = new ActorSystem();
+var greeter = system.ActorSelection("http://localhost:8080/greeter");    
+//pass a message to the remote actor
+greeter.Tell(new Greet { Who = "Roger" });
+```
     
-    //Client Program.CS
-    var system = new ActorSystem();
-    var greeter = system.ActorSelection("http://localhost:8080/greeter");    
-    //pass a message to the remote actor
-    greeter.Tell(new Greet { Who = "Roger" });
-
-    
-Code Hotswap
-============
-
-    public class GreetingActor : UntypedActor
+##Code Hotswap
+```csharp
+public class GreetingActor : UntypedActor
+{
+    protected override void OnReceive(IMessage message)
     {
-        protected override void OnReceive(IMessage message)
-        {
-            Pattern.Match(message)
-                .With<Greet>(m => {
-                    Console.WriteLine("Hello {0}", m.Who);
-                    //this could also be a lambda
-                    Become(OtherReceive);
-                });
-        }
-        
-        void OtherReceive(IMessage message)
-        {
-            Pattern.Match(message)
-                .With<Greet>(m => {
-                    Console.WriteLine("You already said hello!");
-                });
-        }
+        Pattern.Match(message)
+            .With<Greet>(m => {
+                Console.WriteLine("Hello {0}", m.Who);
+                //this could also be a lambda
+                Become(OtherReceive);
+            });
     }
+    
+    void OtherReceive(IMessage message)
+    {
+        Pattern.Match(message)
+            .With<Greet>(m => {
+                Console.WriteLine("You already said hello!");
+                //Unbecome() to revert to old behavior
+            });
+    }
+}
+```
