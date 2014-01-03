@@ -22,11 +22,13 @@ namespace Pigeon.Actor
                 })
                 .Default(m =>
                 {
+                    var context = Context;
                     var futureCompleteResponse = new ActorAction
-                    {
+                    {                        
                         Action = () => 
                         {
-                            Context.Parent.Stop(Self); //kill self
+                            //if we dont close over a var here, we will stop the wrong actor
+                            context.Stop(); //kill self
                             result.SetResult(message); //notify .NET that task is complete
                         },
                     };

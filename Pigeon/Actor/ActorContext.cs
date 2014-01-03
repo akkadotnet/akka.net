@@ -27,15 +27,10 @@ namespace Pigeon.Actor
         }
         public BufferBlock<Message> Mailbox { get; private set; }
         public Props Props { get; private set; }
-        public LocalActorRef Self { get;  set; }
-        public ActorRefFactory Parent { get; set; }
+        public LocalActorRef Self { get; private set; }
+        public ActorContext Parent { get;private set; }
 
         protected ConcurrentDictionary<string, ActorRef> Children = new ConcurrentDictionary<string,ActorRef>();
-
-        public ActorRef ActorFor(string name)
-        {
-            return Child(name); 
-        }
         
         public override ActorRef Child(string name)
         {
@@ -48,12 +43,6 @@ namespace Pigeon.Actor
         {
             var actorRef = new RemoteActorRef(this, remoteActorPath);
             return actorRef;
-        }
-
-        public override void Stop(ActorRef actor)
-        {
-            ActorRef value = null;
-            Children.TryRemove(actor.Path.Name, out value);
         }
 
         public override ActorRef ActorOf<TActor>(string name = null)
@@ -83,12 +72,17 @@ namespace Pigeon.Actor
                 TaskScheduler = TaskScheduler.Default,
             });
 
+            ActorOfInternal(context);
+            return context.Self;
+        }
+
+        private void ActorOfInternal(ActorContext context)
+        {
             //set the thread static context or things will break
             ActorContext.Current = context;
-            Children.TryAdd(name, context.Self);
-            var actor = (ActorBase)Activator.CreateInstance(props.Type, new object[] { });
+            Children.TryAdd(context.Self.Path.Name, context.Self);
+            var actor = (ActorBase)Activator.CreateInstance(context.Props.Type, new object[] { });
             ActorContext.Current = null;
-            return context.Self;
         }
 
         internal void Post(ActorRef sender, LocalActorRef target, object message)
@@ -100,6 +94,29 @@ namespace Pigeon.Actor
                 Payload = message,
             };
             Mailbox.SendAsync(m);
+        }
+
+        public void Stop()
+        {
+            this.Parent.StopChild(this);
+        }
+
+        public void Restart()
+        {
+            this.Parent.RestartChild(this);
+        }
+
+        private void RestartChild(ActorContext actorContext)
+        {
+            StopChild(actorContext);            
+        }
+
+        private void StopChild(ActorContext actorContext)
+        {
+            ActorRef tmp;
+            var name = actorContext.Self.Path.Name;
+            this.Children.TryRemove(name, out tmp);
+            ActorOfInternal(actorContext);
         }
     }    
 }
