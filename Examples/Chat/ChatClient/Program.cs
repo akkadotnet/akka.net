@@ -69,7 +69,7 @@ namespace ChatClient
             Console.WriteLine("Connected!");
             Console.WriteLine(message.Message);
 
-            Tell(server, new Ping
+            server.Tell( new Ping
             {
                 LocalUtcNow = DateTime.UtcNow,
             });

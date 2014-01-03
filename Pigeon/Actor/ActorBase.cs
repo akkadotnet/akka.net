@@ -63,11 +63,6 @@ namespace Pigeon.Actor
             ActorContext.Current = null;
         }
 
-        public void Tell(ActorRef actor, object message)
-        {
-            actor.Tell(message, Self);
-        }
-
         public Task<object> Ask(ActorRef actor, object message)
         {
             var result = new TaskCompletionSource<object>();            
