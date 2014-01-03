@@ -31,12 +31,14 @@ Usage:
 Remoting
 ========
 
-    //Server Program.CS 
+Server:
+
     var system = ActorSystemSignalR.Create("myserver", "http://localhost:8080);
     var greeter = system.ActorOf<GreetingActor>("greeter");
     Console.ReadLine();
-    
-    //Client Program.CS
+
+Client:
+
     var system = new ActorSystem();
     var greeter = system.ActorSelection("http://localhost:8080/greeter");    
     //pass a message to the remote actor
@@ -63,6 +65,7 @@ Code Hotswap
             Pattern.Match(message)
                 .With<Greet>(m => {
                     Console.WriteLine("You already said hello!");
+                    //Unbecome() to revert to old behavior
                 });
         }
     }
