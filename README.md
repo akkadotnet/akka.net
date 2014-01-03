@@ -1,13 +1,8 @@
-Pigeon
-======
-
+# Pigeon
 Actor based framework inspired by Akka
 
-Getting started
-===============
-
+## Getting started
 Write your first actor:
-
 ```csharp
 public class Greet
 {
@@ -23,16 +18,13 @@ public class GreetingActor : UntypedActor
     }
 }
 ```
-    
 Usage:
 ```csharp
 var system = new ActorSystem();
 var greeter = system.ActorOf<GreetingActor>("greeter");
 greeter.Tell(new Greet { Who = "Roger" });
 ```
-Remoting
-========
-
+##Remoting
 Server:
 ```csharp
 var system = ActorSystemSignalR.Create("myserver", "http://localhost:8080);
@@ -47,8 +39,7 @@ var greeter = system.ActorSelection("http://localhost:8080/greeter");
 greeter.Tell(new Greet { Who = "Roger" });
 ```
     
-Code Hotswap
-============
+##Code Hotswap
 ```csharp
 public class GreetingActor : UntypedActor
 {
