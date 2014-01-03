@@ -20,7 +20,7 @@ namespace Pigeon.App
                 Stopwatch sw = Stopwatch.StartNew();
                 for (int i = 0; i < 20; i++)
                 {
-                    actor.Tell(new TimeRequest());
+                    actor.Tell(new Greet{Who ="Roger"});
                 }
                 Console.WriteLine(sw.Elapsed);
                 //for (int i = 0; i < 1000; i++)
@@ -74,19 +74,24 @@ namespace Pigeon.App
         public DateTime DateTime { get; set; }
     }
 
-    public class LogActor : TypedActor , IHandle<LogMessage> , IHandle<TimeRequest>
+    public class LogActor : UntypedActor 
     {
-        public void Handle(LogMessage message)
+  
+        protected override void OnReceive(object message)
         {
-            Console.WriteLine("Log {0}", message.Timestamp);
-        }
-
-        public void Handle(TimeRequest message)
-        {
-            Sender.Tell(new TimeResponse
-            {
-                DateTime = DateTime.Now
-            });
+            Pattern.Match(message)
+                .With<LogMessage>(m =>
+                {
+                    throw new NotSupportedException("Some exception");
+                    Console.WriteLine("Log {0}", m.Timestamp);
+                })
+                .With<TimeRequest>(m =>
+                {
+                    Sender.Tell(new TimeResponse
+                    {
+                        DateTime = DateTime.Now
+                    });
+                });
         }
     }
 
@@ -96,7 +101,7 @@ namespace Pigeon.App
 
         protected override void OnReceive(object message)
         {
-            Console.WriteLine("actor thread: {0}", System.Threading.Thread.CurrentThread.GetHashCode());
+        //    Console.WriteLine("actor thread: {0}", System.Threading.Thread.CurrentThread.GetHashCode());
             Pattern.Match(message)
                 .With<Greet>(m => Console.WriteLine("Hello {0}", m.Who))
                 .With<TimeRequest>(async m =>
@@ -113,7 +118,7 @@ namespace Pigeon.App
                 })
                 .Default(m => Console.WriteLine("Unknown message {0}", m));
 
-            //    logger.Tell(new LogMessage(message));
+                logger.Tell(new LogMessage(message));
         }
     }
 }

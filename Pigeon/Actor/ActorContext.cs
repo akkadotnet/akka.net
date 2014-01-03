@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -104,13 +105,15 @@ namespace Pigeon.Actor
         }
 
         private void RestartChild(ActorContext actorContext)
-        {
+        {           
             StopChild(actorContext);
+            Debug.WriteLine("restarting child: {0}", actorContext.Self.Path);
             ActorOfInternal(actorContext);
         }
 
         private void StopChild(ActorContext actorContext)
         {
+            Debug.WriteLine("stopping child: {0}", actorContext.Self.Path);
             ActorRef tmp;
             var name = actorContext.Self.Path.Name;
             this.Children.TryRemove(name, out tmp);           

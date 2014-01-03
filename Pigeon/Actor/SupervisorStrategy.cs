@@ -1,6 +1,7 @@
 ﻿using Pigeon.Messaging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -40,7 +41,7 @@ namespace Pigeon.Actor
 
         private Dictionary<ActorRef, Failures> actorFailures = new Dictionary<ActorRef, Failures>();
         public override void Handle(ActorRef child, Exception x)
-        {
+        {       
             Failures failures = null;
             actorFailures.TryGetValue(child, out failures);
             //create if missing
@@ -62,6 +63,7 @@ namespace Pigeon.Actor
 
             if (count >= MaxNumberOfRetries)
             {
+                failures.Entries.Clear();
                 var whatToDo = Decider(x);
                 if (whatToDo == Directive.Escalate)
                     child.Tell(new Escalate
@@ -80,7 +82,6 @@ namespace Pigeon.Actor
                     child.Tell(new Stop
                     {
                     });
-
             }
         }
     }
