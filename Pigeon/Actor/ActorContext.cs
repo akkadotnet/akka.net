@@ -25,7 +25,7 @@ namespace Pigeon.Actor
                 current = value;
             }
         }
-        public BufferBlock<Message> Mailbox { get; private set; }
+        public Mailbox Mailbox { get; private set; }
         public Props Props { get; private set; }
         public LocalActorRef Self { get; private set; }
         public ActorContext Parent { get;private set; }
@@ -66,15 +66,11 @@ namespace Pigeon.Actor
             context.System = this.System;
             context.Self = new LocalActorRef(new ActorPath(name), context);
             context.Props = props;
-            context.Mailbox = new BufferBlock<Message>(new DataflowBlockOptions()
-            {
-                BoundedCapacity = 100,
-                TaskScheduler = TaskScheduler.Default,
-            });
+            context.Mailbox = new BufferBlockMailbox();
 
             ActorOfInternal(context);
             return context.Self;
-        }
+        }        
 
         private void ActorOfInternal(ActorContext context)
         {
@@ -93,7 +89,7 @@ namespace Pigeon.Actor
                 Target = target,
                 Payload = message,
             };
-            Mailbox.SendAsync(m);
+            Mailbox.Post(m);
         }
 
         public void Stop()

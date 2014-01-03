@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace Pigeon.Actor
 {   
-    public abstract class ActorBase : IObserver<Message>
+    public abstract class ActorBase
     {
         protected ActorRef Sender { get; private set; }
         protected ActorRef Self { get; private set; }
@@ -22,7 +22,15 @@ namespace Pigeon.Actor
 
             Context.Self.SetActor(this);
             this.Self = Context.Self;
-            Context.Mailbox.AsObservable().Subscribe(this);
+            Context.Mailbox.OnNext = message =>
+                {
+                    this.Sender = message.Sender;
+                    //set the current context
+                    ActorContext.Current = message.Target.Context;
+                    OnReceiveInternal(message.Payload);
+                    //clear the current context
+                    ActorContext.Current = null;
+                };
         }
 
         private void OnReceiveInternal(object message)
@@ -41,27 +49,7 @@ namespace Pigeon.Actor
                 .Default(m => OnReceive(m));
         }
 
-        protected abstract void OnReceive(object message);
-
-        
-
-        void IObserver<Message>.OnCompleted()
-        {
-        }
-
-        void IObserver<Message>.OnError(Exception error)
-        {
-        }
-
-        void IObserver<Message>.OnNext(Message value)
-        {
-            this.Sender = value.Sender;
-            //set the current context
-            ActorContext.Current = value.Target.Context;
-            OnReceiveInternal(value.Payload);
-            //clear the current context
-            ActorContext.Current = null;
-        }
+        protected abstract void OnReceive(object message);      
 
         public Task<object> Ask(ActorRef actor, object message)
         {

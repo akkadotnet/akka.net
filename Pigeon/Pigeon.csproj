@@ -100,6 +100,7 @@
     <Compile Include="Actor\ActorSystem.cs" />
     <Compile Include="Actor\AskSupport.cs" />
     <Compile Include="Actor\FutureActor.cs" />
+    <Compile Include="Actor\Mailbox.cs" />
     <Compile Include="Actor\Props.cs" />
     <Compile Include="Actor\RemoteActorRef.cs" />
     <Compile Include="Actor\UntypedActor.cs" />
