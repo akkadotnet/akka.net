@@ -6,28 +6,24 @@ using System.Threading.Tasks;
 
 namespace Pigeon
 {
-    public interface IMessage
+    public static class Pattern
     {
-    }
-
-    public static class MessageExtensions
-    {
-        public static Case Match(this IMessage self)
+        public static Case Match(object target)
         {
-            return new Case(self);
+            return new Case(target);
         }
     }
 
     public class Case
     {
         private bool _handled = false;
-        private IMessage _message;
-        public Case(IMessage message)
+        private object _message;
+        public Case(object message)
         {
             _message = message;
         }
 
-        public Case With<TMessage>(Action<TMessage> action) where TMessage : IMessage
+        public Case With<TMessage>(Action<TMessage> action) 
         {
             if (!_handled && _message is TMessage)
             {
@@ -38,7 +34,7 @@ namespace Pigeon
             return this;
         }
 
-        public void Default(Action<IMessage> action)
+        public void Default(Action<object> action)
         {
             if (!_handled)
             {

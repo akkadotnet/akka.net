@@ -14,7 +14,7 @@ namespace Pigeon.Actor
     //        this.subject = subject;
     //    }
 
-    //    public override void Tell(IMessage message, ActorRef sender = null)
+    //    public override void Tell(object message, ActorRef sender = null)
     //    {
     //        throw new NotImplementedException();
     //    }

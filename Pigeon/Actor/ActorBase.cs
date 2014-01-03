@@ -12,12 +12,6 @@ namespace Pigeon.Actor
 {   
     public abstract class ActorBase : IObserver<Message>
     {
-        private BufferBlock<Message> messages = new BufferBlock<Message>(new DataflowBlockOptions()
-        {
-            BoundedCapacity = 100,
-            TaskScheduler = TaskScheduler.Default,
-        });
-
         protected ActorRef Sender { get; private set; }
         protected ActorRef Self { get; private set; }
 
@@ -28,12 +22,12 @@ namespace Pigeon.Actor
 
             Context.Self.SetActor(this);
             this.Self = Context.Self;
-            messages.AsObservable().Subscribe(this);
+            Context.Mailbox.AsObservable().Subscribe(this);
         }
 
-        private void OnReceiveInternal(IMessage message)
+        private void OnReceiveInternal(object message)
         {
-            message.Match()
+            Pattern.Match(message)
                 //execute async callbacks within the actor thread
                 .With<ActorAction>(m => m.Action())
                 //resolve time distance to actor
@@ -47,18 +41,9 @@ namespace Pigeon.Actor
                 .Default(m => OnReceive(m));
         }
 
-        protected abstract void OnReceive(IMessage message);
+        protected abstract void OnReceive(object message);
 
-        internal void Post(ActorRef sender,LocalActorRef target, IMessage message)
-        {
-            var m = new Message
-            {
-                Sender = sender,
-                Target = target,
-                Payload = message,
-            };
-            messages.SendAsync(m);
-        }
+        
 
         void IObserver<Message>.OnCompleted()
         {
@@ -78,14 +63,14 @@ namespace Pigeon.Actor
             ActorContext.Current = null;
         }
 
-        public void Tell(ActorRef actor, IMessage message)
+        public void Tell(ActorRef actor, object message)
         {
             actor.Tell(message, Self);
         }
 
-        public Task<IMessage> Ask(ActorRef actor, IMessage message)
+        public Task<object> Ask(ActorRef actor, object message)
         {
-            var result = new TaskCompletionSource<IMessage>();            
+            var result = new TaskCompletionSource<object>();            
             var future = Context.ActorOf<FutureActor>();
             future.Tell(new SetRespondTo { Result = result }, Self);
             actor.Tell(message, future);

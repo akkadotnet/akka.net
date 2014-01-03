@@ -9,13 +9,12 @@ namespace Pigeon.Actor
 {
     public class FutureActor : ActorBase
     {
-        private TaskCompletionSource<IMessage> result;
+        private TaskCompletionSource<object> result;
         private ActorRef RespondTo;
 
-        protected override void OnReceive(IMessage message)
+        protected override void OnReceive(object message)
         {
-            message
-                .Match()
+            Pattern.Match(message)
                 .With<SetRespondTo>(m =>
                 {
                     this.result = m.Result;
@@ -36,8 +35,8 @@ namespace Pigeon.Actor
         }
     }
 
-    public class SetRespondTo : IMessage
+    public class SetRespondTo 
     {
-        public TaskCompletionSource<IMessage> Result { get; set; }
+        public TaskCompletionSource<object> Result { get; set; }
     }
 }

@@ -40,21 +40,21 @@ namespace Pigeon.App
         }
     }
 
-    public class Greet : IMessage
+    public class Greet 
     {
         public string Who { get; set; }
     }
 
     public class GreetingActor : UntypedActor
     {
-        protected override void OnReceive(IMessage message)
+        protected override void OnReceive(object message)
         {
             message.Match()
                 .With<Greet>(m => Console.WriteLine("Hello {0}", m.Who));
         }
     }
 
-    public class LogMessage : IMessage
+    public class LogMessage
     {
         public LogMessage(object message)
         {
@@ -65,11 +65,11 @@ namespace Pigeon.App
         public object Message { get; private set; }
     }
 
-    public class TimeRequest : IMessage
+    public class TimeRequest 
     {
     }
 
-    public class TimeResponse : IMessage
+    public class TimeResponse 
     {
         public DateTime DateTime { get; set; }
     }
@@ -98,7 +98,7 @@ namespace Pigeon.App
             this.logger = Context.ActorOf<LogActor>();
         }
         
-        protected override void OnReceive(IMessage message)
+        protected override void OnReceive(object message)
         {
             Console.WriteLine("actor thread: {0}", System.Threading.Thread.CurrentThread.GetHashCode());
             message.Match()

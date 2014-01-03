@@ -25,7 +25,7 @@ namespace Pigeon.Actor
             {
                 var actor = context.System.Child(actorName);
                 var type = Type.GetType(messageType);
-                var message = (IMessage)JsonConvert.DeserializeObject(data, type);
+                var message = (object)JsonConvert.DeserializeObject(data, type);
                 actor.Tell(message, this);
             });
             hubConnection.StateChanged += hubConnection_StateChanged;
@@ -38,7 +38,7 @@ namespace Pigeon.Actor
         {           
         }
 
-        public override void Tell(IMessage message, ActorRef sender)
+        public override void Tell(object message, ActorRef sender)
         {
             var data = JsonConvert.SerializeObject(message);
             if (sender == ActorRef.NoSender)

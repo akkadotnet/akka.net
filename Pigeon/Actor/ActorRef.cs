@@ -10,7 +10,7 @@ namespace Pigeon.Actor
     {
         public virtual ActorPath Path { get;protected set; }
 
-        public abstract void Tell(IMessage message, ActorRef sender = null);        
+        public abstract void Tell(object message, ActorRef sender = null);        
 
         public static readonly ActorRef NoSender = new NoSender();
     }
@@ -22,7 +22,7 @@ namespace Pigeon.Actor
             this.Path = new ActorPath("NoSender");
         }
 
-        public override void Tell(IMessage message, ActorRef sender)
+        public override void Tell(object message, ActorRef sender)
         {
             
         }

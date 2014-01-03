@@ -10,7 +10,7 @@ namespace Pigeon.Messaging
     public class Message
     {
         public ActorRef Sender { get; set; }
-        public IMessage Payload { get; set; }
+        public object Payload { get; set; }
 
         public LocalActorRef Target { get; set; }
     }

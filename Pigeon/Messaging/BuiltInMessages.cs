@@ -6,23 +6,23 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Messaging
 {
-    public class ActorAction : IMessage
+    public class ActorAction
     {
         public Action Action { get; set; }
     }
 
-    public class Ping : IMessage
+    public class Ping 
     {
         public DateTime LocalUtcNow { get; set; }
     }
 
-    public class Pong : IMessage
+    public class Pong 
     {
         public DateTime LocalUtcNow { get; set; }
         public DateTime RemoteUtcNow { get; set; }
     }
 
-    public class Kill : IMessage
+    public class Kill 
     {
     }
 }

@@ -23,7 +23,7 @@ namespace Pigeon.Actor
             this.actors.Add(actor);
         }
 
-        public override void Tell(IMessage message, ActorRef sender = null)
+        public override void Tell(object message, ActorRef sender = null)
         {
             actors.ForEach(a => a.Tell(message, sender));
         }
