@@ -114,5 +114,18 @@ namespace Pigeon.Actor
             var name = actorContext.Self.Path.Name;
             this.Children.TryRemove(name, out tmp);           
         }
+
+        public Action<object> CurrentBehavior { get; private set; }
+        private Stack<Action<object>> behaviorStack = new Stack<Action<object>>();
+        public void Become(Action<object> receive)
+        {
+            behaviorStack.Push(receive);
+            CurrentBehavior = receive;
+        }
+
+        public void Unbecome()
+        {
+            CurrentBehavior = behaviorStack.Pop(); ;
+        }        
     }    
 }

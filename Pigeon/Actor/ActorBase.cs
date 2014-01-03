@@ -19,7 +19,7 @@ namespace Pigeon.Actor
         {
             if (ActorContext.Current == null)
                 throw new Exception("Do not create actors using 'new', always create them using an ActorContext/System");
-
+            Context.Become(OnReceive);
             Context.Self.SetActor(this);
             this.Self = Context.Self;
             Context.Mailbox.OnNext = message =>
@@ -46,10 +46,10 @@ namespace Pigeon.Actor
                         RemoteUtcNow = DateTime.UtcNow
                     }))
                 //handle any other message
-                .Default(m => OnReceive(m));
+                .Default(m => Context.CurrentBehavior(m));
         }
 
-        protected abstract void OnReceive(object message);      
+        protected abstract void OnReceive(object message);
 
         public Task<object> Ask(ActorRef actor, object message)
         {
@@ -70,6 +70,16 @@ namespace Pigeon.Actor
 
                 return context;
             }
+        }
+
+        protected void Become(Action<object> receive)
+        {
+            Context.Become(receive);
+        }
+
+        protected void Unbecome()
+        {
+            Context.Unbecome();
         }
     }    
 }
