@@ -6,8 +6,16 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Actor
 {
-    public class ActorPath
+    public class ActorPath : IEnumerable<string>
     {
+        public string First
+        {
+            get
+            {
+                return this.parts.FirstOrDefault();
+            }
+        }
+
         public string Name
         {
             get
@@ -36,6 +44,16 @@ namespace Pigeon.Actor
         public override string ToString()
         {
             return string.Join("/", parts);
+        }
+
+        public IEnumerator<string> GetEnumerator()
+        {
+            return parts.GetEnumerator();
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        {
+            return parts.GetEnumerator();
         }
     }
 }

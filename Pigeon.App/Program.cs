@@ -85,7 +85,7 @@ namespace Pigeon.App
                 .With<LogMessage>(m =>
                 {
                     Console.WriteLine("Log {0}", m.Timestamp);
-                    throw new NotSupportedException("Some exception");                    
+                    throw new NotSupportedException("Some exception");
                 })
                 .With<TimeRequest>(m =>
                 {
@@ -93,7 +93,8 @@ namespace Pigeon.App
                     {
                         DateTime = DateTime.Now
                     });
-                });
+                })
+                .Default(Unhandled);
         }
     }
 
@@ -123,7 +124,7 @@ namespace Pigeon.App
             Pattern.Match(message)
                 .With<Greet>(m => 
                 {
-                    Console.WriteLine("Hello {0}", m.Who); 
+             //       Console.WriteLine("Hello {0}", m.Who); 
                 })
                 .With<TimeRequest>(async m =>
                 {
@@ -137,7 +138,7 @@ namespace Pigeon.App
                         .Default(_ => Console.WriteLine("Unknown message"));
 
                 })
-                .Default(m => Console.WriteLine("Unknown message {0}", m));
+                .Default(Unhandled);
 
                 logger.Tell(new LogMessage(message));
         }

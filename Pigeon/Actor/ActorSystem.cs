@@ -14,9 +14,20 @@ namespace Pigeon.Actor
     {       
         public ActorSystem()
         {
+            this.Deadletters = ActorOf<DeadletterActor>("Deadletter");
+            this.Guardian = ActorOf<GuardianActor>("Guardian");
+            this.SystemGuardian = ActorOf<GuardianActor>("SystemGuarian");
+            this.Self = this.Guardian;
         }
 
-        public readonly NoSender Deadletters = new NoSender();
+        public LocalActorRef Deadletters { get; private set; }
+        public LocalActorRef Guardian { get; private set; }
+        public LocalActorRef SystemGuardian { get; private set; }
+
+        public void Shutdown()
+        {
+         //   Guardian.Stop();
+        }
 
         public override ActorSystem System
         {

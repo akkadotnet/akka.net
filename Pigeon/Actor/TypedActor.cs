@@ -17,7 +17,7 @@ namespace Pigeon.Actor
         {
             var method = this.GetType().GetMethod("Handle", new[] { message.GetType() });
             if (method == null)
-                throw new ArgumentException("Actor does not handle messages of type " + message.GetType().Name);
+                Unhandled(message);
 
             method.Invoke(this, new[] { message });
         }

@@ -78,6 +78,10 @@ namespace Pigeon.Actor
 
         protected abstract void OnReceive(object message);
 
+        protected void Unhandled(object message)
+        {
+        }
+
         public Task<object> Ask(ActorRef actor, object message)
         {
             var result = new TaskCompletionSource<object>();            

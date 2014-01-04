@@ -11,12 +11,12 @@ namespace Pigeon.Actor
     {
         public virtual ActorSystem System { get; set; }
 
-        public abstract ActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase;
+        public abstract LocalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase;
 
-        public abstract ActorRef ActorOf(Props props, string name = null);
+        public abstract LocalActorRef ActorOf(Props props, string name = null);
         
         public abstract ActorRef ActorSelection(string remoteActorPath);
 
-        public abstract ActorRef Child(string name);        
+        public abstract LocalActorRef Child(string name);        
     }
 }

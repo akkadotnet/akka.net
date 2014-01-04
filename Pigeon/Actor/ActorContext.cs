@@ -28,30 +28,57 @@ namespace Pigeon.Actor
         }
         public Mailbox Mailbox { get; private set; }
         public Props Props { get; private set; }
-        public LocalActorRef Self { get; private set; }
+        public LocalActorRef Self { get; protected set; }
         public ActorContext Parent { get;private set; }
 
-        protected ConcurrentDictionary<string, ActorRef> Children = new ConcurrentDictionary<string,ActorRef>();
-        
-        public override ActorRef Child(string name)
+        protected ConcurrentDictionary<string, LocalActorRef> Children = new ConcurrentDictionary<string, LocalActorRef>();
+
+        public override LocalActorRef Child(string name)
         {
-            ActorRef actorRef = null;
+            LocalActorRef actorRef = null;
             Children.TryGetValue(name, out actorRef);
             return actorRef;
         }
 
-        public override ActorRef ActorSelection(string remoteActorPath)
+        public override ActorRef ActorSelection(string actorPath)
         {
-            var actorRef = new RemoteActorRef(this, remoteActorPath);
-            return actorRef;
+            return ActorSelection(new ActorPath(actorPath));
         }
 
-        public override ActorRef ActorOf<TActor>(string name = null)
+        public ActorRef ActorSelection(ActorPath actorPath)
+        {
+            if (actorPath.First.StartsWith("pigeon."))
+            {
+                var actorRef = new RemoteActorRef(this, actorPath);
+                return actorRef;
+            }
+
+            var currentContext = this;
+            foreach (var part in actorPath)
+            {
+                if (part == "..")
+                {
+                    currentContext = currentContext.Parent;
+                }
+                if (part == "." || part == "")
+                {
+                    currentContext = currentContext.System;
+                }
+                else
+                {
+                    currentContext = ((LocalActorRef)this.Child(part)).Context;
+                }
+            }
+            
+            return currentContext.Self;
+        }
+
+        public override LocalActorRef ActorOf<TActor>(string name = null)
         {
             return ActorOf(new Props(typeof(TActor)), name);
         }
 
-        public override ActorRef ActorOf(Props props, string name = null)
+        public override LocalActorRef ActorOf(Props props, string name = null)
         {
             if (name == null)
             {
@@ -123,7 +150,7 @@ namespace Pigeon.Actor
             {
                 System.Deadletters.Tell(m);
             });
-            ActorRef tmp;
+            LocalActorRef tmp;
             var name = child.Path.Name;
             this.Children.TryRemove(name, out tmp);           
         }

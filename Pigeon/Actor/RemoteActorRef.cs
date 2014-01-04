@@ -14,11 +14,13 @@ namespace Pigeon.Actor
         private string actorName;
         private ActorContext Context;
 
-        public RemoteActorRef(ActorContext context, string remoteActorPath)
+        public RemoteActorRef(ActorContext context, ActorPath remoteActorPath)
         {
-            this.Path = new ActorPath(remoteActorPath);
+            this.Path = remoteActorPath;
             this.Context = context;
-            var hubConnection = new HubConnection(this.Path.ToString().Substring(0,this.Path.ToString().Length-this.Path.Name.Length));
+            var url = this.Path.ToString().Substring(0, this.Path.ToString().Length - this.Path.Name.Length);
+            url = url.Substring("pigeon.".Length);
+            var hubConnection = new HubConnection(url);
             this.actorName = this.Path.Name;
             hub = hubConnection.CreateHubProxy("ActorHub");
             hub.On("Reply", (string actorName, string data, string messageType) =>
