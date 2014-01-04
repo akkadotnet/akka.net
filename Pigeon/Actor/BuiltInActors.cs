@@ -13,6 +13,13 @@ namespace Pigeon.Actor
         }
     }
 
+    public class EventStreamActor : UntypedActor
+    {
+        protected override void OnReceive(object message)
+        {
+        }
+    }
+
     public class GuardianActor : UntypedActor
     {
         protected override void OnReceive(object message)

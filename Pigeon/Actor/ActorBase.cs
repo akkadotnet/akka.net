@@ -28,17 +28,12 @@ namespace Pigeon.Actor
                 {
                     this.Sender = message.Sender;
                     //set the current context
-                    ActorContext.Current = message.Target.Context;
-                    OnReceiveInternal(message.Payload);
-                    //clear the current context
-                    ActorContext.Current = null;
+                    ActorContext.UseThreadContext(message.Target.Context, () =>
+                    {
+                        OnReceiveInternal(message.Payload);
+                    });
                 };
         }
-
-        
-
-       
-       
 
         protected abstract void OnReceive(object message);
 
@@ -46,6 +41,7 @@ namespace Pigeon.Actor
         {
             Context.System.EventStream.Tell(new UnhandledMessage(message, Sender, Self));
         }
+
         protected static ActorContext Context
         {
             get

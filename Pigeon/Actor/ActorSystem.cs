@@ -14,7 +14,7 @@ namespace Pigeon.Actor
     {       
         public ActorSystem()
         {
-            this.EventStream = ActorOf<DeadletterActor>("EventStream");
+            this.EventStream = ActorOf<EventStreamActor>("EventStream");
             this.Deadletters = ActorOf<DeadletterActor>("Deadletter");
             this.Guardian = ActorOf<GuardianActor>("Guardian");
             this.SystemGuardian = ActorOf<GuardianActor>("SystemGuarian");

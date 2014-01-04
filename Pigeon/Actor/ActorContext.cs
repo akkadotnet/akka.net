@@ -21,11 +21,16 @@ namespace Pigeon.Actor
             {
                 return current;
             }
-            set
-            {
-                current = value;
-            }
         }
+
+        public static void UseThreadContext(ActorContext context, Action action)
+        {
+            var tmp = Current;
+            current = context;
+            action();
+            current = tmp;
+        }
+
         public Mailbox Mailbox { get; private set; }
         public Props Props { get; private set; }
         public LocalActorRef Self { get; protected set; }
@@ -117,10 +122,11 @@ namespace Pigeon.Actor
         {
             var prev = ActorContext.Current;
             //set the thread static context or things will break
-            ActorContext.Current = context;
-            Children.TryAdd(context.Self.Path.Name, context.Self);
-            var actor = (ActorBase)Activator.CreateInstance(context.Props.Type, new object[] { });
-            ActorContext.Current = prev;
+            ActorContext.UseThreadContext(context, () =>
+            {
+                Children.TryAdd(context.Self.Path.Name, context.Self);
+                var actor = (ActorBase)Activator.CreateInstance(context.Props.Type, new object[] { });
+            });
         }
 
         internal void Post(ActorRef sender, LocalActorRef target, object message)
