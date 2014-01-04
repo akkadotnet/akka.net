@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace Pigeon.Actor
 {   
-    public abstract class ActorBase
+    public abstract partial class ActorBase
     {
         protected ActorRef Sender { get; private set; }
         protected ActorRef Self { get; private set; }
@@ -54,43 +54,20 @@ namespace Pigeon.Actor
                     //handle any other message
                     .Default(m => Context.CurrentBehavior(m));
             }
-            catch (Exception x)
+            catch (Exception reason)
             {
-                Context.Parent.Self.Tell(new SuperviceChild
-                {
-                    Reason = x,
-                });
+                Context.Parent.Self.Tell(new SuperviceChild(reason));
             }
         }
 
-        private SupervisorStrategy supervisorStrategy = null;
-        private SupervisorStrategy SupervisorStrategyLazy()
-        {
-            if (supervisorStrategy == null)
-                supervisorStrategy = SupervisorStrategy();
-
-            return supervisorStrategy;
-        }
-        protected virtual SupervisorStrategy SupervisorStrategy()
-        {
-            return new OneForOneStrategy(10, TimeSpan.FromSeconds(30), OneForOneStrategy.DefaultDecider);
-        }
+       
 
         protected abstract void OnReceive(object message);
 
         protected void Unhandled(object message)
         {
+            Context.System.EventStream.Tell(new UnhandledMessage(message, Sender, Self));
         }
-
-        public Task<object> Ask(ActorRef actor, object message)
-        {
-            var result = new TaskCompletionSource<object>();            
-            var future = Context.ActorOf<FutureActor>();
-            future.Tell(new SetRespondTo { Result = result }, Self);
-            actor.Tell(message, future);
-            return result.Task;
-        }
-
         protected static ActorContext Context
         {
             get

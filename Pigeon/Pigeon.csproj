@@ -91,6 +91,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Actor\ActorBase.Ask.cs" />
     <Compile Include="Actor\ActorBase.cs" />
     <Compile Include="Actor\ActorContext.cs" />
     <Compile Include="Actor\ActorPath.cs" />
@@ -120,6 +121,7 @@
     <Compile Include="Tools\Pattern.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Actor\ActorBase.SupervisorStrategy.cs" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

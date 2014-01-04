@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Messaging
+namespace Pigeon.Actor
 {
     public abstract class BuiltInMessage
     {
@@ -12,12 +12,21 @@ namespace Pigeon.Messaging
 
     public class SuperviceChild : BuiltInMessage
     {
-        public Exception Reason { get; set; }
+        public SuperviceChild(Exception reason)
+        {
+            this.Reason = reason;
+        }
+
+        public Exception Reason { get;private set; }
     }
 
     public class ActorAction : BuiltInMessage
     {
-        public Action Action { get; set; }
+        public ActorAction(Action action)
+        {
+            this.Action = action;
+        }
+        public Action Action { get;private set; }
     }
 
     public class Ping : BuiltInMessage
@@ -49,6 +58,24 @@ namespace Pigeon.Messaging
 
     public class Escalate : BuiltInMessage
     {
-        public Exception Reason { get; set; }
+        public Escalate(Exception reason)
+        {
+            this.Reason = reason;
+        }
+        public Exception Reason { get;private set; }
+    }
+
+    public class UnhandledMessage : BuiltInMessage
+    {
+        public UnhandledMessage(object message, ActorRef sender, ActorRef recipient)
+        {
+            this.Message = message;
+            this.Sender = sender;
+            this.Recipient = recipient;
+        }
+
+        public object Message { get;private set; }
+        public ActorRef Sender { get;private set; }
+        public ActorRef Recipient { get;private set; }
     }
 }

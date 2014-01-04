@@ -14,12 +14,14 @@ namespace Pigeon.Actor
     {       
         public ActorSystem()
         {
+            this.EventStream = ActorOf<DeadletterActor>("EventStream");
             this.Deadletters = ActorOf<DeadletterActor>("Deadletter");
             this.Guardian = ActorOf<GuardianActor>("Guardian");
             this.SystemGuardian = ActorOf<GuardianActor>("SystemGuarian");
             this.Self = this.Guardian;
         }
 
+        public LocalActorRef EventStream { get; private set; }
         public LocalActorRef Deadletters { get; private set; }
         public LocalActorRef Guardian { get; private set; }
         public LocalActorRef SystemGuardian { get; private set; }
