@@ -22,12 +22,17 @@ namespace Pigeon.Actor
 					//supervice exception from child actor
                     .With<SuperviceChild>(SuperviceChild)
                     //handle any other message
-                    .Default(m => Context.CurrentBehavior(m));
+                    .Default(Default);
             }
             catch (Exception reason)
             {
                 Context.Parent.Self.Tell(new SuperviceChild(reason));
             }
+        }
+
+		private void Default(object m)
+        {
+            Context.CurrentBehavior(m);
         }
 
 		private void SuperviceChild(SuperviceChild m)
