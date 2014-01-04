@@ -37,7 +37,22 @@ namespace Pigeon.Actor
 
 		private void SuperviceChild(SuperviceChild m)
         {
-            this.SupervisorStrategyLazy().Handle(Sender, m.Reason);
+            var whatToDo = this.SupervisorStrategyLazy().Handle(Sender, m.Reason);
+            if (whatToDo == Directive.Escalate)
+            {
+				//rethrow exception in this actor
+				//TODO: is this the right way to do it=
+                throw m.Reason;
+            }
+            if (whatToDo == Directive.Resume)
+            {
+            }
+            if (whatToDo == Directive.Restart)
+            {
+                Context.Restart((LocalActorRef)Sender);
+            }
+            if (whatToDo == Directive.Stop)
+                Context.Stop((LocalActorRef)Sender);
         }
 
 		private void Ping(Ping m)

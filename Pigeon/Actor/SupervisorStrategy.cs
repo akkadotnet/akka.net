@@ -10,7 +10,7 @@ namespace Pigeon.Actor
 {
     public abstract class SupervisorStrategy
     {
-        public abstract void Handle(ActorRef child, Exception x);
+        public abstract Directive Handle(ActorRef child, Exception x);
     }
 
     public sealed class OneForOneStrategy : SupervisorStrategy
@@ -40,7 +40,7 @@ namespace Pigeon.Actor
         public Func<Exception, Directive> Decider { get; private set; }
 
         private Dictionary<ActorRef, Failures> actorFailures = new Dictionary<ActorRef, Failures>();
-        public override void Handle(ActorRef child, Exception x)
+        public override Directive Handle(ActorRef child, Exception x)
         {       
             Failures failures = null;
             actorFailures.TryGetValue(child, out failures);
@@ -65,25 +65,16 @@ namespace Pigeon.Actor
             {
                 failures.Entries.Clear();
                 var whatToDo = Decider(x);
-                if (whatToDo == Directive.Escalate)
-                {
-                }
-                if (whatToDo == Directive.Resume)
-                {
-                }
-                if (whatToDo == Directive.Restart)
-                {
-                    ActorContext.Current.Restart((LocalActorRef)child);
-                }
-                if (whatToDo == Directive.Stop)
-                    ActorContext.Current.Stop((LocalActorRef)child);
+                return whatToDo;
             }
+
+            return Directive.Resume;
         }
     }
 
     public sealed class AllForOneStrategy : SupervisorStrategy
     {
-        public override void Handle(ActorRef child, Exception x)
+        public override Directive Handle(ActorRef child, Exception x)
         {
             throw new NotImplementedException();
         }
