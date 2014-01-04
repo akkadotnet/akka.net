@@ -30,8 +30,6 @@ namespace Pigeon.SignalR
                     app.UseCors(CorsOptions.AllowAll);
                     app.MapSignalR();
                     GlobalHost.DependencyResolver.Register(typeof(ActorHub), () => new ActorHub(system));
-                    app.MapSignalR();
-
                 })
             };
             return host;

@@ -60,9 +60,14 @@ namespace Pigeon.Actor
                 {
                     currentContext = currentContext.Parent;
                 }
-                if (part == "." || part == "")
+                else if (part == "." || part == "")
                 {
                     currentContext = currentContext.System;
+                }
+                else if (part == "*")
+                {
+                    var actorRef = new BroadcastActorRef(currentContext.Children.Values.ToArray());
+                    return actorRef;
                 }
                 else
                 {
