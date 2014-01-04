@@ -25,6 +25,11 @@ namespace Pigeon.Actor
         }       
 
         private List<string> parts = new List<string>();
+
+        public ActorPath(IEnumerable<string> parts)
+        {
+            this.parts = parts.ToList();
+        }
         public ActorPath(string path)
         {
             parts = path.Split('/').ToList();

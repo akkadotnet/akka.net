@@ -47,12 +47,20 @@ namespace Pigeon.Actor
 
         public ActorRef ActorSelection(ActorPath actorPath)
         {
+            //remote path
             if (actorPath.First.StartsWith("pigeon."))
             {
                 var actorRef = new RemoteActorRef(this, actorPath);
                 return actorRef;
             }
 
+            //local absolute
+            if (actorPath.First.StartsWith("pigeon:"))
+            {
+                actorPath = new ActorPath(actorPath.Skip(1));
+            }
+
+            //standard
             var currentContext = this;
             foreach (var part in actorPath)
             {
