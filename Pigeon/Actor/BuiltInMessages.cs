@@ -20,13 +20,13 @@ namespace Pigeon.Actor
         public Exception Reason { get;private set; }
     }
 
-    public class ActorAction : SystemMessage
+    public class CompleteFuture : SystemMessage
     {
-        public ActorAction(Action action)
+        public CompleteFuture(Action action)
         {
-            this.Action = action;
+            this.SetResult = action;
         }
-        public Action Action { get;private set; }
+        public Action SetResult { get;private set; }
     }
 
     public class Ping : SystemMessage
@@ -80,6 +80,20 @@ namespace Pigeon.Actor
     }
 
     public class Terminated : SystemMessage
+    {
+    }
+
+    //request to an actor ref, to get back the identity of the underlying actors
+    public class Identity : SystemMessage
+    {
+    }
+
+    //response to the Identity message, get identity by Sender
+    public class ActorIdentity : SystemMessage
+    {
+    }
+
+    public class Watch : SystemMessage
     {
     }
 }

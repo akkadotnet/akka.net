@@ -23,7 +23,7 @@ namespace Pigeon.Actor
                 .Default(m =>
                 {
                     var context = Context;
-                    var futureCompleteResponse = new ActorAction(
+                    var futureCompleteResponse = new CompleteFuture(
                     () => 
                         {
                             //if we dont close over a var here, we will stop the wrong actor

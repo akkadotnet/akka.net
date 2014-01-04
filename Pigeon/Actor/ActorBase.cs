@@ -15,7 +15,7 @@ namespace Pigeon.Actor
         protected ActorRef Sender { get; private set; }
         protected ActorRef Self { get; private set; }
 
-        protected ActorRef Watchers { get; private set; }
+        protected BroadcastActorRef Watchers = new BroadcastActorRef();
 
         protected ActorBase()
         {
@@ -23,7 +23,6 @@ namespace Pigeon.Actor
                 throw new Exception("Do not create actors using 'new', always create them using an ActorContext/System");
             Context.Become(OnReceive);
             Context.Self.SetActor(this);
-            this.Watchers = new BroadcastActorRef();
             this.Self = Context.Self;
             Context.Mailbox.OnNext = message =>
                 {
@@ -36,32 +35,7 @@ namespace Pigeon.Actor
                 };
         }
 
-        private void OnReceiveInternal(object message)
-        {
-            try
-            {
-                Pattern.Match(message)
-                    //execute async callbacks within the actor thread
-                    .With<ActorAction>(m => m.Action())
-                    //resolve time distance to actor
-                    .With<Ping>(m => Sender.Tell(
-                        new Pong
-                        {
-                            LocalUtcNow = m.LocalUtcNow,
-                            RemoteUtcNow = DateTime.UtcNow
-                        }))
-                    .With<SuperviceChild>(m =>
-                    {
-                        this.SupervisorStrategyLazy().Handle(Sender, m.Reason);
-                    })
-                    //handle any other message
-                    .Default(m => Context.CurrentBehavior(m));
-            }
-            catch (Exception reason)
-            {
-                Context.Parent.Self.Tell(new SuperviceChild(reason));
-            }
-        }
+        
 
         public virtual void PreStart()
         {
