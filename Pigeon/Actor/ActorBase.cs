@@ -15,12 +15,15 @@ namespace Pigeon.Actor
         protected ActorRef Sender { get; private set; }
         protected ActorRef Self { get; private set; }
 
+        protected ActorRef Watchers { get; private set; }
+
         protected ActorBase()
         {
             if (ActorContext.Current == null)
                 throw new Exception("Do not create actors using 'new', always create them using an ActorContext/System");
             Context.Become(OnReceive);
             Context.Self.SetActor(this);
+            this.Watchers = new BroadcastActorRef();
             this.Self = Context.Self;
             Context.Mailbox.OnNext = message =>
                 {
@@ -60,6 +63,14 @@ namespace Pigeon.Actor
             }
         }
 
+        public virtual void PreStart()
+        {
+        }
+
+        public void PostStop()
+        {
+            Watchers.Tell(new Terminated());
+        }
        
 
         protected abstract void OnReceive(object message);

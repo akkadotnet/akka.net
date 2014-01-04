@@ -109,7 +109,7 @@
     <Compile Include="Actor\SupervisorStrategy.cs" />
     <Compile Include="Actor\UntypedActor.cs" />
     <Compile Include="Context.cs" />
-    <Compile Include="Messaging\BuiltInMessages.cs" />
+    <Compile Include="Actor\BuiltInMessages.cs" />
     <Compile Include="Actor\LocalActorRef.cs" />
     <Compile Include="Messaging\Message.cs" />
     <Compile Include="Messaging\MessageHandler.cs" />

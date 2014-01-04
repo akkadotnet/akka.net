@@ -10,12 +10,20 @@ namespace Pigeon.Actor
     {
         public virtual ActorPath Path { get;protected set; }
 
-        public void Tell(object message, ActorRef sender = null)
+        public void Tell(object message, ActorRef sender)
         {
-            if (sender != null)
+            if (sender == null)
             {
+                throw new ArgumentNullException("sender");
             }
-            else if (ActorContext.Current != null)
+
+            TellInternal(message, sender);
+        }
+
+        public void Tell(object message)
+        {
+            ActorRef sender = null;
+            if (ActorContext.Current != null)
             {
                 sender = ActorContext.Current.Self;
             }
@@ -24,7 +32,7 @@ namespace Pigeon.Actor
                 sender = ActorRef.NoSender;
             }
 
-            TellInternal(message, sender);
+            this.Tell(message,sender);
         }
 
         protected abstract void TellInternal(object message,ActorRef sender);     

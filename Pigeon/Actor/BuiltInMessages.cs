@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Actor
 {
-    public abstract class BuiltInMessage
+    public abstract class SystemMessage
     {
     }
 
-    public class SuperviceChild : BuiltInMessage
+    public class SuperviceChild : SystemMessage
     {
         public SuperviceChild(Exception reason)
         {
@@ -20,7 +20,7 @@ namespace Pigeon.Actor
         public Exception Reason { get;private set; }
     }
 
-    public class ActorAction : BuiltInMessage
+    public class ActorAction : SystemMessage
     {
         public ActorAction(Action action)
         {
@@ -29,34 +29,34 @@ namespace Pigeon.Actor
         public Action Action { get;private set; }
     }
 
-    public class Ping : BuiltInMessage
+    public class Ping : SystemMessage
     {
         public DateTime LocalUtcNow { get; set; }
     }
 
-    public class Pong : BuiltInMessage
+    public class Pong : SystemMessage
     {
         public DateTime LocalUtcNow { get; set; }
         public DateTime RemoteUtcNow { get; set; }
     }
 
-    public class Kill : BuiltInMessage
+    public class Kill : SystemMessage
     {
     }
 
-    public class Restart : BuiltInMessage
+    public class Restart : SystemMessage
     {
     }
 
-    public class Resume : BuiltInMessage
+    public class Resume : SystemMessage
     {
     }
 
-    public class Stop : BuiltInMessage
+    public class Stop : SystemMessage
     {
     }
 
-    public class Escalate : BuiltInMessage
+    public class Escalate : SystemMessage
     {
         public Escalate(Exception reason)
         {
@@ -65,7 +65,7 @@ namespace Pigeon.Actor
         public Exception Reason { get;private set; }
     }
 
-    public class UnhandledMessage : BuiltInMessage
+    public class UnhandledMessage : SystemMessage
     {
         public UnhandledMessage(object message, ActorRef sender, ActorRef recipient)
         {
@@ -77,5 +77,9 @@ namespace Pigeon.Actor
         public object Message { get;private set; }
         public ActorRef Sender { get;private set; }
         public ActorRef Recipient { get;private set; }
+    }
+
+    public class Terminated : SystemMessage
+    {
     }
 }

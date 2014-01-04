@@ -37,6 +37,7 @@ namespace Pigeon.Actor
             {
                 return this;
             }
+            //oh liskov <3
             set
             {
                 throw new NotSupportedException("Can't set the system of a system");
