@@ -15,6 +15,7 @@ namespace Pigeon.Actor
                 Pattern.Match(message)
 					//add watcher
                     .With<Watch>(Watch)
+                    .With<Unwatch>(Unwatch)
                     //complete the future callback by setting the result in this thread
                     .With<CompleteFuture>(CompleteFuture)
                     //resolve time distance to actor
@@ -68,6 +69,11 @@ namespace Pigeon.Actor
 		private void Watch(Watch m)
         {
             Watchers.Add(Sender);
+        }
+
+        private void Unwatch(Unwatch m)
+        {
+            Watchers.Remove(Sender);
         }
 
 		private void CompleteFuture(CompleteFuture m)

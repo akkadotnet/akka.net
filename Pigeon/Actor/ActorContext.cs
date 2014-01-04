@@ -140,21 +140,6 @@ namespace Pigeon.Actor
             Mailbox.Post(m);
         }
 
-        //public void Stop()
-        //{
-        //    foreach (var child in Children.Values)
-        //        child.Tell(new Stop());
-
-        //    this.Become(m =>
-        //    {
-        //        System.Deadletters.Tell(m);
-        //    });
-
-        //    this.Parent.StopChild(this);
-        //}
-
-
-
         public void Restart(LocalActorRef child)
         {           
             Stop(child);
@@ -192,14 +177,14 @@ namespace Pigeon.Actor
             return this.Children.Values.ToArray();
         }
 
-        public void Watch(ActorRef actor)
+        public void Watch(ActorRef subject)
         {
-            actor.Tell(new Watch());
+            subject.Tell(new Watch());
         }
 
-        public void Unwatch(ActorRef actor)
+        public void Unwatch(ActorRef subject)
         {
-
+            subject.Tell(new Unwatch());
         }
     }    
 }

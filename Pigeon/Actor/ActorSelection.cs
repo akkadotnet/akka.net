@@ -23,6 +23,11 @@ namespace Pigeon.Actor
             this.actors.Add(actor);
         }
 
+        internal void Remove(ActorRef Sender)
+        {
+            actors.Remove(Sender);
+        }
+
         protected override void TellInternal(object message, ActorRef sender)
         {
             actors.ForEach(a => a.Tell(message, sender));

@@ -23,6 +23,7 @@ namespace Pigeon.Actor
         public void Tell(object message)
         {
             ActorRef sender = null;
+
             if (ActorContext.Current != null)
             {
                 sender = ActorContext.Current.Self;
@@ -49,7 +50,6 @@ namespace Pigeon.Actor
 
         protected override void TellInternal(object message, ActorRef sender)
         {
-
         }
     }
 }

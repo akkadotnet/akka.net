@@ -93,7 +93,13 @@ namespace Pigeon.Actor
     {
     }
 
+    //used to start watching another actor (deathwatch)
     public class Watch : SystemMessage
+    {
+    }
+
+    //used to unsubscribe to deathwatch
+    public class Unwatch : SystemMessage
     {
     }
 }
