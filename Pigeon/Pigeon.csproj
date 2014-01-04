@@ -123,6 +123,7 @@
   <ItemGroup>
     <Compile Include="Actor\ActorBase.SupervisorStrategy.cs" />
     <Compile Include="Actor\ActorBase.DefaultMessages.cs" />
+    <Compile Include="Actor\ActorBase.Lifecycle.cs" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

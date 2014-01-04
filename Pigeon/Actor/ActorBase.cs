@@ -37,14 +37,7 @@ namespace Pigeon.Actor
 
         
 
-        public virtual void PreStart()
-        {
-        }
-
-        public void PostStop()
-        {
-            Watchers.Tell(new Terminated());
-        }
+       
        
 
         protected abstract void OnReceive(object message);
