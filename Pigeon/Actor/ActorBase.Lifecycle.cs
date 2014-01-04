@@ -16,8 +16,13 @@ namespace Pigeon.Actor
         {
         }
 
-		protected virtual void PostRestart()
+		protected virtual void PostRestart(Exception reason, object message)
         {
+			foreach(var child in Context.GetChildren())
+            {
+                Context.Unwatch(child);
+                Context.Stop(child);
+            }
         }
 
         protected void PostStop()

@@ -179,6 +179,21 @@ namespace Pigeon.Actor
         public void Unbecome()
         {
             CurrentBehavior = behaviorStack.Pop(); ;
-        }        
+        }
+
+        internal IEnumerable<LocalActorRef> GetChildren()
+        {
+            return this.Children.Values.ToArray();
+        }
+
+        public void Watch(ActorRef actor)
+        {
+            actor.Tell(new Watch());
+        }
+
+        public void Unwatch(ActorRef actor)
+        {
+
+        }
     }    
 }
