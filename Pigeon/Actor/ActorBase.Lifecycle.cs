@@ -27,7 +27,7 @@ namespace Pigeon.Actor
 
         protected void PostStop()
         {
-            Watchers.Tell(new Terminated());
+            //Watchers.Tell(new Terminated());
         }
     }
 }

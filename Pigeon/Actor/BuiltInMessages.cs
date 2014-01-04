@@ -40,6 +40,9 @@ namespace Pigeon.Actor
         public DateTime RemoteUtcNow { get; set; }
     }
 
+    public class PoisonPill : SystemMessage
+    {
+    }
     public class Kill : SystemMessage
     {
     }

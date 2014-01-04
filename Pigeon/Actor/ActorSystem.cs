@@ -15,16 +15,18 @@ namespace Pigeon.Actor
         public ActorSystem()
         {
             this.EventStream = ActorOf<EventStreamActor>("EventStream");
-            this.Deadletters = ActorOf<DeadletterActor>("Deadletter");
-            this.Guardian = ActorOf<GuardianActor>("Guardian");
-            this.SystemGuardian = ActorOf<GuardianActor>("SystemGuarian");
+            this.DeadLetters = ActorOf<DeadLettersActor>("deadLetters");
+            this.Guardian = ActorOf<GuardianActor>("user");
+            this.SystemGuardian = ActorOf<GuardianActor>("system");
+            this.TempGuardian = ActorOf<GuardianActor>("temp");
             this.Self = this.Guardian;
         }
 
         public LocalActorRef EventStream { get; private set; }
-        public LocalActorRef Deadletters { get; private set; }
+        public LocalActorRef DeadLetters { get; private set; }
         public LocalActorRef Guardian { get; private set; }
         public LocalActorRef SystemGuardian { get; private set; }
+        public LocalActorRef TempGuardian { get; private set; }
 
         public void Shutdown()
         {

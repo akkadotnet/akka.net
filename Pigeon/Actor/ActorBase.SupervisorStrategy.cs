@@ -9,7 +9,7 @@ namespace Pigeon.Actor
     public abstract partial class ActorBase
     {
         private SupervisorStrategy supervisorStrategy = null;
-        private SupervisorStrategy SupervisorStrategyLazy()
+        internal SupervisorStrategy SupervisorStrategyLazy()
         {
             if (supervisorStrategy == null)
                 supervisorStrategy = SupervisorStrategy();

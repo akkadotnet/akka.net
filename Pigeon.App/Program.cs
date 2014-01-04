@@ -19,13 +19,14 @@ namespace Pigeon.App
             using (var system = ActorSystemSignalR.Create("System A", "http://localhost:8080"))
             {
                 var actor = system.ActorOf<MyActor>();
-                Stopwatch sw = Stopwatch.StartNew();
-                for (int i = 0; i < 20000; i++)
-                {
-                    actor.Tell(new Greet{Who ="Roger"});
-              //      System.Threading.Thread.Sleep(5);
-                }
-                Console.WriteLine(sw.Elapsed);
+                actor.Tell(new TimeRequest());
+              //  Stopwatch sw = Stopwatch.StartNew();
+              //  for (int i = 0; i < 20000; i++)
+              //  {
+              //      actor.Tell(new Greet{Who ="Roger"});
+              ////      System.Threading.Thread.Sleep(5);
+              //  }
+            //    Console.WriteLine(sw.Elapsed);
                 //for (int i = 0; i < 1000; i++)
                 //{
                 //    actor.Tell(new Greet
@@ -85,7 +86,7 @@ namespace Pigeon.App
                 .With<LogMessage>(m =>
                 {
                     Console.WriteLine("Log {0}", m.Timestamp);
-                    throw new NotSupportedException("Some exception");
+                 //   throw new NotSupportedException("Some exception");
                 })
                 .With<TimeRequest>(m =>
                 {

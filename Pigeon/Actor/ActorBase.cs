@@ -12,27 +12,24 @@ namespace Pigeon.Actor
 {   
     public abstract partial class ActorBase
     {
-        protected ActorRef Sender { get; private set; }
-        protected ActorRef Self { get; private set; }
+        protected ActorRef Sender
+        {
+            get
+            {
+                return Context.Sender;
+            }
+        }
+        protected LocalActorRef Self { get; private set; }
 
-        protected BroadcastActorRef Watchers = new BroadcastActorRef();
+       
 
         protected ActorBase()
         {
             if (ActorContext.Current == null)
                 throw new Exception("Do not create actors using 'new', always create them using an ActorContext/System");
             Context.Become(OnReceive);
-            Context.Self.SetActor(this);
-            this.Self = Context.Self;
-            Context.Mailbox.OnNext = message =>
-                {
-                    this.Sender = message.Sender;
-                    //set the current context
-                    ActorContext.UseThreadContext(message.Target.Context, () =>
-                    {
-                        OnReceiveInternal(message.Payload);
-                    });
-                };
+            Context.Actor = this;
+            this.Self = Context.Self;            
         }
 
         protected abstract void OnReceive(object message);

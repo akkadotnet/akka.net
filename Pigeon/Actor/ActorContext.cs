@@ -113,12 +113,108 @@ namespace Pigeon.Actor
             context.Self = new LocalActorRef(new ActorPath(name), context);
             context.Props = props;
             context.Mailbox = new BufferBlockMailbox();
+            context.Mailbox.OnNext = context.OnNext;
 
-            ActorOfInternal(context);
+            CreateActor(context);
             return context.Self;
-        }        
+        }
 
-        private void ActorOfInternal(ActorContext context)
+        public ActorBase Actor { get; set; }
+
+        private void OnNext(Message message)
+        {
+            this.CurrentMessage = message;
+            this.Sender = message.Sender;
+            //set the current context
+            ActorContext.UseThreadContext(this, () =>
+            {
+                OnReceiveInternal(message.Payload);
+            });
+        }
+
+        private void OnReceiveInternal(object message)
+        {
+            try
+            {
+                Pattern.Match(message)
+                    //add watcher
+                    .With<Kill>(Kill)
+                    .With<PoisonPill>(PoisonPill)
+                    .With<Watch>(Watch)
+                    .With<Unwatch>(Unwatch)
+                    //complete the future callback by setting the result in this thread
+                    .With<CompleteFuture>(CompleteFuture)
+                    //resolve time distance to actor
+                    .With<Ping>(Ping)
+                    //supervice exception from child actor
+                    .With<SuperviceChild>(SuperviceChild)
+                    //handle any other message
+                    .Default(Default);
+            }
+            catch (Exception reason)
+            {
+                Parent.Self.Tell(new SuperviceChild(reason));
+            }
+        }
+
+        private void PoisonPill(PoisonPill m)
+        {
+        }
+        private void Kill(Kill m)
+        {
+            throw new ActorKilledException("Kill");
+        }
+        private void Default(object m)
+        {
+            CurrentBehavior(m);
+        }
+
+        private void SuperviceChild(SuperviceChild m)
+        {
+            switch (this.Actor.SupervisorStrategyLazy().Handle(Sender, m.Reason))
+            {
+                case Directive.Escalate:
+                    throw m.Reason;
+                case Directive.Resume:
+                    break;
+                case Directive.Restart:
+                    Restart((LocalActorRef)Sender);
+                    break;
+                case Directive.Stop:
+                    Stop((LocalActorRef)Sender);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private void Ping(Ping m)
+        {
+            Sender.Tell(
+                        new Pong
+                        {
+                            LocalUtcNow = m.LocalUtcNow,
+                            RemoteUtcNow = DateTime.UtcNow
+                        });
+        }
+
+        protected BroadcastActorRef Watchers = new BroadcastActorRef();
+        private void Watch(Watch m)
+        {
+            Watchers.Add(Sender);
+        }
+
+        private void Unwatch(Unwatch m)
+        {
+            Watchers.Remove(Sender);
+        }
+
+        private void CompleteFuture(CompleteFuture m)
+        {
+            m.SetResult();
+        }
+
+        private void CreateActor(ActorContext context)
         {
             var prev = ActorContext.Current;
             //set the thread static context or things will break
@@ -144,7 +240,7 @@ namespace Pigeon.Actor
         {           
             Stop(child);
             Debug.WriteLine("restarting child: {0}", child.Path);
-            ActorOfInternal(child.Context);
+            CreateActor(child.Context);
         }
 
         public void Stop(LocalActorRef child)
@@ -152,7 +248,7 @@ namespace Pigeon.Actor
             Debug.WriteLine("stopping child: {0}", child.Path);
             child.Context.Become(m =>
             {
-                System.Deadletters.Tell(m);
+                System.DeadLetters.Tell(m);
             });
             LocalActorRef tmp;
             var name = child.Path.Name;
@@ -186,5 +282,9 @@ namespace Pigeon.Actor
         {
             subject.Tell(new Unwatch());
         }
+
+        public Message CurrentMessage { get; set; }
+
+        public ActorRef Sender { get; set; }
     }    
 }

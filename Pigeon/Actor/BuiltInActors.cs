@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Actor
 {
-    public class DeadletterActor : UntypedActor
+    public class DeadLettersActor : UntypedActor
     {
         protected override void OnReceive(object message)
         {

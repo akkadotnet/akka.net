@@ -12,6 +12,9 @@ namespace Pigeon.Actor
 
     public class ActorKilledException : Exception
     {
+        public ActorKilledException(string message) : base(message)
+        {
+        }
     }
 
     public class DeathPactException : Exception
