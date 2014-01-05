@@ -19,12 +19,13 @@ namespace Pigeon.Actor
                 if (message is SystemMessage)
                 {
                     Pattern.Match(message)
-                        //add watcher
+                        //kill this actor
                         .With<Kill>(Kill)
-                        .With<Stop>(m => Stop())
+						//request to stop a child
                         .With<StopChild>(m => StopChild(m.Child))
-                        .With<Restart>(m => Restart())
+						//request to restart a child
                         .With<RestartChild>(m => RestartChild(m.Child))
+						//kill this actor
                         .With<PoisonPill>(PoisonPill)
 						//someone is watching us
                         .With<Watch>(Watch)
@@ -38,6 +39,8 @@ namespace Pigeon.Actor
                         .With<SuperviceChild>(SuperviceChild)
                         //handle any other message
                         .With<Identity>(Identity)
+						//forward pong to user
+						.With<Pong>(Default)
                         .Default(m => { throw new NotImplementedException(); });
                 }
                 else
@@ -136,7 +139,7 @@ namespace Pigeon.Actor
                         });
         }
 
-        protected BroadcastActorRef Watchers = new BroadcastActorRef();
+        private BroadcastActorRef Watchers = new BroadcastActorRef();
         private void Watch(Watch m)
         {
             Watchers.Add(Sender);
