@@ -12,20 +12,34 @@ namespace Pigeon.Actor
 {
     public abstract partial class ActorBase
     {
+		public void AroundPreStart()
+        {
+            PreStart();
+        }
         protected virtual void PreStart()
         {
         }
 
-		protected virtual void PostRestart(Exception reason, object message)
+		public void AroundPostRestart(Exception reason, object message)
         {
-			foreach(var child in Context.GetChildren())
+            foreach (var child in Context.GetChildren())
             {
                 Context.Unwatch(child);
-            //    Context.Stop(child);
+                child.Stop();
             }
+            PostRestart(reason, message);
+        }
+		protected virtual void PostRestart(Exception reason, object message)
+        {
+			
         }
 
-        protected void PostStop()
+		public void AroundPostStop()
+        {
+            PostStop();
+        }
+
+        protected virtual void PostStop()
         {
             //Watchers.Tell(new Terminated());
         }

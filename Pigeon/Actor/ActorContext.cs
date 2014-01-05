@@ -12,8 +12,6 @@ namespace Pigeon.Actor
 {
     public partial class ActorContext : ActorRefFactory
     {
-        
-
         protected ConcurrentDictionary<string, LocalActorRef> Children = new ConcurrentDictionary<string, LocalActorRef>();
 
         public override LocalActorRef Child(string name)
@@ -97,6 +95,7 @@ namespace Pigeon.Actor
             cell.UseThreadContext( () =>
             {
                 var instance = cell.Props.NewActor();
+                instance.AroundPreStart();
                 Children.TryAdd(cell.Self.Path.Name, cell.Self);
             });
         }
