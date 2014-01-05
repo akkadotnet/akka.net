@@ -7,17 +7,37 @@ namespace Pigeon.Actor
 {
     public class LocalActorRef : ActorRef
     {
-        public ActorContext Context { get;private set; }
+        public ActorCell Cell { get; private set; }
 
-        public LocalActorRef(ActorPath path,ActorContext context)
+        public void Stop()
+        {
+            Cell.Stop();
+        }
+
+        public void Suspend()
+        {
+           // Cell.Suspend();
+        }
+
+        public void Resume()
+        {
+           // Cell.Resume();
+        }
+
+        public void Restart()
+        {
+            Cell.Restart();
+        }
+
+        public LocalActorRef(ActorPath path,ActorCell context)
         {
             this.Path = path;
-            this.Context = context;
+            this.Cell = context;
         }
 
         protected override void TellInternal(object message, ActorRef sender)
         {
-            this.Context.Post(sender, this, message);
+            this.Cell.Post(sender, this, message);
         }
     }
 }

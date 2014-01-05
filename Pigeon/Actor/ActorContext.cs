@@ -11,11 +11,11 @@ using System.Threading.Tasks.Dataflow;
 namespace Pigeon.Actor
 {
 
-    public class ActorContext : ActorRefFactory
+    public partial class ActorContext : ActorRefFactory
     {
         [ThreadStatic]
-        private static ActorContext current;
-        internal static ActorContext Current
+        private static ActorCell current;
+        internal static ActorCell Current
         {
             get
             {
@@ -23,15 +23,22 @@ namespace Pigeon.Actor
             }
         }
 
-        public static void UseThreadContext(ActorContext context, Action action)
+        public static void UseThreadContext(ActorCell context, Action action)
         {
             var tmp = Current;
             current = context;
-            action();
-            current = tmp;
+            try
+            {
+                action();
+            }
+            finally
+            {
+                //ensure we set back the old context
+                current = tmp;
+            }
         }
 
-        public Mailbox Mailbox { get; private set; }
+
         public Props Props { get; private set; }
         public LocalActorRef Self { get; protected set; }
         public ActorContext Parent { get;private set; }
@@ -84,7 +91,7 @@ namespace Pigeon.Actor
                 }
                 else
                 {
-                    currentContext = ((LocalActorRef)this.Child(part)).Context;
+                    currentContext = ((LocalActorRef)this.Child(part)).Cell;
                 }
             }
             
@@ -107,165 +114,27 @@ namespace Pigeon.Actor
                 name = name + "#" + Guid.NewGuid();
             }
 
-            var context = new ActorContext();
-            context.Parent = this;
-            context.System = this.System;
-            context.Self = new LocalActorRef(new ActorPath(name), context);
-            context.Props = props;
-            context.Mailbox = new BufferBlockMailbox();
-            context.Mailbox.OnNext = context.OnNext;
+            var cell = new ActorCell();
+            cell.Parent = this;
+            cell.System = this.System;
+            cell.Self = new LocalActorRef(new ActorPath(name), cell);
+            cell.Props = props;
+            cell.Mailbox = new BufferBlockMailbox();
+            cell.Mailbox.OnNext = cell.OnNext;
 
-            CreateActor(context);
-            return context.Self;
+            CreateActor(cell);
+            return cell.Self;
         }
 
-        public ActorBase Actor { get; set; }
-
-        private void OnNext(Message message)
-        {
-            this.CurrentMessage = message;
-            this.Sender = message.Sender;
-            //set the current context
-            ActorContext.UseThreadContext(this, () =>
-            {
-                OnReceiveInternal(message.Payload);
-            });
-        }
-
-        private void OnReceiveInternal(object message)
-        {
-            try
-            {
-                Pattern.Match(message)
-                    //add watcher
-                    .With<Kill>(Kill)
-                    .With<PoisonPill>(PoisonPill)
-                    .With<Watch>(Watch)
-                    .With<Unwatch>(Unwatch)
-                    //complete the future callback by setting the result in this thread
-                    .With<CompleteFuture>(CompleteFuture)
-                    //resolve time distance to actor
-                    .With<Ping>(Ping)
-                    //supervice exception from child actor
-                    .With<SuperviceChild>(SuperviceChild)
-                    //handle any other message
-                    .Default(Default);
-            }
-            catch (Exception reason)
-            {
-                Parent.Self.Tell(new SuperviceChild(reason));
-            }
-        }
-
-        private void PoisonPill(PoisonPill m)
-        {
-        }
-        private void Kill(Kill m)
-        {
-            throw new ActorKilledException("Kill");
-        }
-        private void Default(object m)
-        {
-            CurrentBehavior(m);
-        }
-
-        private void SuperviceChild(SuperviceChild m)
-        {
-            switch (this.Actor.SupervisorStrategyLazy().Handle(Sender, m.Reason))
-            {
-                case Directive.Escalate:
-                    throw m.Reason;
-                case Directive.Resume:
-                    break;
-                case Directive.Restart:
-                    Restart((LocalActorRef)Sender);
-                    break;
-                case Directive.Stop:
-                    Stop((LocalActorRef)Sender);
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        private void Ping(Ping m)
-        {
-            Sender.Tell(
-                        new Pong
-                        {
-                            LocalUtcNow = m.LocalUtcNow,
-                            RemoteUtcNow = DateTime.UtcNow
-                        });
-        }
-
-        protected BroadcastActorRef Watchers = new BroadcastActorRef();
-        private void Watch(Watch m)
-        {
-            Watchers.Add(Sender);
-        }
-
-        private void Unwatch(Unwatch m)
-        {
-            Watchers.Remove(Sender);
-        }
-
-        private void CompleteFuture(CompleteFuture m)
-        {
-            m.SetResult();
-        }
-
-        private void CreateActor(ActorContext context)
+        protected void CreateActor(ActorCell cell)
         {
             var prev = ActorContext.Current;
             //set the thread static context or things will break
-            ActorContext.UseThreadContext(context, () =>
+            ActorContext.UseThreadContext(cell, () =>
             {
-                Children.TryAdd(context.Self.Path.Name, context.Self);
-                var actor = (ActorBase)Activator.CreateInstance(context.Props.Type, new object[] { });
+                Children.TryAdd(cell.Self.Path.Name, cell.Self);
+                var actor = (ActorBase)Activator.CreateInstance(cell.Props.Type, new object[] { });
             });
-        }
-
-        internal void Post(ActorRef sender, LocalActorRef target, object message)
-        {
-            var m = new Message
-            {
-                Sender = sender,
-                Target = target,
-                Payload = message,
-            };
-            Mailbox.Post(m);
-        }
-
-        public void Restart(LocalActorRef child)
-        {           
-            Stop(child);
-            Debug.WriteLine("restarting child: {0}", child.Path);
-            CreateActor(child.Context);
-        }
-
-        public void Stop(LocalActorRef child)
-        {
-            Debug.WriteLine("stopping child: {0}", child.Path);
-            child.Context.Become(m =>
-            {
-                System.DeadLetters.Tell(m);
-            });
-            LocalActorRef tmp;
-            var name = child.Path.Name;
-            this.Children.TryRemove(name, out tmp);           
-        }
-
-        public MessageHandler CurrentBehavior { get; private set; }
-        private Stack<MessageHandler> behaviorStack = new Stack<MessageHandler>();
-        public void Become(MessageHandler receive)
-        {
-            behaviorStack.Push(receive);
-            CurrentBehavior = receive;
-        }
-
-        public void Unbecome()
-        {
-            CurrentBehavior = behaviorStack.Pop(); ;
         }
 
         internal IEnumerable<LocalActorRef> GetChildren()
@@ -282,9 +151,5 @@ namespace Pigeon.Actor
         {
             subject.Tell(new Unwatch());
         }
-
-        public Message CurrentMessage { get; set; }
-
-        public ActorRef Sender { get; set; }
     }    
 }

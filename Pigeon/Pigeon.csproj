@@ -93,6 +93,7 @@
   <ItemGroup>
     <Compile Include="Actor\ActorBase.Ask.cs" />
     <Compile Include="Actor\ActorBase.cs" />
+    <Compile Include="Actor\ActorCell.cs" />
     <Compile Include="Actor\ActorContext.cs" />
     <Compile Include="Actor\ActorPath.cs" />
     <Compile Include="Actor\ActorRef.cs" />
@@ -122,8 +123,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Actor\ActorBase.SupervisorStrategy.cs" />
-    <Compile Include="Actor\ActorBase.DefaultMessages.cs" />
     <Compile Include="Actor\ActorBase.Lifecycle.cs" />
+    <Compile Include="Actor\ActorCell.DefaultMessages.cs" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

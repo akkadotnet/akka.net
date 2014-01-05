@@ -39,7 +39,7 @@ namespace Pigeon.Actor
             Context.System.EventStream.Tell(new UnhandledMessage(message, Sender, Self));
         }
 
-        protected static ActorContext Context
+        protected static ActorCell Context
         {
             get
             {

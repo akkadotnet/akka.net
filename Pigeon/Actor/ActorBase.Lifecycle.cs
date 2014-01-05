@@ -21,7 +21,7 @@ namespace Pigeon.Actor
 			foreach(var child in Context.GetChildren())
             {
                 Context.Unwatch(child);
-                Context.Stop(child);
+            //    Context.Stop(child);
             }
         }
 

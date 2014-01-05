@@ -51,12 +51,30 @@ namespace Pigeon.Actor
     {
     }
 
+    public class RestartChild : SystemMessage
+    {
+        public RestartChild(LocalActorRef child)
+        {
+            this.Child = child;
+        }
+        public LocalActorRef Child { get; private set; }
+    }
+
     public class Resume : SystemMessage
     {
     }
 
     public class Stop : SystemMessage
     {
+    }
+
+    public class StopChild : SystemMessage
+    {
+        public StopChild(LocalActorRef child)
+        {
+            this.Child = child;
+        }
+        public LocalActorRef Child { get;private set; }
     }
 
     public class Escalate : SystemMessage
