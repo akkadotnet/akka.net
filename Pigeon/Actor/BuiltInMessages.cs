@@ -107,11 +107,25 @@ namespace Pigeon.Actor
     //request to an actor ref, to get back the identity of the underlying actors
     public class Identity : SystemMessage
     {
+        public Identity(Guid messageId)
+        {
+            MessageId = messageId;
+        }
+        public Guid MessageId { get;private set; }
     }
 
     //response to the Identity message, get identity by Sender
     public class ActorIdentity : SystemMessage
     {
+        public Guid MessageId { get; private set; }
+        public LocalActorRef Subject { get; private set; }
+
+        public ActorIdentity(Guid messageId, LocalActorRef subject)
+        {
+            // TODO: Complete member initialization
+            this.MessageId = messageId;
+            this.Subject = subject;
+        }
     }
 
     //used to start watching another actor (deathwatch)

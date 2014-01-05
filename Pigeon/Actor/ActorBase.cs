@@ -25,7 +25,7 @@ namespace Pigeon.Actor
 
         protected ActorBase()
         {
-            if (ActorContext.Current == null)
+            if (ActorCell.Current == null)
                 throw new Exception("Do not create actors using 'new', always create them using an ActorContext/System");
             Context.Become(OnReceive);
             Context.Actor = this;
@@ -43,7 +43,7 @@ namespace Pigeon.Actor
         {
             get
             {
-                var context = ActorContext.Current;
+                var context = ActorCell.Current;
                 if (context == null)
                     throw new NotSupportedException("There is no active ActorContext, this is most likely due to use of async operations from within this actor.");
 

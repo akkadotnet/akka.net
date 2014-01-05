@@ -10,38 +10,9 @@ using System.Threading.Tasks.Dataflow;
 
 namespace Pigeon.Actor
 {
-
     public partial class ActorContext : ActorRefFactory
     {
-        [ThreadStatic]
-        private static ActorCell current;
-        internal static ActorCell Current
-        {
-            get
-            {
-                return current;
-            }
-        }
-
-        public static void UseThreadContext(ActorCell context, Action action)
-        {
-            var tmp = Current;
-            current = context;
-            try
-            {
-                action();
-            }
-            finally
-            {
-                //ensure we set back the old context
-                current = tmp;
-            }
-        }
-
-
-        public Props Props { get; private set; }
-        public LocalActorRef Self { get; protected set; }
-        public ActorContext Parent { get;private set; }
+        
 
         protected ConcurrentDictionary<string, LocalActorRef> Children = new ConcurrentDictionary<string, LocalActorRef>();
 
@@ -57,13 +28,13 @@ namespace Pigeon.Actor
             return ActorSelection(new ActorPath(actorPath));
         }
 
-        public ActorRef ActorSelection(ActorPath actorPath)
+        public ActorSelection ActorSelection(ActorPath actorPath)
         {
             //remote path
             if (actorPath.First.StartsWith("pigeon."))
             {
                 var actorRef = new RemoteActorRef(this, actorPath);
-                return actorRef;
+                return new ActorSelection(actorRef);
             }
 
             //local absolute
@@ -78,7 +49,7 @@ namespace Pigeon.Actor
             {
                 if (part == "..")
                 {
-                    currentContext = currentContext.Parent;
+                    currentContext = ((ActorCell)currentContext).Parent;
                 }
                 else if (part == "." || part == "")
                 {
@@ -86,7 +57,7 @@ namespace Pigeon.Actor
                 }
                 else if (part == "*")
                 {
-                    var actorRef = new BroadcastActorRef(currentContext.Children.Values.ToArray());
+                    var actorRef = new ActorSelection(currentContext.Children.Values.ToArray());
                     return actorRef;
                 }
                 else
@@ -95,7 +66,7 @@ namespace Pigeon.Actor
                 }
             }
             
-            return currentContext.Self;
+            return new ActorSelection( ((ActorCell)currentContext).Self);
         }
 
         public override LocalActorRef ActorOf<TActor>(string name = null)
@@ -114,42 +85,29 @@ namespace Pigeon.Actor
                 name = name + "#" + Guid.NewGuid();
             }
 
-            var cell = new ActorCell();
-            cell.Parent = this;
-            cell.System = this.System;
-            cell.Self = new LocalActorRef(new ActorPath(name), cell);
-            cell.Props = props;
-            cell.Mailbox = new BufferBlockMailbox();
-            cell.Mailbox.OnNext = cell.OnNext;
+            var cell = new ActorCell(this,props, name);
 
-            CreateActor(cell);
+            NewActor(cell);
             return cell.Self;
         }
 
-        protected void CreateActor(ActorCell cell)
+        protected void NewActor(ActorCell cell)
         {
-            var prev = ActorContext.Current;
             //set the thread static context or things will break
-            ActorContext.UseThreadContext(cell, () =>
+            cell.UseThreadContext( () =>
             {
+                var instance = cell.Props.NewActor();
                 Children.TryAdd(cell.Self.Path.Name, cell.Self);
-                var actor = (ActorBase)Activator.CreateInstance(cell.Props.Type, new object[] { });
             });
         }
 
+        /// <summary>
+        /// May be called from anyone
+        /// </summary>
+        /// <returns></returns>
         internal IEnumerable<LocalActorRef> GetChildren()
         {
             return this.Children.Values.ToArray();
-        }
-
-        public void Watch(ActorRef subject)
-        {
-            subject.Tell(new Watch());
-        }
-
-        public void Unwatch(ActorRef subject)
-        {
-            subject.Tell(new Unwatch());
-        }
+        }        
     }    
 }

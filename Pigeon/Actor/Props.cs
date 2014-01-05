@@ -14,5 +14,11 @@ namespace Pigeon.Actor
         }
 
         public Type Type { get;private set; }
+
+        public ActorBase NewActor()
+        {
+            var actor = (ActorBase)Activator.CreateInstance(this.Type, new object[] { });
+            return actor;
+        }
     }
 }

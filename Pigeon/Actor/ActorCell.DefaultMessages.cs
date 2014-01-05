@@ -16,29 +16,48 @@ namespace Pigeon.Actor
         {
             try
             {
-                Pattern.Match(message)
-                    //add watcher
-                    .With<Kill>(Kill)
-                    .With<Stop>(m => Stop())
-                    .With<StopChild>(m => StopChild(m.Child))
-                    .With<Restart>(m => Restart())
-                    .With<RestartChild>(m => RestartChild(m.Child))
-                    .With<PoisonPill>(PoisonPill)
-                    .With<Watch>(Watch)
-                    .With<Unwatch>(Unwatch)
-                    //complete the future callback by setting the result in this thread
-                    .With<CompleteFuture>(CompleteFuture)
-                    //resolve time distance to actor
-                    .With<Ping>(Ping)
-                    //supervice exception from child actor
-                    .With<SuperviceChild>(SuperviceChild)
-                    //handle any other message
-                    .Default(Default);
+                if (message is SystemMessage)
+                {
+                    Pattern.Match(message)
+                        //add watcher
+                        .With<Kill>(Kill)
+                        .With<Stop>(m => Stop())
+                        .With<StopChild>(m => StopChild(m.Child))
+                        .With<Restart>(m => Restart())
+                        .With<RestartChild>(m => RestartChild(m.Child))
+                        .With<PoisonPill>(PoisonPill)
+						//someone is watching us
+                        .With<Watch>(Watch)
+						//someone is unwatching us
+                        .With<Unwatch>(Unwatch)
+                        //complete the future callback by setting the result in this thread
+                        .With<CompleteFuture>(CompleteFuture)
+                        //resolve time distance to actor
+                        .With<Ping>(Ping)
+                        //supervice exception from child actor
+                        .With<SuperviceChild>(SuperviceChild)
+                        //handle any other message
+                        .With<Identity>(Identity)
+                        .Default(m => { throw new NotImplementedException(); });
+                }
+                else
+                {
+                    Default(message);
+                }
             }
             catch (Exception reason)
             {
-                Parent.Self.Tell(new SuperviceChild(reason));
+				//TODO: do something nicer here
+                if (Parent is ActorCell)
+                {					
+                    ((ActorCell)Parent).Self.Tell(new SuperviceChild(reason));
+                }
             }
+        }		
+
+		private void Identity(Identity m)
+        {
+            Sender.Tell(new ActorIdentity(m.MessageId, this.Self));
         }
 
         private void PoisonPill(PoisonPill m)
@@ -51,7 +70,7 @@ namespace Pigeon.Actor
 		/// </summary>
         public void Restart()
         {
-            this.Parent.Self.Tell(new RestartChild(this.Self));
+            ((ActorCell)this.Parent).Self.Tell(new RestartChild(this.Self));
         }
 
         private void RestartChild(LocalActorRef child)
@@ -59,7 +78,7 @@ namespace Pigeon.Actor
             StopChild(child);
             Debug.WriteLine("restarting child: {0}", child.Path);
             Unbecome();//unbecome deadletters
-            CreateActor(child.Cell);
+            NewActor(child.Cell);
         }
 
 		/// <summary>
@@ -67,7 +86,7 @@ namespace Pigeon.Actor
 		/// </summary>
         public void Stop()
         {
-            this.Parent.Self.Tell(new StopChild(this.Self));
+            ((ActorCell)this.Parent).Self.Tell(new StopChild(this.Self));
         }
 
         private void StopChild(LocalActorRef child)

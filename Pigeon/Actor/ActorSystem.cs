@@ -19,7 +19,6 @@ namespace Pigeon.Actor
             this.Guardian = ActorOf<GuardianActor>("user");
             this.SystemGuardian = ActorOf<GuardianActor>("system");
             this.TempGuardian = ActorOf<GuardianActor>("temp");
-            this.Self = this.Guardian;
         }
 
         public LocalActorRef EventStream { get; private set; }

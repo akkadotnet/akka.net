@@ -6,8 +6,11 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Actor
 {
-    public class ActorSelection
+    public class ActorSelection : BroadcastActorRef
     {
+        public ActorSelection(params ActorRef[] actors) :base(actors)
+        {
+        }
     }
 
     public class BroadcastActorRef : ActorRef

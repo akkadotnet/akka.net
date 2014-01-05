@@ -24,9 +24,9 @@ namespace Pigeon.Actor
         {
             ActorRef sender = null;
 
-            if (ActorContext.Current != null)
+            if (ActorCell.Current != null)
             {
-                sender = ActorContext.Current.Self;
+                sender = ActorCell.Current.Self;
             }
             else
             {
