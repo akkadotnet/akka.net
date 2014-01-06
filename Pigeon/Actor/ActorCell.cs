@@ -13,7 +13,7 @@ namespace Pigeon.Actor
         public virtual ActorSystem System { get; set; }
         public Props Props { get;private set; }
         public LocalActorRef Self { get; private set; }
-        public IActorContext Parent { get; private set; }
+        public ActorRef Parent { get; private set; }
         public ActorBase Actor { get; set; }
         public Message CurrentMessage { get; set; }
         public ActorRef Sender { get;private set; }
@@ -66,7 +66,7 @@ namespace Pigeon.Actor
             {
                 if (part == "..")
                 {
-                    currentContext = ((ActorCell)currentContext.Parent);
+                    currentContext = ((LocalActorRef)currentContext.Parent).Cell;
                 }
                 else if (part == "." || part == "")
                 {
@@ -132,10 +132,10 @@ namespace Pigeon.Actor
         {
         }
 
-        internal ActorCell(IActorContext parent, Props props, string name)
+        internal ActorCell(IActorContext parentContext, Props props, string name)
         {
-            this.Parent = parent;
-            this.System = parent != null ? parent.System : null;
+            this.Parent = parentContext.Self;
+            this.System = parentContext != null ? parentContext.System : null;
             this.Self = new LocalActorRef(new ActorPath(name), this);
             this.Props = props;
             this.Mailbox = new BufferBlockMailbox();

@@ -51,10 +51,7 @@ namespace Pigeon.Actor
             catch (Exception reason)
             {
 				//TODO: do something nicer here
-                if (Parent is ActorCell)
-                {					
-                    ((ActorCell)Parent).Self.Tell(new SuperviceChild(reason));
-                }
+                Parent.Tell(new SuperviceChild(reason));
             }
         }		
 
@@ -73,7 +70,7 @@ namespace Pigeon.Actor
 		/// </summary>
         public void Restart()
         {
-            ((ActorCell)this.Parent).Self.Tell(new RestartChild(this.Self));
+            this.Parent.Tell(new RestartChild(this.Self));
         }
 
         private void RestartChild(LocalActorRef child)
@@ -89,7 +86,7 @@ namespace Pigeon.Actor
 		/// </summary>
         public void Stop()
         {
-            ((ActorCell)this.Parent).Self.Tell(new StopChild(this.Self));
+            this.Parent.Tell(new StopChild(this.Self));
         }
 
         private void StopChild(LocalActorRef child)
