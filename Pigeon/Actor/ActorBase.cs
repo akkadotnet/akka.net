@@ -51,7 +51,7 @@ namespace Pigeon.Actor
             }
         }
 
-        protected void Become(MessageHandler receive)
+        protected void Become(Receive receive)
         {
             Context.Become(receive);
         }

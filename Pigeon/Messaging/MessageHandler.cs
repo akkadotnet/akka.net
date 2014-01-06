@@ -6,5 +6,5 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Messaging
 {
-    public delegate void MessageHandler(object message);
+    public delegate void Receive(object message);
 }

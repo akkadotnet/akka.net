@@ -10,7 +10,7 @@ using System.Collections.Concurrent;
 
 namespace Pigeon.Actor
 {
-    public class ActorSystem : ActorContext, IDisposable
+    public class ActorSystem : ActorCell, IDisposable
     {       
         public ActorSystem()
         {

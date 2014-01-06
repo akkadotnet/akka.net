@@ -12,9 +12,9 @@ namespace Pigeon.Actor
     {
         private IHubProxy hub;
         private string actorName;
-        private ActorContext Context;
+        private IActorContext Context;
 
-        public RemoteActorRef(ActorContext context, ActorPath remoteActorPath)
+        public RemoteActorRef(IActorContext context, ActorPath remoteActorPath)
         {
             this.Path = remoteActorPath;
             this.Context = context;
