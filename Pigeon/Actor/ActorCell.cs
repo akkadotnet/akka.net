@@ -11,11 +11,11 @@ namespace Pigeon.Actor
     public partial class ActorCell : IActorContext, IActorRefFactory
     {
         public virtual ActorSystem System { get; set; }
-        internal Props Props { get;private set; }
-        internal LocalActorRef Self { get;private set; }
-        internal IActorContext Parent { get;private set; }
-        internal ActorBase Actor { get; set; }
-        private Message CurrentMessage { get; set; }
+        public Props Props { get;private set; }
+        public LocalActorRef Self { get; private set; }
+        public IActorContext Parent { get; private set; }
+        public ActorBase Actor { get; set; }
+        public Message CurrentMessage { get; set; }
         public ActorRef Sender { get;private set; }
         internal Receive CurrentBehavior { get; private set; }
         private Stack<Receive> behaviorStack = new Stack<Receive>();

@@ -5,8 +5,6 @@ namespace Pigeon.Actor
     {
         LocalActorRef ActorOf(Props props, string name = null);
         LocalActorRef ActorOf<TActor>(string name = null);
-        ActorRef ActorSelection(string remoteActorPath);
-        
-        ActorSystem System { get; set; }
+        ActorSelection ActorSelection(ActorPath actorPath);
     }
 }
