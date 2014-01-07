@@ -1,7 +1,6 @@
 ﻿using ChatMessages;
 using Pigeon;
 using Pigeon.Actor;
-using Pigeon.Messaging;
 using Pigeon.SignalR;
 using System;
 using System.Collections.Generic;

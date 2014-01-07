@@ -1,5 +1,4 @@
-﻿using Pigeon.Messaging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 namespace Pigeon.Actor
 {
@@ -11,7 +10,7 @@ namespace Pigeon.Actor
         void Unbecome();
         ActorRef Sender { get; }
         LocalActorRef Child(string name);
-        IEnumerable<LocalActorRef> GetChildren();
+        IEnumerable<ActorRef> GetChildren();
         ActorSystem System { get; }
         ActorRef Parent { get; }
         void Watch(ActorRef subject);

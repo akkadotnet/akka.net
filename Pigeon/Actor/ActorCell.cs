@@ -1,5 +1,4 @@
-﻿using Pigeon.Messaging;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +14,7 @@ namespace Pigeon.Actor
         public LocalActorRef Self { get; private set; }
         public ActorRef Parent { get; private set; }
         public ActorBase Actor { get; set; }
-        public Message CurrentMessage { get; set; }
+        public Envelope CurrentMessage { get; set; }
         public ActorRef Sender { get;private set; }
         internal Receive CurrentBehavior { get; private set; }
         private Stack<Receive> behaviorStack = new Stack<Receive>();
@@ -40,7 +39,7 @@ namespace Pigeon.Actor
             return actorRef;
         }
 
-        public virtual ActorRef ActorSelection(string actorPath)
+        public ActorSelection ActorSelection(string actorPath)
         {
             return ActorSelection(new ActorPath(actorPath));
         }
@@ -123,7 +122,7 @@ namespace Pigeon.Actor
         /// May be called from anyone
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<LocalActorRef> GetChildren()
+        public IEnumerable<ActorRef> GetChildren()
         {
             return this.Children.Values.ToArray();
         }
@@ -138,7 +137,7 @@ namespace Pigeon.Actor
             this.System = parentContext != null ? parentContext.System : null;
             this.Self = new LocalActorRef(new ActorPath(name), this);
             this.Props = props;
-            this.Mailbox = new BufferBlockMailbox();
+            this.Mailbox = new ActionBlockMailbox();
             this.Mailbox.OnNext = this.OnNext;
         }
 
@@ -167,7 +166,7 @@ namespace Pigeon.Actor
         {
             CurrentBehavior = behaviorStack.Pop(); ;
         }
-        public void OnNext(Message message)
+        public void OnNext(Envelope message)
         {
             this.CurrentMessage = message;
             this.Sender = message.Sender;
@@ -177,12 +176,11 @@ namespace Pigeon.Actor
                 OnReceiveInternal(message.Payload);
             });
         }
-        internal void Post(ActorRef sender, LocalActorRef target, object message)
+        internal void Post(ActorRef sender, object message)
         {
-            var m = new Message
+            var m = new Envelope
             {
                 Sender = sender,
-                Target = target,
                 Payload = message,
             };
             Mailbox.Post(m);

@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Reactive.Linq;
-using Pigeon.Messaging;
 using System.Threading;
 
 namespace Pigeon.Actor
@@ -22,11 +21,11 @@ namespace Pigeon.Actor
 
 		public void AroundPostRestart(Exception reason, object message)
         {
-            foreach (var child in Context.GetChildren())
-            {
-                Context.Unwatch(child);
-                child.Stop();
-            }
+            //foreach (var child in Context.GetChildren())
+            //{
+            //    Context.Unwatch(child);
+            //    child.Stop();
+            //}
             PostRestart(reason, message);
         }
 		protected virtual void PostRestart(Exception reason, object message)

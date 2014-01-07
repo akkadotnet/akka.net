@@ -37,7 +37,7 @@ namespace Pigeon.Actor
 
         protected override void TellInternal(object message, ActorRef sender)
         {
-            this.Cell.Post(sender, this, message);
+            this.Cell.Post(sender, message);
         }
     }
 }

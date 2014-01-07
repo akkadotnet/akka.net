@@ -5,13 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Messaging
+namespace Pigeon.Actor
 {
-    public class Message
+    public class Envelope
     {
         public ActorRef Sender { get; set; }
         public object Payload { get; set; }
-
-        public LocalActorRef Target { get; set; }
     }
 }

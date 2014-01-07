@@ -16,17 +16,17 @@ namespace Pigeon.App
         static void Main(string[] args)
         {
       //      ThreadPool.SetMinThreads(2000, 2000);
-            using (var system = ActorSystemSignalR.Create("System A", "http://localhost:8080"))
+            using (var system = new ActorSystem())
             {
                 var actor = system.ActorOf<MyActor>();
                 actor.Tell(new TimeRequest());
-              //  Stopwatch sw = Stopwatch.StartNew();
-              //  for (int i = 0; i < 20000; i++)
-              //  {
-              //      actor.Tell(new Greet{Who ="Roger"});
-              ////      System.Threading.Thread.Sleep(5);
-              //  }
-            //    Console.WriteLine(sw.Elapsed);
+                Stopwatch sw = Stopwatch.StartNew();
+                for (int i = 0; i < 5500000; i++)
+                {
+                    actor.Tell(new Greet { Who = "Roger" });
+                    //      System.Threading.Thread.Sleep(5);
+                }
+                Console.WriteLine(sw.Elapsed);
                 //for (int i = 0; i < 1000; i++)
                 //{
                 //    actor.Tell(new Greet
@@ -38,7 +38,8 @@ namespace Pigeon.App
                 //        Name = "Olle",
                 //    }, ActorRef.NoSender);
                 //}
-
+                var c = (actor.Cell.Actor as MyActor).count;
+                Console.WriteLine(c);
                 Console.ReadLine();
             }
         }
@@ -119,12 +120,14 @@ namespace Pigeon.App
                 });
         }
 
+        public int count = 0;
         protected override void OnReceive(object message)
         {
         //    Console.WriteLine("actor thread: {0}", System.Threading.Thread.CurrentThread.GetHashCode());
             Pattern.Match(message)
                 .With<Greet>(m => 
                 {
+                    count++;
              //       Console.WriteLine("Hello {0}", m.Who); 
                 })
                 .With<TimeRequest>(async m =>
@@ -141,7 +144,7 @@ namespace Pigeon.App
                 })
                 .Default(Unhandled);
 
-                logger.Tell(new LogMessage(message));
+            //    logger.Tell(new LogMessage(message));
         }
     }
 }

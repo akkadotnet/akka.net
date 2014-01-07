@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Reactive.Linq;
-using Pigeon.Messaging;
 using System.Threading;
 
 namespace Pigeon.Actor
@@ -28,7 +27,7 @@ namespace Pigeon.Actor
             if (ActorCell.Current == null)
                 throw new Exception("Do not create actors using 'new', always create them using an ActorContext/System");
             Context.Become(OnReceive);
-            Context.Actor = this;
+            ((ActorCell)Context).Actor = this;
             this.Self = Context.Self;            
         }
 
@@ -39,7 +38,7 @@ namespace Pigeon.Actor
             Context.System.EventStream.Tell(new UnhandledMessage(message, Sender, Self));
         }
 
-        protected static ActorCell Context
+        protected static IActorContext Context
         {
             get
             {

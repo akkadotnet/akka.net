@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Messaging
+namespace Pigeon.Actor
 {
     public delegate void Receive(object message);
 }
