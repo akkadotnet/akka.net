@@ -22,7 +22,7 @@ namespace Pigeon.App
                 var actor2 = system.ActorOf<MyActor>();
                 actor1.Tell(new TimeRequest());
                 Stopwatch sw = Stopwatch.StartNew();
-                for (int i = 0; i < 5500000; i++)
+                for (int i = 0; i < 2000000; i++)
                 {
                     actor1.Tell(new Greet { Who = "Roger" });
                //     actor2.Tell(new Greet { Who = "Roger" });
@@ -40,7 +40,7 @@ namespace Pigeon.App
                 //        Name = "Olle",
                 //    }, ActorRef.NoSender);
                 //}
-                System.Threading.Thread.Sleep(2000);
+                System.Threading.Thread.Sleep(500);
                 Console.WriteLine(sw.Elapsed);
                 var c = (actor1.Cell.Actor as MyActor).count;
                 Console.WriteLine(c);
