@@ -18,15 +18,17 @@ namespace Pigeon.App
       //      ThreadPool.SetMinThreads(2000, 2000);
             using (var system = new ActorSystem())
             {
-                var actor = system.ActorOf<MyActor>();
-                actor.Tell(new TimeRequest());
+                var actor1 = system.ActorOf<MyActor>();
+                var actor2 = system.ActorOf<MyActor>();
+                actor1.Tell(new TimeRequest());
                 Stopwatch sw = Stopwatch.StartNew();
                 for (int i = 0; i < 5500000; i++)
                 {
-                    actor.Tell(new Greet { Who = "Roger" });
+                    actor1.Tell(new Greet { Who = "Roger" });
+               //     actor2.Tell(new Greet { Who = "Roger" });
                     //      System.Threading.Thread.Sleep(5);
                 }
-                Console.WriteLine(sw.Elapsed);
+                
                 //for (int i = 0; i < 1000; i++)
                 //{
                 //    actor.Tell(new Greet
@@ -38,8 +40,9 @@ namespace Pigeon.App
                 //        Name = "Olle",
                 //    }, ActorRef.NoSender);
                 //}
-                System.Threading.Thread.Sleep(50000);
-                var c = (actor.Cell.Actor as MyActor).count;
+                System.Threading.Thread.Sleep(2000);
+                Console.WriteLine(sw.Elapsed);
+                var c = (actor1.Cell.Actor as MyActor).count;
                 Console.WriteLine(c);
                 Console.ReadLine();
             }

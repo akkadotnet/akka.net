@@ -149,26 +149,54 @@ namespace Pigeon.Actor
     /// </summary>
     public class ConcurrentQueueMailbox : Mailbox
     {
-        private System.Collections.Concurrent.ConcurrentQueue<Envelope> queue = new System.Collections.Concurrent.ConcurrentQueue<Envelope>();
-
+        private System.Collections.Concurrent.ConcurrentQueue<Envelope> userMessages = new System.Collections.Concurrent.ConcurrentQueue<Envelope>();
+        private System.Collections.Concurrent.ConcurrentQueue<Envelope> systemMessages = new System.Collections.Concurrent.ConcurrentQueue<Envelope>();
+        private bool idle = true;
+        private WaitCallback handler = null;
         public ConcurrentQueueMailbox()
-        {
-            WaitCallback handler = null;
+        {            
             handler = new WaitCallback(_ =>
             {
-                Envelope message = null;
-                if (queue.TryDequeue(out message))
+                idle = true;
+
+                while (systemMessages.Count > 0)
                 {
-                    this.OnNext(message);
+                    Envelope envelope = null;
+                    if (systemMessages.TryDequeue(out envelope))
+                    {
+                        this.OnNext(envelope);
+                    }
                 }
-                ThreadPool.QueueUserWorkItem(handler);
+
+                while (userMessages.Count > 0)
+                {
+                    Envelope envelope = null;
+                    if (userMessages.TryDequeue(out envelope))
+                    {
+                        this.OnNext(envelope);
+                    }
+                }
+
+                System.Threading.ThreadPool.QueueUserWorkItem(handler);
             });
             System.Threading.ThreadPool.QueueUserWorkItem(handler);
         }
 
-        public override void Post(Envelope message)
+        public override void Post(Envelope envelope)
         {
-            queue.Enqueue(message);
+            if (envelope.Payload is SystemMessage)
+            {
+                systemMessages.Enqueue(envelope);
+            }
+            else
+            {
+                userMessages.Enqueue(envelope);
+            }
+
+            //if (idle)
+            //{
+            //    System.Threading.ThreadPool.QueueUserWorkItem(handler);
+            //}
         }
     }
 }

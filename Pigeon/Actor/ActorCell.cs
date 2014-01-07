@@ -137,7 +137,7 @@ namespace Pigeon.Actor
             this.System = parentContext != null ? parentContext.System : null;
             this.Self = new LocalActorRef(new ActorPath(name), this);
             this.Props = props;
-            this.Mailbox = new ActionBlockMailbox();
+            this.Mailbox = new ConcurrentQueueMailbox();// new ActionBlockMailbox();
             this.Mailbox.OnNext = this.OnNext;
         }
 
