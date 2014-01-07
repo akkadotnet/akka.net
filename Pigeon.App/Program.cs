@@ -38,6 +38,7 @@ namespace Pigeon.App
                 //        Name = "Olle",
                 //    }, ActorRef.NoSender);
                 //}
+                System.Threading.Thread.Sleep(50000);
                 var c = (actor.Cell.Actor as MyActor).count;
                 Console.WriteLine(c);
                 Console.ReadLine();

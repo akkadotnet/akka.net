@@ -33,10 +33,17 @@ namespace Pigeon.Actor
                 MaxDegreeOfParallelism = 1,
                 MaxMessagesPerTask = 1,
                 TaskScheduler = TaskScheduler.Default,
+                SingleProducerConstrained = false,
             });
 
-            systemMessages.LinkTo(actionBlock);
-            userMessages.LinkTo(actionBlock);
+            systemMessages.LinkTo(actionBlock, new DataflowLinkOptions()
+            {
+                Append = false,                
+            });
+            userMessages.LinkTo(actionBlock, new DataflowLinkOptions()
+            {
+                Append = true,
+            });
         }
 
         private void OnNextWrapper(Envelope message)
