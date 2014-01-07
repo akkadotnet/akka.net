@@ -20,12 +20,17 @@ namespace Pigeon.App
             {
                 var actor1 = system.ActorOf<MyActor>();
                 var actor2 = system.ActorOf<MyActor>();
+                var actor3 = system.ActorOf<MyActor>();
+                var actor4 = system.ActorOf<MyActor>();
                 actor1.Tell(new TimeRequest());
                 Stopwatch sw = Stopwatch.StartNew();
+                var message = new Greet { Who = "Roger" };
                 for (int i = 0; i < 2000000; i++)
                 {
-                    actor1.Tell(new Greet { Who = "Roger" });
-               //     actor2.Tell(new Greet { Who = "Roger" });
+                    actor1.Tell(message);
+                    actor2.Tell(message);
+                    actor3.Tell(message);
+                    actor4.Tell(message);
                     //      System.Threading.Thread.Sleep(5);
                 }
                 
@@ -40,7 +45,7 @@ namespace Pigeon.App
                 //        Name = "Olle",
                 //    }, ActorRef.NoSender);
                 //}
-                System.Threading.Thread.Sleep(500);
+                System.Threading.Thread.Sleep(600);
                 Console.WriteLine(sw.Elapsed);
                 var c = (actor1.Cell.Actor as MyActor).count;
                 Console.WriteLine(c);
