@@ -151,39 +151,54 @@ namespace Pigeon.Actor
     {
         private System.Collections.Concurrent.ConcurrentQueue<Envelope> userMessages = new System.Collections.Concurrent.ConcurrentQueue<Envelope>();
         private System.Collections.Concurrent.ConcurrentQueue<Envelope> systemMessages = new System.Collections.Concurrent.ConcurrentQueue<Envelope>();
-        private bool idle = true;
+        
         private WaitCallback handler = null;
-        public ConcurrentQueueMailbox()
-        {            
-            handler = new WaitCallback(_ =>
+        private volatile bool hasUnscheduledMessages = false;
+        private int status;
+
+        private static class MailboxStatus
+        {
+            public const int Idle = 0;
+            public const int Busy = 1;
+        }
+
+        private void Run(object _)
+        {
+            Envelope envelope = null;
+            while (systemMessages.TryDequeue(out envelope))
+            {           
+                this.OnNext(envelope);           
+            }
+
+            while (userMessages.TryDequeue(out envelope))
             {
-                idle = true;
+                this.OnNext(envelope);
+            }
 
-                while (systemMessages.Count > 0)
-                {
-                    Envelope envelope = null;
-                    if (systemMessages.TryDequeue(out envelope))
-                    {
-                        this.OnNext(envelope);
-                    }
-                }
+            Interlocked.Exchange(ref status, MailboxStatus.Idle);
 
-                while (userMessages.Count > 0)
-                {
-                    Envelope envelope = null;
-                    if (userMessages.TryDequeue(out envelope))
-                    {
-                        this.OnNext(envelope);
-                    }
-                }
+            if (hasUnscheduledMessages)
+            {
+                hasUnscheduledMessages = false;
+                Schedule();
+            }
+        }
+        public ConcurrentQueueMailbox()
+        {                        
+        }
 
-                System.Threading.ThreadPool.QueueUserWorkItem(handler);
-            });
-            System.Threading.ThreadPool.QueueUserWorkItem(handler);
+        private void Schedule()
+        {
+            //only schedule if we idle
+            if (Interlocked.Exchange(ref status, MailboxStatus.Busy) == MailboxStatus.Idle)
+            {
+                ThreadPool.QueueUserWorkItem(Run);
+            }
         }
 
         public override void Post(Envelope envelope)
         {
+            hasUnscheduledMessages = true;
             if (envelope.Payload is SystemMessage)
             {
                 systemMessages.Enqueue(envelope);
@@ -193,10 +208,7 @@ namespace Pigeon.Actor
                 userMessages.Enqueue(envelope);
             }
 
-            //if (idle)
-            //{
-            //    System.Threading.ThreadPool.QueueUserWorkItem(handler);
-            //}
+            Schedule();
         }
     }
 }

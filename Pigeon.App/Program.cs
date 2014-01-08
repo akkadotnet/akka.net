@@ -45,9 +45,15 @@ namespace Pigeon.App
                 //        Name = "Olle",
                 //    }, ActorRef.NoSender);
                 //}
-                System.Threading.Thread.Sleep(600);
+             //   System.Threading.Thread.Sleep(600);
                 Console.WriteLine(sw.Elapsed);
                 var c = (actor1.Cell.Actor as MyActor).count;
+                Console.WriteLine(c);
+                c = (actor2.Cell.Actor as MyActor).count;
+                Console.WriteLine(c);
+                c = (actor3.Cell.Actor as MyActor).count;
+                Console.WriteLine(c);
+                c = (actor4.Cell.Actor as MyActor).count;
                 Console.WriteLine(c);
                 Console.ReadLine();
             }
@@ -132,26 +138,27 @@ namespace Pigeon.App
         public int count = 0;
         protected override void OnReceive(object message)
         {
+            count++;
         //    Console.WriteLine("actor thread: {0}", System.Threading.Thread.CurrentThread.GetHashCode());
-            Pattern.Match(message)
-                .With<Greet>(m => 
-                {
-                    count++;
-             //       Console.WriteLine("Hello {0}", m.Who); 
-                })
-                .With<TimeRequest>(async m =>
-                {
-                    //TODO: this will execute in another thread, fix
-                    Pattern.Match(await Ask(logger, m))
-                        .With<TimeResponse>(t =>
-                        {
-                            Console.WriteLine("await thread {0}", System.Threading.Thread.CurrentThread.GetHashCode());
-                            //     Console.WriteLine("its {0} o'clock", t.DateTime);
-                        })
-                        .Default(_ => Console.WriteLine("Unknown message"));
+            //Pattern.Match(message)
+            //    .With<Greet>(m => 
+            //    {
+            //        count++;
+            // //       Console.WriteLine("Hello {0}", m.Who); 
+            //    })
+            //    .With<TimeRequest>(async m =>
+            //    {
+            //        //TODO: this will execute in another thread, fix
+            //        Pattern.Match(await Ask(logger, m))
+            //            .With<TimeResponse>(t =>
+            //            {
+            //                Console.WriteLine("await thread {0}", System.Threading.Thread.CurrentThread.GetHashCode());
+            //                //     Console.WriteLine("its {0} o'clock", t.DateTime);
+            //            })
+            //            .Default(_ => Console.WriteLine("Unknown message"));
 
-                })
-                .Default(Unhandled);
+            //    })
+            //    .Default(Unhandled);
 
             //    logger.Tell(new LogMessage(message));
         }
