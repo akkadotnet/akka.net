@@ -33,7 +33,7 @@ namespace Pigeon.Actor
 
         private void Run(object _)
         {
-            Envelope envelope = null;
+            Envelope envelope;
             while (systemMessages.TryDequeue(out envelope))
             {           
                 this.OnNext(envelope);           

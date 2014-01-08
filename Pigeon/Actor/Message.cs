@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Actor
 {
-    public class Envelope
+    public struct Envelope
     {
         public ActorRef Sender { get; set; }
         public object Payload { get; set; }
