@@ -74,6 +74,7 @@ namespace Pigeon.Actor
 
         private void RestartChild(LocalActorRef child)
         {
+            isTerminating = false;
             StopChild(child);
             Debug.WriteLine("restarting child: {0}", child.Path);
             Unbecome();//unbecome deadletters
@@ -88,9 +89,14 @@ namespace Pigeon.Actor
             this.Parent.Tell(new StopChild(this.Self));
         }
 
+        private bool isTerminating = false;
         private void StopChild(LocalActorRef child)
         {
-            Debug.WriteLine("stopping child: {0}", child.Path);
+            if (isTerminating)
+                return;
+
+            isTerminating = true;
+            Console.WriteLine("stopping child: {0}", child.Path);
             child.Cell.Become(System.DeadLetters.Tell);
             LocalActorRef tmp;
             var name = child.Path.Name;

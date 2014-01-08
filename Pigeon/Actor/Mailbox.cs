@@ -173,6 +173,11 @@ namespace Pigeon.Actor
             while (userMessages.TryDequeue(out envelope))
             {
                 this.OnNext(envelope);
+                if (systemMessages.TryDequeue(out envelope))
+                {
+                    this.OnNext(envelope);
+                    break;
+                }
             }
 
             Interlocked.Exchange(ref status, MailboxStatus.Idle);
