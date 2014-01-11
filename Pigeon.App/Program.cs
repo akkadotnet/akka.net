@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Management;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,153 +14,105 @@ namespace Pigeon.App
 {
     class Program
     {
+
+        public static uint CPUSpeed()
+        {
+            ManagementObject Mo = new ManagementObject("Win32_Processor.DeviceID='CPU0'");
+            uint sp = (uint)(Mo["CurrentClockSpeed"]);
+            Mo.Dispose();
+            return sp;
+        }
+
         static void Main(string[] args)
         {
-      //      ThreadPool.SetMinThreads(2000, 2000);
+            int workerThreads;
+            int completionPortThreads;
+            ThreadPool.GetAvailableThreads(out workerThreads, out completionPortThreads);
+            Console.WriteLine("Worker threads: {0}", workerThreads);
+            Console.WriteLine("OSVersion: {0}", Environment.OSVersion);
+            Console.WriteLine("ProcessorCount: {0}",Environment.ProcessorCount);
+            Console.WriteLine("ClockSpeed: {0} MHZ", CPUSpeed());
+
+
+            int i = 1;
+            Console.WriteLine("Actor count, Messages/sec");
+            while (ProfileThroughput(i++))
+            {
+            }
+        }
+
+        private static long bestThroughput = 0;
+        private static int redCount = 0;
+        private static bool ProfileThroughput(int actorCount)
+        {
+            GC.Collect();
             using (var system = new ActorSystem())
             {
-                var actor1 = system.ActorOf<MyActor>();
-                var actor2 = system.ActorOf<MyActor>();
-                var actor3 = system.ActorOf<MyActor>();
-                var actor4 = system.ActorOf<MyActor>();
-         //       actor1.Tell(new TimeRequest());
-                Stopwatch sw = Stopwatch.StartNew();
-                var message = new Greet { Who = "Roger" };
-                for (int i = 0; i < 5000000; i++)
+                var actors = new List<LocalActorRef>();
+                for (int i = 0; i < actorCount; i++)
                 {
-                    actor1.Tell(message);
-                    actor2.Tell(message);
-                    actor3.Tell(message);
-                    actor4.Tell(message);
-                    //      System.Threading.Thread.Sleep(5);
+                    var actor = system.ActorOf<MessageProcessCountActor>();
+                    actors.Add(actor);
                 }
                 
-                //for (int i = 0; i < 1000; i++)
-                //{
-                //    actor.Tell(new Greet
-                //    {
-                //        Name = "Roger",
-                //    }, ActorRef.NoSender);
-                //    actor.Tell(new Greet
-                //    {
-                //        Name = "Olle",
-                //    }, ActorRef.NoSender);
-                //}
-             //   System.Threading.Thread.Sleep(600);
-                Console.WriteLine(sw.Elapsed);
-                var c = (actor1.Cell.Actor as MyActor).count;
-                Console.WriteLine(c);
-                c = (actor2.Cell.Actor as MyActor).count;
-                Console.WriteLine(c);
-                c = (actor3.Cell.Actor as MyActor).count;
-                Console.WriteLine(c);
-                c = (actor4.Cell.Actor as MyActor).count;
-                Console.WriteLine(c);
-                Console.ReadLine();
+                var timeout = TimeSpan.FromSeconds(5);
+
+                var tasks = new List<Task>();
+                var sentMessages = 0L;
+                Stopwatch sw = Stopwatch.StartNew();
+                var message = "hello";
+                
+                while (sw.Elapsed < timeout)
+                {
+                    for (int i = 0; i < actorCount; i++)
+                    {
+                        Interlocked.Increment(ref sentMessages);
+                        actors[i].Tell(message);
+                        Interlocked.Increment(ref sentMessages);
+                        actors[i].Tell(message);
+                    }
+                }
+               
+                var messageCount = actors.Sum(a =>
+                {
+                    return (a.Cell.Actor as MessageProcessCountActor).count;
+                });
+                sw.Stop();
+
+                var throughput = messageCount / sw.ElapsedMilliseconds * 1000;
+
+                
+
+                if (throughput > bestThroughput)
+                {
+                    bestThroughput = throughput;
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    redCount = 0;
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    redCount++;
+                }
+                Console.WriteLine("Actors: {0}", actorCount);
+                Console.WriteLine("Messages sent: {0}/s", sentMessages / sw.ElapsedMilliseconds * 1000);
+                Console.WriteLine("Messages processed {0}/s", throughput);
+
+                if (redCount > 15)
+                    return false;
+
+                return true;
             }
         }
     }
 
-    public class Greet 
+    public class MessageProcessCountActor : UntypedActor
     {
-        public string Who { get; set; }
-    }
-
-    public class GreetingActor : UntypedActor
-    {
-        protected override void OnReceive(object message)
-        {
-            Pattern.Match(message)
-                .With<Greet>(m => Console.WriteLine("Hello {0}", m.Who));
-        }
-    }
-
-    public class LogMessage
-    {
-        public LogMessage(object message)
-        {
-            this.Timestamp = DateTime.Now;
-            this.Message = message;
-        }
-        public DateTime Timestamp { get;private set; }
-        public object Message { get; private set; }
-    }
-
-    public class TimeRequest 
-    {
-    }
-
-    public class TimeResponse 
-    {
-        public DateTime DateTime { get; set; }
-    }
-
-    public class LogActor : UntypedActor 
-    {
-        protected override void OnReceive(object message)
-        {
-            Pattern.Match(message)
-                .With<LogMessage>(m =>
-                {
-                 //   Console.WriteLine("Log {0}", m.Timestamp);
-                    throw new NotSupportedException("Some exception");
-                })
-                .With<TimeRequest>(m =>
-                {
-                    Sender.Tell(new TimeResponse
-                    {
-                        DateTime = DateTime.Now
-                    });
-                })
-                .Default(Unhandled);
-        }
-    }
-
-    public class MyActor : UntypedActor
-    {
-        private ActorRef logger = Context.ActorOf<LogActor>();
-
-        protected override SupervisorStrategy SupervisorStrategy()
-        {
-            return new OneForOneStrategy(
-                maxNumberOfRetries: 10, 
-                duration: TimeSpan.FromSeconds(30), 
-                decider: x =>
-                {
-                    if (x is ArithmeticException)
-                        return Directive.Resume;
-                    if (x is NotSupportedException)
-                        return Directive.Stop;
-
-                    return Directive.Restart;
-                });
-        }
-
-        public int count = 0;
+ 
+        public long count = 0;
         protected override void OnReceive(object message)
         {
             count++;
-            //Pattern.Match(message)
-            //    .With<Greet>(m =>
-            //    {
-            //        count++;
-            //        //       Console.WriteLine("Hello {0}", m.Who); 
-            //    })
-            //    .With<TimeRequest>(async m =>
-            //    {
-            //        //TODO: this will execute in another thread, fix
-            //        Pattern.Match(await Ask(logger, m))
-            //            .With<TimeResponse>(t =>
-            //            {
-            //                Console.WriteLine("await thread {0}", System.Threading.Thread.CurrentThread.GetHashCode());
-            //                //     Console.WriteLine("its {0} o'clock", t.DateTime);
-            //            })
-            //            .Default(_ => Console.WriteLine("Unknown message"));
-
-            //    })
-            //    .Default(Unhandled);
-
-         //   logger.Tell(new LogMessage(message));
         }
     }
 }

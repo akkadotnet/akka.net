@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 
 namespace Pigeon.Actor
 {
@@ -12,6 +13,25 @@ namespace Pigeon.Actor
         public Action<Envelope> OnNext { get; set; }
         public abstract void Post(Envelope message);
     }
+
+    public class DataFlowMailbox : Mailbox
+    {
+        ActionBlock<Envelope> inner;
+
+        public DataFlowMailbox()
+        {
+            inner = new ActionBlock<Envelope>((Action<Envelope>)this.OnNextWrapper);
+        }
+        private void OnNextWrapper(Envelope envelope)
+        {
+            OnNext(envelope);
+        }
+        public override void Post(Envelope message)
+        {
+            inner.Post(message);
+        }
+    }
+
 
     /// <summary>
     /// For explorative reasons only
