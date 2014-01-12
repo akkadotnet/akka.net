@@ -64,11 +64,9 @@ namespace Pigeon.Actor
         {
             if (Stopped)
             {
-            //    Console.WriteLine("dead {0}", System.Threading.Thread.CurrentThread.GetHashCode());
                 return;
             }
 
-          //  Console.WriteLine("working {0}", System.Threading.Thread.CurrentThread.GetHashCode());
             hasUnscheduledMessages = false;
             Envelope envelope;
             while (systemMessages.TryDequeue(out envelope))
@@ -86,8 +84,9 @@ namespace Pigeon.Actor
                     break;
                 }
                 left--;
-                if (left == 0)
+                if (left == 0 && userMessages.TryPeek(out envelope)) 
                 {
+                    // we have processed throughput messages, and there are still envelopes left
                     hasUnscheduledMessages = true;
                     break;
                 }
@@ -156,6 +155,29 @@ namespace Pigeon.Actor
         public override void Schedule(Action<object> run)
         {
             NaiveThreadPool.Schedule(run);
+        }
+    }
+
+    public class SingleThreadDispatcher : MessageDispatcher
+    {
+        private volatile bool running = true;
+        private ConcurrentQueue<Action<object>> queue = new ConcurrentQueue<Action<object>>();
+        public SingleThreadDispatcher()
+        {
+            BlockingCollection<Action<object>> b = new BlockingCollection<Action<object>>(queue);
+            var t = new Thread(_ =>
+                {
+                    while (running)
+                    {
+                        var next = b.Take();
+                        next(null);
+                    }
+                });
+        }
+
+        public override void Schedule(Action<object> run)
+        {
+            queue.Enqueue(run);
         }
     }
     public static class NaiveThreadPool
