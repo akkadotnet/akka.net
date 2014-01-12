@@ -27,6 +27,9 @@ namespace Pigeon.App
             int workerThreads;
             int completionPortThreads;
             ThreadPool.GetAvailableThreads(out workerThreads, out completionPortThreads);
+
+            ThreadPool.SetMinThreads(1000, 1000);
+           
             Console.WriteLine("Worker threads: {0}", workerThreads);
             Console.WriteLine("OSVersion: {0}", Environment.OSVersion);
             Console.WriteLine("ProcessorCount: {0}",Environment.ProcessorCount);
@@ -79,6 +82,7 @@ namespace Pigeon.App
         private static async Task<long> RunActor(LocalActorRef actor)
         {
             await Task.Yield();
+      //      Console.WriteLine("start work {0}",  System.Threading.Thread.CurrentThread.GetHashCode());
 
             var sw = Stopwatch.StartNew();
             var message = "hello";
@@ -93,14 +97,14 @@ namespace Pigeon.App
             await Task.Yield();
             sw.Stop();
             actor.Cell.Kill();
-            await Task.Delay(5000);
+            await Task.Delay(2000);
 
             var messageCount = (actor.Cell.Actor as MessageProcessCountActor).count;
             var throughput = messageCount / sw.ElapsedMilliseconds * 1000;
-      //      Console.WriteLine("t {0}", throughput);
+            Console.WriteLine("done {0} - {1}", throughput,System.Threading.Thread.CurrentThread.GetHashCode());
           //  if (throughput == 0)
           //      Console.WriteLine("wwhat!");
-
+            
             return throughput;
         }
     }
