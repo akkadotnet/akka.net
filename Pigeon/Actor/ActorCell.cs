@@ -205,5 +205,10 @@ namespace Pigeon.Actor
             Watchees.Remove(subject);
             subject.Tell(new Unwatch());
         }
+
+        public void Kill()
+        {
+            Mailbox.Stop();
+        }
     }
 }

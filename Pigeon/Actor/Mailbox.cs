@@ -12,6 +12,8 @@ namespace Pigeon.Actor
     {
         public Action<Envelope> OnNext { get; set; }
         public abstract void Post(Envelope message);
+
+        public abstract void Stop();
     }
 
     public class DataFlowMailbox : Mailbox
@@ -30,6 +32,11 @@ namespace Pigeon.Actor
         {
             inner.Post(message);
         }
+
+        public override void Stop()
+        {
+            throw new NotImplementedException();
+        }
     }
 
 
@@ -43,6 +50,7 @@ namespace Pigeon.Actor
         
         private WaitCallback handler = null;
         private volatile bool hasUnscheduledMessages = false;
+        private volatile bool Stopped = false;
         private int status;
 
         private static class MailboxStatus
@@ -53,6 +61,9 @@ namespace Pigeon.Actor
 
         private void Run(object _)
         {
+            if (Stopped)
+                return;
+
             Envelope envelope;
             while (systemMessages.TryDequeue(out envelope))
             {           
@@ -103,6 +114,11 @@ namespace Pigeon.Actor
             }
 
             Schedule();
+        }
+
+        public override void Stop()
+        {
+            Stopped = true;
         }
     }
 }

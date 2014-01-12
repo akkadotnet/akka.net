@@ -14,7 +14,6 @@ namespace Pigeon.App
 {
     class Program
     {
-
         public static uint CPUSpeed()
         {
             ManagementObject Mo = new ManagementObject("Win32_Processor.DeviceID='CPU0'");
@@ -33,7 +32,6 @@ namespace Pigeon.App
             Console.WriteLine("ProcessorCount: {0}",Environment.ProcessorCount);
             Console.WriteLine("ClockSpeed: {0} MHZ", CPUSpeed());
 
-
             int i = 1;
             Console.WriteLine("Actor count, Messages/sec");
             while (ProfileThroughput(i++))
@@ -48,41 +46,16 @@ namespace Pigeon.App
             GC.Collect();
             using (var system = new ActorSystem())
             {
-                var actors = new List<LocalActorRef>();
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                List<Task<long>> tasks = new List<Task<long>>();
                 for (int i = 0; i < actorCount; i++)
                 {
                     var actor = system.ActorOf<MessageProcessCountActor>();
-                    actors.Add(actor);
+                    var task = RunActor(actor);
+                    tasks.Add(task);
                 }
-                
-                var timeout = TimeSpan.FromSeconds(5);
-
-                var tasks = new List<Task>();
-                var sentMessages = 0L;
-                Stopwatch sw = Stopwatch.StartNew();
-                var message = "hello";
-                
-                while (sw.Elapsed < timeout)
-                {
-                    for (int i = 0; i < actorCount; i++)
-                    {
-                        Interlocked.Increment(ref sentMessages);
-                        actors[i].Tell(message);
-                        Interlocked.Increment(ref sentMessages);
-                        actors[i].Tell(message);
-                    }
-                }
-               
-                var messageCount = actors.Sum(a =>
-                {
-                    return (a.Cell.Actor as MessageProcessCountActor).count;
-                });
-                sw.Stop();
-
-                var throughput = messageCount / sw.ElapsedMilliseconds * 1000;
-
-                
-
+                Task.WaitAll(tasks.ToArray());
+                var throughput = tasks.Sum(t => t.Result);
                 if (throughput > bestThroughput)
                 {
                     bestThroughput = throughput;
@@ -94,21 +67,55 @@ namespace Pigeon.App
                     Console.ForegroundColor = ConsoleColor.Red;
                     redCount++;
                 }
-                Console.WriteLine("Actors: {0}", actorCount);
-                Console.WriteLine("Messages sent: {0}/s", sentMessages / sw.ElapsedMilliseconds * 1000);
-                Console.WriteLine("Messages processed {0}/s", throughput);
+                Console.WriteLine("{0}, {1}",actorCount, throughput);
 
-                if (redCount > 15)
+                if (redCount > 20)
                     return false;
 
                 return true;
             }
         }
+
+        private static async Task<long> RunActor(LocalActorRef actor)
+        {
+            await Task.Yield();
+
+            var sw = Stopwatch.StartNew();
+            var message = "hello";
+
+            for (int i = 0; i < 10000000; i++)
+            {
+                if (i % 10000 == 0)
+                    await Task.Yield();
+
+                actor.Tell(message);
+            }
+            await Task.Yield();
+            sw.Stop();
+            actor.Cell.Kill();
+            await Task.Delay(5000);
+
+            var messageCount = (actor.Cell.Actor as MessageProcessCountActor).count;
+            var throughput = messageCount / sw.ElapsedMilliseconds * 1000;
+      //      Console.WriteLine("t {0}", throughput);
+          //  if (throughput == 0)
+          //      Console.WriteLine("wwhat!");
+
+            return throughput;
+        }
+    }
+
+    public class MessageProducerActor : UntypedActor
+    {
+
+        protected override void OnReceive(object message)
+        {
+            
+        }
     }
 
     public class MessageProcessCountActor : UntypedActor
-    {
- 
+    { 
         public long count = 0;
         protected override void OnReceive(object message)
         {
