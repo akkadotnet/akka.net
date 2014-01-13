@@ -15,7 +15,7 @@ public class Greet
 
 public class GreetingActor : UntypedActor
 {
-    protected override void OnReceive(IMessage message)
+    protected override void OnReceive(object message)
     {
         Pattern.Match(message)
             .With<Greet>(m => Console.WriteLine("Hello {0}", m.Who));
@@ -47,7 +47,7 @@ greeter.Tell(new Greet { Who = "Roger" });
 ```csharp
 public class GreetingActor : UntypedActor
 {
-    protected override void OnReceive(IMessage message)
+    protected override void OnReceive(object message)
     {
         Pattern.Match(message)
             .With<Greet>(m => {
@@ -57,7 +57,7 @@ public class GreetingActor : UntypedActor
             });
     }
     
-    void OtherReceive(IMessage message)
+    void OtherReceive(object message)
     {
         Pattern.Match(message)
             .With<Greet>(m => {
