@@ -24,106 +24,90 @@ namespace Pigeon.App
 
         static void Main(string[] args)
         {
+            //var sw = Stopwatch.StartNew();
+            //int tmp=0;
+            //for (int i = 0; i < 20000000; i++)
+            //{
+            //    NaiveThreadPool.Schedule(_ => tmp++);
+            //}
+            //Console.WriteLine(tmp);
+            //Console.WriteLine(sw.Elapsed);
+            //Console.ReadLine();
+
             int workerThreads;
             int completionPortThreads;
             ThreadPool.GetAvailableThreads(out workerThreads, out completionPortThreads);
 
             ThreadPool.SetMinThreads(1000, 1000);
-           
+
             Console.WriteLine("Worker threads: {0}", workerThreads);
             Console.WriteLine("OSVersion: {0}", Environment.OSVersion);
-            Console.WriteLine("ProcessorCount: {0}",Environment.ProcessorCount);
+            Console.WriteLine("ProcessorCount: {0}", Environment.ProcessorCount);
             Console.WriteLine("ClockSpeed: {0} MHZ", CPUSpeed());
 
-            int i = 1;
             Console.WriteLine("Actor count, Messages/sec");
-            while (ProfileThroughput(i++))
+
+            ActorSystem system = new ActorSystem();
+
+            List<LocalActorRef> actors = new List<LocalActorRef>();
+            for (int i = 0; i < 1; i++)
             {
+                var a1 = system.ActorOf<Client>();
+                var a2 = system.ActorOf<Client>();
+                a1.Tell(Run.Default, a2);
+                a2.Tell(Run.Default, a1);
+
+                actors.Add(a1);
+                actors.Add(a2);
             }
-        }
 
-        private static long bestThroughput = 0;
-        private static int redCount = 0;
-        private static bool ProfileThroughput(int actorCount)
-        {
-            GC.Collect();
-            using (var system = new ActorSystem())
-            {
-                Console.ForegroundColor = ConsoleColor.Magenta;
-                List<Task<long>> tasks = new List<Task<long>>();
-                for (int i = 0; i < actorCount; i++)
-                {
-                    var actor = system.ActorOf<MessageProcessCountActor>();
-                    var task = RunActor(actor);
-                    tasks.Add(task);
-                }
-                Task.WaitAll(tasks.ToArray());
-                var throughput = tasks.Sum(t => t.Result);
-                if (throughput > bestThroughput)
-                {
-                    bestThroughput = throughput;
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    redCount = 0;
-                }
-                else
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    redCount++;
-                }
-                Console.WriteLine("{0}, {1}",actorCount, throughput);
-
-                if (redCount > 20)
-                    return false;
-
-                return true;
-            }
-        }
-
-        private static async Task<long> RunActor(LocalActorRef actor)
-        {
-            await Task.Yield();
-      //      Console.WriteLine("start work {0}",  System.Threading.Thread.CurrentThread.GetHashCode());
-
-            var sw = Stopwatch.StartNew();
-            var message = "hello";
-
-            for (int i = 0; i < 10000000; i++)
-            {
-                if (i % 10000 == 0)
-                    await Task.Yield();
-
-                actor.Tell(message);
-            }
-            await Task.Yield();
+            Stopwatch sw = Stopwatch.StartNew();
+            var startCount = actors.Sum(a => (a.Cell.Actor as Client).received);
+            Thread.Sleep(15000);
+            var endCount = actors.Sum(a => (a.Cell.Actor as Client).received);
             sw.Stop();
-            actor.Cell.Kill();
-            await Task.Delay(2000);
-
-            var messageCount = (actor.Cell.Actor as MessageProcessCountActor).count;
-            var throughput = messageCount / sw.ElapsedMilliseconds * 1000;
-            Console.WriteLine("done {0} - {1}", throughput,System.Threading.Thread.CurrentThread.GetHashCode());
-          //  if (throughput == 0)
-          //      Console.WriteLine("wwhat!");
-            
-            return throughput;
+            var diff = endCount - startCount;
+            Console.WriteLine(diff / sw.ElapsedMilliseconds * 1000);
+            Console.WriteLine(diff );
+            Console.ReadLine();
         }
-    }
 
-    public class MessageProducerActor : UntypedActor
-    {
-
-        protected override void OnReceive(object message)
+        public class Msg
         {
-            
+            public static readonly Msg Default = new Msg();
         }
-    }
 
-    public class MessageProcessCountActor : UntypedActor
-    { 
-        public long count = 0;
-        protected override void OnReceive(object message)
+        public class Run
         {
-            count++;
+            public static readonly Run Default = new Run();       
+        }
+
+        public class Client : UntypedActor
+        {
+            public long received;
+            public long sent;
+            public long repeat = 100000000;
+            public long initialMessages = 2000;
+            protected override void OnReceive(object message)
+            {
+                if (message is Msg)
+                {
+                    received++;
+                    if (sent < repeat)
+                    {
+                        Sender.Tell(Msg.Default);
+                        sent++;
+                    }
+                }
+                if (message is Run)
+                {
+                    for (int i = 0; i < initialMessages; i++)
+                    {
+                        Sender.Tell(Msg.Default);
+                        sent++;
+                    }
+                }
+            }
         }
     }
 }
