@@ -33,12 +33,13 @@ namespace Pigeon.App
             //Console.WriteLine(tmp);
             //Console.WriteLine(sw.Elapsed);
             //Console.ReadLine();
-
+            ThreadPool.SetMinThreads(30, 30);
+            ThreadPool.SetMaxThreads(30, 30);
             int workerThreads;
             int completionPortThreads;
             ThreadPool.GetAvailableThreads(out workerThreads, out completionPortThreads);
 
-            ThreadPool.SetMinThreads(1000, 1000);
+          
 
             Console.WriteLine("Worker threads: {0}", workerThreads);
             Console.WriteLine("OSVersion: {0}", Environment.OSVersion);
@@ -59,27 +60,32 @@ namespace Pigeon.App
 
         private static int redCount = 0;
         private static long bestThroughput = 0;
-        private static bool Benchmark(int actorPairs)
+        private static bool Benchmark(int numberOfClients)
         {
-            ActorSystem system = new ActorSystem();
+            var repeatFactor = 500;
+            var repeat = 30000L * repeatFactor;
+            var repeatsPerClient = repeat / numberOfClients;
+            var system = new ActorSystem();
 
-            List<LocalActorRef> actors = new List<LocalActorRef>();
-            for (int i = 0; i < actorPairs; i++)
+            var clients = new List<LocalActorRef>();
+            var tasks = new List<Task>();
+            for (int i = 0; i < numberOfClients; i++)
             {
-                var a1 = system.ActorOf<Client>();
-                var a2 = system.ActorOf<Client>();
-                a1.Tell(Run, a2);
-                a2.Tell(Run, a1);
-
-                actors.Add(a1);
-                actors.Add(a2);
+                var destination = system.ActorOf<Destination>();
+                var ts = new TaskCompletionSource<bool>();
+                tasks.Add(ts.Task);
+                var client = system.ActorOf(Props.Factory(() => new Client(destination,repeatsPerClient,ts)));                
+                clients.Add(client);
             }
-            Stopwatch sw = Stopwatch.StartNew();
-            var startCount = actors.Sum(a => (a.Cell.Actor as Client).received);
-            Thread.Sleep(10000);
-            var endCount = actors.Sum(a => (a.Cell.Actor as Client).received);
+
+            clients.ForEach(c => c.Tell(Run));
+
+            var sw = Stopwatch.StartNew();
+            var startCount = clients.Sum(a => (a.Cell.Actor as Client).received) * 2; 
+            Task.WaitAll(tasks.ToArray());
+            var endCount = clients.Sum(a => (a.Cell.Actor as Client).received) *2;
             sw.Stop();
-            var diff = endCount - startCount;
+            var diff = repeat * 2;
             system.Shutdown();
             long throughput = diff / sw.ElapsedMilliseconds * 1000;
             if (throughput > bestThroughput)
@@ -94,8 +100,8 @@ namespace Pigeon.App
                 Console.ForegroundColor = ConsoleColor.Red;
             }
 
-            Console.WriteLine("{0}, {1} messages/s",actorPairs*2, throughput );
-            WaitForEmptyThreadPool();
+            Console.WriteLine("{0}, {1} messages/s", numberOfClients * 2, throughput);
+
             if (redCount > 3)
                 return false;
 
@@ -117,12 +123,30 @@ namespace Pigeon.App
         private static object Msg = new object();
         private static object Run = new object();
 
+        public class Destination : UntypedActor
+        {
+            protected override void OnReceive(object message)
+            {
+                if (message == Msg)
+                    Sender.Tell(Msg);
+            }
+        }
+
         public class Client : UntypedActor
         {
             public long received;
             public long sent;
-            public long repeat = 100000000;
-            public long initialMessages = 2000;
+
+            public long repeat;
+            private ActorRef actor;
+            private TaskCompletionSource<bool> latch;
+
+            public Client(ActorRef actor,long repeat,TaskCompletionSource<bool> latch )
+            {
+                this.actor = actor;
+                this.repeat = repeat;
+                this.latch = latch;
+            }
             protected override void OnReceive(object message)
             {
                 if (message == Msg)
@@ -130,15 +154,19 @@ namespace Pigeon.App
                     received++;
                     if (sent < repeat)
                     {
-                        Sender.Tell(Msg);
+                        actor.Tell(Msg);
                         sent++;
+                    }
+                    else if (received >= repeat)
+                    {
+                        latch.SetResult(true);
                     }
                 }
                 if (message == Run)
                 {
-                    for (int i = 0; i < initialMessages; i++)
+                    for (int i = 0; i < Math.Min(1000,repeat); i++)
                     {
-                        Sender.Tell(Msg);
+                        actor.Tell(Msg);
                         sent++;
                     }
                 }

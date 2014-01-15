@@ -27,7 +27,7 @@ namespace Pigeon.Actor
         private System.Collections.Concurrent.ConcurrentQueue<Envelope> userMessages = new System.Collections.Concurrent.ConcurrentQueue<Envelope>();
         private System.Collections.Concurrent.ConcurrentQueue<Envelope> systemMessages = new System.Collections.Concurrent.ConcurrentQueue<Envelope>();
         
-        private WaitCallback handler = null;
+    //    private WaitCallback handler = null;
         private volatile bool hasUnscheduledMessages = false;
         private volatile bool Stopped = false;
         private int status;
