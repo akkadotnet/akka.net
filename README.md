@@ -2,8 +2,12 @@
 
 *Pre alpha stage, do not use in production.*
 
+###High performance Actor Model framework.
 Pigeon is an Actor Model framework for the .NET platform based on the concepts and API found in the Java/Scala framework AKKA.
 
+
+#####Message Throughput
+The current implementation of Pigeon can process around **8.5 million messages/second** on a 4 core 2.8ghz laptop. 
 
 ## Getting started
 Write your first actor:
