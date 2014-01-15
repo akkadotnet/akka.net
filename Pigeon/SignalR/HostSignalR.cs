@@ -53,7 +53,7 @@ namespace Pigeon.SignalR
         {
             var type = Type.GetType(typeName);
             var message = (object)JsonConvert.DeserializeObject(data, type);
-            var actor = system.Child(actorName);
+            var actor = system.Guardian.Cell.Child(actorName);
             var connectionId = this.Context.ConnectionId;
             var remoteActor = new SignalRResponseActorRef(remoteActorName, this, connectionId,actor);
             actor.Tell(message, remoteActor);

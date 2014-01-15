@@ -69,7 +69,7 @@ namespace Pigeon.Actor
                 }
                 else if (part == "." || part == "")
                 {
-                    currentContext = currentContext.System;
+                    currentContext = currentContext.System.Guardian.Cell;
                 }
                 else if (part == "*")
                 {
@@ -122,18 +122,24 @@ namespace Pigeon.Actor
         /// May be called from anyone
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<ActorRef> GetChildren()
+        public IEnumerable<LocalActorRef> GetChildren()
         {
             return this.Children.Values.ToArray();
         }
 
-        protected ActorCell()
+        internal ActorCell(ActorSystem system)
         {
+            this.Parent = null;
+            this.System = system;
+            this.Self = new LocalActorRef(new ActorPath(""), this);
+            this.Props = null;
+            this.Mailbox = new ConcurrentQueueMailbox();// new ActionBlockMailbox();
+            this.Mailbox.OnNext = this.OnNext;
         }
 
         internal ActorCell(IActorContext parentContext, Props props, string name)
         {
-            this.Parent = parentContext.Self;
+            this.Parent = parentContext != null ? parentContext.Self : null;
             this.System = parentContext != null ? parentContext.System : null;
             this.Self = new LocalActorRef(new ActorPath(name), this);
             this.Props = props;
@@ -173,7 +179,7 @@ namespace Pigeon.Actor
             //set the current context
             UseThreadContext(() =>
             {
-                OnReceiveInternal(message.Payload);
+                OnReceiveInternal(message.Message);
             });
         }
         internal void Post(ActorRef sender, object message)
@@ -181,7 +187,7 @@ namespace Pigeon.Actor
             var m = new Envelope
             {
                 Sender = sender,
-                Payload = message,
+                Message = message,
             };
             Mailbox.Post(m);
         }

@@ -10,6 +10,6 @@ namespace Pigeon.Actor
     public struct Envelope
     {
         public ActorRef Sender { get; set; }
-        public object Payload { get; set; }
+        public object Message { get; set; }
     }
 }

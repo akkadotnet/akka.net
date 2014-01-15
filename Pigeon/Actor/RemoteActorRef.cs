@@ -25,7 +25,7 @@ namespace Pigeon.Actor
             hub = hubConnection.CreateHubProxy("ActorHub");
             hub.On("Reply", (string actorName, string data, string messageType) =>
             {
-                var actor = context.System.Child(actorName);
+                var actor = context.System.Guardian.Cell.Child(actorName);
                 var type = Type.GetType(messageType);
                 var message = (object)JsonConvert.DeserializeObject(data, type);
                 actor.Tell(message, this);

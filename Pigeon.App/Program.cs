@@ -47,40 +47,75 @@ namespace Pigeon.App
 
             Console.WriteLine("Actor count, Messages/sec");
 
+            for (int i = 1; i < 20; i++)
+            {
+                if (!Benchmark(i))
+                    break;
+            }
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.WriteLine("Done..");
+            Console.ReadKey();
+        }
+
+        private static int redCount = 0;
+        private static long bestThroughput = 0;
+        private static bool Benchmark(int actorPairs)
+        {
             ActorSystem system = new ActorSystem();
 
             List<LocalActorRef> actors = new List<LocalActorRef>();
-            for (int i = 0; i < 1; i++)
+            for (int i = 0; i < actorPairs; i++)
             {
                 var a1 = system.ActorOf<Client>();
                 var a2 = system.ActorOf<Client>();
-                a1.Tell(Run.Default, a2);
-                a2.Tell(Run.Default, a1);
+                a1.Tell(Run, a2);
+                a2.Tell(Run, a1);
 
                 actors.Add(a1);
                 actors.Add(a2);
             }
-
             Stopwatch sw = Stopwatch.StartNew();
             var startCount = actors.Sum(a => (a.Cell.Actor as Client).received);
-            Thread.Sleep(15000);
+            Thread.Sleep(10000);
             var endCount = actors.Sum(a => (a.Cell.Actor as Client).received);
             sw.Stop();
             var diff = endCount - startCount;
-            Console.WriteLine(diff / sw.ElapsedMilliseconds * 1000);
-            Console.WriteLine(diff );
-            Console.ReadLine();
+            system.Shutdown();
+            long throughput = diff / sw.ElapsedMilliseconds * 1000;
+            if (throughput > bestThroughput)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                bestThroughput = throughput;
+                redCount = 0;
+            }
+            else
+            {
+                redCount++;
+                Console.ForegroundColor = ConsoleColor.Red;
+            }
+
+            Console.WriteLine("{0}, {1} messages/s",actorPairs*2, throughput );
+            WaitForEmptyThreadPool();
+            if (redCount > 3)
+                return false;
+
+            return true;
         }
 
-        public class Msg
+        private static void WaitForEmptyThreadPool()
         {
-            public static readonly Msg Default = new Msg();
+            int count = 100;
+            var tasks = new Task[count];
+            for (int i = 0; i < count; i++)
+            {
+                tasks[i] = Task.Factory.StartNew(() => { });
+            }
+
+            Task.WaitAll(tasks);
         }
 
-        public class Run
-        {
-            public static readonly Run Default = new Run();       
-        }
+        private static object Msg = new object();
+        private static object Run = new object();
 
         public class Client : UntypedActor
         {
@@ -90,20 +125,20 @@ namespace Pigeon.App
             public long initialMessages = 2000;
             protected override void OnReceive(object message)
             {
-                if (message is Msg)
+                if (message == Msg)
                 {
                     received++;
                     if (sent < repeat)
                     {
-                        Sender.Tell(Msg.Default);
+                        Sender.Tell(Msg);
                         sent++;
                     }
                 }
-                if (message is Run)
+                if (message == Run)
                 {
                     for (int i = 0; i < initialMessages; i++)
                     {
-                        Sender.Tell(Msg.Default);
+                        Sender.Tell(Msg);
                         sent++;
                     }
                 }

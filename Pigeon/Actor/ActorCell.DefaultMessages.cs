@@ -85,17 +85,24 @@ namespace Pigeon.Actor
 		/// </summary>
         public void Stop()
         {
+            if (isTerminating)
+                return;
+
             this.Parent.Tell(new StopChild(this.Self));
+            foreach (var child in this.GetChildren())
+            {
+                child.Stop();
+            }
         }
 
-        private bool isTerminating = false;
+        private volatile bool isTerminating = false;
         private void StopChild(LocalActorRef child)
         {
             if (isTerminating)
                 return;
 
             isTerminating = true;
-            Console.WriteLine("stopping child: {0}", child.Path);
+            Debug.WriteLine("stopping child: {0}", child.Path);
             child.Cell.Become(System.DeadLetters.Tell);
             LocalActorRef tmp;
             var name = child.Path.Name;

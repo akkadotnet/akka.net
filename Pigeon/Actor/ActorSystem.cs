@@ -10,16 +10,22 @@ using System.Collections.Concurrent;
 
 namespace Pigeon.Actor
 {
-    public class ActorSystem : ActorCell, IDisposable
-    {       
+    public class ActorSystem : IActorRefFactory , IDisposable
+    {
+        private ActorCell rootCell;
         public ActorSystem()
         {
-            this.EventStream = ActorOf<EventStreamActor>("EventStream");
-            this.DeadLetters = ActorOf<DeadLettersActor>("deadLetters");
-            this.Guardian = ActorOf<GuardianActor>("user");
-            this.SystemGuardian = ActorOf<GuardianActor>("system");
-            this.TempGuardian = ActorOf<GuardianActor>("temp");
+            rootCell = new ActorCell(this);
+            this.RootGuardian = rootCell.ActorOf<GuardianActor>("");
+
+            this.EventStream = RootGuardian.Cell.ActorOf<EventStreamActor>("EventStream");
+            this.DeadLetters = RootGuardian.Cell.ActorOf<DeadLettersActor>("deadLetters");
+            this.Guardian = RootGuardian.Cell.ActorOf<GuardianActor>("user");
+            this.SystemGuardian = RootGuardian.Cell.ActorOf<GuardianActor>("system");
+            this.TempGuardian = RootGuardian.Cell.ActorOf<GuardianActor>("temp");
         }
+
+        public LocalActorRef RootGuardian { get; private set; }
 
         public LocalActorRef EventStream { get; private set; }
         public LocalActorRef DeadLetters { get; private set; }
@@ -29,24 +35,32 @@ namespace Pigeon.Actor
 
         public void Shutdown()
         {
-         //   Guardian.Stop();
-        }
-
-        public override ActorSystem System
-        {
-            get
-            {
-                return this;
-            }
-            //oh liskov <3
-            set
-            {
-                throw new NotSupportedException("Can't set the system of a system");
-            }
+            RootGuardian.Stop();
         }
 
         public void Dispose()
         {
+            this.Shutdown();
+        }
+
+        public LocalActorRef ActorOf(Props props, string name = null)
+        {
+            return Guardian.Cell.ActorOf(props, name);
+        }
+
+        public LocalActorRef ActorOf<TActor>(string name = null)
+        {
+            return Guardian.Cell.ActorOf<TActor>( name);
+        }
+
+        public ActorSelection ActorSelection(ActorPath actorPath)
+        {
+            return Guardian.Cell.ActorSelection(actorPath);
+        }
+
+        public ActorSelection ActorSelection(string actorPath)
+        {
+            return Guardian.Cell.ActorSelection(actorPath);
         }
     }
 }

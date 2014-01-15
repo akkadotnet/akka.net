@@ -88,11 +88,13 @@
     <Compile Include="Actor\ActorSystem.cs" />
     <Compile Include="Actor\AskSupport.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
+    <Compile Include="Actor\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
     <Compile Include="Actor\FutureActor.cs" />
     <Compile Include="Actor\IActorContext.cs" />
     <Compile Include="Actor\IActorRefFactory.cs" />
     <Compile Include="Actor\Mailbox.cs" />
+    <Compile Include="Actor\NaiveThreadPool.cs" />
     <Compile Include="Actor\Props.cs" />
     <Compile Include="Actor\RemoteActorRef.cs" />
     <Compile Include="Actor\SupervisorStrategy.cs" />
