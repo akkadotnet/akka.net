@@ -81,13 +81,11 @@ namespace Pigeon.App
             clients.ForEach(c => c.Tell(Run));
 
             var sw = Stopwatch.StartNew();
-            var startCount = clients.Sum(a => (a.Cell.Actor as Client).received) * 2; 
             Task.WaitAll(tasks.ToArray());
-            var endCount = clients.Sum(a => (a.Cell.Actor as Client).received) *2;
             sw.Stop();
-            var diff = repeat * 2;
+            var totalMessagesReceived = repeat * 2; //times 2 since the client and the destination both send messages
             system.Shutdown();
-            long throughput = diff / sw.ElapsedMilliseconds * 1000;
+            long throughput = totalMessagesReceived / sw.ElapsedMilliseconds * 1000;
             if (throughput > bestThroughput)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
