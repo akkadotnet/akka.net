@@ -5,6 +5,10 @@
 ###High performance Actor Model framework.
 Pigeon is an Actor Model framework for the .NET platform based on the concepts and API found in the Java/Scala framework AKKA.
 
+Why not Akka# or dotAkka? 
+I simply assume that TypeSafe that makes Akka don’t want to be associated with spare time projects like this, so I try not to stain their brand name.
+Pigeon tries to stay as close to the Akka implementation as possible while still beeing .NET idiomatic.
+
 
 #####Message Throughput
 
