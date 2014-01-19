@@ -10,8 +10,8 @@ namespace Pigeon.Actor
 {
     public abstract class MessageDispatcher
     {
-        public const int DefaultThroughput = 5;
-        
+        public const int DefaultThroughput = 5;        
+        public long? ThroughputDeadlineTime { get; set; }
         public int Throughput { get; set; }
 
         protected MessageDispatcher()

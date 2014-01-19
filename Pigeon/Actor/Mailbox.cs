@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -32,7 +33,8 @@ namespace Pigeon.Actor
         private volatile bool hasUnscheduledMessages = false;
         private volatile bool isClosed = false;
         private int status;
-        private MessageDispatcher dispatcher;        
+        private MessageDispatcher dispatcher;
+        private Stopwatch deadLineTimer = null;
 
         private static class MailboxStatus
         {
@@ -40,11 +42,27 @@ namespace Pigeon.Actor
             public const int Busy = 1;
         }
 
+        public ConcurrentQueueMailbox()
+        {            
+        }
+
         private void Run(object _)
         {
             if (isClosed)
             {
                 return;
+            }
+
+            if (dispatcher.ThroughputDeadlineTime.HasValue)
+            {
+                if (deadLineTimer != null)
+                {
+                    deadLineTimer.Restart();
+                }
+                else
+                {
+                    deadLineTimer = Stopwatch.StartNew();
+                }
             }
 
             hasUnscheduledMessages = false;
@@ -55,6 +73,7 @@ namespace Pigeon.Actor
             }
 
             int left = dispatcher.Throughput;
+
             while (userMessages.TryDequeue(out envelope))
             {
                 this.Invoke(envelope);
@@ -67,8 +86,12 @@ namespace Pigeon.Actor
                 if (isClosed)
                     return;
 
-                if (left == 0 && userMessages.TryPeek(out envelope)) 
+                if (left == 0 && userMessages.TryPeek(out envelope) || (dispatcher.ThroughputDeadlineTime.HasValue && deadLineTimer.ElapsedTicks > dispatcher.ThroughputDeadlineTime.Value)) 
                 {
+                    if (dispatcher.ThroughputDeadlineTime.HasValue)
+                    {
+                        deadLineTimer.Stop();
+                    }
                     // we have processed throughput messages, and there are still envelopes left
                     hasUnscheduledMessages = true;
                     break;
