@@ -16,7 +16,7 @@ namespace ChatClient
         {
             using (var system = new ActorSystem())
             {
-                var chatClient = system.ActorOf<ChatClientActor>();
+                var chatClient = system.ActorOf(Props.Create<ChatClientActor>().WithDispatcher(new ThreadPoolDispatcher()));
                 chatClient.Tell(new ConnectRequest()
                 {
                     Username = "Roggan",

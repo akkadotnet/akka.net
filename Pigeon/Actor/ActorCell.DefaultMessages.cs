@@ -10,24 +10,45 @@ namespace Pigeon.Actor
 {
     public partial class ActorCell 
     {
-        private void OnReceiveInternal(object message)
+        public void Invoke(Envelope envelope)
         {
-            try
+            this.CurrentMessage = envelope.Message;
+            this.Sender = envelope.Sender;
+            //set the current context
+            UseThreadContext(() =>
             {
-                if (message is SystemMessage)
+                try
                 {
-                    Pattern.Match(message)
+                    Default(envelope.Message);
+                }
+                catch (Exception reason)
+                {
+                    Parent.Tell(new SuperviceChild(reason));
+                }
+            });
+        }
+
+        public void SystemInvoke(Envelope envelope)
+        {
+            this.CurrentMessage = envelope.Message;
+            this.Sender = envelope.Sender;
+            //set the current context
+            UseThreadContext(() =>
+            {
+                try
+                {
+                    Pattern.Match(envelope.Message)
                         //kill this actor
                         .With<Kill>(Kill)
-						//request to stop a child
+                        //request to stop a child
                         .With<StopChild>(m => StopChild(m.Child))
-						//request to restart a child
+                        //request to restart a child
                         .With<RestartChild>(m => RestartChild(m.Child))
-						//kill this actor
+                        //kill this actor
                         .With<PoisonPill>(PoisonPill)
-						//someone is watching us
+                        //someone is watching us
                         .With<Watch>(Watch)
-						//someone is unwatching us
+                        //someone is unwatching us
                         .With<Unwatch>(Unwatch)
                         //complete the future callback by setting the result in this thread
                         .With<CompleteFuture>(CompleteFuture)
@@ -37,22 +58,16 @@ namespace Pigeon.Actor
                         .With<SuperviceChild>(SuperviceChild)
                         //handle any other message
                         .With<Identity>(Identity)
-						//forward pong to user
-						.With<Pong>(Default)
+                        //forward pong to user
+                        .With<Pong>(Default)
                         .Default(m => { throw new NotImplementedException(); });
                 }
-                else
+                catch (Exception reason)
                 {
-                    Default(message);
+                    Parent.Tell(new SuperviceChild(reason));
                 }
-            }
-            catch (Exception reason)
-            {
-				//TODO: do something nicer here
-                Parent.Tell(new SuperviceChild(reason));
-            }
-        }		
-
+            });
+        }
 		private void Identity(Identity m)
         {
             Sender.Tell(new ActorIdentity(m.MessageId, this.Self));

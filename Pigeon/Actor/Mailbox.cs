@@ -11,7 +11,8 @@ namespace Pigeon.Actor
 {
     public abstract class Mailbox : IDisposable
     {
-        public Action<Envelope> OnNext { get; set; }
+        public Action<Envelope> SystemInvoke { get; set; }
+        public Action<Envelope> Invoke { get; set; }
         public abstract void Post(Envelope message);
 
         public abstract void Stop();
@@ -29,8 +30,9 @@ namespace Pigeon.Actor
         
     //    private WaitCallback handler = null;
         private volatile bool hasUnscheduledMessages = false;
-        private volatile bool Stopped = false;
+        private volatile bool isClosed = false;
         private int status;
+        private MessageDispatcher dispatcher;        
 
         private static class MailboxStatus
         {
@@ -40,7 +42,7 @@ namespace Pigeon.Actor
 
         private void Run(object _)
         {
-            if (Stopped)
+            if (isClosed)
             {
                 return;
             }
@@ -49,20 +51,20 @@ namespace Pigeon.Actor
             Envelope envelope;
             while (systemMessages.TryDequeue(out envelope))
             {           
-                this.OnNext(envelope);           
+                this.SystemInvoke(envelope);           
             }
-            int throughput = 100;
-            int left = throughput;
+
+            int left = dispatcher.Throughput;
             while (userMessages.TryDequeue(out envelope))
             {
-                this.OnNext(envelope);
+                this.Invoke(envelope);
                 if (systemMessages.TryDequeue(out envelope))
                 {
-                    this.OnNext(envelope);
+                    this.SystemInvoke(envelope);
                     break;
                 }
                 left--;
-                if (Stopped)
+                if (isClosed)
                     return;
 
                 if (left == 0 && userMessages.TryPeek(out envelope)) 
@@ -81,8 +83,10 @@ namespace Pigeon.Actor
                 Schedule();
             }
         }
-        public ConcurrentQueueMailbox()
-        {                        
+
+        public ConcurrentQueueMailbox(MessageDispatcher dispatcher)
+        {
+            this.dispatcher = dispatcher;
         }
 
         private void Schedule()
@@ -90,14 +94,13 @@ namespace Pigeon.Actor
             //only schedule if we idle
             if (Interlocked.Exchange(ref status, MailboxStatus.Busy) == MailboxStatus.Idle)
             {
-                //NaiveThreadPool.Schedule(Run);
-                ThreadPool.UnsafeQueueUserWorkItem(Run,null);
+                this.dispatcher.Schedule(Run);
             }
         }
 
         public override void Post(Envelope envelope)
         {
-            if (Stopped)
+            if (isClosed)
                 return;
 
             hasUnscheduledMessages = true;
@@ -115,12 +118,12 @@ namespace Pigeon.Actor
 
         public override void Stop()
         {
-            Stopped = true;
+            isClosed = true;
         }
 
         public override void Dispose()
         {
-            Stopped = true;
+            isClosed = true;
         }
     }
 }

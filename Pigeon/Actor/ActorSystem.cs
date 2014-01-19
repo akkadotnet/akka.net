@@ -14,7 +14,9 @@ namespace Pigeon.Actor
     {
         private ActorCell rootCell;
         public ActorSystem()
-        {
+        {            
+            this.DefaultDispatcher = new ThreadPoolDispatcher();
+
             rootCell = new ActorCell(this);
             this.RootGuardian = rootCell.ActorOf<GuardianActor>("");
 
@@ -48,7 +50,7 @@ namespace Pigeon.Actor
             return Guardian.Cell.ActorOf(props, name);
         }
 
-        public LocalActorRef ActorOf<TActor>(string name = null)
+        public LocalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
         {
             return Guardian.Cell.ActorOf<TActor>( name);
         }
@@ -62,5 +64,7 @@ namespace Pigeon.Actor
         {
             return Guardian.Cell.ActorSelection(actorPath);
         }
+
+        public MessageDispatcher DefaultDispatcher { get; set; }
     }
 }

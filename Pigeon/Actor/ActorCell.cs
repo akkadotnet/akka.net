@@ -9,16 +9,17 @@ namespace Pigeon.Actor
 {
     public partial class ActorCell : IActorContext, IActorRefFactory
     {
-        public virtual ActorSystem System { get; set; }
+        public virtual ActorSystem System { get;private set; }
         public Props Props { get;private set; }
         public LocalActorRef Self { get; private set; }
         public ActorRef Parent { get; private set; }
-        public ActorBase Actor { get; set; }
-        public Envelope CurrentMessage { get; set; }
+        public ActorBase Actor { get;internal set; }
+        public object CurrentMessage { get;private set; }
         public ActorRef Sender { get;private set; }
         internal Receive CurrentBehavior { get; private set; }
         private Stack<Receive> behaviorStack = new Stack<Receive>();
         private Mailbox Mailbox { get; set; }
+        public MessageDispatcher Dispatcher { get;private set; }
         private HashSet<ActorRef> Watchees = new HashSet<ActorRef>();
         [ThreadStatic]
         private static ActorCell current;
@@ -85,9 +86,9 @@ namespace Pigeon.Actor
             return new ActorSelection( ((ActorCell)currentContext).Self);
         }
 
-        public virtual LocalActorRef ActorOf<TActor>(string name = null)
+        public virtual LocalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
         {
-            return ActorOf(new Props(typeof(TActor)), name);
+            return ActorOf(Props.Create<TActor>(), name);
         }
 
         public virtual LocalActorRef ActorOf(Props props, string name = null)
@@ -133,8 +134,9 @@ namespace Pigeon.Actor
             this.System = system;
             this.Self = new LocalActorRef(new ActorPath(""), this);
             this.Props = null;
-            this.Mailbox = new ConcurrentQueueMailbox();// new ActionBlockMailbox();
-            this.Mailbox.OnNext = this.OnNext;
+            this.Mailbox = new ConcurrentQueueMailbox(system.DefaultDispatcher);// new ActionBlockMailbox();
+            this.Mailbox.Invoke = this.Invoke;
+            this.Mailbox.SystemInvoke = this.SystemInvoke;            
         }
 
         internal ActorCell(IActorContext parentContext, Props props, string name)
@@ -143,8 +145,10 @@ namespace Pigeon.Actor
             this.System = parentContext != null ? parentContext.System : null;
             this.Self = new LocalActorRef(new ActorPath(name), this);
             this.Props = props;
-            this.Mailbox = new ConcurrentQueueMailbox();// new ActionBlockMailbox();
-            this.Mailbox.OnNext = this.OnNext;
+            this.Dispatcher = props.Dispathcer ?? this.System.DefaultDispatcher;
+            this.Mailbox = new ConcurrentQueueMailbox(this.Dispatcher);// new ActionBlockMailbox();
+            this.Mailbox.Invoke = this.Invoke;
+            this.Mailbox.SystemInvoke = this.SystemInvoke;
         }
 
         internal void UseThreadContext(Action action)
@@ -172,16 +176,7 @@ namespace Pigeon.Actor
         {
             CurrentBehavior = behaviorStack.Pop(); ;
         }
-        public void OnNext(Envelope message)
-        {
-            this.CurrentMessage = message;
-            this.Sender = message.Sender;
-            //set the current context
-            UseThreadContext(() =>
-            {
-                OnReceiveInternal(message.Message);
-            });
-        }
+
         internal void Post(ActorRef sender, object message)
         {
             var m = new Envelope

@@ -11,6 +11,14 @@ namespace Pigeon.Actor
     public abstract class MessageDispatcher
     {
         public const int DefaultThroughput = 5;
+        
+        public int Throughput { get; set; }
+
+        protected MessageDispatcher()
+        {
+            Throughput = DefaultThroughput;
+        }
+
         public abstract void Schedule(Action<object> run);
     }
 

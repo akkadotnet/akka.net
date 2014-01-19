@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Pigeon.App
+namespace Pigeon.Benchmark.PingPong
 {
     class Program
     {
@@ -24,22 +24,9 @@ namespace Pigeon.App
 
         static void Main(string[] args)
         {
-            //var sw = Stopwatch.StartNew();
-            //int tmp=0;
-            //for (int i = 0; i < 20000000; i++)
-            //{
-            //    NaiveThreadPool.Schedule(_ => tmp++);
-            //}
-            //Console.WriteLine(tmp);
-            //Console.WriteLine(sw.Elapsed);
-            //Console.ReadLine();
-            ThreadPool.SetMinThreads(30, 30);
-            ThreadPool.SetMaxThreads(30, 30);
             int workerThreads;
             int completionPortThreads;
             ThreadPool.GetAvailableThreads(out workerThreads, out completionPortThreads);
-
-          
 
             Console.WriteLine("Worker threads: {0}", workerThreads);
             Console.WriteLine("OSVersion: {0}", Environment.OSVersion);
@@ -66,6 +53,7 @@ namespace Pigeon.App
             var repeat = 30000L * repeatFactor;
             var repeatsPerClient = repeat / numberOfClients;
             var system = new ActorSystem();
+            system.DefaultDispatcher.Throughput = 100;
 
             var clients = new List<LocalActorRef>();
             var tasks = new List<Task>();
@@ -74,7 +62,7 @@ namespace Pigeon.App
                 var destination = system.ActorOf<Destination>();
                 var ts = new TaskCompletionSource<bool>();
                 tasks.Add(ts.Task);
-                var client = system.ActorOf(Props.Factory(() => new Client(destination,repeatsPerClient,ts)));                
+                var client = system.ActorOf(Props.Create(() => new Client(destination,repeatsPerClient,ts)));                
                 clients.Add(client);
             }
 

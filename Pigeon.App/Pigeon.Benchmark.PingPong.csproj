@@ -7,8 +7,8 @@
     <ProjectGuid>{956F7D26-4505-4A26-86D0-73135BD35A93}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Pigeon.App</RootNamespace>
-    <AssemblyName>Pigeon.App</AssemblyName>
+    <RootNamespace>Pigeon.Benchmark.PingPong</RootNamespace>
+    <AssemblyName>Pigeon.Benchmark.PingPong</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
