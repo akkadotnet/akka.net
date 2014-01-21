@@ -10,9 +10,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
-
-//[assembly: PreApplicationStartMethod(typeof(XSocketsBootstrap), "Start")]
-
 namespace Pigeon.Remote
 {    
     public class RemoteHost 
@@ -33,7 +30,6 @@ namespace Pigeon.Remote
             {
                 this.system = system;
                 this.port = port;
-
 
                 server = TcpListener.Create(port);
                 server.ExclusiveAddressUse = false;
@@ -91,42 +87,4 @@ namespace Pigeon.Remote
             return actor;
         }
     }
-
-    //public class ActorHub : Hub
-    //{
-    //    private ActorSystem system;
-
-    //    public ActorHub(ActorSystem system)
-    //    {
-    //        this.system = system;
-    //    }
-    //    public void Post(string remoteActorName, string actorName, string data,string typeName)
-    //    {
-    //        var type = Type.GetType(typeName);
-    //        var message = (object)JsonConvert.DeserializeObject(data, type);
-    //        var actor = system.Guardian.Cell.Child(actorName);
-    //        var connectionId = this.Context.ConnectionId;
-    //        var remoteActor = new SignalRResponseActorRef(remoteActorName, this, connectionId,actor);
-    //        actor.Tell(message, remoteActor);
-    //    }
-
-    //    private class SignalRResponseActorRef : ActorRef
-    //    {
-    //        private string remoteActorName;
-    //        private Hub hub;
-    //        private string connectionId;
-    //        public SignalRResponseActorRef(string remoteActorName, Hub hub, string connectionId,ActorRef owner)
-    //        {
-    //            this.remoteActorName = remoteActorName;
-    //            this.hub = hub;
-    //            this.connectionId = connectionId;
-    //        }
-
-    //        protected override void TellInternal(object message, ActorRef sender)
-    //        {
-    //            var data = JsonConvert.SerializeObject(message);
-    //            hub.Clients.Client(connectionId).Reply(remoteActorName, data, message.GetType().AssemblyQualifiedName);
-    //        }
-    //    }
-    //}
 }
