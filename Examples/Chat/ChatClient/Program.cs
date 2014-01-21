@@ -19,7 +19,7 @@ namespace ChatClient
             Thread.Sleep(1000);
             using (var system = RemoteActorSystem.Create("MyClient",8091))
             {
-                var chatClient = system.ActorOf(Props.Create<ChatClientActor>().WithDispatcher(new ThreadPoolDispatcher()));
+                var chatClient = system.ActorOf(Props.Create<ChatClientActor>());
                 chatClient.Tell(new ConnectRequest()
                 {
                     Username = "Roggan",

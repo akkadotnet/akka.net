@@ -60,14 +60,8 @@ namespace Pigeon.Remote
         private void ProcessSocket(TcpClient client)
         {
             var stream = client.GetStream();
-            ReadMessages(stream);
-        }
-
-        private async void ReadMessages(NetworkStream stream)
-        {
-            while (true)
+            while (client.Connected)
             {
-                await Task.Yield();
                 var remoteEnvelope = RemoteEnvelope.ParseDelimitedFrom(stream);
                 var serializedMessage = remoteEnvelope.Message;
                 var json = serializedMessage.Message.ToString(Encoding.Default);
