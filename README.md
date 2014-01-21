@@ -9,15 +9,6 @@ Why not Akka# or dotAkka?
 I simply assume that TypeSafe that makes Akka don’t want to be associated with spare time projects like this, so I try not to stain their brand name.
 Pigeon tries to stay as close to the Akka implementation as possible while still beeing .NET idiomatic.
 
-#####Contribute
-If you are interested in helping porting the actor part of Akka to .NET please let me know.
-
-#####Contact
-Twitter: http://twitter.com/rogeralsing  (@rogeralsing)
-
-Mail: rogeralsing@gmail.com
-
-
 #####Message Throughput
 
     Worker threads: 1023
@@ -131,3 +122,11 @@ public class MyActor : UntypedActor
     ...
 }
 ```
+
+#####Contribute
+If you are interested in helping porting the actor part of Akka to .NET please let me know.
+
+#####Contact
+Twitter: http://twitter.com/rogeralsing  (@rogeralsing)
+
+Mail: rogeralsing@gmail.com
