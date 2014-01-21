@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
 
 namespace Pigeon.Actor
 {
@@ -26,8 +25,8 @@ namespace Pigeon.Actor
     /// </summary>
     public class ConcurrentQueueMailbox : Mailbox
     {
-        private System.Collections.Concurrent.ConcurrentQueue<Envelope> userMessages = new System.Collections.Concurrent.ConcurrentQueue<Envelope>();
-        private System.Collections.Concurrent.ConcurrentQueue<Envelope> systemMessages = new System.Collections.Concurrent.ConcurrentQueue<Envelope>();
+        private ConcurrentQueue<Envelope> userMessages = new ConcurrentQueue<Envelope>();
+        private ConcurrentQueue<Envelope> systemMessages = new ConcurrentQueue<Envelope>();
         
     //    private WaitCallback handler = null;
         private volatile bool hasUnscheduledMessages = false;

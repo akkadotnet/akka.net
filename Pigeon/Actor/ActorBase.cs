@@ -47,7 +47,6 @@ namespace Pigeon.Actor
                 return context;
             }
         }
-
         protected void Become(Receive receive)
         {
             Context.Become(receive);

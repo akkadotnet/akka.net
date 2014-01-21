@@ -21,6 +21,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Source", "Source", "{01167D
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatServer", "Examples\Chat\ChatServer\ChatServer.csproj", "{7FD886CC-216B-4324-9AB2-241494598B06}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon.Remote", "Pigeon.Remote\Pigeon.Remote.csproj", "{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Pigeon.FSharp", "Pigeon.FSharp\Pigeon.FSharp.fsproj", "{81574240-BC31-4BE4-B447-ADF0D32F4246}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Protobuf", "Protobuf", "{98CEB6FB-A277-42FA-A98E-99A8640B26FD}"
+	ProjectSection(SolutionItems) = preProject
+		Proto\ContainerFormats.proto = Proto\ContainerFormats.proto
+		Proto\csharp_options.proto = Proto\csharp_options.proto
+		Proto\descriptor.proto = Proto\descriptor.proto
+		Proto\WireFormats.proto = Proto\WireFormats.proto
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,12 +59,22 @@ Global
 		{7FD886CC-216B-4324-9AB2-241494598B06}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7FD886CC-216B-4324-9AB2-241494598B06}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7FD886CC-216B-4324-9AB2-241494598B06}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81574240-BC31-4BE4-B447-ADF0D32F4246}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81574240-BC31-4BE4-B447-ADF0D32F4246}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81574240-BC31-4BE4-B447-ADF0D32F4246}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81574240-BC31-4BE4-B447-ADF0D32F4246}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
+		{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
+		{81574240-BC31-4BE4-B447-ADF0D32F4246} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 		{3AA1E79A-F641-4115-BF84-96ECE552EC95} = {69279534-1DBA-4115-BF8B-03F77FC8125E}
 		{73108242-625A-4D7B-AA09-63375DBAE464} = {69279534-1DBA-4115-BF8B-03F77FC8125E}
 		{69AED1DD-02E1-423F-950C-DE6010DFA346} = {3AA1E79A-F641-4115-BF84-96ECE552EC95}

@@ -51,6 +51,7 @@ namespace Pigeon.Actor
             return string.Join("/", parts);
         }
 
+
         public IEnumerator<string> GetEnumerator()
         {
             return parts.GetEnumerator();
@@ -59,6 +60,18 @@ namespace Pigeon.Actor
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
             return parts.GetEnumerator();
+        }
+
+        public string GetHostName()
+        {
+            var host = parts[2].Split(':')[0];
+            return host;
+        }
+
+        public int GetPort()
+        {
+            var port = int.Parse(parts[2].Split(':')[1]);
+            return port;
         }
     }
 }

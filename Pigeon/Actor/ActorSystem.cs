@@ -1,6 +1,4 @@
-﻿using Pigeon.SignalR;
-using Microsoft.AspNet.SignalR.Client;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,20 +11,21 @@ namespace Pigeon.Actor
     public class ActorSystem : IActorRefFactory , IDisposable
     {
         private ActorCell rootCell;
-        public ActorSystem()
-        {            
+        public ActorSystem(string name)
+        {
+            this.Name = name;
             this.DefaultDispatcher = new ThreadPoolDispatcher();
 
             rootCell = new ActorCell(this);
-            this.RootGuardian = rootCell.ActorOf<GuardianActor>("");
+         //   this.RootGuardian = rootCell.ActorOf<GuardianActor>("");
 
-            this.EventStream = RootGuardian.Cell.ActorOf<EventStreamActor>("EventStream");
-            this.DeadLetters = RootGuardian.Cell.ActorOf<DeadLettersActor>("deadLetters");
-            this.Guardian = RootGuardian.Cell.ActorOf<GuardianActor>("user");
-            this.SystemGuardian = RootGuardian.Cell.ActorOf<GuardianActor>("system");
-            this.TempGuardian = RootGuardian.Cell.ActorOf<GuardianActor>("temp");
+            this.EventStream = rootCell.ActorOf<EventStreamActor>("EventStream");
+            this.DeadLetters = rootCell.ActorOf<DeadLettersActor>("deadLetters");
+            this.Guardian = rootCell.ActorOf<GuardianActor>("user");
+            this.SystemGuardian = rootCell.ActorOf<GuardianActor>("system");
+            this.TempGuardian = rootCell.ActorOf<GuardianActor>("temp");
         }
-
+        public string Name { get;private set; }
         public LocalActorRef RootGuardian { get; private set; }
 
         public LocalActorRef EventStream { get; private set; }
@@ -62,9 +61,19 @@ namespace Pigeon.Actor
 
         public ActorSelection ActorSelection(string actorPath)
         {
-            return Guardian.Cell.ActorSelection(actorPath);
+            return rootCell.ActorSelection(actorPath);
         }
 
         public MessageDispatcher DefaultDispatcher { get; set; }
+
+        internal protected virtual ActorRef GetRemoteRef(ActorCell actorCell, ActorPath actorPath)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual string Address()
+        {
+            return Name;
+        }
     }
 }

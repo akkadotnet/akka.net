@@ -50,7 +50,7 @@ namespace Pigeon.Actor
             //remote path
             if (actorPath.First.StartsWith("pigeon."))
             {
-                var actorRef = new RemoteActorRef(this, actorPath);
+                var actorRef =  System.GetRemoteRef(this, actorPath);
                 return new ActorSelection(actorRef);
             }
 
@@ -70,7 +70,7 @@ namespace Pigeon.Actor
                 }
                 else if (part == "." || part == "")
                 {
-                    currentContext = currentContext.System.Guardian.Cell;
+                    currentContext = currentContext.System.RootGuardian.Cell;
                 }
                 else if (part == "*")
                 {
@@ -79,7 +79,7 @@ namespace Pigeon.Actor
                 }
                 else
                 {
-                    currentContext = ((LocalActorRef)this.Child(part)).Cell;
+                    currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
                 }
             }
             
@@ -143,7 +143,7 @@ namespace Pigeon.Actor
         {
             this.Parent = parentContext != null ? parentContext.Self : null;
             this.System = parentContext != null ? parentContext.System : null;
-            this.Self = new LocalActorRef(new ActorPath(name), this);
+            this.Self = new LocalActorRef(new ActorPath(this.Parent.Path, name), this);
             this.Props = props;
             this.Dispatcher = props.Dispathcer ?? this.System.DefaultDispatcher;
             this.Mailbox = new ConcurrentQueueMailbox(this.Dispatcher);// new ActionBlockMailbox();

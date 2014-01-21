@@ -1,11 +1,12 @@
 ﻿using ChatMessages;
 using Pigeon;
 using Pigeon.Actor;
-using Pigeon.SignalR;
+using Pigeon.Remote;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ChatClient
@@ -14,7 +15,9 @@ namespace ChatClient
     {
         static void Main(string[] args)
         {
-            using (var system = new ActorSystem())
+            //testing connectivity
+            Thread.Sleep(1000);
+            using (var system = RemoteActorSystem.Create("MyChat",8091))
             {
                 var chatClient = system.ActorOf(Props.Create<ChatClientActor>().WithDispatcher(new ThreadPoolDispatcher()));
                 chatClient.Tell(new ConnectRequest()
@@ -60,8 +63,10 @@ namespace ChatClient
         IHandle<SayResponse>,
         IHandle<Pong>
     {
+        LoggingAdapter log = Logging.GetLogger(Context.System);
+
         private string nick = "Roggan";
-        private ActorRef server = Context.ActorSelection("pigeon.http://localhost:8090/ChatServer");
+        private ActorRef server = Context.ActorSelection("pigeon.http://localhost:8081/ChatServer");
         
         public void Handle(ConnectResponse message)
         {

@@ -1,7 +1,7 @@
 ﻿using ChatMessages;
 using Pigeon;
 using Pigeon.Actor;
-using Pigeon.SignalR;
+using Pigeon.Remote;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +14,7 @@ namespace ChatServer
     {
         static void Main(string[] args)
         {
-            using (var system = ActorSystemSignalR.Create("Chat Server", "http://localhost:8090"))
+            using (var system = RemoteActorSystem.Create("Chat Server", 8081))
             {
                 var server = system.ActorOf<ChatServerActor>("ChatServer");
 
