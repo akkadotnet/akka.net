@@ -36,9 +36,9 @@ namespace Pigeon.Remote
             return new RemoteActorRef(actorCell, actorPath,this.port);
         }
 
-        public override string Address()
+        public override string GetSystemName()
         {
-            return string.Format("localhost:{0}", this.port);
+            return string.Format("127.0.0.1:{0}", port);
         }
     }
 }

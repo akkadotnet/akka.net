@@ -73,7 +73,7 @@ namespace Pigeon.Remote
                 var json = serializedMessage.Message.ToString(Encoding.Default);
                 var message = fastJSON.JSON.Instance.Parse(json);
                 var recipient = remoteEnvelope.Recipient.ToActorRef(this.system);
-                var sender = remoteEnvelope.Sender.ToActorRef(this.system);
+                var sender =  remoteEnvelope.Sender.ToActorRef(this.system);
 
                 recipient.Tell(message, sender);
             }

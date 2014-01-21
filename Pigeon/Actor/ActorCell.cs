@@ -48,14 +48,14 @@ namespace Pigeon.Actor
         public ActorSelection ActorSelection(ActorPath actorPath)
         {
             //remote path
-            if (actorPath.First.StartsWith("pigeon."))
+            if (actorPath.First.StartsWith("akka."))
             {
                 var actorRef =  System.GetRemoteRef(this, actorPath);
                 return new ActorSelection(actorRef);
             }
 
             //local absolute
-            if (actorPath.First.StartsWith("pigeon:"))
+            if (actorPath.First.StartsWith("akka:"))
             {
                 actorPath = new ActorPath(actorPath.Skip(1));
             }
@@ -128,11 +128,11 @@ namespace Pigeon.Actor
             return this.Children.Values.ToArray();
         }
 
-        internal ActorCell(ActorSystem system)
+        internal ActorCell(ActorSystem system,string name)
         {
             this.Parent = null;
             this.System = system;
-            this.Self = new LocalActorRef(new ActorPath(""), this);
+            this.Self = new LocalActorRef(new ActorPath(name), this);
             this.Props = null;
             this.Mailbox = new ConcurrentQueueMailbox(system.DefaultDispatcher);// new ActionBlockMailbox();
             this.Mailbox.Invoke = this.Invoke;

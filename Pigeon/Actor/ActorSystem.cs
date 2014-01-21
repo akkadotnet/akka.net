@@ -16,15 +16,19 @@ namespace Pigeon.Actor
             this.Name = name;
             this.DefaultDispatcher = new ThreadPoolDispatcher();
 
-            rootCell = new ActorCell(this);
-         //   this.RootGuardian = rootCell.ActorOf<GuardianActor>("");
-
+            this.rootCell = new ActorCell(this,"");            
             this.EventStream = rootCell.ActorOf<EventStreamActor>("EventStream");
             this.DeadLetters = rootCell.ActorOf<DeadLettersActor>("deadLetters");
             this.Guardian = rootCell.ActorOf<GuardianActor>("user");
             this.SystemGuardian = rootCell.ActorOf<GuardianActor>("system");
             this.TempGuardian = rootCell.ActorOf<GuardianActor>("temp");
         }
+
+        public virtual string GetSystemName()
+        {
+            return this.Name;
+        }
+
         public string Name { get;private set; }
         public LocalActorRef RootGuardian { get; private set; }
 
@@ -73,7 +77,7 @@ namespace Pigeon.Actor
 
         public virtual string Address()
         {
-            return Name;
+            return "";
         }
     }
 }

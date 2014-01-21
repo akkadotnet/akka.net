@@ -66,7 +66,7 @@ namespace ChatClient
         LoggingAdapter log = Logging.GetLogger(Context.System);
 
         private string nick = "Roggan";
-        private ActorRef server = Context.ActorSelection("pigeon.http://localhost:8081/ChatServer");
+        private ActorRef server = Context.ActorSelection("akka.tcp://localhost:8081/ChatServer");
         
         public void Handle(ConnectResponse message)
         {
