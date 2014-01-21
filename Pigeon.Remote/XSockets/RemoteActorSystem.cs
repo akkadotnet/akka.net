@@ -38,7 +38,7 @@ namespace Pigeon.Remote
 
         public override string GetSystemName()
         {
-            return string.Format("127.0.0.1:{0}", port);
+            return string.Format("akka.tcp://{0}@127.0.0.1:{1}",Name, port);
         }
     }
 }

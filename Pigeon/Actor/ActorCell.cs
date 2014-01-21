@@ -47,22 +47,30 @@ namespace Pigeon.Actor
 
         public ActorSelection ActorSelection(ActorPath actorPath)
         {
+            var tmpPath = actorPath;
             //remote path
             if (actorPath.First.StartsWith("akka."))
             {
-                var actorRef =  System.GetRemoteRef(this, actorPath);
-                return new ActorSelection(actorRef);
+                if (actorPath.GetSystemName() == this.System.Name)
+                {
+                    tmpPath = new ActorPath(actorPath.Skip(3));
+                }
+                else
+                {
+                    var actorRef = System.GetRemoteRef(this, actorPath);
+                    return new ActorSelection(actorPath, actorRef);
+                }
             }
 
             //local absolute
             if (actorPath.First.StartsWith("akka:"))
             {
-                actorPath = new ActorPath(actorPath.Skip(1));
+                tmpPath = new ActorPath(actorPath.Skip(3));
             }
 
             //standard
             var currentContext = this;
-            foreach (var part in actorPath)
+            foreach (var part in tmpPath)
             {
                 if (part == "..")
                 {
@@ -74,7 +82,7 @@ namespace Pigeon.Actor
                 }
                 else if (part == "*")
                 {
-                    var actorRef = new ActorSelection(currentContext.Children.Values.ToArray());
+                    var actorRef = new ActorSelection(actorPath, currentContext.Children.Values.ToArray());
                     return actorRef;
                 }
                 else
@@ -83,7 +91,7 @@ namespace Pigeon.Actor
                 }
             }
             
-            return new ActorSelection( ((ActorCell)currentContext).Self);
+            return new ActorSelection(actorPath, ((ActorCell)currentContext).Self);
         }
 
         public virtual LocalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase

@@ -26,7 +26,7 @@ namespace Pigeon.Actor
 
         public virtual string GetSystemName()
         {
-            return this.Name;
+            return string.Format("akka://{0}", this.Name);
         }
 
         public string Name { get;private set; }
@@ -60,7 +60,7 @@ namespace Pigeon.Actor
 
         public ActorSelection ActorSelection(ActorPath actorPath)
         {
-            return Guardian.Cell.ActorSelection(actorPath);
+            return rootCell.ActorSelection(actorPath);
         }
 
         public ActorSelection ActorSelection(string actorPath)

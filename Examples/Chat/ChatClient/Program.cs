@@ -17,7 +17,7 @@ namespace ChatClient
         {
             //testing connectivity
             Thread.Sleep(1000);
-            using (var system = RemoteActorSystem.Create("MyChat",8091))
+            using (var system = RemoteActorSystem.Create("MyClient",8091))
             {
                 var chatClient = system.ActorOf(Props.Create<ChatClientActor>().WithDispatcher(new ThreadPoolDispatcher()));
                 chatClient.Tell(new ConnectRequest()
@@ -66,7 +66,7 @@ namespace ChatClient
         LoggingAdapter log = Logging.GetLogger(Context.System);
 
         private string nick = "Roggan";
-        private ActorRef server = Context.ActorSelection("akka.tcp://localhost:8081/ChatServer");
+        private ActorRef server = Context.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
         
         public void Handle(ConnectResponse message)
         {

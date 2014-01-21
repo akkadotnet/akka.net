@@ -64,7 +64,13 @@ namespace Pigeon.Actor
 
         public string GetHostName()
         {
-            var host = parts[2].Split(':')[0];
+            var host = parts[2].Split(':')[0].Split('@')[1];
+            return host;
+        }
+
+        public string GetSystemName()
+        {
+            var host = parts[2].Split(':')[0].Split('@')[0];
             return host;
         }
 

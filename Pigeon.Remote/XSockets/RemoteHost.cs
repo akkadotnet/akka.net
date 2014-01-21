@@ -71,7 +71,7 @@ namespace Pigeon.Remote
                 var remoteEnvelope = RemoteEnvelope.ParseDelimitedFrom(stream);
                 var serializedMessage = remoteEnvelope.Message;
                 var json = serializedMessage.Message.ToString(Encoding.Default);
-                var message = fastJSON.JSON.Instance.Parse(json);
+                var message = fastJSON.JSON.Instance.ToObject(json);
                 var recipient = remoteEnvelope.Recipient.ToActorRef(this.system);
                 var sender =  remoteEnvelope.Sender.ToActorRef(this.system);
 
@@ -84,7 +84,8 @@ namespace Pigeon.Remote
     {
         public static ActorRef ToActorRef(this ActorRefData self,ActorSystem system)
         {
-            var path = self.Path;
+            var path = new ActorPath(self.Path);
+            
             var actor = system.ActorSelection(path);
             return actor;
         }

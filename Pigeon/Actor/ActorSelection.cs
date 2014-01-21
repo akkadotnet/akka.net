@@ -8,8 +8,9 @@ namespace Pigeon.Actor
 {
     public class ActorSelection : BroadcastActorRef
     {
-        public ActorSelection(params ActorRef[] actors) :base(actors)
+        public ActorSelection(ActorPath path, params ActorRef[] actors) :base(actors)
         {
+            this.Path = path;
         }
     }
 

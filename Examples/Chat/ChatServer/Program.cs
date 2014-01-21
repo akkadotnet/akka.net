@@ -14,7 +14,7 @@ namespace ChatServer
     {
         static void Main(string[] args)
         {
-            using (var system = RemoteActorSystem.Create("Chat Server", 8081))
+            using (var system = RemoteActorSystem.Create("MyServer", 8081))
             {
                 var server = system.ActorOf<ChatServerActor>("ChatServer");
 
@@ -46,6 +46,7 @@ namespace ChatServer
 
         public void Handle(ConnectRequest message)
         {
+            Console.WriteLine("User {0} has connected", message.Username);
             clients.Add(this.Sender);
             Sender.Tell(new ConnectResponse
             {
