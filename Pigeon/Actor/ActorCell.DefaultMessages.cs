@@ -103,7 +103,10 @@ namespace Pigeon.Actor
             if (isTerminating)
                 return;
 
-            this.Parent.Tell(new StopChild(this.Self));
+            if (this.Parent != null)
+            {
+                this.Parent.Tell(new StopChild(this.Self));
+            }
             foreach (var child in this.GetChildren())
             {
                 child.Stop();

@@ -40,7 +40,7 @@ namespace Pigeon.Actor
 
         public void Shutdown()
         {
-            RootGuardian.Stop();
+            rootCell.Stop();
         }
 
         public void Dispose()

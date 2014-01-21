@@ -59,17 +59,24 @@ namespace Pigeon.Remote
 
         private void ProcessSocket(TcpClient client)
         {
-            var stream = client.GetStream();
-            while (client.Connected)
+            try
             {
-                var remoteEnvelope = RemoteEnvelope.ParseDelimitedFrom(stream);
-                var serializedMessage = remoteEnvelope.Message;
-                var json = serializedMessage.Message.ToString(Encoding.Default);
-                var message = fastJSON.JSON.Instance.ToObject(json);
-                var recipient = remoteEnvelope.Recipient.ToActorRef(this.system);
-                var sender =  remoteEnvelope.Sender.ToActorRef(this.system);
+                var stream = client.GetStream();
+                while (client.Connected)
+                {
+                    var remoteEnvelope = RemoteEnvelope.ParseDelimitedFrom(stream);
+                    var serializedMessage = remoteEnvelope.Message;
+                    var json = serializedMessage.Message.ToString(Encoding.Default);
+                    var message = fastJSON.JSON.Instance.ToObject(json);
+                    var recipient = remoteEnvelope.Recipient.ToActorRef(this.system);
+                    var sender = remoteEnvelope.Sender.ToActorRef(this.system);
 
-                recipient.Tell(message, sender);
+                    recipient.Tell(message, sender);
+                }
+            }
+            catch (IOException io)
+            {
+                throw;
             }
         }
     }
