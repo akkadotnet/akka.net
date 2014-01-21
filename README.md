@@ -13,7 +13,8 @@ Pigeon tries to stay as close to the Akka implementation as possible while still
 If you are interested in helping porting the actor part of Akka to .NET please let me know.
 
 #####Contact
-Twitter: @rogeralsing
+Twitter: http://twitter.com/rogeralsing  (@rogeralsing)
+
 Mail: rogeralsing@gmail.com
 
 
