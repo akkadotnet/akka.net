@@ -5,8 +5,7 @@ open Pigeon.Actor
 type FsActor()=
     inherit Pigeon.Actor.UntypedActor()
 
-type ActorRef = ActorRef with
-    static member (!) (actorRef:Pigeon.Actor.ActorRef, msg: System.Object) =
+let (<!) (actorRef:Pigeon.Actor.ActorRef) (msg: System.Object) =
         actorRef.Tell msg
         ignore()
 
