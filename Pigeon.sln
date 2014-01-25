@@ -5,8 +5,6 @@ VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon", "Pigeon\Pigeon.csproj", "{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon.Benchmark.PingPong", "Pigeon.App\Pigeon.Benchmark.PingPong.csproj", "{956F7D26-4505-4A26-86D0-73135BD35A93}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatMessages", "Examples\Chat\ChatMessages\ChatMessages.csproj", "{819221CB-82B7-43D3-A4DE-E00AF17F2FDF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatClient", "Examples\Chat\ChatClient\ChatClient.csproj", "{69AED1DD-02E1-423F-950C-DE6010DFA346}"
@@ -33,6 +31,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Protobuf", "Protobuf", "{98
 		Proto\WireFormats.proto = Proto\WireFormats.proto
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon.Benchmark.PingPong", "Examples\Benchmark.PingPong\Pigeon.Benchmark.PingPong.csproj", "{956F7D26-4505-4A26-86D0-73135BD35A93}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,10 +43,6 @@ Global
 		{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}.Release|Any CPU.Build.0 = Release|Any CPU
-		{956F7D26-4505-4A26-86D0-73135BD35A93}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{956F7D26-4505-4A26-86D0-73135BD35A93}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{956F7D26-4505-4A26-86D0-73135BD35A93}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{956F7D26-4505-4A26-86D0-73135BD35A93}.Release|Any CPU.Build.0 = Release|Any CPU
 		{819221CB-82B7-43D3-A4DE-E00AF17F2FDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{819221CB-82B7-43D3-A4DE-E00AF17F2FDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{819221CB-82B7-43D3-A4DE-E00AF17F2FDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -67,6 +63,10 @@ Global
 		{81574240-BC31-4BE4-B447-ADF0D32F4246}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{81574240-BC31-4BE4-B447-ADF0D32F4246}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{81574240-BC31-4BE4-B447-ADF0D32F4246}.Release|Any CPU.Build.0 = Release|Any CPU
+		{956F7D26-4505-4A26-86D0-73135BD35A93}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{956F7D26-4505-4A26-86D0-73135BD35A93}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{956F7D26-4505-4A26-86D0-73135BD35A93}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{956F7D26-4505-4A26-86D0-73135BD35A93}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
