@@ -29,6 +29,40 @@ namespace Pigeon.Actor
             });
         }
 
+
+        /*
+ def autoReceiveMessage(msg: Envelope): Unit = {
+    if (system.settings.DebugAutoReceive)
+      publish(Debug(self.path.toString, clazz(actor), "received AutoReceiveMessage " + msg))
+
+    msg.message match {
+      case t: Terminated              ⇒ receivedTerminated(t)
+      case AddressTerminated(address) ⇒ addressTerminated(address)
+      case Kill                       ⇒ throw new ActorKilledException("Kill")
+      case PoisonPill                 ⇒ self.stop()
+      case sel: ActorSelectionMessage ⇒ receiveSelection(sel)
+      case Identify(messageId)        ⇒ sender() ! ActorIdentity(messageId, Some(self))
+    }
+  }
+         */
+
+        public void AutoReceiveMessage(Envelope envelope)
+        {
+            Pattern.Match(envelope.Message)
+                .With<Terminated>(ReceivedTerminated)
+                .With<Kill>(Kill)
+                .With<PoisonPill>(HandlePoisonPill)
+                .With<CompleteFuture>(HandleCompleteFuture)
+                .With<Identity>(HandleIdentity)
+                .Default(m => {
+                    throw new NotSupportedException("Unknown message " + m.GetType().Name);
+                });
+        }
+
+        private void ReceivedTerminated(Terminated obj)
+        {
+        }
+
         public void SystemInvoke(Envelope envelope)
         {
             this.CurrentMessage = envelope.Message;
@@ -38,35 +72,64 @@ namespace Pigeon.Actor
             {
                 try
                 {
+                    /*
+          case message: SystemMessage if shouldStash(message, currentState) ⇒ stash(message)
+          case f: Failed ⇒ handleFailure(f)
+          case DeathWatchNotification(a, ec, at) ⇒ watchedActorTerminated(a, ec, at)
+          case Create(failure) ⇒ create(failure)
+          case Watch(watchee, watcher) ⇒ addWatcher(watchee, watcher)
+          case Unwatch(watchee, watcher) ⇒ remWatcher(watchee, watcher)
+          case Recreate(cause) ⇒ faultRecreate(cause)
+          case Suspend() ⇒ faultSuspend()
+          case Resume(inRespToFailure) ⇒ faultResume(inRespToFailure)
+          case Terminate() ⇒ terminate()
+          case Supervise(child, async) ⇒ supervise(child, async)
+          case NoMessage ⇒ // only here to suppress warning
+                     */
                     Pattern.Match(envelope.Message)
+                        .With<Failed>(HandleFailed)
                         .With<DeathWatchNotification>(HandleDeathWatchNotification)
+                        //TODO: add create?
+                        .With<Watch>(HandleWatch)
+                        .With<Unwatch>(HandleUnwatch)
+                        .With<Recreate>(FaultRecreate)
+                        .With<Suspend>(FaultSuspend)
+                        .With<Resume>(FaultResume)
                         .With<Terminate>(HandleTerminate)
                         .With<Supervise>(HandleSupervise)
-                        //kill this actor
-                        .With<Kill>(Kill)
-                        //request to stop a child
-                        .With<StopChild>(m => StopChild(m.Child))
-                        //request to restart a child
-                        .With<ReCreate>(FaultReCreate)
-                        //kill this actor
-                        .With<PoisonPill>(HandlePoisonPill)
-                        //someone is watching us
-                        .With<Watch>(HandleWatch)
-                        //someone is unwatching us
-                        .With<Unwatch>(HandleUnwatch)
-                        //complete the future callback by setting the result in this thread
-                        .With<CompleteFuture>(HandleCompleteFuture)
-                        //supervice exception from child actor
-                        .With<Failed>(HandleFailed)
-                        //handle any other message
-                        .With<Identity>(HandleIdentity)
-                        .Default(m => { throw new NotImplementedException(); });
+                        .With<NoMessage>(m => { }) //only goes here to mimic Akka, which only goes here to supress pattern match warning :-P
+                      
+                        .Default(m => AutoReceiveMessage(envelope));
                 }
                 catch (Exception cause)
                 {
                     Parent.Tell(new Failed(Self,cause));
                 }
             });
+        }
+
+        private void FaultResume(Resume obj)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void FaultSuspend(Suspend obj)
+        {
+            SuspendNonRecursive();
+            SuspendChildren();
+        }
+
+        private void SuspendChildren()
+        {
+            foreach(var child in this.GetChildren())
+            {
+                child.Suspend();
+            }
+        }
+
+        private void SuspendNonRecursive()
+        {
+            
         }
 
         private void HandleDeathWatchNotification(DeathWatchNotification m)
@@ -136,10 +199,10 @@ protected def terminate() {
 		/// </summary>
         public void Restart()
         {
-            this.Self.Tell(new ReCreate(null));
+            this.Self.Tell(new Recreate(null));
         }
 
-        private void FaultReCreate(ReCreate m)
+        private void FaultRecreate(Recreate m)
         {
             isTerminating = false;
             Unbecome();//unbecome deadletters
@@ -157,6 +220,14 @@ protected def terminate() {
             }
         }
 
+        public void Resume(Exception causedByFailure)
+        {
+            if (isTerminating)
+                return;
+
+            Self.Tell(new Resume(causedByFailure));
+        }
+
 		/// <summary>
 		/// Async stop this actor
 		/// </summary>
@@ -166,6 +237,14 @@ protected def terminate() {
                 return;
 
             Self.Tell(new Terminate());            
+        }
+
+        public void Suspend()
+        {
+            if (isTerminating)
+                return;
+
+            Self.Tell(new Suspend());
         }
 
         private volatile bool isTerminating = false;
@@ -200,7 +279,7 @@ protected def terminate() {
                 case Directive.Resume:
                     break;
                 case Directive.Restart:
-                    m.Child.Tell(new ReCreate(m.Cause));
+                    m.Child.Tell(new Recreate(m.Cause));
                     break;
                 case Directive.Stop:
                     StopChild((LocalActorRef)Sender);

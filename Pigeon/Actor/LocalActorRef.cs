@@ -16,12 +16,12 @@ namespace Pigeon.Actor
 
         public void Suspend()
         {
-           // Cell.Suspend();
+            Cell.Suspend();
         }
 
-        public void Resume()
+        public void Resume(Exception causedByFailure = null)
         {
-           // Cell.Resume();
+            Cell.Resume(causedByFailure);
         }
 
         public void Restart()

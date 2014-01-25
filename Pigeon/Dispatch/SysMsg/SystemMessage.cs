@@ -15,27 +15,6 @@ namespace Pigeon.Dispatch.SysMsg
 //private[akka] case class Create(failure: Option[ActorInitializationException]) extends SystemMessage // sent to self from Dispatcher.register
 ///**
 
-///**
-// * INTERNAL API
-// */
-//@SerialVersionUID(1L)
-//private[akka] case class Suspend() extends SystemMessage with StashWhenWaitingForChildren // sent to self from ActorCell.suspend
-///**
-// * INTERNAL API
-// */
-//@SerialVersionUID(1L)
-//private[akka] case class Resume(causedByFailure: Throwable) extends SystemMessage with StashWhenWaitingForChildren // sent to self from ActorCell.resume
-///**
-// * INTERNAL API
-// */
-
-
-//@SerialVersionUID(1L)
-//private[akka] case class DeathWatchNotification(
-//  actor: ActorRef,
-//  existenceConfirmed: Boolean,
-//  addressTerminated: Boolean) extends SystemMessage
-
     public abstract class SystemMessage
     {
     }
@@ -126,9 +105,9 @@ namespace Pigeon.Dispatch.SysMsg
     {
     }
 
-    public class ReCreate : SystemMessage
+    public class Recreate : SystemMessage
     {
-        public ReCreate(Exception cause)
+        public Recreate(Exception cause)
         {
             this.Cause = cause;
         }
@@ -137,6 +116,16 @@ namespace Pigeon.Dispatch.SysMsg
     }
 
     public class Resume : SystemMessage
+    {
+        public Resume(Exception causedByFailure)
+        {
+            this.CausedByFailure = causedByFailure;
+        }
+
+        public Exception CausedByFailure { get; set; }
+    }
+
+    public class Suspend : SystemMessage
     {
     }
 
@@ -206,6 +195,4 @@ namespace Pigeon.Dispatch.SysMsg
             this.Subject = subject;
         }
     }
-
-
 }
