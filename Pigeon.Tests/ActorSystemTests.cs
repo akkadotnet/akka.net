@@ -27,9 +27,7 @@ namespace Pigeon.Tests
             //assert
             var children = system.Guardian.Cell.GetChildren();
             Assert.IsTrue(children.Any(c => c == child));
-        }
-
-        
+        }        
 
         [TestMethod]
         public void ActorOf_gives_child_unique_name_if_not_specified()

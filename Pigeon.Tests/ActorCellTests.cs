@@ -28,7 +28,7 @@ namespace Pigeon.Tests
         }
 
         [TestMethod]
-        public void Context_ActorOf_adds_a_child_to_Guardian()
+        public void Context_ActorOf_adds_a_child()
         {
             //arrange
             var system = new ActorSystem("test");

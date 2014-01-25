@@ -46,11 +46,22 @@ namespace Pigeon.Actor
             parts.AddRange(parentPath.parts);
             parts.Add(name);
         }
-        public override string ToString()
+
+
+        public string ToStringWithoutAddress()
         {
             return string.Join("/", parts);
         }
 
+        public override string ToString()
+        {
+            return ToStringWithoutAddress();
+        }
+
+        public ActorPath Child(string childName)
+        {
+            return new ActorPath(this, childName);
+        }
 
         public IEnumerator<string> GetEnumerator()
         {
