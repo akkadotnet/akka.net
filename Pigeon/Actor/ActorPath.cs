@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Actor
 {
-    public class ActorPath : IEnumerable<string>
+    public class ActorPath : IEnumerable<string> , IEquatable<ActorPath>
     {
         public string First
         {
@@ -78,6 +78,21 @@ namespace Pigeon.Actor
         {
             var port = int.Parse(parts[2].Split(':')[1]);
             return port;
+        }
+
+        public override int GetHashCode()
+        {
+            return this.ToString().GetHashCode();
+        }
+
+        public override bool Equals(object obj)
+        {
+            return this.Equals((ActorPath)obj);
+        }
+
+        public bool Equals(ActorPath other)
+        {
+            return this.parts.SequenceEqual(other.parts);
         }
     }
 }
