@@ -33,15 +33,6 @@ namespace Pigeon.Actor
         public ActorSystem System { get; private set; }
         public string Protocol { get; private set; }
 
-  // override lazy val toString: String = {
-  //  val sb = (new java.lang.StringBuilder(protocol)).append("://").append(system)
-
-  //  if (host.isDefined) sb.append('@').append(host.get)
-  //  if (port.isDefined) sb.append(':').append(port.get)
-
-  //  sb.toString
-  //}
-
         public override string ToString()
         {
             return toString.Value;
