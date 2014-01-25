@@ -9,6 +9,7 @@ namespace Pigeon.Serialization
 {
     public abstract class Serializer
     {
+        public abstract int Identifier { get; }
         public abstract bool RequiresManifest { get; }
         public abstract byte[] ToBinary(object obj);
         public abstract object FromBinary(byte[] bytes, Type type);
@@ -31,6 +32,11 @@ namespace Pigeon.Serialization
             var json = fastJSON.JSON.Instance.ToJSON(obj);
             var bytes = Encoding.Default.GetBytes(json);
             return bytes;
+        }
+
+        public override int Identifier
+        {
+            get { return -1; }
         }
     }
 
@@ -57,6 +63,62 @@ namespace Pigeon.Serialization
             {
                 return ProtoBuf.Serializer.NonGeneric.Deserialize(type, stream);
             }
+        }
+
+        public override int Identifier
+        {
+            get { return 2; }
+        }
+    }
+
+    public class NullSerializer : Serializer
+    {
+        private readonly byte[] nullBytes = { };
+        public override int Identifier
+        {
+            get { return 0; }
+        }
+
+        public override bool RequiresManifest
+        {
+            get { return false; }
+        }
+
+        public override byte[] ToBinary(object obj)
+        {
+            return nullBytes;
+        }
+
+        public override object FromBinary(byte[] bytes, Type type)
+        {
+            return null;
+        }
+    }
+
+    public class ByteArraySerializer : Serializer
+    {
+        public override int Identifier
+        {
+            get { return 4; }
+        }
+
+        public override bool RequiresManifest
+        {
+            get { return false; }
+        }
+
+        public override byte[] ToBinary(object obj)
+        {
+            if (obj == null)
+                return null;
+            if (obj is byte[])
+                return (byte[])obj;            
+            throw new NotSupportedException();
+        }
+
+        public override object FromBinary(byte[] bytes, Type type)
+        {
+            return bytes;
         }
     }
 }
