@@ -124,8 +124,8 @@ namespace Pigeon.Actor
             cell.UseThreadContext( () =>
             {
                 var instance = cell.Props.NewActor();
-                instance.AroundPreStart();
                 Children.TryAdd(cell.Self.Path.Name, cell.Self);
+                instance.AroundPreStart();                
             });
         }
 
@@ -200,21 +200,21 @@ namespace Pigeon.Actor
         /// <summary>
         /// May only be called from the owner actor
         /// </summary>
-        /// <param name="subject"></param>
-        public void Watch(ActorRef subject)
+        /// <param name="watchee"></param>
+        public void Watch(ActorRef watchee)
         {
-            Watchees.Add(subject);
-            subject.Tell(new Watch());
+            Watchees.Add(watchee);
+            watchee.Tell(new Watch(watchee,Self));
         }
 
         /// <summary>
         /// May only be called from the owner actor
         /// </summary>
-        /// <param name="subject"></param>
-        public void Unwatch(ActorRef subject)
+        /// <param name="watchee"></param>
+        public void Unwatch(ActorRef watchee)
         {
-            Watchees.Remove(subject);
-            subject.Tell(new Unwatch());
+            Watchees.Remove(watchee);
+            watchee.Tell(new Unwatch(watchee,Self));
         }
 
         public void Kill()

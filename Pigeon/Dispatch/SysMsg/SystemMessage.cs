@@ -35,32 +35,7 @@ namespace Pigeon.Dispatch.SysMsg
 //private[akka] case class Terminate() extends SystemMessage // sent to self from ActorCell.stop
 ///**
 // * INTERNAL API
-// */
-//@SerialVersionUID(1L)
-//private[akka] case class Supervise(child: ActorRef, async: Boolean) extends SystemMessage // sent to supervisor ActorRef from ActorCell.start
-///**
-// * INTERNAL API
-// */
-//@SerialVersionUID(1L)
-//private[akka] case class Watch(watchee: InternalActorRef, watcher: InternalActorRef) extends SystemMessage // sent to establish a DeathWatch
-///**
-// * INTERNAL API
-// */
-//@SerialVersionUID(1L)
-//private[akka] case class Unwatch(watchee: ActorRef, watcher: ActorRef) extends SystemMessage // sent to tear down a DeathWatch
-///**
-// * INTERNAL API
-// */
-//@SerialVersionUID(1L)
-//private[akka] case object NoMessage extends SystemMessage // switched into the mailbox to signal termination
 
-///**
-// * INTERNAL API
-// */
-//@SerialVersionUID(1L)
-//private[akka] case class Failed(child: ActorRef, cause: Throwable, uid: Int) extends SystemMessage
-//  with StashWhenFailed
-//  with StashWhenWaitingForChildren
 
 //@SerialVersionUID(1L)
 //private[akka] case class DeathWatchNotification(
@@ -72,14 +47,54 @@ namespace Pigeon.Dispatch.SysMsg
     {
     }
 
-    public class SuperviceChild : SystemMessage
+    public class NoMessage : SystemMessage
     {
-        public SuperviceChild(Exception reason)
+    }
+
+    public class Failed : SystemMessage
+    {
+        public Failed(ActorRef child, Exception cause)
         {
-            this.Reason = reason;
+            this.Child = child;
+            this.Cause = cause;
+        }
+        public ActorRef Child { get;private set; }
+        public Exception Cause { get; private set; }
+    }
+
+    public class Supervise : SystemMessage
+    {
+        public Supervise(ActorRef child,bool async)
+        {
+            this.Child = child;
+            this.Async = async;
         }
 
-        public Exception Reason { get; private set; }
+        public bool Async { get;private set; }
+        public ActorRef Child { get;private set; }
+    }
+    //used to start watching another actor (deathwatch)
+    public class Watch : SystemMessage
+    {
+        public Watch(ActorRef watchee,ActorRef watcher)
+        {
+            this.Watchee = watchee;
+            this.Watcher = watcher;
+        }
+        public ActorRef Watchee { get;private set; }
+        public ActorRef Watcher { get;private set; }
+    }
+
+    //used to unsubscribe to deathwatch
+    public class Unwatch : SystemMessage
+    {
+        public Unwatch(ActorRef watchee, ActorRef watcher)
+        {
+            this.Watchee = watchee;
+            this.Watcher = watcher;
+        }
+        public ActorRef Watchee { get;private set; }
+        public ActorRef Watcher { get;private set; }
     }
 
     public class CompleteFuture : SystemMessage
@@ -89,17 +104,6 @@ namespace Pigeon.Dispatch.SysMsg
             this.SetResult = action;
         }
         public Action SetResult { get; private set; }
-    }
-
-    public class Ping : SystemMessage
-    {
-        public DateTime LocalUtcNow { get; set; }
-    }
-
-    public class Pong : SystemMessage
-    {
-        public DateTime LocalUtcNow { get; set; }
-        public DateTime RemoteUtcNow { get; set; }
     }
 
     public class PoisonPill : SystemMessage
@@ -190,13 +194,5 @@ namespace Pigeon.Dispatch.SysMsg
         }
     }
 
-    //used to start watching another actor (deathwatch)
-    public class Watch : SystemMessage
-    {
-    }
 
-    //used to unsubscribe to deathwatch
-    public class Unwatch : SystemMessage
-    {
-    }
 }

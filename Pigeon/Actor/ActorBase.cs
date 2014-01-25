@@ -27,7 +27,8 @@ namespace Pigeon.Actor
                 throw new Exception("Do not create actors using 'new', always create them using an ActorContext/System");
             Context.Become(OnReceive);
             ((ActorCell)Context).Actor = this;
-            this.Self = Context.Self;            
+            this.Self = Context.Self;
+            ((ActorCell)Context).Start();
         }
 
         protected abstract void OnReceive(object message);

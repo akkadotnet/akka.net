@@ -22,9 +22,9 @@ namespace Pigeon.Actor
                 {
                     Default(envelope.Message);
                 }
-                catch (Exception reason)
+                catch (Exception cause)
                 {
-                    Parent.Tell(new SuperviceChild(reason));
+                    Parent.Tell( new Failed(Self, cause));
                 }
             });
         }
@@ -39,6 +39,7 @@ namespace Pigeon.Actor
                 try
                 {
                     Pattern.Match(envelope.Message)
+                        .With<Supervise>(HandleSupervise)
                         //kill this actor
                         .With<Kill>(Kill)
                         //request to stop a child
@@ -46,35 +47,35 @@ namespace Pigeon.Actor
                         //request to restart a child
                         .With<RestartChild>(m => RestartChild(m.Child))
                         //kill this actor
-                        .With<PoisonPill>(PoisonPill)
+                        .With<PoisonPill>(HandlePoisonPill)
                         //someone is watching us
-                        .With<Watch>(Watch)
+                        .With<Watch>(HandleWatch)
                         //someone is unwatching us
-                        .With<Unwatch>(Unwatch)
+                        .With<Unwatch>(HandleUnwatch)
                         //complete the future callback by setting the result in this thread
-                        .With<CompleteFuture>(CompleteFuture)
-                        //resolve time distance to actor
-                        .With<Ping>(Ping)
+                        .With<CompleteFuture>(HandleCompleteFuture)
                         //supervice exception from child actor
-                        .With<SuperviceChild>(SuperviceChild)
+                        .With<Failed>(HandleFailed)
                         //handle any other message
-                        .With<Identity>(Identity)
-                        //forward pong to user
-                        .With<Pong>(Default)
+                        .With<Identity>(HandleIdentity)
                         .Default(m => { throw new NotImplementedException(); });
                 }
-                catch (Exception reason)
+                catch (Exception cause)
                 {
-                    Parent.Tell(new SuperviceChild(reason));
+                    Parent.Tell(new Failed(Self,cause));
                 }
             });
         }
-		private void Identity(Identity m)
+        private void HandleSupervise(Supervise m)
+        {
+        }
+
+		private void HandleIdentity(Identity m)
         {
             Sender.Tell(new ActorIdentity(m.MessageId, this.Self));
         }
 
-        private void PoisonPill(PoisonPill m)
+        private void HandlePoisonPill(PoisonPill m)
         {
 
         }
@@ -94,6 +95,17 @@ namespace Pigeon.Actor
             Debug.WriteLine("restarting child: {0}", child.Path);
             Unbecome();//unbecome deadletters
             NewActor(child.Cell);
+        }
+
+        public void Start()
+        {
+            if (isTerminating)
+                return;
+
+            if (Parent != null)
+            {
+                Parent.Tell(new Supervise(Self, false));
+            }
         }
 
 		/// <summary>
@@ -137,12 +149,12 @@ namespace Pigeon.Actor
             CurrentBehavior(m);
         }
 
-        private void SuperviceChild(SuperviceChild m)
+        private void HandleFailed(Failed m)
         {
-            switch (this.Actor.SupervisorStrategyLazy().Handle(Sender, m.Reason))
+            switch (this.Actor.SupervisorStrategyLazy().Handle(Sender, m.Cause))
             {
                 case Directive.Escalate:
-                    throw m.Reason;
+                    throw m.Cause;
                 case Directive.Resume:
                     break;
                 case Directive.Restart:
@@ -154,30 +166,20 @@ namespace Pigeon.Actor
                 default:
                     break;
             }
-        }
-
-        private void Ping(Ping m)
-        {
-            Sender.Tell(
-                        new Pong
-                        {
-                            LocalUtcNow = m.LocalUtcNow,
-                            RemoteUtcNow = DateTime.UtcNow
-                        });
-        }
+        }        
 
         private BroadcastActorRef Watchers = new BroadcastActorRef();
-        private void Watch(Watch m)
+        private void HandleWatch(Watch m)
         {
             Watchers.Add(Sender);
         }
 
-        private void Unwatch(Unwatch m)
+        private void HandleUnwatch(Unwatch m)
         {
             Watchers.Remove(Sender);
         }
 
-        private void CompleteFuture(CompleteFuture m)
+        private void HandleCompleteFuture(CompleteFuture m)
         {
             m.SetResult();
         }

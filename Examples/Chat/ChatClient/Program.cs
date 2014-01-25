@@ -1,6 +1,7 @@
 ﻿using ChatMessages;
 using Pigeon;
 using Pigeon.Actor;
+using Pigeon.Dispatch.SysMsg;
 using Pigeon.Remote;
 using System;
 using System.Collections.Generic;
@@ -72,8 +73,7 @@ namespace ChatClient
         IHandle<NickRequest>,
         IHandle<NickResponse>,
         IHandle<SayRequest>,
-        IHandle<SayResponse>,
-        IHandle<Pong>
+        IHandle<SayResponse>
     {
         LoggingAdapter log = Logging.GetLogger(Context.System);
 
@@ -83,12 +83,7 @@ namespace ChatClient
         public void Handle(ConnectResponse message)
         {
             Console.WriteLine("Connected!");
-            Console.WriteLine(message.Message);
-
-            server.Tell( new Ping
-            {
-                LocalUtcNow = DateTime.UtcNow,
-            });
+            Console.WriteLine(message.Message);         
         }
 
         public void Handle(NickRequest message)
@@ -119,13 +114,6 @@ namespace ChatClient
         {
             message.Username = this.nick;
             server.Tell(message);
-        }
-
-        public void Handle(Pong message)
-        {
-            var now = DateTime.UtcNow;
-            var ping = now - message.LocalUtcNow;
-            Console.WriteLine("Ping is: {0}", ping);
-        }
+        }     
     }
 }
