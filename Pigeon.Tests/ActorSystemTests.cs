@@ -16,7 +16,7 @@ namespace Pigeon.Tests
         }
 
         [TestMethod]
-        public void ActorOf_adds_a_child_to_Guardian()
+        public void ActorSystem_ActorOf_adds_a_child_to_Guardian()
         {
             //arrange
             var system = new ActorSystem("test");
@@ -28,6 +28,8 @@ namespace Pigeon.Tests
             var children = system.Guardian.Cell.GetChildren();
             Assert.IsTrue(children.Any(c => c == child));
         }
+
+        
 
         [TestMethod]
         public void ActorOf_gives_child_unique_name_if_not_specified()
