@@ -7,17 +7,50 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Serialization
 {
+    /**
+     * A Serializer represents a bimap between an object and an array of bytes representing that object.
+     *
+     * Serializers are loaded using reflection during [[akka.actor.ActorSystem]]
+     * start-up, where two constructors are tried in order:
+     *
+     * <ul>
+     * <li>taking exactly one argument of type [[akka.actor.ExtendedActorSystem]];
+     * this should be the preferred one because all reflective loading of classes
+     * during deserialization should use ExtendedActorSystem.dynamicAccess (see
+     * [[akka.actor.DynamicAccess]]), and</li>
+     * <li>without arguments, which is only an option if the serializer does not
+     * load classes using reflection.</li>
+     * </ul>
+     *
+     * <b>Be sure to always use the PropertyManager for loading classes!</b> This is necessary to
+     * avoid strange match errors and inequalities which arise from different class loaders loading
+     * the same class.
+     */
     public abstract class Serializer
     {
+        /**
+         * Completely unique value to identify this implementation of Serializer, used to optimize network traffic
+         * Values from 0 to 16 is reserved for Akka internal usage
+         */
         public abstract int Identifier { get; }
-        public abstract bool RequiresManifest { get; }
+        /**
+         * Returns whether this serializer needs a manifest in the fromBinary method
+         */
+        public abstract bool IncludeManifest { get; }
+        /**
+         * Serializes the given object into an Array of Byte
+         */
         public abstract byte[] ToBinary(object obj);
+
+        /**
+         * Produces an object from an array of bytes, with an optional type;
+         */
         public abstract object FromBinary(byte[] bytes, Type type);
     }
 
     public class JsonSerializer : Serializer
     {
-        public override bool RequiresManifest
+        public override bool IncludeManifest
         {
             get { return false; }
         }
@@ -38,39 +71,11 @@ namespace Pigeon.Serialization
         {
             get { return -1; }
         }
-    }
+    }    
 
-    public class ProtoBufSerializer : Serializer
-    {
-
-        public override bool RequiresManifest
-        {
-            get { return true; }
-        }
-
-        public override byte[] ToBinary(object obj)
-        {
-            using(var stream = new MemoryStream())
-            {
-                ProtoBuf.Serializer.Serialize(stream,obj);
-                return stream.ToArray();
-            }
-        }
-
-        public override object FromBinary(byte[] bytes, Type type)
-        {
-            using(var stream = new MemoryStream(bytes))
-            {
-                return ProtoBuf.Serializer.NonGeneric.Deserialize(type, stream);
-            }
-        }
-
-        public override int Identifier
-        {
-            get { return 2; }
-        }
-    }
-
+    /**
+     * This is a special Serializer that Serializes and deserializes nulls only
+     */
     public class NullSerializer : Serializer
     {
         private readonly byte[] nullBytes = { };
@@ -79,7 +84,7 @@ namespace Pigeon.Serialization
             get { return 0; }
         }
 
-        public override bool RequiresManifest
+        public override bool IncludeManifest
         {
             get { return false; }
         }
@@ -95,6 +100,10 @@ namespace Pigeon.Serialization
         }
     }
 
+    /**
+     * This is a special Serializer that Serializes and deserializes byte arrays only,
+     * (just returns the byte array unchanged/uncopied)
+     */
     public class ByteArraySerializer : Serializer
     {
         public override int Identifier
@@ -102,7 +111,7 @@ namespace Pigeon.Serialization
             get { return 4; }
         }
 
-        public override bool RequiresManifest
+        public override bool IncludeManifest
         {
             get { return false; }
         }

@@ -39,6 +39,10 @@
     <Reference Include="Google.ProtocolBuffers.Serialization">
       <HintPath>..\Proto\Google.ProtocolBuffers.Serialization.dll</HintPath>
     </Reference>
+    <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -50,6 +54,7 @@
   <ItemGroup>
     <Compile Include="Proto\Containerformats.cs" />
     <Compile Include="Proto\Wireformats.cs" />
+    <Compile Include="Serialization\ProtobufSerializer.cs" />
     <Compile Include="XSockets\RemoteActorRef.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="XSockets\RemoteActorSystem.cs" />
