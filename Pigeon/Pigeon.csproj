@@ -54,6 +54,7 @@
     <Compile Include="Actor\ActorSystem.cs" />
     <Compile Include="Actor\Address.cs" />
     <Compile Include="Actor\AskSupport.cs" />
+    <Compile Include="Actor\AutoReceivedMessage.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />

@@ -94,12 +94,7 @@ namespace Pigeon.Dispatch.SysMsg
         public Action SetResult { get; private set; }
     }
 
-    public class PoisonPill : SystemMessage
-    {
-    }
-    public class Kill : SystemMessage
-    {
-    }
+    
 
     public class Restart : SystemMessage
     {
@@ -165,34 +160,10 @@ namespace Pigeon.Dispatch.SysMsg
         public ActorRef Recipient { get; private set; }
     }
 
-    public class Terminated : SystemMessage
-    {
-    }
+
 
     public class Terminate : SystemMessage
     {
     }
-    //request to an actor ref, to get back the identity of the underlying actors
-    public class Identity : SystemMessage
-    {
-        public Identity(Guid messageId)
-        {
-            MessageId = messageId;
-        }
-        public Guid MessageId { get; private set; }
-    }
 
-    //response to the Identity message, get identity by Sender
-    public class ActorIdentity : SystemMessage
-    {
-        public Guid MessageId { get; private set; }
-        public LocalActorRef Subject { get; private set; }
-
-        public ActorIdentity(Guid messageId, LocalActorRef subject)
-        {
-            // TODO: Complete member initialization
-            this.MessageId = messageId;
-            this.Subject = subject;
-        }
-    }
 }

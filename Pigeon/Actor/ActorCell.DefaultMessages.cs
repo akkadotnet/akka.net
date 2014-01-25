@@ -20,7 +20,7 @@ namespace Pigeon.Actor
             {
                 try
                 {
-                    Default(envelope.Message);
+                    AutoReceiveMessage(envelope);
                 }
                 catch (Exception cause)
                 {
@@ -52,11 +52,8 @@ namespace Pigeon.Actor
                 .With<Terminated>(ReceivedTerminated)
                 .With<Kill>(Kill)
                 .With<PoisonPill>(HandlePoisonPill)
-                .With<CompleteFuture>(HandleCompleteFuture)
                 .With<Identity>(HandleIdentity)
-                .Default(m => {
-                    throw new NotSupportedException("Unknown message " + m.GetType().Name);
-                });
+                .Default(m => CurrentBehavior(m));
         }
 
         private void ReceivedTerminated(Terminated obj)
@@ -87,6 +84,7 @@ namespace Pigeon.Actor
           case NoMessage ⇒ // only here to suppress warning
                      */
                     Pattern.Match(envelope.Message)
+                        .With<CompleteFuture>(HandleCompleteFuture)
                         .With<Failed>(HandleFailed)
                         .With<DeathWatchNotification>(HandleDeathWatchNotification)
                         //TODO: add create?
@@ -98,8 +96,10 @@ namespace Pigeon.Actor
                         .With<Terminate>(HandleTerminate)
                         .With<Supervise>(HandleSupervise)
                         .With<NoMessage>(m => { }) //only goes here to mimic Akka, which only goes here to supress pattern match warning :-P
-                      
-                        .Default(m => AutoReceiveMessage(envelope));
+                        .Default(m =>
+                        {
+                            throw new NotSupportedException("Unknown message " + m.GetType().Name);
+                        });
                 }
                 catch (Exception cause)
                 {
