@@ -39,13 +39,15 @@ namespace Pigeon.Actor
                 try
                 {
                     Pattern.Match(envelope.Message)
+                        .With<DeathWatchNotification>(HandleDeathWatchNotification)
+                        .With<Terminate>(HandleTerminate)
                         .With<Supervise>(HandleSupervise)
                         //kill this actor
                         .With<Kill>(Kill)
                         //request to stop a child
                         .With<StopChild>(m => StopChild(m.Child))
                         //request to restart a child
-                        .With<RestartChild>(m => RestartChild(m.Child))
+                        .With<ReCreate>(FaultReCreate)
                         //kill this actor
                         .With<PoisonPill>(HandlePoisonPill)
                         //someone is watching us
@@ -66,6 +68,55 @@ namespace Pigeon.Actor
                 }
             });
         }
+
+        private void HandleDeathWatchNotification(DeathWatchNotification m)
+        {
+            
+        }
+
+
+        /*
+protected def terminate() {
+  
+    // prevent Deadletter(Terminated) messages
+    unwatchWatchedActors(actor)
+
+    // stop all children, which will turn childrenRefs into TerminatingChildrenContainer (if there are children)
+    children foreach stop
+
+    val wasTerminating = isTerminating
+
+    if (setChildrenTerminationReason(ChildrenContainer.Termination)) {
+      if (!wasTerminating) {
+        // do not process normal messages while waiting for all children to terminate
+        suspendNonRecursive()
+        // do not propagate failures during shutdown to the supervisor
+        setFailed(self)
+        if (system.settings.DebugLifecycle) publish(Debug(self.path.toString, clazz(actor), "stopping"))
+      }
+    } else {
+      setTerminated()
+      finishTerminate()
+    }
+  }
+         */
+        private void HandleTerminate(Terminate m)
+        {
+            isTerminating = true;
+            UnwatchWatchedActors(this.Actor);
+            foreach (var child in this.GetChildren())
+            {
+                child.Stop();
+            }
+        }
+
+        private void UnwatchWatchedActors(ActorBase actorBase)
+        {
+            foreach(var watchee in Watchees)
+            {
+                watchee.Tell(new Unwatch(watchee, Self));
+            }
+        }
         private void HandleSupervise(Supervise m)
         {
         }
@@ -85,16 +136,14 @@ namespace Pigeon.Actor
 		/// </summary>
         public void Restart()
         {
-            this.Parent.Tell(new RestartChild(this.Self));
+            this.Self.Tell(new ReCreate(null));
         }
 
-        private void RestartChild(LocalActorRef child)
+        private void FaultReCreate(ReCreate m)
         {
             isTerminating = false;
-            StopChild(child);
-            Debug.WriteLine("restarting child: {0}", child.Path);
             Unbecome();//unbecome deadletters
-            NewActor(child.Cell);
+            NewActor(this);
         }
 
         public void Start()
@@ -116,14 +165,7 @@ namespace Pigeon.Actor
             if (isTerminating)
                 return;
 
-            if (this.Parent != null)
-            {
-                this.Parent.Tell(new StopChild(this.Self));
-            }
-            foreach (var child in this.GetChildren())
-            {
-                child.Stop();
-            }
+            Self.Tell(new Terminate());            
         }
 
         private volatile bool isTerminating = false;
@@ -158,7 +200,7 @@ namespace Pigeon.Actor
                 case Directive.Resume:
                     break;
                 case Directive.Restart:
-                    RestartChild((LocalActorRef)Sender);
+                    m.Child.Tell(new ReCreate(m.Cause));
                     break;
                 case Directive.Stop:
                     StopChild((LocalActorRef)Sender);

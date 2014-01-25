@@ -14,10 +14,7 @@ namespace Pigeon.Dispatch.SysMsg
 //@SerialVersionUID(1L)
 //private[akka] case class Create(failure: Option[ActorInitializationException]) extends SystemMessage // sent to self from Dispatcher.register
 ///**
-// * INTERNAL API
-// */
-//@SerialVersionUID(1L)
-//private[akka] case class Recreate(cause: Throwable) extends SystemMessage with StashWhenWaitingForChildren // sent to self from ActorCell.restart
+
 ///**
 // * INTERNAL API
 // */
@@ -31,10 +28,6 @@ namespace Pigeon.Dispatch.SysMsg
 ///**
 // * INTERNAL API
 // */
-//@SerialVersionUID(1L)
-//private[akka] case class Terminate() extends SystemMessage // sent to self from ActorCell.stop
-///**
-// * INTERNAL API
 
 
 //@SerialVersionUID(1L)
@@ -49,6 +42,22 @@ namespace Pigeon.Dispatch.SysMsg
 
     public class NoMessage : SystemMessage
     {
+    }
+
+    public class DeathWatchNotification : SystemMessage
+    {
+        public DeathWatchNotification(ActorRef actor,bool existenceConfirmed,bool addressTerminated)
+        {
+            this.Actor = actor;
+            this.ExistenceConfirmed = existenceConfirmed;
+            this.AddressTerminated = addressTerminated;
+        }
+
+        public ActorRef Actor { get;private set; }
+
+        public bool ExistenceConfirmed { get;private set; }
+
+        public bool AddressTerminated { get;private set; }
     }
 
     public class Failed : SystemMessage
@@ -117,13 +126,14 @@ namespace Pigeon.Dispatch.SysMsg
     {
     }
 
-    public class RestartChild : SystemMessage
+    public class ReCreate : SystemMessage
     {
-        public RestartChild(LocalActorRef child)
+        public ReCreate(Exception cause)
         {
-            this.Child = child;
+            this.Cause = cause;
         }
-        public LocalActorRef Child { get; private set; }
+
+        public Exception Cause { get;private set; }
     }
 
     public class Resume : SystemMessage
@@ -170,6 +180,9 @@ namespace Pigeon.Dispatch.SysMsg
     {
     }
 
+    public class Terminate : SystemMessage
+    {
+    }
     //request to an actor ref, to get back the identity of the underlying actors
     public class Identity : SystemMessage
     {
