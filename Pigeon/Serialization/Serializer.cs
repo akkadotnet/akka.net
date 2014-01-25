@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -30,6 +31,32 @@ namespace Pigeon.Serialization
             var json = fastJSON.JSON.Instance.ToJSON(obj);
             var bytes = Encoding.Default.GetBytes(json);
             return bytes;
+        }
+    }
+
+    public class ProtoBufSerializer : Serializer
+    {
+
+        public override bool RequiresManifest
+        {
+            get { return true; }
+        }
+
+        public override byte[] ToBinary(object obj)
+        {
+            using(var stream = new MemoryStream())
+            {
+                ProtoBuf.Serializer.Serialize(stream,obj);
+                return stream.ToArray();
+            }
+        }
+
+        public override object FromBinary(byte[] bytes, Type type)
+        {
+            using(var stream = new MemoryStream(bytes))
+            {
+                return ProtoBuf.Serializer.NonGeneric.Deserialize(type, stream);
+            }
         }
     }
 }
