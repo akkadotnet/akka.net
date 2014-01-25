@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Pigeon.Actor;
 using System.Collections.Concurrent;
+using Pigeon.Dispatch;
 
 namespace Pigeon.Actor
 {

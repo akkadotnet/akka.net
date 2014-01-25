@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Pigeon.Dispatch.SysMsg;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;

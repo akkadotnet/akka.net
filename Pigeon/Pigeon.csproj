@@ -55,13 +55,13 @@
     <Compile Include="Actor\Address.cs" />
     <Compile Include="Actor\AskSupport.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
-    <Compile Include="Actor\Dispatchers.cs" />
+    <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
-    <Compile Include="Actor\FutureActor.cs" />
+    <Compile Include="Dispatch\FutureActor.cs" />
     <Compile Include="Actor\IActorContext.cs" />
     <Compile Include="Actor\IActorRefFactory.cs" />
     <Compile Include="Actor\Logging.cs" />
-    <Compile Include="Actor\Mailbox.cs" />
+    <Compile Include="Dispatch\Mailbox.cs" />
     <Compile Include="Actor\NaiveThreadPool.cs" />
     <Compile Include="Actor\Props.cs" />
     <Compile Include="Actor\SupervisorStrategy.cs" />
@@ -71,6 +71,7 @@
     <Compile Include="Actor\LocalActorRef.cs" />
     <Compile Include="Actor\Message.cs" />
     <Compile Include="Actor\MessageHandler.cs" />
+    <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Actor\TypedActor.cs" />
     <Compile Include="Serialization\Serializer.cs" />
