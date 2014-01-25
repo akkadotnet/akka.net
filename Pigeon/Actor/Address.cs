@@ -14,8 +14,20 @@ namespace Pigeon.Actor
             this.System = system;
             this.Host = host;
             this.Port = port;
+            toString = new Lazy<string>(() =>
+            {
+                var sb = new StringBuilder();
+                sb.AppendFormat("{0}://{1}", this.Protocol, this.System.Name);
+                if (!string.IsNullOrWhiteSpace(Host))
+                    sb.AppendFormat("@{0}", Host);
+                if (Port.HasValue)
+                    sb.AppendFormat(":{0}", Port.Value);
+
+                return sb.ToString();
+            }, true);
         }
 
+        private Lazy<string> toString;
         public string Host { get; private set; }
         public int? Port { get; private set; }
         public ActorSystem System { get; private set; }
@@ -32,15 +44,7 @@ namespace Pigeon.Actor
 
         public override string ToString()
         {
-            var sb = new StringBuilder();
-            sb.AppendFormat("{0}://{1}", this.Protocol, this.System.Name);
-            if (!string.IsNullOrWhiteSpace(Host))
-                sb.AppendFormat("@{0}", Host);
-            if (Port.HasValue)
-                sb.AppendFormat(":{0}", Port.Value);
-
-            return sb.ToString();
-        }
-    
+            return toString.Value;
+        }    
     }
 }
