@@ -62,8 +62,10 @@ namespace Pigeon.Remote
                 {
                     var remoteEnvelope = RemoteEnvelope.ParseDelimitedFrom(stream);
                     var serializedMessage = remoteEnvelope.Message;
-                    var json = serializedMessage.Message.ToString(Encoding.Default);
-                    var message = fastJSON.JSON.Instance.ToObject(json);
+
+                    var type = serializedMessage.HasMessageManifest ? Type.GetType(serializedMessage.MessageManifest.ToStringUtf8()) : null;
+
+                    var message = system.Serialization.Deserialize(serializedMessage.Message.ToByteArray(), serializedMessage.SerializerId, type);
                     var recipient = remoteEnvelope.Recipient.ToActorRef(this.system);
                     var sender = remoteEnvelope.Sender.ToActorRef(this.system);
 

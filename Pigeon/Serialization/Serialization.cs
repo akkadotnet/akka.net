@@ -28,6 +28,10 @@ namespace Pigeon.Serialization
             serializerMap.Add(typeof(object), jsonSerializer);
         }
 
+        public object Deserialize(byte[] bytes,int serializerId,Type type)
+        {
+            return serializers[serializerId].FromBinary(bytes, type);
+        }
 
         public Serializer FindSerializerFor(object obj)
         {

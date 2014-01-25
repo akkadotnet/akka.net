@@ -28,22 +28,27 @@ namespace Pigeon.Remote
 
         protected override void TellInternal(object message, ActorRef sender)
         {
-            var messageBody = SerializeMessageToString(message);
-
+            var serializer = Context.System.Serialization.FindSerializerFor(message);
+            var messageBytes = serializer.ToBinary(message);
+            
             var publicPath = "";
             if (sender is LocalActorRef)
                 publicPath = string.Format("{0}{1}", this.Context.System.GetSystemName(), sender.Path.ToString());
             else
                 publicPath = sender.Path.ToString();
 
+            var messageBuilder = new SerializedMessage.Builder()
+                .SetSerializerId(serializer.Identifier);
+            if (serializer.IncludeManifest)
+                messageBuilder.SetMessageManifest(ByteString.CopyFromUtf8(message.GetType().AssemblyQualifiedName));
+            messageBuilder.SetMessage(ByteString.Unsafe.FromBytes(messageBytes));
+
             var remoteEnvelope = new RemoteEnvelope.Builder()
             .SetSender(new ActorRefData.Builder()
                 .SetPath(publicPath))
             .SetRecipient(new ActorRefData.Builder()
                 .SetPath(this.Path.ToString()))
-            .SetMessage(new SerializedMessage.Builder()
-                .SetSerializerId(1)
-                .SetMessage(ByteString.CopyFrom(messageBody, Encoding.Default)))
+            .SetMessage(messageBuilder)  
             .SetSeq(1)
             .Build();
 
