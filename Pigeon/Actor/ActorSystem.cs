@@ -12,9 +12,11 @@ namespace Pigeon.Actor
     public class ActorSystem : IActorRefFactory , IDisposable
     {
         private ActorCell rootCell;
+
         public ActorSystem(string name)
         {
             this.Name = name;
+            this.Serialization = new Serialization.Serialization(this);
             this.DefaultDispatcher = new ThreadPoolDispatcher();
 
             this.rootCell = new ActorCell(this,"");            
@@ -32,12 +34,12 @@ namespace Pigeon.Actor
 
         public string Name { get;private set; }
         public LocalActorRef RootGuardian { get; private set; }
-
         public LocalActorRef EventStream { get; private set; }
         public LocalActorRef DeadLetters { get; private set; }
         public LocalActorRef Guardian { get; private set; }
         public LocalActorRef SystemGuardian { get; private set; }
         public LocalActorRef TempGuardian { get; private set; }
+        public Serialization.Serialization Serialization { get;private set; }
 
         public void Shutdown()
         {

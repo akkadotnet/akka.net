@@ -56,6 +56,7 @@
     <Compile Include="Actor\AskSupport.cs" />
     <Compile Include="Actor\AutoReceivedMessage.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
+    <Compile Include="Configuration\Config.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
     <Compile Include="Dispatch\FutureActor.cs" />
@@ -75,6 +76,7 @@
     <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Actor\TypedActor.cs" />
+    <Compile Include="Serialization\Serialization.cs" />
     <Compile Include="Serialization\Serializer.cs" />
     <Compile Include="Tools\Pattern.cs" />
   </ItemGroup>
