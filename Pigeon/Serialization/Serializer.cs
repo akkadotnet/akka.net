@@ -48,6 +48,30 @@ namespace Pigeon.Serialization
         public abstract object FromBinary(byte[] bytes, Type type);
     }
 
+    public class JavaSerializer : Serializer
+    {
+
+        public override int Identifier
+        {
+            get { return 1; }
+        }
+
+        public override bool IncludeManifest
+        {
+            get { throw new NotSupportedException(); }
+        }
+
+        public override byte[] ToBinary(object obj)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override object FromBinary(byte[] bytes, Type type)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
     public class JsonSerializer : Serializer
     {
         public override bool IncludeManifest

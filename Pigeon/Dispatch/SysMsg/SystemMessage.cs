@@ -15,154 +15,152 @@ namespace Pigeon.Dispatch.SysMsg
 //private[akka] case class Create(failure: Option[ActorInitializationException]) extends SystemMessage // sent to self from Dispatcher.register
 ///**
 
-    public abstract class SystemMessage
+    internal abstract class SystemMessage
     {
     }
 
-    public class NoMessage : SystemMessage
+    internal class NoMessage : SystemMessage
     {
     }
 
-    public class DeathWatchNotification : SystemMessage
+    internal class DeathWatchNotification : SystemMessage
     {
-        public DeathWatchNotification(ActorRef actor,bool existenceConfirmed,bool addressTerminated)
+        internal DeathWatchNotification(ActorRef actor,bool existenceConfirmed,bool addressTerminated)
         {
             this.Actor = actor;
             this.ExistenceConfirmed = existenceConfirmed;
             this.AddressTerminated = addressTerminated;
         }
 
-        public ActorRef Actor { get;private set; }
+        internal ActorRef Actor { get;private set; }
 
-        public bool ExistenceConfirmed { get;private set; }
+        internal bool ExistenceConfirmed { get;private set; }
 
-        public bool AddressTerminated { get;private set; }
+        internal bool AddressTerminated { get;private set; }
     }
 
-    public class Failed : SystemMessage
+    internal class Failed : SystemMessage
     {
-        public Failed(ActorRef child, Exception cause)
+        internal Failed(ActorRef child, Exception cause)
         {
             this.Child = child;
             this.Cause = cause;
         }
-        public ActorRef Child { get;private set; }
-        public Exception Cause { get; private set; }
+        internal ActorRef Child { get;private set; }
+        internal Exception Cause { get; private set; }
     }
 
-    public class Supervise : SystemMessage
+    internal class Supervise : SystemMessage
     {
-        public Supervise(ActorRef child,bool async)
+        internal Supervise(ActorRef child,bool async)
         {
             this.Child = child;
             this.Async = async;
         }
 
-        public bool Async { get;private set; }
-        public ActorRef Child { get;private set; }
+        internal bool Async { get;private set; }
+        internal ActorRef Child { get;private set; }
     }
     //used to start watching another actor (deathwatch)
-    public class Watch : SystemMessage
+    internal class Watch : SystemMessage
     {
-        public Watch(ActorRef watchee,ActorRef watcher)
+        internal Watch(ActorRef watchee,ActorRef watcher)
         {
             this.Watchee = watchee;
             this.Watcher = watcher;
         }
-        public ActorRef Watchee { get;private set; }
-        public ActorRef Watcher { get;private set; }
+        internal ActorRef Watchee { get;private set; }
+        internal ActorRef Watcher { get;private set; }
     }
 
     //used to unsubscribe to deathwatch
-    public class Unwatch : SystemMessage
+    internal class Unwatch : SystemMessage
     {
-        public Unwatch(ActorRef watchee, ActorRef watcher)
+        internal Unwatch(ActorRef watchee, ActorRef watcher)
         {
             this.Watchee = watchee;
             this.Watcher = watcher;
         }
-        public ActorRef Watchee { get;private set; }
-        public ActorRef Watcher { get;private set; }
+        internal ActorRef Watchee { get;private set; }
+        internal ActorRef Watcher { get;private set; }
     }
 
-    public class CompleteFuture : SystemMessage
+    internal class CompleteFuture : SystemMessage
     {
-        public CompleteFuture(Action action)
+        internal CompleteFuture(Action action)
         {
             this.SetResult = action;
         }
-        public Action SetResult { get; private set; }
+        internal Action SetResult { get; private set; }
     }
 
-    
-
-    public class Restart : SystemMessage
+    internal class Restart : SystemMessage
     {
     }
 
-    public class Recreate : SystemMessage
+    internal class Recreate : SystemMessage
     {
-        public Recreate(Exception cause)
+        internal Recreate(Exception cause)
         {
             this.Cause = cause;
         }
 
-        public Exception Cause { get;private set; }
+        internal Exception Cause { get;private set; }
     }
 
-    public class Resume : SystemMessage
+    internal class Resume : SystemMessage
     {
-        public Resume(Exception causedByFailure)
+        internal Resume(Exception causedByFailure)
         {
             this.CausedByFailure = causedByFailure;
         }
 
-        public Exception CausedByFailure { get; set; }
+        internal Exception CausedByFailure { get; set; }
     }
 
-    public class Suspend : SystemMessage
+    internal class Suspend : SystemMessage
     {
     }
 
-    public class Stop : SystemMessage
+    internal class Stop : SystemMessage
     {
     }
 
-    public class StopChild : SystemMessage
+    internal class StopChild : SystemMessage
     {
-        public StopChild(LocalActorRef child)
+        internal StopChild(LocalActorRef child)
         {
             this.Child = child;
         }
-        public LocalActorRef Child { get; private set; }
+        internal LocalActorRef Child { get; private set; }
     }
 
-    public class Escalate : SystemMessage
+    internal class Escalate : SystemMessage
     {
-        public Escalate(Exception reason)
+        internal Escalate(Exception reason)
         {
             this.Reason = reason;
         }
-        public Exception Reason { get; private set; }
+        internal Exception Reason { get; private set; }
     }
 
-    public class UnhandledMessage : SystemMessage
+    internal class UnhandledMessage : SystemMessage
     {
-        public UnhandledMessage(object message, ActorRef sender, ActorRef recipient)
+        internal UnhandledMessage(object message, ActorRef sender, ActorRef recipient)
         {
             this.Message = message;
             this.Sender = sender;
             this.Recipient = recipient;
         }
 
-        public object Message { get; private set; }
-        public ActorRef Sender { get; private set; }
-        public ActorRef Recipient { get; private set; }
+        internal object Message { get; private set; }
+        internal ActorRef Sender { get; private set; }
+        internal ActorRef Recipient { get; private set; }
     }
 
 
 
-    public class Terminate : SystemMessage
+    internal class Terminate : SystemMessage
     {
     }
 
