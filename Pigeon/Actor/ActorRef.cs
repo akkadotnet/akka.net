@@ -45,7 +45,7 @@ namespace Pigeon.Actor
     {
         public NoSender()
         {
-            this.Path = new ActorPath("NoSender");
+            this.Path = null;
         }
 
         protected override void TellInternal(object message, ActorRef sender)

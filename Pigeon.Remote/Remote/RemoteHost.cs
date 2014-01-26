@@ -66,8 +66,8 @@ namespace Pigeon.Remote
                     var type = serializedMessage.HasMessageManifest ? Type.GetType(serializedMessage.MessageManifest.ToStringUtf8()) : null;
 
                     var message = system.Serialization.Deserialize(serializedMessage.Message.ToByteArray(), serializedMessage.SerializerId, type);
-                    var recipient = remoteEnvelope.Recipient.ToActorRef(this.system);
-                    var sender = remoteEnvelope.Sender.ToActorRef(this.system);
+                    var recipient = system.ActorSelection(remoteEnvelope.Recipient.Path);
+                    var sender = system.ActorSelection(remoteEnvelope.Sender.Path);
 
                     recipient.Tell(message, sender);
                 }
@@ -82,12 +82,11 @@ namespace Pigeon.Remote
 
     public static class ProtoExtensions
     {
-        public static ActorRef ToActorRef(this ActorRefData self,ActorSystem system)
-        {
-            var path = new ActorPath(self.Path);
-            
-            var actor = system.ActorSelection(path);
-            return actor;
-        }
+        //public static ActorRef ToActorRef(this ActorRefData self,ActorSystem system)
+        //{
+        //    var path = ActorPath.Parse(self.Path,system);            
+        //    var actor = system.ActorSelection(path);
+        //    return actor;
+        //}
     }
 }

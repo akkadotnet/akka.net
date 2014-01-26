@@ -8,7 +8,7 @@ namespace Pigeon.Actor
 {
     public class Address
     {
-        public Address(string protocol,ActorSystem system, string host=null, int? port=null)
+        public Address(string protocol,string system, string host=null, int? port=null)
         {
             this.Protocol = protocol;
             this.System = system;
@@ -17,7 +17,7 @@ namespace Pigeon.Actor
             toString = new Lazy<string>(() =>
             {
                 var sb = new StringBuilder();
-                sb.AppendFormat("{0}://{1}", this.Protocol, this.System.Name);
+                sb.AppendFormat("{0}://{1}", this.Protocol, this.System);
                 if (!string.IsNullOrWhiteSpace(Host))
                     sb.AppendFormat("@{0}", Host);
                 if (Port.HasValue)
@@ -30,7 +30,7 @@ namespace Pigeon.Actor
         private Lazy<string> toString;
         public string Host { get; private set; }
         public int? Port { get; private set; }
-        public ActorSystem System { get; private set; }
+        public string System { get; private set; }
         public string Protocol { get; private set; }
 
         public override string ToString()

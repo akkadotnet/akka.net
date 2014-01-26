@@ -21,7 +21,7 @@ namespace Pigeon.Remote
             this.Path = remoteActorPath;
             this.Context = context;
             var tmp = this.Path.ToString().Substring(0, this.Path.ToString().Length - this.Path.Name.Length);
-            URL = tmp.Substring("pigeon.".Length);
+            URL = tmp.Substring("akka.".Length);
            
             this.actorName = this.Path.Name;
         }
@@ -74,8 +74,8 @@ namespace Pigeon.Remote
             this.actorCell = actorCell;
             this.Path = actorPath;
 
-            var remoteHostname = actorPath.GetHostName();
-            var remotePort = actorPath.GetPort(); 
+            var remoteHostname = actorPath.Address.Host;
+            var remotePort = actorPath.Address.Port.Value; 
             client = new TcpClient();            
             client.Connect(remoteHostname, remotePort);
             stream = client.GetStream();

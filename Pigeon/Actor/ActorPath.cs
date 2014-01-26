@@ -6,13 +6,35 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Actor
 {
-    public class ActorPath : IEnumerable<string> , IEquatable<ActorPath>
+    public abstract class ActorPath : IEnumerable<string> , IEquatable<ActorPath>
     {
+        public static ActorPath Parse(string path,ActorSystem system)
+        {
+            var elements = path.Split('/');
+            if (elements.First().StartsWith("akka"))
+            {
+                var first = elements.First();
+                var protocol = first.Split(':')[0];
+                var systemName = elements[2].Split('@')[0];
+                var hostPort = elements[2].Split('@')[1];
+                var host = hostPort.Split(':')[0];
+                var port = int.Parse(hostPort.Split(':')[1]);
+                var rest = elements.Skip(3);
+
+                return new RootActorPath(new Address(protocol, systemName,host,port), elements.Skip(3));
+            }
+            else
+            {
+                return new RootActorPath(new Address("akka", system.Name), elements);
+            }
+        }
+
+
         public string First
         {
             get
             {
-                return this.parts.FirstOrDefault();
+                return this.elements.FirstOrDefault();
             }
         }
 
@@ -20,37 +42,51 @@ namespace Pigeon.Actor
         {
             get
             {
-                return this.parts.LastOrDefault();
+                return this.elements.LastOrDefault();
             }
-        }       
+        }
 
-        private List<string> parts = new List<string>();
+        public Address Address { get;private set; }
+
+        private List<string> elements = new List<string>();
 
         public ActorPath(IEnumerable<string> parts)
         {
-            this.parts = parts.ToList();
+            this.elements = parts.ToList();
+        }
+        public ActorPath(Address address, IEnumerable<string> parts)
+        {
+            this.Address = address;
+            this.elements = parts.ToList();
         }
         public ActorPath(string path)
         {
-            parts = path.Split('/').ToList();
+            elements = path.Split('/').ToList();
         }
 
         public ActorPath(string parentPath,string name)
         {
-            parts = parentPath.Split('/').ToList();
-            parts.Add(name);
+            elements = parentPath.Split('/').ToList();
+            elements.Add(name);
+        }
+
+        public ActorPath(Address address, string name)
+        {
+            this.elements.Add(name);
+            this.Address = address;
         }
 
         public ActorPath(ActorPath parentPath, string name)
         {
-            parts.AddRange(parentPath.parts);
-            parts.Add(name);
+            this.Address = parentPath.Address;
+            elements.AddRange(parentPath.elements);
+            elements.Add(name);
         }
 
 
         public string ToStringWithoutAddress()
         {
-            return string.Join("/", parts);
+            return string.Join("/", elements);
         }
 
         public override string ToString()
@@ -60,35 +96,17 @@ namespace Pigeon.Actor
 
         public ActorPath Child(string childName)
         {
-            return new ActorPath(this, childName);
+            return new ChildActorPath(this, childName);
         }
 
         public IEnumerator<string> GetEnumerator()
         {
-            return parts.GetEnumerator();
+            return elements.GetEnumerator();
         }
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
-            return parts.GetEnumerator();
-        }
-
-        public string GetHostName()
-        {
-            var host = parts[2].Split(':')[0].Split('@')[1];
-            return host;
-        }
-
-        public string GetSystemName()
-        {
-            var host = parts[2].Split(':')[0].Split('@')[0];
-            return host;
-        }
-
-        public int GetPort()
-        {
-            var port = int.Parse(parts[2].Split(':')[1]);
-            return port;
+            return elements.GetEnumerator();
         }
 
         public override int GetHashCode()
@@ -103,7 +121,29 @@ namespace Pigeon.Actor
 
         public bool Equals(ActorPath other)
         {
-            return this.parts.SequenceEqual(other.parts);
+            return this.elements.SequenceEqual(other.elements);
+        }
+    }
+
+    public class RootActorPath : ActorPath
+    {
+        public RootActorPath(Address address,string name ="/") : base(address,name)
+        {
+
+        }
+
+        public RootActorPath(Address address, IEnumerable<string> elements)
+            : base(address,elements)
+        {
+
+        }
+    }
+
+    public class ChildActorPath : ActorPath
+    {
+        public ChildActorPath(ActorPath parentPath, string name)
+            : base(parentPath, name)
+        {
         }
     }
 }

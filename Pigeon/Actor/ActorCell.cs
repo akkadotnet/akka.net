@@ -42,32 +42,30 @@ namespace Pigeon.Actor
             return actorRef;
         }
 
-        public ActorSelection ActorSelection(string actorPath)
+        public ActorSelection ActorSelection(string path)
         {
-            return ActorSelection(new ActorPath(actorPath));
+            var actorPath = ActorPath.Parse(path,this.System);
+            return ActorSelection(actorPath);
         }
 
         public ActorSelection ActorSelection(ActorPath actorPath)
         {
             var tmpPath = actorPath;
-            //remote path
-            if (actorPath.First.StartsWith("akka."))
+           
+            if (actorPath.Address.System == this.System.Name)
             {
-                if (actorPath.GetSystemName() == this.System.Name)
-                {
-                    tmpPath = new ActorPath(actorPath.Skip(3));
-                }
-                else
-                {
-                    var actorRef = System.GetRemoteRef(this, actorPath);
-                    return new ActorSelection(actorPath, actorRef);
-                }
+                tmpPath = actorPath;
+            }
+            else
+            {
+                var actorRef = System.GetRemoteRef(this, actorPath);
+                return new ActorSelection(actorPath, actorRef);
             }
 
             //local absolute
             if (actorPath.First.StartsWith("akka:"))
             {
-                tmpPath = new ActorPath(actorPath.Skip(3));
+                tmpPath = new RootActorPath(new Address("akka",this.System.Name), actorPath.Skip(3));
             }
 
             //standard
@@ -142,7 +140,7 @@ namespace Pigeon.Actor
         {
             this.Parent = null;
             this.System = system;
-            this.Self = new LocalActorRef(new ActorPath(name), this);
+            this.Self = new LocalActorRef(new RootActorPath(new Address("akka",this.System.Name), name), this);
             this.Props = null;
             this.Mailbox = new ConcurrentQueueMailbox(system.DefaultDispatcher);// new ActionBlockMailbox();
             this.Mailbox.Invoke = this.Invoke;
@@ -153,7 +151,7 @@ namespace Pigeon.Actor
         {
             this.Parent = parentContext != null ? parentContext.Self : null;
             this.System = parentContext != null ? parentContext.System : null;
-            this.Self = new LocalActorRef(new ActorPath(this.Parent.Path, name), this);
+            this.Self = new LocalActorRef(new ChildActorPath(this.Parent.Path, name), this);
             this.Props = props;
             this.Dispatcher = props.Dispathcer ?? this.System.DefaultDispatcher;
             this.Mailbox = new ConcurrentQueueMailbox(this.Dispatcher);// new ActionBlockMailbox();
