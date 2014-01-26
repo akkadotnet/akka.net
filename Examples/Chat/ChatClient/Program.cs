@@ -18,16 +18,16 @@ namespace ChatClient
         static void Main(string[] args)
         {
             var config = ConfigurationFactory.ParseString(@"
-{
-    Pigeon : {        
-        Remote : {
-            Server : {
-                Host : ""127.0.0.1"",
-                Port : 8091
-            }
+
+Pigeon : {        
+    Remote : {
+        Server : {
+            Host : ""127.0.0.1"",
+            Port : 8091
         }
     }
 }
+
 ");
             //testing connectivity
             Thread.Sleep(1000);

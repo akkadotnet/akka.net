@@ -12,6 +12,8 @@ namespace Pigeon.Actor
     {
         public static Config ParseString(string json)
         {
+            //HACK: add braces
+            json = "{" + Environment.NewLine + json + Environment.NewLine + "}";
             dynamic res = JsonConfig.Config.ApplyJson(json);
             return new Config(res);
         }
@@ -24,7 +26,6 @@ namespace Pigeon.Actor
         public static Config Default()
         {
             var json = @"
-            {
                 Pigeon : {
                     Actor : {
                         Provider : """",
@@ -44,7 +45,6 @@ namespace Pigeon.Actor
                         }
                     }
                 }
-            }
             ";
 
             return ParseString(json);

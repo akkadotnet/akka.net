@@ -15,13 +15,11 @@ namespace ChatServer
         static void Main(string[] args)
         {
             var config = ConfigurationFactory.ParseString(@"
-{
-    Pigeon : {        
-        Remote : {
-            Server : {
-                Host : ""127.0.0.1"",
-                Port : 8081
-            }
+Pigeon : {        
+    Remote : {
+        Server : {
+            Host : ""127.0.0.1"",
+            Port : 8081
         }
     }
 }
