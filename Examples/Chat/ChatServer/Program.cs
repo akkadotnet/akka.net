@@ -14,7 +14,19 @@ namespace ChatServer
     {
         static void Main(string[] args)
         {
-            using (var system = RemoteActorSystem.Create("MyServer", 8081))
+            var config = ConfigurationFactory.ParseString(@"
+{
+    Pigeon : {        
+        Remote : {
+            Server : {
+                Host : ""127.0.0.1"",
+                Port : 8081
+            }
+        }
+    }
+}
+");
+            using (var system = ActorSystem.Create("MyServer", config, new RemoteExtension())) 
             {
                 var server = system.ActorOf<ChatServerActor>("ChatServer");
 

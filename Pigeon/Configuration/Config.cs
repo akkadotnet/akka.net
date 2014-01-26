@@ -6,25 +6,23 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Configuration
+namespace Pigeon.Actor
 {
-
-
-    public class Settings
+    public class ConfigurationFactory
     {
-        public T GetOrDefault<T>(Func<dynamic,dynamic> setting, T defaultValue)
+        public static Config ParseString(string json)
         {
-            dynamic res = setting(Config);
-            if (res is T)
-            {
-                return (T)res;
-            }
-            return defaultValue;
+            dynamic res = JsonConfig.Config.ApplyJson(json);
+            return new Config(res);
         }
-        public Settings(ActorSystem system)
+
+        public static Config Load()
         {
-            //TODO: this is just in lack of something real
-            this.System = system;
+            return ParseString("");
+        }
+
+        public static Config Default()
+        {
             var json = @"
             {
                 Pigeon : {
@@ -40,18 +38,50 @@ namespace Pigeon.Configuration
                         }              
                     },
                     Remote : {
-                        Host : ""127.0.0.1"",
-                        Port : 0
+                        Server : {
+                            Host : ""127.0.0.1"",
+                            Port : 8080
+                        }
                     }
                 }
             }
             ";
 
-            dynamic res = JsonConfig.Config.ApplyJson(json);            
-            this.Config = res;
+            return ParseString(json);
+        }
+    }
+
+    public class Config
+    {
+        public dynamic Data { get; private set; }
+
+        public Config(dynamic res)
+        {
+            this.Data = res;
+        }
+
+    }
+
+    public class Settings
+    {
+        public T GetOrDefault<T>(Func<dynamic,dynamic> setting, T defaultValue)
+        {
+            dynamic res = setting(Config.Data);
+            if (res is T)
+            {
+                return (T)res;
+            }
+            return defaultValue;
+        }
+        public Settings(ActorSystem system,Config config)
+        {
+            if (config == null)
+                config = ConfigurationFactory.Default();
+            this.System = system;                     
+            this.Config = config;
         }
 
         public ActorSystem System { get;private set; }
-        public dynamic Config { get; set; }
+        public Config Config { get; set; }
     }
 }

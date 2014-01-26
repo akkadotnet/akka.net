@@ -9,16 +9,30 @@ using Pigeon.Dispatch;
 
 namespace Pigeon.Actor
 {
+    public abstract class ActorSystemExtension
+    {
+        public abstract void Start(ActorSystem system);
+    }
+
     public class ActorSystem : IActorRefFactory , IDisposable
     {
         private ActorCell rootCell;
 
-        public ActorSystem(string name)
+        public static ActorSystem Create(string name, Config config = null, params ActorSystemExtension[] extensions)
+        {
+            return new ActorSystem(name, config, extensions);
+        }
+
+        private List<ActorSystemExtension> extensions = new List<ActorSystemExtension>();
+
+        public ActorSystem(string name,Config config=null,params ActorSystemExtension[] extensions)
         {
             this.Name = name;
-            this.Settings = new Configuration.Settings(this);
+
+            this.Settings = new Settings(this,config);
             this.Serialization = new Serialization.Serialization(this);
             ConfigDefaultDispatcher();
+            this.Address = new Address("akka", this.Name); //TODO: this should not work this way...
 
             this.rootCell = new ActorCell(this,"");            
             this.EventStream = rootCell.ActorOf<EventStreamActor>("EventStream");
@@ -26,6 +40,11 @@ namespace Pigeon.Actor
             this.Guardian = rootCell.ActorOf<GuardianActor>("user");
             this.SystemGuardian = rootCell.ActorOf<GuardianActor>("system");
             this.TempGuardian = rootCell.ActorOf<GuardianActor>("temp");
+            if (extensions != null)
+            {
+                this.extensions.AddRange(extensions);
+                this.extensions.ForEach(e => e.Start(this));
+            }
         }
 
         private void ConfigDefaultDispatcher()
@@ -34,7 +53,7 @@ namespace Pigeon.Actor
             this.DefaultDispatcher.Throughput = Settings.GetOrDefault(s => s.Pigeon.Actor.DefaultDispatcher.Throughput, 100);
         }
 
-        public Pigeon.Configuration.Settings Settings { get;private set; }
+        public Settings Settings { get;private set; }
         public string Name { get;private set; }
         public LocalActorRef RootGuardian { get; private set; }
         public LocalActorRef EventStream { get; private set; }
@@ -76,17 +95,19 @@ namespace Pigeon.Actor
 
         public MessageDispatcher DefaultDispatcher { get; set; }
 
+        public Func<ActorCell,ActorPath, ActorRef> ActorRefFactory { get; set; }
         internal protected virtual ActorRef GetRemoteRef(ActorCell actorCell, ActorPath actorPath)
         {
-            throw new NotImplementedException();
+            if (ActorRefFactory == null)
+                throw new NotImplementedException();
+
+            return ActorRefFactory(actorCell,actorPath);
         }
 
         public virtual Address Address
         {
-            get
-            {
-                return new Address("akka", this.Name);
-            }
+            get;
+            set;
         }
     }
 }

@@ -17,9 +17,21 @@ namespace ChatClient
     {
         static void Main(string[] args)
         {
+            var config = ConfigurationFactory.ParseString(@"
+{
+    Pigeon : {        
+        Remote : {
+            Server : {
+                Host : ""127.0.0.1"",
+                Port : 8091
+            }
+        }
+    }
+}
+");
             //testing connectivity
             Thread.Sleep(1000);
-            using (var system = RemoteActorSystem.Create("MyClient",8091))
+            using (var system = ActorSystem.Create("MyClient",config,new RemoteExtension())) 
             {
                 var chatClient = system.ActorOf(Props.Create<ChatClientActor>());
                 var tmp = system.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");

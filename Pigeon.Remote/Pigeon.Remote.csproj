@@ -57,7 +57,7 @@
     <Compile Include="Serialization\ProtobufSerializer.cs" />
     <Compile Include="Remote\RemoteActorRef.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Remote\RemoteActorSystem.cs" />
+    <Compile Include="Remote\RemoteExtension.cs" />
     <Compile Include="Remote\RemoteHost.cs" />
   </ItemGroup>
   <ItemGroup>
