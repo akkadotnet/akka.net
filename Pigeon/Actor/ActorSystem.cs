@@ -27,11 +27,6 @@ namespace Pigeon.Actor
             this.TempGuardian = rootCell.ActorOf<GuardianActor>("temp");
         }
 
-        public virtual string GetSystemName()
-        {
-            return string.Format("akka://{0}", this.Name);
-        }
-
         public string Name { get;private set; }
         public LocalActorRef RootGuardian { get; private set; }
         public LocalActorRef EventStream { get; private set; }
@@ -78,9 +73,12 @@ namespace Pigeon.Actor
             throw new NotImplementedException();
         }
 
-        public virtual string Address()
+        public virtual Address Address
         {
-            return "";
+            get
+            {
+                return new Address("akka", this.Name);
+            }
         }
     }
 }

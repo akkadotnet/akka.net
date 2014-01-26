@@ -123,6 +123,16 @@ namespace Pigeon.Actor
         {
             return this.elements.SequenceEqual(other.elements);
         }
+
+        public string ToStringWithAddress()
+        {
+            return ToStringWithAddress(Address);
+        }
+
+        public string ToStringWithAddress(Address address)
+        {
+            return string.Format("{0}{1}", address, string.Join("/", elements));
+        }       
     }
 
     public class RootActorPath : ActorPath

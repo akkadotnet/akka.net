@@ -36,9 +36,12 @@ namespace Pigeon.Remote
             return new RemoteActorRef(actorCell, actorPath,this.port);
         }
 
-        public override string GetSystemName()
+        public override Address Address
         {
-            return string.Format("akka.tcp://{0}@127.0.0.1:{1}",Name, port);
+            get
+            {
+                return new Address("akka.tcp", this.Name,"127.0.0.1",this.port);
+            }
         }
     }
 }
