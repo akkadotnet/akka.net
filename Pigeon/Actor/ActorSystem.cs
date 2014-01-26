@@ -16,8 +16,9 @@ namespace Pigeon.Actor
         public ActorSystem(string name)
         {
             this.Name = name;
+            this.Settings = new Configuration.Settings(this);
             this.Serialization = new Serialization.Serialization(this);
-            this.DefaultDispatcher = new ThreadPoolDispatcher();
+            ConfigDefaultDispatcher();
 
             this.rootCell = new ActorCell(this,"");            
             this.EventStream = rootCell.ActorOf<EventStreamActor>("EventStream");
@@ -27,6 +28,13 @@ namespace Pigeon.Actor
             this.TempGuardian = rootCell.ActorOf<GuardianActor>("temp");
         }
 
+        private void ConfigDefaultDispatcher()
+        {
+            this.DefaultDispatcher = new ThreadPoolDispatcher();
+            this.DefaultDispatcher.Throughput = Settings.GetOrDefault(s => s.Pigeon.Actor.DefaultDispatcher.Throughput, 100);
+        }
+
+        public Pigeon.Configuration.Settings Settings { get;private set; }
         public string Name { get;private set; }
         public LocalActorRef RootGuardian { get; private set; }
         public LocalActorRef EventStream { get; private set; }

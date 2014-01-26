@@ -74,7 +74,7 @@ namespace Pigeon.Remote
             }
             catch (IOException io)
             {
-                throw;
+            //    throw;
             }
         }
     }

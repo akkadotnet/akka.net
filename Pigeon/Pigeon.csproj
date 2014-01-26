@@ -33,6 +33,9 @@
     <Reference Include="fastjson">
       <HintPath>..\packages\fastJSON.2.0.27.1\lib\net40\fastjson.dll</HintPath>
     </Reference>
+    <Reference Include="JsonFx">
+      <HintPath>..\..\JsonConfig\lib\JsonFx.dll</HintPath>
+    </Reference>
     <Reference Include="protobuf-net">
       <HintPath>..\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
     </Reference>
@@ -57,6 +60,9 @@
     <Compile Include="Actor\AutoReceivedMessage.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Configuration\Config.cs" />
+    <Compile Include="Configuration\JsonConfig\Config.cs" />
+    <Compile Include="Configuration\JsonConfig\ConfigObjects.cs" />
+    <Compile Include="Configuration\JsonConfig\Merger.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
     <Compile Include="Dispatch\FutureActor.cs" />
