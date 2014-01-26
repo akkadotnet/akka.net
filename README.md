@@ -50,16 +50,30 @@ public class GreetingActor : UntypedActor
 ```
 Usage:
 ```csharp
-var system = new ActorSystem();
+var system = ActorSystem.Create("MySystem");
 var greeter = system.ActorOf<GreetingActor>("greeter");
 greeter.Tell(new Greet { Who = "Roger" });
+
 ```
 ##Remoting
 Server:
 ```csharp
-var system = ActorSystemSignalR.Create("myserver", "http://localhost:8080);
-var greeter = system.ActorOf<GreetingActor>("greeter");
-Console.ReadLine();
+var config = ConfigurationFactory.ParseString(@"
+Pigeon : { 
+    Remote : {
+        #this is the host and port the ActorSystem will listen to for connections
+        Server : {
+            Host : ""127.0.0.1"",
+            Port : 8091
+        }
+    }
+}
+");
+
+using (var system = ActorSystem.Create("MyServer",config,new RemoteExtension())) 
+{
+    Console.ReadLine();
+}
 ```
 Client:
 ```csharp
@@ -122,26 +136,6 @@ public class MyActor : UntypedActor
     ...
 }
 ```
-
-##Configuration
-```csharp
-var config = ConfigurationFactory.ParseString(@"
-Pigeon : { 
-    Actor : {
-        DefaultDispatcher : {
-        #set default dispatcher throughput to 100 messages per run
-            Throughput: 100
-        }
-    }
-    Remote : {
-        #this is the host and port the ActorSystem will listen to for connections
-        Server : {
-            Host : ""127.0.0.1"",
-            Port : 8091
-        }
-    }
-}
-");
 
 #####Contribute
 If you are interested in helping porting the actor part of Akka to .NET please let me know.
