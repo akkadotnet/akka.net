@@ -123,6 +123,26 @@ public class MyActor : UntypedActor
 }
 ```
 
+##Configuration
+```csharp
+var config = ConfigurationFactory.ParseString(@"
+Pigeon : { 
+    Actor : {
+        DefaultDispatcher : {
+        #set default dispatcher throughput to 100 messages per run
+            Throughput: 100
+        }
+    }
+    Remote : {
+        #this is the host and port the ActorSystem will listen to for connections
+        Server : {
+            Host : ""127.0.0.1"",
+            Port : 8091
+        }
+    }
+}
+");
+
 #####Contribute
 If you are interested in helping porting the actor part of Akka to .NET please let me know.
 
