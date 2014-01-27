@@ -18,9 +18,19 @@ namespace Pigeon.Actor
     {
         private ActorCell rootCell;
 
-        public static ActorSystem Create(string name, Config config = null, params ActorSystemExtension[] extensions)
+        public static ActorSystem Create(string name, Config config, params ActorSystemExtension[] extensions)
         {
             return new ActorSystem(name, config, extensions);
+        }
+
+        public static ActorSystem Create(string name, params ActorSystemExtension[] extensions)
+        {
+            return new ActorSystem(name, null, extensions);
+        }
+
+        public static ActorSystem Create(string name)
+        {
+            return new ActorSystem(name, null);
         }
 
         private List<ActorSystemExtension> extensions = new List<ActorSystemExtension>();

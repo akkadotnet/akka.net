@@ -18,7 +18,6 @@ namespace ChatClient
         static void Main(string[] args)
         {
             var config = ConfigurationFactory.ParseString(@"
-
 Pigeon : {        
     Remote : {
         Server : {
@@ -27,7 +26,6 @@ Pigeon : {
         }
     }
 }
-
 ");
             //testing connectivity
             Thread.Sleep(1000);

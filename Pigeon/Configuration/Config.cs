@@ -30,9 +30,9 @@ namespace Pigeon.Actor
                     Actor : {
                         Provider : """",
                         Serializers : {
-                          json : ""Pigeon.Serialization.JsonSerializer"",
-                          java : ""Pigeon.Serialization.JavaSerializer"",
-                          proto : ""Pigeon.Remote.Serialization.ProtobufSerializer""
+                            json : ""Pigeon.Serialization.JsonSerializer"",
+                            java : ""Pigeon.Serialization.JavaSerializer"",
+                            proto : ""Pigeon.Remote.Serialization.ProtobufSerializer""
                         }, 
                         DefaultDispatcher: {
                             Throughput : 100

@@ -45,8 +45,7 @@ namespace Pigeon.Remote
         }
 
         private async void WaitForClient()
-        {
-            
+        {            
             var client = await server.AcceptTcpClientAsync();
             ProcessSocket(client);
             await Task.Yield();
@@ -77,16 +76,5 @@ namespace Pigeon.Remote
             //    throw;
             }
         }
-    }
-
-
-    public static class ProtoExtensions
-    {
-        //public static ActorRef ToActorRef(this ActorRefData self,ActorSystem system)
-        //{
-        //    var path = ActorPath.Parse(self.Path,system);            
-        //    var actor = system.ActorSelection(path);
-        //    return actor;
-        //}
     }
 }
