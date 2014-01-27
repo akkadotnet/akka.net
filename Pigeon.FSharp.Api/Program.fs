@@ -1,6 +1,4 @@
-﻿// Learn more about F# at http://fsharp.net
-// See the 'F# Tutorial' project for more help.
-open Pigeon.Actor
+﻿open Pigeon.Actor
 open Pigeon.FSharp
 open System
 
@@ -9,7 +7,7 @@ type SomeActorMessages =
     | Hi
 
 type SomeActor() =
-    inherit Pigeon.Actor.UntypedActor()
+    inherit Actor()
 
     override x.OnReceive message =
         match message with

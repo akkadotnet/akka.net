@@ -2,7 +2,7 @@
 open Pigeon.Actor
 
 [<AbstractClass>]
-type FsActor()=
+type Actor()=
     inherit Pigeon.Actor.UntypedActor()
 
 let (<!) (actorRef:Pigeon.Actor.ActorRef) (msg: System.Object) =
