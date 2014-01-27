@@ -137,6 +137,30 @@ public class MyActor : UntypedActor
 }
 ```
 
+##Special F# API
+```fsharp
+type SomeActorMessages =
+    | Greet of string
+    | Hi
+
+type SomeActor() =
+    inherit Actor()
+
+    override x.OnReceive message =
+        match message with
+        | :? SomeActorMessages as m ->  
+            match m with
+            | Greet(name) -> Console.WriteLine("Hello {0}",name)
+            | Hi -> Console.WriteLine("Hello from F#!")
+        | _ -> failwith "unknown message"
+
+let system = ActorSystem.Create("FSharpActors")
+let actor = system.ActorOf<SomeActor>("MyActor")
+
+actor <! Greet "Roger"
+actor <! Hi
+```
+
 #####Contribute
 If you are interested in helping porting the actor part of Akka to .NET please let me know.
 
