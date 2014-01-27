@@ -60,11 +60,7 @@ namespace Pigeon.Remote
                 while (client.Connected)
                 {
                     var remoteEnvelope = RemoteEnvelope.ParseDelimitedFrom(stream);
-                    var serializedMessage = remoteEnvelope.Message;
-
-                    var type = serializedMessage.HasMessageManifest ? Type.GetType(serializedMessage.MessageManifest.ToStringUtf8()) : null;
-
-                    var message = system.Serialization.Deserialize(serializedMessage.Message.ToByteArray(), serializedMessage.SerializerId, type);
+                    var message = MessageSerializer.Deserialize(this.system, remoteEnvelope.Message);
                     var recipient = system.ActorSelection(remoteEnvelope.Recipient.Path);
                     var sender = system.ActorSelection(remoteEnvelope.Sender.Path);
 

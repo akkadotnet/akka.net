@@ -42,7 +42,7 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Library1.fs" />
+    <Compile Include="FsApi.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Pigeon\Pigeon.csproj">

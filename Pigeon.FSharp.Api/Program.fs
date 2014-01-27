@@ -6,7 +6,7 @@ type SomeActorMessages =
     | Greet of string
     | Hi
 
-type SomeActor() =
+type SomeActor() =    
     inherit Actor()
 
     override x.OnReceive message =
