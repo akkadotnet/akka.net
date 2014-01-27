@@ -17,14 +17,12 @@ type SomeActor() =
             match m with
             | Greet(name) -> Console.WriteLine("Hello {0}",name)
             | Hi -> Console.WriteLine("Hello from F#!")
-        | _ -> ignore()
+        | _ -> failwith "unknown message"
 
 let system = ActorSystem.Create("FSharpActors")
 let actor = system.ActorOf<SomeActor>("MyActor")
 
 actor <! Greet "roger"
 actor <! Hi
-actor <! "foo?"
-
 
 System.Console.ReadKey() |> ignore
