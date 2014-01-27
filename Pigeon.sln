@@ -39,7 +39,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon.Tests", "Pigeon.Test
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FSharp", "FSharp", "{E814B432-DBC2-4372-92C6-70B9198613BD}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Pigeon.FSharp.Api", "Pigeon.FSharp.Api\Pigeon.FSharp.Api.fsproj", "{19993C0B-8F9D-4FE4-B047-45965EA66BA2}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Pigeon.FSharp.Api", "Examples\Pigeon.FSharp.Api\Pigeon.FSharp.Api.fsproj", "{19993C0B-8F9D-4FE4-B047-45965EA66BA2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
