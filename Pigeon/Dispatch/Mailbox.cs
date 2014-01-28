@@ -15,22 +15,40 @@ namespace Pigeon.Actor
     {
         public Action<Envelope> SystemInvoke { get; set; }
         public Action<Envelope> Invoke { get; set; }
-        public abstract void Post(Envelope message);
+        public abstract void Post(Envelope envelope);
 
         public abstract void Stop();
 
         public abstract void Dispose();
     }
 
-    /// <summary>
-    /// For explorative reasons only
-    /// </summary>
+    public class DaemonMailbox : Mailbox
+    {
+
+        public override void Post(Envelope envelope)
+        {
+            if (envelope.Message is SystemMessage)
+                SystemInvoke(envelope);
+            else
+                Invoke(envelope);
+        }
+
+        public override void Stop()
+        {
+            
+        }
+
+        public override void Dispose()
+        {
+            
+        }
+    }
+
     public class ConcurrentQueueMailbox : Mailbox
     {
         private ConcurrentQueue<Envelope> userMessages = new ConcurrentQueue<Envelope>();
         private ConcurrentQueue<Envelope> systemMessages = new ConcurrentQueue<Envelope>();
-        
-    //    private WaitCallback handler = null;
+            
         private volatile bool hasUnscheduledMessages = false;
         private volatile bool isClosed = false;
         private int status;

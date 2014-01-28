@@ -60,6 +60,7 @@
     <Compile Include="Actor\AskSupport.cs" />
     <Compile Include="Actor\AutoReceivedMessage.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
+    <Compile Include="Actor\Deployer.cs" />
     <Compile Include="Configuration\Config.cs" />
     <Compile Include="Configuration\JsonConfig\Config.cs" />
     <Compile Include="Configuration\JsonConfig\ConfigObjects.cs" />

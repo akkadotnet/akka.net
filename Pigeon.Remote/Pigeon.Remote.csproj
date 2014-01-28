@@ -55,6 +55,7 @@
     <Compile Include="MessageSerializer.cs" />
     <Compile Include="Proto\Containerformats.cs" />
     <Compile Include="Proto\Wireformats.cs" />
+    <Compile Include="RemoteDaemon.cs" />
     <Compile Include="Serialization\ProtobufSerializer.cs" />
     <Compile Include="RemoteActorRef.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
