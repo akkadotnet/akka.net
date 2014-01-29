@@ -1,4 +1,5 @@
 ﻿using Pigeon.Actor;
+using Pigeon.Hocon;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
@@ -12,9 +13,7 @@ namespace Pigeon.Actor
     {
         public static Config ParseString(string json)
         {
-            //HACK: add braces
-            json = "{" + Environment.NewLine + json + Environment.NewLine + "}";
-            dynamic res = JsonConfig.Config.ApplyJson(json);
+            var res = Pigeon.Hocon.Parser.Parse(json);
             return new Config(res);
         }
 
@@ -26,22 +25,22 @@ namespace Pigeon.Actor
         public static Config Default()
         {
             var json = @"
-                Pigeon : {
-                    Actor : {
-                        Provider : """",
-                        Serializers : {
-                            json : ""Pigeon.Serialization.JsonSerializer"",
-                            java : ""Pigeon.Serialization.JavaSerializer"",
-                            proto : ""Pigeon.Remote.Serialization.ProtobufSerializer""
-                        }, 
-                        DefaultDispatcher: {
-                            Throughput : 100
+                Pigeon {
+                    Actor {
+                        Provider = """"
+                        Serializers {
+                            json = ""Pigeon.Serialization.JsonSerializer""
+                            java = ""Pigeon.Serialization.JavaSerializer""
+                            proto = ""Pigeon.Remote.Serialization.ProtobufSerializer""
+                        }
+                        DefaultDispatcher {
+                            Throughput = 100
                         }              
-                    },
-                    Remote : {
-                        Server : {
-                            Host : ""127.0.0.1"",
-                            Port : 8080
+                    }
+                    Remote {
+                        Server {
+                            Host = ""127.0.0.1""
+                            Port = 8080
                         }
                     }
                 }
@@ -53,26 +52,44 @@ namespace Pigeon.Actor
 
     public class Config
     {
-        public dynamic Data { get; private set; }
+        private Node node;
 
-        public Config(dynamic res)
+        public Config(Node node)
         {
-            this.Data = res;
+            this.node = node;
         }
 
+        private Node GetNode(string path)
+        {
+            var elements = path.Split('.');
+            var node = this.node;
+            foreach(var part in elements)
+            {
+                node = node.Children.FirstOrDefault(n => n.Id == part);
+                if (node == null)
+                    return null;
+            }
+            return node;
+        }
+
+        public int GetInt(string path)
+        {
+            var node = GetNode(path);
+            if (node == null)
+                return 100;
+
+            return int.Parse(node.Value);
+        }
+
+        public string GetString(string path)
+        {
+            var node = GetNode(path);
+            return node.Value;
+        }
     }
 
     public class Settings
-    {
-        public T GetOrDefault<T>(Func<dynamic,dynamic> setting, T defaultValue)
-        {
-            dynamic res = setting(Config.Data);
-            if (res is T)
-            {
-                return (T)res;
-            }
-            return defaultValue;
-        }
+    {        
         public Settings(ActorSystem system,Config config)
         {
             if (config == null)

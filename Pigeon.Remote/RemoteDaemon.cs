@@ -40,6 +40,7 @@ namespace Pigeon.Remote
         {
             ActorPath path = ActorPath.Parse(message.Path, Context.System);
 
+            Context.ActorOf(message.Props);
         }
     }
 }

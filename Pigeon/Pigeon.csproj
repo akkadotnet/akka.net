@@ -33,10 +33,6 @@
     <Reference Include="fastjson">
       <HintPath>..\packages\fastJSON.2.0.27.1\lib\net40\fastjson.dll</HintPath>
     </Reference>
-    <Reference Include="JsonFx, Version=2.0.1209.2802, Culture=neutral, PublicKeyToken=315052dd637f8a52, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\JsonFx.2.0.1209.2802\lib\net40\JsonFx.dll</HintPath>
-    </Reference>
     <Reference Include="protobuf-net">
       <HintPath>..\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
     </Reference>
@@ -62,9 +58,6 @@
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Actor\Deployer.cs" />
     <Compile Include="Configuration\Config.cs" />
-    <Compile Include="Configuration\JsonConfig\Config.cs" />
-    <Compile Include="Configuration\JsonConfig\ConfigObjects.cs" />
-    <Compile Include="Configuration\JsonConfig\Merger.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
     <Compile Include="Dispatch\FutureActor.cs" />
@@ -95,6 +88,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Pigeon.Hocon\Pigeon.Hocon.csproj">
+      <Project>{613df65f-570e-413b-84f5-3f8e52f2827b}</Project>
+      <Name>Pigeon.Hocon</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
