@@ -14,14 +14,12 @@ namespace Pigeon.Configuration.Hocon
         {
             var root = new HoconObject();
             var reader = new HoconTokenizer(text);
-            ParseObject(reader, root);
+            ParseObject(reader, root,true);
             return root;
         }
 
-        private void ParseObject(HoconTokenizer reader, HoconObject context)
+        private void ParseObject(HoconTokenizer reader, HoconObject context,bool root)
         {
-            HoconObject self = null;
-
             while (!reader.EoF)
             {
                 Token t = reader.PullNext();
@@ -30,21 +28,37 @@ namespace Pigeon.Configuration.Hocon
                     case TokenType.EoF:
                         break;
                     case TokenType.Key:
-                        self = context.CreateChild(t.Value.ToString());
+                        var self = context.CreateChild(t.Value.ToString());
+                        ParseKeyContent(reader, self);
+                        if (!root)
+                            return;
                         break;
-                    case TokenType.Dot:
-                        ParseObject(reader, self);
-                        return; //always return after parsed dot to revert to root
-                    case TokenType.Assign:
-                        ParseValue(reader, self);
-                        break;
-                    case TokenType.ObjectStart:
-                        ParseObject(reader, self);
-                        break;
+                    
                     case TokenType.ObjectEnd:
                         return;
                 }
             }
+        }
+
+        private void ParseKeyContent(HoconTokenizer reader, HoconObject self)
+        {
+            while (!reader.EoF)
+            {
+                Token t = reader.PullNext();
+                switch (t.Type)
+                {
+                    case TokenType.Dot:
+                        ParseObject(reader, self,false);
+                        return; 
+                    case TokenType.Assign:
+                        ParseValue(reader, self);
+                        return;
+                    case TokenType.ObjectStart:
+                        ParseObject(reader, self,true);
+                        return;
+                }
+            }
+            
         }
 
         public void ParseValue(HoconTokenizer reader, HoconObject context)
@@ -60,7 +74,7 @@ namespace Pigeon.Configuration.Hocon
                         context.Value = t.Value;
                         return;
                     case TokenType.ObjectStart:
-                        ParseObject(reader, context);
+                        ParseObject(reader, context,true);
                         return;
                     case TokenType.ArrayStart:
                         var arr = ParseArray(reader, context);
@@ -85,7 +99,7 @@ namespace Pigeon.Configuration.Hocon
                         break;
                     case TokenType.ObjectStart:
                         var c = new HoconObject();
-                        ParseObject(reader, c);
+                        ParseObject(reader, c,true);
                         arr.Add(c);
                         break;
                     case TokenType.ArrayStart:

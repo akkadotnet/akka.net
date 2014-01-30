@@ -52,6 +52,7 @@
   <ItemGroup>
     <Compile Include="ActorCellTests.cs" />
     <Compile Include="ActorSystemTests.cs" />
+    <Compile Include="HoconTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
