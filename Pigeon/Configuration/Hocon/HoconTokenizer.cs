@@ -421,9 +421,24 @@ namespace Pigeon.Configuration.Hocon
             return Token.LiteralValue(long.Parse(sb.ToString(), NumberFormatInfo.InvariantInfo));
         }
 
+        private bool IsSpaceOrTab()
+        {
+            return Matches(" ", "\t");
+        }
+
         private bool IsStartNumber()
         {
             return Matches("-", "+") || char.IsDigit(Peek());
+        }
+
+        private Token PullSingleLineWhitespace()
+        {
+            var sb = new StringBuilder();
+            while (IsSpaceOrTab())
+            {
+                sb.Append(Take());
+            }
+            return Token.LiteralValue(sb.ToString());
         }
 
         private Token PullUnquotedText()
