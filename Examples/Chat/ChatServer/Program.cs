@@ -1,6 +1,7 @@
 ﻿using ChatMessages;
 using Pigeon;
 using Pigeon.Actor;
+using Pigeon.Configuration;
 using Pigeon.Remote;
 using System;
 using System.Collections.Generic;
@@ -18,7 +19,7 @@ namespace ChatServer
 Pigeon {        
     Remote {
         Server {
-            Host = 127.0.0.1
+            Host = ""127.0.0.1""
             Port = 8081
         }
     }

@@ -57,7 +57,13 @@
     <Compile Include="Actor\AutoReceivedMessage.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Actor\Deployer.cs" />
+    <Compile Include="Configuration\ConfigurationFactory.cs" />
     <Compile Include="Configuration\Config.cs" />
+    <Compile Include="Configuration\Hocon\HoconArray.cs" />
+    <Compile Include="Configuration\Hocon\HoconObject.cs" />
+    <Compile Include="Configuration\Hocon\HoconParser.cs" />
+    <Compile Include="Configuration\Hocon\HoconToken.cs" />
+    <Compile Include="Configuration\Hocon\HoconTokenizer.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
     <Compile Include="Dispatch\FutureActor.cs" />
@@ -88,12 +94,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Pigeon.Hocon\Pigeon.Hocon.csproj">
-      <Project>{613df65f-570e-413b-84f5-3f8e52f2827b}</Project>
-      <Name>Pigeon.Hocon</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

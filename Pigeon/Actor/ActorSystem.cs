@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Pigeon.Actor;
 using System.Collections.Concurrent;
 using Pigeon.Dispatch;
+using Pigeon.Configuration;
 
 namespace Pigeon.Actor
 {
