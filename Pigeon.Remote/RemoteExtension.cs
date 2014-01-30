@@ -12,8 +12,8 @@ namespace Pigeon.Remote
     {
         public override void Start(ActorSystem system)
         {
-            var host = system.Settings.Config.GetString("Pigeon.Remote.Server.Host");
-            var port = system.Settings.Config.GetInt("Pigeon.Remote.Server.Port");
+            var host = system.Settings.Config.GetString("akka.remote.server.host");
+            var port = system.Settings.Config.GetInt("akka.remote.server.port");
             this.System = system;
             system.ActorRefFactory = (cell,actorPath) => new RemoteActorRef(cell, actorPath, port);
             system.Address = new Address("akka.tcp", system.Name,host,port);

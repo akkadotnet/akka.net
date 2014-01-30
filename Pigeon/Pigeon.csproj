@@ -93,6 +93,7 @@
     <Compile Include="Actor\ActorCell.DefaultMessages.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Configuration\Pigeon.conf" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

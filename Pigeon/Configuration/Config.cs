@@ -29,11 +29,23 @@ namespace Pigeon.Configuration
             return node;
         }
 
-        public int GetInt(string path)
+        public bool GetBoolean(string path, bool @default = false)
         {
             var node = GetNode(path);
             if (node == null)
-                return 100;
+                return @default;
+
+            if (node.Value is bool)
+                return (bool)node.Value;
+
+            return bool.Parse(node.Value.ToString());
+        }
+
+        public int GetInt(string path,int @default=0)
+        {
+            var node = GetNode(path);
+            if (node == null)
+                return @default;
 
             if (node.Value is long)
                 return (int)(long)node.Value;
@@ -41,9 +53,23 @@ namespace Pigeon.Configuration
             return int.Parse(node.Value.ToString());
         }
 
-        public string GetString(string path)
+        public long GetLong(string path, long @default = 0)
         {
             var node = GetNode(path);
+            if (node == null)
+                return @default;
+
+            if (node.Value is long)
+                return (long)node.Value;
+
+            return long.Parse(node.Value.ToString());
+        }
+
+        public string GetString(string path,string @default=null)
+        {
+            var node = GetNode(path);
+            if (node == null)
+                return @default;
 
             if (node.Value == null)
                 return null;

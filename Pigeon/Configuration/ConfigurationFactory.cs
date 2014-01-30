@@ -4,7 +4,9 @@ using Pigeon.Configuration.Hocon;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -25,29 +27,16 @@ namespace Pigeon.Configuration
 
         public static Config Default()
         {
-            var json = @"
-                Pigeon {
-                    Actor {
-                        Provider = """"
-                        Serializers {
-                            json = ""Pigeon.Serialization.JsonSerializer""
-                            java = ""Pigeon.Serialization.JavaSerializer""
-                            proto = ""Pigeon.Remote.Serialization.ProtobufSerializer""
-                        }
-                        DefaultDispatcher {
-                            Throughput = 100
-                        }              
-                    }
-                    Remote {
-                        Server {
-                            Host = ""127.0.0.1""
-                            Port = 8080
-                        }
-                    }
-                }
-            ";
+            var assembly = Assembly.GetExecutingAssembly();
+            var resourceName = "Pigeon.Configuration.Pigeon.conf";
 
-            return ParseString(json);
+            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                string result = reader.ReadToEnd();
+
+                return ParseString(result);
+            }
         }
     }
 
