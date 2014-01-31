@@ -65,7 +65,7 @@ akka {
         #this is the host and port the ActorSystem will listen to for connections
         server {
             host : ""127.0.0.1"",
-            port : 8091
+            port : 8080
         }
     }
 }
