@@ -59,12 +59,12 @@ greeter.Tell(new Greet { Who = "Roger" });
 Server:
 ```csharp
 var config = ConfigurationFactory.ParseString(@"
-Pigeon : { 
-    Remote : {
+akka { 
+    remote {
         #this is the host and port the ActorSystem will listen to for connections
-        Server : {
-            Host : ""127.0.0.1"",
-            Port : 8091
+        server {
+            host : ""127.0.0.1"",
+            port : 8091
         }
     }
 }
@@ -78,7 +78,7 @@ using (var system = ActorSystem.Create("MyServer",config,new RemoteExtension()))
 Client:
 ```csharp
 var system = new ActorSystem();
-var greeter = system.ActorSelection("http://localhost:8080/greeter");    
+var greeter = system.ActorSelection("http://localhost:8080/user/greeter");    
 //pass a message to the remote actor
 greeter.Tell(new Greet { Who = "Roger" });
 ```
