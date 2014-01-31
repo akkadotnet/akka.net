@@ -59,6 +59,7 @@ greeter.Tell(new Greet { Who = "Roger" });
 Server:
 ```csharp
 var config = ConfigurationFactory.ParseString(@"
+# we use real Akka Hocon notation configs
 akka { 
     remote {
         #this is the host and port the ActorSystem will listen to for connections
