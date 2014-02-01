@@ -13,6 +13,24 @@ namespace Pigeon.Tests
     public class HoconTests
     {
         [TestMethod]
+        public void CanAssignValueToPathExpression()
+        {
+            var hocon = @"a.b.c=1";
+            Assert.AreEqual(1L, ConfigurationFactory.ParseString(hocon).GetLong("a.b.c"));
+        }
+
+        [TestMethod]
+        public void CanAssignValuesToPathExpressions()
+        {
+            var hocon = @"
+a.b.c=1
+a.b.d=2
+";
+            Assert.AreEqual(1L, ConfigurationFactory.ParseString(hocon).GetLong("a.b.c"));
+            Assert.AreEqual(2L, ConfigurationFactory.ParseString(hocon).GetLong("a.b.d"));
+        }
+
+        [TestMethod]
         public void CanAssignLongToField()
         {
             var hocon = @"a=1";
