@@ -12,6 +12,42 @@ namespace Pigeon.Tests
     [TestClass]
     public class HoconTests
     {
+        [TestMethod]
+        public void CanParseHocon()
+        {
+            var hocon = @"
+root {
+  int = 1
+  quoted-string = ""foo""
+  unquoted-string = bar
+  concat-string = foo bar
+  object {
+    hasContent = true
+  }
+  array = [1,2,3,4]
+  array-concat = [[1,2] [2,3]]
+  array-single-element = [1 2 3 4]
+  array-newline-element = [
+    1
+    2
+    3
+    4
+  ]
+  null = null
+  double = 1.23
+  bool = true
+}
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            Assert.AreEqual("1", config.GetString("root.int"));
+            Assert.AreEqual("1.23", config.GetString("root.double"));
+            Assert.AreEqual(true, config.GetBoolean("root.bool"));
+            Assert.AreEqual(true, config.GetBoolean("root.object.hasContent"));
+            Assert.AreEqual(null, config.GetString("root.null"));
+            Assert.AreEqual("foo", config.GetString("root.quoted-string"));
+            Assert.AreEqual("bar", config.GetString("root.unquoted-string"));
+            Assert.AreEqual("foo bar", config.GetString("root.concat-string"));
+        }
 
         [TestMethod]
         public void CanParseJson()
@@ -36,7 +72,6 @@ namespace Pigeon.Tests
             Assert.AreEqual(true, config.GetBoolean("root.object.hasContent"));
             Assert.AreEqual(null, config.GetString("root.null"));
             Assert.AreEqual("foo", config.GetString("root.string"));
-
         }
 
         [TestMethod]
