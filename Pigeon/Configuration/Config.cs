@@ -20,10 +20,10 @@ namespace Pigeon.Configuration
         private HoconObject GetNode(string path)
         {
             var elements = path.Split('.');
-            var node = this.node;
-            foreach (var part in elements)
+            var node = this.node.Content.GetObject();
+            foreach (var key in elements)
             {
-                node = node.Children.FirstOrDefault(n => n.Id == part);
+                node = node.Content.GetChildObject(key);
                 if (node == null)
                     return null;
             }

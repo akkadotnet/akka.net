@@ -20,6 +20,7 @@ namespace Pigeon.Configuration.Hocon
 
         private void ParseObject(HoconTokenizer reader, HoconObject context,bool root)
         {
+            context.Content.NewValue(context); //set self as content
             while (!reader.EoF)
             {
                 Token t = reader.PullNext();

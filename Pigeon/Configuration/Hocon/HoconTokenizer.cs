@@ -409,7 +409,7 @@ namespace Pigeon.Configuration.Hocon
             {
                 return PullArrayEnd();
             }
-            throw new Exception("unknown token");
+            throw new Exception("Expected value: Null literal, Array, Number, Boolean, Quoted Text, Unquoted Text, Tripple quoted Text, Object or End of array");
         }
 
         private bool IsSpaceOrTab()

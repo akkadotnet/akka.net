@@ -51,5 +51,16 @@ namespace Pigeon.Configuration.Hocon
             }
             return values.FirstOrDefault();
         }
+
+        public HoconObject GetObject()
+        {
+            var o = values.FirstOrDefault() as HoconObject;
+            return o;
+        }
+
+        public HoconObject GetChildObject(string key)
+        {
+            return GetObject().Children.FirstOrDefault(c => c.Id == key);
+        }
     }
 }
