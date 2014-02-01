@@ -12,6 +12,24 @@ namespace Pigeon.Tests
     [TestClass]
     public class HoconTests
     {
+
+        [TestMethod]
+        public void CanParseJson()
+        {
+            var hocon = @"
+a : {
+  b : 1,
+  c : ""foo"",
+  d : {},
+  e : [1,2,3,4]
+}
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            Assert.AreEqual("1", config.GetString("a.b"));
+            Assert.AreEqual("foo", config.GetString("a.c"));
+
+        }
+
         [TestMethod]
         public void CanParseObject()
         {
@@ -80,9 +98,10 @@ a.b.c=1
 a.b.d=2
 a.b.e.f=3
 ";
-            Assert.AreEqual(1L, ConfigurationFactory.ParseString(hocon).GetLong("a.b.c"));
-            Assert.AreEqual(2L, ConfigurationFactory.ParseString(hocon).GetLong("a.b.d"));
-            Assert.AreEqual(3L, ConfigurationFactory.ParseString(hocon).GetLong("a.b.e.f"));
+            var config = ConfigurationFactory.ParseString(hocon);
+            Assert.AreEqual(1L, config.GetLong("a.b.c"));
+            Assert.AreEqual(2L, config.GetLong("a.b.d"));
+            Assert.AreEqual(3L, config.GetLong("a.b.e.f"));
         }
 
         [TestMethod]

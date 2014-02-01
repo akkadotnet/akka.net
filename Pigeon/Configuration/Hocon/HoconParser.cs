@@ -35,6 +35,11 @@ namespace Pigeon.Configuration.Hocon
                         break;
                     
                     case TokenType.ObjectEnd:
+                        reader.PullWhitespace();
+                        if (reader.IsComma())
+                        {
+                            reader.PullComma();
+                        }
                         return;
                 }
             }
@@ -105,7 +110,18 @@ namespace Pigeon.Configuration.Hocon
                     case TokenType.EoF:
                         break;
                     case TokenType.LiteralValue:
-                        arr.Add(t.Value);
+                        HoconValue v = new HoconValue();
+                        v.NewValue(t.Value);
+                        arr.Add(v);
+                        while (reader.IsStartSimpleValue()) //fetch rest of values if string concat
+                        {
+                            t = reader.PullSimpleValue();
+                            v.AppendValue(t.Value);
+                        }
+                        if (reader.IsComma()) //optional end of value
+                        {
+                            reader.PullComma();
+                        }
                         break;
                     case TokenType.ObjectStart:
                         var c = new HoconObject();
