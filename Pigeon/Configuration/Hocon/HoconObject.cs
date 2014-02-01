@@ -13,11 +13,11 @@ namespace Pigeon.Configuration.Hocon
 
         public HoconObject()
         {
-            Id = "";
+            Key = "";
             Content = new HoconValue();
         }
 
-        public string Id { get; set; }
+        public string Key { get; set; }
 
         public HoconValue Content { get; private set; }
 
@@ -26,17 +26,17 @@ namespace Pigeon.Configuration.Hocon
             get { return _children.Values; }
         }
 
-        public HoconObject CreateChild(string id)
+        public HoconObject GetChild(string key)
         {
-            if (_children.ContainsKey(id))
+            if (_children.ContainsKey(key))
             {
-                return _children[id];
+                return _children[key];
             }
             var child = new HoconObject
             {
-                Id = id,
+                Key = key,
             };
-            _children.Add(id, child);
+            _children.Add(key, child);
             return child;
         }
 
@@ -52,21 +52,21 @@ namespace Pigeon.Configuration.Hocon
 
             if (Content != null)
             {
-                if (Content is string)
+                if (Content.GetValue() is string)
                 {
-                    sb.AppendFormat("{0}{1} = \"{2}\"", t, Id, Content);
+                    sb.AppendFormat("{0}{1} = \"{2}\"", t, Key, Content.GetValue());
                 }
-                else if (Content == null)
+                else if (Content.GetValue() == null)
                 {
-                    sb.AppendFormat("{0}{1} = null", t, Id);
+                    sb.AppendFormat("{0}{1} = null", t, Key);
                 }
                 else
                 {
-                    sb.AppendFormat("{0}{1} = {2}", t, Id, Content);
+                    sb.AppendFormat("{0}{1} = {2}", t, Key, Content.GetValue());
                 }
                 return sb.ToString();
             }
-            sb.AppendLine(t + Id  + " {");
+            sb.AppendLine(t + Key  + " {");
 
             foreach (HoconObject child in Children)
             {
@@ -82,14 +82,19 @@ namespace Pigeon.Configuration.Hocon
 
             if (Content != null)
             {
-                sb.AppendFormat("{0} = {1}", Id, Content);
+                sb.AppendFormat("{0} = {1}", Key, Content);
                 return sb.ToString();
             }
-            sb.Append(Id + " {");
+            sb.Append(Key + " {");
 
             sb.Append(string.Join(",", Children.Select(c => c.ToFlatString())));
             sb.Append("}");
             return sb.ToString();
+        }
+
+        public void Clear()
+        {
+            this._children.Clear();
         }
     }
 }

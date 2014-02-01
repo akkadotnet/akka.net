@@ -60,7 +60,12 @@ namespace Pigeon.Configuration.Hocon
 
         public HoconObject GetChildObject(string key)
         {
-            return GetObject().Children.FirstOrDefault(c => c.Id == key);
+            return GetObject().Children.FirstOrDefault(c => c.Key == key);
+        }
+
+        internal bool IsObject()
+        {
+            return GetObject() != null;
         }
     }
 }

@@ -75,6 +75,43 @@ root {
         }
 
         [TestMethod]
+        public void CanMergeObject()
+        {
+            var hocon = @"
+a.b.c = {
+        x = 1
+        y = 2
+    }
+a.b.c = {
+        z = 3
+    }
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            Assert.AreEqual("1", config.GetString("a.b.c.x"));
+            Assert.AreEqual("2", config.GetString("a.b.c.y"));
+            Assert.AreEqual("3", config.GetString("a.b.c.z"));
+        }
+
+        [TestMethod]
+        public void CanOverrideObject()
+        {
+            var hocon = @"
+a.b.c = {
+        x = 1
+        y = 2
+    }
+a.b.c = null
+a.b.c = {
+        z = 3
+    }
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            Assert.AreEqual(null, config.GetString("a.b.c.x"));
+            Assert.AreEqual(null, config.GetString("a.b.c.y"));
+            Assert.AreEqual("3", config.GetString("a.b.c.z"));
+        }
+
+        [TestMethod]
         public void CanParseObject()
         {
             var hocon = @"
