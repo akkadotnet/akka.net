@@ -17,6 +17,7 @@ namespace Pigeon.Configuration.Hocon
         EoF,
         ArrayStart,
         ArrayEnd,
+        Comma,
     }
 
     public class Token

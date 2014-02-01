@@ -1,6 +1,7 @@
 ﻿using Pigeon.Configuration.Hocon;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -35,10 +36,7 @@ namespace Pigeon.Configuration
             if (node == null)
                 return @default;
 
-            if (node.Value is bool)
-                return (bool)node.Value;
-
-            return bool.Parse(node.Value.ToString());
+            return bool.Parse(node.Value.GetValue().ToString());
         }
 
         public int GetInt(string path,int @default=0)
@@ -47,10 +45,7 @@ namespace Pigeon.Configuration
             if (node == null)
                 return @default;
 
-            if (node.Value is long)
-                return (int)(long)node.Value;
-
-            return int.Parse(node.Value.ToString());
+            return int.Parse(node.Value.GetValue().ToString(), NumberFormatInfo.InvariantInfo);
         }
 
         public long GetLong(string path, long @default = 0)
@@ -59,10 +54,7 @@ namespace Pigeon.Configuration
             if (node == null)
                 return @default;
 
-            if (node.Value is long)
-                return (long)node.Value;
-
-            return long.Parse(node.Value.ToString());
+            return long.Parse(node.Value.GetValue().ToString(), NumberFormatInfo.InvariantInfo);
         }
 
         public string GetString(string path,string @default=null)
@@ -71,10 +63,7 @@ namespace Pigeon.Configuration
             if (node == null)
                 return @default;
 
-            if (node.Value == null)
-                return null;
-
-            return node.Value.ToString();
+            return node.Value.GetValue().ToString();
         }
 
         public double GetDouble(string path, double @default = 0)
@@ -83,10 +72,7 @@ namespace Pigeon.Configuration
             if (node == null)
                 return @default;
 
-            if (node.Value is double)
-                return (double)node.Value;
-
-            return double.Parse(node.Value.ToString());
+            return double.Parse(node.Value.GetValue().ToString(),NumberFormatInfo.InvariantInfo);
         }
     }
 }

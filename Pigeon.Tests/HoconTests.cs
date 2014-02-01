@@ -12,6 +12,14 @@ namespace Pigeon.Tests
     [TestClass]
     public class HoconTests
     {
+        //TODO: implement string concat
+        [TestMethod]
+        public void CanAssignConcatenatedValueToField()
+        {
+            var hocon = @"a=1 2 3";
+            Assert.AreEqual("1 2 3", ConfigurationFactory.ParseString(hocon).GetString("a"));
+        }
+
         [TestMethod]
         public void CanAssignValueToQuotedField()
         {
@@ -32,9 +40,11 @@ namespace Pigeon.Tests
             var hocon = @"
 a.b.c=1
 a.b.d=2
+a.b.e.f=3
 ";
             Assert.AreEqual(1L, ConfigurationFactory.ParseString(hocon).GetLong("a.b.c"));
             Assert.AreEqual(2L, ConfigurationFactory.ParseString(hocon).GetLong("a.b.d"));
+            Assert.AreEqual(3L, ConfigurationFactory.ParseString(hocon).GetLong("a.b.e.f"));
         }
 
         [TestMethod]

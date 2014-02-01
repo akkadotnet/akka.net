@@ -5,6 +5,8 @@ using System.Text;
 
 namespace Pigeon.Configuration.Hocon
 {
+
+    
     public class HoconObject
     {
         private readonly Dictionary<string, HoconObject> _children = new Dictionary<string, HoconObject>();
@@ -12,10 +14,12 @@ namespace Pigeon.Configuration.Hocon
         public HoconObject()
         {
             Id = "";
+            Value = new HoconValue();
         }
 
         public string Id { get; set; }
-        public object Value { get; set; }
+
+        public HoconValue Value { get; private set; }
 
         public IEnumerable<HoconObject> Children
         {

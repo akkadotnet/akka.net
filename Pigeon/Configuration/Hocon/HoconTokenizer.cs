@@ -83,8 +83,8 @@ namespace Pigeon.Configuration.Hocon
 
     public class HoconTokenizer : Tokenizer
     {
-        private const string notInUnquotedKey = "$\"{}[]:=,+#`^?!@*&\\.";
-        private const string notInUnquotedText = "$\"{}[]:=,+#`^?!@*&\\";
+        private const string notInUnquotedKey = "$\"{}[]:=,#`^?!@*&\\.";
+        private const string notInUnquotedText = "$\"{}[]:=,#`^?!@*&\\";
 
         public HoconTokenizer(string text)
             : base(text)
@@ -194,6 +194,12 @@ namespace Pigeon.Configuration.Hocon
             return new Token(TokenType.Dot);
         }
 
+        public Token PullComma()
+        {
+            Take();
+            return new Token(TokenType.Comma);
+        }
+
         public Token PullStartOfObject()
         {
             Take();
@@ -212,19 +218,24 @@ namespace Pigeon.Configuration.Hocon
             return new Token(TokenType.Assign);
         }
 
+        public bool IsComma()
+        {
+            return Matches(",");
+        }
+
         public bool IsDot()
         {
-            return Peek() == '.';
+            return Matches(".");
         }
 
         public bool IsStartOfObject()
         {
-            return Peek() == '{';
+            return Matches("{");
         }
 
         public bool IsEndOfObject()
         {
-            return Peek() == '}';
+            return Matches("}");
         }
 
         public bool IsAssignment()
@@ -293,7 +304,7 @@ namespace Pigeon.Configuration.Hocon
         {
             var sb = new StringBuilder();
             Take();
-            while (!EoF && Peek() != '"')
+            while (!EoF && !Matches("\""))
             {
                 if (Matches("\\"))
                 {
@@ -313,7 +324,7 @@ namespace Pigeon.Configuration.Hocon
         {
             var sb = new StringBuilder();
             Take();
-            while (!EoF && Peek() != '"')
+            while (!EoF && !Matches("\""))
             {
                 if (Matches("\\"))
                 {
@@ -373,11 +384,7 @@ namespace Pigeon.Configuration.Hocon
             {
                 return PullStartOfObject();
             }
-            if (IsStartNumber())
-            {
-                return PullNumber();
-            }
-
+  
             if (IsStartOfTrippleQuotedText())
             {
                 return PullTrippleQuotedText();
@@ -403,32 +410,25 @@ namespace Pigeon.Configuration.Hocon
             throw new Exception("unknown token");
         }
 
-        private Token PullNumber()
-        {
-            var sb = new StringBuilder();
-            sb.Append(Take());
-            bool isDecimal = false;
-            while (!EoF && (char.IsDigit(Peek()) || Matches(".", "e", "E")))
-            {
-                if (Matches(".", "e", "E"))
-                    isDecimal = true;
-
-                sb.Append(Take());
-            }
-
-            if (isDecimal)
-                return Token.LiteralValue(double.Parse(sb.ToString(), NumberFormatInfo.InvariantInfo));
-            return Token.LiteralValue(long.Parse(sb.ToString(), NumberFormatInfo.InvariantInfo));
-        }
-
         private bool IsSpaceOrTab()
         {
             return Matches(" ", "\t");
         }
 
-        private bool IsStartNumber()
+        //private bool IsStartNumber()
+        //{
+        //    return Matches("-", "+") || char.IsDigit(Peek());
+       // }
+
+        public bool IsStartSimpleValue()
         {
-            return Matches("-", "+") || char.IsDigit(Peek());
+            if (IsSpaceOrTab())
+                return true;
+
+            if (IsUnquotedText())
+                return true;
+
+            return false;
         }
 
         private Token PullSingleLineWhitespace()
@@ -447,22 +447,6 @@ namespace Pigeon.Configuration.Hocon
             while (!EoF && IsUnquotedText())
             {
                 sb.Append(Take());
-
-                if (sb.Length == 4)
-                {
-                    string text = sb.ToString();
-                    
-                    if (text == "true")
-                        return new Token(true);
-                    if (text == "null")
-                        return new Token(null);
-                }
-                else if (sb.Length == 5)
-                {
-                    string text = sb.ToString();
-                    if (text == "false")
-                        return new Token(false);
-                }
             }
 
             return Token.LiteralValue(sb.ToString());
@@ -471,6 +455,16 @@ namespace Pigeon.Configuration.Hocon
         private bool IsUnquotedText()
         {
             return (!EoF && !IsWhitespace() && !IsStartOfComment() && !notInUnquotedText.Contains(Peek()));
+        }
+
+        public Token PullSimpleValue()
+        {
+            if (IsSpaceOrTab())
+                return PullSingleLineWhitespace();
+            if (IsUnquotedText())
+                return PullUnquotedText();
+
+            throw new Exception("No simple value found");
         }
     }
 }

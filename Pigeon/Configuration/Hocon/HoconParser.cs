@@ -71,14 +71,24 @@ namespace Pigeon.Configuration.Hocon
                     case TokenType.EoF:
                         break;
                     case TokenType.LiteralValue:
-                        context.Value = t.Value;
+                        context.Value.NewValue(t.Value);
+                        while (reader.IsStartSimpleValue()) //fetch rest of values if string concat
+                        {
+                            t = reader.PullSimpleValue();
+                            context.Value.AppendValue(t.Value);
+                        }
+                        if (reader.IsComma()) //optional end of value
+                        {
+                            reader.PullComma();
+                        }
+
                         return;
                     case TokenType.ObjectStart:
                         ParseObject(reader, context,true);
                         return;
                     case TokenType.ArrayStart:
                         var arr = ParseArray(reader, context);
-                        context.Value = arr;
+                        context.Value.NewValue(arr);
                         return;
                 }
             }
