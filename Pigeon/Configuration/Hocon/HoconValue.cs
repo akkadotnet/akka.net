@@ -52,9 +52,9 @@ namespace Pigeon.Configuration.Hocon
             return values.FirstOrDefault();
         }
 
-        public HoconKeyValuePair GetObject()
+        public HoconObject GetObject()
         {
-            var o = values.FirstOrDefault() as HoconKeyValuePair;
+            var o = values.FirstOrDefault() as HoconObject;
             return o;
         }
 

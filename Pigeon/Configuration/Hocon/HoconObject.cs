@@ -13,6 +13,15 @@ namespace Pigeon.Configuration.Hocon
         {
             get { return _children.Values; }
         }
+
+        public HoconKeyValuePair GetKey(string key)
+        {
+            if (_children.ContainsKey(key))
+            {
+                return _children[key];
+            }
+            return null;
+        }
         public HoconKeyValuePair GetOrCreateKey(string key)
         {
             if (_children.ContainsKey(key))

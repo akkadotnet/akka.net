@@ -27,8 +27,7 @@ namespace Pigeon.Configuration.Hocon
             else
             {      
                 //the value of this KVP is not an object, thus, we should add a new
-                owner.Content.NewValue(owner); //set self as content
-                owner.Clear();
+                owner.Content.NewValue(new HoconObject()); 
             }
 
             var currentObject = owner.Content.GetObject();

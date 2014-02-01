@@ -20,7 +20,7 @@ namespace Pigeon.Configuration
         private HoconKeyValuePair GetNode(string path)
         {
             var elements = path.Split('.');
-            var node = this.node.Content.GetObject();
+            var node = this.node;
             foreach (var key in elements)
             {
                 node = node.Content.GetChildObject(key);
