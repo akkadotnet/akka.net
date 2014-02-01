@@ -13,6 +13,13 @@ namespace Pigeon.Tests
     public class HoconTests
     {
         [TestMethod]
+        public void CanAssignValueToQuotedField()
+        {
+            var hocon = @"""a""=1";
+            Assert.AreEqual(1L, ConfigurationFactory.ParseString(hocon).GetLong("a"));
+        }
+
+        [TestMethod]
         public void CanAssignValueToPathExpression()
         {
             var hocon = @"a.b.c=1";
@@ -35,6 +42,19 @@ a.b.d=2
         {
             var hocon = @"a=1";
             Assert.AreEqual(1L, ConfigurationFactory.ParseString(hocon).GetLong("a"));
+        }
+
+        [TestMethod]
+        public void CanAssignArrayToField()
+        {
+            var hocon = @"a=
+[
+    1
+    2
+    3
+]";
+        //TODO: add array api
+        //    Assert.AreEqual(1L, ConfigurationFactory.ParseString(hocon).GetLong("a"));
         }
 
         [TestMethod]
