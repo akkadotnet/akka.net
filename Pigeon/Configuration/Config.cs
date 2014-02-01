@@ -36,7 +36,20 @@ namespace Pigeon.Configuration
             if (node == null)
                 return @default;
 
-            return bool.Parse(node.Value.GetValue().ToString());
+            var v = node.Content.GetValue().ToString();
+            switch(v)
+            {
+                case "on":
+                    return true;
+                case "off":
+                    return false;
+                case "true":
+                    return true;
+                case "false":
+                    return false;
+                default:
+                    throw new NotSupportedException("Unknown boolean format: " + v);
+            }
         }
 
         public int GetInt(string path,int @default=0)
@@ -45,7 +58,7 @@ namespace Pigeon.Configuration
             if (node == null)
                 return @default;
 
-            return int.Parse(node.Value.GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+            return int.Parse(node.Content.GetValue().ToString(), NumberFormatInfo.InvariantInfo);
         }
 
         public long GetLong(string path, long @default = 0)
@@ -54,7 +67,7 @@ namespace Pigeon.Configuration
             if (node == null)
                 return @default;
 
-            return long.Parse(node.Value.GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+            return long.Parse(node.Content.GetValue().ToString(), NumberFormatInfo.InvariantInfo);
         }
 
         public string GetString(string path,string @default=null)
@@ -63,7 +76,7 @@ namespace Pigeon.Configuration
             if (node == null)
                 return @default;
 
-            return node.Value.GetValue().ToString();
+            return (string)node.Content.GetValue();
         }
 
         public double GetDouble(string path, double @default = 0)
@@ -72,7 +85,7 @@ namespace Pigeon.Configuration
             if (node == null)
                 return @default;
 
-            return double.Parse(node.Value.GetValue().ToString(),NumberFormatInfo.InvariantInfo);
+            return double.Parse(node.Content.GetValue().ToString(),NumberFormatInfo.InvariantInfo);
         }
     }
 }

@@ -71,11 +71,11 @@ namespace Pigeon.Configuration.Hocon
                     case TokenType.EoF:
                         break;
                     case TokenType.LiteralValue:
-                        context.Value.NewValue(t.Value);
+                        context.Content.NewValue(t.Value);
                         while (reader.IsStartSimpleValue()) //fetch rest of values if string concat
                         {
                             t = reader.PullSimpleValue();
-                            context.Value.AppendValue(t.Value);
+                            context.Content.AppendValue(t.Value);
                         }
                         if (reader.IsComma()) //optional end of value
                         {
@@ -88,7 +88,7 @@ namespace Pigeon.Configuration.Hocon
                         return;
                     case TokenType.ArrayStart:
                         var arr = ParseArray(reader, context);
-                        context.Value.NewValue(arr);
+                        context.Content.NewValue(arr);
                         return;
                 }
             }

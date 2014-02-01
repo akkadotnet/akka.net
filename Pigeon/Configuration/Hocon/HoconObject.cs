@@ -14,12 +14,12 @@ namespace Pigeon.Configuration.Hocon
         public HoconObject()
         {
             Id = "";
-            Value = new HoconValue();
+            Content = new HoconValue();
         }
 
         public string Id { get; set; }
 
-        public HoconValue Value { get; private set; }
+        public HoconValue Content { get; private set; }
 
         public IEnumerable<HoconObject> Children
         {
@@ -50,19 +50,19 @@ namespace Pigeon.Configuration.Hocon
             var t = new string(' ', indent * 2);
             var sb = new StringBuilder();
 
-            if (Value != null)
+            if (Content != null)
             {
-                if (Value is string)
+                if (Content is string)
                 {
-                    sb.AppendFormat("{0}{1} = \"{2}\"", t, Id, Value);
+                    sb.AppendFormat("{0}{1} = \"{2}\"", t, Id, Content);
                 }
-                else if (Value == null)
+                else if (Content == null)
                 {
                     sb.AppendFormat("{0}{1} = null", t, Id);
                 }
                 else
                 {
-                    sb.AppendFormat("{0}{1} = {2}", t, Id, Value);
+                    sb.AppendFormat("{0}{1} = {2}", t, Id, Content);
                 }
                 return sb.ToString();
             }
@@ -80,9 +80,9 @@ namespace Pigeon.Configuration.Hocon
         {
             var sb = new StringBuilder();
 
-            if (Value != null)
+            if (Content != null)
             {
-                sb.AppendFormat("{0} = {1}", Id, Value);
+                sb.AppendFormat("{0} = {1}", Id, Content);
                 return sb.ToString();
             }
             sb.Append(Id + " {");

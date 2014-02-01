@@ -20,6 +20,13 @@ namespace Pigeon.Tests
         }
 
         [TestMethod]
+        public void CanTrimConcatenatedValue()
+        {
+            var hocon = "a= \t \t 1 2 3 \t \t,";
+            Assert.AreEqual("1 2 3", ConfigurationFactory.ParseString(hocon).GetString("a"));
+        }
+
+        [TestMethod]
         public void CanConsumeCommaAfterValue()
         {
             var hocon = "a=1,";
@@ -95,11 +102,23 @@ a.b.e.f=3
         }
 
         [TestMethod]
+        public void CanAssignNullToField()
+        {
+            var hocon = @"a=null";
+            Assert.IsNull(ConfigurationFactory.ParseString(hocon).GetString("a"));
+        }
+
+        [TestMethod]
         public void CanAssignBooleanToField()
         {
             var hocon = @"a=true";
             Assert.AreEqual(true, ConfigurationFactory.ParseString(hocon).GetBoolean("a"));
             hocon = @"a=false";
+            Assert.AreEqual(false, ConfigurationFactory.ParseString(hocon).GetBoolean("a"));
+
+            hocon = @"a=on";
+            Assert.AreEqual(true, ConfigurationFactory.ParseString(hocon).GetBoolean("a"));
+            hocon = @"a=off";
             Assert.AreEqual(false, ConfigurationFactory.ParseString(hocon).GetBoolean("a"));
         }
 
