@@ -10,14 +10,14 @@ namespace Pigeon.Configuration
 {
     public class Config
     {
-        private HoconObject node;
+        private HoconKeyValuePair node;
 
-        public Config(HoconObject node)
+        public Config(HoconKeyValuePair node)
         {
             this.node = node;
         }
 
-        private HoconObject GetNode(string path)
+        private HoconKeyValuePair GetNode(string path)
         {
             var elements = path.Split('.');
             var node = this.node.Content.GetObject();

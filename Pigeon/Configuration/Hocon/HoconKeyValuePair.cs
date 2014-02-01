@@ -4,14 +4,12 @@ using System.Linq;
 using System.Text;
 
 namespace Pigeon.Configuration.Hocon
-{
-
-    
-    public class HoconObject
+{    
+    public class HoconKeyValuePair
     {
-        private readonly Dictionary<string, HoconObject> _children = new Dictionary<string, HoconObject>();
+        private readonly Dictionary<string, HoconKeyValuePair> _children = new Dictionary<string, HoconKeyValuePair>();
 
-        public HoconObject()
+        public HoconKeyValuePair()
         {
             Key = "";
             Content = new HoconValue();
@@ -21,18 +19,18 @@ namespace Pigeon.Configuration.Hocon
 
         public HoconValue Content { get; private set; }
 
-        public IEnumerable<HoconObject> Children
+        public IEnumerable<HoconKeyValuePair> Children
         {
             get { return _children.Values; }
         }
 
-        public HoconObject GetChild(string key)
+        public HoconKeyValuePair GetChild(string key)
         {
             if (_children.ContainsKey(key))
             {
                 return _children[key];
             }
-            var child = new HoconObject
+            var child = new HoconKeyValuePair
             {
                 Key = key,
             };
@@ -68,7 +66,7 @@ namespace Pigeon.Configuration.Hocon
             }
             sb.AppendLine(t + Key  + " {");
 
-            foreach (HoconObject child in Children)
+            foreach (HoconKeyValuePair child in Children)
             {
                 sb.AppendLine(child.ToString(indent + 1));
             }

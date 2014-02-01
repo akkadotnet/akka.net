@@ -52,13 +52,13 @@ namespace Pigeon.Configuration.Hocon
             return values.FirstOrDefault();
         }
 
-        public HoconObject GetObject()
+        public HoconKeyValuePair GetObject()
         {
-            var o = values.FirstOrDefault() as HoconObject;
+            var o = values.FirstOrDefault() as HoconKeyValuePair;
             return o;
         }
 
-        public HoconObject GetChildObject(string key)
+        public HoconKeyValuePair GetChildObject(string key)
         {
             return GetObject().Children.FirstOrDefault(c => c.Key == key);
         }

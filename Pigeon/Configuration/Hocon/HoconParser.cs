@@ -5,20 +5,20 @@ namespace Pigeon.Configuration.Hocon
 {
     public class Parser
     {
-        public static HoconObject Parse(string text)
+        public static HoconKeyValuePair Parse(string text)
         {
             return new Parser().ParseText(text);
         }
 
-        private HoconObject ParseText(string text)
+        private HoconKeyValuePair ParseText(string text)
         {
-            var root = new HoconObject();
+            var root = new HoconKeyValuePair();
             var reader = new HoconTokenizer(text);
             ParseObject(reader, root,true);
             return root;
         }
 
-        private void ParseObject(HoconTokenizer reader, HoconObject parent,bool root)
+        private void ParseObject(HoconTokenizer reader, HoconKeyValuePair parent,bool root)
         {
             if (parent.Content.IsObject())
             {
@@ -56,7 +56,7 @@ namespace Pigeon.Configuration.Hocon
             }
         }
 
-        private void ParseKeyContent(HoconTokenizer reader, HoconObject self)
+        private void ParseKeyContent(HoconTokenizer reader, HoconKeyValuePair self)
         {
             while (!reader.EoF)
             {
@@ -77,7 +77,7 @@ namespace Pigeon.Configuration.Hocon
             
         }
 
-        public void ParseValue(HoconTokenizer reader, HoconObject context)
+        public void ParseValue(HoconTokenizer reader, HoconKeyValuePair context)
         {
             while (!reader.EoF)
             {
@@ -110,7 +110,7 @@ namespace Pigeon.Configuration.Hocon
             }
         }
 
-        public HoconArray ParseArray(HoconTokenizer reader, HoconObject context)
+        public HoconArray ParseArray(HoconTokenizer reader, HoconKeyValuePair context)
         {
             var arr = new HoconArray();
             while (!reader.EoF)
@@ -135,12 +135,12 @@ namespace Pigeon.Configuration.Hocon
                         }
                         break;
                     case TokenType.ObjectStart:
-                        var c = new HoconObject();
+                        var c = new HoconKeyValuePair();
                         ParseObject(reader, c,true);
                         arr.Add(c);
                         break;
                     case TokenType.ArrayStart:
-                        var c2 = new HoconObject();
+                        var c2 = new HoconKeyValuePair();
                         var childArr = ParseArray(reader, c2);
                         arr.Add(childArr);
                         break;

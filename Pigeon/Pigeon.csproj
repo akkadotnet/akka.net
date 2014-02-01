@@ -60,7 +60,7 @@
     <Compile Include="Configuration\ConfigurationFactory.cs" />
     <Compile Include="Configuration\Config.cs" />
     <Compile Include="Configuration\Hocon\HoconArray.cs" />
-    <Compile Include="Configuration\Hocon\HoconObject.cs" />
+    <Compile Include="Configuration\Hocon\HoconKeyValuePair.cs" />
     <Compile Include="Configuration\Hocon\HoconParser.cs" />
     <Compile Include="Configuration\Hocon\HoconToken.cs" />
     <Compile Include="Configuration\Hocon\HoconTokenizer.cs" />
