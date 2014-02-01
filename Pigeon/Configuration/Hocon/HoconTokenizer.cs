@@ -91,6 +91,18 @@ namespace Pigeon.Configuration.Hocon
         {
         }
 
+        public void PullWhitespaceAndComments()
+        {
+            do
+            {
+                PullWhitespace();
+                while (IsStartOfComment())
+                {
+                    PullComment();
+                }
+            } while (IsWhitespace());
+        }
+
         public string PullRestOfLine()
         {
             var sb = new StringBuilder();
@@ -109,15 +121,9 @@ namespace Pigeon.Configuration.Hocon
             return sb.ToString().Trim();
         }
 
-        public string PullToEndOfLine()
-        {
-            PullWhitespace();
-            return PullRestOfLine();
-        }
-
         public Token PullNext()
         {
-            PullWhitespace();
+            PullWhitespaceAndComments();
             if (IsDot())
             {
                 return PullDot();
@@ -137,10 +143,6 @@ namespace Pigeon.Configuration.Hocon
             if (IsStartOfQuotedKey())
             {
                 return PullQuotedKey();
-            }
-            if (IsStartOfComment())
-            {
-                return PullComment();
             }
             if (IsUnquotedKey())
             {
@@ -378,7 +380,7 @@ namespace Pigeon.Configuration.Hocon
 
         public Token PullNextValue()
         {
-            PullWhitespace();
+            PullWhitespaceAndComments();
 
             if (IsStartOfObject())
             {
