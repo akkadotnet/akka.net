@@ -58,9 +58,9 @@ namespace Pigeon.Configuration.Hocon
             return o;
         }
 
-        public HoconKeyValuePair GetChildObject(string key)
+        public HoconValue GetChildObject(string key)
         {
-            return GetObject().Children.FirstOrDefault(c => c.Key == key);
+            return GetObject().GetKey(key);
         }
 
         internal bool IsObject()

@@ -8,13 +8,13 @@ namespace Pigeon.Configuration.Hocon
 {
     public class HoconObject
     {
-        private readonly Dictionary<string, HoconKeyValuePair> _children = new Dictionary<string, HoconKeyValuePair>();
-        public IEnumerable<HoconKeyValuePair> Children
+        private readonly Dictionary<string, HoconValue> _children = new Dictionary<string, HoconValue>();
+        public IEnumerable<HoconValue> Children
         {
             get { return _children.Values; }
         }
 
-        public HoconKeyValuePair GetKey(string key)
+        public HoconValue GetKey(string key)
         {
             if (_children.ContainsKey(key))
             {
@@ -22,16 +22,13 @@ namespace Pigeon.Configuration.Hocon
             }
             return null;
         }
-        public HoconKeyValuePair GetOrCreateKey(string key)
+        public HoconValue GetOrCreateKey(string key)
         {
             if (_children.ContainsKey(key))
             {
                 return _children[key];
             }
-            var child = new HoconKeyValuePair
-            {
-                Key = key,
-            };
+            var child = new HoconValue();            
             _children.Add(key, child);
             return child;
         }

@@ -41,8 +41,8 @@ namespace Pigeon.Configuration.Hocon
                     case TokenType.EoF:
                         break;
                     case TokenType.Key:
-                        var childKVP = currentObject.GetOrCreateKey(t.Value.ToString());
-                        ParseKeyContent( childKVP);
+                        var value = currentObject.GetOrCreateKey(t.Value.ToString());
+                        ParseKeyContent( value);
                         if (!root)
                             return;
                         break;
@@ -58,7 +58,7 @@ namespace Pigeon.Configuration.Hocon
             }
         }
 
-        private void ParseKeyContent(HoconKeyValuePair self)
+        private void ParseKeyContent(HoconValue self)
         {
             while (!reader.EoF)
             {
@@ -66,20 +66,19 @@ namespace Pigeon.Configuration.Hocon
                 switch (t.Type)
                 {
                     case TokenType.Dot:
-                        ParseObject(self.Content,false);
+                        ParseObject(self,false);
                         return; 
                     case TokenType.Assign:
                         ParseValue(reader, self);
                         return;
                     case TokenType.ObjectStart:
-                        ParseObject( self.Content,true);
+                        ParseObject( self,true);
                         return;
                 }
-            }
-            
+            }            
         }
 
-        public void ParseValue(HoconTokenizer reader, HoconKeyValuePair owner)
+        public void ParseValue(HoconTokenizer reader, HoconValue owner)
         {
             while (!reader.EoF)
             {
@@ -89,14 +88,14 @@ namespace Pigeon.Configuration.Hocon
                     case TokenType.EoF:
                         break;
                     case TokenType.LiteralValue:
-                        ParseSimpleValue( t.Value, owner.Content);
+                        ParseSimpleValue( t.Value, owner);
                         return;
                     case TokenType.ObjectStart:
-                        ParseObject( owner.Content,true);
+                        ParseObject( owner,true);
                         return;
                     case TokenType.ArrayStart:
                         var arr = ParseArray();
-                        owner.Content.NewValue(arr);
+                        owner.NewValue(arr);
                         return;
                 }
             }
