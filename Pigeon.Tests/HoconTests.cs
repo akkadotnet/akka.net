@@ -13,6 +13,17 @@ namespace Pigeon.Tests
     public class HoconTests
     {
         [TestMethod]
+        public void CanParseObject()
+        {
+            var hocon = @"
+a {
+  b = 1
+}
+";
+            Assert.AreEqual("1", ConfigurationFactory.ParseString(hocon).GetString("a.b"));
+        }
+
+        [TestMethod]
         public void CanTrimValue()
         {
             var hocon = "a= \t \t 1 \t \t,";
