@@ -12,7 +12,27 @@ namespace Pigeon.Tests
     [TestClass]
     public class HoconTests
     {
-        //TODO: implement string concat
+        [TestMethod]
+        public void CanTrimValue()
+        {
+            var hocon = "a= \t \t 1 \t \t,";
+            Assert.AreEqual("1", ConfigurationFactory.ParseString(hocon).GetString("a"));
+        }
+
+        [TestMethod]
+        public void CanConsumeCommaAfterValue()
+        {
+            var hocon = "a=1,";
+            Assert.AreEqual("1", ConfigurationFactory.ParseString(hocon).GetString("a"));
+        }
+
+        [TestMethod]
+        public void CanAssignIpAddressToField()
+        {
+            var hocon = @"a=127.0.0.1";
+            Assert.AreEqual("127.0.0.1", ConfigurationFactory.ParseString(hocon).GetString("a"));
+        }
+
         [TestMethod]
         public void CanAssignConcatenatedValueToField()
         {
