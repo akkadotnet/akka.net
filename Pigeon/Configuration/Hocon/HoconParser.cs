@@ -10,27 +10,28 @@ namespace Pigeon.Configuration.Hocon
             return new Parser().ParseText(text);
         }
 
+        private HoconTokenizer reader;
         private HoconKeyValuePair ParseText(string text)
         {
             var root = new HoconKeyValuePair();
-            var reader = new HoconTokenizer(text);
-            ParseObject(reader, root,true);
+            reader = new HoconTokenizer(text);
+            ParseObject( root.Content,true);
             return root;
         }
 
-        private void ParseObject(HoconTokenizer reader, HoconKeyValuePair owner,bool root)
+        private void ParseObject( HoconValue owner,bool root)
         {
-            if (owner.Content.IsObject())
+            if (owner.IsObject())
             {
                 //the value of this KVP is already an object
             }
             else
             {      
                 //the value of this KVP is not an object, thus, we should add a new
-                owner.Content.NewValue(new HoconObject()); 
+                owner.NewValue(new HoconObject()); 
             }
 
-            var currentObject = owner.Content.GetObject();
+            var currentObject = owner.GetObject();
 
             while (!reader.EoF)
             {
@@ -41,7 +42,7 @@ namespace Pigeon.Configuration.Hocon
                         break;
                     case TokenType.Key:
                         var childKVP = currentObject.GetOrCreateKey(t.Value.ToString());
-                        ParseKeyContent(reader, childKVP);
+                        ParseKeyContent( childKVP);
                         if (!root)
                             return;
                         break;
@@ -57,7 +58,7 @@ namespace Pigeon.Configuration.Hocon
             }
         }
 
-        private void ParseKeyContent(HoconTokenizer reader, HoconKeyValuePair self)
+        private void ParseKeyContent(HoconKeyValuePair self)
         {
             while (!reader.EoF)
             {
@@ -65,20 +66,20 @@ namespace Pigeon.Configuration.Hocon
                 switch (t.Type)
                 {
                     case TokenType.Dot:
-                        ParseObject(reader, self,false);
+                        ParseObject(self.Content,false);
                         return; 
                     case TokenType.Assign:
                         ParseValue(reader, self);
                         return;
                     case TokenType.ObjectStart:
-                        ParseObject(reader, self,true);
+                        ParseObject( self.Content,true);
                         return;
                 }
             }
             
         }
 
-        public void ParseValue(HoconTokenizer reader, HoconKeyValuePair context)
+        public void ParseValue(HoconTokenizer reader, HoconKeyValuePair owner)
         {
             while (!reader.EoF)
             {
@@ -88,30 +89,20 @@ namespace Pigeon.Configuration.Hocon
                     case TokenType.EoF:
                         break;
                     case TokenType.LiteralValue:
-                        context.Content.NewValue(t.Value);
-                        while (reader.IsStartSimpleValue()) //fetch rest of values if string concat
-                        {
-                            t = reader.PullSimpleValue();
-                            context.Content.AppendValue(t.Value);
-                        }
-                        if (reader.IsComma()) //optional end of value
-                        {
-                            reader.PullComma();
-                        }
-
+                        ParseSimpleValue( t.Value, owner.Content);
                         return;
                     case TokenType.ObjectStart:
-                        ParseObject(reader, context,true);
+                        ParseObject( owner.Content,true);
                         return;
                     case TokenType.ArrayStart:
-                        var arr = ParseArray(reader, context);
-                        context.Content.NewValue(arr);
+                        var arr = ParseArray();
+                        owner.Content.NewValue(arr);
                         return;
                 }
             }
         }
 
-        public HoconArray ParseArray(HoconTokenizer reader, HoconKeyValuePair context)
+        public HoconArray ParseArray()
         {
             var arr = new HoconArray();
             while (!reader.EoF)
@@ -123,34 +114,21 @@ namespace Pigeon.Configuration.Hocon
                         break;
                     case TokenType.LiteralValue:
                         HoconValue v = new HoconValue();
-                        v.NewValue(t.Value);
                         arr.Add(v);
-                        while (reader.IsStartSimpleValue()) //fetch rest of values if string concat
-                        {
-                            t = reader.PullSimpleValue();
-                            v.AppendValue(t.Value);
-                        }
-                        if (reader.IsComma()) //optional end of value
-                        {
-                            reader.PullComma();
-                        }
+                        ParseSimpleValue( t.Value, v);
                         break;
                     case TokenType.ObjectStart:
-                        var c = new HoconKeyValuePair();
-                        ParseObject(reader, c,true);
+                        var c = new HoconValue();
+                        ParseObject( c,true);
                         arr.Add(c);
                         break;
                     case TokenType.ArrayStart:
-                        var c2 = new HoconKeyValuePair();
-                        var childArr = ParseArray(reader, c2);
+                        var childArr = ParseArray();
                         arr.Add(childArr);
                         break;
                     case TokenType.ArrayEnd:
                         reader.PullWhitespace();
-                        if (reader.IsComma())
-                        {
-                            reader.PullComma();
-                        }
+                        IgnoreComma();
 
                         if (!arr.Any() || !arr.All(e => e is HoconArray)) 
                             return arr;
@@ -165,6 +143,25 @@ namespace Pigeon.Configuration.Hocon
                 }
             }
             return arr;
+        }
+
+        private void ParseSimpleValue(object value, HoconValue v)
+        {
+            v.NewValue(value);
+            while (reader.IsStartSimpleValue()) //fetch rest of values if string concat
+            {
+                var t = reader.PullSimpleValue();
+                v.AppendValue(t.Value);
+            }
+            IgnoreComma();
+        }
+
+        private void IgnoreComma()
+        {
+            if (reader.IsComma()) //optional end of value
+            {
+                reader.PullComma();
+            }
         }
     }
 }
