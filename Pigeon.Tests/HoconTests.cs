@@ -25,7 +25,7 @@ root {
     hasContent = true
   }
   array = [1,2,3,4]
-  array-concat = [[1,2] [2,3]]
+  array-concat = [[1,2] [3,4]]
   array-single-element = [1 2 3 4]
   array-newline-element = [
     1
@@ -47,6 +47,9 @@ root {
             Assert.AreEqual("foo", config.GetString("root.quoted-string"));
             Assert.AreEqual("bar", config.GetString("root.unquoted-string"));
             Assert.AreEqual("foo bar", config.GetString("root.concat-string"));
+            Assert.IsTrue(new[] { 1, 2, 3,4 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("root.array")));
+            Assert.IsTrue(new[] { 1, 2, 3, 4 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("root.array-newline-element")));
+            Assert.IsTrue(new[] { "1 2 3 4" }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetStringList("root.array-single-element")));
         }
 
         [TestMethod]
@@ -73,6 +76,7 @@ root {
             Assert.AreEqual(null, config.GetString("root.null"));
             Assert.AreEqual("foo", config.GetString("root.string"));
             Assert.IsTrue(new[] { 1, 2, 3 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("root.array")));
+
         }
 
         [TestMethod]
