@@ -24,7 +24,7 @@ namespace Pigeon.Configuration.Hocon
             get { return _children.Values; }
         }
 
-        public HoconKeyValuePair GetChild(string key)
+        public HoconKeyValuePair GetOrCreateKey(string key)
         {
             if (_children.ContainsKey(key))
             {

@@ -18,18 +18,20 @@ namespace Pigeon.Configuration.Hocon
             return root;
         }
 
-        private void ParseObject(HoconTokenizer reader, HoconKeyValuePair parent,bool root)
+        private void ParseObject(HoconTokenizer reader, HoconKeyValuePair owner,bool root)
         {
-            if (parent.Content.IsObject())
+            if (owner.Content.IsObject())
             {
                 //the value of this KVP is already an object
             }
             else
             {      
                 //the value of this KVP is not an object, thus, we should add a new
-                parent.Content.NewValue(parent); //set self as content
-                parent.Clear();
+                owner.Content.NewValue(owner); //set self as content
+                owner.Clear();
             }
+
+            var currentObject = owner.Content.GetObject();
 
             while (!reader.EoF)
             {
@@ -39,8 +41,8 @@ namespace Pigeon.Configuration.Hocon
                     case TokenType.EoF:
                         break;
                     case TokenType.Key:
-                        var child = parent.GetChild(t.Value.ToString());
-                        ParseKeyContent(reader, child);
+                        var childKVP = currentObject.GetOrCreateKey(t.Value.ToString());
+                        ParseKeyContent(reader, childKVP);
                         if (!root)
                             return;
                         break;
