@@ -134,6 +134,12 @@ namespace Pigeon.Configuration.Hocon
                         arr.Add(childArr);
                         break;
                     case TokenType.ArrayEnd:
+                        reader.PullWhitespace();
+                        if (reader.IsComma())
+                        {
+                            reader.PullComma();
+                        }
+
                         if (!arr.Any() || !arr.All(e => e is HoconArray)) 
                             return arr;
 

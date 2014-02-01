@@ -17,16 +17,25 @@ namespace Pigeon.Tests
         public void CanParseJson()
         {
             var hocon = @"
-a : {
-  b : 1,
-  c : ""foo"",
-  d : {},
-  e : [1,2,3,4]
+""root"" : {
+  ""int"" : 1,
+  ""string"" : ""foo"",
+  ""object"" : {
+        ""hasContent"" : true
+    },
+  ""array"" : [1,2,3,4],
+  ""null"" : null,
+  ""double"" : 1.23,
+  ""bool"" : true
 }
 ";
             var config = ConfigurationFactory.ParseString(hocon);
-            Assert.AreEqual("1", config.GetString("a.b"));
-            Assert.AreEqual("foo", config.GetString("a.c"));
+            Assert.AreEqual("1", config.GetString("root.int"));
+            Assert.AreEqual("1.23", config.GetString("root.double"));
+            Assert.AreEqual(true, config.GetBoolean("root.bool"));
+            Assert.AreEqual(true, config.GetBoolean("root.object.hasContent"));
+            Assert.AreEqual(null, config.GetString("root.null"));
+            Assert.AreEqual("foo", config.GetString("root.string"));
 
         }
 
