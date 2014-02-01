@@ -76,5 +76,17 @@ namespace Pigeon.Configuration
 
             return node.Value.ToString();
         }
+
+        public double GetDouble(string path, double @default = 0)
+        {
+            var node = GetNode(path);
+            if (node == null)
+                return @default;
+
+            if (node.Value is double)
+                return (double)node.Value;
+
+            return double.Parse(node.Value.ToString());
+        }
     }
 }

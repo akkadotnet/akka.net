@@ -17,12 +17,12 @@ namespace Pigeon.Configuration.Hocon
 
         public bool EoF
         {
-            get { return index >= text.Length - 1; }
+            get { return index >= text.Length; }
         }
 
         public bool Matches(string pattern)
         {
-            if (pattern.Length + index >= text.Length)
+            if (pattern.Length + index > text.Length)
                 return false;
 
             if (text.Substring(index, pattern.Length) == pattern)
