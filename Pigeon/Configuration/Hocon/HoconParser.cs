@@ -129,7 +129,9 @@ namespace Pigeon.Configuration.Hocon
                     case TokenType.ArrayStart:
                         {
                             var childArr = ParseArray();
-                            arr.Add(childArr);
+                            var value = new HoconValue();
+                            value.NewValue(childArr);
+                            arr.Add(value);
                             break;
                         }
                     case TokenType.ArrayEnd:
@@ -137,12 +139,12 @@ namespace Pigeon.Configuration.Hocon
                             reader.PullWhitespace();
                             IgnoreComma();
 
-                            if (!arr.Any() || !arr.All(e => e is HoconArray))
+                            if (!arr.Any() || !arr.All(e => e.IsArray()))
                                 return arr;
 
                             //concat arrays in arrays
-                            var x = (from a in arr.OfType<HoconArray>()
-                                     from e in a
+                            var x = (from a in arr
+                                     from e in a.GetArray()
                                      select e).ToArray();
                             arr.Clear();
                             arr.AddRange(x);

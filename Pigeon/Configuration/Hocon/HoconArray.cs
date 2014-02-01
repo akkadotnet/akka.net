@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Pigeon.Configuration.Hocon
 {
-    public class HoconArray : List<object>
+    public class HoconArray : List<HoconValue>
     {
         public override string ToString()
         {

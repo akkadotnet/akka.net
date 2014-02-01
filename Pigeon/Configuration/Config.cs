@@ -36,20 +36,7 @@ namespace Pigeon.Configuration
             if (node == null)
                 return @default;
 
-            var v = node.GetValue().ToString();
-            switch(v)
-            {
-                case "on":
-                    return true;
-                case "off":
-                    return false;
-                case "true":
-                    return true;
-                case "false":
-                    return false;
-                default:
-                    throw new NotSupportedException("Unknown boolean format: " + v);
-            }
+            return node.GetBoolean();
         }
 
         public int GetInt(string path,int @default=0)
@@ -58,7 +45,7 @@ namespace Pigeon.Configuration
             if (node == null)
                 return @default;
 
-            return int.Parse(node.GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+            return node.GetInt();
         }
 
         public long GetLong(string path, long @default = 0)
@@ -67,16 +54,35 @@ namespace Pigeon.Configuration
             if (node == null)
                 return @default;
 
-            return long.Parse(node.GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+            return node.GetLong();
         }
 
         public string GetString(string path,string @default=null)
+        {
+        
+            var node = GetNode(path);
+            if (node == null)
+                return @default;
+
+            return (string)node.GetString();
+        }
+
+        public float GetFloat(string path, float @default = 0)
         {
             var node = GetNode(path);
             if (node == null)
                 return @default;
 
-            return (string)node.GetValue();
+            return node.GetFloat();
+        }
+
+        public decimal GetDecimal(string path, decimal @default = 0)
+        {
+            var node = GetNode(path);
+            if (node == null)
+                return @default;
+
+            return node.GetDecimal();
         }
 
         public double GetDouble(string path, double @default = 0)
@@ -85,7 +91,55 @@ namespace Pigeon.Configuration
             if (node == null)
                 return @default;
 
-            return double.Parse(node.GetValue().ToString(),NumberFormatInfo.InvariantInfo);
+            return node.GetDouble();
+        }
+
+        public IList<Boolean> GetBooleanList(string path)
+        {
+            var node = GetNode(path);
+            return node.GetBooleanList();
+        }
+
+        public IList<decimal> GetDecimalList(string path)
+        {
+            var node = GetNode(path);
+            return node.GetDecimalList();
+        }
+
+        public IList<float> GetFloatList(string path)
+        {
+            var node = GetNode(path);
+            return node.GetFloatList();
+        }
+
+        public IList<double> GetDoubleList(string path)
+        {
+            var node = GetNode(path);           
+            return node.GetDoubleList();
+        }
+
+        public IList<int> GetIntList(string path)
+        {
+            var node = GetNode(path);
+            return node.GetIntList();
+        }
+
+        public IList<long> GetLongList(string path)
+        {
+            var node = GetNode(path);
+            return node.GetLongList();
+        }
+
+        public IList<byte> GetByteList(string path)
+        {
+            var node = GetNode(path);
+            return node.GetByteList();
+        }
+
+        public IList<string> GetStringList(string path)
+        {
+            var node = GetNode(path);
+            return node.GetStringList();
         }
     }
 }

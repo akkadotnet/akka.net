@@ -59,7 +59,7 @@ root {
   ""object"" : {
         ""hasContent"" : true
     },
-  ""array"" : [1,2,3,4],
+  ""array"" : [1,2,3],
   ""null"" : null,
   ""double"" : 1.23,
   ""bool"" : true
@@ -72,6 +72,7 @@ root {
             Assert.AreEqual(true, config.GetBoolean("root.object.hasContent"));
             Assert.AreEqual(null, config.GetString("root.null"));
             Assert.AreEqual("foo", config.GetString("root.string"));
+            Assert.IsTrue(new[] { 1, 2, 3 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("root.array")));
         }
 
         [TestMethod]
@@ -201,8 +202,10 @@ a.b.e.f=3
     2
     3
 ]";
-        //TODO: add array api
-        //    Assert.AreEqual(1L, ConfigurationFactory.ParseString(hocon).GetLong("a"));
+            Assert.IsTrue(new[] { 1, 2, 3 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("a")));
+
+            hocon = @"a= [ 1, 2, 3 ]";
+            Assert.IsTrue(new[] { 1, 2, 3 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("a")));
         }
 
         [TestMethod]

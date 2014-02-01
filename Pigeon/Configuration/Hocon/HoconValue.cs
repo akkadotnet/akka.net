@@ -29,24 +29,6 @@ namespace Pigeon.Configuration.Hocon
                 if (concat == "null")
                     return null;
 
-                //if (concat == "true")
-                //    return true;
-
-                //if (concat == "false")
-                //    return false;
-
-                //long tmpLong;
-                //if (long.TryParse(concat, NumberStyles.Integer, NumberFormatInfo.InvariantInfo, out tmpLong))
-                //{
-                //    return tmpLong;
-                //}
-
-                //double tmpDouble;
-                //if (double.TryParse(concat,NumberStyles.Float,NumberFormatInfo.InvariantInfo,out tmpDouble))
-                //{
-                //    return tmpDouble;
-                //}
-
                 return concat;
             }
             return values.FirstOrDefault();
@@ -63,9 +45,112 @@ namespace Pigeon.Configuration.Hocon
             return GetObject().GetKey(key);
         }
 
-        internal bool IsObject()
+        public bool IsObject()
         {
             return GetObject() != null;
+        }
+
+        public bool GetBoolean()
+        {
+            var v = GetValue().ToString();
+            switch (v)
+            {
+                case "on":
+                    return true;
+                case "off":
+                    return false;
+                case "true":
+                    return true;
+                case "false":
+                    return false;
+                default:
+                    throw new NotSupportedException("Unknown boolean format: " + v);
+            }
+        }
+      
+        public string GetString()
+        {
+            return GetValue() as string;
+        }
+
+        public decimal GetDecimal()
+        {
+            return decimal.Parse(GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+        }
+
+        public float GetFloat()
+        {
+            return float.Parse(GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+        }
+
+        public double GetDouble()
+        {
+            return double.Parse(GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+        }
+
+        public long GetLong()
+        {
+            return long.Parse(GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+        }
+
+        public int GetInt()
+        {
+            return int.Parse(GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+        }
+
+        public byte GetByte()
+        {
+            return byte.Parse(GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+        }
+
+        public IList<byte> GetByteList()
+        {
+            return this.GetArray().Select(v => v.GetByte()).ToList();
+        }
+
+        public IList<int> GetIntList()
+        {
+            return this.GetArray().Select(v => v.GetInt()).ToList();
+        }
+
+        public IList<long> GetLongList()
+        {
+            return this.GetArray().Select(v => v.GetLong()).ToList();
+        }
+
+        public IList<bool> GetBooleanList()
+        {
+            return this.GetArray().Select(v => v.GetBoolean()).ToList();
+        }
+
+        public IList<float> GetFloatList()
+        {
+            return this.GetArray().Select(v => v.GetFloat()).ToList();
+        }
+
+        public IList<double> GetDoubleList()
+        {
+            return this.GetArray().Select(v => v.GetDouble()).ToList();
+        }
+
+        public IList<decimal> GetDecimalList()
+        {
+            return this.GetArray().Select(v => v.GetDecimal()).ToList();
+        }
+
+        public IList<string> GetStringList()
+        {
+            return this.GetArray().Select(v => v.GetString()).ToList();
+        }
+
+        public IList<HoconValue> GetArray()
+        {
+            return this.values.FirstOrDefault() as HoconArray;
+        }
+
+        public bool IsArray()
+        {
+            return this.GetArray() != null;
         }
     }
 }
