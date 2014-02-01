@@ -179,7 +179,7 @@ namespace Pigeon.Configuration.Hocon
             return Matches("]");
         }
 
-        private bool IsArrayStart()
+        public bool IsArrayStart()
         {
             return Matches("[");
         }
@@ -412,7 +412,7 @@ namespace Pigeon.Configuration.Hocon
             throw new Exception("Expected value: Null literal, Array, Number, Boolean, Quoted Text, Unquoted Text, Tripple quoted Text, Object or End of array");
         }
 
-        private bool IsSpaceOrTab()
+        public bool IsSpaceOrTab()
         {
             return Matches(" ", "\t");
         }
@@ -433,7 +433,7 @@ namespace Pigeon.Configuration.Hocon
             return false;
         }
 
-        private Token PullSingleLineWhitespace()
+        public Token PullSpaceOrTab()
         {
             var sb = new StringBuilder();
             while (IsSpaceOrTab())
@@ -462,7 +462,7 @@ namespace Pigeon.Configuration.Hocon
         public Token PullSimpleValue()
         {
             if (IsSpaceOrTab())
-                return PullSingleLineWhitespace();
+                return PullSpaceOrTab();
             if (IsUnquotedText())
                 return PullUnquotedText();
 

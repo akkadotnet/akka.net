@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Pigeon.Configuration.Hocon
@@ -95,16 +96,29 @@ namespace Pigeon.Configuration.Hocon
                         ParseObject( value,true);
                         return;
                     case TokenType.ArrayStart:
-                        var arr = ParseArray();
-                        value.NewValue(arr);
+                        ParseArray(value);
                         return;
                 }
             }
         }
 
-        public HoconArray ParseArray()
+        public void ParseArray(HoconValue owner)
         {
             var arr = new HoconArray();
+            owner.NewValue(arr);
+            ParseArrayContents(arr);
+            reader.PullSpaceOrTab();
+            if (reader.IsArrayStart())
+            {
+                reader.Take();
+                arr = new HoconArray();
+                ParseArrayContents(arr);
+                owner.AppendValue(arr);
+            }
+        }
+
+        private void ParseArrayContents(HoconArray arr)
+        {
             while (!reader.EoF)
             {
                 Token t = reader.PullNextValue();
@@ -123,14 +137,13 @@ namespace Pigeon.Configuration.Hocon
                         {
                             var value = new HoconValue();
                             arr.Add(value);
-                            ParseObject(value, true);                            
+                            ParseObject(value, true);
                             break;
                         }
                     case TokenType.ArrayStart:
                         {
-                            var childArr = ParseArray();
                             var value = new HoconValue();
-                            value.NewValue(childArr);
+                            ParseArray(value);
                             arr.Add(value);
                             break;
                         }
@@ -139,20 +152,11 @@ namespace Pigeon.Configuration.Hocon
                             reader.PullWhitespace();
                             IgnoreComma();
 
-                            if (!arr.Any() || !arr.All(e => e.IsArray()))
-                                return arr;
-
-                            //concat arrays in arrays
-                            var x = (from a in arr
-                                     from e in a.GetArray()
-                                     select e).ToArray();
-                            arr.Clear();
-                            arr.AddRange(x);
-                            return arr;
+                            return;
                         }
                 }
             }
-            return arr;
+            throw new Exception("End of file reached when parsing array");
         }
 
         private void ParseSimpleValue(object value, HoconValue v)

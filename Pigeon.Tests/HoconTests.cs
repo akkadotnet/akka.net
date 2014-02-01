@@ -213,6 +213,13 @@ a.b.e.f=3
         }
 
         [TestMethod]
+        public void CanConcatenateArray()
+        {
+            var hocon = @"a=[1,2] [3,4]";
+            Assert.IsTrue(new[] { 1, 2, 3, 4 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("a")));
+        }
+
+        [TestMethod]
         public void CanAssignDoubleToField()
         {
             var hocon = @"a=1.1";
