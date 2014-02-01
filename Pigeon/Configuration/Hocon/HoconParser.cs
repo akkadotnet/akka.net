@@ -5,17 +5,18 @@ namespace Pigeon.Configuration.Hocon
 {
     public class Parser
     {
-        public static HoconKeyValuePair Parse(string text)
+        public static HoconValue Parse(string text)
         {
             return new Parser().ParseText(text);
         }
 
         private HoconTokenizer reader;
-        private HoconKeyValuePair ParseText(string text)
+        private HoconValue ParseText(string text)
         {
-            var root = new HoconKeyValuePair();
+            var root = new HoconValue();
             reader = new HoconTokenizer(text);
-            ParseObject( root.Content,true);
+            reader.PullWhitespaceAndComments();
+            ParseObject( root,true);
             return root;
         }
 
@@ -58,7 +59,7 @@ namespace Pigeon.Configuration.Hocon
             }
         }
 
-        private void ParseKeyContent(HoconValue self)
+        private void ParseKeyContent(HoconValue value)
         {
             while (!reader.EoF)
             {
@@ -66,19 +67,19 @@ namespace Pigeon.Configuration.Hocon
                 switch (t.Type)
                 {
                     case TokenType.Dot:
-                        ParseObject(self,false);
+                        ParseObject(value,false);
                         return; 
                     case TokenType.Assign:
-                        ParseValue(reader, self);
+                        ParseValue(reader, value);
                         return;
                     case TokenType.ObjectStart:
-                        ParseObject( self,true);
+                        ParseObject( value,true);
                         return;
                 }
             }            
         }
 
-        public void ParseValue(HoconTokenizer reader, HoconValue owner)
+        public void ParseValue(HoconTokenizer reader, HoconValue value)
         {
             while (!reader.EoF)
             {
@@ -88,14 +89,14 @@ namespace Pigeon.Configuration.Hocon
                     case TokenType.EoF:
                         break;
                     case TokenType.LiteralValue:
-                        ParseSimpleValue( t.Value, owner);
+                        ParseSimpleValue( t.Value, value);
                         return;
                     case TokenType.ObjectStart:
-                        ParseObject( owner,true);
+                        ParseObject( value,true);
                         return;
                     case TokenType.ArrayStart:
                         var arr = ParseArray();
-                        owner.NewValue(arr);
+                        value.NewValue(arr);
                         return;
                 }
             }
@@ -112,33 +113,41 @@ namespace Pigeon.Configuration.Hocon
                     case TokenType.EoF:
                         break;
                     case TokenType.LiteralValue:
-                        HoconValue v = new HoconValue();
-                        arr.Add(v);
-                        ParseSimpleValue( t.Value, v);
-                        break;
+                        {
+                            var value = new HoconValue();
+                            arr.Add(value);
+                            ParseSimpleValue(t.Value, value);
+                            break;
+                        }
                     case TokenType.ObjectStart:
-                        var c = new HoconValue();
-                        ParseObject( c,true);
-                        arr.Add(c);
-                        break;
+                        {
+                            var value = new HoconValue();
+                            arr.Add(value);
+                            ParseObject(value, true);                            
+                            break;
+                        }
                     case TokenType.ArrayStart:
-                        var childArr = ParseArray();
-                        arr.Add(childArr);
-                        break;
+                        {
+                            var childArr = ParseArray();
+                            arr.Add(childArr);
+                            break;
+                        }
                     case TokenType.ArrayEnd:
-                        reader.PullWhitespace();
-                        IgnoreComma();
+                        {
+                            reader.PullWhitespace();
+                            IgnoreComma();
 
-                        if (!arr.Any() || !arr.All(e => e is HoconArray)) 
+                            if (!arr.Any() || !arr.All(e => e is HoconArray))
+                                return arr;
+
+                            //concat arrays in arrays
+                            var x = (from a in arr.OfType<HoconArray>()
+                                     from e in a
+                                     select e).ToArray();
+                            arr.Clear();
+                            arr.AddRange(x);
                             return arr;
-
-                        //concat arrays in arrays
-                        var x = (from a in arr.OfType<HoconArray>()
-                            from e in a 
-                            select e).ToArray();
-                        arr.Clear();
-                        arr.AddRange(x);
-                        return arr;
+                        }
                 }
             }
             return arr;

@@ -10,9 +10,9 @@ namespace Pigeon.Configuration
 {
     public class Config
     {
-        private HoconKeyValuePair node;
+        private HoconValue node;
 
-        public Config(HoconKeyValuePair node)
+        public Config(HoconValue node)
         {
             this.node = node;
         }
@@ -20,7 +20,7 @@ namespace Pigeon.Configuration
         private HoconValue GetNode(string path)
         {
             var elements = path.Split('.');
-            var node = this.node.Content;
+            var node = this.node;
             foreach (var key in elements)
             {
                 node = node.GetChildObject(key);
