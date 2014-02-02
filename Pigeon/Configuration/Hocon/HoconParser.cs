@@ -98,6 +98,9 @@ namespace Pigeon.Configuration.Hocon
                     case TokenType.ArrayStart:
                         ParseArray(value);
                         return;
+                    case TokenType.Substitute:
+                        value.NewValue(new HoconSubstitution((string)t.Value));
+                        return;
                 }
             }
         }

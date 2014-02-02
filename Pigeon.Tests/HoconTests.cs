@@ -220,6 +220,16 @@ a.b.e.f=3
         }
 
         [TestMethod]
+        public void CanAssignSubstitutionToField()
+        {
+            var hocon = @"a{
+    b = 1
+    c = ${b}
+}";
+            Assert.AreEqual(1, ConfigurationFactory.ParseString(hocon).GetInt("a.c"));
+        }
+
+        [TestMethod]
         public void CanAssignDoubleToField()
         {
             var hocon = @"a=1.1";

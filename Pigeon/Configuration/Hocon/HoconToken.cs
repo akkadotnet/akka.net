@@ -18,6 +18,7 @@ namespace Pigeon.Configuration.Hocon
         ArrayStart,
         ArrayEnd,
         Comma,
+        Substitute,
     }
 
     public class Token
@@ -46,6 +47,15 @@ namespace Pigeon.Configuration.Hocon
             {
                 Type = TokenType.Key,
                 Value = key,
+            };
+        }
+
+        public static Token Substitution(string path)
+        {
+            return new Token
+            {
+                Type = TokenType.Substitute,
+                Value = path,
             };
         }
 

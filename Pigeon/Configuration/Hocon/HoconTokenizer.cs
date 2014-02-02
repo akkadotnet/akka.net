@@ -409,8 +409,36 @@ namespace Pigeon.Configuration.Hocon
             {
                 return PullArrayEnd();
             }
+            if (IsSubstitutionStart())
+            {
+                return PullSubstitution();
+            }
+
             throw new Exception("Expected value: Null literal, Array, Number, Boolean, Quoted Text, Unquoted Text, Tripple quoted Text, Object or End of array");
         }
+
+        private bool IsSubstitutionStart()
+        {
+            return Matches("${");
+        }
+
+        private Token PullSubstitution()
+        {
+            var sb = new StringBuilder();
+            Take(2);
+            while(!EoF && IsUnquotedText())
+            {
+                sb.Append(Take());
+            }
+            Take();
+            return Token.Substitution(sb.ToString());
+        }
+
+        //public Token PullNextTrailingValue()
+        //{
+        //    PullSpaceOrTab();
+
+        //}
 
         public bool IsSpaceOrTab()
         {
