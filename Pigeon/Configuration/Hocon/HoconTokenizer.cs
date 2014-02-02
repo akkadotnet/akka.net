@@ -184,7 +184,7 @@ namespace Pigeon.Configuration.Hocon
             return Matches("[");
         }
 
-        private Token PullArrayStart()
+        public Token PullArrayStart()
         {
             Take();
             return new Token(TokenType.ArrayStart);
@@ -417,12 +417,12 @@ namespace Pigeon.Configuration.Hocon
             throw new Exception("Expected value: Null literal, Array, Number, Boolean, Quoted Text, Unquoted Text, Tripple quoted Text, Object or End of array");
         }
 
-        private bool IsSubstitutionStart()
+        public bool IsSubstitutionStart()
         {
             return Matches("${");
         }
 
-        private Token PullSubstitution()
+        public Token PullSubstitution()
         {
             var sb = new StringBuilder();
             Take(2);

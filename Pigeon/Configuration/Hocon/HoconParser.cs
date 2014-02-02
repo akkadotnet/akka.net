@@ -80,49 +80,54 @@ namespace Pigeon.Configuration.Hocon
             }            
         }
 
-        public void ParseValue(HoconTokenizer reader, HoconValue value)
+        public void ParseValue(HoconTokenizer reader, HoconValue owner)
         {
-            while (!reader.EoF)
+            if (reader.EoF)
+                throw new Exception("End of file reached while trying to read a value");
+
+            Token t = reader.PullNextValue();
+            switch (t.Type)
             {
-                Token t = reader.PullNextValue();
-                switch (t.Type)
-                {
-                    case TokenType.EoF:
-                        break;
-                    case TokenType.LiteralValue:
-                        ParseSimpleValue(value, t.Value);
-                        return;
-                    case TokenType.ObjectStart:
-                        ParseObject( value,true);
-                        return;
-                    case TokenType.ArrayStart:
-                        ParseArray(value);
-                        return;
-                    case TokenType.Substitute:
-                        ParseSubstitution(value, (string)t.Value);
-                        return;
-                }
+                case TokenType.EoF:
+                    break;
+                case TokenType.LiteralValue:
+                    ParseSimpleValue(owner, t.Value);
+                    break;
+                case TokenType.ObjectStart:
+                    ParseObject(owner, true);
+                    break;
+                case TokenType.ArrayStart:
+                    owner.NewValue(ParseArray());
+                    break;
+                case TokenType.Substitute:
+                    owner.NewValue(ParseSubstitution((string)t.Value));
+                    break;
             }
-        }
-
-        private static void ParseSubstitution(HoconValue owner, string value )
-        {
-            owner.NewValue(new HoconSubstitution(value));
-        }
-
-        public void ParseArray(HoconValue owner)
-        {
-            var arr = new HoconArray();
-            owner.NewValue(arr);
-            ParseArrayContents(arr);
-            reader.PullSpaceOrTab();
+            reader.PullSpaceOrTab(); 
+            //look for trailing values to concatenate
+            if (reader.IsSubstitutionStart())
+            {
+                var s = reader.PullSubstitution();
+                owner.AppendValue(ParseSubstitution((string)s.Value));
+            }
             if (reader.IsArrayStart())
             {
-                reader.Take();
-                arr = new HoconArray();
-                ParseArrayContents(arr);
-                owner.AppendValue(arr);
+                reader.PullArrayStart();               
+                owner.AppendValue(ParseArray());
             }
+            IgnoreComma();
+        }
+
+        private static HoconSubstitution ParseSubstitution(string value )
+        {
+            return new HoconSubstitution(value);
+        }
+
+        public HoconArray ParseArray()
+        {
+            var arr = new HoconArray();
+            ParseArrayContents(arr);
+            return arr;
         }
 
         private void ParseArrayContents(HoconArray arr)
@@ -139,6 +144,7 @@ namespace Pigeon.Configuration.Hocon
                             var value = new HoconValue();
                             arr.Add(value);
                             ParseSimpleValue(value, t.Value);
+                            IgnoreComma();
                             break;
                         }
                     case TokenType.ObjectStart:
@@ -151,7 +157,7 @@ namespace Pigeon.Configuration.Hocon
                     case TokenType.ArrayStart:
                         {
                             var value = new HoconValue();
-                            ParseArray(value);
+                            value.NewValue(ParseArray());
                             arr.Add(value);
                             break;
                         }
@@ -175,7 +181,6 @@ namespace Pigeon.Configuration.Hocon
                 var t = reader.PullSimpleValue();
                 v.AppendValue(t.Value);
             }
-            IgnoreComma();
         }
 
         private void IgnoreComma()
