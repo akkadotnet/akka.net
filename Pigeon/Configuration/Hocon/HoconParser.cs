@@ -90,7 +90,7 @@ namespace Pigeon.Configuration.Hocon
                     case TokenType.EoF:
                         break;
                     case TokenType.LiteralValue:
-                        ParseSimpleValue( t.Value, value);
+                        ParseSimpleValue(value, t.Value);
                         return;
                     case TokenType.ObjectStart:
                         ParseObject( value,true);
@@ -99,10 +99,15 @@ namespace Pigeon.Configuration.Hocon
                         ParseArray(value);
                         return;
                     case TokenType.Substitute:
-                        value.NewValue(new HoconSubstitution((string)t.Value));
+                        ParseSubstitution(value, (string)t.Value);
                         return;
                 }
             }
+        }
+
+        private static void ParseSubstitution(HoconValue owner, string value )
+        {
+            owner.NewValue(new HoconSubstitution(value));
         }
 
         public void ParseArray(HoconValue owner)
@@ -133,7 +138,7 @@ namespace Pigeon.Configuration.Hocon
                         {
                             var value = new HoconValue();
                             arr.Add(value);
-                            ParseSimpleValue(t.Value, value);
+                            ParseSimpleValue(value, t.Value);
                             break;
                         }
                     case TokenType.ObjectStart:
@@ -162,7 +167,7 @@ namespace Pigeon.Configuration.Hocon
             throw new Exception("End of file reached when parsing array");
         }
 
-        private void ParseSimpleValue(object value, HoconValue v)
+        private void ParseSimpleValue(HoconValue v, object value)
         {
             v.NewValue(value);
             while (reader.IsStartSimpleValue()) //fetch rest of values if string concat
