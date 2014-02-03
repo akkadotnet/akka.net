@@ -18,6 +18,10 @@ Read more on:
 * [Hotswap](../../wiki/Hotswap)
 * [Supervision](../../wiki/Supervision)
 
+####Not yet implemented:
+* Full Akka actor life cycle management
+* Akka Cluster support
+
 ###Pigeon specific
 * [Performance](../../wiki/Performance)
 * [The F# API](../../wiki/FSharp-API)
