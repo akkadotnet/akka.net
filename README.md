@@ -18,7 +18,7 @@ Read more on:
 * [Hotswap](../../wiki/Hotswap)
 * [Supervision](../../wiki/Supervision)
 
-####Not yet implemented:
+#####Not yet implemented:
 * Full Akka actor life cycle management
 * Akka Cluster support
 
