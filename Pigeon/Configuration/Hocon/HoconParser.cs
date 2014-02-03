@@ -49,12 +49,7 @@ namespace Pigeon.Configuration.Hocon
                             return;
                         break;
                     
-                    case TokenType.ObjectEnd:
-                        reader.PullWhitespace();
-                        if (reader.IsComma())
-                        {
-                            reader.PullComma();
-                        }
+                    case TokenType.ObjectEnd:                        
                         return;
                 }
             }
@@ -71,7 +66,7 @@ namespace Pigeon.Configuration.Hocon
                         ParseObject(value,false);
                         return; 
                     case TokenType.Assign:
-                        ParseValue(reader, value);
+                        ParseValue(value);
                         return;
                     case TokenType.ObjectStart:
                         ParseObject( value,true);
@@ -80,41 +75,58 @@ namespace Pigeon.Configuration.Hocon
             }            
         }
 
-        public void ParseValue(HoconTokenizer reader, HoconValue owner)
+        public void ParseValue( HoconValue owner)
         {
             if (reader.EoF)
                 throw new Exception("End of file reached while trying to read a value");
 
-            Token t = reader.PullNextValue();
-            switch (t.Type)
+            //if (owner.IsObject())
+            //{
+
+            //}
+            //else
+            //{
+            //    owner.Clear();
+            //}
+            bool isObject = owner.IsObject();
+            reader.PullWhitespaceAndComments();
+            while (reader.IsValue())
             {
-                case TokenType.EoF:
-                    break;
-                case TokenType.LiteralValue:
-                    ParseSimpleValue(owner, t.Value);
-                    break;
-                case TokenType.ObjectStart:
-                    ParseObject(owner, true);
-                    break;
-                case TokenType.ArrayStart:
-                    owner.NewValue(ParseArray());
-                    break;
-                case TokenType.Substitute:
-                    owner.NewValue(ParseSubstitution((string)t.Value));
-                    break;
+                Token t = reader.PullValue();
+
+                switch (t.Type)
+                {
+                    case TokenType.EoF:
+                        break;
+                    case TokenType.LiteralValue:
+                        if (isObject)
+                        {
+                            //needed to allow for override objects
+                            isObject = false;
+                            owner.Clear();
+                        }
+
+                        owner.AppendValue(t.Value);
+                        var ws = reader.PullSpaceOrTab();
+                        //single line ws should be included if string concat
+                        if (((string)ws.Value).Length > 0)
+                            owner.AppendValue(ws.Value);
+                        break;
+                    case TokenType.ObjectStart:
+                        ParseObject(owner, true);
+                        break;
+                    case TokenType.ArrayStart:
+                        var arr = ParseArray();
+                        owner.AppendValue(arr);
+                        break;
+                    case TokenType.Substitute:
+                        var sub = ParseSubstitution((string)t.Value);
+                        owner.AppendValue(sub);
+                        break;
+                }
+                reader.PullSpaceOrTab();
             }
-            reader.PullSpaceOrTab(); 
-            //look for trailing values to concatenate
-            if (reader.IsSubstitutionStart())
-            {
-                var s = reader.PullSubstitution();
-                owner.AppendValue(ParseSubstitution((string)s.Value));
-            }
-            if (reader.IsArrayStart())
-            {
-                reader.PullArrayStart();               
-                owner.AppendValue(ParseArray());
-            }
+            
             IgnoreComma();
         }
 
@@ -132,56 +144,15 @@ namespace Pigeon.Configuration.Hocon
 
         private void ParseArrayContents(HoconArray arr)
         {
-            while (!reader.EoF)
+            while (!reader.EoF && !reader.IsArrayEnd())
             {
-                Token t = reader.PullNextValue();
-                switch (t.Type)
-                {
-                    case TokenType.EoF:
-                        break;
-                    case TokenType.LiteralValue:
-                        {
-                            var value = new HoconValue();
-                            arr.Add(value);
-                            ParseSimpleValue(value, t.Value);
-                            IgnoreComma();
-                            break;
-                        }
-                    case TokenType.ObjectStart:
-                        {
-                            var value = new HoconValue();
-                            arr.Add(value);
-                            ParseObject(value, true);
-                            break;
-                        }
-                    case TokenType.ArrayStart:
-                        {
-                            var value = new HoconValue();
-                            value.NewValue(ParseArray());
-                            arr.Add(value);
-                            break;
-                        }
-                    case TokenType.ArrayEnd:
-                        {
-                            reader.PullWhitespace();
-                            IgnoreComma();
-
-                            return;
-                        }
-                }
+                var v = new HoconValue();
+                ParseValue(v);
+                arr.Add(v);
+                reader.PullWhitespaceAndComments();
             }
-            throw new Exception("End of file reached when parsing array");
-        }
-
-        private void ParseSimpleValue(HoconValue v, object value)
-        {
-            v.NewValue(value);
-            while (reader.IsStartSimpleValue()) //fetch rest of values if string concat
-            {
-                var t = reader.PullSimpleValue();
-                v.AppendValue(t.Value);
-            }
-        }
+            reader.PullArrayEnd();
+        }       
 
         private void IgnoreComma()
         {

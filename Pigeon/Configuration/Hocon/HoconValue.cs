@@ -14,6 +14,10 @@ namespace Pigeon.Configuration.Hocon
         {
             this.values.Add(value);
         }
+        public void Clear()
+        {
+            this.values.Clear();
+        }
         public void NewValue(object value)
         {
             this.values.Clear();

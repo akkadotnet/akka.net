@@ -33,7 +33,7 @@ namespace Pigeon.Configuration.Hocon
 
         public string Take(int length)
         {
-            if (index + length >= text.Length)
+            if (index + length > text.Length)
                 return null;
 
             string s = text.Substring(index, length);
@@ -128,7 +128,7 @@ namespace Pigeon.Configuration.Hocon
             {
                 return PullDot();
             }
-            if (IsStartOfObject())
+            if (IsObjectStart())
             {
                 return PullStartOfObject();
             }
@@ -168,13 +168,13 @@ namespace Pigeon.Configuration.Hocon
             return Matches("\"");
         }
 
-        private Token PullArrayEnd()
+        public Token PullArrayEnd()
         {
             Take();
             return new Token(TokenType.ArrayEnd);
         }
 
-        private bool IsArrayEnd()
+        public bool IsArrayEnd()
         {
             return Matches("]");
         }
@@ -230,7 +230,7 @@ namespace Pigeon.Configuration.Hocon
             return Matches(".");
         }
 
-        public bool IsStartOfObject()
+        public bool IsObjectStart()
         {
             return Matches("{");
         }
@@ -378,11 +378,9 @@ namespace Pigeon.Configuration.Hocon
             return (Matches("#", "//"));
         }
 
-        public Token PullNextValue()
+        public Token PullValue()
         {
-            PullWhitespaceAndComments();
-
-            if (IsStartOfObject())
+            if (IsObjectStart())
             {
                 return PullStartOfObject();
             }
@@ -495,6 +493,24 @@ namespace Pigeon.Configuration.Hocon
                 return PullUnquotedText();
 
             throw new Exception("No simple value found");
+        }
+
+        internal bool IsValue()
+        {
+            if (IsArrayStart())
+                return true;
+            if (IsObjectStart())
+                return true;
+            if (IsStartOfTrippleQuotedText())
+                return true;
+            if (IsSubstitutionStart())
+                return true;
+            if (IsStartOfQuotedText())
+                return true;
+            if (IsUnquotedText())
+                return true;
+
+            return false;
         }
     }
 }
