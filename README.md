@@ -16,7 +16,7 @@ Read more on:
 * [Hotswap](../../wiki/Hotswap)
 * [Supervision](../../wiki/Supervision)
 * [Performance](../../wiki/Performance)
-* [The F# API](../../wiki/F# API)
+* [The F# API](../../wiki/F#-API)
 
 ## Getting started
 Write your first actor:
