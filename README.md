@@ -11,8 +11,8 @@ Pigeon tries to stay as close to the Akka implementation as possible while still
 
 Read more on:
 
-* [Performance](Performance)
-* [The F# API](F# API)
+* [Performance](wiki/Performance)
+* [The F# API](wiki/F# API)
 
 
 
