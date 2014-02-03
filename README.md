@@ -9,158 +9,22 @@ Why not Akka# or dotAkka?
 I simply assume that TypeSafe that makes Akka don’t want to be associated with spare time projects like this, so I try not to stain their brand name.
 Pigeon tries to stay as close to the Akka implementation as possible while still beeing .NET idiomatic.
 
-#####Message Throughput
+Read more on:
 
-    Worker threads: 1023
-    OSVersion: Microsoft Windows NT 6.2.9200.0
-    ProcessorCount: 8
-    ClockSpeed: 3392 MHZ
-    Actor count, Messages/sec
-    2, 7073000 messages/s
-    4, 11760000 messages/s
-    6, 14534000 messages/s
-    8, 18039000 messages/s
-    10, 20161000 messages/s
-    12, 18785000 messages/s
-    14, 17523000 messages/s
-    16, 17482000 messages/s
-    18, 17931000 messages/s
-    20, 18575000 messages/s
-    22, 18975000 messages/s
-    24, 20920000 messages/s
-    ....
+###Akka features
+* [Getting started](https://github.com/rogeralsing/Pigeon/wiki/Getting started)
+* [Configuration](https://github.com/rogeralsing/Pigeon/wiki/Configuration)
+* [Remoting](https://github.com/rogeralsing/Pigeon/Remoting)
+* [Hotswap](https://github.com/rogeralsing/Pigeon/Hotswap)
+* [Supervision](https://github.com/rogeralsing/Pigeon/wiki/Supervision)
 
+#####Not yet implemented:
+* Full Akka actor life cycle management
+* Akka Cluster support
 
-## Getting started
-Write your first actor:
-```csharp
-public class Greet
-{
-    public string Who { get; set; }
-}
-
-public class GreetingActor : UntypedActor
-{
-    protected override void OnReceive(object message)
-    {
-        Pattern.Match(message)
-            .With<Greet>(m => Console.WriteLine("Hello {0}", m.Who));
-    }
-}
-```
-Usage:
-```csharp
-var system = ActorSystem.Create("MySystem");
-var greeter = system.ActorOf<GreetingActor>("greeter");
-greeter.Tell(new Greet { Who = "Roger" });
-
-```
-##Remoting
-Server:
-```csharp
-var config = ConfigurationFactory.ParseString(@"
-# we use real Akka Hocon notation configs
-akka { 
-    remote {
-        #this is the host and port the ActorSystem will listen to for connections
-        server {
-            host : ""127.0.0.1""
-            port : 8080
-        }
-    }
-}
-");
-
-using (var system = ActorSystem.Create("MyServer",config,new RemoteExtension())) 
-{
-    Console.ReadLine();
-}
-```
-Client:
-```csharp
-var system = new ActorSystem();
-var greeter = system.ActorSelection("http://localhost:8080/user/greeter");    
-//pass a message to the remote actor
-greeter.Tell(new Greet { Who = "Roger" });
-```
-    
-##Code Hotswap
-```csharp
-public class GreetingActor : UntypedActor
-{
-    protected override void OnReceive(object message)
-    {
-        Pattern.Match(message)
-            .With<Greet>(m => {
-                Console.WriteLine("Hello {0}", m.Who);
-                //this could also be a lambda
-                Become(OtherReceive);
-            });
-    }
-    
-    void OtherReceive(object message)
-    {
-        Pattern.Match(message)
-            .With<Greet>(m => {
-                Console.WriteLine("You already said hello!");
-                //Unbecome() to revert to old behavior
-            });
-    }
-}
-```
-
-##Supervision
-```csharp
-public class MyActor : UntypedActor
-{
-    private ActorRef logger = Context.ActorOf<LogActor>();
-
-    // if any child, e.g. the logger above. throws an exception
-    // apply the rules below
-    // e.g. Restart the child if 10 exceptions occur in 30 seconds or less
-    protected override SupervisorStrategy SupervisorStrategy()
-    {
-        return new OneForOneStrategy(
-            maxNumberOfRetries: 10, 
-            duration: TimeSpan.FromSeconds(30), 
-            decider: x =>
-            {
-                if (x is ArithmeticException)
-                    return Directive.Resume;
-                if (x is NotSupportedException)
-                    return Directive.Stop;
-
-                return Directive.Restart;
-            });
-    }
-    
-    ...
-}
-```
-
-##Special F# API
-```fsharp
-type SomeActorMessages =
-    | Greet of string
-    | Hi
-
-type SomeActor() =
-    inherit Actor()
-
-    override x.OnReceive message =
-        match message with
-        | :? SomeActorMessages as m ->  
-            match m with
-            | Greet(name) -> Console.WriteLine("Hello {0}",name)
-            | Hi -> Console.WriteLine("Hello from F#!")
-        | _ -> failwith "unknown message"
-
-let system = ActorSystem.Create("FSharpActors")
-let actor = system.ActorOf<SomeActor>("MyActor")
-
-actor <! Greet "Roger"
-actor <! Hi
-```
+###Pigeon specific
+* [Performance](https://github.com/rogeralsing/Pigeon/wiki/Performance)
+* [The F# API](https://github.com/rogeralsing/Pigeon/wiki/FSharp-API)
 
 #####Contribute
 If you are interested in helping porting the actor part of Akka to .NET please let me know.
