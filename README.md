@@ -23,8 +23,8 @@ Read more on:
 * Akka Cluster support
 
 ###Pigeon specific
-* [Performance](../../wiki/Performance)
-* [The F# API](../../wiki/FSharp-API)
+* [Performance](https://github.com/rogeralsing/Pigeon/wiki/Performance)
+* [The F# API](https://github.com/rogeralsing/Pigeon/wiki/FSharp-API)
 
 #####Contribute
 If you are interested in helping porting the actor part of Akka to .NET please let me know.
