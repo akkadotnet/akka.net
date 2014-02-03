@@ -13,6 +13,7 @@ Read more on:
 
 ###Akka features
 * [Getting started](../../wiki/Getting started)
+* [Configuration](../../wiki/Configuration)
 * [Remoting](../../wiki/Remoting)
 * [Hotswap](../../wiki/Hotswap)
 * [Supervision](../../wiki/Supervision)
