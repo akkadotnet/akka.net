@@ -11,10 +11,12 @@ Pigeon tries to stay as close to the Akka implementation as possible while still
 
 Read more on:
 
-* [Performance](wiki/Performance)
-* [The F# API](wiki/F# API)
-
-
+* [Getting started](../../wiki/Getting started)
+* [Remoting](../../wiki/Remoting)
+* [Hotswap](../../wiki/Hotswap)
+* [Supervision](../../wiki/Supervision)
+* [Performance](../../wiki/Performance)
+* [The F# API](../../wiki/F# API)
 
 ## Getting started
 Write your first actor:
