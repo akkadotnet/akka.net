@@ -80,14 +80,6 @@ namespace Pigeon.Configuration.Hocon
             if (reader.EoF)
                 throw new Exception("End of file reached while trying to read a value");
 
-            //if (owner.IsObject())
-            //{
-
-            //}
-            //else
-            //{
-            //    owner.Clear();
-            //}
             bool isObject = owner.IsObject();
             reader.PullWhitespaceAndComments();
             while (reader.IsValue())
@@ -107,10 +99,13 @@ namespace Pigeon.Configuration.Hocon
                         }
 
                         owner.AppendValue(t.Value);
-                        var ws = reader.PullSpaceOrTab();
-                        //single line ws should be included if string concat
-                        if (((string)ws.Value).Length > 0)
-                            owner.AppendValue(ws.Value);
+                        if (reader.IsSpaceOrTab())
+                        {
+                            var ws = reader.PullSpaceOrTab();
+                            //single line ws should be included if string concat
+                            if (((string)ws.Value).Length > 0)
+                                owner.AppendValue(ws.Value);
+                        }
                         break;
                     case TokenType.ObjectStart:
                         ParseObject(owner, true);
@@ -138,12 +133,6 @@ namespace Pigeon.Configuration.Hocon
         public HoconArray ParseArray()
         {
             var arr = new HoconArray();
-            ParseArrayContents(arr);
-            return arr;
-        }
-
-        private void ParseArrayContents(HoconArray arr)
-        {
             while (!reader.EoF && !reader.IsArrayEnd())
             {
                 var v = new HoconValue();
@@ -152,7 +141,8 @@ namespace Pigeon.Configuration.Hocon
                 reader.PullWhitespaceAndComments();
             }
             reader.PullArrayEnd();
-        }       
+            return arr;
+        }   
 
         private void IgnoreComma()
         {
