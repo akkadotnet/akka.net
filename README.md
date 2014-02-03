@@ -9,26 +9,11 @@ Why not Akka# or dotAkka?
 I simply assume that TypeSafe that makes Akka don’t want to be associated with spare time projects like this, so I try not to stain their brand name.
 Pigeon tries to stay as close to the Akka implementation as possible while still beeing .NET idiomatic.
 
-#####Message Throughput
+Read more on:
 
-    Worker threads: 1023
-    OSVersion: Microsoft Windows NT 6.2.9200.0
-    ProcessorCount: 8
-    ClockSpeed: 3392 MHZ
-    Actor count, Messages/sec
-    2, 7073000 messages/s
-    4, 11760000 messages/s
-    6, 14534000 messages/s
-    8, 18039000 messages/s
-    10, 20161000 messages/s
-    12, 18785000 messages/s
-    14, 17523000 messages/s
-    16, 17482000 messages/s
-    18, 17931000 messages/s
-    20, 18575000 messages/s
-    22, 18975000 messages/s
-    24, 20920000 messages/s
-    ....
+* [Performance](Performance)
+* [The F# API](F# API)
+
 
 
 ## Getting started
