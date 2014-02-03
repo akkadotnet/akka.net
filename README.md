@@ -12,11 +12,11 @@ Pigeon tries to stay as close to the Akka implementation as possible while still
 Read more on:
 
 ###Akka features
-* [Getting started](../../wiki/Getting started)
-* [Configuration](../../wiki/Configuration)
-* [Remoting](../../wiki/Remoting)
-* [Hotswap](../../wiki/Hotswap)
-* [Supervision](../../wiki/Supervision)
+* [Getting started](https://github.com/rogeralsing/Pigeon/wiki/Getting started)
+* [Configuration](https://github.com/rogeralsing/Pigeon/wiki/Configuration)
+* [Remoting](https://github.com/rogeralsing/Pigeon/Remoting)
+* [Hotswap](https://github.com/rogeralsing/Pigeon/Hotswap)
+* [Supervision](https://github.com/rogeralsing/Pigeon/wiki/Supervision)
 
 #####Not yet implemented:
 * Full Akka actor life cycle management
