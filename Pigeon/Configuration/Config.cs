@@ -141,5 +141,11 @@ namespace Pigeon.Configuration
             var node = GetNode(path);
             return node.GetStringList();
         }
+
+        public Config GetConfig(string path)
+        {
+            var node = GetNode(path);
+            return new Config(node);
+        }
     }
 }

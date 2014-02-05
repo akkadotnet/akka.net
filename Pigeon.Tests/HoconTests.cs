@@ -9,9 +9,28 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Tests
 {
+
     [TestClass]
     public class HoconTests
     {
+
+        [TestMethod]
+        public void CanParseSubConfig()
+        {
+            var hocon = @"
+a {
+   b {
+     c = 1
+     d = true
+   }
+}";
+            var config = ConfigurationFactory.ParseString(hocon);
+            var subConfig = config.GetConfig("a");
+            Assert.AreEqual(1, subConfig.GetInt("b.c"));
+            Assert.AreEqual(true, subConfig.GetBoolean("b.d"));
+        }
+
+
         [TestMethod]
         public void CanParseHocon()
         {
