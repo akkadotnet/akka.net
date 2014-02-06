@@ -144,7 +144,7 @@ namespace Pigeon.Configuration.Hocon
             {
                 return PullQuotedKey();
             }
-            if (IsUnquotedKey())
+            if (IsUnquotedKeyStart())
             {
                 return PullUnquotedKey();
             }
@@ -269,10 +269,15 @@ namespace Pigeon.Configuration.Hocon
                 sb.Append(Take());
             }
 
-            return Token.Key((sb.ToString()));
+            return Token.Key((sb.ToString().Trim()));
         }
 
         public bool IsUnquotedKey()
+        {
+            return (!EoF && !IsStartOfComment() && !notInUnquotedKey.Contains(Peek()));
+        }
+
+        public bool IsUnquotedKeyStart()
         {
             return (!EoF && !IsWhitespace() && !IsStartOfComment() && !notInUnquotedKey.Contains(Peek()));
         }
