@@ -9,10 +9,43 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Tests
 {
-
     [TestClass]
     public class HoconTests
     {
+        //Added tests to conform to the HOCON spec https://github.com/typesafehub/config/blob/master/HOCON.md
+        [TestMethod]
+        public void CanUsePathsAsKeys_FooBar()
+        {
+            var hocon1 = @"foo.bar : 42";
+            var hocon2 = @"foo { bar : 42 }";
+            Assert.AreEqual(ConfigurationFactory.ParseString(hocon1).GetString("foo.bar"), ConfigurationFactory.ParseString(hocon2).GetString("foo.bar"));
+        }
+
+        [TestMethod]
+        public void CanUsePathsAsKeys_FooBarBaz()
+        {
+            var hocon1 = @"foo.bar.baz : 42";
+            var hocon2 = @"foo { bar { baz : 42 } }";
+            Assert.AreEqual(ConfigurationFactory.ParseString(hocon1).GetString("foo.bar.baz"), ConfigurationFactory.ParseString(hocon2).GetString("foo.bar.baz"));
+        }
+
+        [TestMethod]
+        public void CanUsePathsAsKeys_AX_AY()
+        {
+            var hocon1 = @"a.x : 42, a.y : 43";
+            var hocon2 = @"a { x : 42, y : 43 }";
+            Assert.AreEqual(ConfigurationFactory.ParseString(hocon1).GetString("a.x"), ConfigurationFactory.ParseString(hocon2).GetString("a.x"));
+            Assert.AreEqual(ConfigurationFactory.ParseString(hocon1).GetString("a.y"), ConfigurationFactory.ParseString(hocon2).GetString("a.y"));
+        }
+
+        [TestMethod]
+        public void CanUsePathsAsKeys_A_B_C()
+        {
+            var hocon1 = @"a b c : 42";
+            var hocon2 = @"""a b c"" : 42";
+            Assert.AreEqual(ConfigurationFactory.ParseString(hocon1).GetString("a b c"), ConfigurationFactory.ParseString(hocon2).GetString("a b c"));
+        }
+
 
         [TestMethod]
         public void CanConcatinateSubstitutedUnquotedString()
