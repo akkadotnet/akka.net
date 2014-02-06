@@ -14,6 +14,30 @@ namespace Pigeon.Tests
     {
         //Added tests to conform to the HOCON spec https://github.com/typesafehub/config/blob/master/HOCON.md
         [TestMethod]
+        public void CanUsePathsAsKeys_3_14()
+        {
+            var hocon1 = @"3.14 : 42";
+            var hocon2 = @"3 { 14 : 42}";
+            Assert.AreEqual(ConfigurationFactory.ParseString(hocon1).GetString("3.14"), ConfigurationFactory.ParseString(hocon2).GetString("3.14"));
+        }
+
+        [TestMethod]
+        public void CanUsePathsAsKeys_3()
+        {
+            var hocon1 = @"3 : 42";
+            var hocon2 = @"""3"" : 42";
+            Assert.AreEqual(ConfigurationFactory.ParseString(hocon1).GetString("3"), ConfigurationFactory.ParseString(hocon2).GetString("3"));
+        }
+
+        [TestMethod]
+        public void CanUsePathsAsKeys_true()
+        {
+            var hocon1 = @"true : 42";
+            var hocon2 = @"""true"" : 42";
+            Assert.AreEqual(ConfigurationFactory.ParseString(hocon1).GetString("true"), ConfigurationFactory.ParseString(hocon2).GetString("true"));
+        }
+
+        [TestMethod]
         public void CanUsePathsAsKeys_FooBar()
         {
             var hocon1 = @"foo.bar : 42";
