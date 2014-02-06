@@ -12,5 +12,10 @@ namespace Pigeon
         {
             return (T)self;
         }
+
+        public static T[] Add<T>(this T[] self,T add)
+        {
+            return self.Union(Enumerable.Repeat(add, 1)).ToArray();
+        }
     }
 }
