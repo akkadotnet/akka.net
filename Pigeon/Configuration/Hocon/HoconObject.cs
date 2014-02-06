@@ -38,8 +38,17 @@ namespace Pigeon.Configuration.Hocon
             return false;
         }
 
-
         public string GetString()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsArray()
+        {
+            return false;
+        }
+
+        public IList<HoconValue> GetArray()
         {
             throw new NotImplementedException();
         }

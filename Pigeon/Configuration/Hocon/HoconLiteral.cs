@@ -15,10 +15,19 @@ namespace Pigeon.Configuration.Hocon
             return true;
         }
 
-
         public string GetString()
         {
             return Value;
+        }
+
+        public bool IsArray()
+        {
+            return false;
+        }
+
+        public IList<HoconValue> GetArray()
+        {
+            throw new NotImplementedException();
         }
     }
 }

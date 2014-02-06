@@ -155,8 +155,9 @@ namespace Pigeon.Configuration.Hocon
 
         public IList<HoconValue> GetArray()
         {
-            var x = from arr in this.values.OfType<HoconArray>()
-                    from e in arr
+            var x = from arr in this.values
+                    where arr.IsArray()
+                    from e in arr.GetArray()
                     select e;
 
             return x.ToList();

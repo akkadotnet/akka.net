@@ -10,5 +10,9 @@ namespace Pigeon.Configuration.Hocon
     {
         bool IsString();
         string GetString();
+
+        bool IsArray();
+
+        IList<HoconValue> GetArray();
     }
 }

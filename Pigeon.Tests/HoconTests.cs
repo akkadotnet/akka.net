@@ -15,6 +15,26 @@ namespace Pigeon.Tests
     {
 
         [TestMethod]
+        public void CanConcatinateSubstitutedUnquotedString()
+        {
+            var hocon = @"a {
+  name = Roger
+  c = Hello my name is ${a.name}
+}";
+            Assert.AreEqual("Hello my name is Roger",ConfigurationFactory.ParseString(hocon).GetString("a.c"));
+        }
+
+        [TestMethod]
+        public void CanConcatinateSubstitutedArray()
+        {
+            var hocon = @"a {
+  b = [1,2,3]
+  c = ${a.b} [4,5,6]
+}";
+            Assert.IsTrue(new[] { 1, 2, 3, 4, 5, 6 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("a.c")));
+        }
+
+        [TestMethod]
         public void CanParseSubConfig()
         {
             var hocon = @"

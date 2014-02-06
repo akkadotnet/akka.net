@@ -26,5 +26,15 @@ namespace Pigeon.Configuration.Hocon
         {
             return ResolvedValue.GetString();
         }
+
+        public bool IsArray()
+        {
+            return ResolvedValue.IsArray();
+        }
+
+        public IList<HoconValue> GetArray()
+        {
+            return ResolvedValue.GetArray();
+        }
     }
 }

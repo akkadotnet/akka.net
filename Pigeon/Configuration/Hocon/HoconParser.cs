@@ -114,19 +114,7 @@ namespace Pigeon.Configuration.Hocon
                             Value = t.Value
                         };
                         owner.AppendValue(lit);
-                        if (reader.IsSpaceOrTab())
-                        {
-                            var ws = reader.PullSpaceOrTab();
-                            //single line ws should be included if string concat
-                            if (((string)ws.Value).Length > 0)
-                            {
-                                var wsLit = new HoconLiteral
-                                {
-                                    Value = ws.Value,
-                                };
-                                owner.AppendValue(wsLit);
-                            }
-                        }
+                        
                         break;
                     case TokenType.ObjectStart:
                         ParseObject(owner, true);
@@ -141,10 +129,27 @@ namespace Pigeon.Configuration.Hocon
                         owner.AppendValue(sub);
                         break;
                 }
-                reader.PullSpaceOrTab();
+                if (reader.IsSpaceOrTab())
+                {
+                    ParseTrailingWhitespace(owner);
+                }
             }
             
             IgnoreComma();
+        }
+
+        private void ParseTrailingWhitespace(HoconValue owner)
+        {
+            var ws = reader.PullSpaceOrTab();
+            //single line ws should be included if string concat
+            if (((string)ws.Value).Length > 0)
+            {
+                var wsLit = new HoconLiteral
+                {
+                    Value = ws.Value,
+                };
+                owner.AppendValue(wsLit);
+            }
         }
 
         private static HoconSubstitution ParseSubstitution(string value )
