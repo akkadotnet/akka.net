@@ -9,6 +9,14 @@ namespace Pigeon.Actor
     {
         public ActorCell Cell { get; private set; }
 
+        public ActorSystem Provider
+        {
+            get
+            {
+                return Cell.System;
+            }
+        }
+
         public void Stop()
         {
             Cell.Stop();

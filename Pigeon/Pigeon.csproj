@@ -85,6 +85,7 @@
     <Compile Include="Actor\Message.cs" />
     <Compile Include="Actor\MessageHandler.cs" />
     <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Actor\TypedActor.cs" />
     <Compile Include="Routing\Balancing.cs" />
@@ -94,6 +95,7 @@
     <Compile Include="Routing\Random.cs" />
     <Compile Include="Routing\RoundRobin.cs" />
     <Compile Include="Routing\RoutedActorRef.cs" />
+    <Compile Include="Routing\Router.cs" />
     <Compile Include="Serialization\Serialization.cs" />
     <Compile Include="Serialization\Serializer.cs" />
     <Compile Include="Tools\Pattern.cs" />
