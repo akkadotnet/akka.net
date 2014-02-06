@@ -238,8 +238,10 @@ a.b.e.f=3
             var hocon = @"a{
     b = 1
     c = ${a.b}
+    d = ${a.c}23
 }";
             Assert.AreEqual(1, ConfigurationFactory.ParseString(hocon).GetInt("a.c"));
+            Assert.AreEqual(123, ConfigurationFactory.ParseString(hocon).GetInt("a.d"));
         }
 
         [TestMethod]

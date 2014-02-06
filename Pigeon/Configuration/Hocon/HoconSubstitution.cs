@@ -22,7 +22,6 @@ namespace Pigeon.Configuration.Hocon
             return ResolvedValue.IsString();
         }
 
-
         public string GetString()
         {
             return ResolvedValue.GetString();
