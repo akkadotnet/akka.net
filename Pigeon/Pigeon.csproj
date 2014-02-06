@@ -96,6 +96,7 @@
     <Compile Include="Routing\RoundRobin.cs" />
     <Compile Include="Routing\RoutedActorRef.cs" />
     <Compile Include="Routing\Router.cs" />
+    <Compile Include="Routing\RouterActor.cs" />
     <Compile Include="Serialization\Serialization.cs" />
     <Compile Include="Serialization\Serializer.cs" />
     <Compile Include="Tools\Pattern.cs" />

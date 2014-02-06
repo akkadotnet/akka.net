@@ -17,16 +17,21 @@ namespace Pigeon.Actor
         {
         }
 
-		public void AroundPostRestart(Exception reason, object message)
+        public void AroundPostRestart(Exception cause, object message)
         {
             //foreach (var child in Context.GetChildren())
             //{
             //    Context.Unwatch(child);
             //    child.Stop();
             //}
-            PostRestart(reason, message);
+            PostRestart(cause, message);
         }
-		protected virtual void PostRestart(Exception reason, object message)
+
+        protected virtual void PreRestart(Exception cause, object message)
+        {
+
+        }
+        protected virtual void PostRestart(Exception cause, object message)
         {
 			
         }

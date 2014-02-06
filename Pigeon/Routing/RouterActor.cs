@@ -1,14 +1,20 @@
-﻿using System;
+﻿using Pigeon.Actor;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Actor
+namespace Pigeon.Routing
 {
-    public abstract class UntypedActor : ActorBase
+    public class RouterActor : UntypedActor
     {
         protected override void PreRestart(Exception cause, object message)
+        {
+ 	 
+        }
+        
+        protected override void OnReceive(object message)
         {
             
         }
