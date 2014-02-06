@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Configuration.Hocon
 {
-    public class HoconObject
+    public class HoconObject : IHoconElement
     {
         private readonly Dictionary<string, HoconValue> _children = new Dictionary<string, HoconValue>();
         public IEnumerable<HoconValue> Children
@@ -31,6 +31,17 @@ namespace Pigeon.Configuration.Hocon
             var child = new HoconValue();            
             _children.Add(key, child);
             return child;
+        }
+
+        public bool IsString()
+        {
+            return false;
+        }
+
+
+        public string GetString()
+        {
+            throw new NotImplementedException();
         }
     }
 }

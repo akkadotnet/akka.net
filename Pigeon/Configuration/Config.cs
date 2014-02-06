@@ -147,5 +147,11 @@ namespace Pigeon.Configuration
             var node = GetNode(path);
             return new Config(node);
         }
+
+        public HoconValue GetValue(string path)
+        {
+            var node = GetNode(path);
+            return node;
+        }
     }
 }

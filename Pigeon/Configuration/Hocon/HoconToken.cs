@@ -32,13 +32,13 @@ namespace Pigeon.Configuration.Hocon
             Type = type;
         }
 
-        public Token(object value)
+        public Token(string value)
         {
             Type = TokenType.LiteralValue;
             Value = value;
         }
 
-        public object Value { get; set; }
+        public string Value { get; set; }
         public TokenType Type { get; set; }
 
         public static Token Key(string key)
@@ -59,7 +59,7 @@ namespace Pigeon.Configuration.Hocon
             };
         }
 
-        public static Token LiteralValue(object value)
+        public static Token LiteralValue(string value)
         {
             return new Token
             {

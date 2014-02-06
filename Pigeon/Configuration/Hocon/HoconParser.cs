@@ -12,12 +12,24 @@ namespace Pigeon.Configuration.Hocon
         }
 
         private HoconTokenizer reader;
+        private HoconValue root;
+        private List<HoconSubstitution> substitutions = new List<HoconSubstitution>();
         private HoconValue ParseText(string text)
         {
-            var root = new HoconValue();
+            root = new HoconValue();
             reader = new HoconTokenizer(text);
             reader.PullWhitespaceAndComments();
             ParseObject( root,true);
+
+            Config c = new Config(root);
+            foreach(var sub in substitutions)
+            {
+                var res = c.GetValue(sub.Path);
+                if (res == null)
+                    throw new Exception("Unresolved substitution:" + sub.Path);
+                sub.ResolvedValue = res;
+
+            }
             return root;
         }
 
@@ -97,14 +109,23 @@ namespace Pigeon.Configuration.Hocon
                             isObject = false;
                             owner.Clear();
                         }
-
-                        owner.AppendValue(t.Value);
+                        var lit = new HoconLiteral()
+                        {
+                            Value = t.Value
+                        };
+                        owner.AppendValue(lit);
                         if (reader.IsSpaceOrTab())
                         {
                             var ws = reader.PullSpaceOrTab();
                             //single line ws should be included if string concat
                             if (((string)ws.Value).Length > 0)
-                                owner.AppendValue(ws.Value);
+                            {
+                                var wsLit = new HoconLiteral
+                                {
+                                    Value = ws.Value,
+                                };
+                                owner.AppendValue(wsLit);
+                            }
                         }
                         break;
                     case TokenType.ObjectStart:
@@ -116,6 +137,7 @@ namespace Pigeon.Configuration.Hocon
                         break;
                     case TokenType.Substitute:
                         var sub = ParseSubstitution((string)t.Value);
+                        substitutions.Add(sub);
                         owner.AppendValue(sub);
                         break;
                 }

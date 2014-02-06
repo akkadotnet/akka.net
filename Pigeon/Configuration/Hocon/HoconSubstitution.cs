@@ -6,13 +6,26 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Configuration.Hocon
 {
-    public class HoconSubstitution
+    public class HoconSubstitution : IHoconElement
     {
         public string Path { get;private set; }
 
         public HoconSubstitution(string path)
         {
             this.Path = path;
+        }
+
+        public HoconValue ResolvedValue { get; set; }
+
+        public bool IsString()
+        {
+            return ResolvedValue.IsString();
+        }
+
+
+        public string GetString()
+        {
+            return ResolvedValue.GetString();
         }
     }
 }

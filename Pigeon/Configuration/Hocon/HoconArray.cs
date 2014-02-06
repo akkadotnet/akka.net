@@ -5,11 +5,22 @@ using System.Text;
 
 namespace Pigeon.Configuration.Hocon
 {
-    public class HoconArray : List<HoconValue>
+    public class HoconArray : List<HoconValue> , IHoconElement
     {
         public override string ToString()
         {
             return "[" + string.Join(",", this) + "]";
+        }
+
+        public bool IsString()
+        {
+            return false;
+        }
+
+
+        public string GetString()
+        {
+            throw new NotImplementedException();
         }
     }
 }

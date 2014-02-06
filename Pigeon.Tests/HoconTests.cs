@@ -237,7 +237,7 @@ a.b.e.f=3
         {
             var hocon = @"a{
     b = 1
-    c = ${b}
+    c = ${a.b}
 }";
             Assert.AreEqual(1, ConfigurationFactory.ParseString(hocon).GetInt("a.c"));
         }

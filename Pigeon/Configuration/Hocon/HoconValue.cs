@@ -9,8 +9,8 @@ namespace Pigeon.Configuration.Hocon
 {
     public class HoconValue
     {
-        private List<object> values = new List<object>();
-        public void AppendValue(object value)
+        private List<IHoconElement> values = new List<IHoconElement>();
+        public void AppendValue(IHoconElement value)
         {
             this.values.Add(value);
         }
@@ -18,28 +18,30 @@ namespace Pigeon.Configuration.Hocon
         {
             this.values.Clear();
         }
-        public void NewValue(object value)
+        public void NewValue(IHoconElement value)
         {
             this.values.Clear();
             this.values.Add(value);
         }
 
-        public object GetValue()
+        public bool IsString()
         {
-            if (values.Any() && values.All(v => v is string))
-            {
-                var concat = string.Join("", values).Trim();
+            return values.Any() && values.All(v => v.IsString());
+        }
 
-                if (concat == "null")
-                    return null;
+        private string ConcatString()
+        {
+            var concat = string.Join("", values.Select(l => l.GetString())).Trim();
 
-                return concat;
-            }
-            return values.FirstOrDefault();
+            if (concat == "null")
+                return null;
+
+            return concat;
         }
 
         public HoconObject GetObject()
-        {
+        {    
+            //TODO: merge objects?
             var o = values.FirstOrDefault() as HoconObject;
             return o;
         }
@@ -56,7 +58,7 @@ namespace Pigeon.Configuration.Hocon
 
         public bool GetBoolean()
         {
-            var v = GetValue().ToString();
+            var v = GetString();
             switch (v)
             {
                 case "on":
@@ -74,37 +76,41 @@ namespace Pigeon.Configuration.Hocon
       
         public string GetString()
         {
-            return GetValue() as string;
+            if (IsString())
+            {
+                return ConcatString();
+            }
+            return null; //TODO: throw exception?
         }
 
         public decimal GetDecimal()
         {
-            return decimal.Parse(GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+            return decimal.Parse(GetString(), NumberFormatInfo.InvariantInfo);
         }
 
         public float GetFloat()
         {
-            return float.Parse(GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+            return float.Parse(GetString(), NumberFormatInfo.InvariantInfo);
         }
 
         public double GetDouble()
         {
-            return double.Parse(GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+            return double.Parse(GetString(), NumberFormatInfo.InvariantInfo);
         }
 
         public long GetLong()
         {
-            return long.Parse(GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+            return long.Parse(GetString(), NumberFormatInfo.InvariantInfo);
         }
 
         public int GetInt()
         {
-            return int.Parse(GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+            return int.Parse(GetString(), NumberFormatInfo.InvariantInfo);
         }
 
         public byte GetByte()
         {
-            return byte.Parse(GetValue().ToString(), NumberFormatInfo.InvariantInfo);
+            return byte.Parse(GetString(), NumberFormatInfo.InvariantInfo);
         }
 
         public IList<byte> GetByteList()
