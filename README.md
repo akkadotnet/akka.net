@@ -13,10 +13,12 @@ Read more on:
 
 ###Akka features
 * [Getting started](https://github.com/rogeralsing/Pigeon/wiki/Getting started)
-* [Configuration](https://github.com/rogeralsing/Pigeon/wiki/Configuration)
-* [Remoting](https://github.com/rogeralsing/Pigeon/Remoting)
+* [Configuration](https://github.com/rogeralsing/Pigeon/wiki/Configuration) - Inprogress
+* [Remoting](https://github.com/rogeralsing/Pigeon/Remoting) - Inprogress
 * [Hotswap](https://github.com/rogeralsing/Pigeon/Hotswap)
-* [Supervision](https://github.com/rogeralsing/Pigeon/wiki/Supervision)
+* [Supervision](https://github.com/rogeralsing/Pigeon/wiki/Supervision) - Inprogress
+* Actor Lifecycle management - Inprogress
+* Routers - Inprogress
 
 #####Not yet implemented:
 * Full Akka actor life cycle management
