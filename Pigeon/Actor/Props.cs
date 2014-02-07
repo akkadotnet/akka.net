@@ -1,4 +1,5 @@
 ﻿using Pigeon.Dispatch;
+using Pigeon.Routing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +13,9 @@ namespace Pigeon.Actor
         private Func<ActorBase> factory;
         public Type Type { get; private set; }
 
-        public MessageDispatcher Dispathcer { get;private set; }
+        public MessageDispatcher Dispatcher { get;private set; }
+
+        public RouterConfig RouterConfig { get; private set; }
 
         public static Props Create<TActor> (Func<TActor> factory) where TActor : ActorBase
         {
@@ -40,7 +43,13 @@ namespace Pigeon.Actor
 
         public Props WithDispatcher(MessageDispatcher dispatcher)
         {
-            this.Dispathcer = dispatcher;
+            this.Dispatcher = dispatcher;
+            return this;
+        }
+
+        public Props WithRouter(RouterConfig routerConfig)
+        {
+            this.RouterConfig = RouterConfig;
             return this;
         }
 

@@ -153,7 +153,7 @@ namespace Pigeon.Actor
             this.System = parentContext != null ? parentContext.System : null;
             this.Self = new LocalActorRef(new ChildActorPath(this.Parent.Path, name), this);
             this.Props = props;
-            this.Dispatcher = props.Dispathcer ?? this.System.DefaultDispatcher;
+            this.Dispatcher = props.Dispatcher ?? this.System.DefaultDispatcher;
             this.Mailbox = new ConcurrentQueueMailbox(this.Dispatcher);// new ActionBlockMailbox();
             this.Mailbox.Invoke = this.Invoke;
             this.Mailbox.SystemInvoke = this.SystemInvoke;

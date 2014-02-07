@@ -94,9 +94,12 @@
     <Compile Include="Routing\MurmurHash.cs" />
     <Compile Include="Routing\Random.cs" />
     <Compile Include="Routing\RoundRobin.cs" />
+    <Compile Include="Routing\RoutedActorCell.cs" />
     <Compile Include="Routing\RoutedActorRef.cs" />
     <Compile Include="Routing\Router.cs" />
     <Compile Include="Routing\RouterActor.cs" />
+    <Compile Include="Routing\RouterConfig.cs" />
+    <Compile Include="Routing\RouterMsg.cs" />
     <Compile Include="Serialization\Serialization.cs" />
     <Compile Include="Serialization\Serializer.cs" />
     <Compile Include="Tools\Pattern.cs" />

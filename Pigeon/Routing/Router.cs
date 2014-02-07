@@ -102,6 +102,13 @@ namespace Pigeon.Routing
     {
         private Routee[] routees;
         private RoutingLogic logic;
+        public IEnumerable<Routee> Routees
+        {
+            get
+            {
+                return routees;
+            }
+        }
         public Router(RoutingLogic logic, params Routee[] routees)
         {
             if (routees == null)

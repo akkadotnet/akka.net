@@ -9,6 +9,22 @@ namespace Pigeon.Routing
 {
     public class RouterActor : UntypedActor
     {
+        public RouterActor() : base()
+        {
+            if (!(Context is RoutedActorCell))
+            {
+                throw new NotSupportedException("Current Context must be of type RouterActorContext");
+            }
+        }
+
+        protected RoutedActorCell Cell
+        {
+            get
+            {
+                return Context.AsInstanceOf<RoutedActorCell>();
+            }
+        }
+
         protected override void PreRestart(Exception cause, object message)
         {
  	 
@@ -16,7 +32,9 @@ namespace Pigeon.Routing
         
         protected override void OnReceive(object message)
         {
-            
+            Pattern.Match(message)
+                .With<GetRoutees>(m => Sender.Tell(new Routees(this.Cell.Router.Routees)));
+                
         }
     }
 }
