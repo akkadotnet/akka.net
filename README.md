@@ -21,7 +21,6 @@ Read more on:
 * Routers - In progress
 
 #####Not yet implemented:
-* Full Akka actor life cycle management
 * Akka Cluster support
 
 ###Pigeon specific
