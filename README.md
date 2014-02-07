@@ -1,6 +1,6 @@
 # Pigeon
 
-*Alpha stage, do not use in production.*
+*Early beta, do not use in production.*
 
 ###High performance Actor Model framework.
 Pigeon is an unofficial port of the Scala/Java Akka actor model framework.
