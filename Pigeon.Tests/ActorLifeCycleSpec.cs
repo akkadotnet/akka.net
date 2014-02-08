@@ -1,7 +1,9 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pigeon.Actor;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -20,9 +22,17 @@ namespace Pigeon.Tests
 
         public class TestActor : UntypedActor
         {
+            private BlockingCollection<string> queue;
+            public TestActor(BlockingCollection<string> queue)
+            {
+                this.queue = queue;
+            }
             protected override void OnReceive(object message)
             {
-                
+                if (message is string)
+                {
+                    queue.Add((string)message);
+                }
             }
         }
         public class Supervisor : UntypedActor
@@ -51,7 +61,7 @@ namespace Pigeon.Tests
         }
         public class AtomicInteger
         {
-            private int value;
+            private int value=-1;
             public int Value
             {
                 get
@@ -87,7 +97,7 @@ namespace Pigeon.Tests
 
             protected override void OnReceive(object message)
             {
-                if (message is string && (string)message == "Status")
+                if (message is string && (string)message == "status")
                 {
                     Sender.Tell("OK");
                 }
@@ -95,22 +105,22 @@ namespace Pigeon.Tests
 
             protected override void PostStop()
             {
-                Report("PostStop");
+                Report("postStop");
             }
 
             protected override void PreStart()
             {
-                Report("PreStart");
+                Report("preStart");
             }
 
             protected override void PreRestart(Exception cause, object message)
             {
-                Report("PreRestart");
+                Report("preRestart");
             }
 
             protected override void PostRestart(Exception cause, object message)
             {
-                Report("PostRestart");
+                Report("postRestart");
             }
         }
 
@@ -121,14 +131,22 @@ namespace Pigeon.Tests
         {
             using (var system = ActorSystem.Create("Test"))
             {
-                Action<string, string, int> expectMsg = (a, b, c) => { };
-                string id = Guid.NewGuid().ToString();
                 var generationProvider = new AtomicInteger();
+                BlockingCollection<string> queue = new BlockingCollection<string>();
+                Action<string, string, int> expectMsg = (expectedText, b, generation) => {
+                    var actualText = queue.Take();
+                    Debug.WriteLine(actualText);
+
+                    Assert.AreEqual(expectedText, actualText);
+                    Assert.AreEqual(generation,generationProvider.Value);
+                };
+                string id = Guid.NewGuid().ToString();
+                
                 OneForOneStrategy strategy = new OneForOneStrategy(3, TimeSpan.FromSeconds(10), x =>
                 {
-                    return Directive.Resume;
+                    return Directive.Restart;
                 });
-                ActorRef testActor = system.ActorOf<TestActor>();
+                ActorRef testActor = system.ActorOf(Props.Create(() => new TestActor(queue)));
                 var supervisor = system.ActorOf(Props.Create(() => new Supervisor(strategy)));
                 var restarterProps = Props.Create(() => new LifeCycleTestActor(testActor, id, generationProvider));
 

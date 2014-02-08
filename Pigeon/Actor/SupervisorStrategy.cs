@@ -37,7 +37,14 @@ namespace Pigeon.Actor
 
         private void ProcessFailure(ActorCell actorCell, bool restart, ActorRef child, Exception exception)
         {
-            child.Stop();
+            if (restart)
+            {
+                child.AsInstanceOf<LocalActorRef>().Restart();
+            }
+            else
+            {
+                child.Stop();
+            }
             /*
     if (children.nonEmpty) {
       if (restart && children.forall(_.requestRestartPermission(retriesWindow)))
