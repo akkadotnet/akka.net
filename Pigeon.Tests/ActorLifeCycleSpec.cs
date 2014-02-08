@@ -174,8 +174,7 @@ namespace Pigeon.Tests
                 expectMsg("OK", id, 3);
                 restarter.Tell(new Kill());
                 expectMsg("postStop", id, 3);
-
-
+                supervisor.Stop();
             }
         }
     }
