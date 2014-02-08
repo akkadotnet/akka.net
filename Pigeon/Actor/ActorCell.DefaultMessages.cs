@@ -1,4 +1,5 @@
 ﻿using Pigeon.Dispatch.SysMsg;
+using Pigeon.Event;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -135,7 +136,7 @@ namespace Pigeon.Actor
 
         private void HandleDeathWatchNotification(DeathWatchNotification m)
         {
-            
+            Self.Tell(new Terminated(m.Actor), m.Actor);
         }
 
 
@@ -172,6 +173,59 @@ protected def terminate() {
             {
                 child.Stop();
             }
+
+            FinishTerminate();
+        }
+
+        private void FinishTerminate()
+        {
+
+            try
+            {
+                TellWatchersWeDied();
+            }
+            catch { }
+            if (Actor != null)
+            {
+                try
+                {
+                    Actor.AroundPostStop();
+                }
+                catch (Exception x)
+                {
+                    HandleNonFatalOrInterruptedException(() => Publish(new Error(x, Self.Path.ToString(), Actor.GetType(), x.Message)));
+                }
+            }
+            Actor = null;
+            Mailbox.Invoke = null;
+            Mailbox.SystemInvoke = null;
+            Mailbox = null;
+        }
+
+        private void HandleNonFatalOrInterruptedException(Action action)
+        {
+            action();
+        }
+
+        private void Publish(object message)
+        {
+
+        }
+
+        private void TryCatch(Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch
+            {
+            }
+        }
+
+        private void TellWatchersWeDied()
+        {
+            WatchedBy.Tell(new DeathWatchNotification(Self,true,false));
         }
 
         private void UnwatchWatchedActors(ActorBase actorBase)
@@ -251,7 +305,7 @@ protected def terminate() {
         }
 
         private volatile bool isTerminating = false;
-        private void StopChild(LocalActorRef child)
+        public void Stop(LocalActorRef child)
         {
             //if (isTerminating)
             //    return;
@@ -280,15 +334,15 @@ protected def terminate() {
                 throw m.Cause;
         }       
 
-        private BroadcastActorRef Watchers = new BroadcastActorRef();
+        private BroadcastActorRef WatchedBy = new BroadcastActorRef();
         private void HandleWatch(Watch m)
         {
-            Watchers.Add(Sender);
+            WatchedBy.Add(Sender);
         }
 
         private void HandleUnwatch(Unwatch m)
         {
-            Watchers.Remove(Sender);
+            WatchedBy.Remove(Sender);
         }
 
         private void HandleCompleteFuture(CompleteFuture m)

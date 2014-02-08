@@ -33,7 +33,11 @@ namespace Pigeon.Actor
         }
         protected virtual void PostRestart(Exception cause, object message)
         {
-			
+            Context.GetChildren().ToList().ForEach(c => {
+                Context.Unwatch(c);
+                Context.Stop(c);
+            });
+            PostStop();
         }
 
 		public void AroundPostStop()

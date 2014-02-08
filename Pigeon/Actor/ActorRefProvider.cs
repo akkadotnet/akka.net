@@ -15,12 +15,14 @@ namespace Pigeon.Actor
             {
                 var cell = new RoutedActorCell(parentContext, props, name);
                 parentContext.NewActor(cell);
+                parentContext.Watch(cell.Self);
                 return cell.Self;
             }
             else
             {
                 var cell = new ActorCell(parentContext, props, name);
                 parentContext.NewActor(cell);
+                parentContext.Watch(cell.Self);
                 return cell.Self;
             }
         }

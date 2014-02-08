@@ -31,5 +31,7 @@ namespace Pigeon.Actor
   def watch(subject: ActorRef): ActorRef
   def unwatch(subject: ActorRef): ActorRef
          */
+
+        void Stop(LocalActorRef child);
     }
 }
