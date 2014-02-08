@@ -20,7 +20,7 @@ namespace Routing
                 system.ActorOf<Worker>("Worker4");
 
                 var actor = system.ActorOf(new Props().WithRouter(new RoundRobinGroup("user/Worker1", "user/Worker2", "user/Worker3", "user/Worker4")));
-                for (int i = 0; i < 10; i++)
+                for (int i = 0; i < 20; i++)
                 {
                     actor.Tell(i);
                 }
