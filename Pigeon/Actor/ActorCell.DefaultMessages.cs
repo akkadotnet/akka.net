@@ -56,8 +56,9 @@ namespace Pigeon.Actor
                 .Default(m => CurrentBehavior(m));
         }
 
-        private void ReceivedTerminated(Terminated obj)
+        private void ReceivedTerminated(Terminated m)
         {
+            Debug.WriteLine("Terminated! actor: {0}", this.Self.Path);
         }
 
         public void SystemInvoke(Envelope envelope)
@@ -236,6 +237,8 @@ protected def terminate() {
             if (isTerminating)
                 return;
 
+            isTerminating = true;
+
             Self.Tell(new Terminate());            
         }
 
@@ -250,11 +253,11 @@ protected def terminate() {
         private volatile bool isTerminating = false;
         private void StopChild(LocalActorRef child)
         {
-            if (isTerminating)
-                return;
+            //if (isTerminating)
+            //    return;
 
-            isTerminating = true;
-            Debug.WriteLine("stopping child: {0}", child.Path);
+            //isTerminating = true;
+            //Debug.WriteLine("stopping child: {0}", child.Path);
             child.Cell.Become(System.DeadLetters.Tell);
             LocalActorRef tmp;
             var name = child.Path.Name;
@@ -272,22 +275,10 @@ protected def terminate() {
 
         private void HandleFailed(Failed m)
         {
-            switch (this.Actor.SupervisorStrategyLazy().Handle(Sender, m.Cause))
-            {
-                case Directive.Escalate:
-                    throw m.Cause;
-                case Directive.Resume:
-                    break;
-                case Directive.Restart:
-                    m.Child.Tell(new Recreate(m.Cause));
-                    break;
-                case Directive.Stop:
-                    StopChild((LocalActorRef)Sender);
-                    break;
-                default:
-                    break;
-            }
-        }        
+            var handled = this.Actor.SupervisorStrategyLazy().HandleFailure(this, m.Child, m.Cause);
+            if (!handled)
+                throw m.Cause;
+        }       
 
         private BroadcastActorRef Watchers = new BroadcastActorRef();
         private void HandleWatch(Watch m)

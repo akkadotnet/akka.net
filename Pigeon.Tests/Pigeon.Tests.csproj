@@ -54,6 +54,7 @@
     <Compile Include="ActorSystemTests.cs" />
     <Compile Include="HoconTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SupervisionTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Pigeon\Pigeon.csproj">

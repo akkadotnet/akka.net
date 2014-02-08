@@ -39,6 +39,10 @@ namespace Pigeon.Actor
         protected abstract void TellInternal(object message,ActorRef sender);     
 
         public static readonly ActorRef NoSender = new NoSender();
+
+        public abstract void Resume(Exception causedByFailure = null);
+
+        public abstract void Stop();
     }
 
     public sealed class NoSender : ActorRef
@@ -50,6 +54,16 @@ namespace Pigeon.Actor
 
         protected override void TellInternal(object message, ActorRef sender)
         {
+        }
+
+        public override void Resume(Exception causedByFailure = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Stop()
+        {
+            throw new NotImplementedException();
         }
     }
 }

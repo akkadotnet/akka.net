@@ -9,7 +9,69 @@ namespace Pigeon.Actor
 {
     public abstract class SupervisorStrategy
     {
+        protected Dictionary<ActorRef, Failures> actorFailures = new Dictionary<ActorRef, Failures>();
         public abstract Directive Handle(ActorRef child, Exception x);
+
+        public bool HandleFailure(ActorCell actorCell, ActorRef child, Exception cause)
+        {
+            var directive = Handle(child, cause);
+            LogFailure(actorCell, child, cause, directive);
+            switch (directive)
+            {
+                case Directive.Escalate:
+                    return false;
+                case Directive.Resume:
+                    ResumeChild(child, cause);
+                    return true;
+                case Directive.Restart:
+                    ProcessFailure(actorCell, true, child, cause);
+                    return true;
+                case Directive.Stop:
+                    ProcessFailure(actorCell, true, child, cause);
+                    return true;
+                default:
+                    break;
+            }
+            return false;
+        }
+
+        private void ProcessFailure(ActorCell actorCell, bool restart, ActorRef child, Exception exception)
+        {
+            child.Stop();
+            /*
+    if (children.nonEmpty) {
+      if (restart && children.forall(_.requestRestartPermission(retriesWindow)))
+        children foreach (crs ⇒ restartChild(crs.child, cause, suspendFirst = (crs.child != child)))
+      else
+        for (c ← children) context.stop(c.child)
+    }
+             */
+
+            //if (children.Any())
+            //{
+            //    if (restart)
+            //    {
+
+            //    }
+            //    else
+            //    {
+            //        foreach (var child in children)
+            //        {
+            //            child.Stop();
+            //        }
+            //    }
+            //}
+        }
+
+        private void ResumeChild(ActorRef child, Exception exception)
+        {
+            child.Resume();
+        }
+
+        private void LogFailure(ActorCell actorCell, ActorRef child, Exception exception, Directive directive)
+        {
+            Debug.WriteLine("Failute! supervisor: {0}, child: {1}, cause: {2}, directive: {3}", actorCell.Self.Path, child.Path, exception, directive);
+        } 
     }
 
     public sealed class OneForOneStrategy : SupervisorStrategy
@@ -38,7 +100,7 @@ namespace Pigeon.Actor
 
         public Func<Exception, Directive> Decider { get; private set; }
 
-        private Dictionary<ActorRef, Failures> actorFailures = new Dictionary<ActorRef, Failures>();
+        
         public override Directive Handle(ActorRef child, Exception x)
         {       
             Failures failures = null;
@@ -62,12 +124,11 @@ namespace Pigeon.Actor
 
             if (count >= MaxNumberOfRetries)
             {
-                failures.Entries.Clear();
-                var whatToDo = Decider(x);
-                return whatToDo;
+                return Directive.Stop;
             }
 
-            return Directive.Resume;
+            var whatToDo = Decider(x);
+            return whatToDo;
         }
     }
 

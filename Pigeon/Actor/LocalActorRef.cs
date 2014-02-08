@@ -17,7 +17,7 @@ namespace Pigeon.Actor
             }
         }
 
-        public void Stop()
+        public override void Stop()
         {
             Cell.Stop();
         }
@@ -27,7 +27,7 @@ namespace Pigeon.Actor
             Cell.Suspend();
         }
 
-        public void Resume(Exception causedByFailure = null)
+        public override void Resume(Exception causedByFailure = null)
         {
             Cell.Resume(causedByFailure);
         }
