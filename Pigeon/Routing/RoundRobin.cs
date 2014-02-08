@@ -10,7 +10,7 @@ namespace Pigeon.Routing
 {
     public class RoundRobinLogic : RoutingLogic
     {
-        private int next;
+        private int next=-1;
         public override Routee Select(object message, Routee[] routees)
         {
             if (routees == null || routees.Length == 0)
