@@ -25,7 +25,7 @@ namespace Pigeon.Actor
 
         public void AroundPostRestart(Exception cause, object message)
         {
-            PostRestart(cause, message);
+            PostRestart(cause);
         }
 
         protected virtual void PreRestart(Exception cause, object message)
@@ -37,9 +37,9 @@ namespace Pigeon.Actor
             });
             PostStop();
         }
-        protected virtual void PostRestart(Exception cause, object message)
+        protected virtual void PostRestart(Exception cause)
         {
-
+            PreStart();
         }
 
 		public void AroundPostStop()

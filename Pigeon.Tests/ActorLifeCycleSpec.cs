@@ -118,7 +118,7 @@ namespace Pigeon.Tests
                 Report("preRestart");
             }
 
-            protected override void PostRestart(Exception cause, object message)
+            protected override void PostRestart(Exception cause)
             {
                 Report("postRestart");
             }
