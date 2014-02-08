@@ -18,6 +18,7 @@ namespace Pigeon.Actor
     public class ActorSystem : IActorRefFactory , IDisposable
     {
         private ActorCell rootCell;
+        public ActorRefProvider Provider { get; private set; }
 
         public static ActorSystem Create(string name, Config config, params ActorSystemExtension[] extensions)
         {
@@ -39,7 +40,7 @@ namespace Pigeon.Actor
         public ActorSystem(string name,Config config=null,params ActorSystemExtension[] extensions)
         {
             this.Name = name;
-
+            this.Provider = new ActorRefProvider();
             this.Settings = new Settings(this,config);
             this.Serialization = new Serialization.Serialization(this);
             ConfigDefaultDispatcher();

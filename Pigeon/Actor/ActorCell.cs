@@ -1,5 +1,6 @@
 ﻿using Pigeon.Dispatch;
 using Pigeon.Dispatch.SysMsg;
+using Pigeon.Routing;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -11,9 +12,10 @@ namespace Pigeon.Actor
 {
     public partial class ActorCell : IActorContext, IActorRefFactory
     {
+        
         public virtual ActorSystem System { get;private set; }
         public Props Props { get;private set; }
-        public LocalActorRef Self { get; private set; }
+        public LocalActorRef Self { get; protected set; }
         public ActorRef Parent { get; private set; }
         public ActorBase Actor { get;internal set; }
         public object CurrentMessage { get;private set; }
@@ -101,7 +103,26 @@ namespace Pigeon.Actor
 
         public virtual LocalActorRef ActorOf(Props props, string name = null)
         {
-            if (name == null)
+            name = GetActorName(props, name);
+
+            return System.Provider.ActorOf(this, props, name);
+            //if (props.RouterConfig != null)
+            //{
+            //    var cell = new RoutedActorCell(this, props, name);
+            //    NewActor(cell);
+            //    return cell.Self;
+            //}
+            //else
+            //{
+            //    var cell = new ActorCell(this, props, name);
+            //    NewActor(cell);
+            //    return cell.Self;
+            //}            
+        }
+
+        private static string GetActorName(Props props, string name)
+        {
+            if (props.Type != null && name == null)
             {
                 name = props.Type.Name;
                 if (name.EndsWith("Actor"))
@@ -109,14 +130,10 @@ namespace Pigeon.Actor
 
                 name = name + "#" + Guid.NewGuid();
             }
-
-            var cell = new ActorCell(this,props, name);
-
-            NewActor(cell);
-            return cell.Self;
+            return name;
         }
 
-        protected void NewActor(ActorCell cell)
+        internal void NewActor(ActorCell cell)
         {
             //set the thread static context or things will break
             cell.UseThreadContext( () =>
@@ -139,6 +156,7 @@ namespace Pigeon.Actor
         internal ActorCell(ActorSystem system,string name)
         {
             this.Parent = null;
+            
             this.System = system;
             this.Self = new LocalActorRef(new RootActorPath(new Address("akka",this.System.Name), name), this);
             this.Props = null;

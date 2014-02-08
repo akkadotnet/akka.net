@@ -30,6 +30,11 @@ namespace Pigeon.Actor
             return new Props(type);
         }
 
+        public Props()
+        {
+
+        }
+
         private Props(Type type, Func<ActorBase> factory)
         {            
             this.factory = factory;
@@ -49,7 +54,9 @@ namespace Pigeon.Actor
 
         public Props WithRouter(RouterConfig routerConfig)
         {
-            this.RouterConfig = RouterConfig;
+            this.Type = typeof(RouterActor);
+            this.factory = () => new RouterActor();
+            this.RouterConfig = routerConfig;
             return this;
         }
 

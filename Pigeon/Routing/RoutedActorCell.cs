@@ -11,7 +11,11 @@ namespace Pigeon.Routing
     {
         public RoutedActorCell(IActorContext parentContext,Props props,string name) :base(parentContext,props,name)
         {
-
+            var routerConfig = props.RouterConfig;
+            var routees = routerConfig.GetRoutees(this.System).ToArray();
+            this.Router = new Routing.Router(routerConfig.GetLogic(),routees);
+            var path = Self.Path;
+            Self = new RoutedActorRef(this.Router,path,this);
         }
         public Router Router { get; private set; }
     }
