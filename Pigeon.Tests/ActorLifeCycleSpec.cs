@@ -22,16 +22,16 @@ namespace Pigeon.Tests
 
         public class TestActor : UntypedActor
         {
-            private BlockingCollection<string> queue;
-            public TestActor(BlockingCollection<string> queue)
+            private BlockingCollection<Tuple<string,string,int>> queue;
+            public TestActor(BlockingCollection<Tuple<string, string, int>> queue)
             {
                 this.queue = queue;
             }
             protected override void OnReceive(object message)
             {
-                if (message is string)
+                if (message is Tuple<string,string,int>)
                 {
-                    queue.Add((string)message);
+                    queue.Add((Tuple<string,string,int>)message);
                 }
             }
         }
@@ -92,14 +92,14 @@ namespace Pigeon.Tests
 
             private void Report(object message)
             {
-                testActor.Tell(message);
+                testActor.Tell(Tuple.Create((string)message,id,CurrentGeneration));
             }
 
             protected override void OnReceive(object message)
             {
                 if (message is string && (string)message == "status")
                 {
-                    testActor.Tell("OK");
+                    testActor.Tell(Tuple.Create("OK",id,CurrentGeneration));
                 }
             }
 
@@ -132,13 +132,17 @@ namespace Pigeon.Tests
             using (var system = ActorSystem.Create("Test"))
             {
                 var generationProvider = new AtomicInteger();
-                BlockingCollection<string> queue = new BlockingCollection<string>();
-                Action<string, string, int> expectMsg = (expectedText, b, generation) => {
-                    var actualText = queue.Take();
+                var queue = new BlockingCollection<Tuple<string, string, int>>();
+                Action<string, string, int> expectMsg = (expectedText, expectedId, expectedGeneration) => {
+                    var t = queue.Take();
+                    var actualText = t.Item1;
+                    var actualId = t.Item2;
+                    var actualGeneration = t.Item3;
                     Debug.WriteLine(actualText);
 
                     Assert.AreEqual(expectedText, actualText);
-                //    Assert.AreEqual(generation,generationProvider.Value);
+                    Assert.AreEqual(expectedGeneration, actualGeneration);
+                    Assert.AreEqual(expectedId, actualId);
                 };
                 string id = Guid.NewGuid().ToString();
                 
