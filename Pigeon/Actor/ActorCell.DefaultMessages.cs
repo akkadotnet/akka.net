@@ -112,7 +112,7 @@ namespace Pigeon.Actor
 
         private void FaultResume(Resume obj)
         {
-            throw new NotImplementedException();
+            
         }
 
         private void FaultSuspend(Suspend obj)

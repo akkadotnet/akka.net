@@ -205,6 +205,11 @@ namespace Pigeon.Actor
 
         internal void Post(ActorRef sender, object message)
         {
+            if (Mailbox == null)
+            {
+                throw new NotSupportedException("Can not post messages to terminated a actor");
+            }
+
             var m = new Envelope
             {
                 Sender = sender,

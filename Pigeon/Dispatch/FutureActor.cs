@@ -23,9 +23,21 @@ namespace Pigeon.Dispatch
                 })
                 .Default(m =>
                 {
-                    Self.Stop();
-                    RespondTo.Tell(new CompleteFuture(() => result.SetResult(message)));
-                    Become(_ => { });
+                    if (RespondTo != ActorRef.NoSender)
+                    {
+                        Self.Stop();
+                        RespondTo.Tell(new CompleteFuture(() => result.SetResult(message)));
+                        Become(_ => { });
+                    }
+                    else
+                    {                        
+                        //if there is no listening actor asking,
+                        //just eval the result directly
+                        Self.Stop();
+                        Become(_ => { });
+
+                        result.SetResult(message);                        
+                    }
                 });
         }
     }

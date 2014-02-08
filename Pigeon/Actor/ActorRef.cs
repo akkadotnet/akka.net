@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Pigeon.Dispatch;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -43,6 +44,24 @@ namespace Pigeon.Actor
         public abstract void Resume(Exception causedByFailure = null);
 
         public abstract void Stop();
+
+        public Task<object> Ask(object message)
+        {
+            var result = new TaskCompletionSource<object>();
+            var future = ActorCell.Current.System.TempGuardian.Cell.ActorOf<FutureActor>();
+            future.Tell(new SetRespondTo { Result = result }, ActorCell.Current.Self);
+            Tell(message, future);
+            return result.Task;
+        }
+
+        public Task<object> Ask(object message,ActorSystem system)
+        {
+            var result = new TaskCompletionSource<object>();
+            var future = system.TempGuardian.Cell.ActorOf<FutureActor>();
+            future.Tell(new SetRespondTo { Result = result });
+            Tell(message, future);
+            return result.Task;
+        }
     }
 
     public sealed class NoSender : ActorRef
