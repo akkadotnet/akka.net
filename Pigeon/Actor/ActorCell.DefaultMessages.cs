@@ -260,8 +260,16 @@ protected def terminate() {
         private void FaultRecreate(Recreate m)
         {
             isTerminating = false;
+            Actor.AroundPreRestart(m.Cause, null); //TODO: pass message?
             Unbecome();//unbecome deadletters
-            NewActor(this);
+            this.UseThreadContext(() =>
+            {
+                behaviorStack.Clear();
+                var instance = this.Props.NewActor();
+                Children.TryAdd(this.Self.Path.Name, this.Self);
+                instance.AroundPostRestart(m.Cause,null);
+            });
+            
         }
 
         public void Start()

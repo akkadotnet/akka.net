@@ -138,6 +138,7 @@ namespace Pigeon.Actor
             //set the thread static context or things will break
             cell.UseThreadContext( () =>
             {
+                behaviorStack.Clear();
                 var instance = cell.Props.NewActor();
                 Children.TryAdd(cell.Self.Path.Name, cell.Self);
                 instance.AroundPreStart();                
