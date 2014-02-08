@@ -27,7 +27,7 @@ namespace Pigeon.Actor
                     ProcessFailure(actorCell, true, child, cause);
                     return true;
                 case Directive.Stop:
-                    ProcessFailure(actorCell, true, child, cause);
+                    ProcessFailure(actorCell, false, child, cause);
                     return true;
                 default:
                     break;
@@ -129,7 +129,7 @@ namespace Pigeon.Actor
             //calc count of active
             var count = failures.Entries.Count();
 
-            if (count >= MaxNumberOfRetries)
+            if (count > MaxNumberOfRetries)
             {
                 return Directive.Stop;
             }

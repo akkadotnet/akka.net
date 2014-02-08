@@ -142,7 +142,7 @@ namespace Pigeon.Tests
                 };
                 string id = Guid.NewGuid().ToString();
                 
-                OneForOneStrategy strategy = new OneForOneStrategy(3, TimeSpan.FromSeconds(10), x =>
+                OneForOneStrategy strategy = new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x =>
                 {
                     return Directive.Restart;
                 });
