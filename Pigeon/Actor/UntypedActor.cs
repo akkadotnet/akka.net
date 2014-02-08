@@ -8,9 +8,6 @@ namespace Pigeon.Actor
 {
     public abstract class UntypedActor : ActorBase
     {
-        protected override void PreRestart(Exception cause, object message)
-        {
-            
-        }
+
     }
 }

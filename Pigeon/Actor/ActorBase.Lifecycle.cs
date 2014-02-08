@@ -49,7 +49,7 @@ namespace Pigeon.Actor
 
         protected virtual void PostStop()
         {
-            //Watchers.Tell(new Terminated());
+            
         }
     }
 }
