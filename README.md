@@ -18,7 +18,7 @@ Read more on:
 * [Hotswap](https://github.com/rogeralsing/Pigeon/Hotswap)
 * [Supervision](https://github.com/rogeralsing/Pigeon/wiki/Supervision) - In progress
 * Actor Lifecycle management - In progress
-* Routers - In progress
+* [Routing](https://github.com/rogeralsing/Pigeon/wiki/Routing) - In progress
 
 #####Not yet implemented:
 * Akka Cluster support
