@@ -163,116 +163,90 @@ namespace Pigeon.Tests
 
         }
 
-      //  [Description("invoke preRestart, preStart, postRestart when using OneForOneStrategy")]
+        [TestInitialize]
+        public void Setup()
+        {
+            queue = new BlockingCollection<Tuple<string, string, int>>();
+            system = ActorSystem.Create("test");
+            testActor = system.ActorOf(Props.Create(() => new TestActor(queue)));
+        }
+        BlockingCollection<Tuple<string, string, int>> queue;
+        ActorSystem system;
+        ActorRef testActor;
+
+        private void expectMsg(string expectedText, string expectedId, int expectedGeneration)
+        {
+            var t = queue.Take();
+            var actualText = t.Item1;
+            var actualId = t.Item2;
+            var actualGeneration = t.Item3;
+            Debug.WriteLine(actualText);
+
+            Assert.AreEqual(expectedText, actualText);
+            Assert.AreEqual(expectedGeneration, actualGeneration);
+            Assert.AreEqual(expectedId, actualId);
+        }
+
+        [Description("invoke preRestart, preStart, postRestart when using OneForOneStrategy")]
         [TestMethod()]
         public void ActorLifecycleTest1()
         {
-            using (var system = ActorSystem.Create("Test"))
-            {
-                var generationProvider = new AtomicInteger();
-                var queue = new BlockingCollection<Tuple<string, string, int>>();
-                Action<string, string, int> expectMsg = (expectedText, expectedId, expectedGeneration) => {
-                    var t = queue.Take();
-                    var actualText = t.Item1;
-                    var actualId = t.Item2;
-                    var actualGeneration = t.Item3;
-                    Debug.WriteLine(actualText);
+            var generationProvider = new AtomicInteger();
+            string id = Guid.NewGuid().ToString();
+            var supervisor = system.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
+            var restarterProps = Props.Create(() => new LifeCycleTestActor(testActor, id, generationProvider));
+            var restarter = (ActorRef)supervisor.Ask(restarterProps, system).Result;
 
-                    Assert.AreEqual(expectedText, actualText);
-                    Assert.AreEqual(expectedGeneration, actualGeneration);
-                    Assert.AreEqual(expectedId, actualId);
-                };
-                string id = Guid.NewGuid().ToString();
-                
-                OneForOneStrategy strategy = new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x =>
-                {
-                    return Directive.Restart;
-                });
-                ActorRef testActor = system.ActorOf(Props.Create(() => new TestActor(queue)));
-                var supervisor = system.ActorOf(Props.Create(() => new Supervisor(strategy)));
-                var restarterProps = Props.Create(() => new LifeCycleTestActor(testActor, id, generationProvider));
-
-                var restarter = (ActorRef)supervisor.Ask(restarterProps, system).Result;
-
-                expectMsg("preStart", id, 0);
-                restarter.Tell(new Kill());
-                expectMsg("preRestart", id, 0);
-                expectMsg("postRestart", id, 1);
-                restarter.Tell("status");
-                expectMsg("OK", id, 1);
-                restarter.Tell(new Kill());
-                expectMsg("preRestart", id, 1);
-                expectMsg("postRestart", id, 2);
-                restarter.Tell("status");
-                expectMsg("OK", id, 2);
-                restarter.Tell(new Kill());
-                expectMsg("preRestart", id, 2);
-                expectMsg("postRestart", id, 3);
-                restarter.Tell("status");
-                expectMsg("OK", id, 3);
-                restarter.Tell(new Kill());
-                expectMsg("postStop", id, 3);
-                supervisor.Stop();
-            }
+            expectMsg("preStart", id, 0);
+            restarter.Tell(new Kill());
+            expectMsg("preRestart", id, 0);
+            expectMsg("postRestart", id, 1);
+            restarter.Tell("status");
+            expectMsg("OK", id, 1);
+            restarter.Tell(new Kill());
+            expectMsg("preRestart", id, 1);
+            expectMsg("postRestart", id, 2);
+            restarter.Tell("status");
+            expectMsg("OK", id, 2);
+            restarter.Tell(new Kill());
+            expectMsg("preRestart", id, 2);
+            expectMsg("postRestart", id, 3);
+            restarter.Tell("status");
+            expectMsg("OK", id, 3);
+            restarter.Tell(new Kill());
+            expectMsg("postStop", id, 3);
+            supervisor.Stop();
         }
 
+        [Description("default for preRestart and postRestart is to call postStop and preStart respectively")]
         [TestMethod()]
         public void ActorLifecycleTest2()
         {
-            using (var system = ActorSystem.Create("Test"))
-            {
-                var generationProvider = new AtomicInteger();
-                var queue = new BlockingCollection<Tuple<string, string, int>>();
-                Action<string, string, int> expectMsg = (expectedText, expectedId, expectedGeneration) =>
-                {
-                    var t = queue.Take();
-                    var actualText = t.Item1;
-                    var actualId = t.Item2;
-                    var actualGeneration = t.Item3;
-                    Debug.WriteLine(actualText);
+            var generationProvider = new AtomicInteger();
+            string id = Guid.NewGuid().ToString();            
+            var supervisor = system.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
+            var restarterProps = Props.Create(() => new LifeCycleTest2Actor(testActor, id, generationProvider));
+            var restarter = (ActorRef)supervisor.Ask(restarterProps, system).Result;
 
-                    Assert.AreEqual(expectedText, actualText);
-                    Assert.AreEqual(expectedGeneration, actualGeneration);
-                    Assert.AreEqual(expectedId, actualId);
-                };
-                string id = Guid.NewGuid().ToString();
-
-                OneForOneStrategy strategy = new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x =>
-                {
-                    return Directive.Restart;
-                });
-                ActorRef testActor = system.ActorOf(Props.Create(() => new TestActor(queue)));
-                var supervisor = system.ActorOf(Props.Create(() => new Supervisor(strategy)));
-                var restarterProps = Props.Create(() => new LifeCycleTest2Actor(testActor, id, generationProvider));
-
-                var restarter = (ActorRef)supervisor.Ask(restarterProps, system).Result;
-
-                expectMsg("preStart", id, 0);
-                restarter.Tell(new Kill());
-                expectMsg("postStop", id, 0);
-                expectMsg("preStart", id, 1);
-
-                restarter.Tell("status");
-                expectMsg("OK", id, 1);
-
-                restarter.Tell(new Kill());
-                expectMsg("postStop", id, 1);
-                expectMsg("preStart", id, 2);
-
-                restarter.Tell("status");
-                expectMsg("OK", id, 2);
-
-                restarter.Tell(new Kill());
-                expectMsg("postStop", id, 2);
-                expectMsg("preStart", id, 3);
-
-                restarter.Tell("status");
-                expectMsg("OK", id, 3);
-
-                restarter.Tell(new Kill());
-                expectMsg("postStop", id, 3);
-                supervisor.Stop();
-            }
-        }
+            expectMsg("preStart", id, 0);
+            restarter.Tell(new Kill());
+            expectMsg("postStop", id, 0);
+            expectMsg("preStart", id, 1);
+            restarter.Tell("status");
+            expectMsg("OK", id, 1);
+            restarter.Tell(new Kill());
+            expectMsg("postStop", id, 1);
+            expectMsg("preStart", id, 2);
+            restarter.Tell("status");
+            expectMsg("OK", id, 2);
+            restarter.Tell(new Kill());
+            expectMsg("postStop", id, 2);
+            expectMsg("preStart", id, 3);
+            restarter.Tell("status");
+            expectMsg("OK", id, 3);
+            restarter.Tell(new Kill());
+            expectMsg("postStop", id, 3);
+            supervisor.Stop();
+        } 
     }
 }
