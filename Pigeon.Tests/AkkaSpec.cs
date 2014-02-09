@@ -63,11 +63,11 @@ namespace Pigeon.Tests
             }
         }
 
-        protected void EventFilter<T>(string message,int occurances, Action body) where T:Exception
+        protected void EventFilter<T>(string message,int occurances, Action intercept) where T:Exception
         {
             var events = new BlockingCollection<Event>();
             system.EventStream.Subscribe(new BlockingCollectionSubscriber(events));
-            body();
+            intercept();
             for(int i = 0;i<occurances;i++)
             {
                 var res = events.Take();
