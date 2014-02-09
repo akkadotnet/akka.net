@@ -55,6 +55,11 @@ namespace Pigeon.Events
         {
             actor.Tell(@event);
         }
+
+        public static implicit operator ActorSubscriber(ActorRef actor)
+        {
+            return new ActorSubscriber(actor);
+        }
     }
 
     public class BlockingCollectionSubscriber : Subscriber
