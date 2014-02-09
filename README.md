@@ -12,13 +12,14 @@ Pigeon tries to stay as close to the Akka implementation as possible while still
 Read more on:
 
 ###Akka features
-* [Getting started](https://github.com/rogeralsing/Pigeon/wiki/Getting started)
-* [Configuration](https://github.com/rogeralsing/Pigeon/wiki/Configuration) - In progress
-* [Remoting](https://github.com/rogeralsing/Pigeon/Remoting) - In progress
+* [Actors](https://github.com/rogeralsing/Pigeon/wiki/Getting started)
+* [Configuration](https://github.com/rogeralsing/Pigeon/wiki/Configuration)
+* [Remoting](https://github.com/rogeralsing/Pigeon/Remoting)
 * [Hotswap](https://github.com/rogeralsing/Pigeon/Hotswap)
-* [Supervision](https://github.com/rogeralsing/Pigeon/wiki/Supervision) - In progress
-* [Actor Lifecycle](https://github.com/rogeralsing/Pigeon/blob/master/Pigeon.Tests/ActorLifeCycleSpec.cs) - In progress
-* [Routing](https://github.com/rogeralsing/Pigeon/wiki/Routing) - In progress
+* [Supervision](https://github.com/rogeralsing/Pigeon/wiki/Supervision)
+* [Actor Lifecycle](https://github.com/rogeralsing/Pigeon/blob/master/Pigeon.Tests/ActorLifeCycleSpec.cs
+* [Routing](https://github.com/rogeralsing/Pigeon/wiki/Routing)
+* [EventBus](https://github.com/rogeralsing/Pigeon/wiki/EventBus)
 
 #####Not yet implemented:
 * Akka Cluster support
