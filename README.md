@@ -1,5 +1,7 @@
 # Pigeon
 
+Subscribe to the Pigeon dev feed: https://twitter.com/PigeonFramework
+
 *Early beta, do not use in production.*
 
 ###High performance Actor Model framework.
