@@ -42,6 +42,15 @@ namespace Pigeon.Events
     public abstract class Subscriber
     {
         public abstract void Publish(Event @event);
+
+        public static implicit operator Subscriber(ActorRef actor)
+        {
+            return new ActorSubscriber(actor);
+        }
+        public static implicit operator Subscriber(Action<Event> action)
+        {
+            return new ActionSubscriber(action);
+        }
     }
 
     public class ActorSubscriber : Subscriber
@@ -56,10 +65,7 @@ namespace Pigeon.Events
             actor.Tell(@event);
         }
 
-        public static implicit operator ActorSubscriber(ActorRef actor)
-        {
-            return new ActorSubscriber(actor);
-        }
+        
     }
 
     public class BlockingCollectionSubscriber : Subscriber
@@ -72,6 +78,20 @@ namespace Pigeon.Events
         public override void Publish(Event @event)
         {
             this.queue.Add(@event);
+        }
+    }
+
+    public class ActionSubscriber : Subscriber
+    {
+        private Action<Event> action;
+        public ActionSubscriber (Action<Event> action)
+        {
+            this.action = action;
+        }
+
+        public override void Publish(Event @event)
+        {
+            action(@event);
         }
     }
 }
