@@ -17,7 +17,7 @@ Read more on:
 * [Remoting](https://github.com/rogeralsing/Pigeon/Remoting) - In progress
 * [Hotswap](https://github.com/rogeralsing/Pigeon/Hotswap)
 * [Supervision](https://github.com/rogeralsing/Pigeon/wiki/Supervision) - In progress
-* Actor Lifecycle management - In progress
+* [Actor Lifecycle](https://github.com/rogeralsing/Pigeon/blob/master/Pigeon.Tests/ActorLifeCycleSpec.cs) - In progress
 * [Routing](https://github.com/rogeralsing/Pigeon/wiki/Routing) - In progress
 
 #####Not yet implemented:
