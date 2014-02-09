@@ -20,6 +20,11 @@ namespace Pigeon.Actor
         public abstract void Stop();
 
         public abstract void Dispose();
+        protected MessageDispatcher dispatcher;
+        public void Setup(MessageDispatcher dispatcher)
+        {
+            this.dispatcher = dispatcher;
+        }
     }
 
     public class DaemonMailbox : Mailbox
@@ -52,7 +57,7 @@ namespace Pigeon.Actor
         private volatile bool hasUnscheduledMessages = false;
         private volatile bool isClosed = false;
         private int status;
-        private MessageDispatcher dispatcher;
+        
         private Stopwatch deadLineTimer = null;
 
         private static class MailboxStatus
@@ -126,10 +131,7 @@ namespace Pigeon.Actor
             }
         }
 
-        public ConcurrentQueueMailbox(MessageDispatcher dispatcher)
-        {
-            this.dispatcher = dispatcher;
-        }
+
 
         private void Schedule()
         {

@@ -46,7 +46,7 @@ namespace Pigeon.Actor
             ConfigDefaultDispatcher();
             this.Address = new Address("akka", this.Name); //TODO: this should not work this way...
 
-            this.rootCell = new ActorCell(this,"");            
+            this.rootCell = new ActorCell(this,"",new ConcurrentQueueMailbox());            
             this.EventStream = rootCell.ActorOf<EventStreamActor>("EventStream");
             this.DeadLetters = rootCell.ActorOf<DeadLettersActor>("deadLetters");
             this.Guardian = rootCell.ActorOf<GuardianActor>("user");

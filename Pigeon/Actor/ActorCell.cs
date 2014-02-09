@@ -154,26 +154,28 @@ namespace Pigeon.Actor
             return this.Children.Values.ToArray();
         }
 
-        internal ActorCell(ActorSystem system,string name)
+        internal ActorCell(ActorSystem system,string name,Mailbox mailbox)
         {
             this.Parent = null;
             
             this.System = system;
             this.Self = new LocalActorRef(new RootActorPath(new Address("akka",this.System.Name), name), this);
             this.Props = null;
-            this.Mailbox = new ConcurrentQueueMailbox(system.DefaultDispatcher);// new ActionBlockMailbox();
+            mailbox.Setup(system.DefaultDispatcher);
+            this.Mailbox = mailbox;
             this.Mailbox.Invoke = this.Invoke;
             this.Mailbox.SystemInvoke = this.SystemInvoke;            
         }
 
-        internal ActorCell(IActorContext parentContext, Props props, string name)
+        internal ActorCell(IActorContext parentContext, Props props, string name,Mailbox mailbox)
         {
             this.Parent = parentContext != null ? parentContext.Self : null;
             this.System = parentContext != null ? parentContext.System : null;
             this.Self = new LocalActorRef(new ChildActorPath(this.Parent.Path, name), this);
             this.Props = props;
             this.Dispatcher = props.Dispatcher ?? this.System.DefaultDispatcher;
-            this.Mailbox = new ConcurrentQueueMailbox(this.Dispatcher);// new ActionBlockMailbox();
+            mailbox.Setup(this.Dispatcher);
+            this.Mailbox = mailbox;
             this.Mailbox.Invoke = this.Invoke;
             this.Mailbox.SystemInvoke = this.SystemInvoke;
         }

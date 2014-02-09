@@ -17,6 +17,8 @@ namespace Pigeon.Actor
 
         public RouterConfig RouterConfig { get; private set; }
 
+        public Type MailboxType { get; private set; }
+
         public static Props Create<TActor> (Func<TActor> factory) where TActor : ActorBase
         {
             return new Props(typeof(TActor), factory);
@@ -32,15 +34,16 @@ namespace Pigeon.Actor
 
         public Props()
         {
-
+            this.MailboxType = typeof(ConcurrentQueueMailbox);
         }
 
-        private Props(Type type, Func<ActorBase> factory)
+        private Props(Type type, Func<ActorBase> factory) : this()
         {            
             this.factory = factory;
             this.Type = type;
         }
         private Props(Type type)
+            : this()
         {
             this.factory = () => (ActorBase)Activator.CreateInstance(this.Type, new object[] { });
             this.Type = type;
@@ -57,6 +60,12 @@ namespace Pigeon.Actor
             this.Type = typeof(RouterActor);
             this.factory = () => new RouterActor();
             this.RouterConfig = routerConfig;
+            return this;
+        }
+
+        public Props WithMailbox<T>() where T : Mailbox
+        {
+            this.MailboxType = typeof(T);
             return this;
         }
 
