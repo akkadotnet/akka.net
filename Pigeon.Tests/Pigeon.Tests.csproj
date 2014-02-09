@@ -53,9 +53,12 @@
     <Compile Include="ActorCellTests.cs" />
     <Compile Include="ActorLifeCycleSpec.cs" />
     <Compile Include="ActorSystemTests.cs" />
+    <Compile Include="AkkaSpec.cs" />
+    <Compile Include="AtomicInteger.cs" />
     <Compile Include="HoconTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SupervisionTests.cs" />
+    <Compile Include="Supervisor.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Pigeon\Pigeon.csproj">

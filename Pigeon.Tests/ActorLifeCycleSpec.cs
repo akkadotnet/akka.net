@@ -12,72 +12,8 @@ using System.Threading.Tasks;
 namespace Pigeon.Tests
 {
     [TestClass]
-    public class ActorLifeCycleSpec
+    public class ActorLifeCycleSpec : AkkaSpec
     {
-
-/**
- * For testing Supervisor behavior, normally you don't supply the strategy
- * from the outside like this.
- */
-
-        public class TestActor : UntypedActor
-        {
-            private BlockingCollection<Tuple<string,string,int>> queue;
-            public TestActor(BlockingCollection<Tuple<string, string, int>> queue)
-            {
-                this.queue = queue;
-            }
-            protected override void OnReceive(object message)
-            {
-                if (message is Tuple<string,string,int>)
-                {
-                    queue.Add((Tuple<string,string,int>)message);
-                }
-            }
-        }
-        public class Supervisor : UntypedActor
-        {
-            private SupervisorStrategy supervisorStrategy;
-            public Supervisor(SupervisorStrategy supervisorStrategy)
-            {
-                this.supervisorStrategy = supervisorStrategy;
-            }
-
-            protected override SupervisorStrategy SupervisorStrategy()
-            {
-                return supervisorStrategy;
-            }
-
-            protected override void OnReceive(object message)
-            {
-                if (message is Props)
-                {
-                    Sender.Tell(Context.ActorOf((Props)message));
-                }               
-            }
-
-            protected override void PreRestart(Exception cause, object message)
-            {
-                // need to override the default of stopping all children upon restart, tests rely on keeping them around
-            }
-        }
-        public class AtomicInteger
-        {
-            private int value=-1;
-            public int Value
-            {
-                get
-                {
-                    return value;
-                }
-            }
-            public int GetAndIncrement()
-            {
-                Interlocked.Increment(ref value);
-                return value;
-            }
-        }
-
         public class LifeCycleTestActor : UntypedActor
         {
             private AtomicInteger generationProvider;
@@ -162,31 +98,6 @@ namespace Pigeon.Tests
             {
                 Report("preStart");
             }
-
-        }
-
-        [TestInitialize]
-        public void Setup()
-        {
-            queue = new BlockingCollection<Tuple<string, string, int>>();
-            system = ActorSystem.Create("test");
-            testActor = system.ActorOf(Props.Create(() => new TestActor(queue)));
-        }
-        BlockingCollection<Tuple<string, string, int>> queue;
-        ActorSystem system;
-        ActorRef testActor;
-
-        private void expectMsg(string expectedText, string expectedId, int expectedGeneration)
-        {
-            var t = queue.Take();
-            var actualText = t.Item1;
-            var actualId = t.Item2;
-            var actualGeneration = t.Item3;
-            Debug.WriteLine(actualText);
-
-            Assert.AreEqual(expectedText, actualText);
-            Assert.AreEqual(expectedGeneration, actualGeneration);
-            Assert.AreEqual(expectedId, actualId);
         }
 
         [Description("invoke preRestart, preStart, postRestart when using OneForOneStrategy")]
@@ -217,6 +128,7 @@ namespace Pigeon.Tests
             expectMsg("OK", id, 3);
             restarter.Tell(new Kill());
             expectMsg("postStop", id, 3);
+            expectNoMsg(TimeSpan.FromSeconds(1));
             supervisor.Stop();
         }
 
@@ -248,7 +160,26 @@ namespace Pigeon.Tests
             expectMsg("OK", id, 3);
             restarter.Tell(new Kill());
             expectMsg("postStop", id, 3);
+            expectNoMsg(TimeSpan.FromSeconds(1));
             supervisor.Stop();
         } 
+
+        [Description("not invoke preRestart and postRestart when never restarted using OneForOneStrategy")]
+        [TestMethod]
+        public void ActorLifecycleTest3()
+        {
+            var generationProvider = new AtomicInteger();
+            string id = Guid.NewGuid().ToString();            
+            var supervisor = system.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
+            var restarterProps = Props.Create(() => new LifeCycleTest2Actor(testActor, id, generationProvider));
+            var restarter = (ActorRef)supervisor.Ask(restarterProps, system).Result;
+
+            expectMsg("preStart", id, 0);
+            restarter.Tell("status");
+            expectMsg("OK", id, 0);
+            restarter.Stop();
+            expectMsg("postStop", id, 0);
+            expectNoMsg(TimeSpan.FromSeconds(1));
+        }
     }
 }

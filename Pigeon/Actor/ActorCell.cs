@@ -105,19 +105,7 @@ namespace Pigeon.Actor
         {
             name = GetActorName(props, name);
 
-            return System.Provider.ActorOf(this, props, name);
-            //if (props.RouterConfig != null)
-            //{
-            //    var cell = new RoutedActorCell(this, props, name);
-            //    NewActor(cell);
-            //    return cell.Self;
-            //}
-            //else
-            //{
-            //    var cell = new ActorCell(this, props, name);
-            //    NewActor(cell);
-            //    return cell.Self;
-            //}            
+            return System.Provider.ActorOf(this, props, name);          
         }
 
         private static string GetActorName(Props props, string name)
