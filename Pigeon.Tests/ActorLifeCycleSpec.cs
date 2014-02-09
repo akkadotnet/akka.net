@@ -200,7 +200,7 @@ namespace Pigeon.Tests
         public void ActorLifecycleTest4()
         {
             var a = system.ActorOf<EmptyActor>();
-            EventFilter<Exception>("hurrah",() =>
+            EventFilter<Exception>(message: "hurrah",occurances: 1, body: () =>
                 {
                     a.Tell(new PoisonPill());
                 });            

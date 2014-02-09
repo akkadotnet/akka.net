@@ -57,10 +57,10 @@ namespace Pigeon.Events
         }
     }
 
-    public class CollectionSubscriber : Subscriber
+    public class BlockingCollectionSubscriber : Subscriber
     {
-        private ICollection<Event> queue;
-        public CollectionSubscriber(ICollection<Event> queue)
+        private BlockingCollection<Event> queue;
+        public BlockingCollectionSubscriber(BlockingCollection<Event> queue)
         {
             this.queue = queue;
         }
@@ -69,7 +69,4 @@ namespace Pigeon.Events
             this.queue.Add(@event);
         }
     }
-
-
-    
 }

@@ -17,7 +17,19 @@ namespace Pigeon.Events
 
         public Error(Exception cause, string path, Type actorType, string errorMessage)
         {
+            this.Cause = cause;
+            this.Path = path;
+            this.ActorType = actorType;
+            this.ErrorMessage = errorMessage;
         }
+
+        public Exception Cause { get;private set; }
+
+        public string Path { get; private set; }
+
+        public Type ActorType { get; private set; }
+
+        public string ErrorMessage { get; private set; }
     }
 
     public class UnhandledMessage : Event

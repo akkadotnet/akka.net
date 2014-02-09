@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pigeon.Actor;
+using Pigeon.Events;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -62,11 +63,19 @@ namespace Pigeon.Tests
             }
         }
 
-        protected void EventFilter<T>(string message, Action body) where T:Exception
+        protected void EventFilter<T>(string message,int occurances, Action body) where T:Exception
         {
-
+            var events = new BlockingCollection<Event>();
+            system.EventStream.Subscribe(new BlockingCollectionSubscriber(events));
             body();
-            
+            for(int i = 0;i<occurances;i++)
+            {
+                var res = events.Take();
+                var error = (Error)res;
+
+                Assert.AreEqual(typeof(T), error.Cause.GetType());
+                Assert.AreEqual(message, error.ErrorMessage);                
+            }
         }
     }
 }
