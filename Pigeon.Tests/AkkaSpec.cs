@@ -61,5 +61,12 @@ namespace Pigeon.Tests
                 }
             }
         }
+
+        protected void EventFilter<T>(string message, Action body) where T:Exception
+        {
+
+            body();
+            
+        }
     }
 }

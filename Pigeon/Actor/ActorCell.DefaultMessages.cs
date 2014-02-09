@@ -1,5 +1,5 @@
 ﻿using Pigeon.Dispatch.SysMsg;
-using Pigeon.Event;
+using Pigeon.Events;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -214,9 +214,16 @@ protected def terminate() {
             action();
         }
 
-        private void Publish(object message)
+        private void Publish(Event @event)
         {
+            try
+            {
+                System.EventStream.Publish(@event);
+            }
+            catch
+            {
 
+            }
         }
 
         private void TryCatch(Action action)
@@ -253,7 +260,7 @@ protected def terminate() {
 
         private void HandlePoisonPill(PoisonPill m)
         {
-
+            Self.Stop();
         }
 
 		/// <summary>

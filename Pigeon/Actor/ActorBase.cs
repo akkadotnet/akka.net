@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 using Pigeon.Dispatch.SysMsg;
+using Pigeon.Events;
 
 namespace Pigeon.Actor
 {   
@@ -35,7 +36,7 @@ namespace Pigeon.Actor
 
         protected void Unhandled(object message)
         {
-            Context.System.EventStream.Tell(new UnhandledMessage(message, Sender, Self));
+            Context.System.EventStream.Publish(new UnhandledMessage(message, Sender, Self));
         }
 
         protected static IActorContext Context

@@ -144,19 +144,7 @@ namespace Pigeon.Dispatch.SysMsg
         internal Exception Reason { get; private set; }
     }
 
-    internal class UnhandledMessage : SystemMessage
-    {
-        internal UnhandledMessage(object message, ActorRef sender, ActorRef recipient)
-        {
-            this.Message = message;
-            this.Sender = sender;
-            this.Recipient = recipient;
-        }
-
-        internal object Message { get; private set; }
-        internal ActorRef Sender { get; private set; }
-        internal ActorRef Recipient { get; private set; }
-    }
+    
 
 
 

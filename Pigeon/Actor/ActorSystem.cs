@@ -7,6 +7,7 @@ using Pigeon.Actor;
 using System.Collections.Concurrent;
 using Pigeon.Dispatch;
 using Pigeon.Configuration;
+using Pigeon.Events;
 
 namespace Pigeon.Actor
 {
@@ -46,8 +47,8 @@ namespace Pigeon.Actor
             ConfigDefaultDispatcher();
             this.Address = new Address("akka", this.Name); //TODO: this should not work this way...
 
-            this.rootCell = new ActorCell(this,"",new ConcurrentQueueMailbox());            
-            this.EventStream = rootCell.ActorOf<EventStreamActor>("EventStream");
+            this.rootCell = new ActorCell(this,"",new ConcurrentQueueMailbox());
+            this.EventStream = new EventBus();
             this.DeadLetters = rootCell.ActorOf<DeadLettersActor>("deadLetters");
             this.Guardian = rootCell.ActorOf<GuardianActor>("user");
             this.SystemGuardian = rootCell.ActorOf<GuardianActor>("system");
@@ -68,7 +69,7 @@ namespace Pigeon.Actor
         public Settings Settings { get;private set; }
         public string Name { get;private set; }
         public LocalActorRef RootGuardian { get; private set; }
-        public LocalActorRef EventStream { get; private set; }
+        public EventBus EventStream { get; private set; }
         public LocalActorRef DeadLetters { get; private set; }
         public LocalActorRef Guardian { get; private set; }
         public LocalActorRef SystemGuardian { get; private set; }

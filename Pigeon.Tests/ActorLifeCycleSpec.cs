@@ -181,5 +181,29 @@ namespace Pigeon.Tests
             expectMsg("postStop", id, 0);
             expectNoMsg(TimeSpan.FromSeconds(1));
         }
+
+
+        public class EmptyActor : UntypedActor
+        {
+            protected override void OnReceive(object message)
+            {         
+            }
+
+            protected override void PostStop()
+            {
+                throw new Exception("hurrah");
+            }
+        }
+
+        [Description("log failues in postStop")]
+        [TestMethod]
+        public void ActorLifecycleTest4()
+        {
+            var a = system.ActorOf<EmptyActor>();
+            EventFilter<Exception>("hurrah",() =>
+                {
+                    a.Tell(new PoisonPill());
+                });            
+        }
     }
 }

@@ -86,6 +86,7 @@
     <Compile Include="Actor\Message.cs" />
     <Compile Include="Actor\MessageHandler.cs" />
     <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
+    <Compile Include="Event\EventBus.cs" />
     <Compile Include="Event\Logging.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
