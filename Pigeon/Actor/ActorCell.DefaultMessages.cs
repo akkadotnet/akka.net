@@ -49,12 +49,19 @@ namespace Pigeon.Actor
 
         public void AutoReceiveMessage(Envelope envelope)
         {
-            Pattern.Match(envelope.Message)
-                .With<Terminated>(ReceivedTerminated)
-                .With<Kill>(Kill)
-                .With<PoisonPill>(HandlePoisonPill)
-                .With<Identity>(HandleIdentity)
-                .Default(m => CurrentBehavior(m));
+            var message = envelope.Message;
+            if (message is AutoReceivedMessage)
+            {
+                Pattern.Match(envelope.Message)
+               .With<Terminated>(ReceivedTerminated)
+               .With<Kill>(Kill)
+               .With<PoisonPill>(HandlePoisonPill)
+               .With<Identity>(HandleIdentity);
+            }
+            else
+            {
+                CurrentBehavior(message);
+            }           
         }
 
         private void ReceivedTerminated(Terminated m)
