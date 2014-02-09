@@ -17,7 +17,7 @@ Read more on:
 * [Remoting](https://github.com/rogeralsing/Pigeon/Remoting)
 * [Hotswap](https://github.com/rogeralsing/Pigeon/Hotswap)
 * [Supervision](https://github.com/rogeralsing/Pigeon/wiki/Supervision)
-* [Actor Lifecycle](https://github.com/rogeralsing/Pigeon/blob/master/Pigeon.Tests/ActorLifeCycleSpec.cs
+* [Actor Lifecycle](https://github.com/rogeralsing/Pigeon/blob/master/Pigeon.Tests/ActorLifeCycleSpec.cs)
 * [Routing](https://github.com/rogeralsing/Pigeon/wiki/Routing)
 * [EventBus](https://github.com/rogeralsing/Pigeon/wiki/EventBus)
 
