@@ -15,30 +15,29 @@ namespace Pigeon.Dispatch
 
         protected override void OnReceive(object message)
         {
-            Pattern.Match(message)
-                .With<SetRespondTo>(m =>
+            if (message is SetRespondTo)
+            {
+                this.result = ((SetRespondTo)message).Result;
+                this.RespondTo = this.Sender;
+            }
+            else
+            {
+                if (RespondTo != ActorRef.NoSender)
                 {
-                    this.result = m.Result;
-                    this.RespondTo = this.Sender;
-                })
-                .Default(m =>
+                    Self.Stop();
+                    RespondTo.Tell(new CompleteFuture(() => result.SetResult(message)));
+                    Become(_ => { });
+                }
+                else
                 {
-                    if (RespondTo != ActorRef.NoSender)
-                    {
-                        Self.Stop();
-                        RespondTo.Tell(new CompleteFuture(() => result.SetResult(message)));
-                        Become(_ => { });
-                    }
-                    else
-                    {                        
-                        //if there is no listening actor asking,
-                        //just eval the result directly
-                        Self.Stop();
-                        Become(_ => { });
+                    //if there is no listening actor asking,
+                    //just eval the result directly
+                    Self.Stop();
+                    Become(_ => { });
 
-                        result.SetResult(message);                        
-                    }
-                });
+                    result.SetResult(message);
+                }
+            }            
         }
     }
 

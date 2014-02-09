@@ -32,9 +32,10 @@ namespace Pigeon.Routing
         
         protected override void OnReceive(object message)
         {
-            Pattern.Match(message)
-                .With<GetRoutees>(m => Sender.Tell(new Routees(this.Cell.Router.Routees)));
-                
+            if (message is GetRoutees)
+            {
+                Sender.Tell(new Routees(this.Cell.Router.Routees));
+            }                
         }
     }
 }

@@ -8,7 +8,7 @@ namespace Pigeon
 {
     public static class Pattern
     {
-        [Obsolete("This is hissibly slow, should be replaced with standard 'is' checks",false)]
+        [Obsolete("This is horribly slow, should be replaced with standard 'is' checks",false)]
         public static Case Match(object target)
         {
             return new Case(target);

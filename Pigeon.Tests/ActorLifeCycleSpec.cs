@@ -50,8 +50,10 @@ namespace Pigeon.Tests
 
             protected override void OnReceive(object message)
             {
-                Pattern.Match(message)
-                    .With<Props>(x => Sender.Tell(Context.ActorOf(x)));
+                if (message is Props)
+                {
+                    Sender.Tell(Context.ActorOf((Props)message));
+                }               
             }
 
             protected override void PreRestart(Exception cause, object message)

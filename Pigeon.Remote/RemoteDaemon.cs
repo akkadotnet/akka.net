@@ -31,9 +31,14 @@ namespace Pigeon.Remote
     {
         protected override void OnReceive(object message)
         {
-            Pattern.Match(message)
-                .With<DaemonMsgCreate>(HandleDaemonMsgCreate)
-                .Default(Unhandled);
+            if (message is DaemonMsgCreate)
+            {
+                HandleDaemonMsgCreate((DaemonMsgCreate)message);
+            }
+            else
+            {
+                Unhandled(message);
+            }            
         }
 
         private void HandleDaemonMsgCreate(DaemonMsgCreate message)
