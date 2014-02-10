@@ -15,7 +15,7 @@ namespace Pigeon.Routing
         [ThreadStatic]
         private static Random _local;
 
-        static ThreadSafeRandom()
+        public ThreadSafeRandom()
         {
             if (_local == null)
             {
@@ -27,7 +27,7 @@ namespace Pigeon.Routing
                 _local = new Random(seed);
             }
         }
-        public static int Next(int maxValue)
+        public int Next(int maxValue)
         {
             return _local.Next(maxValue);
         }
@@ -35,6 +35,7 @@ namespace Pigeon.Routing
 
     public class RandomLogic : RoutingLogic
     {
+        private ThreadSafeRandom rnd = new ThreadSafeRandom();
         public override Routee Select(object message, Routee[] routees)
         {
             if (routees == null || routees.Length == 0)
@@ -43,7 +44,7 @@ namespace Pigeon.Routing
             }
             else
             {
-                return routees[ThreadSafeRandom.Next(routees.Length-1) % routees.Length];
+                return routees[rnd.Next(routees.Length-1) % routees.Length];
             }
         }
     }
