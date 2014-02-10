@@ -50,7 +50,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Pigeon\Pigeon.csproj">
+    <ProjectReference Include="..\..\src\Pigeon\Pigeon.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Pigeon</Name>
     </ProjectReference>
