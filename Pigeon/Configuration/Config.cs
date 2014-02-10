@@ -11,10 +11,17 @@ namespace Pigeon.Configuration
     public class Config
     {
         private HoconValue node;
+        private Config fallback;
 
         public Config(HoconValue node)
         {
             this.node = node;
+        }
+
+        public Config(Config source,Config fallback)
+        {
+            this.node = source.node;
+            this.fallback = fallback;
         }
 
         private HoconValue GetNode(string path)
@@ -25,7 +32,12 @@ namespace Pigeon.Configuration
             {
                 node = node.GetChildObject(key);
                 if (node == null)
+                {
+                    if (fallback != null)
+                        return fallback.GetNode(path);
+
                     return null;
+                }
             }
             return node;
         }
@@ -152,6 +164,15 @@ namespace Pigeon.Configuration
         {
             var node = GetNode(path);
             return node;
+        }
+
+        public TimeSpan GetMillisDuration(string path,TimeSpan? @default=null)
+        {
+            var node = GetNode(path);
+            if (node == null)
+                return @default.Value;
+
+            return node.GetMillisDuration();
         }
     }
 }

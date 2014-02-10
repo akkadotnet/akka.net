@@ -167,5 +167,11 @@ namespace Pigeon.Configuration.Hocon
         {
             return this.GetArray() != null;
         }
+
+        //TODO: implement this
+        public TimeSpan GetMillisDuration()
+        {
+            return TimeSpan.FromMilliseconds(0);
+        }
     }
 }

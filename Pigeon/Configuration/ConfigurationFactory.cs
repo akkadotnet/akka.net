@@ -38,21 +38,5 @@ namespace Pigeon.Configuration
                 return ParseString(result);
             }
         }
-    }
-
-    
-
-    public class Settings
-    {        
-        public Settings(ActorSystem system,Config config)
-        {
-            if (config == null)
-                config = ConfigurationFactory.Default();
-            this.System = system;                     
-            this.Config = config;
-        }
-
-        public ActorSystem System { get;private set; }
-        public Config Config { get; set; }
-    }
+    }       
 }
