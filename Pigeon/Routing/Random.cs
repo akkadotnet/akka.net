@@ -15,7 +15,7 @@ namespace Pigeon.Routing
         [ThreadStatic]
         private static Random _local;
 
-        public ThreadSafeRandom()
+        public int Next(int maxValue)
         {
             if (_local == null)
             {
@@ -26,9 +26,7 @@ namespace Pigeon.Routing
                 }
                 _local = new Random(seed);
             }
-        }
-        public int Next(int maxValue)
-        {
+
             return _local.Next(maxValue);
         }
     }
