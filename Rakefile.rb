@@ -11,6 +11,7 @@ require 'version_bumper'
 #-----------------------
 require File.expand_path(File.dirname(__FILE__)) + '/buildscripts/projects'
 require File.expand_path(File.dirname(__FILE__)) + '/buildscripts/paths'
+require File.expand_path(File.dirname(__FILE__)) + '/buildscripts/nuspec'
 
 #-----------------------
 # Environment variables
@@ -105,9 +106,9 @@ end
 desc "Sets the output / bin folders based on the current build configuration"
 task :set_output_folders do
     #.NET 4.5
-    Folders[:bin][:pigeon] = File.join(Folders[:src], Projects[:pigeon_net45][:dir],"bin", @env_buildconfigname)
-    Folders[:bin][:pigeon_fsharp] = File.join(Folders[:src], Projects[:pigeon_fsharp_net45][:dir],"bin", @env_buildconfigname)
-    Folders[:bin][:pigeon_remote] = File.join(Folders[:src], Projects[:pigeon_remote_net45][:dir],"bin", @env_buildconfigname)
+    Folders[:bin][:pigeon] = File.join(Folders[:src], Projects[:pigeon][:dir],"bin", @env_buildconfigname)
+    Folders[:bin][:pigeon_fsharp] = File.join(Folders[:src], Projects[:pigeon_fsharp][:dir],"bin", @env_buildconfigname)
+    Folders[:bin][:pigeon_remote] = File.join(Folders[:src], Projects[:pigeon_remote][:dir],"bin", @env_buildconfigname)
 end
 
 desc "Wipes out the build folder so we have a clean slate to work with"
@@ -180,14 +181,14 @@ nuspec :nuspec_pigeon => [:all_output] do |nuspec|
     nuspec.description = Projects[:pigeon][:description]
     nuspec.projectUrl = Projects[:projectUrl]
     nuspec.licenseUrl = Projects[:licenseUrl]
-    nuspec.language = Projects[:language]
-    nuspec.tags = Projects[:pigeon][:nuget_tags]
-    nuspec.output_file = File.join(Folders[:nuget_out], "#{Projects[:pigeon][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec");
+    nuspec.language = Projects[:language]   
 
     #dependencies
-    Projects[:pigeon][:dependencies].each do |key, array|
-        nuspec.dependency array[:package], array[:verison]
-    end
+    nuspec.dependency Projects[:pigeon][:dependencies][:fast_json][:package], Projects[:pigeon][:dependencies][:fast_json][:version]
+    nuspec.dependency Projects[:pigeon][:dependencies][:protobuf_net][:package], Projects[:pigeon][:dependencies][:protobuf_net][:version]
+    
+    nuspec.tags = Projects[:pigeon][:nuget_tags]
+    nuspec.output_file = File.join(Folders[:nuget_out], "#{Projects[:pigeon][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec");
 end
 
 desc "Builds a nuspec file for Pigeon.FSharp"
@@ -203,7 +204,7 @@ nuspec :nuspec_pigeon_fsharp => [:all_output] do |nuspec|
     nuspec.language = Projects[:language]
     nuspec.tags = Projects[:pigeon_fsharp][:nuget_tags]
     nuspec.output_file = File.join(Folders[:nuget_out], "#{Projects[:pigeon_fsharp][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec");
-
+    nuspec.dependency Projects[:pigeon][:id], env_nuget_version
     #Framework (GAC) assembly references
     Projects[:pigeon_fsharp ][:framework_assemblies].each do |key, array|
         nuspec.framework_assembly array[:assemblyName], array[:targetFramework]
@@ -224,10 +225,9 @@ nuspec :nuspec_pigeon_remote => [:all_output] do |nuspec|
     nuspec.tags = Projects[:pigeon_remote][:nuget_tags]
     nuspec.output_file = File.join(Folders[:nuget_out], "#{Projects[:pigeon_remote][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec");
 
-    #assembly references
-    Projects[:pigeon_remote][:references].each do |key, array|
-        nuspec.reference array[:file]
-    end
+    nuspec.dependency Projects[:pigeon][:id], env_nuget_version
+    nuspec.reference Files[:pigeon_remote][:google_protobuff]
+    nuspec.reference Files[:pigeon_remote][:google_serialization_protobuff]
 end
 
 #executes all of the individual NuSpec tasks
