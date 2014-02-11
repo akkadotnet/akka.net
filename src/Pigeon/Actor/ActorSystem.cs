@@ -49,7 +49,7 @@ namespace Pigeon.Actor
 
             this.rootCell = new ActorCell(this,"",new ConcurrentQueueMailbox());
             this.EventStream = new EventBus();
-            this.DeadLetters = rootCell.ActorOf<DeadLettersActor>("deadLetters");
+            this.DeadLetters = new DeadLetterActorRef(ActorPath.Parse("deadLetters",this), this.EventStream);
             this.Guardian = rootCell.ActorOf<GuardianActor>("user");
             this.SystemGuardian = rootCell.ActorOf<GuardianActor>("system");
             this.TempGuardian = rootCell.ActorOf<GuardianActor>("temp");
@@ -82,7 +82,7 @@ namespace Pigeon.Actor
         public string Name { get;private set; }
         public LocalActorRef RootGuardian { get; private set; }
         public EventBus EventStream { get; private set; }
-        public LocalActorRef DeadLetters { get; private set; }
+        public ActorRef DeadLetters { get; private set; }
         public LocalActorRef Guardian { get; private set; }
         public LocalActorRef SystemGuardian { get; private set; }
         public LocalActorRef TempGuardian { get; private set; }
