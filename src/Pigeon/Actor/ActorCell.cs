@@ -1,5 +1,6 @@
 ﻿using Pigeon.Dispatch;
 using Pigeon.Dispatch.SysMsg;
+using Pigeon.Event;
 using Pigeon.Routing;
 using System;
 using System.Collections.Concurrent;
@@ -198,7 +199,9 @@ namespace Pigeon.Actor
         {
             if (Mailbox == null)
             {
-                throw new NotSupportedException("Can not post messages to terminated a actor");
+                return;
+                //stackoverflow if this is the deadletters actorref
+                //this.System.DeadLetters.Tell(new DeadLetter(message, sender, this.Self));
             }
 
             var m = new Envelope

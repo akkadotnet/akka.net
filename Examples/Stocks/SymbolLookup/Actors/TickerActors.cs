@@ -14,18 +14,13 @@ namespace SymbolLookup.Actors
         IHandle<CompletedStockQuoteDownload>, 
         IHandle<DownloadSymbolData>
     {
-        private ActorRef _headlineActor;
-        private ActorRef _quoteActor;
+        //these will get initialized during create/recreate
+        private ActorRef _headlineActor = Context.ActorSelection("../symbolrss");
+        private ActorRef _quoteActor = Context.ActorSelection("../symbolquotes");
 
         private string _symbol;
         private Quote _stockQuote;
         private IFeed _headlines;
-
-        protected override void PreStart()
-        {
-            _headlineActor = Context.ActorSelection("../symbolrss");
-            _quoteActor = Context.ActorSelection("../symbolquotes");
-        }
 
         public void Handle(CompletedHeadlinesDownload message)
         {
@@ -34,7 +29,7 @@ namespace SymbolLookup.Actors
             //Finished processing! send the parent the full data payload
             if (_headlines != null && _stockQuote != null)
                 Context.Parent.Tell(
-                    new FullStockData() { Symbol = _symbol, Headlines = _headlines, Quote = _stockQuote }, Self);
+                    new FullStockData() { Symbol = _symbol, Headlines = _headlines, Quote = _stockQuote });
         }
 
         public void Handle(CompletedStockQuoteDownload message)
@@ -44,14 +39,14 @@ namespace SymbolLookup.Actors
             //Finished processing! send the parent the full data payload
             if (_headlines != null && _stockQuote != null)
                 Context.Parent.Tell(
-                    new FullStockData() { Symbol = _symbol, Headlines = _headlines, Quote = _stockQuote }, Self);
+                    new FullStockData() { Symbol = _symbol, Headlines = _headlines, Quote = _stockQuote });
         }
 
         public void Handle(DownloadSymbolData message)
         {
             _symbol = message.Symbol;
-            _headlineActor.Tell(message, Self);
-            _quoteActor.Tell(message, Self);
+            _headlineActor.Tell(message);
+            _quoteActor.Tell(message);
         }
     }
 
@@ -66,7 +61,7 @@ namespace SymbolLookup.Actors
 
         protected override void PreRestart(Exception cause, object message)
         {
-            Context.Parent.Tell(new Failure(cause, Self), Self);
+            Context.Parent.Tell(new Failure(cause, Self));
         }
 
         protected override void OnReceive(object msg)
@@ -76,7 +71,7 @@ namespace SymbolLookup.Actors
             {
                 var feedTask = _feedFactory.CreateFeedAsync(StockUriHelper.CreateHeadlinesRssUri(symboldata.Symbol));
                 feedTask.Wait();
-                Sender.Tell(new CompletedHeadlinesDownload() {Feed = feedTask.Result, Symbol = symboldata.Symbol}, Self);
+                Sender.Tell(new CompletedHeadlinesDownload() {Feed = feedTask.Result, Symbol = symboldata.Symbol});
             }
             else
                 Unhandled(msg);
@@ -94,7 +89,7 @@ namespace SymbolLookup.Actors
 
         protected override void PreRestart(Exception cause, object message)
         {
-            Context.Parent.Tell(new Failure(cause, Self), Self);
+            Context.Parent.Tell(new Failure(cause, Self));
         }
 
         protected override void OnReceive(object msg)
@@ -106,12 +101,19 @@ namespace SymbolLookup.Actors
                 quoteStrTask.Wait();
                 var quoteStr = quoteStrTask.Result;
                 var quoteData = fastJSON.JSON.Instance.ToObject<RootObject>(quoteStr);
-                Sender.Tell(
-                        new CompletedStockQuoteDownload()
-                        {
-                            Quote = quoteData.query.results.quote,
-                            Symbol = symboldata.Symbol
-                        }, Self);
+                if (quoteData == null || quoteData.query == null || quoteData.query.results == null)
+                {
+                    //request failed for whatever reason, 
+                }
+                else
+                {
+                    Sender.Tell(
+                            new CompletedStockQuoteDownload()
+                            {
+                                Quote = quoteData.query.results.quote,
+                                Symbol = symboldata.Symbol
+                            });
+                }
             }
             else
                 Unhandled(msg);

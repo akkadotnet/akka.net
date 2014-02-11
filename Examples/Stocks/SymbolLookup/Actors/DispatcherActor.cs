@@ -37,7 +37,7 @@ namespace SymbolLookup.Actors
             foreach (var symbol in symbols)
             {
                 var stockActor = Context.ActorOf(Props.Create<StockActor>());
-                stockActor.Tell(new DownloadSymbolData() { Symbol = symbol }, Self);
+                stockActor.Tell(new DownloadSymbolData() { Symbol = symbol });
             }
         }
 
