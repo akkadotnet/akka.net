@@ -79,7 +79,15 @@ class DeadLetterListener extends Actor {
                 var doneMsg = done ? ", no more dead letters will be logged" : "";
                 if (!done)
                 {
-                    eventStream.Publish(new Info(rcp.Path.ToString(), rcp.GetType(), string.Format("Message {0} from {1} to {2} was not delivered. {3} dead letters encountered.{4}", message.GetType().Name, snd.Path, rcp.Path, count,doneMsg)));
+                    var rcpPath = "";
+                    if (rcp == ActorRef.NoSender)
+                        rcpPath = "NoSender";
+
+                    var sndPath = "";
+                    if (snd == ActorRef.NoSender)
+                        sndPath = "NoSender";
+
+                    eventStream.Publish(new Info(rcpPath, rcp.GetType(), string.Format("Message {0} from {1} to {2} was not delivered. {3} dead letters encountered.{4}", deadLetter.Message.GetType().Name, sndPath, rcpPath, count, doneMsg)));
                 }
                 if (done)
                 {

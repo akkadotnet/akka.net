@@ -77,12 +77,10 @@ namespace Pigeon.Actor
 
         public override void Resume(Exception causedByFailure = null)
         {
-            throw new NotImplementedException();
         }
 
         public override void Stop()
         {
-            throw new NotImplementedException();
         }
     }
 }
