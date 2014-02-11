@@ -60,7 +60,7 @@ class DeadLetterListener extends Actor {
         }
         protected override void PreStart()
         {
-            
+            eventStream.Subscribe(Self);
         }
         protected override void PostStop()
         {

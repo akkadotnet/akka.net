@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Pigeon.Event;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,6 +11,7 @@ namespace Pigeon.Actor
     {
         protected override void OnReceive(object message)
         {
+            Context.System.EventStream.Publish(new DeadLetter(message, Sender, Self));
         }
     }
 

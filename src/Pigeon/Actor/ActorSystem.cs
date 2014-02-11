@@ -63,6 +63,9 @@ namespace Pigeon.Actor
 
         private void Start()
         {
+            if (Settings.LogDeadLetters > 0)
+                this.logDeadLetterListener = this.SystemGuardian.Cell.ActorOf <DeadLetterListener>("deadLetterListener");
+
             if (Settings.LogConfigOnStart)
             {
                 log.Info(Settings.ToString());
@@ -87,6 +90,7 @@ namespace Pigeon.Actor
 
         //TODO: read from config
         public LoggingAdapter log = new LoggingAdapter();
+        private LocalActorRef logDeadLetterListener;
 
         public void Shutdown()
         {
