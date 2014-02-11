@@ -33,6 +33,8 @@ Read more on:
 #####Contribute
 If you are interested in helping porting the actor part of Akka to .NET please let me know.
 
+Also, please see [Building Pigeon](https://github.com/rogeralsing/Pigeon/wiki/Building-and-Distributing-Pigeon).
+
 #####Contact
 Twitter: http://twitter.com/rogeralsing  (@rogeralsing)
 
