@@ -1,6 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pigeon.Actor;
-using Pigeon.Events;
+using Pigeon.Event;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -65,7 +65,7 @@ namespace Pigeon.Tests
 
         protected void EventFilter<T>(string message,int occurances, Action intercept) where T:Exception
         {
-            var events = new BlockingCollection<Event>();
+            var events = new BlockingCollection<EventMessage>();
             system.EventStream.Subscribe(new BlockingCollectionSubscriber(events));
             intercept();
             for(int i = 0;i<occurances;i++)

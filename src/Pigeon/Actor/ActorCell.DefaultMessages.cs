@@ -1,5 +1,5 @@
 ﻿using Pigeon.Dispatch.SysMsg;
-using Pigeon.Events;
+using Pigeon.Event;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -214,7 +214,7 @@ protected def terminate() {
             action();
         }
 
-        private void Publish(Event @event)
+        private void Publish(EventMessage @event)
         {
             try
             {

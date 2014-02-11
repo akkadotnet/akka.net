@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 using Pigeon.Dispatch.SysMsg;
-using Pigeon.Events;
+using Pigeon.Event;
 
 namespace Pigeon.Actor
 {   

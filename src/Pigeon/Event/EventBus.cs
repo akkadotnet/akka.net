@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Events
+namespace Pigeon.Event
 {
 
 
@@ -30,7 +30,7 @@ namespace Pigeon.Events
             subscribers.TryRemove(subscriber, out tmp);
         }
 
-        public void Publish(Event @event)
+        public void Publish(EventMessage @event)
         {
             foreach(var subscriber in subscribers.Values)
             {
@@ -41,13 +41,13 @@ namespace Pigeon.Events
 
     public abstract class Subscriber
     {
-        public abstract void Publish(Event @event);
+        public abstract void Publish(EventMessage @event);
 
         public static implicit operator Subscriber(ActorRef actor)
         {
             return new ActorSubscriber(actor);
         }
-        public static implicit operator Subscriber(Action<Event> action)
+        public static implicit operator Subscriber(Action<EventMessage> action)
         {
             return new ActionSubscriber(action);
         }
@@ -60,7 +60,7 @@ namespace Pigeon.Events
         {
             this.actor = actor;
         }
-        public override void Publish(Event @event)
+        public override void Publish(EventMessage @event)
         {
             actor.Tell(@event);
         }
@@ -70,12 +70,12 @@ namespace Pigeon.Events
 
     public class BlockingCollectionSubscriber : Subscriber
     {
-        private BlockingCollection<Event> queue;
-        public BlockingCollectionSubscriber(BlockingCollection<Event> queue)
+        private BlockingCollection<EventMessage> queue;
+        public BlockingCollectionSubscriber(BlockingCollection<EventMessage> queue)
         {
             this.queue = queue;
         }
-        public override void Publish(Event @event)
+        public override void Publish(EventMessage @event)
         {
             this.queue.Add(@event);
         }
@@ -83,13 +83,13 @@ namespace Pigeon.Events
 
     public class ActionSubscriber : Subscriber
     {
-        private Action<Event> action;
-        public ActionSubscriber (Action<Event> action)
+        private Action<EventMessage> action;
+        public ActionSubscriber (Action<EventMessage> action)
         {
             this.action = action;
         }
 
-        public override void Publish(Event @event)
+        public override void Publish(EventMessage @event)
         {
             action(@event);
         }

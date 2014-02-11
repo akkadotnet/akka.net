@@ -174,5 +174,10 @@ namespace Pigeon.Configuration
 
             return node.GetMillisDuration();
         }
+
+        public override string ToString()
+        {
+            return this.node.ToString();
+        }
     }
 }

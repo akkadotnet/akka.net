@@ -93,6 +93,8 @@
     <Compile Include="Actor\Message.cs" />
     <Compile Include="Actor\MessageHandler.cs" />
     <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
+    <Compile Include="Event\DeadLetter.cs" />
+    <Compile Include="Event\DeadLetterListener.cs" />
     <Compile Include="Event\EventBus.cs" />
     <Compile Include="Event\Logging.cs" />
     <Compile Include="Extensions.cs" />

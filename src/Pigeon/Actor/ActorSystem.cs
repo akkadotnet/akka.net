@@ -7,7 +7,7 @@ using Pigeon.Actor;
 using System.Collections.Concurrent;
 using Pigeon.Dispatch;
 using Pigeon.Configuration;
-using Pigeon.Events;
+using Pigeon.Event;
 
 namespace Pigeon.Actor
 {
@@ -58,6 +58,15 @@ namespace Pigeon.Actor
                 this.extensions.AddRange(extensions);
                 this.extensions.ForEach(e => e.Start(this));
             }
+            this.Start();
+        }
+
+        private void Start()
+        {
+            if (Settings.LogConfigOnStart)
+            {
+                log.Info(Settings.ToString());
+            }
         }
 
         private void ConfigDefaultDispatcher()
@@ -75,6 +84,9 @@ namespace Pigeon.Actor
         public LocalActorRef SystemGuardian { get; private set; }
         public LocalActorRef TempGuardian { get; private set; }
         public Serialization.Serialization Serialization { get;private set; }
+
+        //TODO: read from config
+        public LoggingAdapter log = new LoggingAdapter();
 
         public void Shutdown()
         {

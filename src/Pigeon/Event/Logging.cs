@@ -5,14 +5,30 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Events
+namespace Pigeon.Event
 {
-    public abstract class Event
+    public abstract class EventMessage
     {
 
     }
 
-    public class Error : Event
+    public class Info : EventMessage
+    {
+        public Info(string logSource,Type logClass,object message)
+        {
+            this.LogSource = logSource;
+            this.LogClass = logClass;
+            this.Message = message;
+        }
+
+        public string LogSource { get;private set; }
+
+        public Type LogClass { get; private set; }
+
+        public object Message { get; private set; }
+    }
+
+    public class Error : EventMessage
     {
 
         public Error(Exception cause, string path, Type actorType, string errorMessage)
@@ -32,7 +48,7 @@ namespace Pigeon.Events
         public string ErrorMessage { get; private set; }
     }
 
-    public class UnhandledMessage : Event
+    public class UnhandledMessage : EventMessage
     {
         internal UnhandledMessage(object message, ActorRef sender, ActorRef recipient)
         {
