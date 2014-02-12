@@ -49,8 +49,7 @@ namespace Pigeon.Actor
             ConfigDefaultDispatcher();
             this.Address = new Address("akka", this.Name); //TODO: this should not work this way...
 
-            this.Provider = new LocalActorRefProvider(this);
-            this.Provider.Init();
+            ConfigureProvider();
 
             if (extensions != null)
             {
@@ -58,6 +57,14 @@ namespace Pigeon.Actor
                 this.extensions.ForEach(e => e.Start(this));
             }
             this.Start();
+        }
+
+        private void ConfigureProvider()
+        {
+            var providerType = Type.GetType(Settings.ProviderClass);
+            var provider = (ActorRefProvider)Activator.CreateInstance(providerType, this);
+            this.Provider = provider;
+            this.Provider.Init();
         }
 
         private void Start()
