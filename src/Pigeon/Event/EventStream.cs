@@ -8,35 +8,79 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Event
 {
-
-
-
-    public class EventBus 
+    public class EventStream 
     {
-        private ConcurrentDictionary<Subscriber, Subscriber> subscribers = new ConcurrentDictionary<Subscriber, Subscriber>();
+        private ConcurrentDictionary<Subscriber, Classifier> subscribers = new ConcurrentDictionary<Subscriber, Classifier>();
+        private bool debug;
 
-        public EventBus()
+        public EventStream(bool debug)
         {
-
+            this.debug = debug;
         }
+
         public void Subscribe(Subscriber subscriber)
         {
-            subscribers.TryAdd(subscriber, subscriber);
+            subscribers.TryAdd(subscriber, Classifier.EveryClassifier);
+        }
+
+        public void Subscribe(Subscriber subscriber,Classifier classifier)
+        {
+            subscribers.TryAdd(subscriber, classifier);
         }
 
         public void Unsubscribe(Subscriber subscriber)
         {
-            Subscriber tmp;
+            Classifier tmp;
             subscribers.TryRemove(subscriber, out tmp);
         }
 
         public void Publish(EventMessage @event)
         {
-            foreach(var subscriber in subscribers.Values)
+            foreach(var kvp in subscribers)
             {
-                subscriber.Publish(@event);
+                var subscriber = kvp.Key;
+                var classifier = kvp.Value;
+
+                if (classifier.Classify(@event))
+                {
+                    subscriber.Publish(@event);
+                }
             }
         }
+    }
+
+    public abstract class Classifier
+    {
+        public static readonly Classifier EveryClassifier = new EveryClassifier();
+
+        public abstract bool Classify(EventMessage @event);
+    }
+
+    public class EveryClassifier : Classifier
+    {
+        public override bool Classify(EventMessage @event)
+        {
+            return true;
+        }
+    }
+
+    public class SubClassifier : Classifier
+    {
+        private Type type;
+        public SubClassifier(Type type)
+        {
+            this.type = type;
+        }
+        public override bool Classify(EventMessage @event)
+        {
+            return type.IsAssignableFrom(@event.GetType());
+        }
+    }
+
+    public class SubClassifier<T> : SubClassifier
+    {
+        public SubClassifier() : base(typeof(T))
+        { }
     }
 
     public abstract class Subscriber
@@ -63,9 +107,7 @@ namespace Pigeon.Event
         public override void Publish(EventMessage @event)
         {
             actor.Tell(@event);
-        }
-
-        
+        }        
     }
 
     public class BlockingCollectionSubscriber : Subscriber
@@ -92,6 +134,14 @@ namespace Pigeon.Event
         public override void Publish(EventMessage @event)
         {
             action(@event);
+        }
+    }
+
+    public static class EventStreamExtensions
+    {
+        public static void Subscribe(this EventStream self, Subscriber subscriber,Type type)
+        {
+            self.Subscribe(subscriber, new SubClassifier(type));
         }
     }
 }

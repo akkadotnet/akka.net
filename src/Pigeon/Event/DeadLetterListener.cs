@@ -50,17 +50,17 @@ class DeadLetterListener extends Actor {
 */
     public class DeadLetterListener : UntypedActor
     {
-        private EventBus eventStream = Context.System.EventStream;
+        private EventStream eventStream = Context.System.EventStream;
         private int maxCount = Context.System.Settings.LogDeadLetters;
         private int count = 0;
 
         protected override void PostRestart(Exception cause)
         {
-            
+
         }
         protected override void PreStart()
         {
-            eventStream.Subscribe(Self);
+            eventStream.Subscribe(Self, typeof(DeadLetter));
         }
         protected override void PostStop()
         {
@@ -69,30 +69,27 @@ class DeadLetterListener extends Actor {
 
         protected override void OnReceive(object message)
         {
-            if (message is DeadLetter)
+            var deadLetter = (DeadLetter)message;
+            var snd = deadLetter.Sender;
+            var rcp = deadLetter.Recipient;
+            count++;
+            var done = maxCount != int.MaxValue && count >= maxCount;
+            var doneMsg = done ? ", no more dead letters will be logged" : "";
+            if (!done)
             {
-                var deadLetter = (DeadLetter)message;
-                var snd = deadLetter.Sender;
-                var rcp = deadLetter.Recipient;
-                count++;
-                var done = maxCount != int.MaxValue && count >= maxCount;
-                var doneMsg = done ? ", no more dead letters will be logged" : "";
-                if (!done)
-                {
-                    var rcpPath = "";
-                    if (rcp == ActorRef.NoSender)
-                        rcpPath = "NoSender";
+                var rcpPath = "";
+                if (rcp == ActorRef.NoSender)
+                    rcpPath = "NoSender";
 
-                    var sndPath = "";
-                    if (snd == ActorRef.NoSender)
-                        sndPath = "NoSender";
+                var sndPath = "";
+                if (snd == ActorRef.NoSender)
+                    sndPath = "NoSender";
 
-                    eventStream.Publish(new Info(rcpPath, rcp.GetType(), string.Format("Message {0} from {1} to {2} was not delivered. {3} dead letters encountered.{4}", deadLetter.Message.GetType().Name, sndPath, rcpPath, count, doneMsg)));
-                }
-                if (done)
-                {
-                    Self.Stop();
-                }
+                eventStream.Publish(new Info(rcpPath, rcp.GetType(), string.Format("Message {0} from {1} to {2} was not delivered. {3} dead letters encountered.{4}", deadLetter.Message.GetType().Name, sndPath, rcpPath, count, doneMsg)));
+            }
+            if (done)
+            {
+                Self.Stop();
             }
         }
     }

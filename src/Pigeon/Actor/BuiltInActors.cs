@@ -50,9 +50,9 @@ private[akka] class DeadLetterActorRef(_provider: ActorRefProvider,
      */
     public class DeadLetterActorRef : ActorRef
     {
-        private EventBus eventStream;
+        private EventStream eventStream;
         private ActorPath path;
-        public DeadLetterActorRef(ActorPath path, EventBus eventStream)
+        public DeadLetterActorRef(ActorPath path, EventStream eventStream)
         {
             this.eventStream = eventStream;
             this.path = path;

@@ -43,12 +43,13 @@ namespace Pigeon.Actor
             this.Name = name;
 
             this.Settings = new Settings(this,config);
-            this.EventStream = new EventBus();
+
+            this.EventStream = new EventStream(Settings.DebugEventStream);
             this.Serialization = new Serialization.Serialization(this);
             ConfigDefaultDispatcher();
             this.Address = new Address("akka", this.Name); //TODO: this should not work this way...
 
-            this.Provider = new ActorRefProvider(this);
+            this.Provider = new LocalActorRefProvider(this);
             this.Provider.Init();
 
             if (extensions != null)
@@ -132,7 +133,7 @@ namespace Pigeon.Actor
             set;
         }
 
-        public EventBus EventStream { get; private set; }
+        public EventStream EventStream { get; private set; }
 
         public ActorRef DeadLetters
         {
