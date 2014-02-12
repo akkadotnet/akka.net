@@ -1,6 +1,7 @@
 # Pigeon
 
 Subscribe to the Pigeon dev feed: https://twitter.com/PigeonFramework
+Discuss on the Pigeon support forum: https://groups.google.com/forum/#!forum/pigeon-framework
 
 *Early beta, do not use in production.*
 
@@ -16,7 +17,7 @@ Read more on:
 ###Akka features
 * [Actors](https://github.com/rogeralsing/Pigeon/wiki/Getting started)
 * [Configuration](https://github.com/rogeralsing/Pigeon/wiki/Configuration)
-* [Remoting](https://github.com/rogeralsing/Pigeon/Remoting)
+* [Remoting](https://github.com/rogeralsing/Pigeon/wiki/Remoting)
 * [Hotswap](https://github.com/rogeralsing/Pigeon/Hotswap)
 * [Supervision](https://github.com/rogeralsing/Pigeon/wiki/Supervision)
 * [Actor Lifecycle](https://github.com/rogeralsing/Pigeon/blob/master/Pigeon.Tests/ActorLifeCycleSpec.cs)
