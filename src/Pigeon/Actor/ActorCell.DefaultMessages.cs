@@ -257,7 +257,16 @@ protected def terminate() {
         }
         private void HandleSupervise(Supervise m)
         {
-            //TODO: 
+            //TODO: complete this
+            //  if (!isTerminating) {
+            // Supervise is the first thing we get from a new child, so store away the UID for later use in handleFailure()
+
+            //   initChild(child) match {
+            //     case Some(crs) ⇒
+            //       handleSupervise(child, async)
+            if (System.Settings.DebugLifecycle)
+                Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "now supervising " + m.Child));
+            //     case None ⇒ publish(Error(self.path.toString, clazz(actor), "received Supervise from unregistered child " + child + ", this will not end well"))
         }
 
 		private void HandleIdentity(Identity m)
