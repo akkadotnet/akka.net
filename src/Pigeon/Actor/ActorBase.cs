@@ -36,7 +36,7 @@ namespace Pigeon.Actor
 
         protected void Unhandled(object message)
         {
-            Context.System.Provider.EventStream.Publish(new UnhandledMessage(message, Sender, Self));
+            Context.System.EventStream.Publish(new UnhandledMessage(message, Sender, Self));
         }
 
         protected static IActorContext Context

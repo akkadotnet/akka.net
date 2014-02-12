@@ -43,6 +43,7 @@ namespace Pigeon.Actor
             this.Name = name;
 
             this.Settings = new Settings(this,config);
+            this.EventStream = new EventBus();
             this.Serialization = new Serialization.Serialization(this);
             ConfigDefaultDispatcher();
             this.Address = new Address("akka", this.Name); //TODO: this should not work this way...
@@ -130,5 +131,32 @@ namespace Pigeon.Actor
             get;
             set;
         }
+
+        public EventBus EventStream { get; private set; }
+
+        public ActorRef DeadLetters
+        {
+            get
+            {
+                return Provider.DeadLetters;
+            }
+        }
+
+        public ActorRef Guardian
+        {
+            get
+            {
+                return this.Provider.Guardian ;
+            }
+        }
+
+        public ActorRef SystemGuardian
+        {
+            get
+            {
+                return this.Provider.SystemGuardian;
+            }
+        }
+
     }
 }

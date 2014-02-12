@@ -221,7 +221,7 @@ protected def terminate() {
         {
             try
             {
-                System.Provider.EventStream.Publish(@event);
+                System.EventStream.Publish(@event);
             }
             catch
             {
@@ -335,7 +335,7 @@ protected def terminate() {
 
             //isTerminating = true;
             //Debug.WriteLine("stopping child: {0}", child.Path);
-            child.Cell.Become(System.Provider.DeadLetters.Tell);
+            child.Cell.Become(System.DeadLetters.Tell);
             LocalActorRef tmp;
             var name = child.Path.Name;
             this.Children.TryRemove(name, out tmp);
