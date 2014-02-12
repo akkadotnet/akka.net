@@ -257,6 +257,7 @@ protected def terminate() {
         }
         private void HandleSupervise(Supervise m)
         {
+            //TODO: 
         }
 
 		private void HandleIdentity(Identity m)
@@ -281,12 +282,19 @@ protected def terminate() {
         {
             isTerminating = false;
             Actor.AroundPreRestart(m.Cause, null); //TODO: pass message?            
+
+           
+
             this.UseThreadContext(() =>
             {
                 behaviorStack.Clear(); //clear earlier behaviors
-                var instance = this.Props.NewActor();
+                var created = this.Props.NewActor();
+
+                if (System.Settings.DebugLifecycle)
+                    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), created.GetType(), "started (" + created + ")"));
+
                 Children.TryAdd(this.Self.Path.Name, this.Self);
-                instance.AroundPostRestart(m.Cause,null);
+                created.AroundPostRestart(m.Cause,null);
             });            
         }
 

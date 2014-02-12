@@ -8,8 +8,7 @@ using System.Threading.Tasks;
 namespace Pigeon.Actor
 {
     public class Settings
-    {
-        private bool DebugLifecycle;
+    {        
         public Settings(ActorSystem system, Config config)
         {
             var fallback = ConfigurationFactory.Default();
@@ -94,6 +93,7 @@ namespace Pigeon.Actor
         public bool DebugRouterMisconfiguration { get; private set; }
         public string Home { get; private set; }
         public bool DebugRouterMisConfiguration { get; private set; }
+        public bool DebugLifecycle { get; private set; }
 
         public override string ToString()
         {
