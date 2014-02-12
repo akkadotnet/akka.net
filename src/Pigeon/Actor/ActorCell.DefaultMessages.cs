@@ -52,6 +52,9 @@ namespace Pigeon.Actor
             var message = envelope.Message;
             if (message is AutoReceivedMessage)
             {
+                if (System.Settings.DebugAutoReceive)
+                    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "received AutoReceiveMessage " + message));
+
                 Pattern.Match(envelope.Message)
                .With<Terminated>(ReceivedTerminated)
                .With<Kill>(Kill)
@@ -66,7 +69,7 @@ namespace Pigeon.Actor
 
         private void ReceivedTerminated(Terminated m)
         {
-            Debug.WriteLine("Terminated! actor: {0}", this.Self.Path);
+            global::System.Diagnostics.Debug.WriteLine("Terminated! actor: {0}", this.Self.Path);
         }
 
         public void SystemInvoke(Envelope envelope)

@@ -31,7 +31,7 @@ namespace Pigeon.Tests
             var actualText = t.Item1;
             var actualId = t.Item2;
             var actualGeneration = t.Item3;
-            Debug.WriteLine(actualText);
+            global::System.Diagnostics.Debug.WriteLine(actualText);
 
             Assert.AreEqual(expectedText, actualText);
             Assert.AreEqual(expectedGeneration, actualGeneration);

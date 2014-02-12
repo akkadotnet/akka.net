@@ -28,6 +28,20 @@ namespace Pigeon.Event
         public object Message { get; private set; }
     }
 
+    public class Debug : EventMessage
+    {
+        public Debug(string logSource, Type logClass, string message)
+        {
+            this.LogSource = logSource;
+            this.LogClass = logClass;
+            this.Message = message;
+        }
+
+        public string LogSource { get;private set; }
+        public Type LogClass { get; private set; }
+        public string Message { get; private set; }
+    }
+
     public class Error : EventMessage
     {
 
