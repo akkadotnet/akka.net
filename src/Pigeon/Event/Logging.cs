@@ -1,6 +1,7 @@
 ﻿using Pigeon.Actor;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -74,5 +75,52 @@ namespace Pigeon.Event
         internal object Message { get; private set; }
         internal ActorRef Sender { get; private set; }
         internal ActorRef Recipient { get; private set; }
+    }
+
+    public class DefaultLogger : UntypedActor
+    {
+
+        protected override void OnReceive(object message)
+        {
+        }
+    }
+
+    public class LoggingAdapter
+    {
+        public void Debug(string text)
+        {
+            //TODO: implement
+            //TODO: should this java api be used or replaced with tracewriter or somesuch?
+            Trace.WriteLine(text);
+        }
+
+        public void Warn(string text)
+        {
+            //TODO: implement
+            //TODO: should this java api be used or replaced with tracewriter or somesuch?
+            Trace.WriteLine(text);
+        }
+
+        public void Error(string text)
+        {
+            //TODO: implement
+            //TODO: should this java api be used or replaced with tracewriter or somesuch?
+            Trace.WriteLine(text);
+        }
+        public void Info(string text)
+        {
+            //TODO: implement
+            //TODO: should this java api be used or replaced with tracewriter or somesuch?
+            Trace.WriteLine(text);
+        }
+    }
+
+    public static class Logging
+    {
+        public static LoggingAdapter GetLogger(ActorSystem system)
+        {
+            var actor = ActorCell.Current.Actor;
+            return new LoggingAdapter();
+        }
     }
 }

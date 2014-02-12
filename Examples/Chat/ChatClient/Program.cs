@@ -24,7 +24,8 @@ akka {
     actor {
         provider = ""Pigeon.Remote.RemoteActorRefProvider, Pigeon.Remote""
         debug {
-            lifecycle = true
+            lifecycle = on
+            receive = on
         }
     }
     remote {
