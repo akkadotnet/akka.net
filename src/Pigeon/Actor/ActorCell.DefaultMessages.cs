@@ -265,7 +265,13 @@ protected def terminate() {
             //     case Some(crs) ⇒
             //       handleSupervise(child, async)
             if (System.Settings.DebugLifecycle)
-                Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "now supervising " + m.Child));
+            {
+                Type actorType = null;
+                if (Actor != null)
+                    actorType = Actor.GetType();
+
+                Publish(new Pigeon.Event.Debug(Self.Path.ToString(), actorType, "now supervising " + m.Child.Path.ToString()));
+            }
             //     case None ⇒ publish(Error(self.path.toString, clazz(actor), "received Supervise from unregistered child " + child + ", this will not end well"))
         }
 

@@ -90,11 +90,7 @@ namespace Pigeon.Event
         public static implicit operator Subscriber(ActorRef actor)
         {
             return new ActorSubscriber(actor);
-        }
-        public static implicit operator Subscriber(Action<EventMessage> action)
-        {
-            return new ActionSubscriber(action);
-        }
+        }       
     }
 
     public class ActorSubscriber : Subscriber
@@ -142,6 +138,16 @@ namespace Pigeon.Event
         public static void Subscribe(this EventStream self, Subscriber subscriber,Type type)
         {
             self.Subscribe(subscriber, new SubClassifier(type));
+        }
+
+        public static void Subscribe(this EventStream self, Action<EventMessage> action)
+        {
+            self.Subscribe(new ActionSubscriber(action));
+        }
+
+        public static void Subscribe(this EventStream self, Action<EventMessage> action,Type type)
+        {
+            self.Subscribe(new ActionSubscriber(action),new SubClassifier(type));
         }
     }
 }
