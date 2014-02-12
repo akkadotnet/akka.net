@@ -122,7 +122,7 @@ namespace Pigeon.Actor
             return name;
         }
 
-        internal void NewActor(ActorCell cell)
+        public void NewActor(ActorCell cell)
         {
             //set the thread static context or things will break
             cell.UseThreadContext( () =>
@@ -143,7 +143,7 @@ namespace Pigeon.Actor
             return this.Children.Values.ToArray();
         }
 
-        internal ActorCell(ActorSystem system,string name,Mailbox mailbox)
+        public ActorCell(ActorSystem system,string name,Mailbox mailbox)
         {
             this.Parent = null;
             
@@ -156,7 +156,7 @@ namespace Pigeon.Actor
             this.Mailbox.SystemInvoke = this.SystemInvoke;            
         }
 
-        internal ActorCell(IActorContext parentContext, Props props, string name,Mailbox mailbox)
+        public ActorCell(IActorContext parentContext, Props props, string name, Mailbox mailbox)
         {
             this.Parent = parentContext != null ? parentContext.Self : null;
             this.System = parentContext != null ? parentContext.System : null;
