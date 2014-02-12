@@ -1,7 +1,7 @@
 # Pigeon
 
-Subscribe to the Pigeon dev feed: https://twitter.com/PigeonFramework
-Discuss on the Pigeon support forum: https://groups.google.com/forum/#!forum/pigeon-framework
+* Subscribe to the Pigeon dev feed: https://twitter.com/PigeonFramework
+* Discuss on the Pigeon support forum: https://groups.google.com/forum/#!forum/pigeon-framework
 
 *Early beta, do not use in production.*
 
