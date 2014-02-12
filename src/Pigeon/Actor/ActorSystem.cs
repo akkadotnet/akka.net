@@ -18,7 +18,7 @@ namespace Pigeon.Actor
 
     public class ActorSystem : IActorRefFactory , IDisposable
     {
-        private ActorCell rootCell;
+        
         public ActorRefProvider Provider { get; private set; }
 
         public static ActorSystem Create(string name, Config config, params ActorSystemExtension[] extensions)
@@ -41,18 +41,15 @@ namespace Pigeon.Actor
         public ActorSystem(string name,Config config=null,params ActorSystemExtension[] extensions)
         {
             this.Name = name;
-            this.Provider = new ActorRefProvider();
+
             this.Settings = new Settings(this,config);
             this.Serialization = new Serialization.Serialization(this);
             ConfigDefaultDispatcher();
             this.Address = new Address("akka", this.Name); //TODO: this should not work this way...
 
-            this.rootCell = new ActorCell(this,"",new ConcurrentQueueMailbox());
-            this.EventStream = new EventBus();
-            this.DeadLetters = new DeadLetterActorRef(ActorPath.Parse("deadLetters",this), this.EventStream);
-            this.Guardian = rootCell.ActorOf<GuardianActor>("user");
-            this.SystemGuardian = rootCell.ActorOf<GuardianActor>("system");
-            this.TempGuardian = rootCell.ActorOf<GuardianActor>("temp");
+            this.Provider = new ActorRefProvider(this);
+            this.Provider.Init();
+
             if (extensions != null)
             {
                 this.extensions.AddRange(extensions);
@@ -64,7 +61,7 @@ namespace Pigeon.Actor
         private void Start()
         {
             if (Settings.LogDeadLetters > 0)
-                this.logDeadLetterListener = this.SystemGuardian.Cell.ActorOf <DeadLetterListener>("deadLetterListener");
+                this.logDeadLetterListener = this.Provider.SystemGuardian.Cell.ActorOf <DeadLetterListener>("deadLetterListener");
 
             if (Settings.LogConfigOnStart)
             {
@@ -80,12 +77,7 @@ namespace Pigeon.Actor
 
         public Settings Settings { get;private set; }
         public string Name { get;private set; }
-        public LocalActorRef RootGuardian { get; private set; }
-        public EventBus EventStream { get; private set; }
-        public ActorRef DeadLetters { get; private set; }
-        public LocalActorRef Guardian { get; private set; }
-        public LocalActorRef SystemGuardian { get; private set; }
-        public LocalActorRef TempGuardian { get; private set; }
+       
         public Serialization.Serialization Serialization { get;private set; }
 
         //TODO: read from config
@@ -94,7 +86,7 @@ namespace Pigeon.Actor
 
         public void Shutdown()
         {
-            rootCell.Stop();
+            Provider.RootCell.Stop();
         }
 
         public void Dispose()
@@ -104,22 +96,22 @@ namespace Pigeon.Actor
 
         public LocalActorRef ActorOf(Props props, string name = null)
         {
-            return Guardian.Cell.ActorOf(props, name);
+            return Provider.Guardian.Cell.ActorOf(props, name);
         }
 
         public LocalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
         {
-            return Guardian.Cell.ActorOf<TActor>( name);
+            return Provider.Guardian.Cell.ActorOf<TActor>( name);
         }
 
         public ActorSelection ActorSelection(ActorPath actorPath)
         {
-            return rootCell.ActorSelection(actorPath);
+            return Provider.RootCell.ActorSelection(actorPath);
         }
 
         public ActorSelection ActorSelection(string actorPath)
         {
-            return rootCell.ActorSelection(actorPath);
+            return Provider.RootCell.ActorSelection(actorPath);
         }
 
         public MessageDispatcher DefaultDispatcher { get; set; }

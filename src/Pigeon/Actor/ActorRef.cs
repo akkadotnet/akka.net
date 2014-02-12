@@ -48,7 +48,7 @@ namespace Pigeon.Actor
         public Task<object> Ask(object message)
         {
             var result = new TaskCompletionSource<object>();
-            var future = ActorCell.Current.System.TempGuardian.Cell.ActorOf<FutureActor>();
+            var future = ActorCell.Current.System.Provider.TempGuardian.Cell.ActorOf<FutureActor>();
             future.Tell(new SetRespondTo { Result = result }, ActorCell.Current.Self);
             Tell(message, future);
             return result.Task;
@@ -57,7 +57,7 @@ namespace Pigeon.Actor
         public Task<object> Ask(object message,ActorSystem system)
         {
             var result = new TaskCompletionSource<object>();
-            var future = system.TempGuardian.Cell.ActorOf<FutureActor>();
+            var future = system.Provider.TempGuardian.Cell.ActorOf<FutureActor>();
             future.Tell(new SetRespondTo { Result = result });
             Tell(message, future);
             return result.Task;

@@ -50,7 +50,7 @@ class DeadLetterListener extends Actor {
 */
     public class DeadLetterListener : UntypedActor
     {
-        private EventBus eventStream = Context.System.EventStream;
+        private EventBus eventStream = Context.System.Provider.EventStream;
         private int maxCount = Context.System.Settings.LogDeadLetters;
         private int count = 0;
 

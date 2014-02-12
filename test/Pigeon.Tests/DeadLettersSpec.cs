@@ -16,8 +16,8 @@ namespace Pigeon.Tests
         public void CanSendMessagesToDeadLetters()
         {
             var stream = new BlockingCollection<EventMessage>();
-            system.EventStream.Subscribe(new BlockingCollectionSubscriber(stream));
-            system.DeadLetters.Tell("foobar");
+            system.Provider.EventStream.Subscribe(new BlockingCollectionSubscriber(stream));
+            system.Provider.DeadLetters.Tell("foobar");
             var message = stream.Take();
             Assert.IsInstanceOfType(message, typeof(DeadLetter));
             var deadLetter = (DeadLetter)message;

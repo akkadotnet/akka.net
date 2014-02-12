@@ -204,21 +204,24 @@ protected def terminate() {
                 }
             }
             Actor = null;
-            Mailbox.Invoke = null;
-            Mailbox.SystemInvoke = null;
-            Mailbox = null;
+            Mailbox.Invoke = m => { };
+            Mailbox.SystemInvoke = m => { };
         }
 
         private void HandleNonFatalOrInterruptedException(Action action)
         {
-            action();
+            try
+            {
+                action();
+            }
+            catch { }
         }
 
         private void Publish(EventMessage @event)
         {
             try
             {
-                System.EventStream.Publish(@event);
+                System.Provider.EventStream.Publish(@event);
             }
             catch
             {
@@ -274,16 +277,14 @@ protected def terminate() {
         private void FaultRecreate(Recreate m)
         {
             isTerminating = false;
-            Actor.AroundPreRestart(m.Cause, null); //TODO: pass message?
-            Unbecome();//unbecome deadletters
+            Actor.AroundPreRestart(m.Cause, null); //TODO: pass message?            
             this.UseThreadContext(() =>
             {
-                behaviorStack.Clear();
+                behaviorStack.Clear(); //clear earlier behaviors
                 var instance = this.Props.NewActor();
                 Children.TryAdd(this.Self.Path.Name, this.Self);
                 instance.AroundPostRestart(m.Cause,null);
-            });
-            
+            });            
         }
 
         public void Start()
@@ -334,7 +335,7 @@ protected def terminate() {
 
             //isTerminating = true;
             //Debug.WriteLine("stopping child: {0}", child.Path);
-            child.Cell.Become(System.DeadLetters.Tell);
+            child.Cell.Become(System.Provider.DeadLetters.Tell);
             LocalActorRef tmp;
             var name = child.Path.Name;
             this.Children.TryRemove(name, out tmp);

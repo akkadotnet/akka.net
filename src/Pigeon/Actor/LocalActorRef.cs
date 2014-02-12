@@ -9,11 +9,11 @@ namespace Pigeon.Actor
     {
         public ActorCell Cell { get; private set; }
 
-        public ActorSystem Provider
+        public ActorRefProvider Provider
         {
             get
             {
-                return Cell.System;
+                return Cell.System.Provider;
             }
         }
 

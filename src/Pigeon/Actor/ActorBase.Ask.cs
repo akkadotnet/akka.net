@@ -12,7 +12,7 @@ namespace Pigeon.Actor
         public Task<object> Ask(ActorRef actor, object message)
         {
             var result = new TaskCompletionSource<object>();
-            var future = Context.System.TempGuardian.Cell.ActorOf<FutureActor>();
+            var future = Context.System.Provider.TempGuardian.Cell.ActorOf<FutureActor>();
             future.Tell(new SetRespondTo { Result = result }, Self);
             actor.Tell(message, future);
             return result.Task;

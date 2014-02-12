@@ -66,7 +66,7 @@ namespace Pigeon.Tests
         protected void EventFilter<T>(string message,int occurances, Action intercept) where T:Exception
         {
             var events = new BlockingCollection<EventMessage>();
-            system.EventStream.Subscribe(new BlockingCollectionSubscriber(events));
+            system.Provider.EventStream.Subscribe(new BlockingCollectionSubscriber(events));
             intercept();
             for(int i = 0;i<occurances;i++)
             {

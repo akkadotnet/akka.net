@@ -25,7 +25,7 @@ namespace Pigeon.Tests
             var child = system.ActorOf<TestActor>("test");
 
             //assert
-            var children = system.Guardian.Cell.GetChildren();
+            var children = system.Provider.Guardian.Cell.GetChildren();
             Assert.IsTrue(children.Any(c => c == child));
         }        
 
