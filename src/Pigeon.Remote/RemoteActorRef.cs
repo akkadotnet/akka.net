@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Remote
 {
+    //TODO: rewrite, this should take a RemoteTransport upon creation.
+    //move all network related code to RemoteTransport and other remoting classes
     public class RemoteActorRef : ActorRef
     {
         private IActorContext Context;
