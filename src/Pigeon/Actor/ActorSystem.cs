@@ -142,7 +142,7 @@ namespace Pigeon.Actor
             }
         }
 
-        public ActorRef Guardian
+        public LocalActorRef Guardian
         {
             get
             {
@@ -150,7 +150,7 @@ namespace Pigeon.Actor
             }
         }
 
-        public ActorRef SystemGuardian
+        public LocalActorRef SystemGuardian
         {
             get
             {
