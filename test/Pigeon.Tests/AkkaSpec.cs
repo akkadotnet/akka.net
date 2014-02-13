@@ -17,30 +17,26 @@ namespace Pigeon.Tests
         [TestInitialize]
         public void Setup()
         {
-            queue = new BlockingCollection<Tuple<string, string, int>>();
+            queue = new BlockingCollection<object>();
             system = ActorSystem.Create("test");
             testActor = system.ActorOf(Props.Create(() => new TestActor(queue)));            
         }
-        protected BlockingCollection<Tuple<string, string, int>> queue;
+        protected BlockingCollection<object> queue;
         protected ActorSystem system;
         protected ActorRef testActor;
 
-        protected void expectMsg(string expectedText, string expectedId, int expectedGeneration)
+        protected void expectMsg(object expected)
         {
-            var t = queue.Take();
-            var actualText = t.Item1;
-            var actualId = t.Item2;
-            var actualGeneration = t.Item3;
-            global::System.Diagnostics.Debug.WriteLine(actualText);
+            var actual = queue.Take();
 
-            Assert.AreEqual(expectedText, actualText);
-            Assert.AreEqual(expectedGeneration, actualGeneration);
-            Assert.AreEqual(expectedId, actualId);
+            global::System.Diagnostics.Debug.WriteLine(actual);
+
+            Assert.AreEqual(expected, actual);            
         }
 
         protected void expectNoMsg(TimeSpan duration)
         {
-            Tuple<string,string,int> t;
+            object t;
             if (queue.TryTake(out t,duration))
             {
                 Assert.Fail("Expected no messages during the duration");
@@ -49,28 +45,24 @@ namespace Pigeon.Tests
 
         public class TestActor : UntypedActor
         {
-            private BlockingCollection<Tuple<string, string, int>> queue;
-            public TestActor(BlockingCollection<Tuple<string, string, int>> queue)
+            private BlockingCollection<object> queue;
+            public TestActor(BlockingCollection<object> queue)
             {
                 this.queue = queue;
             }
             protected override void OnReceive(object message)
             {
-                if (message is Tuple<string, string, int>)
-                {
-                    queue.Add((Tuple<string, string, int>)message);
-                }
+                queue.Add(message);
             }
         }
 
         protected void EventFilter<T>(string message,int occurances, Action intercept) where T:Exception
         {
-            var events = new BlockingCollection<EventMessage>();
-            system.EventStream.Subscribe(new BlockingCollectionSubscriber(events));
+            system.EventStream.Subscribe(testActor,typeof(object));
             intercept();
             for(int i = 0;i<occurances;i++)
             {
-                var res = events.Take();
+                var res = queue.Take();
                 var error = (Error)res;
 
                 Assert.AreEqual(typeof(T), error.Cause.GetType());

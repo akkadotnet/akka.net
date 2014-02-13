@@ -12,8 +12,6 @@ namespace Pigeon.Event
     {
         private ConcurrentDictionary<T, T> content = new ConcurrentDictionary<T, T>();
 
-
-
         public bool Add(T item)
         {
             return content.TryAdd(item, item);
@@ -115,26 +113,21 @@ namespace Pigeon.Event
             return content.Values.GetEnumerator();
         }
     }
-    public class EventBus
+
+    public abstract class EventBus<TEvent,TClassifier,TSubscriber>
     {
-        private ConcurrentDictionary<Subscriber, ConcurrentSet<Classifier>> subscribers = new ConcurrentDictionary<Subscriber, ConcurrentSet<Classifier>>();
+        private ConcurrentDictionary<TSubscriber, ConcurrentSet<TClassifier>> subscribers = new ConcurrentDictionary<TSubscriber, ConcurrentSet<TClassifier>>();
 
         protected string SimpleName(object source)
         {
             return source.GetType().Name;
         }
 
-        public void Subscribe(Subscriber subscriber)
-        {
-            var channel = Classifier.EveryClassifier;
-            Subscribe(subscriber, channel);            
-        }
-
-        public void Subscribe(Subscriber subscriber, Classifier classifier)
+        public virtual void Subscribe(TSubscriber subscriber, TClassifier classifier)
         {
             while (true)
             {
-                ConcurrentSet<Classifier> set;
+                ConcurrentSet<TClassifier> set;
                 if (subscribers.TryGetValue(subscriber, out set))
                 {
                     set.Add(classifier);
@@ -146,7 +139,7 @@ namespace Pigeon.Event
                 }
                 else
                 {
-                    set = new ConcurrentSet<Classifier>();
+                    set = new ConcurrentSet<TClassifier>();
                     set.Add(classifier);
                     if (!subscribers.TryAdd(subscriber, set))
                     {
@@ -158,7 +151,7 @@ namespace Pigeon.Event
             }
         }
 
-        public void Unsubscribe(Subscriber subscriber)
+        public virtual void Unsubscribe(TSubscriber subscriber)
         {
             var set = subscribers[subscriber];
             if (set != null)
@@ -171,7 +164,7 @@ namespace Pigeon.Event
             }
         }
 
-        public void Unsubscribe(Subscriber subscriber,Classifier classifier)
+        public virtual void Unsubscribe(TSubscriber subscriber,TClassifier classifier)
         {
             var set = subscribers[subscriber];
             if (set != null)
@@ -184,7 +177,11 @@ namespace Pigeon.Event
             }
         }
 
-        public void Publish(EventMessage @event)
+        protected abstract void Publish(TEvent @event,TSubscriber subscriber);
+
+        protected abstract bool Classify(TEvent @event, TClassifier classifier);        
+
+        public virtual void Publish(TEvent @event)
         {
             foreach (var kvp in subscribers)
             {
@@ -192,102 +189,97 @@ namespace Pigeon.Event
                 var set = kvp.Value;
                 foreach (var classifier in set)
                 {
-                    if (classifier.Classify(@event))
+                    if (Classify(@event,classifier))
                     {
-                        subscriber.Publish(@event);
+                        this.Publish(@event, subscriber);
                     }
                 }
             }
         }
-
-        internal void Unsubscribe(ActorRef subscriber, SubClassifier channel)
-        {
-            throw new NotImplementedException();
-        }
     }
 
-    public abstract class Classifier
-    {
-        public static readonly Classifier EveryClassifier = new EveryClassifier();
+    //public abstract class Classifier
+    //{
+    //    public static readonly Classifier EveryClassifier = new EveryClassifier();
 
-        public abstract bool Classify(EventMessage @event);
-    }
+    //    public abstract bool Classify(EventMessage @event);
+    //}
 
-    public class EveryClassifier : Classifier
-    {
-        public override bool Classify(EventMessage @event)
-        {
-            return true;
-        }
-    }
+    //public class EveryClassifier : Classifier
+    //{
+    //    public override bool Classify(EventMessage @event)
+    //    {
+    //        return true;
+    //    }
+    //}
 
-    public class SubClassifier : Classifier
-    {
-        private Type type;
-        public SubClassifier(Type type)
-        {
-            this.type = type;
-        }
-        public override bool Classify(EventMessage @event)
-        {
-            return type.IsAssignableFrom(@event.GetType());
-        }
-    }
+    //public class SubClassifier : Classifier
+    //{
+    //    private Type type;
+    //    public SubClassifier(Type type)
+    //    {
+    //        this.type = type;
+    //    }
+    //    public override bool Classify(EventMessage @event)
+    //    {
+    //        return type.IsAssignableFrom(@event.GetType());
+    //    }
+    //}
 
-    public class SubClassifier<T> : SubClassifier
-    {
-        public SubClassifier()
-            : base(typeof(T))
-        { }
-    }
+    //public class SubClassifier<T> : SubClassifier
+    //{
+    //    public SubClassifier()
+    //        : base(typeof(T))
+    //    { }
+    //}
 
-    public abstract class Subscriber
-    {
-        public abstract void Publish(EventMessage @event);
+    //public abstract class Subscriber
+    //{
+    //    public abstract void Publish(EventMessage @event);
 
-        public static implicit operator Subscriber(ActorRef actor)
-        {
-            return new ActorSubscriber(actor);
-        }
-    }
+    //    public static implicit operator Subscriber(ActorRef actor)
+    //    {
+    //        return new ActorSubscriber(actor);
+    //    }
+    //}
 
-    public class ActorSubscriber : Subscriber
-    {
-        private ActorRef actor;
-        public ActorSubscriber(ActorRef actor)
-        {
-            this.actor = actor;
-        }
-        public override void Publish(EventMessage @event)
-        {
-            actor.Tell(@event);
-        }
-    }
+    //public class ActorSubscriber : Subscriber
+    //{
+    //    private ActorRef actor;
+    //    public ActorSubscriber(ActorRef actor)
+    //    {
+    //        this.actor = actor;
+    //    }
+    //    public override void Publish(EventMessage @event)
+    //    {
+    //        actor.Tell(@event);
+    //    }
+    //}
 
-    public class BlockingCollectionSubscriber : Subscriber
-    {
-        private BlockingCollection<EventMessage> queue;
-        public BlockingCollectionSubscriber(BlockingCollection<EventMessage> queue)
-        {
-            this.queue = queue;
-        }
-        public override void Publish(EventMessage @event)
-        {
-            this.queue.Add(@event);
-        }
-    }
+    //public class BlockingCollectionSubscriber : Subscriber
+    //{
+    //    private BlockingCollection<EventMessage> queue;
+    //    public BlockingCollectionSubscriber(BlockingCollection<EventMessage> queue)
+    //    {
+    //        this.queue = queue;
+    //    }
+    //    public override void Publish(EventMessage @event)
+    //    {
+    //        this.queue.Add(@event);
+    //    }
+    //}
 
-    public class ActionSubscriber : Subscriber
-    {
-        private Action<EventMessage> action;
-        public ActionSubscriber(Action<EventMessage> action)
-        {
-            this.action = action;
-        }
+    //public class ActionSubscriber : Subscriber
+    //{
+    //    private Action<EventMessage> action;
+    //    public ActionSubscriber(Action<EventMessage> action)
+    //    {
+    //        this.action = action;
+    //    }
 
-        public override void Publish(EventMessage @event)
-        {
-            action(@event);
-        }
-    }
+    //    public override void Publish(EventMessage @event)
+    //    {
+    //        action(@event);
+    //    }
+    //}
 }

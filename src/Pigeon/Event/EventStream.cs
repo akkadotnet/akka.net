@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Event
 {
-    public class EventStream : EventBus
+    public class EventStream : EventBus<object, Type, ActorRef>
     {
         private bool debug;
         public EventStream(bool debug)
@@ -16,27 +16,25 @@ namespace Pigeon.Event
             this.debug = debug;
         }
 
-        public void Subscribe(ActorRef subscriber,Type type)
+        public override void Subscribe(ActorRef subscriber,Type channel)
         {
             if (subscriber == null)
                 throw new ArgumentNullException("subscriber is null");
 
-            var channel = new SubClassifier(type);
             if (debug) Publish(new Debug(SimpleName(this), this.GetType(), "subscribing " + subscriber + " to channel " + channel));
             base.Subscribe(subscriber,channel);
         }
 
-        public void Unsubscribe(ActorRef subscriber,Type type)
+        public override void Unsubscribe(ActorRef subscriber,Type channel)
         {
             if (subscriber == null)
                 throw new ArgumentNullException("subscriber is null");
 
-            var channel = new SubClassifier(type);
             base.Unsubscribe(subscriber,channel);
             if (debug) Publish(new Debug(SimpleName(this), this.GetType(), "unsubscribing " + subscriber + " from channel " + channel));            
         }
 
-        public void Unsubscribe(ActorRef subscriber)
+        public override void Unsubscribe(ActorRef subscriber)
         {
             if (subscriber == null)
                 throw new ArgumentNullException("subscriber is null");
@@ -44,25 +42,15 @@ namespace Pigeon.Event
             base.Unsubscribe(subscriber);
             if (debug) Publish(new Debug(SimpleName(this), this.GetType(), "unsubscribing " + subscriber + " from all channels"));
         }
-    }
 
-    
-
-    public static class EventStreamExtensions
-    {
-        public static void Subscribe(this EventStream self, Subscriber subscriber,Type type)
+        protected override void Publish(object @event, ActorRef subscriber)
         {
-            self.Subscribe(subscriber, new SubClassifier(type));
+            subscriber.Tell(@event);
         }
 
-        public static void Subscribe(this EventStream self, Action<EventMessage> action)
+        protected override bool Classify(object @event,Type classifier)
         {
-            self.Subscribe(new ActionSubscriber(action));
+            return (classifier.IsAssignableFrom(@event.GetType()));
         }
-
-        public static void Subscribe(this EventStream self, Action<EventMessage> action,Type type)
-        {
-            self.Subscribe(new ActionSubscriber(action),new SubClassifier(type));
-        }
-    }
+    }      
 }

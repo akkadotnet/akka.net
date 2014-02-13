@@ -40,12 +40,6 @@ akka {
             Thread.Sleep(1000);
             using (var system = ActorSystem.Create("MyClient",config)) 
             {
-                system.EventStream.Subscribe(e =>
-                {
-                    var debug = (Pigeon.Event.Debug)e;
-
-                    Console.WriteLine("{0} {1} {2}",debug.LogSource,debug.LogClass,debug.Message);
-                },typeof(Pigeon.Event.Debug));
                 var chatClient = system.ActorOf(Props.Create<ChatClientActor>());
                 var tmp = system.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
                 chatClient.Tell(new ConnectRequest()

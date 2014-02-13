@@ -110,24 +110,24 @@ namespace Pigeon.Tests
             var restarterProps = Props.Create(() => new LifeCycleTestActor(testActor, id, generationProvider));
             var restarter = (ActorRef)supervisor.Ask(restarterProps, system).Result;
 
-            expectMsg("preStart", id, 0);
+            expectMsg(Tuple.Create( "preStart", id, 0));
             restarter.Tell(new Kill());
-            expectMsg("preRestart", id, 0);
-            expectMsg("postRestart", id, 1);
+            expectMsg(Tuple.Create("preRestart", id, 0));
+            expectMsg(Tuple.Create("postRestart", id, 1));
             restarter.Tell("status");
-            expectMsg("OK", id, 1);
+            expectMsg(Tuple.Create("OK", id, 1));
             restarter.Tell(new Kill());
-            expectMsg("preRestart", id, 1);
-            expectMsg("postRestart", id, 2);
+            expectMsg(Tuple.Create("preRestart", id, 1));
+            expectMsg(Tuple.Create("postRestart", id, 2));
             restarter.Tell("status");
-            expectMsg("OK", id, 2);
+            expectMsg(Tuple.Create("OK", id, 2));
             restarter.Tell(new Kill());
-            expectMsg("preRestart", id, 2);
-            expectMsg("postRestart", id, 3);
+            expectMsg(Tuple.Create("preRestart", id, 2));
+            expectMsg(Tuple.Create("postRestart", id, 3));
             restarter.Tell("status");
-            expectMsg("OK", id, 3);
+            expectMsg(Tuple.Create("OK", id, 3));
             restarter.Tell(new Kill());
-            expectMsg("postStop", id, 3);
+            expectMsg(Tuple.Create("postStop", id, 3));
             expectNoMsg(TimeSpan.FromSeconds(1));
             supervisor.Stop();
         }
@@ -142,24 +142,24 @@ namespace Pigeon.Tests
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(testActor, id, generationProvider));
             var restarter = (ActorRef)supervisor.Ask(restarterProps, system).Result;
 
-            expectMsg("preStart", id, 0);
+            expectMsg(Tuple.Create("preStart", id, 0));
             restarter.Tell(new Kill());
-            expectMsg("postStop", id, 0);
-            expectMsg("preStart", id, 1);
+            expectMsg(Tuple.Create("postStop", id, 0));
+            expectMsg(Tuple.Create("preStart", id, 1));
             restarter.Tell("status");
-            expectMsg("OK", id, 1);
+            expectMsg(Tuple.Create("OK", id, 1));
             restarter.Tell(new Kill());
-            expectMsg("postStop", id, 1);
-            expectMsg("preStart", id, 2);
+            expectMsg(Tuple.Create("postStop", id, 1));
+            expectMsg(Tuple.Create("preStart", id, 2));
             restarter.Tell("status");
-            expectMsg("OK", id, 2);
+            expectMsg(Tuple.Create("OK", id, 2));
             restarter.Tell(new Kill());
-            expectMsg("postStop", id, 2);
-            expectMsg("preStart", id, 3);
+            expectMsg(Tuple.Create("postStop", id, 2));
+            expectMsg(Tuple.Create("preStart", id, 3));
             restarter.Tell("status");
-            expectMsg("OK", id, 3);
+            expectMsg(Tuple.Create("OK", id, 3));
             restarter.Tell(new Kill());
-            expectMsg("postStop", id, 3);
+            expectMsg(Tuple.Create("postStop", id, 3));
             expectNoMsg(TimeSpan.FromSeconds(1));
             supervisor.Stop();
         } 
@@ -174,11 +174,11 @@ namespace Pigeon.Tests
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(testActor, id, generationProvider));
             var restarter = (ActorRef)supervisor.Ask(restarterProps, system).Result;
 
-            expectMsg("preStart", id, 0);
+            expectMsg(Tuple.Create("preStart", id, 0));
             restarter.Tell("status");
-            expectMsg("OK", id, 0);
+            expectMsg(Tuple.Create("OK", id, 0));
             restarter.Stop();
-            expectMsg("postStop", id, 0);
+            expectMsg(Tuple.Create("postStop", id, 0));
             expectNoMsg(TimeSpan.FromSeconds(1));
         }
 
