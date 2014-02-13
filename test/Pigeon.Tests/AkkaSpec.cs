@@ -30,7 +30,6 @@ namespace Pigeon.Tests
             var actual = queue.Take();
 
             global::System.Diagnostics.Debug.WriteLine(actual);
-
             Assert.AreEqual(expected, actual);            
         }
 
@@ -54,6 +53,29 @@ namespace Pigeon.Tests
             {
                 queue.Add(message);
             }
+        }
+
+        //protected void Within(TimeSpan duration,Action body)
+        //{
+        //    var now = DateTime.Now;
+        //    body();
+
+        //}
+
+        protected void intercept<T>(Action intercept) where T:Exception
+        {
+            try
+            {
+                intercept();
+            }
+            catch(Exception x)
+            {
+                if(x is T)
+                {
+                    return;
+                }
+            }
+            Assert.Fail("Expected exception of type " + typeof(T).Name);
         }
 
         protected void EventFilter<T>(string message,int occurances, Action intercept) where T:Exception

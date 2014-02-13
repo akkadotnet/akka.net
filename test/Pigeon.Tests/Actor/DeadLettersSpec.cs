@@ -15,12 +15,13 @@ namespace Pigeon.Tests
         [TestMethod]
         public void CanSendMessagesToDeadLetters()
         {
-            //system.DeadLetters.Tell("foobar");
-            //var message = queue.Take();
-            //Assert.IsInstanceOfType(message, typeof(DeadLetter));
-            //var deadLetter = (DeadLetter)message;
-            //var payload = (string)deadLetter.Message;
-            //Assert.AreEqual("foobar", payload);
+            system.EventStream.Subscribe(testActor, typeof(DeadLetter));
+            system.DeadLetters.Tell("foobar");
+            var message = queue.Take();
+            Assert.IsInstanceOfType(message, typeof(DeadLetter));
+            var deadLetter = (DeadLetter)message;
+            var payload = (string)deadLetter.Message;
+            Assert.AreEqual("foobar", payload);
         }
     }
 }
