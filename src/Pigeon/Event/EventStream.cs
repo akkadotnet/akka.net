@@ -8,19 +8,19 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Event
 {
-    public class EventStream 
+    public class EventBus 
     {
         private ConcurrentDictionary<Subscriber, Classifier> subscribers = new ConcurrentDictionary<Subscriber, Classifier>();
-        private bool debug;
 
-        public EventStream(bool debug)
-        {
-            this.debug = debug;
+        protected string SimpleName(object source){
+            return source.GetType().Name;
         }
 
         public void Subscribe(Subscriber subscriber)
         {
-            subscribers.TryAdd(subscriber, Classifier.EveryClassifier);
+            var channel = Classifier.EveryClassifier;
+
+            subscribers.TryAdd(subscriber, channel);
         }
 
         public void Subscribe(Subscriber subscriber,Classifier classifier)
@@ -46,6 +46,49 @@ namespace Pigeon.Event
                     subscriber.Publish(@event);
                 }
             }
+        }
+
+        internal void Unsubscribe(ActorRef subscriber, SubClassifier channel)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class EventStream : EventBus
+    {
+        private bool debug;
+        public EventStream(bool debug)
+        {
+            this.debug = debug;
+        }
+
+        public void Subscribe(ActorRef subscriber,Type type)
+        {
+            if (subscriber == null)
+                throw new ArgumentNullException("subscriber is null");
+
+            var channel = new SubClassifier(type);
+            if (debug) Publish(new Debug(SimpleName(this), this.GetType(), "subscribing " + subscriber + " to channel " + channel));
+            base.Subscribe(subscriber,channel);
+        }
+
+        public void Unsubscribe(ActorRef subscriber,Type type)
+        {
+            if (subscriber == null)
+                throw new ArgumentNullException("subscriber is null");
+
+            var channel = new SubClassifier(type);
+            base.Unsubscribe(subscriber,channel);
+            if (debug) Publish(new Debug(SimpleName(this), this.GetType(), "unsubscribing " + subscriber + " from channel " + channel));            
+        }
+
+        public void Unsubscribe(ActorRef subscriber)
+        {
+            if (subscriber == null)
+                throw new ArgumentNullException("subscriber is null");
+
+            base.Unsubscribe(subscriber);
+            if (debug) Publish(new Debug(SimpleName(this), this.GetType(), "unsubscribing " + subscriber + " from all channels"));
         }
     }
 
