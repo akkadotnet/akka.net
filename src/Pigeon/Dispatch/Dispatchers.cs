@@ -24,11 +24,28 @@ namespace Pigeon.Dispatch
 
     public class ThreadPoolDispatcher : MessageDispatcher
     {
-
         public override void Schedule(Action<object> run)
         {
             WaitCallback wc = new WaitCallback(run);
             ThreadPool.UnsafeQueueUserWorkItem(wc, null);
+        }
+    }
+
+    /// <summary>
+    /// Dispatcher that dispatches messages on the current synchronization context, e.g. WinForms or WPF GUI thread
+    /// </summary>
+    public class TaskDispatcher : MessageDispatcher
+    {
+        private  TaskScheduler scheduler;
+        public TaskDispatcher()
+        {
+            this.scheduler = TaskScheduler.FromCurrentSynchronizationContext();
+        }
+
+        public override void Schedule(Action<object> run)
+        {
+            var t = new Task(() => run(null));
+            t.Start(scheduler);
         }
     }
 
