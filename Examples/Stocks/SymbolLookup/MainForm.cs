@@ -67,7 +67,7 @@ namespace SymbolLookup
                 ActorSystem
                 .ActorOf(
                     Props.Create(() => new DispatcherActor(DataAvailable, StatusChange))
-                    .WithDispatcher(Dispatchers.FromCurrentSynchronizationContext()) //dispatch on GUI thread
+                    .WithDispatcher("akka.actor.synchronized-dispatcher") //dispatch on GUI thread
                 ); //new DispatcherActor(DataAvailable, StatusChange)
         }
 

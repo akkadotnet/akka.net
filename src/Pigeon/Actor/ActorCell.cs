@@ -150,7 +150,8 @@ namespace Pigeon.Actor
             this.System = system;
             this.Self = new LocalActorRef(new RootActorPath(new Address("akka",this.System.Name), name), this);
             this.Props = null;
-            mailbox.Setup(system.DefaultDispatcher);
+            this.Dispatcher = System.Dispatchers.FromConfig("akka.actor.default-dispatcher");
+            mailbox.Setup(this.Dispatcher);
             this.Mailbox = mailbox;
             this.Mailbox.Invoke = this.Invoke;
             this.Mailbox.SystemInvoke = this.SystemInvoke;            
@@ -162,7 +163,7 @@ namespace Pigeon.Actor
             this.System = parentContext != null ? parentContext.System : null;
             this.Self = new LocalActorRef(new ChildActorPath(this.Parent.Path, name), this);
             this.Props = props;
-            this.Dispatcher = props.Dispatcher ?? this.System.DefaultDispatcher;
+            this.Dispatcher = System.Dispatchers.FromConfig(props.DispatcherPath);
             mailbox.Setup(this.Dispatcher);
             this.Mailbox = mailbox;
             this.Mailbox.Invoke = this.Invoke;

@@ -52,7 +52,6 @@ namespace Pigeon.Benchmark.PingPong
             var repeat = 30000L * repeatFactor;
             var repeatsPerClient = repeat / numberOfClients;
             var system = new ActorSystem("PingPong");
-            system.DefaultDispatcher.Throughput = 100;
 
             var clients = new List<LocalActorRef>();
             var tasks = new List<Task>();

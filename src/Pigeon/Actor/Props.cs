@@ -13,8 +13,6 @@ namespace Pigeon.Actor
         private Func<ActorBase> factory;
         public Type Type { get; private set; }
 
-        public MessageDispatcher Dispatcher { get; private set; }
-
         public RouterConfig RouterConfig { get; private set; }
 
         public Type MailboxType { get; private set; }
@@ -54,12 +52,6 @@ namespace Pigeon.Actor
         {
             this.factory = () => (ActorBase)Activator.CreateInstance(this.Type, new object[] { });
             this.Type = type;
-        }
-
-        public Props WithDispatcher(MessageDispatcher dispatcher)
-        {
-            this.Dispatcher = dispatcher;
-            return this;
         }
 
         public Props WithRouter(string path)

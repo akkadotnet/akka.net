@@ -78,8 +78,7 @@ namespace Pigeon.Actor
 
         private void ConfigureDispatchers()
         {
-            this.Dispatchers = new Dispatchers(this);
-            this.DefaultDispatcher = Dispatchers.FromConfig("akka.actor.default-dispatcher");
+            this.Dispatchers = new Dispatchers(this);           
         }
 
         public Settings Settings { get;private set; }
@@ -120,8 +119,6 @@ namespace Pigeon.Actor
         {
             return Provider.RootCell.ActorSelection(actorPath);
         }
-
-        public MessageDispatcher DefaultDispatcher { get; set; }
 
         public Func<ActorCell,ActorPath, ActorRef> ActorRefFactory { get; set; }
         internal protected virtual ActorRef GetRemoteRef(ActorCell actorCell, ActorPath actorPath)
