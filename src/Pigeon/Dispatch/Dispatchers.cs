@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Pigeon.Actor;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -74,9 +75,49 @@ namespace Pigeon.Dispatch
 
     public class Dispatchers
     {
+        private ActorSystem system;
+        public Dispatchers(ActorSystem system)
+        {
+            this.system = system;
+        }
+
         public static MessageDispatcher FromCurrentSynchronizationContext()
         {
             return new CurrentSynchronizationContextDispatcher();
+        }
+
+        public MessageDispatcher FromConfig(string path)
+        {
+            var config = system.Settings.Config.GetConfig(path);
+            var type = config.GetString("type");
+            var throughput = config.GetInt("throughput");
+            //shutdown-timeout
+            //throughput-deadline-time
+            //attempt-teamwork
+            //mailbox-requirement
+
+            MessageDispatcher dispatcher = null;
+            switch(type)
+            {
+                case "Dispatcher":
+                    dispatcher = new ThreadPoolDispatcher();
+                    break;
+                case "PinnedDispatcher":
+                    dispatcher = new SingleThreadDispatcher();
+                    break;
+                case "SynchronizedDispatcher":
+                    dispatcher = new CurrentSynchronizationContextDispatcher();
+                    break;
+                default:
+                    var dispatcherType = Type.GetType(type);
+                    dispatcher = (MessageDispatcher)Activator.CreateInstance(dispatcherType);
+                    break;
+            }
+
+            dispatcher.Throughput = throughput;
+          //  dispatcher.ThroughputDeadlineTime 
+
+            return dispatcher;
         }
     }
 }

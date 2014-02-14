@@ -78,9 +78,8 @@ namespace Pigeon.Actor
 
         private void ConfigureDispatchers()
         {
-            this.Dispatchers = new Dispatchers();
-            this.DefaultDispatcher = new ThreadPoolDispatcher();
-            this.DefaultDispatcher.Throughput = Settings.Config.GetInt("akka.actor.default-dispatcher.throughput", 100);
+            this.Dispatchers = new Dispatchers(this);
+            this.DefaultDispatcher = Dispatchers.FromConfig("akka.actor.default-dispatcher");
         }
 
         public Settings Settings { get;private set; }
