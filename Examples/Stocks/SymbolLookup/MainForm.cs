@@ -7,6 +7,7 @@ using QDFeedParser;
 using SymbolLookup.Actors;
 using SymbolLookup.Actors.Messages;
 using SymbolLookup.YahooFinance;
+using Pigeon.Dispatch;
 
 namespace SymbolLookup
 {
@@ -19,16 +20,6 @@ namespace SymbolLookup
 
         public event EventHandler<FullStockData> DataAvailable;
         public event EventHandler<string> StatusChange;
-
-        public void UpdateStockData(FullStockData data)
-        {
-            lock (m_lock)
-            {
-                StockData = StockData.SetItem(data.Symbol, new Tuple<Quote, IFeed>(data.Quote, data.Headlines));
-                this.lstDownloadedStocks.Items.Clear();
-                lstDownloadedStocks.Items.AddRange(StockData.Select(x => new ListViewItem(x.Key)).ToArray());
-            }
-        }
 
         public void UpdateStatus(string status)
         {
@@ -43,25 +34,20 @@ namespace SymbolLookup
             DataAvailable += OnDataAvailable;
             StatusChange += (sender, s) =>
             {
-                if (InvokeRequired)
-                {
-                    BeginInvoke(new Action<string>(UpdateStatus), s);
-                    return;
-                }
-
                 UpdateStatus(s);
             };
         }
 
         private void OnDataAvailable(object sender, FullStockData fullStockData)
         {
-            if (InvokeRequired)
-            {
-                BeginInvoke(new Action<FullStockData>(UpdateStockData), fullStockData);
-                return;
-            }
-
             UpdateStockData(fullStockData);
+        }
+
+        public void UpdateStockData(FullStockData data)
+        {
+            StockData = StockData.SetItem(data.Symbol, new Tuple<Quote, IFeed>(data.Quote, data.Headlines));
+            this.lstDownloadedStocks.Items.Clear();
+            lstDownloadedStocks.Items.AddRange(StockData.Select(x => new ListViewItem(x.Key)).ToArray());
         }
 
         private void lstDownloadedStocks_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
@@ -78,7 +64,11 @@ namespace SymbolLookup
         private void MainForm_Load(object sender, EventArgs e)
         {
             StockActor =
-                ActorSystem.ActorOf(Props.Create(() => new DispatcherActor(DataAvailable, StatusChange))); //new DispatcherActor(DataAvailable, StatusChange)
+                ActorSystem
+                .ActorOf(
+                    Props.Create(() => new DispatcherActor(DataAvailable, StatusChange))
+                    .WithDispatcher(Dispatchers.FromCurrentSynchronizationContext()) //dispatch on GUI thread
+                ); //new DispatcherActor(DataAvailable, StatusChange)
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)

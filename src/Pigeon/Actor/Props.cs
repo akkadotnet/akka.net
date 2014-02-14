@@ -31,9 +31,11 @@ namespace Pigeon.Actor
         {
             return new Props(type);
         }
+        public string DispatcherName { get;private set; }
 
         public Props()
         {
+            this.DispatcherName = "default-dispatcher";
             this.MailboxType = typeof(ConcurrentQueueMailbox);
         }
 

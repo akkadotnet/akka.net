@@ -41,14 +41,12 @@ namespace Pigeon.Actor
         public ActorSystem(string name,Config config=null,params ActorSystemExtension[] extensions)
         {
             this.Name = name;
-
+            this.Address = new Address("akka", this.Name); //TODO: this should not work this way...
             this.Settings = new Settings(this,config);
 
             this.EventStream = new EventStream(Settings.DebugEventStream);
             this.Serialization = new Serialization.Serialization(this);
-            ConfigDefaultDispatcher();
-            this.Address = new Address("akka", this.Name); //TODO: this should not work this way...
-
+            ConfigureDispatchers();           
             ConfigureProvider();
 
             if (extensions != null)
@@ -78,8 +76,9 @@ namespace Pigeon.Actor
             }
         }
 
-        private void ConfigDefaultDispatcher()
+        private void ConfigureDispatchers()
         {
+            this.Dispatchers = new Dispatchers();
             this.DefaultDispatcher = new ThreadPoolDispatcher();
             this.DefaultDispatcher.Throughput = Settings.Config.GetInt("akka.actor.default-dispatcher.throughput", 100);
         }
@@ -166,5 +165,6 @@ namespace Pigeon.Actor
             }
         }
 
+        public Dispatchers Dispatchers { get;private set; }
     }
 }

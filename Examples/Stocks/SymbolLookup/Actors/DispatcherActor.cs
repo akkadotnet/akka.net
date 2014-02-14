@@ -14,20 +14,13 @@ namespace SymbolLookup.Actors
     {
         private readonly EventHandler<FullStockData> _dataHandler;
         private readonly EventHandler<string> _statusHandler;
-        public Props RssFeedProps = Props.Create(() => new SymbolRssActor(new HttpFeedFactory()));
-        public Props StockQuoteProps = Props.Create(() => new StockQuoteActor(new HttpClient()));
+        private ActorRef rss = Context.ActorOf(Props.Create(() => new SymbolRssActor(new HttpFeedFactory())), "symbolrss");
+        private ActorRef stock = Context.ActorOf(Props.Create(() => new StockQuoteActor(new HttpClient())), "symbolquotes");
 
         public DispatcherActor(EventHandler<FullStockData> dataHandler, EventHandler<string> statusHandler)
         {
             _dataHandler = dataHandler;
             _statusHandler = statusHandler;
-        }
-
-        protected override void PreStart()
-        {
-            //Create child actors for managing RSS feed and Stock quotes.
-            Context.ActorOf(RssFeedProps, "symbolrss");
-            Context.ActorOf(StockQuoteProps, "symbolquotes");
         }
 
         public void Handle(string message)

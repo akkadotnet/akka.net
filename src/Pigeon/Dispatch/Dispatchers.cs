@@ -34,10 +34,10 @@ namespace Pigeon.Dispatch
     /// <summary>
     /// Dispatcher that dispatches messages on the current synchronization context, e.g. WinForms or WPF GUI thread
     /// </summary>
-    public class TaskDispatcher : MessageDispatcher
+    public class CurrentSynchronizationContextDispatcher : MessageDispatcher
     {
         private  TaskScheduler scheduler;
-        public TaskDispatcher()
+        public CurrentSynchronizationContextDispatcher()
         {
             this.scheduler = TaskScheduler.FromCurrentSynchronizationContext();
         }
@@ -69,6 +69,14 @@ namespace Pigeon.Dispatch
         public override void Schedule(Action<object> run)
         {
             queue.Enqueue(run);
+        }
+    }
+
+    public class Dispatchers
+    {
+        public static MessageDispatcher FromCurrentSynchronizationContext()
+        {
+            return new CurrentSynchronizationContextDispatcher();
         }
     }
 }
