@@ -13,13 +13,13 @@ namespace Pigeon.Actor
         private Func<ActorBase> factory;
         public Type Type { get; private set; }
 
-        public MessageDispatcher Dispatcher { get;private set; }
+        public MessageDispatcher Dispatcher { get; private set; }
 
         public RouterConfig RouterConfig { get; private set; }
 
         public Type MailboxType { get; private set; }
 
-        public static Props Create<TActor> (Func<TActor> factory) where TActor : ActorBase
+        public static Props Create<TActor>(Func<TActor> factory) where TActor : ActorBase
         {
             return new Props(typeof(TActor), factory);
         }
@@ -31,16 +31,21 @@ namespace Pigeon.Actor
         {
             return new Props(type);
         }
-        public string DispatcherName { get;private set; }
+        public string DispatcherPath { get; private set; }
+        public string MailboxPath { get; private set; }
+        public string RouterPath { get; private set; }
 
         public Props()
         {
-            this.DispatcherName = "default-dispatcher";
+            this.DispatcherPath = "akka.actor.default-dispatcher";
+            this.MailboxPath = null;
+            this.RouterPath = null;
             this.MailboxType = typeof(ConcurrentQueueMailbox);
         }
 
-        private Props(Type type, Func<ActorBase> factory) : this()
-        {            
+        private Props(Type type, Func<ActorBase> factory)
+            : this()
+        {
             this.factory = factory;
             this.Type = type;
         }
@@ -54,6 +59,24 @@ namespace Pigeon.Actor
         public Props WithDispatcher(MessageDispatcher dispatcher)
         {
             this.Dispatcher = dispatcher;
+            return this;
+        }
+
+        public Props WithRouter(string path)
+        {
+            this.RouterPath = path;
+            return this;
+        }
+
+        public Props WithMailbox(string path)
+        {
+            this.MailboxPath = path;
+            return this;
+        }
+
+        public Props WithDispatcher(string path)
+        {
+            this.DispatcherPath = path;
             return this;
         }
 
@@ -74,6 +97,14 @@ namespace Pigeon.Actor
         public ActorBase NewActor()
         {
             return this.factory();
+        }
+
+        public Props Empty
+        {
+            get
+            {
+                return new Props();
+            }
         }
     }
 }

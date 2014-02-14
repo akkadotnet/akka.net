@@ -1,4 +1,5 @@
-﻿using Pigeon.Event;
+﻿using Pigeon.Dispatch;
+using Pigeon.Event;
 using Pigeon.Routing;
 using System;
 using System.Collections.Generic;

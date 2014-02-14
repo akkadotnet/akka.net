@@ -1,4 +1,5 @@
-﻿using Pigeon.Dispatch;
+﻿using Pigeon.Actor;
+using Pigeon.Dispatch;
 using Pigeon.Dispatch.SysMsg;
 using System;
 using System.Collections.Concurrent;
@@ -9,7 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Pigeon.Actor
+namespace Pigeon.Dispatch
 {
     public abstract class Mailbox : IDisposable
     {

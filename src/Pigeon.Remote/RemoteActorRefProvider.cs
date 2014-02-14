@@ -1,5 +1,6 @@
 ﻿using Pigeon.Actor;
 using Pigeon.Configuration;
+using Pigeon.Dispatch;
 using Pigeon.Routing;
 using System;
 using System.Collections.Generic;
