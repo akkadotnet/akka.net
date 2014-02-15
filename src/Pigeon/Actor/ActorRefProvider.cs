@@ -43,7 +43,7 @@ namespace Pigeon.Actor
 
         public override LocalActorRef ActorOf(ActorCell parentContext, Props props, string name)
         {
-            var mailbox = (Mailbox)Activator.CreateInstance(props.MailboxType);
+            var mailbox = System.Mailboxes.FromConfig(props.MailboxPath);
 
             if (props.RouterConfig != null)
             {

@@ -42,19 +42,43 @@ namespace Pigeon.Actor
         {
             this.Name = name;
             this.Address = new Address("akka", this.Name); //TODO: this should not work this way...
-            this.Settings = new Settings(this,config);
-
-            this.EventStream = new EventStream(Settings.DebugEventStream);
-            this.Serialization = new Serialization.Serialization(this);
-            ConfigureDispatchers();           
+            ConfigureSettings(config);
+            ConfigureEventStream();
+            ConfigureSerialization();
+            ConfigureMailboxes();
+            ConfigureDispatchers();
             ConfigureProvider();
+            ConfigureExtensions(extensions);
+            this.Start();
+        }
 
+        private void ConfigureExtensions(ActorSystemExtension[] extensions)
+        {
             if (extensions != null)
             {
                 this.extensions.AddRange(extensions);
                 this.extensions.ForEach(e => e.Start(this));
             }
-            this.Start();
+        }
+
+        private void ConfigureSettings(Config config)
+        {
+            this.Settings = new Settings(this, config);
+        }
+
+        private void ConfigureEventStream()
+        {
+            this.EventStream = new EventStream(Settings.DebugEventStream);
+        }
+
+        private void ConfigureSerialization()
+        {
+            this.Serialization = new Serialization.Serialization(this);
+        }
+
+        private void ConfigureMailboxes()
+        {
+            this.Mailboxes = new Mailboxes(this);
         }
 
         private void ConfigureProvider()
@@ -162,5 +186,6 @@ namespace Pigeon.Actor
         }
 
         public Dispatchers Dispatchers { get;private set; }
+        public Mailboxes Mailboxes { get;private set; }
     }
 }

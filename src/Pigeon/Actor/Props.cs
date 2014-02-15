@@ -15,8 +15,6 @@ namespace Pigeon.Actor
 
         public RouterConfig RouterConfig { get; private set; }
 
-        public Type MailboxType { get; private set; }
-
         public static Props Create<TActor>(Func<TActor> factory) where TActor : ActorBase
         {
             return new Props(typeof(TActor), factory);
@@ -36,9 +34,8 @@ namespace Pigeon.Actor
         public Props()
         {
             this.DispatcherPath = "akka.actor.default-dispatcher";
-            this.MailboxPath = null;
+            this.MailboxPath = "akka.actor.default-mailbox";
             this.RouterPath = null;
-            this.MailboxType = typeof(ConcurrentQueueMailbox);
         }
 
         private Props(Type type, Func<ActorBase> factory)
@@ -77,12 +74,6 @@ namespace Pigeon.Actor
             this.Type = typeof(RouterActor);
             this.factory = () => new RouterActor();
             this.RouterConfig = routerConfig;
-            return this;
-        }
-
-        public Props WithMailbox<T>() where T : Mailbox
-        {
-            this.MailboxType = typeof(T);
             return this;
         }
 
