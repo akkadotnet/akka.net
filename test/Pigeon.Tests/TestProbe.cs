@@ -51,5 +51,14 @@ namespace Pigeon.Tests
         {
             queue.Add(message);
         }
+
+        internal void expectNoMsg(TimeSpan duration)
+        {
+            object res;
+            if (queue.TryTake(out res,duration))
+            {
+                Assert.Fail("Did not expect a message during the duration " + duration.ToString());
+            }
+        }
     }
 }
