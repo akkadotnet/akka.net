@@ -57,5 +57,10 @@ namespace Pigeon.Event
         {
             return parent.IsAssignableFrom(child);
         }
+
+        protected override Type GetClassifier(object @event)
+        {
+            return @event.GetType();
+        }
     }      
 }

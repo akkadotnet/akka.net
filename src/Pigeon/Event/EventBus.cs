@@ -65,6 +65,21 @@ namespace Pigeon.Event
                 {
                     set.RemoveAll(s => s.Subscriber.Equals(subscriber));
                 }
+                else
+                {
+                    foreach (var kvp in subscribers)
+                    {
+                        if (IsSubClassification(kvp.Key,classifier))
+                        {
+                            var s = kvp.Value;
+                            var subscriptions = s.Where(ss => ss.Subscriber.Equals(subscriber)).ToList();
+                            foreach(var sss in subscriptions)
+                            {
+                                sss.Unsubscriptions.Add(classifier);
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -72,10 +87,13 @@ namespace Pigeon.Event
 
         protected abstract void Publish(TEvent @event,TSubscriber subscriber);
 
-        protected abstract bool Classify(TEvent @event, TClassifier classifier);        
+        protected abstract bool Classify(TEvent @event, TClassifier classifier);
+
+        protected abstract TClassifier GetClassifier(TEvent @event);
 
         public virtual void Publish(TEvent @event)
         {
+            var eventClass = GetClassifier(@event);
             foreach (var kvp in subscribers)
             {
                 var classifier = kvp.Key;
@@ -84,6 +102,9 @@ namespace Pigeon.Event
                 {
                     foreach (var subscriber in set)
                     {
+                        if (subscriber.Unsubscriptions.Any(u => IsSubClassification(u, eventClass)))
+                            continue;
+
                         this.Publish(@event, subscriber.Subscriber);
                     }
                 }                
