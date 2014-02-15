@@ -93,16 +93,13 @@ namespace Pigeon.Tests.Event
             bus.Publish(b1);
             expectMsg(b1);
 
-            //TODO: we can't unsubscribe from types we havent subscribed to.
-            //we have subscribed to base class A, but this implies that the type B1 and subclasses should no longer match on the A entry
-
             bus.Unsubscribe(testActor, typeof(B1));
             bus.Publish(c); //should not publish
             bus.Publish(b2); //should publish
             bus.Publish(a); //should publish
             expectMsg(b2);
-            //expectMsg(a);
-            //expectNoMsg(TimeSpan.FromSeconds(1));
+            expectMsg(a);
+            expectNoMsg(TimeSpan.FromSeconds(1));
         }
     }
 }

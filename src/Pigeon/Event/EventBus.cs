@@ -18,8 +18,9 @@ namespace Pigeon.Event
         public TSubscriber Subscriber { get;private set; }
         public ISet<TClassifier> Unsubscriptions { get;private set; }
     }
+
     public abstract class EventBus<TEvent,TClassifier,TSubscriber>
-    {
+    {        
         private Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>> subscribers = new Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>>();
 
         protected string SimpleName(object source)
@@ -31,6 +32,16 @@ namespace Pigeon.Event
         {            
             lock(subscribers)
             {
+                //remove sub-subscribers
+                foreach(var kvp in subscribers)
+                {
+                    if (IsSubClassification(classifier,kvp.Key))
+                    {
+                        kvp.Value.RemoveAll(s => s.Subscriber.Equals(subscriber));
+                        //TODO: unsubscriptions in the subscriptions needs to be carried over to the new parent subscription
+                    }
+                }
+
                 List<Subscription<TSubscriber, TClassifier>> set;
                 if (!subscribers.TryGetValue(classifier, out set))
                 {
