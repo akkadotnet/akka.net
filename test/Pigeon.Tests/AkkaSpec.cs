@@ -12,6 +12,13 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Tests
 {    
+    public static class AkkaSpecExtensions
+    {
+        public static void Then<T>(this T self,Action<T> body)
+        {
+            body(self);
+        }
+    }
     public class AkkaSpec
     {
         [TestInitialize]

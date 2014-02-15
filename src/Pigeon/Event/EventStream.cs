@@ -16,31 +16,33 @@ namespace Pigeon.Event
             this.debug = debug;
         }
 
-        public override void Subscribe(ActorRef subscriber,Type channel)
+        public override bool Subscribe(ActorRef subscriber,Type channel)
         {
             if (subscriber == null)
                 throw new ArgumentNullException("subscriber is null");
 
             if (debug) Publish(new Debug(SimpleName(this), this.GetType(), "subscribing " + subscriber + " to channel " + channel));
-            base.Subscribe(subscriber,channel);
+            return base.Subscribe(subscriber,channel);
         }
 
-        public override void Unsubscribe(ActorRef subscriber,Type channel)
+        public override bool Unsubscribe(ActorRef subscriber,Type channel)
         {
             if (subscriber == null)
                 throw new ArgumentNullException("subscriber is null");
 
-            base.Unsubscribe(subscriber,channel);
-            if (debug) Publish(new Debug(SimpleName(this), this.GetType(), "unsubscribing " + subscriber + " from channel " + channel));            
+            var res = base.Unsubscribe(subscriber,channel);
+            if (debug) Publish(new Debug(SimpleName(this), this.GetType(), "unsubscribing " + subscriber + " from channel " + channel));
+            return res;
         }
 
-        public override void Unsubscribe(ActorRef subscriber)
+        public override bool Unsubscribe(ActorRef subscriber)
         {
             if (subscriber == null)
                 throw new ArgumentNullException("subscriber is null");
 
-            base.Unsubscribe(subscriber);
+            bool res = base.Unsubscribe(subscriber);
             if (debug) Publish(new Debug(SimpleName(this), this.GetType(), "unsubscribing " + subscriber + " from all channels"));
+            return res;
         }
 
         protected override void Publish(object @event, ActorRef subscriber)

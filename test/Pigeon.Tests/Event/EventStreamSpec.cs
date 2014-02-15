@@ -134,10 +134,10 @@ namespace Pigeon.Tests.Event
             a3.expectMsg(tm1);
             a3.expectMsg(tm2); 
             a4.expectMsg(tm2);
-          //es.unSubscribe(a1.Ref, classOf[AT]) should be(true)
-          //es.unSubscribe(a2.Ref, classOf[BT]) should be(true)
-          //es.unSubscribe(a3.Ref, classOf[CC]) should be(true)
-          //es.unSubscribe(a4.Ref, classOf[CCATBT]) should be(true)
+            es.Unsubscribe(a1.Ref, typeof(AT)).Then(Assert.IsTrue);
+            es.Unsubscribe(a2.Ref, typeof(BT)).Then(Assert.IsTrue);
+            es.Unsubscribe(a3.Ref, typeof(CC)).Then(Assert.IsTrue);
+            es.Unsubscribe(a4.Ref, typeof(CCATBT)).Then(Assert.IsTrue);
         }
 
         //"manage sub-channels using classes and traits (update on unsubscribe)"
@@ -163,10 +163,10 @@ namespace Pigeon.Tests.Event
             a2.expectMsg(tm2);
             a3.expectNoMsg(TimeSpan.FromSeconds(1));
             a4.expectMsg(tm2);
-            //es.unSubscribe(a1.Ref, classOf[AT]) should be(true)
-            //es.unSubscribe(a2.Ref, classOf[BT]) should be(true)
-            //es.unSubscribe(a3.Ref, classOf[CC]) should be(true)
-            //es.unSubscribe(a4.Ref, classOf[CCATBT]) should be(true)
+            es.Unsubscribe(a1.Ref, typeof(AT)).Then(Assert.IsTrue);
+            es.Unsubscribe(a2.Ref, typeof(BT)).Then(Assert.IsTrue);
+            es.Unsubscribe(a3.Ref, typeof(CC)).Then(Assert.IsFalse);
+            es.Unsubscribe(a4.Ref, typeof(CCATBT)).Then(Assert.IsTrue);
         }
 
         [TestMethod]
@@ -180,21 +180,21 @@ namespace Pigeon.Tests.Event
             var a3 = TestProbe();
             var a4 = TestProbe();
 
-            es.Subscribe(a1.Ref, typeof(AT));
-            es.Subscribe(a2.Ref, typeof(BT));
-            es.Subscribe(a3.Ref, typeof(CC));
-            es.Subscribe(a4.Ref, typeof(CCATBT));
-            es.Unsubscribe(a3.Ref);
+            es.Subscribe(a1.Ref, typeof(AT)).Then(Assert.IsTrue);
+            es.Subscribe(a2.Ref, typeof(BT)).Then(Assert.IsTrue);
+            es.Subscribe(a3.Ref, typeof(CC)).Then(Assert.IsTrue);
+            es.Subscribe(a4.Ref, typeof(CCATBT)).Then(Assert.IsTrue);
+            es.Unsubscribe(a3.Ref).Then(Assert.IsTrue);
             es.Publish(tm1);
             es.Publish(tm2);
             a1.expectMsg(tm2);
             a2.expectMsg(tm2);
             a3.expectNoMsg(TimeSpan.FromSeconds(1));
             a4.expectMsg(tm2);
-            //es.unSubscribe(a1.Ref, classOf[AT]) should be(true)
-            //es.unSubscribe(a2.Ref, classOf[BT]) should be(true)
-            //es.unSubscribe(a3.Ref, classOf[CC]) should be(true)
-            //es.unSubscribe(a4.Ref, classOf[CCATBT]) should be(true)
+            es.Unsubscribe(a1.Ref, typeof(AT)).Then(Assert.IsTrue);
+            es.Unsubscribe(a2.Ref, typeof(BT)).Then(Assert.IsTrue);
+            es.Unsubscribe(a3.Ref, typeof(CC)).Then(Assert.IsFalse);
+            es.Unsubscribe(a4.Ref, typeof(CCATBT)).Then(Assert.IsTrue);
         }
     }
 }

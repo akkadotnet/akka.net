@@ -33,7 +33,7 @@ namespace Pigeon.Event
             return source.GetType().Name;
         }
 
-        public virtual void Subscribe(TSubscriber subscriber, TClassifier classifier)
+        public virtual bool Subscribe(TSubscriber subscriber, TClassifier classifier)
         {            
             lock(classifiers)
             {
@@ -43,37 +43,47 @@ namespace Pigeon.Event
                     subscribers = new List<Subscription<TSubscriber, TClassifier>>();
                     classifiers.Add(classifier, subscribers);
                 }
+                //already subscribed
+                if (subscribers.Any(s => s.Subscriber.Equals(subscriber)))
+                    return false;
+
                 var subscription = new Subscription<TSubscriber, TClassifier>(subscriber);
 
                 subscribers.Add(subscription);
                 ClearCache();
+                return true;
             }
         }
 
-        public virtual void Unsubscribe(TSubscriber subscriber)
+        public virtual bool Unsubscribe(TSubscriber subscriber)
         {
             lock (classifiers)
             {
+                bool res = false;
                 List<Subscription<TSubscriber, TClassifier>> subscribers;
                 foreach(var classifier in classifiers.Keys)
                 {
                     if (classifiers.TryGetValue(classifier, out subscribers))
                     {
-                        subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber));
+                        if (subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber)) > 0)
+                            res = true;
                     }
                 }
                 ClearCache();
+                return res;
             }
         }
 
-        public virtual void Unsubscribe(TSubscriber subscriber,TClassifier classifier)
+        public virtual bool Unsubscribe(TSubscriber subscriber,TClassifier classifier)
         {
             lock (classifiers)
             {
+                bool res = false;
                 List<Subscription<TSubscriber,TClassifier>> subscribers;
                 if (classifiers.TryGetValue(classifier, out subscribers))
-                {                    
-                    subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber));
+                {
+                    if (subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber)) > 0)
+                        res = true;
                 }
                 else
                 {
@@ -83,14 +93,16 @@ namespace Pigeon.Event
                         {
                             var s = kvp.Value;
                             var subscriptions = s.Where(ss => ss.Subscriber.Equals(subscriber)).ToList();
-                            foreach(var sss in subscriptions)
+                            foreach(var existingSubscriber in subscriptions)
                             {
-                                sss.Unsubscriptions.Add(classifier);
+                                existingSubscriber.Unsubscriptions.Add(classifier);
+                                res = true;
                             }
                         }
                     }
                 }
                 ClearCache();
+                return res;
             }
         }
 
