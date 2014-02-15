@@ -168,5 +168,33 @@ namespace Pigeon.Tests.Event
             //es.unSubscribe(a3.Ref, classOf[CC]) should be(true)
             //es.unSubscribe(a4.Ref, classOf[CCATBT]) should be(true)
         }
+
+        [TestMethod]
+        public void ManageSubChannelsUsingClassesAndInterfacesUpdateOnUnsubscribeAll()
+        {
+            var es = new EventStream(false);
+            var tm1 = new CC();
+            var tm2 = new CCATBT();
+            var a1 = TestProbe();
+            var a2 = TestProbe();
+            var a3 = TestProbe();
+            var a4 = TestProbe();
+
+            es.Subscribe(a1.Ref, typeof(AT));
+            es.Subscribe(a2.Ref, typeof(BT));
+            es.Subscribe(a3.Ref, typeof(CC));
+            es.Subscribe(a4.Ref, typeof(CCATBT));
+            es.Unsubscribe(a3.Ref);
+            es.Publish(tm1);
+            es.Publish(tm2);
+            a1.expectMsg(tm2);
+            a2.expectMsg(tm2);
+            a3.expectNoMsg(TimeSpan.FromSeconds(1));
+            a4.expectMsg(tm2);
+            //es.unSubscribe(a1.Ref, classOf[AT]) should be(true)
+            //es.unSubscribe(a2.Ref, classOf[BT]) should be(true)
+            //es.unSubscribe(a3.Ref, classOf[CC]) should be(true)
+            //es.unSubscribe(a4.Ref, classOf[CCATBT]) should be(true)
+        }
     }
 }
