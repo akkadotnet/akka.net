@@ -293,11 +293,36 @@ protected def terminate() {
             this.Self.Tell(new Recreate(null));
         }
 
+        public void Restart(Exception cause)
+        {
+            this.Self.Tell(new Recreate(cause));
+        }
+
         private void FaultRecreate(Recreate m)
         {
             isTerminating = false;
-            Actor.AroundPreRestart(m.Cause, null); //TODO: pass message?            
+            var failedActor = this.Actor;
 
+            var optionalMessage = this.CurrentMessage;
+
+            //TODO: don't know where this is handled in akka.. 
+            HandleNonFatalOrInterruptedException(() => Publish(new Error(m.Cause, this.Self.Path.ToString(), failedActor.GetType(), m.Cause.Message)));
+
+            if (System.Settings.DebugLifecycle) 
+                Publish(new Pigeon.Event.Debug(Self.Path.ToString(), failedActor.GetType(), "restarting"));
+
+            try
+            {
+                failedActor.AroundPreRestart(m.Cause, optionalMessage); //TODO: pass message?            
+            }
+            catch(Exception e)
+            {
+                HandleNonFatalOrInterruptedException(() =>
+                    {
+                        var ex = new PreRestartException(Self, e, m.Cause, optionalMessage);
+                        Publish(new Error(ex, Self.Path.ToString(), failedActor.GetType(), e.Message));
+                    });
+            }
            
 
             this.UseThreadContext(() =>
@@ -310,7 +335,9 @@ protected def terminate() {
 
                 Children.TryAdd(this.Self.Path.Name, this.Self);
                 created.AroundPostRestart(m.Cause,null);
-            });            
+            });
+
+
         }
 
         public void Start()

@@ -217,6 +217,16 @@ namespace Pigeon.Tests
             {
                 this.testActor = testActor;
             }
+
+            protected override void PreRestart(Exception cause, object message)
+            {
+                base.PreRestart(cause, message);
+            }
+
+            protected override void PostRestart(Exception cause)
+            {
+                base.PostRestart(cause);
+            }
             protected override void OnReceive(object message)
             {
                 if (message is Become)
@@ -234,6 +244,7 @@ namespace Pigeon.Tests
         public void ClearBehaviorStackUponRestart()
         {
             var a = sys.ActorOf(Props.Create(() => new BecomeActor(testActor)));
+
             a.Tell("hello");
             expectMsg(42);
             a.Tell(new Become
@@ -253,12 +264,12 @@ namespace Pigeon.Tests
             expectMsg("ok");
             a.Tell("hello");
             expectMsg(43);
-            //EventFilter<Exception>("buh", 1, () =>
-            //{
-            //    a.Tell("fail");
-            //});
-            //a.Tell("hello");
-            //expectMsg(42);
+            EventFilter<Exception>("buh", 1, () =>
+            {                
+                a.Tell("fail");
+            });
+            a.Tell("hello");
+            expectMsg(42);
         }
 
     }

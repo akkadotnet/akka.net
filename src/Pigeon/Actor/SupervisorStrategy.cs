@@ -35,11 +35,11 @@ namespace Pigeon.Actor
             return false;
         }
 
-        private void ProcessFailure(ActorCell actorCell, bool restart, ActorRef child, Exception exception)
+        private void ProcessFailure(ActorCell actorCell, bool restart, ActorRef child, Exception cause)
         {
             if (restart)
             {
-                child.AsInstanceOf<LocalActorRef>().Restart();
+                child.AsInstanceOf<LocalActorRef>().Cell.Restart(cause);
             }
             else
             {
