@@ -172,6 +172,10 @@ namespace Pigeon.Dispatch
         }
     }
 
+    /// <summary>
+    /// Special mailbox that processes the last message first
+    /// Useful for some real time edge cases
+    /// </summary>
     public class ConcurrentStackMailbox : Mailbox
     {
         private ConcurrentStack<Envelope> userMessages = new ConcurrentStack<Envelope>();

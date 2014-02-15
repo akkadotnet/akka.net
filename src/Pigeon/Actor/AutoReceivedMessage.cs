@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Actor
 {
-    public abstract class AutoReceivedMessage
+    public abstract class AutoReceivedMessage : NoSerializationVerificationNeeded
     {
     }
 

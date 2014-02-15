@@ -15,7 +15,7 @@ namespace Pigeon.Dispatch.SysMsg
 //private[akka] case class Create(failure: Option[ActorInitializationException]) extends SystemMessage // sent to self from Dispatcher.register
 ///**
 
-    internal abstract class SystemMessage
+    internal abstract class SystemMessage : NoSerializationVerificationNeeded
     {
     }
 

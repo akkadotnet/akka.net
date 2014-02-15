@@ -205,6 +205,14 @@ namespace Pigeon.Actor
                 //this.System.DeadLetters.Tell(new DeadLetter(message, sender, this.Self));
             }
 
+            if (System.Settings.SerializeAllMessages && !(message is NoSerializationVerificationNeeded))
+            {
+                var serializer = System.Serialization.FindSerializerFor(message);
+                var serialized = serializer.ToBinary(message);
+                var deserialized = System.Serialization.Deserialize(serialized, serializer.Identifier, message.GetType());
+                message = deserialized;
+            }
+
             var m = new Envelope
             {
                 Sender = sender,
