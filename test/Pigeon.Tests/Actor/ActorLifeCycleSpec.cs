@@ -197,7 +197,7 @@ namespace Pigeon.Tests
 
         [Description("log failues in postStop")]
         [TestMethod]
-        public void ActorLifecycleTest4()
+        public void LogFailutresInPostStop()
         {
             var a = sys.ActorOf<EmptyActor>();
             EventFilter<Exception>(message: "hurrah",occurances: 1, intercept: () =>
@@ -205,5 +205,61 @@ namespace Pigeon.Tests
                     a.Tell(new PoisonPill());
                 });            
         }
+
+        public class Become
+        {
+            public Receive x;
+        }
+        public class BecomeActor : UntypedActor
+        {
+            private ActorRef testActor;
+            public BecomeActor(ActorRef testActor)
+            {
+                this.testActor = testActor;
+            }
+            protected override void OnReceive(object message)
+            {
+                if (message is Become)
+                {
+                    Context.Become(((Become)message).x);
+                    testActor.Tell("ok");
+                }
+                else
+                {
+                    testActor.Tell(42);
+                }
+            }
+        }
+        [TestMethod]
+        public void ClearBehaviorStackUponRestart()
+        {
+            var a = sys.ActorOf(Props.Create(() => new BecomeActor(testActor)));
+            a.Tell("hello");
+            expectMsg(42);
+            a.Tell(new Become
+            {
+                x = m =>
+                {
+                    if (m.ToString() == "fail")
+                    {
+                        throw new Exception("buh");
+                    }
+                    else
+                    {
+                        testActor.Tell(43);
+                    }
+                }
+            });
+            expectMsg("ok");
+            a.Tell("hello");
+            expectMsg(43);
+            //EventFilter<Exception>("buh", 1, () =>
+            //{
+            //    a.Tell("fail");
+            //});
+            //a.Tell("hello");
+            //expectMsg(42);
+        }
+
     }
 }
