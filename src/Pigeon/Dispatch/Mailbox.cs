@@ -171,4 +171,127 @@ namespace Pigeon.Dispatch
             isClosed = true;
         }
     }
+
+    public class ConcurrentStackMailbox : Mailbox
+    {
+        private ConcurrentStack<Envelope> userMessages = new ConcurrentStack<Envelope>();
+        private ConcurrentQueue<Envelope> systemMessages = new ConcurrentQueue<Envelope>();
+
+        private volatile bool hasUnscheduledMessages = false;
+        private volatile bool isClosed = false;
+        private int status;
+
+        private Stopwatch deadLineTimer = null;
+
+        private static class MailboxStatus
+        {
+            public const int Idle = 0;
+            public const int Busy = 1;
+        }
+
+        public ConcurrentStackMailbox()
+        {
+        }
+
+        private void Run(object _)
+        {
+            if (isClosed)
+            {
+                return;
+            }
+
+            if (dispatcher.ThroughputDeadlineTime.HasValue)
+            {
+                if (deadLineTimer != null)
+                {
+                    deadLineTimer.Restart();
+                }
+                else
+                {
+                    deadLineTimer = Stopwatch.StartNew();
+                }
+            }
+
+            hasUnscheduledMessages = false;
+            Envelope envelope;
+            while (systemMessages.TryDequeue(out envelope))
+            {
+                this.SystemInvoke(envelope);
+            }
+
+            int left = dispatcher.Throughput;
+
+            while (userMessages.TryPop(out envelope))
+            {
+                this.Invoke(envelope);
+                if (systemMessages.TryDequeue(out envelope))
+                {
+                    this.SystemInvoke(envelope);
+                    break;
+                }
+                left--;
+                if (isClosed)
+                    return;
+
+                if (left == 0 && userMessages.TryPeek(out envelope) || (dispatcher.ThroughputDeadlineTime.HasValue && deadLineTimer.ElapsedTicks > dispatcher.ThroughputDeadlineTime.Value))
+                {
+                    if (dispatcher.ThroughputDeadlineTime.HasValue)
+                    {
+                        deadLineTimer.Stop();
+                    }
+                    // we have processed throughput messages, and there are still envelopes left
+                    hasUnscheduledMessages = true;
+                    break;
+                }
+            }
+
+            Interlocked.Exchange(ref status, MailboxStatus.Idle);
+
+            if (hasUnscheduledMessages)
+            {
+                hasUnscheduledMessages = false;
+                Schedule();
+            }
+        }
+
+
+
+        private void Schedule()
+        {
+            //only schedule if we idle
+            if (Interlocked.Exchange(ref status, MailboxStatus.Busy) == MailboxStatus.Idle)
+            {
+                this.dispatcher.Schedule(Run);
+            }
+        }
+
+        public override void Post(Envelope envelope)
+        {
+            if (isClosed)
+                return;
+
+            hasUnscheduledMessages = true;
+            if (envelope.Message is SystemMessage)
+            {
+                systemMessages.Enqueue(envelope);
+            }
+            else
+            {
+                userMessages.Push(envelope);
+            }
+
+            Schedule();
+        }
+
+        public override void Stop()
+        {
+            isClosed = true;
+        }
+
+        public override void Dispose()
+        {
+            isClosed = true;
+        }
+    }
+
 }
