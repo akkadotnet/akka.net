@@ -91,5 +91,11 @@ namespace Pigeon.Tests
                 Assert.AreEqual(message, error.ErrorMessage);                
             }
         }
+
+
+        protected TestProbe TestProbe()
+        {
+            return new TestProbe();
+        }
     }
 }

@@ -68,6 +68,7 @@
     <Compile Include="HoconTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Supervisor.cs" />
+    <Compile Include="TestProbe.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Pigeon\Pigeon.csproj">
