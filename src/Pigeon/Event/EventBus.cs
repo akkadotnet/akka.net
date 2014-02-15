@@ -10,6 +10,11 @@ namespace Pigeon.Event
 {
     public class Subscription<TSubscriber,TClassifier>
     {
+        public Subscription(TSubscriber subscriber,IEnumerable<TClassifier> unsubscriptions)
+        {
+            this.Subscriber = subscriber;
+            this.Unsubscriptions = new HashSet<TClassifier>(unsubscriptions);
+        }
         public Subscription(TSubscriber subscriber)
         {
             this.Subscriber = subscriber;
@@ -21,7 +26,7 @@ namespace Pigeon.Event
 
     public abstract class EventBus<TEvent,TClassifier,TSubscriber>
     {        
-        private Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>> subscribers = new Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>>();
+        private Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>> classifiers = new Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>>();
 
         protected string SimpleName(object source)
         {
@@ -30,39 +35,31 @@ namespace Pigeon.Event
 
         public virtual void Subscribe(TSubscriber subscriber, TClassifier classifier)
         {            
-            lock(subscribers)
+            lock(classifiers)
             {
-                //remove sub-subscribers
-                foreach(var kvp in subscribers)
+                List<Subscription<TSubscriber, TClassifier>> subscribers;
+                if (!classifiers.TryGetValue(classifier, out subscribers))
                 {
-                    if (IsSubClassification(classifier,kvp.Key))
-                    {
-                        kvp.Value.RemoveAll(s => s.Subscriber.Equals(subscriber));
-                        //TODO: unsubscriptions in the subscriptions needs to be carried over to the new parent subscription
-                    }
+                    subscribers = new List<Subscription<TSubscriber, TClassifier>>();
+                    classifiers.Add(classifier, subscribers);
                 }
+                var subscription = new Subscription<TSubscriber, TClassifier>(subscriber);
 
-                List<Subscription<TSubscriber, TClassifier>> set;
-                if (!subscribers.TryGetValue(classifier, out set))
-                {
-                    set = new List<Subscription<TSubscriber, TClassifier>>();
-                    subscribers.Add(classifier, set);
-                }
-                set.Add(new Subscription<TSubscriber,TClassifier>(subscriber));
+                subscribers.Add(subscription);
                 ClearCache();
             }
         }
 
         public virtual void Unsubscribe(TSubscriber subscriber)
         {
-            lock (subscribers)
+            lock (classifiers)
             {
-                List<Subscription<TSubscriber, TClassifier>> set;
-                foreach(var classifier in subscribers.Keys)
+                List<Subscription<TSubscriber, TClassifier>> subscribers;
+                foreach(var classifier in classifiers.Keys)
                 {
-                    if (subscribers.TryGetValue(classifier, out set))
+                    if (classifiers.TryGetValue(classifier, out subscribers))
                     {
-                        set.RemoveAll(s => s.Subscriber.Equals(subscriber));
+                        subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber));
                     }
                 }
                 ClearCache();
@@ -71,16 +68,16 @@ namespace Pigeon.Event
 
         public virtual void Unsubscribe(TSubscriber subscriber,TClassifier classifier)
         {
-            lock (subscribers)
+            lock (classifiers)
             {
-                List<Subscription<TSubscriber,TClassifier>> set;
-                if (subscribers.TryGetValue(classifier, out set))
-                {
-                    set.RemoveAll(s => s.Subscriber.Equals(subscriber));
+                List<Subscription<TSubscriber,TClassifier>> subscribers;
+                if (classifiers.TryGetValue(classifier, out subscribers))
+                {                    
+                    subscribers.RemoveAll(s => s.Subscriber.Equals(subscriber));
                 }
                 else
                 {
-                    foreach (var kvp in subscribers)
+                    foreach (var kvp in classifiers)
                     {
                         if (IsSubClassification(kvp.Key,classifier))
                         {
@@ -123,7 +120,7 @@ namespace Pigeon.Event
             }
             else
             {
-                cachedSubscribers = UpdateCacheForEventClassifier(@event, eventClass, cachedSubscribers);
+                cachedSubscribers = UpdateCacheForEventClassifier(@event, eventClass);
                 PublishToSubscribers(@event, cachedSubscribers);
             }
         }
@@ -136,12 +133,12 @@ namespace Pigeon.Event
             }
         }
 
-        private List<TSubscriber> UpdateCacheForEventClassifier(TEvent @event, TClassifier eventClass, List<TSubscriber> cachedSubscribers)
+        private List<TSubscriber> UpdateCacheForEventClassifier(TEvent @event, TClassifier eventClass)
         {
-            lock (subscribers)
+            lock (classifiers)
             {
-                cachedSubscribers = new List<TSubscriber>();
-                foreach (var kvp in subscribers)
+                var cachedSubscribers = new HashSet<TSubscriber>();
+                foreach (var kvp in classifiers)
                 {
                     var classifier = kvp.Key;
                     var set = kvp.Value;
@@ -156,10 +153,11 @@ namespace Pigeon.Event
                         }
                     }
                 }
-
-                cache[eventClass] = cachedSubscribers;
-            }
-            return cachedSubscribers;
+                //finds a distinct list of subscribers for the given event type
+                var list = cachedSubscribers.ToList();
+                cache[eventClass] = list;
+                return list;
+            }            
         }
     }
 
