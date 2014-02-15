@@ -52,5 +52,10 @@ namespace Pigeon.Event
         {
             return (classifier.IsAssignableFrom(@event.GetType()));
         }
+
+        protected override bool IsSubClassification(Type parent, Type child)
+        {
+            return parent.IsAssignableFrom(child);
+        }
     }      
 }

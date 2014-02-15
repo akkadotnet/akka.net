@@ -96,15 +96,13 @@ namespace Pigeon.Tests.Event
             //TODO: we can't unsubscribe from types we havent subscribed to.
             //we have subscribed to base class A, but this implies that the type B1 and subclasses should no longer match on the A entry
 
-            //bus.Unsubscribe(testActor,typeof(B1));
-            //bus.Publish(c);
-            //bus.Publish(b2);
-            //bus.Publish(a);
-            //expectMsg(b2);
-            //expectMsg(a);
-            //expectNoMsg(TimeSpan.FromSeconds(1));
-
-
+            bus.Unsubscribe(testActor, typeof(B1));
+            bus.Publish(c);
+            bus.Publish(b2);
+            bus.Publish(a);
+            expectMsg(b2);
+            expectMsg(a);
+            expectNoMsg(TimeSpan.FromSeconds(1));
         }
     }
 }
