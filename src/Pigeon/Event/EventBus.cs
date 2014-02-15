@@ -49,6 +49,7 @@ namespace Pigeon.Event
                     subscribers.Add(classifier, set);
                 }
                 set.Add(new Subscription<TSubscriber,TClassifier>(subscriber));
+                ClearCache();
             }
         }
 
@@ -64,6 +65,7 @@ namespace Pigeon.Event
                         set.RemoveAll(s => s.Subscriber.Equals(subscriber));
                     }
                 }
+                ClearCache();
             }
         }
 
@@ -91,7 +93,13 @@ namespace Pigeon.Event
                         }
                     }
                 }
+                ClearCache();
             }
+        }
+
+        private void ClearCache()
+        {
+            cache = new ConcurrentDictionary<TClassifier, List<TSubscriber>>();
         }
 
         protected abstract bool IsSubClassification(TClassifier parent, TClassifier child);
@@ -102,24 +110,61 @@ namespace Pigeon.Event
 
         protected abstract TClassifier GetClassifier(TEvent @event);
 
+        private volatile ConcurrentDictionary<TClassifier, List<TSubscriber>> cache = new ConcurrentDictionary<TClassifier, List<TSubscriber>>();
+
         public virtual void Publish(TEvent @event)
         {
             var eventClass = GetClassifier(@event);
-            foreach (var kvp in subscribers)
-            {
-                var classifier = kvp.Key;
-                var set = kvp.Value;
-                if (Classify(@event, classifier))
-                {
-                    foreach (var subscriber in set)
-                    {
-                        if (subscriber.Unsubscriptions.Any(u => IsSubClassification(u, eventClass)))
-                            continue;
 
-                        this.Publish(@event, subscriber.Subscriber);
-                    }
-                }                
+            List<TSubscriber> cachedSubscribers;
+            if (cache.TryGetValue(eventClass, out cachedSubscribers))
+            {
+                PublishToSubscribers(@event, cachedSubscribers);
+            }
+            else
+            {
+                cachedSubscribers = UpdateCacheForEventClassifier(@event, eventClass, cachedSubscribers);
+                PublishToSubscribers(@event, cachedSubscribers);
             }
         }
+
+        private void PublishToSubscribers(TEvent @event, List<TSubscriber> cachedSubscribers)
+        {
+            foreach (var subscriber in cachedSubscribers)
+            {
+                this.Publish(@event, subscriber);
+            }
+        }
+
+        private List<TSubscriber> UpdateCacheForEventClassifier(TEvent @event, TClassifier eventClass, List<TSubscriber> cachedSubscribers)
+        {
+            lock (subscribers)
+            {
+                cachedSubscribers = new List<TSubscriber>();
+                foreach (var kvp in subscribers)
+                {
+                    var classifier = kvp.Key;
+                    var set = kvp.Value;
+                    if (Classify(@event, classifier))
+                    {
+                        foreach (var subscriber in set)
+                        {
+                            if (subscriber.Unsubscriptions.Any(u => IsSubClassification(u, eventClass)))
+                                continue;
+
+                            cachedSubscribers.Add(subscriber.Subscriber);
+                        }
+                    }
+                }
+
+                cache[eventClass] = cachedSubscribers;
+            }
+            return cachedSubscribers;
+        }
+    }
+
+    public abstract class ActorEventBus<TEvent,TClassifier> : EventBus<TEvent,TClassifier,ActorRef>
+    {
+
     }
 }
