@@ -15,8 +15,8 @@ namespace Pigeon.Tests
         [TestMethod]
         public void CanSendMessagesToDeadLetters()
         {
-            system.EventStream.Subscribe(testActor, typeof(DeadLetter));
-            system.DeadLetters.Tell("foobar");
+            sys.EventStream.Subscribe(testActor, typeof(DeadLetter));
+            sys.DeadLetters.Tell("foobar");
             var message = queue.Take();
             Assert.IsInstanceOfType(message, typeof(DeadLetter));
             var deadLetter = (DeadLetter)message;

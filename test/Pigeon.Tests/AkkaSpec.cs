@@ -18,11 +18,11 @@ namespace Pigeon.Tests
         public void Setup()
         {
             queue = new BlockingCollection<object>();
-            system = ActorSystem.Create("test");
-            testActor = system.ActorOf(Props.Create(() => new TestActor(queue)));            
+            sys = ActorSystem.Create("test");
+            testActor = sys.ActorOf(Props.Create(() => new TestActor(queue)));            
         }
         protected BlockingCollection<object> queue;
-        protected ActorSystem system;
+        protected ActorSystem sys;
         protected ActorRef testActor;
 
         protected void expectMsg(object expected)
@@ -80,7 +80,7 @@ namespace Pigeon.Tests
 
         protected void EventFilter<T>(string message,int occurances, Action intercept) where T:Exception
         {
-            system.EventStream.Subscribe(testActor,typeof(object));
+            sys.EventStream.Subscribe(testActor,typeof(object));
             intercept();
             for(int i = 0;i<occurances;i++)
             {

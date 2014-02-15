@@ -1,6 +1,8 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pigeon.Actor;
+using Pigeon.Configuration;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,36 +11,55 @@ using System.Threading.Tasks;
 namespace Pigeon.Tests
 {
     [TestClass]
-    public class ActorCellTests
+    public class ActorCellSpec : AkkaSpec
     {
-        public class TestActor : UntypedActor
+        public class SomeUserMessage : Comparable
         {
-            protected override void OnReceive(object message)
+            public string A { get; set; }
+            public int B { get; set; }
+            public Guid C { get; set; }
+        }
+       [TestMethod]
+       public void DoesNotSerializesUserMessagesWhenSerializeAllMessagesIsOff()
+       {
+            var message = new SomeUserMessage
             {
-            }
+                A = "abc",
+                B = 123,
+                C = Guid.Empty
+            };
+            testActor.Tell(message);
+
+            var result = queue.Take();
+
+            Assert.IsFalse(sys.Settings.SerializeAllMessages);
+            Assert.AreEqual(message, result);
+            Assert.AreSame(message, result);
         }
 
-        public class TestParentActor : UntypedActor
-        {
-            private ActorRef child = Context.ActorOf<TestActor>();
+       [TestMethod]
+       public void SerializesUserMessagesWhenSerializeAllMessagesIsOn()
+       {
+           var config = ConfigurationFactory.ParseString(@"
+akka.actor.serialize-messages = on
+");
+           var queue = new BlockingCollection<object>();
+           var sys = ActorSystem.Create("test",config);
+           var testActor = sys.ActorOf(Props.Create(() => new TestActor(queue)));      
 
-            protected override void OnReceive(object message)
-            {
-            }
-        }
+           var message = new SomeUserMessage
+           {
+               A = "abc",
+               B = 123,
+               C = Guid.Empty
+           };
+           testActor.Tell(message);
 
-        [TestMethod]
-        public void Context_ActorOf_adds_a_child()
-        {
-            //arrange
-            var system = new ActorSystem("test");
+           var result = queue.Take();
 
-            //act
-            var parent = system.ActorOf<TestParentActor>("test");
-
-            //assert
-            var children = parent.Cell.GetChildren();
-            Assert.IsTrue(children.Count() == 1);
-        }
+           Assert.IsTrue(sys.Settings.SerializeAllMessages);
+           Assert.AreEqual(message, result);
+           Assert.AreNotSame(message, result);
+       }
     }
 }

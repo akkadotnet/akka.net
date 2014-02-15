@@ -106,9 +106,9 @@ namespace Pigeon.Tests
         {
             var generationProvider = new AtomicInteger();
             string id = Guid.NewGuid().ToString();
-            var supervisor = system.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
+            var supervisor = sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTestActor(testActor, id, generationProvider));
-            var restarter = (ActorRef)supervisor.Ask(restarterProps, system).Result;
+            var restarter = (ActorRef)supervisor.Ask(restarterProps, sys).Result;
 
             expectMsg(Tuple.Create( "preStart", id, 0));
             restarter.Tell(new Kill());
@@ -138,9 +138,9 @@ namespace Pigeon.Tests
         {
             var generationProvider = new AtomicInteger();
             string id = Guid.NewGuid().ToString();            
-            var supervisor = system.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
+            var supervisor = sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(testActor, id, generationProvider));
-            var restarter = (ActorRef)supervisor.Ask(restarterProps, system).Result;
+            var restarter = (ActorRef)supervisor.Ask(restarterProps, sys).Result;
 
             expectMsg(Tuple.Create("preStart", id, 0));
             restarter.Tell(new Kill());
@@ -170,9 +170,9 @@ namespace Pigeon.Tests
         {
             var generationProvider = new AtomicInteger();
             string id = Guid.NewGuid().ToString();            
-            var supervisor = system.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
+            var supervisor = sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(testActor, id, generationProvider));
-            var restarter = (ActorRef)supervisor.Ask(restarterProps, system).Result;
+            var restarter = (ActorRef)supervisor.Ask(restarterProps, sys).Result;
 
             expectMsg(Tuple.Create("preStart", id, 0));
             restarter.Tell("status");
@@ -199,7 +199,7 @@ namespace Pigeon.Tests
         [TestMethod]
         public void ActorLifecycleTest4()
         {
-            var a = system.ActorOf<EmptyActor>();
+            var a = sys.ActorOf<EmptyActor>();
             EventFilter<Exception>(message: "hurrah",occurances: 1, intercept: () =>
                 {
                     a.Tell(new PoisonPill());
