@@ -41,7 +41,7 @@ namespace Pigeon.Actor
         public ActorSystem(string name,Config config=null,params ActorSystemExtension[] extensions)
         {
             this.Name = name;
-            this.Address = new Address("akka", this.Name); //TODO: this should not work this way...
+            
             ConfigureSettings(config);
             ConfigureEventStream();
             ConfigureSerialization();
@@ -144,11 +144,7 @@ namespace Pigeon.Actor
             return Provider.RootCell.ActorSelection(actorPath);
         }
 
-        public virtual Address Address
-        {
-            get;
-            set;
-        }
+
 
         public EventStream EventStream { get; private set; }
 

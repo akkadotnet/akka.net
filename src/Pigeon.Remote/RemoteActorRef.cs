@@ -14,14 +14,14 @@ namespace Pigeon.Remote
     //move all network related code to RemoteTransport and other remoting classes
     public class RemoteActorRef : ActorRef
     {
-        private IActorContext Context;
+        private ActorSystem system;
         protected string actorName;
         private TcpClient client;
         private NetworkStream stream;
 
-        public RemoteActorRef(IActorContext context, ActorPath remoteActorPath, int port)
+        public RemoteActorRef(ActorSystem system, ActorPath remoteActorPath, int port)
         {
-            this.Context = context;
+            this.system = system;
             this.Path = remoteActorPath;
             this.actorName = this.Path.Name;
 
@@ -37,13 +37,13 @@ namespace Pigeon.Remote
             var publicPath = "";
             if (sender is LocalActorRef)
             {                
-                var s = sender as LocalActorRef;               
-                publicPath = sender.Path.ToStringWithAddress(s.Cell.System.Address);
+                var s = sender as LocalActorRef;
+                publicPath = sender.Path.ToStringWithAddress(system.Provider.Address);
             }
             else
                 publicPath = sender.Path.ToString();
 
-            var serializedMessage = MessageSerializer.Serialize(Context.System, message);
+            var serializedMessage = MessageSerializer.Serialize(system, message);
 
             var remoteEnvelope = new RemoteEnvelope.Builder()
             .SetSender(new ActorRefData.Builder()

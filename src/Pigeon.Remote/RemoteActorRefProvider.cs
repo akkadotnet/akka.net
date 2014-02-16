@@ -27,7 +27,7 @@ namespace Pigeon.Remote
             var host = config.GetString("server.host");
             var port = config.GetInt("server.port");
 
-            System.Address = new Address("akka.tcp", System.Name, host, port);
+            this.Address = new Address("akka.tcp", System.Name, host, port);
             RemoteHost.StartHost(System, port);
         }
 
@@ -53,7 +53,7 @@ namespace Pigeon.Remote
 
         public override ActorRef ResolveActorRef(ActorPath actorPath)
         {
-            if (System.Address.Equals(actorPath.Address))
+            if (this.Address.Equals(actorPath.Address))
             {
                 //standard
                 var currentContext = RootCell;
@@ -65,7 +65,7 @@ namespace Pigeon.Remote
             }
             else
             {
-                return new RemoteActorRef(RootCell, actorPath, System.Address.Port.Value);
+                return new RemoteActorRef(System, actorPath, this.Address.Port.Value);
             }
         }
     }

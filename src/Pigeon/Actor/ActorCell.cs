@@ -55,7 +55,7 @@ namespace Pigeon.Actor
         {
             var tmpPath = actorPath;
            
-            if (System.Address.Equals( actorPath.Address))
+            if (System.Provider.Address.Equals( actorPath.Address))
             {
                 tmpPath = actorPath;
             }

@@ -40,12 +40,18 @@ namespace Pigeon.Actor
 
         public abstract ActorRef ResolveActorRef(ActorPath actorPath);
 
+        public virtual Address Address
+        {
+            get;
+            set;
+        }
     }
 
     public class LocalActorRefProvider : ActorRefProvider
     {
         public LocalActorRefProvider(ActorSystem system) : base(system)
         {
+            this.Address = new Address("akka", this.System.Name); //TODO: this should not work this way...
         }
 
         public override LocalActorRef ActorOf(ActorCell parentContext, Props props, string name)
@@ -70,7 +76,7 @@ namespace Pigeon.Actor
 
         public override ActorRef ResolveActorRef(ActorPath actorPath)
         {
-            if (System.Address.Equals(actorPath.Address))
+            if (this.Address.Equals(actorPath.Address))
             {
                 //standard
                 var currentContext = RootCell;
