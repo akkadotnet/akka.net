@@ -82,6 +82,8 @@ namespace Pigeon.Serialization
 
     public class JsonSerializer : Serializer
     {
+        [ThreadStatic]
+        private static ActorSystem currentSystem;
         private fastJSON.JSON json;
         public JsonSerializer(ActorSystem system)
             : base(system)
@@ -98,7 +100,7 @@ namespace Pigeon.Serialization
 
         private object DeserializeActorRef(string data)
         {
-            return system.Provider.ResolveActorRef(data);
+            return currentSystem.Provider.ResolveActorRef(data);
         }        
 
         public override bool IncludeManifest
@@ -107,6 +109,7 @@ namespace Pigeon.Serialization
         }
         public override object FromBinary(byte[] bytes, Type type)
         {
+            currentSystem = this.system;
             var data = Encoding.Default.GetString(bytes);
             return json.ToObject(data);
         }
