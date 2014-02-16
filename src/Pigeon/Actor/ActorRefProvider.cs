@@ -25,7 +25,7 @@ namespace Pigeon.Actor
         }
         public ActorSystem System { get;protected set; }
         public ActorCell RootCell { get; protected set; }
-        public LocalActorRef RootGuardian { get; protected set; }
+
 
         public ActorRef DeadLetters { get; protected set; }
         public LocalActorRef Guardian { get; protected set; }
@@ -33,6 +33,7 @@ namespace Pigeon.Actor
         public LocalActorRef TempGuardian { get; protected set; }      
 
         public abstract LocalActorRef ActorOf(ActorCell parentContext,Props props,string name);
+        public abstract ActorRef ResolveActorRef(string path);
     }
 
     public class LocalActorRefProvider : ActorRefProvider
@@ -58,6 +59,25 @@ namespace Pigeon.Actor
                 parentContext.NewActor(cell);
                 parentContext.Watch(cell.Self);
                 return cell.Self;
+            }
+        }
+
+        public override ActorRef ResolveActorRef(string path)
+        {
+            var actorPath = ActorPath.Parse(path,this.System);
+            if (System.Address.Equals(actorPath.Address))
+            {
+                //standard
+                var currentContext = RootCell;
+                foreach (var part in actorPath.Skip(1))
+                {
+                    currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
+                }
+                return currentContext.Self;
+            }
+            else
+            {
+                throw new NotSupportedException("The provided actor path is not valid in the LocalActorRefProvider");
             }
         }
     }

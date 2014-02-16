@@ -36,6 +36,20 @@ namespace Pigeon.Actor
         public override string ToString()
         {
             return toString.Value;
-        }    
+        }
+
+        public override int GetHashCode()
+        {
+            return ToString().GetHashCode();
+        }
+
+        //TODO: implement real equals checks instead
+        public override bool Equals(object obj)
+        {
+            if (obj == null)
+                return false;
+
+            return this.ToString() == obj.ToString();
+        }
     }
 }

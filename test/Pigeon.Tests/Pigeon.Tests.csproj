@@ -58,6 +58,7 @@
   <ItemGroup>
     <Compile Include="Actor\ActorCellTests.cs" />
     <Compile Include="Actor\ActorLifeCycleSpec.cs" />
+    <Compile Include="Actor\ActorRefProviderSpec.cs" />
     <Compile Include="Actor\ActorSystemTests.cs" />
     <Compile Include="AkkaSpec.cs" />
     <Compile Include="AtomicInteger.cs" />

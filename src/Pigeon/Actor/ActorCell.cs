@@ -81,7 +81,7 @@ namespace Pigeon.Actor
                 }
                 else if (part == "." || part == "")
                 {
-                    currentContext = currentContext.System.Provider.RootGuardian.Cell;
+                    currentContext = currentContext.System.Provider.RootCell;
                 }
                 else if (part == "*")
                 {

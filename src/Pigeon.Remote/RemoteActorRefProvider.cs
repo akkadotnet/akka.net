@@ -50,5 +50,24 @@ namespace Pigeon.Remote
                 return cell.Self;
             }
         }
+
+        public override ActorRef ResolveActorRef(string path)
+        {
+            var actorPath = ActorPath.Parse(path, this.System);
+            if (actorPath.Address == System.Address)
+            {
+                //standard
+                var currentContext = RootCell;
+                foreach (var part in actorPath)
+                {
+                    currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
+                }
+                return currentContext.Self;
+            }
+            else
+            {
+                return null;
+            }
+        }
     }
 }
