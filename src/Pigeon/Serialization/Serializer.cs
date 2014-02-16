@@ -82,11 +82,13 @@ namespace Pigeon.Serialization
 
     public class JsonSerializer : Serializer
     {
+        private fastJSON.JSON json;
         public JsonSerializer(ActorSystem system)
             : base(system)
-        {
-            fastJSON.JSON.Instance.RegisterCustomType(typeof(ActorRef), SerializeActorRef, DeserializeActorRef);
-            fastJSON.JSON.Instance.RegisterCustomType(typeof(LocalActorRef), SerializeActorRef, DeserializeActorRef);
+        {            
+            json = fastJSON.JSON.Instance;
+            json.RegisterCustomType(typeof(ActorRef), SerializeActorRef, DeserializeActorRef);
+            json.RegisterCustomType(typeof(LocalActorRef), SerializeActorRef, DeserializeActorRef);
         }
 
         private string SerializeActorRef(object data)
@@ -105,14 +107,14 @@ namespace Pigeon.Serialization
         }
         public override object FromBinary(byte[] bytes, Type type)
         {
-            var json = Encoding.Default.GetString(bytes);
-            return fastJSON.JSON.Instance.ToObject(json);
+            var data = Encoding.Default.GetString(bytes);
+            return json.ToObject(data);
         }
 
         public override byte[] ToBinary(object obj)
         {
-            var json = fastJSON.JSON.Instance.ToJSON(obj);
-            var bytes = Encoding.Default.GetBytes(json);
+            var data = json.ToJSON(obj);
+            var bytes = Encoding.Default.GetBytes(data);
             return bytes;
         }
 

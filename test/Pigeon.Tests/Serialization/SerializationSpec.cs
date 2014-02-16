@@ -22,7 +22,7 @@ namespace Pigeon.Tests.Serialization
             //TODO: this test fails when running all of the tests
             //looks like we either need another serializer than fastJSON, or be able to make fastJSON context aware.
             //(it blows up when trying to deserialze actorrefs since there have been multiple actor systems registering actorref as a custom type)
-
+            //fastJSON is problematic also because it wants each subtype to be registered. we need to register ActorRef only, and not all subtypes
             var message = new SomeMessage
             {
                 ActorRef = testActor,
