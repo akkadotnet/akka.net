@@ -86,6 +86,7 @@ namespace Pigeon.Serialization
             : base(system)
         {
             fastJSON.JSON.Instance.RegisterCustomType(typeof(ActorRef), SerializeActorRef, DeserializeActorRef);
+            fastJSON.JSON.Instance.RegisterCustomType(typeof(LocalActorRef), SerializeActorRef, DeserializeActorRef);
         }
 
         private string SerializeActorRef(object data)

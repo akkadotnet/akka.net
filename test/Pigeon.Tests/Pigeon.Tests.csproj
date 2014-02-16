@@ -68,6 +68,7 @@
     <Compile Include="Event\EventStreamSpec.cs" />
     <Compile Include="HoconTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Serialization\SerializationSpec.cs" />
     <Compile Include="Supervisor.cs" />
     <Compile Include="TestProbe.cs" />
   </ItemGroup>

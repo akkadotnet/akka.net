@@ -17,15 +17,27 @@ namespace Pigeon.Actor
                 var first = elements.First();
                 var protocol = first.Split(':')[0];
                 var systemName = elements[2].Split('@')[0];
-                var hostPort = elements[2].Split('@')[1];
-                var host = hostPort.Split(':')[0];
-                var port = int.Parse(hostPort.Split(':')[1]);
-                var rest = elements.Skip(3);
 
-                var pathElements = elements.Skip(3).ToList();
-                pathElements.Insert(0, ""); //HACK: we need to make room for the root cell ("/")
-                //format is  /subsystem/actor ... 
-                return new RootActorPath(new Address(protocol, systemName, host, port), pathElements);
+                if (elements[2].Contains('@'))
+                {
+                    var hostPort = elements[2].Split('@')[1];
+                    var host = hostPort.Split(':')[0];
+                    var port = int.Parse(hostPort.Split(':')[1]);
+                    var rest = elements.Skip(3);
+
+                    var pathElements = elements.Skip(3).ToList();
+                    pathElements.Insert(0, ""); //HACK: we need to make room for the root cell ("/")
+                    //format is  /subsystem/actor ... 
+                    return new RootActorPath(new Address(protocol, systemName, host, port), pathElements);
+                }
+                else
+                {
+                    var pathElements = elements.Skip(3).ToList();
+                    pathElements.Insert(0, ""); //HACK: we need to make room for the root cell ("/")
+                    //format is  /subsystem/actor ... 
+                    return new RootActorPath(new Address(protocol, systemName, null, null), pathElements);
+                }
+                
             }
             else
             {
