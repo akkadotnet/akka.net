@@ -82,23 +82,39 @@ namespace Pigeon.Serialization
 
     public class JsonSerializer : Serializer
     {
+        //this is needed to let the serializer know what system to use when deserializing
+        //since fastJSON only supports 
         [ThreadStatic]
         private static ActorSystem currentSystem;
-        private fastJSON.JSON json;
-        public JsonSerializer(ActorSystem system)
-            : base(system)
-        {            
-            json = fastJSON.JSON.Instance;
-            json.RegisterCustomType(typeof(ActorRef), SerializeActorRef, DeserializeActorRef);
-            json.RegisterCustomType(typeof(LocalActorRef), SerializeActorRef, DeserializeActorRef);
+
+
+        static JsonSerializer()
+        {
+            //TODO: need a cleaner way of finding all actorref types
+            var actorRefTypes =
+                                 from a in AppDomain.CurrentDomain.GetAssemblies()
+                                 from t in a.GetTypes()
+                                 where typeof(ActorRef).IsAssignableFrom(t)
+                                 select t;
+
+            foreach(var type in actorRefTypes)
+            {
+                fastJSON.JSON.Instance.RegisterCustomType(type, SerializeActorRef, DeserializeActorRef);
+            }           
         }
 
-        private string SerializeActorRef(object data)
+        public JsonSerializer(ActorSystem system)
+            : base(system)
+        {
+            
+        }
+
+        private static string SerializeActorRef(object data)
         {
             return ((ActorRef)data).Path.ToStringWithAddress();
         }
 
-        private object DeserializeActorRef(string data)
+        private static object DeserializeActorRef(string data)
         {
             return currentSystem.Provider.ResolveActorRef(data);
         }        
@@ -111,12 +127,12 @@ namespace Pigeon.Serialization
         {
             currentSystem = this.system;
             var data = Encoding.Default.GetString(bytes);
-            return json.ToObject(data);
+            return fastJSON.JSON.Instance.ToObject(data);
         }
 
         public override byte[] ToBinary(object obj)
         {
-            var data = json.ToJSON(obj);
+            var data = fastJSON.JSON.Instance.ToJSON(obj);
             var bytes = Encoding.Default.GetBytes(data);
             return bytes;
         }
