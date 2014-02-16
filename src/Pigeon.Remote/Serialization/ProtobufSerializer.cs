@@ -1,4 +1,5 @@
-﻿using Pigeon.Serialization;
+﻿using Pigeon.Actor;
+using Pigeon.Serialization;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,6 +11,7 @@ namespace Pigeon.Remote.Serialization
 {
     public class ProtobufSerializer : Serializer
     {
+        public ProtobufSerializer(ActorSystem system) : base(system) { }
 
         public override bool IncludeManifest
         {

@@ -10,10 +10,10 @@ namespace Pigeon.Serialization
     public class Serialization
     {
         private Dictionary<int, Serializer> serializers = new Dictionary<int, Serializer>();
-        private Serializer jsonSerializer = new JsonSerializer();
-        private Serializer javaSerializer = new JavaSerializer();
-        private Serializer nullSerializer = new NullSerializer();
-        private Serializer byteArraySerializer = new ByteArraySerializer();
+        private Serializer jsonSerializer;
+        private Serializer javaSerializer;
+        private Serializer nullSerializer;
+        private Serializer byteArraySerializer;
 
         private Dictionary<Type, Serializer> serializerMap = new Dictionary<Type, Serializer>();
 
@@ -21,6 +21,11 @@ namespace Pigeon.Serialization
         public Serialization(ActorSystem system)
         {
             this.System = system;
+            jsonSerializer = new JsonSerializer(system);
+            javaSerializer = new JavaSerializer(system);
+            nullSerializer = new NullSerializer(system);
+            byteArraySerializer = new ByteArraySerializer(system);
+
             serializers.Add(jsonSerializer.Identifier, jsonSerializer);
             serializers.Add(javaSerializer.Identifier, javaSerializer);
             serializers.Add(nullSerializer.Identifier,nullSerializer);

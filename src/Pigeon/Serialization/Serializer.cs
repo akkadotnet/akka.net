@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Pigeon.Actor;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -28,6 +29,12 @@ namespace Pigeon.Serialization
      */
     public abstract class Serializer
     {
+        protected readonly ActorSystem system;
+
+        public Serializer(ActorSystem system)
+        {
+            this.system = system;
+        }
         /**
          * Completely unique value to identify this implementation of Serializer, used to optimize network traffic
          * Values from 0 to 16 is reserved for Akka internal usage
@@ -50,6 +57,7 @@ namespace Pigeon.Serialization
 
     public class JavaSerializer : Serializer
     {
+        public JavaSerializer(ActorSystem system) : base(system) { }
 
         public override int Identifier
         {
@@ -74,6 +82,22 @@ namespace Pigeon.Serialization
 
     public class JsonSerializer : Serializer
     {
+        public JsonSerializer(ActorSystem system)
+            : base(system)
+        {
+            fastJSON.JSON.Instance.RegisterCustomType(typeof(ActorRef), SerializeActorRef, DeserializeActorRef);
+        }
+
+        private string SerializeActorRef(object data)
+        {
+            return ((ActorRef)data).Path.ToStringWithAddress();
+        }
+
+        private object DeserializeActorRef(string data)
+        {
+            return system.Provider.ResolveActorRef(data);
+        }        
+
         public override bool IncludeManifest
         {
             get { return false; }
@@ -102,6 +126,8 @@ namespace Pigeon.Serialization
      */
     public class NullSerializer : Serializer
     {
+        public NullSerializer(ActorSystem system) : base(system) { }
+
         private readonly byte[] nullBytes = { };
         public override int Identifier
         {
@@ -130,6 +156,8 @@ namespace Pigeon.Serialization
      */
     public class ByteArraySerializer : Serializer
     {
+        public ByteArraySerializer(ActorSystem system) : base(system) { }
+
         public override int Identifier
         {
             get { return 4; }
