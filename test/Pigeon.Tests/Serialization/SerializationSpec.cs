@@ -19,6 +19,10 @@ namespace Pigeon.Tests.Serialization
         [TestMethod]
         public void CanSerializeActorRef()
         {
+            //TODO: this test fails when running all of the tests
+            //looks like we either need another serializer than fastJSON, or be able to make fastJSON context aware.
+            //(it blows up when trying to deserialze actorrefs since there have been multiple actor systems registering actorref as a custom type)
+
             var message = new SomeMessage
             {
                 ActorRef = testActor,
