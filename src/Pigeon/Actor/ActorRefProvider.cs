@@ -33,7 +33,13 @@ namespace Pigeon.Actor
         public LocalActorRef TempGuardian { get; protected set; }      
 
         public abstract LocalActorRef ActorOf(ActorCell parentContext,Props props,string name);
-        public abstract ActorRef ResolveActorRef(string path);
+        public ActorRef ResolveActorRef(string path){
+            var actorPath = ActorPath.Parse(path,this.System);
+            return ResolveActorRef(actorPath);
+        }
+
+        public abstract ActorRef ResolveActorRef(ActorPath actorPath);
+
     }
 
     public class LocalActorRefProvider : ActorRefProvider
@@ -62,9 +68,8 @@ namespace Pigeon.Actor
             }
         }
 
-        public override ActorRef ResolveActorRef(string path)
+        public override ActorRef ResolveActorRef(ActorPath actorPath)
         {
-            var actorPath = ActorPath.Parse(path,this.System);
             if (System.Address.Equals(actorPath.Address))
             {
                 //standard

@@ -55,20 +55,14 @@ namespace Pigeon.Actor
         {
             var tmpPath = actorPath;
            
-            if (actorPath.Address.System == this.System.Name)
+            if (System.Address.Equals( actorPath.Address))
             {
                 tmpPath = actorPath;
             }
             else
             {
-                var actorRef = System.GetRemoteRef(this, actorPath);
+                var actorRef = System.Provider.ResolveActorRef(actorPath);
                 return new ActorSelection(actorPath, actorRef);
-            }
-
-            //local absolute
-            if (actorPath.First.StartsWith("akka:"))
-            {
-                tmpPath = new RootActorPath(new Address("akka",this.System.Name), actorPath.Skip(3));
             }
 
             //standard

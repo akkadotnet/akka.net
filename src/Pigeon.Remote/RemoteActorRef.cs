@@ -23,17 +23,13 @@ namespace Pigeon.Remote
         {
             this.Context = context;
             this.Path = remoteActorPath;
+            this.actorName = this.Path.Name;
 
             var remoteHostname = remoteActorPath.Address.Host;
             var remotePort = remoteActorPath.Address.Port.Value;
             client = new TcpClient();
             client.Connect(remoteHostname, remotePort);
             stream = client.GetStream();
-
-            this.Path = remoteActorPath;
-            this.Context = context;
-           
-            this.actorName = this.Path.Name;
         }
 
         protected override void TellInternal(object message, ActorRef sender)
@@ -53,7 +49,7 @@ namespace Pigeon.Remote
             .SetSender(new ActorRefData.Builder()
                 .SetPath(publicPath))
             .SetRecipient(new ActorRefData.Builder()
-                .SetPath(this.Path.ToString()))
+                .SetPath(this.Path.ToStringWithAddress()))
             .SetMessage(serializedMessage)  
             .SetSeq(1)
             .Build();

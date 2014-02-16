@@ -144,15 +144,6 @@ namespace Pigeon.Actor
             return Provider.RootCell.ActorSelection(actorPath);
         }
 
-        public Func<ActorCell,ActorPath, ActorRef> ActorRefFactory { get; set; }
-        internal protected virtual ActorRef GetRemoteRef(ActorCell actorCell, ActorPath actorPath)
-        {
-            if (ActorRefFactory == null)
-                throw new NotImplementedException();
-
-            return ActorRefFactory(actorCell,actorPath);
-        }
-
         public virtual Address Address
         {
             get;

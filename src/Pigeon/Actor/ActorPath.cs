@@ -13,6 +13,7 @@ namespace Pigeon.Actor
             var elements = path.Split('/');
             if (elements.First().StartsWith("akka"))
             {
+                //TODO: better parser
                 var first = elements.First();
                 var protocol = first.Split(':')[0];
                 var systemName = elements[2].Split('@')[0];
@@ -21,7 +22,9 @@ namespace Pigeon.Actor
                 var port = int.Parse(hostPort.Split(':')[1]);
                 var rest = elements.Skip(3);
 
-                return new RootActorPath(new Address(protocol, systemName,host,port), elements.Skip(3));
+                var pathElements = elements.Skip(3).ToList();
+                pathElements.Insert(0, "");
+                return new RootActorPath(new Address(protocol, systemName, host, port), pathElements);
             }
             else
             {
