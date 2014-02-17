@@ -62,6 +62,7 @@
     <Compile Include="Actor\Address.cs" />
     <Compile Include="Actor\AskSupport.cs" />
     <Compile Include="Actor\AutoReceivedMessage.cs" />
+    <Compile Include="Actor\BroadcastActorRef.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Actor\Deployer.cs" />
     <Compile Include="Actor\NoSerializationVerificationNeeded.cs" />

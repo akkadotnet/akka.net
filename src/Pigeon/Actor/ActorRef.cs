@@ -14,11 +14,12 @@ namespace Pigeon.Actor
         private TaskCompletionSource<object> result;
         private ActorRef sender;
         private Action unregister;
-        public FutureActorRef(TaskCompletionSource<object> result, ActorRef sender, Action unregister)
+        public FutureActorRef(TaskCompletionSource<object> result, ActorRef sender, Action unregister,ActorPath path)
         {
             this.result = result;
             this.sender = sender;
             this.unregister = unregister;
+            this.Path = path;
         }
 
         protected override void TellInternal(object message, ActorRef sender)
@@ -83,7 +84,7 @@ namespace Pigeon.Actor
             var path = ActorCell.Current.System.Provider.TempPath();
             var provider = ActorCell.Current.System.Provider;
             Action unregister = () => provider.UnregisterTempActor(path);
-            FutureActorRef future = new FutureActorRef(result, ActorCell.Current.Self, unregister);
+            FutureActorRef future = new FutureActorRef(result, ActorCell.Current.Self, unregister,path);
             ActorCell.Current.System.Provider.RegisterTempActor(future, path);
             Tell(message, future);
             return result.Task;
@@ -96,7 +97,7 @@ namespace Pigeon.Actor
             var provider = system.Provider;
             Action unregister = () => 
                 provider.UnregisterTempActor(path);
-            FutureActorRef future = new FutureActorRef(result, null, unregister);
+            FutureActorRef future = new FutureActorRef(result, null, unregister,path);
             system.Provider.RegisterTempActor(future, path);
             Tell(message, future);
             return result.Task;
@@ -257,7 +258,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
                 return this;
             
             var n = name.First();
-            if (!string.IsNullOrEmpty(n))
+            if (string.IsNullOrEmpty(n))
                 return this;
             else
             {

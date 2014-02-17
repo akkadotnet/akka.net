@@ -22,7 +22,7 @@ namespace Pigeon.Actor
 
         public virtual void Init()
         {
-            this.RootPath = new RootActorPath(this.Address,this.System.Name);
+            this.RootPath = new RootActorPath(this.Address,"");
             this.TempNode = RootPath / "temp";
 
             this.RootCell = new ActorCell(System, "", new ConcurrentQueueMailbox());
@@ -100,13 +100,22 @@ namespace Pigeon.Actor
         {
             if (this.Address.Equals(actorPath.Address))
             {
-                //standard
-                var currentContext = RootCell;
-                foreach (var part in actorPath.Skip(1))
+                if (actorPath.Head == "temp")
                 {
-                    currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
+                    //skip ""/"temp", 
+                    var parts = actorPath.Skip(2).ToArray();
+                    return TempContainer.GetChild(parts);
                 }
-                return currentContext.Self;
+                else
+                {
+                    //standard
+                    var currentContext = RootCell;
+                    foreach (var part in actorPath.Skip(1))
+                    {
+                        currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
+                    }
+                    return currentContext.Self;
+                }                
             }
             else
             {

@@ -11,6 +11,13 @@ namespace Pigeon.Tests.Serialization
     [TestClass]
     public class SerializationSpec : AkkaSpec
     {
+        public class EmptyActor : UntypedActor
+        {
+            protected override void OnReceive(object message)
+            {
+                Context.System.EventStream.Publish(Sender);
+            }
+        }
         public class SomeMessage
         {
             public ActorRef ActorRef { get; set; }
@@ -19,10 +26,6 @@ namespace Pigeon.Tests.Serialization
         [TestMethod]
         public void CanSerializeActorRef()
         {
-            //TODO: this test fails when running all of the tests
-            //looks like we either need another serializer than fastJSON, or be able to make fastJSON context aware.
-            //(it blows up when trying to deserialze actorrefs since there have been multiple actor systems registering actorref as a custom type)
-            //fastJSON is problematic also because it wants each subtype to be registered. we need to register ActorRef only, and not all subtypes
             var message = new SomeMessage
             {
                 ActorRef = testActor,
@@ -33,6 +36,27 @@ namespace Pigeon.Tests.Serialization
             var deserialized = (SomeMessage)serializer.FromBinary(serialized, typeof(SomeMessage));
 
             Assert.AreSame(testActor, deserialized.ActorRef);
+        }
+
+        [TestMethod]
+        public void CanSerializeFutureActorRef()
+        {
+            sys.EventStream.Subscribe(testActor,typeof(object));
+            var empty = sys.ActorOf<EmptyActor>();
+            empty.Ask("hello", sys);
+            var f = (FutureActorRef)queue.Take();
+
+
+            var message = new SomeMessage
+            {
+                ActorRef = f,
+            };
+
+            var serializer = sys.Serialization.FindSerializerFor(message);
+            var serialized = serializer.ToBinary(message);
+            var deserialized = (SomeMessage)serializer.FromBinary(serialized, typeof(SomeMessage));
+
+            Assert.AreSame(f, deserialized.ActorRef);
         }
     }
 }

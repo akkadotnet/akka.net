@@ -16,6 +16,14 @@ namespace Pigeon.Actor
             return new ChildActorPath(path, name);
         }
 
+        public string Head
+        {
+            get
+            {
+                return elements[1];
+            }
+        }
+
         public static ActorPath Parse(string path,ActorSystem system)
         {
             var elements = path.Split('/');
