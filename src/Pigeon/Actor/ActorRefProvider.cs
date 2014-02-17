@@ -16,13 +16,13 @@ namespace Pigeon.Actor
             this.System = system;            
         }
 
-        private ActorPath RootPath { get; set; }
-        private ActorPath TempNode { get; set; }
+        public ActorPath RootPath { get;private set; }
+        public ActorPath TempNode { get;private set; }
         
 
         public virtual void Init()
         {
-            this.RootPath = new RootActorPath(new Address("akka",this.System.Name));
+            this.RootPath = new RootActorPath(this.Address,this.System.Name);
             this.TempNode = RootPath / "temp";
 
             this.RootCell = new ActorCell(System, "", new ConcurrentQueueMailbox());

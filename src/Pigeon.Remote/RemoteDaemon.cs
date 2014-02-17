@@ -26,10 +26,13 @@ namespace Pigeon.Remote
         public ActorRef Supervisor { get; private set; }
     }
 
-    //TODO: create a specific actortype which forces DaemonMailbox for unbounded parallellism
-    public class RemoteDaemon : UntypedActor
+    public class RemoteDaemon : VirtualPathContainer
     {
-        protected override void OnReceive(object message)
+        public RemoteDaemon(ActorRefProvider provider,ActorPath path,InternalActorRef parent) : base(provider,path,parent)
+        {
+
+        }
+        protected void OnReceive(object message)
         {
             if (message is DaemonMsgCreate)
             {
@@ -37,15 +40,15 @@ namespace Pigeon.Remote
             }
             else
             {
-                Unhandled(message);
+              //  Unhandled(message);
             }            
         }
 
         private void HandleDaemonMsgCreate(DaemonMsgCreate message)
         {
-            ActorPath path = ActorPath.Parse(message.Path, Context.System);
+          //  ActorPath path = ActorPath.Parse(message.Path, Context.System);
 
-            Context.ActorOf(message.Props);
+          //  Context.ActorOf(message.Props);
         }
     }
 }

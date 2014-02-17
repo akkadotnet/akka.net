@@ -12,6 +12,8 @@ namespace Pigeon.Remote
 {
     public class RemoteActorRefProvider : ActorRefProvider
     {
+        public RemoteDaemon RemoteDaemon { get;private set; }
+
         public RemoteActorRefProvider(ActorSystem system)
             : base(system)
         {
@@ -22,12 +24,13 @@ namespace Pigeon.Remote
 
         public override void Init()
         {
-            base.Init();
-
             var host = config.GetString("server.host");
             var port = config.GetInt("server.port");
-
             this.Address = new Address("akka.tcp", System.Name, host, port);
+
+            base.Init();
+
+            this.RemoteDaemon = new Remote.RemoteDaemon (this,RootPath / "remote",null);
             RemoteHost.StartHost(System, port);
         }
 
