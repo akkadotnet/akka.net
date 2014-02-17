@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Pigeon.Actor
@@ -103,15 +104,24 @@ namespace Pigeon.Actor
             return System.Provider.ActorOf(this, props, name);          
         }
 
-        private static string GetActorName(Props props, string name)
+        private static string base64chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
+        private long uid = 0;
+        private  string GetActorName(Props props, string name)
         {
-            if (props.Type != null && name == null)
+            var auid = Interlocked.Increment(ref uid);
+            var next = auid;
+            if (name == null)
             {
-                name = props.Type.Name;
-                if (name.EndsWith("Actor"))
-                    name = name.Substring(0, name.Length - 5);
+                var sb = new StringBuilder("$");
 
-                name = name + "#" + Guid.NewGuid();
+                while(next != 0)
+                {
+                    var index = (int)(next & 63);
+                    var c = base64chars[index];
+                    sb.Append(c);
+                    next = next >> 6;
+                }
+                name = sb.ToString();
             }
             return name;
         }

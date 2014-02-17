@@ -2,12 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Pigeon.Actor
 {
     public abstract class ActorPath : IEnumerable<string> , IEquatable<ActorPath>
     {
+        public static readonly Regex ElementRegex = new Regex(@"(?:[-\w:@&=+,.!~*'_;]|%\\p{N}{2})(?:[-\w:@&=+,.!~*'$_;]|%\\p{N}{2})*",RegexOptions.Compiled);
+
         public static ActorPath Parse(string path,ActorSystem system)
         {
             var elements = path.Split('/');
