@@ -82,6 +82,8 @@ namespace Pigeon.Actor
             return this;
         }
 
+        //TODO: use Linq Expressions so compile a creator
+        //cache the creator
         public ActorBase NewActor()
         {
             return (ActorBase)Activator.CreateInstance(Type, Arguments);
