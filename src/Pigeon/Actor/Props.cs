@@ -14,8 +14,10 @@ namespace Pigeon.Actor
     {
         public string TypeName { get;private set; }
         public Type Type { get; private set; }
-
+        public string Dispatcher { get; private set; }
+        public string Mailbox { get; private set; }
         public RouterConfig RouterConfig { get; private set; }
+        public Deploy Deploy { get; private set; }
 
         public static Props Create<TActor>(Expression<Func<TActor>> factory) where TActor : ActorBase
         {
@@ -35,8 +37,6 @@ namespace Pigeon.Actor
         {
             return new Props(type);
         }
-        public string Dispatcher { get; private set; }
-        public string Mailbox { get; private set; }
 
         public Props()
         {
@@ -77,9 +77,17 @@ namespace Pigeon.Actor
 
         public Props WithRouter(RouterConfig routerConfig)
         {
-            this.Type = typeof(RouterActor);
-            this.RouterConfig = routerConfig;
-            return this;
+            var copy = Copy();
+            copy.Type = typeof(RouterActor);
+            copy.RouterConfig = routerConfig;
+            return copy;
+        }
+
+        public Props WithDeploy(Deploy deploy)
+        {
+            var copy = Copy();
+            copy.Deploy = deploy;
+            return copy;
         }
 
         //TODO: use Linq Expressions so compile a creator
@@ -107,6 +115,7 @@ namespace Pigeon.Actor
                 Mailbox = this.Mailbox,
                 RouterConfig = this.RouterConfig,
                 Type = this.Type,
+                Deploy = this.Deploy,
             };
         }
 

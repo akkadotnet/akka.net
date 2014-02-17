@@ -38,5 +38,13 @@ namespace Pigeon.Configuration
                 return ParseString(result);
             }
         }
+
+        public static Config Empty
+        {
+            get
+            {
+                return ConfigurationFactory.ParseString("");
+            }
+        }
     }       
 }
