@@ -1,4 +1,5 @@
 ﻿using Pigeon.Dispatch;
+using Pigeon.Dispatch.SysMsg;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -8,6 +9,37 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Actor
 {
+    public class FutureActorRef : MinimalActorRef
+    {
+        private TaskCompletionSource<object> result;
+        private ActorRef sender;
+        private Action unregister;
+        public FutureActorRef(TaskCompletionSource<object> result, ActorRef sender, Action unregister)
+        {
+            this.result = result;
+            this.sender = sender;
+            this.unregister = unregister;
+        }
+
+        protected override void TellInternal(object message, ActorRef sender)
+        {
+            unregister();
+            if (sender != ActorRef.NoSender)
+            {
+                sender.Tell(new CompleteFuture(() => result.SetResult(message)));
+            }
+            else
+            {
+                result.SetResult(message);
+            }
+        }
+
+        public override ActorRefProvider Provider
+        {
+            get { throw new NotImplementedException(); }
+        }
+    }
+
     public abstract class ActorRef
     {
         public static readonly Nobody Nobody = new Nobody();
@@ -50,8 +82,11 @@ namespace Pigeon.Actor
         public Task<object> Ask(object message)
         {
             var result = new TaskCompletionSource<object>();
-            var future = ActorCell.Current.System.Provider.TempGuardian.Cell.ActorOf<FutureActor>();
-            future.Tell(new SetRespondTo { Result = result }, ActorCell.Current.Self);
+            var path = ActorCell.Current.System.Provider.TempPath();
+            var provider = ActorCell.Current.System.Provider;
+            Action unregister = () => provider.UnregisterTempActor(path);
+            FutureActorRef future = new FutureActorRef(result, ActorCell.Current.Self, unregister);
+            ActorCell.Current.System.Provider.RegisterTempActor(future, path);
             Tell(message, future);
             return result.Task;
         }
@@ -59,8 +94,12 @@ namespace Pigeon.Actor
         public Task<object> Ask(object message,ActorSystem system)
         {
             var result = new TaskCompletionSource<object>();
-            var future = system.Provider.TempGuardian.Cell.ActorOf<FutureActor>();
-            future.Tell(new SetRespondTo { Result = result });
+            var path = system.Provider.TempPath();
+            var provider = system.Provider;
+            Action unregister = () => 
+                provider.UnregisterTempActor(path);
+            FutureActorRef future = new FutureActorRef(result, null, unregister);
+            system.Provider.RegisterTempActor(future, path);
             Tell(message, future);
             return result.Task;
         }        
@@ -189,7 +228,7 @@ namespace Pigeon.Actor
             });
         }
 
-        public void Remove(string name)
+        public void RemoveChild(string name)
         {
             InternalActorRef tmp;
             if (!children.TryRemove(name,out tmp))

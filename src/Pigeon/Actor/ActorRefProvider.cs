@@ -15,22 +15,43 @@ namespace Pigeon.Actor
         {
             this.System = system;            
         }
+
+        private ActorPath RootPath { get; set; }
+        private ActorPath TempNode { get; set; }
+        
+
         public virtual void Init()
         {
+            this.RootPath = new RootActorPath(new Address("akka",this.System.Name));
+            this.TempNode = RootPath / "temp";
+
             this.RootCell = new ActorCell(System, "", new ConcurrentQueueMailbox());
             this.DeadLetters = new DeadLetterActorRef(ActorPath.Parse("deadLetters", System), this.System.EventStream);
             this.Guardian = RootCell.ActorOf<GuardianActor>("user");
             this.SystemGuardian = RootCell.ActorOf<GuardianActor>("system");
-            this.TempGuardian = RootCell.ActorOf<GuardianActor>("temp");        
+            this.TempContainer = new VirtualPathContainer(this, TempNode, null);
         }
+
+        public void RegisterTempActor(InternalActorRef actorRef,ActorPath path)
+        {
+            TempContainer.AddChild(path.Name, actorRef);
+        }
+
+        public void UnregisterTempActor(ActorPath path)
+        {
+            TempContainer.RemoveChild(path.Name);
+        }
+        public ActorPath TempPath()
+        {
+            return TempNode / Guid.NewGuid().ToString();
+        }
+
+        public VirtualPathContainer TempContainer { get;private set; }
         public ActorSystem System { get;protected set; }
         public ActorCell RootCell { get; protected set; }
-
-
         public ActorRef DeadLetters { get; protected set; }
         public LocalActorRef Guardian { get; protected set; }
-        public LocalActorRef SystemGuardian { get; protected set; }
-        public LocalActorRef TempGuardian { get; protected set; }      
+        public LocalActorRef SystemGuardian { get; protected set; }    
 
         public abstract LocalActorRef ActorOf(ActorCell parentContext,Props props,string name,long uid);
         public ActorRef ResolveActorRef(string path){
@@ -45,6 +66,8 @@ namespace Pigeon.Actor
             get;
             set;
         }
+
+        
     }
 
     public class LocalActorRefProvider : ActorRefProvider
