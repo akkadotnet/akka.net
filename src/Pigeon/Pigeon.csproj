@@ -118,6 +118,7 @@
     <Compile Include="Routing\RouterMsg.cs" />
     <Compile Include="Serialization\Serialization.cs" />
     <Compile Include="Serialization\Serializer.cs" />
+    <Compile Include="Tools\ExpressionExtensions.cs" />
     <Compile Include="Tools\Pattern.cs" />
   </ItemGroup>
   <ItemGroup>

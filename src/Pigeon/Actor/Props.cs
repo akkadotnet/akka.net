@@ -3,21 +3,29 @@ using Pigeon.Routing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using Pigeon.Reflection;
 
 namespace Pigeon.Actor
 {
     public class Props
     {
-        private Func<ActorBase> factory;
+        public string TypeName { get;private set; }
         public Type Type { get; private set; }
 
         public RouterConfig RouterConfig { get; private set; }
 
-        public static Props Create<TActor>(Func<TActor> factory) where TActor : ActorBase
+        public static Props Create<TActor>(Expression<Func<TActor>> factory) where TActor : ActorBase
         {
-            return new Props(typeof(TActor), factory);
+            var newExpression = factory.Body.AsInstanceOf<NewExpression>();
+            if (newExpression == null)
+                throw new ArgumentException("The create function must be a 'new T (args)' expression");
+
+            var args = newExpression.GetArguments().ToArray();
+            
+            return new Props(typeof(TActor), args);
         }
         public static Props Create<TActor>() where TActor : ActorBase
         {
@@ -33,22 +41,25 @@ namespace Pigeon.Actor
 
         public Props()
         {
+            this.Arguments = new object[] { };
             this.Dispatcher = "akka.actor.default-dispatcher";
             this.Mailbox = "akka.actor.default-mailbox";
             this.Router = null;
         }
 
-        private Props(Type type, Func<ActorBase> factory)
+        private Props(Type type, object[] args)
             : this()
         {
-            this.factory = factory;
             this.Type = type;
+            this.TypeName = type.AssemblyQualifiedName;
+            this.Arguments = args;
         }
         private Props(Type type)
             : this()
         {
-            this.factory = () => (ActorBase)Activator.CreateInstance(this.Type, new object[] { });
             this.Type = type;
+            this.TypeName = type.AssemblyQualifiedName;
+            this.Arguments = new object[] { };
         }
 
         
@@ -77,14 +88,13 @@ namespace Pigeon.Actor
         public Props WithRouter(RouterConfig routerConfig)
         {
             this.Type = typeof(RouterActor);
-            this.factory = () => new RouterActor();
             this.RouterConfig = routerConfig;
             return this;
         }
 
         public ActorBase NewActor()
         {
-            return this.factory();
+            return (ActorBase)Activator.CreateInstance(Type, Arguments);
         }
 
         private static Props empty = new Props();
@@ -100,7 +110,7 @@ namespace Pigeon.Actor
         {
             return new Props()
             {
-                factory = this.factory,
+                Arguments = this.Arguments,
                 Dispatcher = this.Dispatcher,
                 Mailbox = this.Mailbox,
                 RouterConfig = this.RouterConfig,
@@ -108,5 +118,7 @@ namespace Pigeon.Actor
                 Type = this.Type,
             };
         }
+
+        public object[] Arguments { get;private set; }
     }
 }
