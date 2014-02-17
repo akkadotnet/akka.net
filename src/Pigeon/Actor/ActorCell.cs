@@ -173,7 +173,7 @@ namespace Pigeon.Actor
         {
             this.Parent = parentContext != null ? parentContext.Self : null;
             this.System = parentContext != null ? parentContext.System : null;
-            this.Self = new LocalActorRef(new ChildActorPath(this.Parent.Path, name), this);
+            this.Self = new LocalActorRef((this.Parent.Path / name), this);
             this.Props = props;
             this.Dispatcher = System.Dispatchers.FromConfig(props.Dispatcher);
             mailbox.Setup(this.Dispatcher);

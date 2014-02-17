@@ -76,9 +76,7 @@ namespace Pigeon.Actor
         protected abstract void TellInternal(object message,ActorRef sender);     
 
         public static readonly ActorRef NoSender = new NoSender();
-
-       
-
+      
         public Task<object> Ask(object message)
         {
             var result = new TaskCompletionSource<object>();
