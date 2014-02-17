@@ -33,7 +33,7 @@ namespace Pigeon.Remote
 
         public override LocalActorRef ActorOf(ActorCell parentContext, Props props, string name)
         {
-            var mailbox = System.Mailboxes.FromConfig(props.MailboxPath);
+            var mailbox = System.Mailboxes.FromConfig(props.Mailbox);
 
             if (props.RouterConfig != null)
             {

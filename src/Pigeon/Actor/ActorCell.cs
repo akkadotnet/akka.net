@@ -157,7 +157,7 @@ namespace Pigeon.Actor
             this.System = parentContext != null ? parentContext.System : null;
             this.Self = new LocalActorRef(new ChildActorPath(this.Parent.Path, name), this);
             this.Props = props;
-            this.Dispatcher = System.Dispatchers.FromConfig(props.DispatcherPath);
+            this.Dispatcher = System.Dispatchers.FromConfig(props.Dispatcher);
             mailbox.Setup(this.Dispatcher);
             this.Mailbox = mailbox;
             this.Mailbox.Invoke = this.Invoke;

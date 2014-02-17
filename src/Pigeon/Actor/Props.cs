@@ -27,15 +27,15 @@ namespace Pigeon.Actor
         {
             return new Props(type);
         }
-        public string DispatcherPath { get; private set; }
-        public string MailboxPath { get; private set; }
-        public string RouterPath { get; private set; }
+        public string Dispatcher { get; private set; }
+        public string Mailbox { get; private set; }
+        public string Router { get; private set; }
 
         public Props()
         {
-            this.DispatcherPath = "akka.actor.default-dispatcher";
-            this.MailboxPath = "akka.actor.default-mailbox";
-            this.RouterPath = null;
+            this.Dispatcher = "akka.actor.default-dispatcher";
+            this.Mailbox = "akka.actor.default-mailbox";
+            this.Router = null;
         }
 
         private Props(Type type, Func<ActorBase> factory)
@@ -51,24 +51,29 @@ namespace Pigeon.Actor
             this.Type = type;
         }
 
+        
         public Props WithRouter(string path)
         {
-            this.RouterPath = path;
-            return this;
+            var copy = Copy();
+            copy.Router = path;
+            return copy;
         }
 
         public Props WithMailbox(string path)
         {
-            this.MailboxPath = path;
-            return this;
+            var copy = Copy();
+            copy.Mailbox = path;
+            return copy;
         }
 
         public Props WithDispatcher(string path)
         {
-            this.DispatcherPath = path;
-            return this;
+            var copy = Copy();
+            copy.Dispatcher = path;
+            return copy;
         }
 
+        [Obsolete("Just for dev, should be replaced")]
         public Props WithRouter(RouterConfig routerConfig)
         {
             this.Type = typeof(RouterActor);
@@ -82,12 +87,26 @@ namespace Pigeon.Actor
             return this.factory();
         }
 
+        private static Props empty = new Props();
         public Props Empty
         {
             get
             {
-                return new Props();
+                return empty;
             }
+        }
+
+        private Props Copy()
+        {
+            return new Props()
+            {
+                factory = this.factory,
+                Dispatcher = this.Dispatcher,
+                Mailbox = this.Mailbox,
+                RouterConfig = this.RouterConfig,
+                Router = this.Router,
+                Type = this.Type,
+            };
         }
     }
 }
