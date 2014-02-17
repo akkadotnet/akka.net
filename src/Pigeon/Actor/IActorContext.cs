@@ -12,7 +12,7 @@ namespace Pigeon.Actor
         LocalActorRef Child(string name);
         IEnumerable<LocalActorRef> GetChildren();
         ActorSystem System { get; }
-        ActorRef Parent { get; }
+        InternalActorRef Parent { get; }
         void Watch(ActorRef subject);
         void Unwatch(ActorRef subject);
 

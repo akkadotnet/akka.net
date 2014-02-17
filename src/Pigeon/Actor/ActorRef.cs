@@ -63,7 +63,28 @@ namespace Pigeon.Actor
             future.Tell(new SetRespondTo { Result = result });
             Tell(message, future);
             return result.Task;
-        }
+        }        
+    }
+
+
+
+    public abstract class InternalActorRef : ActorRef
+    {
+        public abstract ActorRef GetChild(IEnumerable<string> name);
+    }
+
+    public abstract class MinimalActorRef : InternalActorRef
+    {
+
+    }
+
+    public abstract class ActorRefWithCell : InternalActorRef
+    {
+        public ActorCell Cell { get; protected set; }
+
+        public abstract IEnumerable<ActorRef> Children { get; }
+
+        public abstract InternalActorRef GetSingleChild(string name);
     }
 
     public sealed class NoSender : ActorRef

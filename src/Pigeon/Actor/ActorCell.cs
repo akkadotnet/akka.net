@@ -18,7 +18,7 @@ namespace Pigeon.Actor
         public virtual ActorSystem System { get;private set; }
         public Props Props { get;private set; }
         public LocalActorRef Self { get; protected set; }
-        public ActorRef Parent { get; private set; }
+        public InternalActorRef Parent { get; private set; }
         public ActorBase Actor { get;internal set; }
         public object CurrentMessage { get;private set; }
         public ActorRef Sender { get;private set; }

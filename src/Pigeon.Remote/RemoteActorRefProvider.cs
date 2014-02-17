@@ -35,20 +35,20 @@ namespace Pigeon.Remote
         {
             var mailbox = System.Mailboxes.FromConfig(props.Mailbox);
 
-            if (props.RouterConfig != null)
+            ActorCell cell = null;
+            if (props.RouterConfig is NoRouter)
             {
-                var cell = new RoutedActorCell(parentContext, props, name, mailbox);
-                parentContext.NewActor(cell);
-                parentContext.Watch(cell.Self);
-                return cell.Self;
+                cell = new ActorCell(parentContext, props, name, mailbox);
+              
             }
             else
             {
-                var cell = new ActorCell(parentContext, props, name, mailbox);
-                parentContext.NewActor(cell);
-                parentContext.Watch(cell.Self);
-                return cell.Self;
+                cell = new RoutedActorCell(parentContext, props, name, mailbox);
             }
+
+            parentContext.NewActor(cell);
+            parentContext.Watch(cell.Self);
+            return cell.Self;
         }
 
         public override ActorRef ResolveActorRef(ActorPath actorPath)
