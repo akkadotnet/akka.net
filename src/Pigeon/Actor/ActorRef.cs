@@ -8,8 +8,10 @@ using System.Threading.Tasks;
 namespace Pigeon.Actor
 {
     public abstract class ActorRef
-    {
+    {        
+        public long UID { get; protected set; }
         public virtual ActorPath Path { get;protected set; }
+
 
         public void Tell(object message, ActorRef sender)
         {

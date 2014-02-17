@@ -32,7 +32,7 @@ namespace Pigeon.Actor
         public LocalActorRef SystemGuardian { get; protected set; }
         public LocalActorRef TempGuardian { get; protected set; }      
 
-        public abstract LocalActorRef ActorOf(ActorCell parentContext,Props props,string name);
+        public abstract LocalActorRef ActorOf(ActorCell parentContext,Props props,string name,long uid);
         public ActorRef ResolveActorRef(string path){
             var actorPath = ActorPath.Parse(path,this.System);
             return ResolveActorRef(actorPath);
@@ -54,7 +54,7 @@ namespace Pigeon.Actor
             this.Address = new Address("akka", this.System.Name); //TODO: this should not work this way...
         }
 
-        public override LocalActorRef ActorOf(ActorCell parentContext, Props props, string name)
+        public override LocalActorRef ActorOf(ActorCell parentContext, Props props, string name,long uid)
         {
             var mailbox = System.Mailboxes.FromConfig(props.Mailbox);
 

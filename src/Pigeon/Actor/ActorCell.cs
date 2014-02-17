@@ -99,17 +99,22 @@ namespace Pigeon.Actor
 
         public virtual LocalActorRef ActorOf(Props props, string name = null)
         {
-            name = GetActorName(props, name);
+            var uid = GetNextUID();
+            name = GetActorName(props, name,uid);
+            return System.Provider.ActorOf(this, props, name, uid);          
+        }
 
-            return System.Provider.ActorOf(this, props, name);          
+        private long GetNextUID()
+        {
+            var auid = Interlocked.Increment(ref uid);
+            return auid;
         }
 
         private static string base64chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
         private long uid = 0;
-        private  string GetActorName(Props props, string name)
-        {
-            var auid = Interlocked.Increment(ref uid);
-            var next = auid;
+        private  string GetActorName(Props props, string name,long uid)
+        {            
+            var next = uid;
             if (name == null)
             {
                 var sb = new StringBuilder("$");
