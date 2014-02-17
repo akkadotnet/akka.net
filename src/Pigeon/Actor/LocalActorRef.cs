@@ -7,7 +7,7 @@ namespace Pigeon.Actor
 {
     public class LocalActorRef : ActorRefWithCell
     {      
-        public ActorRefProvider Provider
+        public override ActorRefProvider Provider
         {
             get
             {
@@ -15,7 +15,7 @@ namespace Pigeon.Actor
             }
         }
 
-        public InternalActorRef Parent
+        public override InternalActorRef Parent
         {
             get
             {

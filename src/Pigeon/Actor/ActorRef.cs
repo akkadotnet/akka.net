@@ -79,6 +79,10 @@ namespace Pigeon.Actor
         public abstract void Restart(Exception cause);
 
         public abstract void Suspend();
+
+        public abstract InternalActorRef Parent { get; }
+
+        public abstract ActorRefProvider Provider { get; }
     }
 
     public abstract class MinimalActorRef : InternalActorRef
@@ -111,11 +115,20 @@ namespace Pigeon.Actor
         protected override void TellInternal(object message, ActorRef sender)
         {
         }
+
+        public override InternalActorRef Parent
+        {
+            get { return Nobody; }
+        }        
     }
 
-    public class Nobody : MinimalActorRef
+    public sealed class Nobody : MinimalActorRef
     {
 
+        public override ActorRefProvider Provider
+        {
+            get { throw new NotSupportedException("Nobody does not proide"); }
+        }
     }
 
     public abstract class ActorRefWithCell : InternalActorRef
@@ -141,7 +154,26 @@ namespace Pigeon.Actor
 
     public class VirtualPathContainer : MinimalActorRef
     {
+        private InternalActorRef parent;
+        public VirtualPathContainer(ActorRefProvider provider,ActorPath path,InternalActorRef parent)
+        {            
+            this.Path = path;
+            this.parent = parent;
+            this.provider = provider;
+        }
+
+        public override ActorRefProvider Provider
+        {
+            get { return provider; }
+        }
+
+        public override InternalActorRef Parent
+        {
+            get { return parent; }
+        }
+
         private ConcurrentDictionary<string, InternalActorRef> children = new ConcurrentDictionary<string, InternalActorRef>();
+        private ActorRefProvider provider;
 
         private InternalActorRef GetChild(string name)
         {
