@@ -9,7 +9,9 @@ using System.Threading.Tasks;
 namespace Pigeon.Actor
 {
     public abstract class ActorRef
-    {        
+    {
+        public static readonly Nobody Nobody = new Nobody();
+
         public long UID { get; protected set; }
         public virtual ActorPath Path { get;protected set; }
 
@@ -82,6 +84,38 @@ namespace Pigeon.Actor
     public abstract class MinimalActorRef : InternalActorRef
     {
 
+        public override ActorRef GetChild(IEnumerable<string> name)
+        {
+ 	        if (name.All(n => string.IsNullOrEmpty(n)))
+                return this;
+            else
+                return Nobody;
+        }
+
+        public override void Resume(Exception causedByFailure = null)
+        {
+        }
+
+        public override void Stop()
+        {
+        }
+
+        public override void Restart(Exception cause)
+        {
+        }
+
+        public override void Suspend()
+        {
+        }
+
+        protected override void TellInternal(object message, ActorRef sender)
+        {
+        }
+    }
+
+    public class Nobody : MinimalActorRef
+    {
+
     }
 
     public abstract class ActorRefWithCell : InternalActorRef
@@ -152,27 +186,18 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             //TODO: I have no clue what the scala version does
             if (!name.Any())
                 return this;
-
-            var child = name.FirstOrDefault();
-            if (child != null && child != "")
-                return children[child] ?? this;
-
-            return this;
-        }
-
-        protected override void TellInternal(object message, ActorRef sender)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Resume(Exception causedByFailure = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Stop()
-        {
-            throw new NotImplementedException();
+            
+            var n = name.First();
+            if (!string.IsNullOrEmpty(n))
+                return this;
+            else
+            {
+                var c = children[n];
+                if (c == null)
+                    return Nobody;
+                else
+                    return c.GetChild(name.Skip(1));
+            }            
         }
 
         public void ForeachActorRef(Action<ActorRef> action)
@@ -181,16 +206,6 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             {
                 action(child);
             }
-        }
-
-        public override void Restart(Exception cause)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Suspend()
-        {
-            throw new NotImplementedException();
         }
     }
 }
