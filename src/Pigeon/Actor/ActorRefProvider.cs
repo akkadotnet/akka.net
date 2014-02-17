@@ -58,16 +58,16 @@ namespace Pigeon.Actor
         {
             var mailbox = System.Mailboxes.FromConfig(props.Mailbox);
 
-            if (props.RouterConfig != null)
+            if (props.RouterConfig is NoRouter)
             {
-                var cell = new RoutedActorCell(parentContext, props, name, mailbox);
+                var cell = new ActorCell(parentContext, props, name, mailbox);
                 parentContext.NewActor(cell);
                 parentContext.Watch(cell.Self);
-                return cell.Self;
+                return cell.Self;                
             }
             else
             {
-                var cell = new ActorCell(parentContext, props, name, mailbox);
+                var cell = new RoutedActorCell(parentContext, props, name, mailbox);
                 parentContext.NewActor(cell);
                 parentContext.Watch(cell.Self);
                 return cell.Self;

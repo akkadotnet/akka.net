@@ -37,14 +37,13 @@ namespace Pigeon.Actor
         }
         public string Dispatcher { get; private set; }
         public string Mailbox { get; private set; }
-        public string Router { get; private set; }
 
         public Props()
         {
+            this.RouterConfig = RouterConfig.NoRouter;
             this.Arguments = new object[] { };
             this.Dispatcher = "akka.actor.default-dispatcher";
             this.Mailbox = "akka.actor.default-mailbox";
-            this.Router = null;
         }
 
         private Props(Type type, object[] args)
@@ -62,14 +61,6 @@ namespace Pigeon.Actor
             this.Arguments = new object[] { };
         }
 
-        
-        public Props WithRouter(string path)
-        {
-            var copy = Copy();
-            copy.Router = path;
-            return copy;
-        }
-
         public Props WithMailbox(string path)
         {
             var copy = Copy();
@@ -84,7 +75,6 @@ namespace Pigeon.Actor
             return copy;
         }
 
-        [Obsolete("Just for dev, should be replaced")]
         public Props WithRouter(RouterConfig routerConfig)
         {
             this.Type = typeof(RouterActor);
@@ -114,7 +104,6 @@ namespace Pigeon.Actor
                 Dispatcher = this.Dispatcher,
                 Mailbox = this.Mailbox,
                 RouterConfig = this.RouterConfig,
-                Router = this.Router,
                 Type = this.Type,
             };
         }
