@@ -305,9 +305,6 @@ protected def terminate() {
 
             var optionalMessage = this.CurrentMessage;
 
-            //TODO: don't know where this is handled in akka.. 
-            HandleNonFatalOrInterruptedException(() => Publish(new Error(m.Cause, this.Self.Path.ToString(), failedActor.GetType(), m.Cause.Message)));
-
             if (System.Settings.DebugLifecycle) 
                 Publish(new Pigeon.Event.Debug(Self.Path.ToString(), failedActor.GetType(), "restarting"));
 

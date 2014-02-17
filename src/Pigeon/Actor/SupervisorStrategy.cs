@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Pigeon.Event;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -15,18 +16,21 @@ namespace Pigeon.Actor
         public bool HandleFailure(ActorCell actorCell, ActorRef child, Exception cause)
         {
             var directive = Handle(child, cause);
-            LogFailure(actorCell, child, cause, directive);
             switch (directive)
             {
                 case Directive.Escalate:
+                    LogFailure(actorCell, child, cause, directive);
                     return false;
                 case Directive.Resume:
+                    LogFailure(actorCell, child, cause, directive);
                     ResumeChild(child, cause);
                     return true;
                 case Directive.Restart:
+                    LogFailure(actorCell, child, cause, directive);
                     ProcessFailure(actorCell, true, child, cause);
                     return true;
                 case Directive.Stop:
+                    LogFailure(actorCell, child, cause, directive);
                     ProcessFailure(actorCell, false, child, cause);
                     return true;
                 default:
@@ -83,9 +87,24 @@ namespace Pigeon.Actor
             child.AsInstanceOf<InternalActorRef>().Resume(exception);
         }
 
-        private void LogFailure(ActorCell actorCell, ActorRef child, Exception exception, Directive directive)
+        private void LogFailure(ActorCell actorCell, ActorRef child, Exception cause, Directive directive)
         {
-            Debug.WriteLine("Failute! supervisor: {0}, child: {1}, cause: {2}, directive: {3}", actorCell.Self.Path, child.Path, exception, directive);
+            System.Diagnostics.Debug.WriteLine("Failute! supervisor: {0}, child: {1}, cause: {2}, directive: {3}", actorCell.Self.Path, child.Path, cause, directive);
+            switch(directive)
+            {
+                case Directive.Resume:
+                //    actorCell.System.EventStream.Publish(new Warning(child.Path.ToString(),this.GetType(),cause.Message);
+                    break;
+                case Directive.Escalate:
+                    break;
+                default:
+                //case Directive.Restart:
+                //case Directive.Stop:
+                    actorCell.System.EventStream.Publish(new Error(cause, child.Path.ToString(), this.GetType(), cause.Message));
+                    break;
+            }
+            
+            
         } 
     }
 
