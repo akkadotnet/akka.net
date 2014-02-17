@@ -28,7 +28,7 @@ namespace Pigeon.Actor
             Cell.Stop();
         }
 
-        public void Suspend()
+        public override void Suspend()
         {
             Cell.Suspend();
         }
@@ -38,9 +38,9 @@ namespace Pigeon.Actor
             Cell.Resume(causedByFailure);
         }
 
-        public void Restart()
+        public override void Restart(Exception cause)
         {
-            Cell.Restart();
+            Cell.Restart(cause);
         }
 
         public LocalActorRef(ActorPath path,ActorCell context)

@@ -1,5 +1,6 @@
 ﻿using Pigeon.Dispatch;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,7 +12,6 @@ namespace Pigeon.Actor
     {        
         public long UID { get; protected set; }
         public virtual ActorPath Path { get;protected set; }
-
 
         public void Tell(object message, ActorRef sender)
         {
@@ -43,9 +43,7 @@ namespace Pigeon.Actor
 
         public static readonly ActorRef NoSender = new NoSender();
 
-        public abstract void Resume(Exception causedByFailure = null);
-
-        public abstract void Stop();
+       
 
         public Task<object> Ask(object message)
         {
@@ -71,6 +69,14 @@ namespace Pigeon.Actor
     public abstract class InternalActorRef : ActorRef
     {
         public abstract ActorRef GetChild(IEnumerable<string> name);
+
+        public abstract void Resume(Exception causedByFailure = null);
+
+        public abstract void Stop();
+
+        public abstract void Restart(Exception cause);
+
+        public abstract void Suspend();
     }
 
     public abstract class MinimalActorRef : InternalActorRef
@@ -96,14 +102,95 @@ namespace Pigeon.Actor
 
         protected override void TellInternal(object message, ActorRef sender)
         {
+        }       
+    }
+
+    public class VirtualPathContainer : MinimalActorRef
+    {
+        private ConcurrentDictionary<string, InternalActorRef> children = new ConcurrentDictionary<string, InternalActorRef>();
+
+        private InternalActorRef GetChild(string name)
+        {
+            return children[name];
+        }
+
+        public void AddChild(string name,InternalActorRef actor)
+        {
+            children.AddOrUpdate(name, actor, (k,v) =>
+            {
+                //TODO:  log.debug("{} replacing child {} ({} -> {})", path, name, old, ref)
+                return v;
+            });
+        }
+
+        public void Remove(string name)
+        {
+            InternalActorRef tmp;
+            if (!children.TryRemove(name,out tmp))
+            {
+                //TODO: log.warning("{} trying to remove non-child {}", path, name)
+            }
+        }
+
+        /*
+override def getChild(name: Iterator[String]): InternalActorRef = {
+    if (name.isEmpty) this
+    else {
+      val n = name.next()
+      if (n.isEmpty) this
+      else children.get(n) match {
+        case null ⇒ Nobody
+        case some ⇒
+          if (name.isEmpty) some
+          else some.getChild(name)
+      }
+    }
+  }
+*/
+        public override ActorRef GetChild(IEnumerable<string> name)
+        {
+            //TODO: I have no clue what the scala version does
+            if (!name.Any())
+                return this;
+
+            var child = name.FirstOrDefault();
+            if (child != null && child != "")
+                return children[child] ?? this;
+
+            return this;
+        }
+
+        protected override void TellInternal(object message, ActorRef sender)
+        {
+            throw new NotImplementedException();
         }
 
         public override void Resume(Exception causedByFailure = null)
         {
+            throw new NotImplementedException();
         }
 
         public override void Stop()
         {
+            throw new NotImplementedException();
+        }
+
+        public void ForeachActorRef(Action<ActorRef> action)
+        {
+            foreach (var child in children.Values)
+            {
+                action(child);
+            }
+        }
+
+        public override void Restart(Exception cause)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Suspend()
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -63,14 +63,6 @@ private[akka] class DeadLetterActorRef(_provider: ActorRefProvider,
             //TODO: need to special handle some messages here
             //e.g. identity,
             eventStream.Publish(new DeadLetter(message, sender, this));
-        }
-
-        public override void Resume(Exception causedByFailure = null)
-        {
-        }
-
-        public override void Stop()
-        {
-        }
+        }        
     }
 }

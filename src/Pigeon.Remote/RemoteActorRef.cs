@@ -61,16 +61,6 @@ namespace Pigeon.Remote
         {
             envelope.WriteDelimitedTo(stream);
             stream.Flush();
-        }
-
-        public override void Resume(Exception causedByFailure = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Stop()
-        {
-            throw new NotImplementedException();
-        }
+        }        
     }   
 }

@@ -19,17 +19,7 @@ namespace Pigeon.Tests
         protected override void TellInternal(object message, ActorRef sender)
         {
             owner.Tell(message, sender);
-        }
-
-        public override void Resume(Exception causedByFailure = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Stop()
-        {
-            throw new NotImplementedException();
-        }
+        }        
     }
     public class TestProbe
     {

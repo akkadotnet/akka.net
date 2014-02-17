@@ -35,15 +35,23 @@ namespace Pigeon.Actor
             return false;
         }
 
+        private void RestartChild(ActorRef child,Exception cause,bool suspendFirst)
+        {
+            var c = child.AsInstanceOf<InternalActorRef>();
+            if (suspendFirst)
+                c.Suspend();
+            c.AsInstanceOf<InternalActorRef>().Restart(cause);
+        }
+
         private void ProcessFailure(ActorCell actorCell, bool restart, ActorRef child, Exception cause)
         {
             if (restart)
             {
-                child.AsInstanceOf<LocalActorRef>().Cell.Restart(cause);
+                RestartChild(child, cause, false);
             }
             else
             {
-                child.Stop();
+                child.AsInstanceOf<InternalActorRef>().Stop();
             }
             /*
     if (children.nonEmpty) {
@@ -72,7 +80,7 @@ namespace Pigeon.Actor
 
         private void ResumeChild(ActorRef child, Exception exception)
         {
-            child.Resume();
+            child.AsInstanceOf<InternalActorRef>().Resume(exception);
         }
 
         private void LogFailure(ActorCell actorCell, ActorRef child, Exception exception, Directive directive)

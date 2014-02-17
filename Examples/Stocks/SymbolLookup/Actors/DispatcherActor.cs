@@ -38,7 +38,7 @@ namespace SymbolLookup.Actors
         {
             _statusHandler(this, string.Format("Received data for {0}", sd.Symbol));
             _dataHandler(this, sd);
-            Sender.Stop(); //tell the sender to shut down
+            ((InternalActorRef)Sender).Stop(); //tell the sender to shut down
         }
 
         public void Handle(Failure fail)

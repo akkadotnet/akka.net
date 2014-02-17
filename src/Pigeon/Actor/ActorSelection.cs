@@ -35,16 +35,6 @@ namespace Pigeon.Actor
         protected override void TellInternal(object message, ActorRef sender)
         {
             actors.ForEach(a => a.Tell(message, sender));
-        }
-
-        public override void Resume(Exception causedByFailure = null)
-        {
-            actors.ForEach(a => a.Resume(causedByFailure));
-        }
-
-        public override void Stop()
-        {
-            actors.ForEach(a => a.Stop());
-        }
+        }       
     }
 }
