@@ -43,6 +43,7 @@ namespace Pigeon.Actor
             this.Name = name;
             
             ConfigureSettings(config);
+            ConfigureDeployer();
             ConfigureEventStream();
             ConfigureSerialization();
             ConfigureMailboxes();
@@ -50,6 +51,11 @@ namespace Pigeon.Actor
             ConfigureProvider();
             ConfigureExtensions(extensions);
             this.Start();
+        }
+
+        private void ConfigureDeployer()
+        {
+            this.Deployer = new Deployer(this.Settings);
         }
 
         private void ConfigureExtensions(ActorSystemExtension[] extensions)
@@ -174,5 +180,6 @@ namespace Pigeon.Actor
 
         public Dispatchers Dispatchers { get;private set; }
         public Mailboxes Mailboxes { get;private set; }
+        public Deployer Deployer { get;private set; }
     }
 }

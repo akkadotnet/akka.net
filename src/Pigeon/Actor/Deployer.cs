@@ -10,6 +10,8 @@ namespace Pigeon.Actor
 {
     public class Deploy
     {
+        public static readonly Deploy Local = new Deploy(Scope.Local);
+
         private static readonly string NoDispatcherGiven = null;
         private static readonly string NoMailboxGiven = null;
         private static readonly Scope NoScopeGiven = null;
@@ -120,5 +122,27 @@ namespace Pigeon.Actor
         }
 
         public Address Address { get;private set; }
+    }
+
+
+    public class Deployer
+    {
+        private Settings settings;
+        private Config deployment;
+        private Config fallback;
+        public Deployer(Settings settings)
+        {
+            this.settings = settings;
+            deployment = settings.Config.GetConfig("akka.actor.deployment");
+            fallback = deployment.GetConfig("default");            
+        }
+
+        public Deploy Lookup(string path)
+        {
+            var config = deployment.GetConfig(path).WithFallback(fallback);
+            //TODO: implement this
+
+            return Deploy.Local;
+        }
     }
 }

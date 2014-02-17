@@ -121,6 +121,9 @@ namespace Pigeon.Actor
             //set the thread static context or things will break
             cell.UseThreadContext( () =>
             {
+                //TODO: where should deployment be handled?
+                var deployPath = cell.Self.Path.ToStringWithoutAddress();
+                var deploy = System.Deployer.Lookup(deployPath);
                 behaviorStack.Clear();
                 var instance = cell.Props.NewActor();
                 Children.TryAdd(cell.Self.Path.Name, cell.Self);
