@@ -32,6 +32,50 @@ namespace Pigeon.Actor
             Mailbox = Deploy.NoMailboxGiven;
         }
 
+        public Deploy(Scope scope)
+            : this()
+        {
+            this.Scope = scope;
+        }
+
+        public Deploy(RouterConfig routerConfig, Scope scope)
+            : this()
+        {
+            this.RouterConfig = routerConfig;
+            this.Scope = scope;
+        }
+
+        public Deploy(RouterConfig routerConfig)
+        {
+            this.RouterConfig = routerConfig;
+        }
+
+        public Deploy WithFallback(Deploy other)
+        {
+            return new Deploy
+            {
+                Path = Path,
+                Config = Config.WithFallback(other.Config),
+                RouterConfig = RouterConfig.WithFallback(other.RouterConfig),
+                Scope = Scope.WithFallback(other.Scope),
+                Dispatcher = Dispatcher == NoDispatcherGiven ? other.Dispatcher : Dispatcher,
+                Mailbox = Mailbox == NoMailboxGiven ? other.Mailbox : Mailbox,
+
+            };
+        }
+
+        private Deploy Copy()
+        {
+            return new Deploy(){
+                Config = this.Config,
+                Dispatcher = this.Dispatcher,
+                Mailbox = this.Mailbox,
+                Path = this.Path,
+                RouterConfig = this.RouterConfig,
+                Scope = this.Scope,
+            };
+        }
+
         public string Path { get;private set; }
         public Config Config { get;private set; }
         public RouterConfig RouterConfig { get;private set; }

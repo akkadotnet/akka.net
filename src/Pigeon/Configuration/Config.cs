@@ -179,5 +179,10 @@ namespace Pigeon.Configuration
         {
             return this.node.ToString();
         }
+
+        public Config WithFallback(Config fallback)
+        {
+            return new Config(this, fallback);
+        }
     }
 }

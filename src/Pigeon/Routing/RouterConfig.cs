@@ -14,6 +14,11 @@ namespace Pigeon.Routing
         public abstract IEnumerable<Routee> GetRoutees(ActorSystem system);
 
         public static readonly RouterConfig NoRouter = new NoRouter();
+
+        public virtual RouterConfig WithFallback(RouterConfig routerConfig)
+        {
+            return this;
+        }
     }
 
     public class NoRouter : RouterConfig
