@@ -58,13 +58,28 @@ namespace Pigeon.Remote
         {
             if (this.Address.Equals(actorPath.Address))
             {
-                //standard
-                var currentContext = RootCell;
-                foreach (var part in actorPath.Skip(1))
+                if (actorPath.Head == "remote")
                 {
-                    currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
+                    //skip ""/"remote", 
+                    var parts = actorPath.Skip(2).ToArray();
+                    return RemoteDaemon.GetChild(parts);
                 }
-                return currentContext.Self;
+                else if (actorPath.Head == "temp")
+                {
+                    //skip ""/"temp", 
+                    var parts = actorPath.Skip(2).ToArray();
+                    return TempContainer.GetChild(parts);
+                }
+                else
+                {
+                    //standard
+                    var currentContext = RootCell;
+                    foreach (var part in actorPath.Skip(1))
+                    {
+                        currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
+                    }
+                    return currentContext.Self;
+                }           
             }
             else
             {

@@ -210,7 +210,7 @@ namespace Pigeon.Actor
             get { return parent; }
         }
 
-        private ConcurrentDictionary<string, InternalActorRef> children = new ConcurrentDictionary<string, InternalActorRef>();
+        protected ConcurrentDictionary<string, InternalActorRef> children = new ConcurrentDictionary<string, InternalActorRef>();
         private ActorRefProvider provider;
 
         private InternalActorRef GetChild(string name)

@@ -62,7 +62,7 @@ namespace Pigeon.Actor
             }
             else
             {
-                return new RootActorPath(new Address("akka", system.Name), elements);
+                return new RootActorPath(system.Provider.Address, elements);
             }
         }
 
