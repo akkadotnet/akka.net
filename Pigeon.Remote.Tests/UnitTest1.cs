@@ -60,7 +60,6 @@ akka {
             child.Tell("hello");
             //expect the child to forward the message to the eventstream
             p.expectMsg("hello");
-            //TODO: complete this test
         }
     }
 }
