@@ -34,19 +34,19 @@ namespace Pigeon.Remote
             RemoteHost.StartHost(System, port);
         }
 
-        public override LocalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, string name, ActorPath path, long uid)
+        public override LocalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, long uid)
         {
             var mailbox = System.Mailboxes.FromConfig(props.Mailbox);
 
             ActorCell cell = null;
             if (props.RouterConfig is NoRouter)
             {
-                cell = new ActorCell(system,supervisor, props, name, mailbox);
+                cell = new ActorCell(system,supervisor, props, path, mailbox);
               
             }
             else
             {
-                cell = new RoutedActorCell(system,supervisor, props, name, mailbox);
+                cell = new RoutedActorCell(system,supervisor, props, path, mailbox);
             }
 
             cell.NewActor();

@@ -57,8 +57,7 @@ namespace Pigeon.Remote
             ActorPath path = ActorPath.Parse(message.Path, System);
             var subPath = this.Path / path.Skip(1);
             var name = string.Join("/",path.Skip(1));
-            //TODO: this is not correct, the actor should not be created as a child of RootCell
-            var actor = System.Provider.ActorOf(System, message.Props, supervisor, Guid.NewGuid().ToString(), subPath, 0);
+            var actor = System.Provider.ActorOf(System, message.Props, supervisor, subPath, 0);
             this.AddChild(name, actor);
             actor.Tell(new Watch(actor, this));
         }

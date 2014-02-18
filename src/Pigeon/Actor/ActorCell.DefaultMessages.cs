@@ -310,7 +310,7 @@ protected def terminate() {
 
             try
             {
-                failedActor.AroundPreRestart(m.Cause, optionalMessage); //TODO: pass message?            
+                failedActor.AroundPreRestart(m.Cause, optionalMessage);          
             }
             catch(Exception e)
             {

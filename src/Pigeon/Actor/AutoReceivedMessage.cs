@@ -38,7 +38,6 @@ namespace Pigeon.Actor
 
         public ActorIdentity(Guid messageId, LocalActorRef subject)
         {
-            // TODO: Complete member initialization
             this.MessageId = messageId;
             this.Subject = subject;
         }

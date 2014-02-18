@@ -53,7 +53,7 @@ namespace Pigeon.Actor
         public LocalActorRef Guardian { get; protected set; }
         public LocalActorRef SystemGuardian { get; protected set; }
 
-        public abstract LocalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, string name, ActorPath path, long uid);
+        public abstract LocalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, long uid);
         public ActorRef ResolveActorRef(string path){
             var actorPath = ActorPath.Parse(path,this.System);
             return ResolveActorRef(actorPath);
@@ -77,18 +77,18 @@ namespace Pigeon.Actor
             this.Address = new Address("akka", this.System.Name); //TODO: this should not work this way...
         }
 
-        public override LocalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, string name, ActorPath path, long uid)
+        public override LocalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, long uid)
         {
             var mailbox = System.Mailboxes.FromConfig(props.Mailbox);
 
             ActorCell cell = null;
             if (props.RouterConfig is NoRouter)
             {
-                cell = new ActorCell(system,supervisor, props, name, mailbox);
+                cell = new ActorCell(system, supervisor, props, path, mailbox);
             }
             else
             {
-                cell = new RoutedActorCell(system, supervisor, props, name, mailbox);
+                cell = new RoutedActorCell(system, supervisor, props, path, mailbox);
             }
             cell.NewActor();
 
