@@ -38,7 +38,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="fastjson">
-      <HintPath>..\packages\fastJSON.2.0.27.1\lib\net40\fastjson.dll</HintPath>
+      <HintPath>..\..\packages\fastJSON.2.0.27.1\lib\net40\fastjson.dll</HintPath>
     </Reference>
     <Reference Include="System" />
   </ItemGroup>
@@ -64,7 +64,7 @@
     <Compile Include="TestProbe.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\src\Pigeon\Pigeon.csproj">
+    <ProjectReference Include="..\..\src\Pigeon\Pigeon.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Pigeon</Name>
     </ProjectReference>
