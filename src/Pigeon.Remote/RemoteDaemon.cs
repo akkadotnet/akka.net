@@ -53,13 +53,12 @@ namespace Pigeon.Remote
 
         private void HandleDaemonMsgCreate(DaemonMsgCreate message)
         {
+            //TODO: find out what format "Path" should have
             var supervisor = (InternalActorRef)message.Supervisor;
             var props = message.Props;
-            ActorPath path = ActorPath.Parse(message.Path, System);
-            var subPath = path.Skip(1);
-            var p = this.Path / path.Skip(1);            
-            var actor = System.Provider.ActorOf(System, props, supervisor, p, 0);
-            var name = string.Join("/", subPath);
+            ActorPath path = this.Path / message.Path.Split('/');         
+            var actor = System.Provider.ActorOf(System, props, supervisor, path, 0);
+            var name = message.Path;
             this.AddChild(name, actor);
             actor.Tell(new Watch(actor, this));
         }

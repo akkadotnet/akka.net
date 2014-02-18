@@ -48,6 +48,7 @@ namespace Pigeon.Actor
 
         public ActorSelection ActorSelection(string path)
         {
+            //TODO: remove ActorPath here, use ienumerable of string instead..
             var actorPath = ActorPath.Parse(path,this.System);
             return ActorSelection(actorPath);
         }

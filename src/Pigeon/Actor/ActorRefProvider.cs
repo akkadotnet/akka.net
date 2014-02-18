@@ -55,7 +55,7 @@ namespace Pigeon.Actor
 
         public abstract LocalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, long uid);
         public ActorRef ResolveActorRef(string path){
-            var actorPath = ActorPath.Parse(path,this.System);
+            var actorPath = ActorPath.Parse(path);
             return ResolveActorRef(actorPath);
         }
 
