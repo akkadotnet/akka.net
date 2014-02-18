@@ -49,8 +49,8 @@ namespace Pigeon.Remote
                 cell = new RoutedActorCell(parentContext, props, name, mailbox);
             }
 
-            parentContext.NewActor(cell);
-            parentContext.Watch(cell.Self);
+            cell.NewActor();
+         //   parentContext.Watch(cell.Self);
             return cell.Self;
         }
 

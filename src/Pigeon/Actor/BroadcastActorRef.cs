@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,25 +9,27 @@ namespace Pigeon.Actor
 {
     public class BroadcastActorRef : ActorRef
     {
-        private List<ActorRef> actors = new List<ActorRef>();
+        private ConcurrentDictionary<ActorRef, ActorRef> actors = new ConcurrentDictionary<ActorRef, ActorRef>();
         public BroadcastActorRef(params ActorRef[] actors)
         {
-            this.actors.AddRange(actors);
+            foreach (var a in actors)
+                this.actors.TryAdd(a, a);
         }
 
         public void Add(ActorRef actor)
         {
-            this.actors.Add(actor);
+            actors.TryAdd(actor, actor);
         }
 
-        internal void Remove(ActorRef Sender)
+        internal void Remove(ActorRef actor)
         {
-            actors.Remove(Sender);
+            ActorRef tmp;
+            actors.TryRemove(actor, out tmp);
         }
 
         protected override void TellInternal(object message, ActorRef sender)
         {
-            actors.ForEach(a => a.Tell(message, sender));
+            actors.Values.ToList().ForEach(a => a.Tell(message, sender));
         }
     }
 }

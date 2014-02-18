@@ -90,7 +90,7 @@ namespace Pigeon.Actor
             {
                 cell = new RoutedActorCell(parentContext, props, name, mailbox);
             }
-            parentContext.NewActor(cell);
+            cell.NewActor();
 
           //  parentContext.Watch(cell.Self);
             return cell.Self;

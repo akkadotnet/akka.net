@@ -321,7 +321,6 @@ protected def terminate() {
                     });
             }
            
-
             this.UseThreadContext(() =>
             {
                 behaviorStack.Clear(); //clear earlier behaviors
@@ -333,8 +332,6 @@ protected def terminate() {
                 Children.TryAdd(this.Self.Path.Name, this.Self);
                 created.AroundPostRestart(m.Cause,null);
             });
-
-
         }
 
         public void Start()
@@ -411,6 +408,8 @@ protected def terminate() {
         private void HandleWatch(Watch m)
         {
             WatchedBy.Add(Sender);
+            if (System.Settings.DebugLifecycle)
+                Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "now watched by " + m.Watcher));
         }
 
         private void HandleUnwatch(Unwatch m)

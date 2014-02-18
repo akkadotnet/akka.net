@@ -102,7 +102,9 @@ namespace Pigeon.Actor
             var uid = GetNextUID();
             name = GetActorName(props, name,uid);
             var path = this.Self.Path / name;
-            return System.Provider.ActorOf(this, props, this.Self, name, path, uid);          
+            var actor = System.Provider.ActorOf(this, props, this.Self, name, path, uid);
+            this.Children.TryAdd(name, actor);
+            return actor;
         }
 
         private long GetNextUID()
@@ -132,17 +134,16 @@ namespace Pigeon.Actor
             return name;
         }
 
-        public void NewActor(ActorCell cell)
+        public void NewActor()
         {
             //set the thread static context or things will break
-            cell.UseThreadContext( () =>
+            this.UseThreadContext( () =>
             {
                 //TODO: where should deployment be handled?
-                var deployPath = cell.Self.Path.ToStringWithoutAddress();
+                var deployPath = Self.Path.ToStringWithoutAddress();
                 var deploy = System.Deployer.Lookup(deployPath);
                 behaviorStack.Clear();
-                var instance = cell.Props.NewActor();
-                Children.TryAdd(cell.Self.Path.Name, cell.Self);
+                var instance = Props.NewActor();
                 instance.AroundPreStart();                
             });
         }
@@ -183,7 +184,7 @@ namespace Pigeon.Actor
             this.Mailbox.SystemInvoke = this.SystemInvoke;
         }
 
-        internal void UseThreadContext(Action action)
+        public void UseThreadContext(Action action)
         {
             var tmp = Current;
             current = this;

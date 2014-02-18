@@ -61,7 +61,6 @@ namespace Pigeon.Remote
             var actor = System.Provider.ActorOf(Provider.RootCell, message.Props, supervisor, Guid.NewGuid().ToString(), subPath, 0);
             this.AddChild(name, actor);
             actor.Tell(new Watch(actor, this));
-
         }
     }
 }
