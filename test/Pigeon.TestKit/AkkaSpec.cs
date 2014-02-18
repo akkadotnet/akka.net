@@ -19,6 +19,11 @@ namespace Pigeon.Tests
         {
             body(self);
         }
+
+        public static void Then<T>(this T self,Action<T,T> body,T other)
+        {
+            body(other, self);
+        }
     }
 
 

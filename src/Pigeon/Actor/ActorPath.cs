@@ -19,7 +19,7 @@ namespace Pigeon.Actor
         public static ActorPath operator /(ActorPath path, IEnumerable<string> name)
         {
             return new ChildActorPath(path, name);
-        }
+        }       
 
         public string Head
         {
@@ -34,34 +34,27 @@ namespace Pigeon.Actor
             var elements = path.Split('/');
             if (elements.First().StartsWith("akka"))
             {
-                //TODO: better parser
-                var first = elements.First();
-                var protocol = first.Split(':')[0];
-                var systemName = elements[2].Split('@')[0];
-
-                if (elements[2].Contains('@'))
+                var uri = new Uri(path);
+                if (string.IsNullOrEmpty(uri.UserInfo))
                 {
-                    var hostPort = elements[2].Split('@')[1];
-                    var host = hostPort.Split(':')[0];
-                    var port = int.Parse(hostPort.Split(':')[1]);
-                    var rest = elements.Skip(3);
-
-                    var pathElements = elements.Skip(3).ToList();
-                    pathElements.Insert(0, ""); //HACK: we need to make room for the root cell ("/")
-                    //format is  /subsystem/actor ... 
-                    return new RootActorPath(new Address(protocol, systemName, host, port), pathElements);
+                    var protocol = uri.Scheme;
+                    var systemName = uri.Host;
+                    var pathElements = uri.AbsolutePath.Split('/');
+                    return new RootActorPath(new Address(protocol, systemName, null, null), pathElements);
                 }
                 else
                 {
-                    var pathElements = elements.Skip(3).ToList();
-                    pathElements.Insert(0, ""); //HACK: we need to make room for the root cell ("/")
-                    //format is  /subsystem/actor ... 
-                    return new RootActorPath(new Address(protocol, systemName, null, null), pathElements);
+                    var protocol = uri.Scheme;
+                    var systemName = uri.UserInfo;
+                    var host = uri.Host;
+                    var port = uri.Port;
+                    var pathElements = uri.AbsolutePath.Split('/');
+                    return new RootActorPath(new Address(protocol, systemName, host, port), pathElements);
                 }
-                
             }
             else
             {
+                //TODO: this should be removed once ActorSelection is rewritten..
                 return new RootActorPath(system.Provider.Address, elements);
             }
         }
@@ -135,7 +128,7 @@ namespace Pigeon.Actor
 
         public override string ToString()
         {
-            return ToStringWithoutAddress();
+            return ToStringWithAddress();
         }
 
         public ActorPath Child(string childName)
@@ -181,7 +174,7 @@ namespace Pigeon.Actor
 
     public class RootActorPath : ActorPath
     {
-        public RootActorPath(Address address,string name ="/") : base(address,name)
+        public RootActorPath(Address address,string name ="") : base(address,name)
         {
 
         }
