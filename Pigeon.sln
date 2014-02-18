@@ -56,9 +56,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Stocks", "Stocks", "{D92D67
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SymbolLookup", "Examples\Stocks\SymbolLookup\SymbolLookup.csproj", "{3007A692-A050-4F12-9187-4AE6C6106A66}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon.TestKit", "Pigeon.TestKit\Pigeon.TestKit.csproj", "{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon.TestKit", "test\Pigeon.TestKit\Pigeon.TestKit.csproj", "{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon.Remote.Tests", "Pigeon.Remote.Tests\Pigeon.Remote.Tests.csproj", "{95E921AB-1F5A-4AF9-B7FE-284E317A97F4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon.Remote.Tests", "test\Pigeon.Remote.Tests\Pigeon.Remote.Tests.csproj", "{95E921AB-1F5A-4AF9-B7FE-284E317A97F4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

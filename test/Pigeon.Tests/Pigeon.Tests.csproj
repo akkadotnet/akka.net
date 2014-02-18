@@ -68,13 +68,13 @@
     <Compile Include="Serialization\SerializationSpec.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Pigeon.TestKit\Pigeon.TestKit.csproj">
-      <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
-      <Name>Pigeon.TestKit</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\src\Pigeon\Pigeon.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Pigeon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Pigeon.TestKit\Pigeon.TestKit.csproj">
+      <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
+      <Name>Pigeon.TestKit</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
