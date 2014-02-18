@@ -25,17 +25,13 @@ namespace Pigeon.Remote.Tests
             {               
             }
         }
-        [TestMethod]
-        public void CanCreateActorUsingRemoteDaemonAndInteractWithChild()
+
+        protected override string GetConfig()
         {
-            var config = ConfigurationFactory.ParseString(@"
+            return @"
 akka {  
     actor {
         provider = ""Pigeon.Remote.RemoteActorRefProvider, Pigeon.Remote""
-        debug {
-            lifecycle = on
-            receive = on
-        }
     }
     remote {
         server {
@@ -44,8 +40,12 @@ akka {
         }
     }
 }
-");
-            var sys = ActorSystem.Create("foo", config);
+";
+        }
+
+        [TestMethod]
+        public void CanCreateActorUsingRemoteDaemonAndInteractWithChild()
+        {           
             var p = new TestProbe();
             sys.EventStream.Subscribe(p.Ref, typeof(string));
             var supervisor = sys.ActorOf<SomeActor>();

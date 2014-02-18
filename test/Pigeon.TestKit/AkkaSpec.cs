@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Pigeon.Actor;
+using Pigeon.Configuration;
 using Pigeon.Event;
 using System;
 using System.Collections.Concurrent;
@@ -19,13 +20,21 @@ namespace Pigeon.Tests
             body(self);
         }
     }
+
+
     public class AkkaSpec
     {
+
+        protected virtual string GetConfig()
+        {
+            return "";
+        }
         [TestInitialize]
         public void Setup()
         {
+            var config = ConfigurationFactory.ParseString(GetConfig());
             queue = new BlockingCollection<object>();
-            sys = ActorSystem.Create("test");
+            sys = ActorSystem.Create("test",config);
             testActor = sys.ActorOf(Props.Create(() => new TestActor(queue)));            
         }
         protected BlockingCollection<object> queue;
