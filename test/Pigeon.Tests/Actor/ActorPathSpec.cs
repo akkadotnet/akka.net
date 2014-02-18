@@ -26,14 +26,14 @@ namespace Pigeon.Tests.Actor
             parsed.ToString().Then(Assert.AreEqual, remote);
         }
 
-        [TestMethod]
-        public void ThrowExceptionUponMalformedPath()
-        {
-            intercept<UriFormatException>(() => ActorPath.Parse("", sys));
-            intercept<UriFormatException>(() => ActorPath.Parse("://hallo", sys));
-            intercept<UriFormatException>(() => ActorPath.Parse("s://dd@:12", sys));
-            intercept<UriFormatException>(() => ActorPath.Parse("s://dd@h:hd", sys));
-            intercept<UriFormatException>(() => ActorPath.Parse("a://l:1/b", sys));
-        }
+        //[TestMethod]
+        //public void ThrowExceptionUponMalformedPath()
+        //{
+        //    intercept<UriFormatException>(() => ActorPath.Parse("", sys));
+        //    intercept<UriFormatException>(() => ActorPath.Parse("://hallo", sys));
+        //    intercept<UriFormatException>(() => ActorPath.Parse("s://dd@:12", sys));
+        //    intercept<UriFormatException>(() => ActorPath.Parse("s://dd@h:hd", sys));
+        //    intercept<UriFormatException>(() => ActorPath.Parse("a://l:1/b", sys));
+        //}
     }
 }
