@@ -36,10 +36,11 @@ akka {
 }
 ");
             var sys = ActorSystem.Create("foo", config);
+            var supervisor = sys.ActorOf<SomeActor>();
             var provider = (RemoteActorRefProvider)sys.Provider;
             var daemon = provider.RemoteDaemon;
 
-            daemon.Tell(new DaemonMsgCreate(Props.Create(() => new SomeActor()),null,"/user/foo",null));
+            daemon.Tell(new DaemonMsgCreate(Props.Create(() => new SomeActor()),null,"/user/foo",supervisor));
             //TODO: complete this test
         }
     }

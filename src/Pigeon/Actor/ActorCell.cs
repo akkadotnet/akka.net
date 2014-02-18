@@ -102,7 +102,7 @@ namespace Pigeon.Actor
             var uid = GetNextUID();
             name = GetActorName(props, name,uid);
             var path = this.Self.Path / name;
-            var actor = System.Provider.ActorOf(this, props, this.Self, name, path, uid);
+            var actor = System.Provider.ActorOf(System, props, this.Self, name, path, uid);
             this.Children.TryAdd(name, actor);
             return actor;
         }
@@ -171,10 +171,10 @@ namespace Pigeon.Actor
             this.Mailbox.SystemInvoke = this.SystemInvoke;            
         }
 
-        public ActorCell(IActorContext parentContext, Props props, string name, Mailbox mailbox)
+        public ActorCell(ActorSystem system,InternalActorRef supervisor, Props props, string name, Mailbox mailbox)
         {
-            this.Parent = parentContext != null ? parentContext.Self : null;
-            this.System = parentContext != null ? parentContext.System : null;
+            this.Parent = supervisor;
+            this.System = system;
             this.Self = new LocalActorRef((this.Parent.Path / name), this);
             this.Props = props;
             this.Dispatcher = System.Dispatchers.FromConfig(props.Dispatcher);

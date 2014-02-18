@@ -10,7 +10,7 @@ namespace Pigeon.Routing
 {
     public class RoutedActorCell : ActorCell
     {
-        public RoutedActorCell(IActorContext parentContext,Props props,string name,Mailbox mailbox) :base(parentContext,props,name,mailbox)
+        public RoutedActorCell(ActorSystem system,InternalActorRef supervisor,Props props,string name,Mailbox mailbox) :base(system,supervisor,props,name,mailbox)
         {
             var routerConfig = props.RouterConfig;
             var routees = routerConfig.GetRoutees(this.System).ToArray();
