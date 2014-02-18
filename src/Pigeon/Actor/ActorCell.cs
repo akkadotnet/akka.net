@@ -52,6 +52,8 @@ namespace Pigeon.Actor
             return ActorSelection(actorPath);
         }
 
+        //TODO: this is not correct. actor selection should be an object with an anchor actorref and elements
+        //resolution of the members is done lazy
         public ActorSelection ActorSelection(ActorPath actorPath)
         {
             var tmpPath = actorPath;
