@@ -28,9 +28,10 @@ namespace Pigeon.Remote
 
     public class RemoteDaemon : VirtualPathContainer
     {
-        public RemoteDaemon(ActorRefProvider provider,ActorPath path,InternalActorRef parent) : base(provider,path,parent)
+        public ActorSystem System { get;private set; }
+        public RemoteDaemon(ActorSystem system,ActorPath path,InternalActorRef parent) : base(system.Provider,path,parent)
         {
-
+            this.System = system;
         }
         protected void OnReceive(object message)
         {
@@ -44,11 +45,16 @@ namespace Pigeon.Remote
             }            
         }
 
+        protected override void TellInternal(object message, ActorRef sender)
+        {
+            OnReceive(message);
+        }
+
         private void HandleDaemonMsgCreate(DaemonMsgCreate message)
         {
-          //  ActorPath path = ActorPath.Parse(message.Path, Context.System);
-
-          //  Context.ActorOf(message.Props);
+            ActorPath path = ActorPath.Parse(message.Path, System);
+            var subPath = this.Path / path.Skip(1);
+            //System.Provider.ActorOf(null,message.Props,Guid.)
         }
     }
 }

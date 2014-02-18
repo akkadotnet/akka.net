@@ -31,18 +31,18 @@ namespace Pigeon.Tests
 
         public ActorRef Ref { get;private set; }
 
-        internal void expectMsg(object expected)
+        public void expectMsg(object expected)
         {
             var res = queue.Take();
             Assert.AreEqual(expected, res);
         }
 
-        internal void Tell(object message, ActorRef sender)
+        public void Tell(object message, ActorRef sender)
         {
             queue.Add(message);
         }
 
-        internal void expectNoMsg(TimeSpan duration)
+        public void expectNoMsg(TimeSpan duration)
         {
             object res;
             if (queue.TryTake(out res,duration))

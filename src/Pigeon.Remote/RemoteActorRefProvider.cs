@@ -30,7 +30,7 @@ namespace Pigeon.Remote
 
             base.Init();
 
-            this.RemoteDaemon = new Remote.RemoteDaemon (this,RootPath / "remote",null);
+            this.RemoteDaemon = new Remote.RemoteDaemon (this.System,RootPath / "remote",null);
             RemoteHost.StartHost(System, port);
         }
 

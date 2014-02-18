@@ -16,6 +16,11 @@ namespace Pigeon.Actor
             return new ChildActorPath(path, name);
         }
 
+        public static ActorPath operator /(ActorPath path, IEnumerable<string> name)
+        {
+            return new ChildActorPath(path, name);
+        }
+
         public string Head
         {
             get
@@ -115,6 +120,13 @@ namespace Pigeon.Actor
             elements.Add(name);
         }
 
+        public ActorPath(ActorPath parentPath, IEnumerable<string> name)
+        {
+            this.Address = parentPath.Address;
+            elements.AddRange(parentPath.elements);
+            elements.AddRange(name);
+        }
+
 
         public string ToStringWithoutAddress()
         {
@@ -184,6 +196,11 @@ namespace Pigeon.Actor
     public class ChildActorPath : ActorPath
     {
         public ChildActorPath(ActorPath parentPath, string name)
+            : base(parentPath, name)
+        {
+        }
+
+        public ChildActorPath(ActorPath parentPath, IEnumerable<string> name)
             : base(parentPath, name)
         {
         }
