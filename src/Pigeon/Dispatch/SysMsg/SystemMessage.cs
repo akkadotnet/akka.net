@@ -9,146 +9,146 @@ namespace Pigeon.Dispatch.SysMsg
 {
 
  /**
- * INTERNAL API
+ * public API
  */
 //@SerialVersionUID(1L)
 //private[akka] case class Create(failure: Option[ActorInitializationException]) extends SystemMessage // sent to self from Dispatcher.register
 ///**
 
-    internal abstract class SystemMessage : NoSerializationVerificationNeeded
+    public abstract class SystemMessage : NoSerializationVerificationNeeded
     {
     }
 
-    internal class NoMessage : SystemMessage
+    public class NoMessage : SystemMessage
     {
     }
 
-    internal class DeathWatchNotification : SystemMessage
+    public class DeathWatchNotification : SystemMessage
     {
-        internal DeathWatchNotification(ActorRef actor,bool existenceConfirmed,bool addressTerminated)
+        public DeathWatchNotification(ActorRef actor,bool existenceConfirmed,bool addressTerminated)
         {
             this.Actor = actor;
             this.ExistenceConfirmed = existenceConfirmed;
             this.AddressTerminated = addressTerminated;
         }
 
-        internal ActorRef Actor { get;private set; }
+        public ActorRef Actor { get;private set; }
 
-        internal bool ExistenceConfirmed { get;private set; }
+        public bool ExistenceConfirmed { get;private set; }
 
-        internal bool AddressTerminated { get;private set; }
+        public bool AddressTerminated { get;private set; }
     }
 
-    internal class Failed : SystemMessage
+    public class Failed : SystemMessage
     {
-        internal Failed(ActorRef child, Exception cause)
+        public Failed(ActorRef child, Exception cause)
         {
             this.Child = child;
             this.Cause = cause;
         }
-        internal ActorRef Child { get;private set; }
-        internal Exception Cause { get; private set; }
+        public ActorRef Child { get;private set; }
+        public Exception Cause { get; private set; }
     }
 
-    internal class Supervise : SystemMessage
+    public class Supervise : SystemMessage
     {
-        internal Supervise(ActorRef child,bool async)
+        public Supervise(ActorRef child,bool async)
         {
             this.Child = child;
             this.Async = async;
         }
 
-        internal bool Async { get;private set; }
-        internal ActorRef Child { get;private set; }
+        public bool Async { get;private set; }
+        public ActorRef Child { get;private set; }
     }
     //used to start watching another actor (deathwatch)
-    internal class Watch : SystemMessage
+    public class Watch : SystemMessage
     {
-        internal Watch(ActorRef watchee,ActorRef watcher)
+        public Watch(ActorRef watchee,ActorRef watcher)
         {
             this.Watchee = watchee;
             this.Watcher = watcher;
         }
-        internal ActorRef Watchee { get;private set; }
-        internal ActorRef Watcher { get;private set; }
+        public ActorRef Watchee { get;private set; }
+        public ActorRef Watcher { get;private set; }
     }
 
     //used to unsubscribe to deathwatch
-    internal class Unwatch : SystemMessage
+    public class Unwatch : SystemMessage
     {
-        internal Unwatch(ActorRef watchee, ActorRef watcher)
+        public Unwatch(ActorRef watchee, ActorRef watcher)
         {
             this.Watchee = watchee;
             this.Watcher = watcher;
         }
-        internal ActorRef Watchee { get;private set; }
-        internal ActorRef Watcher { get;private set; }
+        public ActorRef Watchee { get;private set; }
+        public ActorRef Watcher { get;private set; }
     }
 
-    internal class CompleteFuture : SystemMessage
+    public class CompleteFuture : SystemMessage
     {
-        internal CompleteFuture(Action action)
+        public CompleteFuture(Action action)
         {
             this.SetResult = action;
         }
-        internal Action SetResult { get; private set; }
+        public Action SetResult { get; private set; }
     }
 
-    internal class Restart : SystemMessage
+    public class Restart : SystemMessage
     {
     }
 
-    internal class Recreate : SystemMessage
+    public class Recreate : SystemMessage
     {
-        internal Recreate(Exception cause)
+        public Recreate(Exception cause)
         {
             this.Cause = cause;
         }
 
-        internal Exception Cause { get;private set; }
+        public Exception Cause { get;private set; }
     }
 
-    internal class Resume : SystemMessage
+    public class Resume : SystemMessage
     {
-        internal Resume(Exception causedByFailure)
+        public Resume(Exception causedByFailure)
         {
             this.CausedByFailure = causedByFailure;
         }
 
-        internal Exception CausedByFailure { get; set; }
+        public Exception CausedByFailure { get; set; }
     }
 
-    internal class Suspend : SystemMessage
+    public class Suspend : SystemMessage
     {
     }
 
-    internal class Stop : SystemMessage
+    public class Stop : SystemMessage
     {
     }
 
-    internal class StopChild : SystemMessage
+    public class StopChild : SystemMessage
     {
-        internal StopChild(LocalActorRef child)
+        public StopChild(LocalActorRef child)
         {
             this.Child = child;
         }
-        internal LocalActorRef Child { get; private set; }
+        public LocalActorRef Child { get; private set; }
     }
 
-    internal class Escalate : SystemMessage
+    public class Escalate : SystemMessage
     {
-        internal Escalate(Exception reason)
+        public Escalate(Exception reason)
         {
             this.Reason = reason;
         }
-        internal Exception Reason { get; private set; }
+        public Exception Reason { get; private set; }
     }
 
     
 
 
 
-    internal class Terminate : SystemMessage
+    public class Terminate : SystemMessage
     {
     }
 

@@ -34,7 +34,7 @@ namespace Pigeon.Remote
             RemoteHost.StartHost(System, port);
         }
 
-        public override LocalActorRef ActorOf(ActorCell parentContext, Props props, string name,long uid)
+        public override LocalActorRef ActorOf(ActorCell parentContext, Props props, InternalActorRef supervisor, string name, ActorPath path, long uid)
         {
             var mailbox = System.Mailboxes.FromConfig(props.Mailbox);
 

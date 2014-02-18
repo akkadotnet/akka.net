@@ -101,7 +101,8 @@ namespace Pigeon.Actor
         {
             var uid = GetNextUID();
             name = GetActorName(props, name,uid);
-            return System.Provider.ActorOf(this, props, name, uid);          
+            var path = this.Self.Path / name;
+            return System.Provider.ActorOf(this, props, this.Self, name, path, uid);          
         }
 
         private long GetNextUID()
@@ -160,7 +161,7 @@ namespace Pigeon.Actor
             this.Parent = null;
             
             this.System = system;
-            this.Self = new LocalActorRef(new RootActorPath(new Address("akka",this.System.Name), name), this);
+            this.Self = new LocalActorRef(new RootActorPath(System.Provider.Address, name), this);
             this.Props = null;
             this.Dispatcher = System.Dispatchers.FromConfig("akka.actor.default-dispatcher");
             mailbox.Setup(this.Dispatcher);

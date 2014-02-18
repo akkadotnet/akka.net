@@ -1,4 +1,5 @@
 ﻿using Pigeon.Actor;
+using Pigeon.Dispatch.SysMsg;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,9 +53,15 @@ namespace Pigeon.Remote
 
         private void HandleDaemonMsgCreate(DaemonMsgCreate message)
         {
+            var supervisor = (InternalActorRef)message.Supervisor;
             ActorPath path = ActorPath.Parse(message.Path, System);
             var subPath = this.Path / path.Skip(1);
-            //System.Provider.ActorOf(null,message.Props,Guid.)
+            var name = string.Join("/",path.Skip(1));
+            //TODO: this is not correct, the actor should not be created as a child of RootCell
+            var actor = System.Provider.ActorOf(Provider.RootCell, message.Props, supervisor, Guid.NewGuid().ToString(), subPath, 0);
+            this.AddChild(name, actor);
+            actor.Tell(new Watch(actor, this));
+
         }
     }
 }
