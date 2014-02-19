@@ -46,7 +46,7 @@ namespace Pigeon.Actor
             return actorRef;
         }
 
-        public ActorSelection ActorSelection(string path)
+        public BrokenActorSelection ActorSelection(string path)
         {
             //TODO: remove ActorPath here, use ienumerable of string instead..
             var actorPath = ActorPath.Parse(path,this.System);
@@ -55,7 +55,7 @@ namespace Pigeon.Actor
 
         //TODO: this is not correct. actor selection should be an object with an anchor actorref and elements
         //resolution of the members is done lazy
-        public ActorSelection ActorSelection(ActorPath actorPath)
+        public BrokenActorSelection ActorSelection(ActorPath actorPath)
         {
             var tmpPath = actorPath;
            
@@ -66,7 +66,7 @@ namespace Pigeon.Actor
             else
             {
                 var actorRef = System.Provider.ResolveActorRef(actorPath);
-                return new ActorSelection(actorPath, actorRef);
+                return new BrokenActorSelection(actorPath, actorRef);
             }
 
             //standard
@@ -83,7 +83,7 @@ namespace Pigeon.Actor
                 }
                 else if (part == "*")
                 {
-                    var actorRef = new ActorSelection(actorPath, currentContext.Children.Values.ToArray());
+                    var actorRef = new BrokenActorSelection(actorPath, currentContext.Children.Values.ToArray());
                     return actorRef;
                 }
                 else
@@ -92,7 +92,7 @@ namespace Pigeon.Actor
                 }
             }
             
-            return new ActorSelection(actorPath, ((ActorCell)currentContext).Self);
+            return new BrokenActorSelection(actorPath, ((ActorCell)currentContext).Self);
         }
 
         public virtual LocalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase

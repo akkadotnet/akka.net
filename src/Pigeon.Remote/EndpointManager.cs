@@ -11,7 +11,7 @@ namespace Pigeon.Remote
     {
         protected override void OnReceive(object message)
         {
-            Pattern.Match(message)
+            ReceiveBuilder.Match(message)
                 .With<Listen>(m => 
                 {
 

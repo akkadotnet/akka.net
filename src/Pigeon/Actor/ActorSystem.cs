@@ -140,12 +140,12 @@ namespace Pigeon.Actor
             return Provider.Guardian.Cell.ActorOf<TActor>( name);
         }
 
-        public ActorSelection ActorSelection(ActorPath actorPath)
+        public BrokenActorSelection ActorSelection(ActorPath actorPath)
         {
             return Provider.RootCell.ActorSelection(actorPath);
         }
 
-        public ActorSelection ActorSelection(string actorPath)
+        public BrokenActorSelection ActorSelection(string actorPath)
         {
             return Provider.RootCell.ActorSelection(actorPath);
         }

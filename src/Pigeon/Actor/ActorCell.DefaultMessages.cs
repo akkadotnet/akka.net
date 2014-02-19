@@ -55,7 +55,7 @@ namespace Pigeon.Actor
                 if (System.Settings.DebugAutoReceive)
                     Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "received AutoReceiveMessage " + message));
 
-                Pattern.Match(envelope.Message)
+                ReceiveBuilder.Match(envelope.Message)
                .With<Terminated>(ReceivedTerminated)
                .With<Kill>(Kill)
                .With<PoisonPill>(HandlePoisonPill)
@@ -95,7 +95,7 @@ namespace Pigeon.Actor
           case Supervise(child, async) ⇒ supervise(child, async)
           case NoMessage ⇒ // only here to suppress warning
                      */
-                    Pattern.Match(envelope.Message)
+                    ReceiveBuilder.Match(envelope.Message)
                         .With<CompleteFuture>(HandleCompleteFuture)
                         .With<Failed>(HandleFailed)
                         .With<DeathWatchNotification>(HandleDeathWatchNotification)

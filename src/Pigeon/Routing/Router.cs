@@ -44,8 +44,8 @@ namespace Pigeon.Routing
 
     public class ActorSelectionRoutee : Routee
     {
-        private ActorSelection actor;
-        public ActorSelectionRoutee(ActorSelection actor)
+        private BrokenActorSelection actor;
+        public ActorSelectionRoutee(BrokenActorSelection actor)
         {
             this.actor = actor;
         }
@@ -161,7 +161,7 @@ namespace Pigeon.Routing
             return new Router(logic, this.routees.Add(new ActorRefRoutee(routee)));
         }
 
-        public Router AddRoutee(ActorSelection routee)
+        public Router AddRoutee(BrokenActorSelection routee)
         {
             return new Router(logic, this.routees.Add(new ActorSelectionRoutee(routee)));
         }
