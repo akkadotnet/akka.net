@@ -145,7 +145,7 @@ namespace Pigeon.Actor
             return Provider.RootCell.ActorSelection(actorPath);
         }
 
-        public BrokenActorSelection ActorSelection(string actorPath)
+        public ActorSelection ActorSelection(string actorPath)
         {
             return Provider.RootCell.ActorSelection(actorPath);
         }

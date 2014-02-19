@@ -14,31 +14,84 @@ namespace Pigeon.Actor
         }
     }
 
-    public class ActorSelection
+    public class ActorSelection : ActorRef
     {
+        private LocalActorRef localActorRef;
+        private SelectionPathElement[] selectionPathElement;
+
         public ActorRef Anchor { get; private set; }
-        public IEnumerable<SelectionPathElement> Path { get; set; }
+        public SelectionPathElement[] Path { get; set; }
 
-        public static ActorSelection Apply(ActorRef anchor,string path)
+        public ActorSelection(ActorRef anchor,SelectionPathElement[] path)
         {
-            return Apply(anchor, path.Split('/'));
+            this.Anchor = anchor;
+            this.Path = path;
         }
 
-        public static ActorSelection Apply(ActorRef anchor, IEnumerable<string> elements)
+        public ActorSelection(ActorRef anchor, string path) : this(anchor,path.Split('/'))
+        {            
+        }
+
+        public ActorSelection(ActorRef anchor, IEnumerable<string> elements)
         {
-            return new ActorSelection
+            Anchor = anchor;
+            Path = elements.Select<string, SelectionPathElement>(e =>
             {
-                Anchor = anchor,
-                Path = elements.Select<string, SelectionPathElement>(e =>
-                {
-                    if (e == "..")
-                        return new SelectParent();
-                    else if (e.Contains("?") || e.Contains("*"))
-                        return new SelectChildPattern(e);
-                    return new SelectChildName(e);
-                })
-            };
+                if (e == "..")
+                    return new SelectParent();
+                else if (e.Contains("?") || e.Contains("*"))
+                    return new SelectChildPattern(e);
+                return new SelectChildName(e);
+            }).ToArray();
         }
+
+
+        protected override void TellInternal(object message, ActorRef sender)
+        {
+            Deliver(message, sender, 0, Anchor);
+        }
+
+        private void Deliver(object message, ActorRef sender,int pathIndex,ActorRef current)
+        {
+            if (pathIndex == Path.Length)
+            {
+                current.Tell(message, sender);
+            }
+            else
+            {
+                var element = this.Path[pathIndex];
+                if (current is ActorRefWithCell)
+                {
+                    var withCell = (ActorRefWithCell)current;
+                    if (element is SelectParent)
+                        Deliver(message, sender, pathIndex + 1, withCell.Parent);
+                    else if (element is SelectChildName)
+                        Deliver(message, sender, pathIndex + 1, withCell.GetSingleChild(element.AsInstanceOf<SelectChildName>().Name));
+                    else
+                    {
+                        //pattern, ignore for now
+                    }
+                }
+                else
+                {
+                    var rest = Path.Skip(pathIndex).ToArray();
+                    current.Tell(new ActorSelectionMessage(message,rest),sender);
+                }
+            }
+        }
+    }
+
+    public class ActorSelectionMessage : AutoReceivedMessage
+    {
+        public ActorSelectionMessage(object message,SelectionPathElement[] elements)
+        {
+            this.Message = message;
+            this.Elements = elements;
+        }
+
+        public object Message { get;private set; }
+
+        public SelectionPathElement[] Elements { get; private set; }
     }
 
     public abstract class SelectionPathElement

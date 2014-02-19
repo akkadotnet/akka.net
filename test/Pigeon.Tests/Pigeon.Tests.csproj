@@ -60,6 +60,7 @@
     <Compile Include="Actor\ActorLifeCycleSpec.cs" />
     <Compile Include="Actor\ActorPathSpec.cs" />
     <Compile Include="Actor\ActorRefProviderSpec.cs" />
+    <Compile Include="Actor\ActorSelectionSpec.cs" />
     <Compile Include="Actor\ActorSystemTests.cs" />
     <Compile Include="Actor\DeadLettersSpec.cs" />
     <Compile Include="Event\EventBusSpec.cs" />

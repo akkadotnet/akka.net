@@ -46,11 +46,32 @@ namespace Pigeon.Actor
             return actorRef;
         }
 
-        public BrokenActorSelection ActorSelection(string path)
+        public ActorSelection ActorSelection(string path)
         {
-            //TODO: remove ActorPath here, use ienumerable of string instead..
-            var actorPath = ActorPath.Parse(path,this.System);
-            return ActorSelection(actorPath);
+           if (Uri.IsWellFormedUriString(path,UriKind.Absolute))
+           {
+               return null;
+           }
+           else
+           {
+               //no path given
+               if (string.IsNullOrEmpty(path))
+               {
+                   return new ActorSelection(this.System.DeadLetters, "");
+               }
+               else
+               {
+                   //absolute path
+                   if (path.Split('/').First() == "")
+                   {
+                       return new ActorSelection(this.System.Provider.RootCell.Self, path);
+                   }                    
+                   else // relative path
+                   {
+                       return new ActorSelection(this.Self, path);
+                   }
+               }
+           }
         }
 
         //TODO: this is not correct. actor selection should be an object with an anchor actorref and elements

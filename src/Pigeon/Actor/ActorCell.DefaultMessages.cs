@@ -59,12 +59,19 @@ namespace Pigeon.Actor
                .With<Terminated>(ReceivedTerminated)
                .With<Kill>(Kill)
                .With<PoisonPill>(HandlePoisonPill)
+               .With<ActorSelectionMessage>(ReceiveSelection)
                .With<Identity>(HandleIdentity);
             }
             else
             {
                 CurrentBehavior(message);
             }           
+        }
+
+        private void ReceiveSelection(ActorSelectionMessage m)
+        {
+            var selection = new ActorSelection(this.Self, m.Elements);
+            selection.Tell(m.Message, Sender);
         }
 
         private void ReceivedTerminated(Terminated m)

@@ -40,7 +40,7 @@ namespace Pigeon.Tests
             var config = ConfigurationFactory.ParseString(GetConfig());
             queue = new BlockingCollection<object>();
             sys = ActorSystem.Create("test",config);
-            testActor = sys.ActorOf(Props.Create(() => new TestActor(queue)));            
+            testActor = sys.ActorOf(Props.Create(() => new TestActor(queue)),"test");            
         }
         protected BlockingCollection<object> queue;
         protected ActorSystem sys;
