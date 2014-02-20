@@ -109,7 +109,7 @@ namespace Pigeon.Tests
                 var error = (Error)res;
 
                 Assert.AreEqual(typeof(T), error.Cause.GetType());
-                Assert.AreEqual(message, error.ErrorMessage);                
+                Assert.AreEqual(message, error.Message);                
             }
         }
 

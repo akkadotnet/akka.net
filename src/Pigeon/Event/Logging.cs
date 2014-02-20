@@ -98,7 +98,17 @@ namespace Pigeon.Event
     }
     public abstract class LogEvent : NoSerializationVerificationNeeded
     {
+        public LogEvent()
+        {
+            this.Timestamp = DateTime.Now;
+            this.Thread = System.Threading.Thread.CurrentThread;
+        }
         public abstract LogLevel LogLevel();
+        public DateTime Timestamp { get; private set; }
+        public System.Threading.Thread Thread { get;private set; }
+        public string LogSource { get; protected set; }
+        public Type LogClass { get; protected set; }
+        public object Message { get; protected set; }
     }
 
     public class Info : LogEvent
@@ -109,12 +119,6 @@ namespace Pigeon.Event
             this.LogClass = logClass;
             this.Message = message;
         }
-
-        public string LogSource { get; private set; }
-
-        public Type LogClass { get; private set; }
-
-        public object Message { get; private set; }
 
         public override LogLevel LogLevel()
         {
@@ -131,10 +135,6 @@ namespace Pigeon.Event
             this.Message = message;
         }
 
-        public string LogSource { get;private set; }
-        public Type LogClass { get; private set; }
-        public object Message { get; private set; }
-
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.DebugLevel;
@@ -150,12 +150,6 @@ namespace Pigeon.Event
             this.Message = message;
         }
 
-        public object Message { get; set; }
-
-        public Type LogClass { get; set; }
-
-        public string LogSource { get; set; }
-
         public override LogLevel LogLevel()
         {            
             return Event.LogLevel.WarningLevel;
@@ -165,21 +159,15 @@ namespace Pigeon.Event
     public class Error : LogEvent
     {
 
-        public Error(Exception cause, string path, Type actorType, string errorMessage)
+        public Error(Exception cause, string logSource, Type logClass, object message)
         {
             this.Cause = cause;
-            this.Path = path;
-            this.ActorType = actorType;
-            this.ErrorMessage = errorMessage;
+            this.LogSource = logSource;
+            this.LogClass = logClass;
+            this.Message = message;
         }
 
         public Exception Cause { get;private set; }
-
-        public string Path { get; private set; }
-
-        public Type ActorType { get; private set; }
-
-        public string ErrorMessage { get; private set; }
 
         public override LogLevel LogLevel()
         {
