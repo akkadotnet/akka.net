@@ -109,6 +109,11 @@ namespace Pigeon.Event
         public string LogSource { get; protected set; }
         public Type LogClass { get; protected set; }
         public object Message { get; protected set; }
+
+        public override string ToString()
+        {
+            return string.Format("{0} {1} {2} {3} {4} {5}", Timestamp, LogLevel(), LogSource, LogClass, Thread.GetHashCode(), Message);
+        }
     }
 
     public class Info : LogEvent

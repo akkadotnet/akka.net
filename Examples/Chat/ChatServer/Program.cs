@@ -17,9 +17,19 @@ namespace ChatServer
         {
             var config = ConfigurationFactory.ParseString(@"
 akka {  
+    stdout-loglevel = ""DEBUG""
     actor {
         provider = ""Pigeon.Remote.RemoteActorRefProvider, Pigeon.Remote""
+        
+        debug {  
+          receive = on 
+          autoreceive = on
+          lifecycle = on
+          event-stream = on
+          unhandled = on
+        }
     }
+
     remote {
         server {
             host = localhost
@@ -30,6 +40,7 @@ akka {
 ");
             using (var system = ActorSystem.Create("MyServer", config)) 
             {
+                Console.WriteLine(system.Settings.DebugEventStream);
                 var server = system.ActorOf<ChatServerActor>("ChatServer");
 
                 Console.ReadLine();
