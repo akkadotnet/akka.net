@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Event
 {
-    public class EventStream : ActorEventBus<object, Type>
+    public class EventStream : LoggingBus
     {
         private bool debug;
         public EventStream(bool debug)
