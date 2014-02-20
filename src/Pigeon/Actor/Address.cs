@@ -8,6 +8,8 @@ namespace Pigeon.Actor
 {
     public class Address
     {
+        public static readonly Address AllSystems = new Address("akka", "all-systems");
+
         public Address(string protocol,string system, string host=null, int? port=null)
         {
             this.Protocol = protocol;

@@ -8,9 +8,82 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Event
 {
+    public class StandardOutLogger : MinimalActorRef
+    {
+        public StandardOutLogger()
+        {
+            Path = new RootActorPath(Address.AllSystems, "StandardOutLogger");
+        }
+
+        public override ActorRefProvider Provider
+        {
+            get { throw new Exception("StandardOutLogged does not provide"); }
+        }
+
+        protected override void TellInternal(object message, ActorRef sender)
+        {
+            if (message == null)
+                throw new Exception("message is null");
+
+            Console.WriteLine(message);
+        }
+    }
+    public class LoggingBus : ActorEventBus<object, Type>
+    {
+        private IEnumerable<ActorRef> loggers;
+
+        protected override bool IsSubClassification(Type parent, Type child)
+        {
+            return parent.IsAssignableFrom(child);
+        }
+
+        protected override void Publish(object @event, ActorRef subscriber)
+        {
+            subscriber.Tell(@event);
+        }
+
+        protected override bool Classify(object @event, Type classifier)
+        {
+            return classifier.IsAssignableFrom(GetClassifier(@event));
+        }
+
+        protected override Type GetClassifier(object @event)
+        {
+            return @event.GetType();
+        }
+
+        private static readonly LogLevel[] AllLogLevels = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToArray();
+
+        public void SetLogLevel(LogLevel logLevel)
+        {
+           
+
+            foreach(var logger in loggers)
+            {
+                //subscribe to given log level and above
+                foreach (var level in AllLogLevels.Where(l => l >= logLevel))
+                {
+                    this.Subscribe(logger, Logging.ClassFor(logLevel));
+                }
+                //unsubscribe to all levels below loglevel
+                foreach (var level in AllLogLevels.Where(l => l < logLevel))
+                {
+                    this.Unsubscribe(logger, Logging.ClassFor(logLevel));
+                }
+            }
+        }
+    } 
+
+    public enum LogLevel
+    {
+        ErrorLevel,
+        WarningLevel,
+        InfoLevel,
+        DebugLevel,
+    }
     public abstract class LogEvent : NoSerializationVerificationNeeded
     {
-
+        public abstract LogLevel LogLevel();
     }
 
     public class Info : LogEvent
@@ -27,6 +100,11 @@ namespace Pigeon.Event
         public Type LogClass { get; private set; }
 
         public object Message { get; private set; }
+
+        public override LogLevel LogLevel()
+        {
+            return Event.LogLevel.InfoLevel;
+        }
     }
 
     public class Debug : LogEvent
@@ -41,6 +119,11 @@ namespace Pigeon.Event
         public string LogSource { get;private set; }
         public Type LogClass { get; private set; }
         public object Message { get; private set; }
+
+        public override LogLevel LogLevel()
+        {
+            return Event.LogLevel.DebugLevel;
+        }
     }
 
     public class Warn : LogEvent
@@ -57,6 +140,11 @@ namespace Pigeon.Event
         public Type LogClass { get; set; }
 
         public string LogSource { get; set; }
+
+        public override LogLevel LogLevel()
+        {            
+            return Event.LogLevel.WarningLevel;
+        }
     }
 
     public class Error : LogEvent
@@ -77,9 +165,14 @@ namespace Pigeon.Event
         public Type ActorType { get; private set; }
 
         public string ErrorMessage { get; private set; }
+
+        public override LogLevel LogLevel()
+        {
+            return Event.LogLevel.ErrorLevel;
+        }
     }
 
-    public class UnhandledMessage : LogEvent
+    public class UnhandledMessage 
     {
         internal UnhandledMessage(object message, ActorRef sender, ActorRef recipient)
         {
@@ -133,6 +226,23 @@ namespace Pigeon.Event
 
     public static class Logging
     {
+        public static readonly StandardOutLogger StandardOutLogger = new StandardOutLogger();
+        public static Type ClassFor(LogLevel logLevel)
+        {
+            switch (logLevel)
+            {
+                case LogLevel.DebugLevel:
+                    return typeof(Debug);
+                case LogLevel.InfoLevel:
+                    return typeof(Info);
+                case LogLevel.WarningLevel:
+                    return typeof(Warn);
+                case LogLevel.ErrorLevel:
+                    return typeof(Error);
+                default:
+                    throw new ArgumentException("Unknown LogLevel", "logLevel");
+            }
+        }
         public static LoggingAdapter GetLogger(ActorSystem system)
         {
             var actor = ActorCell.Current.Actor;
