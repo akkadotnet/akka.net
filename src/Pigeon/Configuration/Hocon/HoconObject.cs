@@ -52,5 +52,31 @@ namespace Pigeon.Configuration.Hocon
         {
             throw new NotImplementedException();
         }
+
+        public override string ToString()
+        {
+            return this.ToString(0);
+        }
+
+        public string ToString(int indent)
+        {
+            var i = new string(' ', indent * 2);
+            StringBuilder sb = new StringBuilder();
+            foreach(var kvp in _children)
+            {
+                var key = QuoteIfNeeded(kvp.Key);
+                sb.AppendFormat("{0}{1} : {2}\r\n", i, key, kvp.Value.ToString(indent));
+            }
+            return sb.ToString();
+        }
+
+        private string QuoteIfNeeded(string text)
+        {
+            if (text.ToCharArray().Intersect(" \t".ToCharArray()).Any())
+            {
+                return "\"" + text + "\"";
+            }
+            return text;
+        }
     }
 }

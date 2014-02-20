@@ -173,5 +173,38 @@ namespace Pigeon.Configuration.Hocon
         {
             return TimeSpan.FromMilliseconds(0);
         }
+
+        public override string ToString()
+        {
+            return ToString(0);
+        }
+
+        public virtual string ToString(int indent)
+        {
+            if (this.IsString())
+            {
+                var text = QuoteIfNeeded(this.GetString());
+                return text;
+            }
+            if (this.IsObject())
+            {
+                var i = new string(' ', indent * 2);
+                return string.Format("{{\r\n{1}{0}}}",i, this.GetObject().ToString(indent+1));
+            }
+            if (this.IsArray())
+            {
+                return string.Format("[{0}]", string.Join(",", this.GetArray().Select(e => e.ToString())));
+            }
+            return "aa";
+        }
+
+        private string QuoteIfNeeded(string text)
+        {
+            if (text.ToCharArray().Intersect(" \t".ToCharArray()).Any())
+            {
+                return "\"" + text + "\"";
+            }
+            return text;
+        }
     }
 }

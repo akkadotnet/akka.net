@@ -29,5 +29,10 @@ namespace Pigeon.Configuration.Hocon
         {
             throw new NotImplementedException();
         }
+
+        public override string ToString()
+        {
+            return this.Value;
+        }
     }
 }

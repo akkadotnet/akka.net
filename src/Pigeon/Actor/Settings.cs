@@ -35,7 +35,7 @@ namespace Pigeon.Actor
             this.LoggerStartTimeout = Config.GetMillisDuration("akka.logger-startup-timeout");
 
             //handled
-            this.LogConfigOnStart = Config.GetBoolean("akka.log-Config-on-start");
+            this.LogConfigOnStart = Config.GetBoolean("akka.log-config-on-start");
             this.LogDeadLetters = 0;
             switch (Config.GetString("akka.log-dead-letters"))
             {

@@ -101,13 +101,14 @@ namespace Pigeon.Actor
             if (Settings.LogDeadLetters > 0)
                 this.logDeadLetterListener = this.Provider.SystemGuardian.Cell.ActorOf <DeadLetterListener>("deadLetterListener");
 
+            EventStream.StartDefaultLoggers(this);
+
+            this.log = new BusLogging(EventStream, "ActorSystem(" + Name + ")", this.GetType());
+
             if (Settings.LogConfigOnStart)
             {
-                log.Info(Settings.ToString());
+                log.Warn(this.Settings.ToString());
             }
-
-            EventStream.StartDefaultLoggers(this);
-            this.log = new BusLogging(EventStream, "ActorSystem(" + Name + ")", this.GetType());
         }
 
         private void ConfigureDispatchers()
