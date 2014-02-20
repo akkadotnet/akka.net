@@ -24,8 +24,10 @@ namespace Pigeon.Event
         {
             if (message == null)
                 throw new Exception("message is null");
-
+            var tmp = Console.ForegroundColor;
+        //    Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine(message);
+        //    Console.ForegroundColor = ConsoleColor.White;
         }
     }
     public class LoggingBus : ActorEventBus<object, Type>
