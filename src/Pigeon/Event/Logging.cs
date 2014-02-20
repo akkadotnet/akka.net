@@ -98,8 +98,10 @@ namespace Pigeon.Event
   
         private static readonly LogLevel[] AllLogLevels = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToArray();
 
+        public LogLevel LogLevel { get; private set; }
         public void SetLogLevel(LogLevel logLevel)
-        {          
+        {
+            this.LogLevel = LogLevel;
             foreach(var logger in loggers)
             {
                 //subscribe to given log level and above
@@ -247,34 +249,168 @@ namespace Pigeon.Event
         }
     }
 
-    public class LoggingAdapter
+    public abstract class LoggingAdapter
     {
-        public void Debug(string text)
+        protected abstract void NotifyError(string message);
+        protected abstract void NotifyError(Exception cause,string message);
+        protected abstract void NotifyWarning(string message);
+        protected abstract void NotifyInfo(string message);
+        protected abstract void NotifyDebug(string message);
+
+        protected bool isErrorEnabled;
+        protected bool isWarningEnabled;
+        protected bool isInfoEnabled;
+        protected bool isDebugEnabled;
+
+        protected bool IsEnabled(LogLevel logLevel)
         {
-            //TODO: implement
-            //TODO: should this java api be used or replaced with tracewriter or somesuch?
-            Trace.WriteLine(text);
+            switch(logLevel)
+            {
+                case LogLevel.DebugLevel:
+                    return isDebugEnabled;
+                case LogLevel.InfoLevel:
+                    return isInfoEnabled;
+                case LogLevel.WarningLevel:
+                    return isWarningEnabled;
+                case LogLevel.ErrorLevel:
+                    return isErrorEnabled;
+                default:
+                    throw new NotSupportedException("Unknown LogLevel " + logLevel);
+            }
         }
 
-        public void Warn(string text)
+        protected void NotifyLog(LogLevel logLevel,string message)
         {
-            //TODO: implement
-            //TODO: should this java api be used or replaced with tracewriter or somesuch?
-            Trace.WriteLine(text);
+            switch (logLevel)
+            {
+                case LogLevel.DebugLevel:
+                    if (isDebugEnabled) NotifyDebug(message);
+                    break;
+                case LogLevel.InfoLevel:
+                    if (isInfoEnabled) NotifyInfo(message);
+                    break;
+                case LogLevel.WarningLevel:
+                    if (isWarningEnabled) NotifyWarning(message);
+                    break;
+                case LogLevel.ErrorLevel:
+                    if (isErrorEnabled) NotifyError(message);
+                    break;
+                default:
+                    throw new NotSupportedException("Unknown LogLevel " + logLevel);
+            }
         }
 
-        public void Error(string text)
+        public void Debug(string message)
         {
-            //TODO: implement
-            //TODO: should this java api be used or replaced with tracewriter or somesuch?
-            Trace.WriteLine(text);
+            if (isDebugEnabled)
+                NotifyDebug(message);
         }
-        public void Info(string text)
+
+        public void Warn(string message)
         {
-            //TODO: implement
-            //TODO: should this java api be used or replaced with tracewriter or somesuch?
-            Trace.WriteLine(text);
+            if (isWarningEnabled)
+                NotifyWarning(message);
         }
+
+        public void Error(Exception cause, string message)
+        {
+            if (isErrorEnabled)
+                NotifyError(cause, message);
+        }
+
+        public void Error(string message)
+        {
+            if (isErrorEnabled)
+                NotifyError(message);
+        }
+        public void Info(string message)
+        {
+            if (isInfoEnabled)
+                NotifyInfo(message);
+        }
+
+
+        public void Debug(string format,params object[] args)
+        {
+            if (isDebugEnabled)
+                NotifyDebug(string.Format(format,args));
+        }
+
+        public void Warn(string format, params object[] args)
+        {
+            if (isWarningEnabled)
+                NotifyWarning(string.Format(format, args));
+        }
+
+        public void Error(Exception cause, string format, params object[] args)
+        {
+            if (isErrorEnabled)
+                NotifyError(cause, string.Format(format, args));
+        }
+
+        public void Error(string format, params object[] args)
+        {
+            if (isErrorEnabled)
+                NotifyError(string.Format(format, args));
+        }
+        public void Info(string format, params object[] args)
+        {
+            if (isInfoEnabled)
+                NotifyInfo(string.Format(format, args));
+        }
+
+        public void Log(LogLevel logLevel, string message)
+        {
+            NotifyLog(logLevel, message);
+        }
+
+        public void Log(LogLevel logLevel, string format, params object[] args)
+        {
+            NotifyLog(logLevel, string.Format(format, args));
+        }
+    }
+
+    public class BusLogging : LoggingAdapter
+    {
+        private LoggingBus bus;
+        private string logSource;
+        private Type logClass;
+        public BusLogging (LoggingBus bus, string logSource, Type logClass)
+        {
+            this.bus = bus;
+            this.logSource = logSource;
+            this.logClass = logClass;
+
+            isErrorEnabled = bus.LogLevel <= LogLevel.ErrorLevel;
+            isWarningEnabled = bus.LogLevel <= LogLevel.WarningLevel;
+            isInfoEnabled = bus.LogLevel <= LogLevel.InfoLevel;
+            isDebugEnabled = bus.LogLevel <= LogLevel.DebugLevel;
+        }
+        protected override void NotifyError(string message)
+        {
+            bus.Publish(new Error(null, logSource, logClass, message));
+        }
+
+        protected override void NotifyError(Exception cause, string message)
+        {
+            bus.Publish(new Error(cause, logSource, logClass, message));
+        }
+
+        protected override void NotifyWarning(string message)
+        {
+            bus.Publish(new Warn(logSource, logClass, message));
+        }
+
+        protected override void NotifyInfo(string message)
+        {
+            bus.Publish(new Info(logSource, logClass, message));
+        }
+
+        protected override void NotifyDebug(string message)
+        {
+            bus.Publish(new Debug(logSource, logClass, message));
+        }
+
     }
 
     public static class Logging
@@ -296,10 +432,24 @@ namespace Pigeon.Event
                     throw new ArgumentException("Unknown LogLevel", "logLevel");
             }
         }
-        public static LoggingAdapter GetLogger(ActorSystem system)
+        public static LoggingAdapter GetLogger(IActorContext cell)
         {
-            var actor = ActorCell.Current.Actor;
-            return new LoggingAdapter();
+            string logSource = cell.Self.ToString();
+            Type logClass = cell.Props.Type;
+           
+            return new BusLogging(cell.System.EventStream, logSource, logClass);
+        }
+        public static LoggingAdapter GetLogger(ActorSystem system,object logSourceObj)
+        {
+            //TODO: refine this
+            string logSource = logSourceObj.ToString() ;
+            Type logClass = null;
+            if (logSourceObj is Type)
+                logClass = (Type)logSourceObj;
+            else
+                logClass = logSourceObj.GetType();
+
+            return new BusLogging(system.EventStream, logSource, logClass);
         }
 
         public static LogLevel LogLevelFor(string logLevel)

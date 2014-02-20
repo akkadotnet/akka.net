@@ -107,6 +107,7 @@ namespace Pigeon.Actor
             }
 
             EventStream.StartDefaultLoggers(this);
+            this.log = new BusLogging(EventStream, "ActorSystem(" + Name + ")", this.GetType());
         }
 
         private void ConfigureDispatchers()
@@ -119,8 +120,7 @@ namespace Pigeon.Actor
        
         public Serialization.Serialization Serialization { get;private set; }
 
-        //TODO: read from config
-        public LoggingAdapter log = new LoggingAdapter();
+        public LoggingAdapter log;
         private LocalActorRef logDeadLetterListener;
 
         public void Shutdown()

@@ -94,7 +94,12 @@ akka {
         IHandle<SayRequest>,
         IHandle<SayResponse>
     {
-        LoggingAdapter log = Logging.GetLogger(Context.System);
+        LoggingAdapter log = Logging.GetLogger(Context);
+
+        public ChatClientActor()
+        {
+            log.Error("Testing the logging feature!");
+        }
 
         private string nick = "Roggan";
         private ActorSelection server = Context.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");

@@ -38,22 +38,21 @@ namespace Pigeon.Actor
 
         protected abstract void OnReceive(object message);
 
-        private HashSet<object> unhandled = new HashSet<object>();
+        private bool lastMessageIsUnhandled = false;
         public Func<object,bool> GetUnhandled()
         {
-            if (unhandled.Count > 0)
-                unhandled.Clear();
+            lastMessageIsUnhandled = false;
 
             return IsUnhandled;
         }   
         private bool IsUnhandled(object message)
         {
-            return unhandled.Contains(message);
+            return lastMessageIsUnhandled;
         }
 
         protected void Unhandled(object message)
         {
-            unhandled.Add(message);
+            lastMessageIsUnhandled = true;
             Context.System.EventStream.Publish(new UnhandledMessage(message, Sender, Self));
         }
 
