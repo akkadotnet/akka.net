@@ -52,6 +52,21 @@ namespace Pigeon.Event
             return @event.GetType();
         }
 
+        public void StartStdoutLogger(Settings config) 
+        {
+            SetUpStdoutLogger(config);
+            Publish(new Debug(SimpleName(this), this.GetType(), "StandardOutLogger started"));
+        }
+
+        private void SetUpStdoutLogger(Settings config)
+        {
+            var logLevel = Logging.LogLevelFor(config.StdoutLogLevel);
+            foreach (var level in AllLogLevels.Where(l => l >= logLevel))
+            {
+                this.Subscribe(Logging.StandardOutLogger, Logging.ClassFor(logLevel));
+            }
+        }
+  
         private static readonly LogLevel[] AllLogLevels = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToArray();
 
         public void SetLogLevel(LogLevel logLevel)
@@ -247,6 +262,23 @@ namespace Pigeon.Event
         {
             var actor = ActorCell.Current.Actor;
             return new LoggingAdapter();
+        }
+
+        public static LogLevel LogLevelFor(string logLevel)
+        {
+            switch (logLevel)
+            {
+                case "DEBUG":
+                    return LogLevel.DebugLevel;
+                case "INFO":
+                    return LogLevel.InfoLevel;
+                case "WARNING":
+                    return LogLevel.WarningLevel;
+                case "ERROR":
+                    return LogLevel.ErrorLevel;
+                default:
+                    throw new ArgumentException("Unknown LogLevel", "logLevel");
+            }
         }
     }
 }
