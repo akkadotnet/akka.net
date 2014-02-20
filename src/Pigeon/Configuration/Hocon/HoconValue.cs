@@ -171,7 +171,14 @@ namespace Pigeon.Configuration.Hocon
         //TODO: implement this
         public TimeSpan GetMillisDuration()
         {
-            return TimeSpan.FromMilliseconds(0);
+            var res = this.GetString();
+            if (res.EndsWith("s"))
+            {
+                var v = res.Substring(0, res.Length - 1);
+                return TimeSpan.FromSeconds(double.Parse(v));
+            }
+
+            return TimeSpan.FromSeconds(double.Parse(res));
         }
 
         public override string ToString()

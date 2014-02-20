@@ -67,7 +67,16 @@ namespace Pigeon.Event
                     //TODO: create real exceptions and refine error messages
                     throw new Exception("Can not use logger of type:" + loggerType);
                 }
-                await AddLogger(system, actorClass, logLevel, logName);
+                var timeout = system.Settings.LoggerStartTimeout;
+                var task = AddLogger(system, actorClass, logLevel, logName);
+                if (await Task.WhenAny(task, Task.Delay(timeout)) == task)
+                {
+
+                }
+                else
+                {
+                     Publish(new Warning(logName, this.GetType(), "Logger " + logName + " did not respond within " + timeout + " to InitializeLogger(bus)")); 
+                }
             }
             Publish(new Debug(logName, this.GetType(), "Default Loggers started"));
             this.SetLogLevel(logLevel);
@@ -175,9 +184,9 @@ namespace Pigeon.Event
         }
     }
 
-    public class Warn : LogEvent
+    public class Warning : LogEvent
     {
-        public Warn(string logSource, Type logClass, object message)
+        public Warning(string logSource, Type logClass, object message)
         {
             this.LogSource = logSource;
             this.LogClass = logClass;
@@ -398,7 +407,7 @@ namespace Pigeon.Event
 
         protected override void NotifyWarning(string message)
         {
-            bus.Publish(new Warn(logSource, logClass, message));
+            bus.Publish(new Warning(logSource, logClass, message));
         }
 
         protected override void NotifyInfo(string message)
@@ -425,7 +434,7 @@ namespace Pigeon.Event
                 case LogLevel.InfoLevel:
                     return typeof(Info);
                 case LogLevel.WarningLevel:
-                    return typeof(Warn);
+                    return typeof(Warning);
                 case LogLevel.ErrorLevel:
                     return typeof(Error);
                 default:

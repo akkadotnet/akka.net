@@ -19,7 +19,7 @@ namespace ChatServer
 akka {  
     log-config-on-start = on
     stdout-loglevel = DEBUG
-    loglevel = DEBUG
+    loglevel = ERROR
     actor {
         provider = ""Pigeon.Remote.RemoteActorRefProvider, Pigeon.Remote""
         
