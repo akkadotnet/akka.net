@@ -6,14 +6,6 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Actor
 {
-    public class BrokenActorSelection : BroadcastActorRef
-    {
-        public BrokenActorSelection(ActorPath path, params ActorRef[] actors) :base(actors)
-        {
-            this.Path = path;
-        }
-    }
-
     public class ActorSelection 
     {
         public ActorRef Anchor { get; private set; }

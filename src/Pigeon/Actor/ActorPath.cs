@@ -27,38 +27,7 @@ namespace Pigeon.Actor
             {
                 return elements[1];
             }
-        }
-
-        [Obsolete("Do not use. use Parse(string) instead")]
-        public static ActorPath Parse(string path,ActorSystem system)
-        {
-            var elements = path.Split('/');
-            if (elements.First().StartsWith("akka"))
-            {
-                var uri = new Uri(path);
-                if (string.IsNullOrEmpty(uri.UserInfo))
-                {
-                    var protocol = uri.Scheme;
-                    var systemName = uri.Host;
-                    var pathElements = uri.AbsolutePath.Split('/');
-                    return new RootActorPath(new Address(protocol, systemName, null, null), pathElements);
-                }
-                else
-                {
-                    var protocol = uri.Scheme;
-                    var systemName = uri.UserInfo;
-                    var host = uri.Host;
-                    var port = uri.Port;
-                    var pathElements = uri.AbsolutePath.Split('/');
-                    return new RootActorPath(new Address(protocol, systemName, host, port), pathElements);
-                }
-            }
-            else
-            {
-                //TODO: this should be removed once ActorSelection is rewritten..
-                return new RootActorPath(system.Provider.Address, elements);
-            }
-        }
+        }       
 
         public static ActorPath Parse(string path)
         {
