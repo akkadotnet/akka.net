@@ -18,7 +18,7 @@ Read more on:
 * [Actors](https://github.com/rogeralsing/Pigeon/wiki/Getting started)
 * [Configuration](https://github.com/rogeralsing/Pigeon/wiki/Configuration)
 * [Remoting](https://github.com/rogeralsing/Pigeon/wiki/Remoting)
-* [Hotswap](https://github.com/rogeralsing/Pigeon/Hotswap)
+* [Hotswap](https://github.com/rogeralsing/Pigeon/wiki/Hotswap)
 * [Supervision](https://github.com/rogeralsing/Pigeon/wiki/Supervision)
 * [Actor Lifecycle](https://github.com/rogeralsing/Pigeon/blob/master/Pigeon.Tests/ActorLifeCycleSpec.cs)
 * [Routing](https://github.com/rogeralsing/Pigeon/wiki/Routing)
