@@ -23,6 +23,7 @@ Read more on:
 * [Actor Lifecycle](https://github.com/rogeralsing/Pigeon/blob/master/Pigeon.Tests/ActorLifeCycleSpec.cs)
 * [Routing](https://github.com/rogeralsing/Pigeon/wiki/Routing)
 * [EventBus](https://github.com/rogeralsing/Pigeon/wiki/EventBus)
+* Logging
 
 #####Not yet implemented:
 * Akka Cluster support
