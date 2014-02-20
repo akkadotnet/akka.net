@@ -97,7 +97,7 @@ akka {
         LoggingAdapter log = Logging.GetLogger(Context.System);
 
         private string nick = "Roggan";
-        private ActorRef server = Context.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
+        private ActorSelection server = Context.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
         
         public void Handle(ConnectResponse message)
         {

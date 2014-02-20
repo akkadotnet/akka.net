@@ -62,7 +62,7 @@ namespace Pigeon.Remote
                     var remoteEnvelope = RemoteEnvelope.ParseDelimitedFrom(stream);
                     var message = MessageSerializer.Deserialize(this.system, remoteEnvelope.Message);
                     var recipient = system.Provider.ResolveActorRef(remoteEnvelope.Recipient.Path);
-                    var sender = system.ActorSelection(remoteEnvelope.Sender.Path);
+                    var sender = system.Provider.ResolveActorRef(remoteEnvelope.Sender.Path);
 
                     recipient.Tell(message, sender);
                 }

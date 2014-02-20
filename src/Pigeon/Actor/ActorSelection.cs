@@ -14,28 +14,26 @@ namespace Pigeon.Actor
         }
     }
 
-    public class ActorSelection : ActorRef
+    public class ActorSelection 
     {
-        private LocalActorRef localActorRef;
-        private SelectionPathElement[] selectionPathElement;
-
         public ActorRef Anchor { get; private set; }
-        public SelectionPathElement[] Path { get; set; }
+        public SelectionPathElement[] Elements { get; set; }
 
+        public ActorSelection() { }
         public ActorSelection(ActorRef anchor,SelectionPathElement[] path)
         {
             this.Anchor = anchor;
-            this.Path = path;
+            this.Elements = path;
         }
 
-        public ActorSelection(ActorRef anchor, string path) : this(anchor,path.Split('/'))
+        public ActorSelection(ActorRef anchor, string path) : this(anchor,path == "" ? new string[]{} : path.Split('/'))
         {            
         }
 
         public ActorSelection(ActorRef anchor, IEnumerable<string> elements)
         {
             Anchor = anchor;
-            Path = elements.Select<string, SelectionPathElement>(e =>
+            Elements = elements.Select<string, SelectionPathElement>(e =>
             {
                 if (e == "..")
                     return new SelectParent();
@@ -45,21 +43,25 @@ namespace Pigeon.Actor
             }).ToArray();
         }
 
-
-        protected override void TellInternal(object message, ActorRef sender)
+        public void Tell(object message)
+        {
+            var sender = ActorCell.Current.Self ?? ActorRef.NoSender;
+            Deliver(message, sender, 0, Anchor);
+        }
+        public void Tell(object message, ActorRef sender)
         {
             Deliver(message, sender, 0, Anchor);
         }
 
         private void Deliver(object message, ActorRef sender,int pathIndex,ActorRef current)
         {
-            if (pathIndex == Path.Length)
+            if (pathIndex == Elements.Length)
             {
                 current.Tell(message, sender);
             }
             else
             {
-                var element = this.Path[pathIndex];
+                var element = this.Elements[pathIndex];
                 if (current is ActorRefWithCell)
                 {
                     var withCell = (ActorRefWithCell)current;
@@ -74,7 +76,7 @@ namespace Pigeon.Actor
                 }
                 else
                 {
-                    var rest = Path.Skip(pathIndex).ToArray();
+                    var rest = Elements.Skip(pathIndex).ToArray();
                     current.Tell(new ActorSelectionMessage(message,rest),sender);
                 }
             }
@@ -83,15 +85,19 @@ namespace Pigeon.Actor
 
     public class ActorSelectionMessage : AutoReceivedMessage
     {
+        public ActorSelectionMessage()
+        {
+        }
+
         public ActorSelectionMessage(object message,SelectionPathElement[] elements)
         {
             this.Message = message;
             this.Elements = elements;
         }
 
-        public object Message { get;private set; }
+        public object Message { get; set; }
 
-        public SelectionPathElement[] Elements { get; private set; }
+        public SelectionPathElement[] Elements { get;  set; }
     }
 
     public abstract class SelectionPathElement
@@ -101,12 +107,15 @@ namespace Pigeon.Actor
 
     public class SelectChildName : SelectionPathElement
     {
+        public SelectChildName() 
+        { 
+        }
         public SelectChildName(string name)
         {
             this.Name = name;
         }
 
-        public string Name { get;private set; }
+        public string Name { get; set; }
 
         public override string ToString()
         {
@@ -133,7 +142,7 @@ namespace Pigeon.Actor
             this.Pattern = Helpers.MakePattern(patternStr);
         }
 
-        public Pattern Pattern { get; private set; }
+        public Pattern Pattern { get; set; }
 
         public override string ToString()
         {

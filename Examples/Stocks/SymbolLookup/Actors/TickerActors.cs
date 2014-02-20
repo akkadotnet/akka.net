@@ -15,8 +15,8 @@ namespace SymbolLookup.Actors
         IHandle<DownloadSymbolData>
     {
         //these will get initialized during create/recreate
-        private ActorRef _headlineActor = Context.ActorSelection("../symbolrss");
-        private ActorRef _quoteActor = Context.ActorSelection("../symbolquotes");
+        private ActorSelection _headlineActor = Context.ActorSelection("../symbolrss");
+        private ActorSelection _quoteActor = Context.ActorSelection("../symbolquotes");
 
         private string _symbol;
         private Quote _stockQuote;

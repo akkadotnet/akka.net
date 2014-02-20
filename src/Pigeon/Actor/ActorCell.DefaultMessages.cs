@@ -70,7 +70,7 @@ namespace Pigeon.Actor
 
         private void ReceiveSelection(ActorSelectionMessage m)
         {
-            var selection = new ActorSelection(this.Self, m.Elements);
+            var selection = new ActorSelection(this.Self, m.Elements.ToArray());
             selection.Tell(m.Message, Sender);
         }
 

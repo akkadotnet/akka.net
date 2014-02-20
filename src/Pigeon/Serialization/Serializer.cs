@@ -127,6 +127,7 @@ namespace Pigeon.Serialization
         {
             currentSystem = this.system;
             var data = Encoding.Default.GetString(bytes);
+            
             return fastJSON.JSON.Instance.ToObject(data);
         }
 

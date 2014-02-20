@@ -50,7 +50,9 @@ namespace Pigeon.Actor
         {
            if (Uri.IsWellFormedUriString(path,UriKind.Absolute))
            {
-               return null;
+               var actorPath = ActorPath.Parse(path);
+               var actorRef = System.Provider.ResolveActorRef(actorPath);
+               return new ActorSelection(actorRef, "");
            }
            else
            {
@@ -76,44 +78,10 @@ namespace Pigeon.Actor
 
         //TODO: this is not correct. actor selection should be an object with an anchor actorref and elements
         //resolution of the members is done lazy
-        public BrokenActorSelection ActorSelection(ActorPath actorPath)
+        public ActorSelection ActorSelection(ActorPath actorPath)
         {
-            var tmpPath = actorPath;
-           
-            if (System.Provider.Address.Equals( actorPath.Address))
-            {
-                tmpPath = actorPath;
-            }
-            else
-            {
-                var actorRef = System.Provider.ResolveActorRef(actorPath);
-                return new BrokenActorSelection(actorPath, actorRef);
-            }
-
-            //standard
-            var currentContext = this;
-            foreach (var part in tmpPath)
-            {
-                if (part == "..")
-                {
-                    currentContext = ((LocalActorRef)currentContext.Parent).Cell;
-                }
-                else if (part == "." || part == "")
-                {
-                    currentContext = currentContext.System.Provider.RootCell;
-                }
-                else if (part == "*")
-                {
-                    var actorRef = new BrokenActorSelection(actorPath, currentContext.Children.Values.ToArray());
-                    return actorRef;
-                }
-                else
-                {
-                    currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
-                }
-            }
-            
-            return new BrokenActorSelection(actorPath, ((ActorCell)currentContext).Self);
+            var actorRef = System.Provider.ResolveActorRef(actorPath);
+            return new ActorSelection(actorRef, ""); 
         }
 
         public virtual LocalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
