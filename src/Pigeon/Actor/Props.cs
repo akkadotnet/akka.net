@@ -12,21 +12,24 @@ namespace Pigeon.Actor
 {
     public class Props
     {
-        public string TypeName { get;private set; }
-        public Type Type { get; private set; }
-        public string Dispatcher { get; private set; }
-        public string Mailbox { get; private set; }
-        public RouterConfig RouterConfig { get; private set; }
-        public Deploy Deploy { get; private set; }
+        public string TypeName { get; protected set; }
+        public Type Type { get; protected set; }
+        public string Dispatcher { get; protected set; }
+        public string Mailbox { get; protected set; }
+        public RouterConfig RouterConfig { get; protected set; }
+        public Deploy Deploy { get; protected set; }
 
         public static Props Create<TActor>(Expression<Func<TActor>> factory) where TActor : ActorBase
         {
+            if (factory.Body is UnaryExpression)
+                return new DynamicProps<TActor>(factory.Compile());
+
             var newExpression = factory.Body.AsInstanceOf<NewExpression>();
             if (newExpression == null)
                 throw new ArgumentException("The create function must be a 'new T (args)' expression");
 
             var args = newExpression.GetArguments().ToArray();
-            
+
             return new Props(typeof(TActor), args);
         }
         public static Props Create<TActor>() where TActor : ActorBase
@@ -46,14 +49,14 @@ namespace Pigeon.Actor
             this.Mailbox = "akka.actor.default-mailbox";
         }
 
-        private Props(Type type, object[] args)
+        protected Props(Type type, object[] args)
             : this()
         {
             this.Type = type;
             this.TypeName = type.AssemblyQualifiedName;
             this.Arguments = args;
         }
-        private Props(Type type)
+        protected Props(Type type)
             : this()
         {
             this.Type = type;
@@ -92,7 +95,7 @@ namespace Pigeon.Actor
 
         //TODO: use Linq Expressions so compile a creator
         //cache the creator
-        public ActorBase NewActor()
+        public virtual ActorBase NewActor()
         {
             return (ActorBase)Activator.CreateInstance(Type, Arguments);
         }
@@ -106,7 +109,7 @@ namespace Pigeon.Actor
             }
         }
 
-        private Props Copy()
+        protected virtual Props Copy()
         {
             return new Props()
             {
@@ -119,6 +122,51 @@ namespace Pigeon.Actor
             };
         }
 
-        public object[] Arguments { get;private set; }
+        public object[] Arguments { get; private set; }
+    }
+
+    /// <summary>
+    /// Props instance that uses dynamic invocation to create new Actor instances,
+    /// rather than a traditional Activator. 
+    /// 
+    /// Intended to be used in conjunction with Dependency Injection.
+    /// </summary>
+    class DynamicProps<TActor> : Props where TActor : ActorBase
+    {
+        private Func<TActor> Invoker;
+
+        public DynamicProps(Func<TActor> invoker)
+            : base(typeof(TActor))
+        {
+            Invoker = invoker;
+        }
+
+        public override ActorBase NewActor()
+        {
+            return Invoker.Invoke();
+        }
+
+        #region Copy methods
+
+        /// <summary>
+        /// Copy constructor
+        /// </summary>
+        protected DynamicProps(Props copy, Func<TActor> invoker)
+        {
+            Dispatcher = copy.Dispatcher;
+            Mailbox = copy.Mailbox;
+            RouterConfig = copy.RouterConfig;
+            Type = copy.Type;
+            Deploy = copy.Deploy;
+        }
+
+        protected override Props Copy()
+        {
+            var initialCopy = base.Copy();
+            var invokerCopy = (Func<TActor>) Invoker.Clone();
+            return new DynamicProps<TActor>(initialCopy, invokerCopy);
+        }
+
+        #endregion
     }
 }
