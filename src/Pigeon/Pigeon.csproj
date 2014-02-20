@@ -84,7 +84,6 @@
     <Compile Include="Dispatch\FutureActor.cs" />
     <Compile Include="Actor\IActorContext.cs" />
     <Compile Include="Actor\IActorRefFactory.cs" />
-    <Compile Include="Actor\Logging.cs" />
     <Compile Include="Dispatch\Mailbox.cs" />
     <Compile Include="Actor\NaiveThreadPool.cs" />
     <Compile Include="Actor\Props.cs" />

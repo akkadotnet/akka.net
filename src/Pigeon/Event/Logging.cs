@@ -12,7 +12,7 @@ namespace Pigeon.Event
     {
         public StandardOutLogger()
         {
-            Path = new RootActorPath(Address.AllSystems, "StandardOutLogger");
+            Path = new RootActorPath(Address.AllSystems, "/StandardOutLogger");
         }
 
         public override ActorRefProvider Provider
