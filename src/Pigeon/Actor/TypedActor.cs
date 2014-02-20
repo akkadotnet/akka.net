@@ -17,7 +17,10 @@ namespace Pigeon.Actor
         {
             var method = this.GetType().GetMethod("Handle", new[] { message.GetType() });
             if (method == null)
+            {
                 Unhandled(message);
+                return;
+            }
 
             method.Invoke(this, new[] { message });
         }
