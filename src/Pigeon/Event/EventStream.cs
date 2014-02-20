@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Event
 {
-    public class EventStream : ActorEventBus<object, Type>
+    public class EventStream : LoggingBus
     {
         private bool debug;
         public EventStream(bool debug)
@@ -43,26 +43,6 @@ namespace Pigeon.Event
             bool res = base.Unsubscribe(subscriber);
             if (debug) Publish(new Debug(SimpleName(this), this.GetType(), "unsubscribing " + subscriber + " from all channels"));
             return res;
-        }
-
-        protected override void Publish(object @event, ActorRef subscriber)
-        {
-            subscriber.Tell(@event);
-        }
-
-        protected override bool Classify(object @event,Type classifier)
-        {
-            return (classifier.IsAssignableFrom(@event.GetType()));
-        }
-
-        protected override bool IsSubClassification(Type parent, Type child)
-        {
-            return parent.IsAssignableFrom(child);
-        }
-
-        protected override Type GetClassifier(object @event)
-        {
-            return @event.GetType();
-        }
+        }        
     }      
 }

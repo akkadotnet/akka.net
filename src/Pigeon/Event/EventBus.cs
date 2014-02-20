@@ -30,7 +30,12 @@ namespace Pigeon.Event
 
         protected string SimpleName(object source)
         {
-            return source.GetType().Name;
+            return SimpleName(source.GetType());
+        }
+
+        protected string SimpleName(Type source)
+        {
+            return source.Name;
         }
 
         public virtual bool Subscribe(TSubscriber subscriber, TClassifier classifier)

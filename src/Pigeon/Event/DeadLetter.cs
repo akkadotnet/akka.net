@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Pigeon.Event
 {
-    public class DeadLetter : LogEvent
+    public class DeadLetter
     {
         public DeadLetter(object message,ActorRef sender,ActorRef recipient)
         {

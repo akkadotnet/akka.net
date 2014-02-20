@@ -50,6 +50,7 @@ namespace Pigeon.Actor
         public void AutoReceiveMessage(Envelope envelope)
         {
             var message = envelope.Message;
+
             if (message is AutoReceivedMessage)
             {
                 if (System.Settings.DebugAutoReceive)
@@ -64,7 +65,20 @@ namespace Pigeon.Actor
             }
             else
             {
-                CurrentBehavior(message);
+                if (System.Settings.AddLoggingReceive)
+                {
+                    //TODO: akka alters the receive handler for logging, but the effect is the same. keep it this way?
+                    var UnhandledLookup = Actor.GetUnhandled();                
+                
+                    CurrentBehavior(message);
+                    var unhandled = UnhandledLookup(message);
+                
+                    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "received " + (unhandled ? "unhandled" : "handled") + " message " + message));
+                }
+                else
+                {
+                    CurrentBehavior(message);
+                }
             }           
         }
 
@@ -273,7 +287,7 @@ protected def terminate() {
             //       handleSupervise(child, async)
             if (System.Settings.DebugLifecycle)
             {
-                Type actorType = null;
+                Type actorType = null; //TODO: the root guardian has no actor and thus this is null.. what does akka do here?
                 if (Actor != null)
                     actorType = Actor.GetType();
 

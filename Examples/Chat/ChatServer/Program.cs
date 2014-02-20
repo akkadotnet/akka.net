@@ -17,9 +17,20 @@ namespace ChatServer
         {
             var config = ConfigurationFactory.ParseString(@"
 akka {  
+    stdout-loglevel = ""DEBUG""
+    loglevel = ""DEBUG""
     actor {
         provider = ""Pigeon.Remote.RemoteActorRefProvider, Pigeon.Remote""
+        
+        debug {  
+          receive = off 
+          autoreceive = on
+          lifecycle = on
+          event-stream = on
+          unhandled = on
+        }
     }
+
     remote {
         server {
             host = localhost
@@ -49,7 +60,7 @@ akka {
 
         public void Handle(SayRequest message)
         {
-            Console.WriteLine("User {0} said {1}",message.Username , message.Text);
+          //  Console.WriteLine("User {0} said {1}",message.Username , message.Text);
             var response = new SayResponse
             {
                 Username = message.Username,
@@ -60,7 +71,7 @@ akka {
 
         public void Handle(ConnectRequest message)
         {
-            Console.WriteLine("User {0} has connected", message.Username);
+         //   Console.WriteLine("User {0} has connected", message.Username);
             clients.Add(this.Sender);
             Sender.Tell(new ConnectResponse
             {

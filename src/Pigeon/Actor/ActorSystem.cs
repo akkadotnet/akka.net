@@ -75,6 +75,7 @@ namespace Pigeon.Actor
         private void ConfigureEventStream()
         {
             this.EventStream = new EventStream(Settings.DebugEventStream);
+            this.EventStream.StartStdoutLogger(Settings);
         }
 
         private void ConfigureSerialization()
@@ -104,6 +105,8 @@ namespace Pigeon.Actor
             {
                 log.Info(Settings.ToString());
             }
+
+            EventStream.StartDefaultLoggers(this);
         }
 
         private void ConfigureDispatchers()

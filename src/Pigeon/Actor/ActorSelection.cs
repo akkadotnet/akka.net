@@ -37,7 +37,10 @@ namespace Pigeon.Actor
 
         public void Tell(object message)
         {
-            var sender = ActorCell.Current.Self ?? ActorRef.NoSender;
+            var sender = ActorRef.NoSender;
+            if (ActorCell.Current != null && ActorCell.Current.Self != null)
+                sender = ActorCell.Current.Self;
+
             Deliver(message, sender, 0, Anchor);
         }
         public void Tell(object message, ActorRef sender)

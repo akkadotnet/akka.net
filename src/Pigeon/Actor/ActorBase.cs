@@ -34,10 +34,26 @@ namespace Pigeon.Actor
 
         protected abstract void OnReceive(object message);
 
+        private HashSet<object> unhandled = new HashSet<object>();
+        public Func<object,bool> GetUnhandled()
+        {
+            if (unhandled.Count > 0)
+                unhandled.Clear();
+
+            return IsUnhandled;
+        }   
+        private bool IsUnhandled(object message)
+        {
+            return unhandled.Contains(message);
+        }
+
         protected void Unhandled(object message)
         {
+            unhandled.Add(message);
             Context.System.EventStream.Publish(new UnhandledMessage(message, Sender, Self));
         }
+
+        
 
         protected static IActorContext Context
         {
