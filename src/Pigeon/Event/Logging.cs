@@ -54,6 +54,31 @@ namespace Pigeon.Event
             return @event.GetType();
         }
 
+        public async void StartDefaultLoggers(ActorSystem system)
+        {
+            var logName = SimpleName(this) + "(" + system.Name + ")";
+            var logLevel = Logging.LogLevelFor(system.Settings.LogLevel);
+            var loggerTypes = system.Settings.Loggers;
+            foreach(var loggerType in loggerTypes)
+            {
+                var actorClass = Type.GetType(loggerType);
+                if (actorClass == null)
+                {
+                    //TODO: create real exceptions and refine error messages
+                    throw new Exception("Can not use logger of type:" + loggerType);
+                }
+                await AddLogger(system, actorClass, logLevel, logName);
+            }
+            Publish(new Debug(logName, this.GetType(), "Default Loggers started"));
+        }
+
+        private async Task AddLogger(ActorSystem system, Type actorClass, LogLevel logLevel, string logName)
+        {
+            var name = "log" + system.Name + "-" + SimpleName(actorClass);
+            var actor = system.SystemGuardian.Cell.ActorOf(Props.Create(actorClass), name);
+            await actor.Ask(new InitializeLogger(this), system);
+        }
+
         public void StartStdoutLogger(Settings config) 
         {
             SetUpStdoutLogger(config);
@@ -196,11 +221,28 @@ namespace Pigeon.Event
         internal ActorRef Recipient { get; private set; }
     }
 
+    public class InitializeLogger : NoSerializationVerificationNeeded
+    {
+        public InitializeLogger(LoggingBus loggingBus)
+        {
+            this.LoggingBus = loggingBus;
+        }
+
+        public LoggingBus LoggingBus { get;private set; }
+    }
+
+    public class LoggerInitialized : NoSerializationVerificationNeeded
+    {
+    }
+
     public class DefaultLogger : UntypedActor
     {
-
         protected override void OnReceive(object message)
         {
+            ReceiveBuilder.Match(message)
+                .With<InitializeLogger>(m => Sender.Tell(new LoggerInitialized()))
+                .With<LogEvent>(m => Console.WriteLine(m))
+                .Default(Unhandled);
         }
     }
 

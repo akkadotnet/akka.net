@@ -105,6 +105,8 @@ namespace Pigeon.Actor
             {
                 log.Info(Settings.ToString());
             }
+
+            EventStream.StartDefaultLoggers(this);
         }
 
         private void ConfigureDispatchers()
