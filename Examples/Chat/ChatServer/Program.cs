@@ -23,7 +23,7 @@ akka {
         provider = ""Pigeon.Remote.RemoteActorRefProvider, Pigeon.Remote""
         
         debug {  
-          receive = off 
+          receive = on 
           autoreceive = on
           lifecycle = on
           event-stream = on
@@ -53,7 +53,8 @@ akka {
         IHandle<ConnectRequest>,
         IHandle<NickRequest>,
         IHandle<Disconnect>,
-        IHandle<ChannelsRequest>
+        IHandle<ChannelsRequest>,
+        ILogReceive
 
     {
         private BroadcastActorRef clients = new BroadcastActorRef();

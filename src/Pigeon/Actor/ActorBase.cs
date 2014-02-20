@@ -9,6 +9,10 @@ using Pigeon.Event;
 
 namespace Pigeon.Actor
 {   
+    public interface ILogReceive
+    {
+
+    }
     public abstract partial class ActorBase
     {
         protected ActorRef Sender

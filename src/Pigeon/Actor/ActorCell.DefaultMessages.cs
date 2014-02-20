@@ -65,7 +65,7 @@ namespace Pigeon.Actor
             }
             else
             {
-                if (System.Settings.AddLoggingReceive)
+                if (System.Settings.AddLoggingReceive && Actor is ILogReceive)
                 {
                     //TODO: akka alters the receive handler for logging, but the effect is the same. keep it this way?
                     var UnhandledLookup = Actor.GetUnhandled();                
