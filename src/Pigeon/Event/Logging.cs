@@ -92,7 +92,7 @@ namespace Pigeon.Event
             var logLevel = Logging.LogLevelFor(config.StdoutLogLevel);
             foreach (var level in AllLogLevels.Where(l => l >= logLevel))
             {
-                this.Subscribe(Logging.StandardOutLogger, Logging.ClassFor(logLevel));
+                this.Subscribe(Logging.StandardOutLogger, Logging.ClassFor(level));
             }
         }
   
