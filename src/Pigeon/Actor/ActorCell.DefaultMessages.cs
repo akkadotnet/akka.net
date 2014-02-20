@@ -50,6 +50,7 @@ namespace Pigeon.Actor
         public void AutoReceiveMessage(Envelope envelope)
         {
             var message = envelope.Message;
+
             if (message is AutoReceivedMessage)
             {
                 if (System.Settings.DebugAutoReceive)
@@ -64,7 +65,13 @@ namespace Pigeon.Actor
             }
             else
             {
+                //TODO: akka alters the receive handler for logging, but the effect is the same. keep it this way?
+                var UnhandledLookup = Actor.GetUnhandled();                
+                
                 CurrentBehavior(message);
+                var unhandled = UnhandledLookup(message);
+                if (System.Settings.AddLoggingReceive)
+                    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "received " + (unhandled?"unhandled":"handled") +  " message " + message));
             }           
         }
 
