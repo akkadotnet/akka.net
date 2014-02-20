@@ -32,7 +32,7 @@ namespace Pigeon.Event
     }
     public class LoggingBus : ActorEventBus<object, Type>
     {
-        private IEnumerable<ActorRef> loggers;
+        private List<ActorRef> loggers = new List<ActorRef>();
 
         protected override bool IsSubClassification(Type parent, Type child)
         {
@@ -70,12 +70,14 @@ namespace Pigeon.Event
                 await AddLogger(system, actorClass, logLevel, logName);
             }
             Publish(new Debug(logName, this.GetType(), "Default Loggers started"));
+            this.SetLogLevel(logLevel);
         }
 
         private async Task AddLogger(ActorSystem system, Type actorClass, LogLevel logLevel, string logName)
         {
             var name = "log" + system.Name + "-" + SimpleName(actorClass);
             var actor = system.SystemGuardian.Cell.ActorOf(Props.Create(actorClass), name);
+            loggers.Add(actor);
             await actor.Ask(new InitializeLogger(this), system);
         }
 
@@ -97,20 +99,18 @@ namespace Pigeon.Event
         private static readonly LogLevel[] AllLogLevels = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToArray();
 
         public void SetLogLevel(LogLevel logLevel)
-        {
-           
-
+        {          
             foreach(var logger in loggers)
             {
                 //subscribe to given log level and above
                 foreach (var level in AllLogLevels.Where(l => l >= logLevel))
                 {
-                    this.Subscribe(logger, Logging.ClassFor(logLevel));
+                    this.Subscribe(logger, Logging.ClassFor(level));
                 }
                 //unsubscribe to all levels below loglevel
                 foreach (var level in AllLogLevels.Where(l => l < logLevel))
                 {
-                    this.Unsubscribe(logger, Logging.ClassFor(logLevel));
+                    this.Unsubscribe(logger, Logging.ClassFor(level));
                 }
             }
         }
@@ -118,10 +118,10 @@ namespace Pigeon.Event
 
     public enum LogLevel
     {
-        ErrorLevel,
-        WarningLevel,
-        InfoLevel,
         DebugLevel,
+        InfoLevel,        
+        WarningLevel,
+        ErrorLevel,
     }
     public abstract class LogEvent : NoSerializationVerificationNeeded
     {
@@ -241,7 +241,8 @@ namespace Pigeon.Event
         {
             ReceiveBuilder.Match(message)
                 .With<InitializeLogger>(m => Sender.Tell(new LoggerInitialized()))
-                .With<LogEvent>(m => Console.WriteLine(m))
+                .With<LogEvent>(m => 
+                    Console.WriteLine("DefaultLogger " + m))
                 .Default(Unhandled);
         }
     }

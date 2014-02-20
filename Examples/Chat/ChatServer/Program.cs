@@ -18,11 +18,12 @@ namespace ChatServer
             var config = ConfigurationFactory.ParseString(@"
 akka {  
     stdout-loglevel = ""DEBUG""
+    loglevel = ""DEBUG""
     actor {
         provider = ""Pigeon.Remote.RemoteActorRefProvider, Pigeon.Remote""
         
         debug {  
-          receive = on 
+          receive = off 
           autoreceive = on
           lifecycle = on
           event-stream = on
