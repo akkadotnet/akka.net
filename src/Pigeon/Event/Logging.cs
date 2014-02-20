@@ -8,12 +8,12 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Event
 {
-    public abstract class EventMessage
+    public abstract class LogEvent : NoSerializationVerificationNeeded
     {
 
     }
 
-    public class Info : EventMessage
+    public class Info : LogEvent
     {
         public Info(string logSource,Type logClass,object message)
         {
@@ -22,16 +22,16 @@ namespace Pigeon.Event
             this.Message = message;
         }
 
-        public string LogSource { get;private set; }
+        public string LogSource { get; private set; }
 
         public Type LogClass { get; private set; }
 
         public object Message { get; private set; }
     }
 
-    public class Debug : EventMessage
+    public class Debug : LogEvent
     {
-        public Debug(string logSource, Type logClass, string message)
+        public Debug(string logSource, Type logClass, object message)
         {
             this.LogSource = logSource;
             this.LogClass = logClass;
@@ -40,10 +40,26 @@ namespace Pigeon.Event
 
         public string LogSource { get;private set; }
         public Type LogClass { get; private set; }
-        public string Message { get; private set; }
+        public object Message { get; private set; }
     }
 
-    public class Error : EventMessage
+    public class Warn : LogEvent
+    {
+        public Warn(string logSource, Type logClass, object message)
+        {
+            this.LogSource = logSource;
+            this.LogClass = logClass;
+            this.Message = message;
+        }
+
+        public object Message { get; set; }
+
+        public Type LogClass { get; set; }
+
+        public string LogSource { get; set; }
+    }
+
+    public class Error : LogEvent
     {
 
         public Error(Exception cause, string path, Type actorType, string errorMessage)
@@ -63,7 +79,7 @@ namespace Pigeon.Event
         public string ErrorMessage { get; private set; }
     }
 
-    public class UnhandledMessage : EventMessage
+    public class UnhandledMessage : LogEvent
     {
         internal UnhandledMessage(object message, ActorRef sender, ActorRef recipient)
         {

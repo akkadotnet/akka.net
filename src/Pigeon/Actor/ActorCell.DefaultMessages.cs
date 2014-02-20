@@ -227,7 +227,7 @@ protected def terminate() {
             catch { }
         }
 
-        private void Publish(EventMessage @event)
+        private void Publish(LogEvent @event)
         {
             try
             {
