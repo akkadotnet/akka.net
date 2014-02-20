@@ -133,17 +133,17 @@ namespace Pigeon.Actor
     /// </summary>
     class DynamicProps<TActor> : Props where TActor : ActorBase
     {
-        private Func<TActor> Invoker;
+        private readonly Func<TActor> _invoker;
 
         public DynamicProps(Func<TActor> invoker)
             : base(typeof(TActor))
         {
-            Invoker = invoker;
+            _invoker = invoker;
         }
 
         public override ActorBase NewActor()
         {
-            return Invoker.Invoke();
+            return _invoker.Invoke();
         }
 
         #region Copy methods
@@ -158,12 +158,13 @@ namespace Pigeon.Actor
             RouterConfig = copy.RouterConfig;
             Type = copy.Type;
             Deploy = copy.Deploy;
+            _invoker = invoker;
         }
 
         protected override Props Copy()
         {
             var initialCopy = base.Copy();
-            var invokerCopy = (Func<TActor>) Invoker.Clone();
+            var invokerCopy = (Func<TActor>) _invoker.Clone();
             return new DynamicProps<TActor>(initialCopy, invokerCopy);
         }
 
