@@ -273,7 +273,7 @@ protected def terminate() {
             //       handleSupervise(child, async)
             if (System.Settings.DebugLifecycle)
             {
-                Type actorType = null;
+                Type actorType = null; //TODO: the root guardian has no actor and thus this is null.. what does akka do here?
                 if (Actor != null)
                     actorType = Actor.GetType();
 

@@ -101,7 +101,12 @@ namespace Pigeon.Actor
             system.Provider.RegisterTempActor(future, path);
             Tell(message, future);
             return result.Task;
-        }        
+        }
+
+        public override string ToString()
+        {
+            return string.Format("[{0}]", this.Path.ToString());
+        }
     }
 
 

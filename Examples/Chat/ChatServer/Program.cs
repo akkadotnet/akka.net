@@ -40,7 +40,6 @@ akka {
 ");
             using (var system = ActorSystem.Create("MyServer", config)) 
             {
-                Console.WriteLine(system.Settings.DebugEventStream);
                 var server = system.ActorOf<ChatServerActor>("ChatServer");
 
                 Console.ReadLine();
