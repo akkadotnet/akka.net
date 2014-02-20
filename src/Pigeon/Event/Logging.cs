@@ -242,7 +242,7 @@ namespace Pigeon.Event
             ReceiveBuilder.Match(message)
                 .With<InitializeLogger>(m => Sender.Tell(new LoggerInitialized()))
                 .With<LogEvent>(m => 
-                    Console.WriteLine("DefaultLogger " + m))
+                    Console.WriteLine(m))
                 .Default(Unhandled);
         }
     }
