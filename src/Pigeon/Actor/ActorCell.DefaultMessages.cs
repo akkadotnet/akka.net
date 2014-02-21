@@ -413,7 +413,6 @@ protected def terminate() {
             //isTerminating = true;
             //Debug.WriteLine("stopping child: {0}", child.Path);
             child.Cell.Become(System.DeadLetters.Tell);
-            child.Cell.Stop();
             LocalActorRef tmp;
             var name = child.Path.Name;
             this.Children.TryRemove(name, out tmp);
