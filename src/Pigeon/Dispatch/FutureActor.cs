@@ -13,6 +13,17 @@ namespace Pigeon.Dispatch
         private TaskCompletionSource<object> result;
         private ActorRef RespondTo;
 
+        public FutureActor()
+        {
+            
+        }
+
+        public FutureActor(TaskCompletionSource<object> completionSource, ActorRef respondTo)
+        {
+            result = completionSource;
+            RespondTo = respondTo ?? ActorRef.NoSender;
+        }
+
         protected override void OnReceive(object message)
         {
             if (message is SetRespondTo)

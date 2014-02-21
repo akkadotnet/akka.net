@@ -41,12 +41,14 @@ namespace Pigeon.Tests
             queue = new BlockingCollection<object>();
             messages = new List<object>();
             sys = ActorSystem.Create("test",config);
-            testActor = sys.ActorOf(Props.Create(() => new TestActor(queue,messages)),"test");            
+            testActor = sys.ActorOf(Props.Create(() => new TestActor(queue,messages)),"test");
+            echoActor = sys.ActorOf(Props.Create(() => new EchoActor(testActor)), "echo");
         }
         protected BlockingCollection<object> queue;
         protected List<object> messages;
         protected ActorSystem sys;
         protected ActorRef testActor;
+        protected ActorRef echoActor;
 
         protected void expectMsg(object expected)
         {
@@ -79,6 +81,25 @@ namespace Pigeon.Tests
                 global::System.Diagnostics.Debug.WriteLine("testactor received " + message);
                 messages.Add(message);
                 queue.Add(message);
+            }
+        }
+
+        /// <summary>
+        /// Used for testing Ask / reply behaviors
+        /// </summary>
+        public class EchoActor : UntypedActor
+        {
+            private ActorRef _testActor;
+
+            public EchoActor(ActorRef testActorRef)
+            {
+                _testActor = testActorRef;
+            }
+
+            protected override void OnReceive(object message)
+            {
+                Sender.Tell(message, Self);
+                _testActor.Tell(message, Sender);
             }
         }
 

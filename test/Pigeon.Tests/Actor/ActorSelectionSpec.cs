@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Pigeon.Actor;
 
 namespace Pigeon.Tests.Actor
 {
@@ -24,6 +25,16 @@ namespace Pigeon.Tests.Actor
             var selection = sys.ActorSelection("user/test/../../user/test");
             selection.Tell("hello");
             expectMsg("hello");
+        }
+
+        [TestMethod()]
+        public void CanAskActorSelection()
+        {
+            var selection = sys.ActorSelection("user/echo");
+            var task = selection.Ask("hello", sys);
+            expectMsg("hello");
+            task.Wait();
+            Assert.AreEqual("hello", task.Result);
         }
     }
 }
