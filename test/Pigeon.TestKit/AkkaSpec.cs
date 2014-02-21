@@ -39,10 +39,12 @@ namespace Pigeon.Tests
         {
             var config = ConfigurationFactory.ParseString(GetConfig());
             queue = new BlockingCollection<object>();
+            messages = new List<object>();
             sys = ActorSystem.Create("test",config);
-            testActor = sys.ActorOf(Props.Create(() => new TestActor(queue)),"test");            
+            testActor = sys.ActorOf(Props.Create(() => new TestActor(queue,messages)),"test");            
         }
         protected BlockingCollection<object> queue;
+        protected List<object> messages;
         protected ActorSystem sys;
         protected ActorRef testActor;
 
@@ -50,7 +52,7 @@ namespace Pigeon.Tests
         {
             var actual = queue.Take();
 
-            global::System.Diagnostics.Debug.WriteLine(actual);
+            global::System.Diagnostics.Debug.WriteLine("actual: " + actual);
             Assert.AreEqual(expected, actual);            
         }
 
@@ -66,12 +68,16 @@ namespace Pigeon.Tests
         public class TestActor : UntypedActor
         {
             private BlockingCollection<object> queue;
-            public TestActor(BlockingCollection<object> queue)
+            private List<object> messages;
+            public TestActor(BlockingCollection<object> queue,List<object> messages)
             {
                 this.queue = queue;
+                this.messages = messages;
             }
             protected override void OnReceive(object message)
             {
+                global::System.Diagnostics.Debug.WriteLine("testactor received " + message);
+                messages.Add(message);
                 queue.Add(message);
             }
         }

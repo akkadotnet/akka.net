@@ -24,6 +24,17 @@ namespace Pigeon
             _message = message;
         }
 
+        public Case With<TMessage>(Action action)
+        {
+            if (!_handled && _message is TMessage)
+            {
+                action();
+                _handled = true;
+            }
+
+            return this;
+        }
+
         public Case With<TMessage>(Action<TMessage> action)
         {
             if (!_handled && _message is TMessage)

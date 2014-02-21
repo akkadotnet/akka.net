@@ -124,14 +124,14 @@ namespace Pigeon.Actor
                     ReceiveBuilder.Match(envelope.Message)
                         .With<CompleteFuture>(HandleCompleteFuture)
                         .With<Failed>(HandleFailed)
-                        .With<DeathWatchNotification>(HandleDeathWatchNotification)
+                        .With<DeathWatchNotification>(WatchedActorTerminated)
                         //TODO: add create?
                         .With<Watch>(HandleWatch)
                         .With<Unwatch>(HandleUnwatch)
                         .With<Recreate>(FaultRecreate)
                         .With<Suspend>(FaultSuspend)
                         .With<Resume>(FaultResume)
-                        .With<Terminate>(HandleTerminate)
+                        .With<Terminate>(Terminate)
                         .With<Supervise>(HandleSupervise)
                         .With<NoMessage>(m => { }) //only goes here to mimic Akka, which only goes here to supress pattern match warning :-P
                         .Default(m =>
@@ -170,9 +170,35 @@ namespace Pigeon.Actor
             
         }
 
-        private void HandleDeathWatchNotification(DeathWatchNotification m)
+        private void WatchedActorTerminated(DeathWatchNotification m)
         {
-            Self.Tell(new Terminated(m.Actor), m.Actor);
+    // AKKA:
+    //        if (watchingContains(actor)) {
+    //  maintainAddressTerminatedSubscription(actor) {
+    //    watching = removeFromSet(actor, watching)
+    //  }
+    //  if (!isTerminating) {
+    //    self.tell(Terminated(actor)(existenceConfirmed, addressTerminated), actor)
+    //    terminatedQueuedFor(actor)
+    //  }
+    //}
+    //if (childrenRefs.getByRef(actor).isDefined) handleChildTerminated(actor)
+            if (!isTerminating)
+            {
+                Self.Tell(new Terminated(m.Actor), m.Actor);
+            }
+            if (Children.ContainsKey(m.Actor.Path.Name))
+            {
+                HandleChildTerminated(m.Actor);
+            }
+        }
+
+        private void HandleChildTerminated(ActorRef actor)
+        {
+            LocalActorRef tmp;
+            Children.TryRemove(actor.Path.Name, out tmp);
+            global::System.Diagnostics.Debug.WriteLine("removed child " + actor.Path.Name);
+            global::System.Diagnostics.Debug.WriteLine("count " + Children.Count());
         }
 
 
@@ -201,8 +227,11 @@ protected def terminate() {
     }
   }
          */
-        private void HandleTerminate(Terminate m)
+        private void Terminate()
         {
+            if (isTerminating)
+                return;
+
             isTerminating = true;
             
             UnwatchWatchedActors(this.Actor);
@@ -211,34 +240,34 @@ protected def terminate() {
                 child.Stop();
             }
 
-            Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "Terminating..."));
+            if (System.Settings.DebugLifecycle) Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "stopping"));
             FinishTerminate();
         }
 
         private void FinishTerminate()
         {
-
-            try
-            {
-                TellWatchersWeDied();
-            }
-            catch { }
-            if (Actor != null)
+            var a = Actor;
+            if (a != null)
             {
                 try
                 {
+                    global::System.Diagnostics.Debug.WriteLine("before post stop");
                     Actor.AroundPostStop();
                 }
-                catch (Exception x)
+                catch(Exception x) 
                 {
                     HandleNonFatalOrInterruptedException(() => Publish(new Error(x, Self.Path.ToString(), Actor.GetType(), x.Message)));
                 }
-                Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "Terminated."));
             }
+            Parent.Tell(new DeathWatchNotification(Self, true, false));
+            TellWatchersWeDied();
+             if (System.Settings.DebugLifecycle)
+                    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "stopped"));
+             UnwatchWatchedActors(a);
+
             Actor = null;
             Mailbox.Invoke = m => { };
-            Mailbox.SystemInvoke = m => { };
-            
+            Mailbox.SystemInvoke = m => { };            
         }
 
         private void HandleNonFatalOrInterruptedException(Action action)
@@ -359,7 +388,6 @@ protected def terminate() {
                 if (System.Settings.DebugLifecycle)
                     Publish(new Pigeon.Event.Debug(Self.Path.ToString(), created.GetType(), "started (" + created + ")"));
 
-                Children.TryAdd(this.Self.Path.Name, this.Self);
                 created.AroundPostRestart(m.Cause,null);
             });
         }
@@ -388,12 +416,13 @@ protected def terminate() {
 		/// </summary>
         public void Stop()
         {
-            if (isTerminating)
-                return;
-
-            isTerminating = true;
-
-            Self.Tell(new Terminate());            
+            //try
+            //{
+            Self.Tell(new Terminate());
+            //}
+            //catch
+            //{
+            //}
         }
 
         public void Suspend()
@@ -407,16 +436,19 @@ protected def terminate() {
         private volatile bool isTerminating = false;
         public void Stop(LocalActorRef child)
         {
-            //if (isTerminating)
-            //    return;
+            //TODO: in akka this does some wild magic on childrefs and then just call child.stop();
 
-            //isTerminating = true;
-            //Debug.WriteLine("stopping child: {0}", child.Path);
-            child.Cell.Become(System.DeadLetters.Tell);
-            LocalActorRef tmp;
-            var name = child.Path.Name;
-            this.Children.TryRemove(name, out tmp);
-            Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), string.Format("Child Actor {0} stopped - no longer supervising", child.Path)));
+            //ignore this for now
+            //if (Children.ContainsKey(child.Path.Name))
+            //{
+            //    child.Cell.Become(System.DeadLetters.Tell);
+            //    LocalActorRef tmp;
+            //    var name = child.Path.Name;
+            //    this.Children.TryRemove(name, out tmp);
+            //    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), string.Format("Child Actor {0} stopped - no longer supervising", child.Path)));
+            //}
+
+            child.AsInstanceOf<InternalActorRef>().Stop();
         }
 
         private void Kill(Kill m)

@@ -41,9 +41,10 @@ namespace Pigeon.Tests
        public void SerializesUserMessagesWhenSerializeAllMessagesIsOn()
        {
            var config = ConfigurationFactory.ParseString(@"akka.actor.serialize-messages = on");
+           var messages = new List<object>();
            var queue = new BlockingCollection<object>();
            var sys = ActorSystem.Create("test",config);
-           var testActor = sys.ActorOf(Props.Create(() => new TestActor(queue)));      
+           var testActor = sys.ActorOf(Props.Create(() => new TestActor(queue,messages)));      
 
            var message = new SomeUserMessage
            {

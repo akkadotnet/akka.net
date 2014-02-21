@@ -292,16 +292,13 @@ namespace Pigeon.Tests
                     .With<ContextStop>(m =>
                     {
                         var child = Context.Child(m.Name);
-                        Context.Stop(child);
-                        testActor.Tell(Tuple.Create("Terminated", m.Name));
+                        Context.Stop(child);                    
                     })
                     .With<Stop>(m =>
                     {
                         var child = Context.Child(m.Name);
                         child.Stop();
                     })
-                    .With<Terminated>(m =>
-                        testActor.Tell(Tuple.Create("Terminated", m.actorRef.Path.Name)))
                     .With<Count>(m => 
                         testActor.Tell(Context.GetChildren().Count()));
             }
@@ -334,6 +331,7 @@ namespace Pigeon.Tests
 
             protected override void PostStop()
             {
+                Debug.WriteLine("inside poststop");
                 testActor.Tell(Tuple.Create("Terminated", Self.Path.Name));
             }
 
@@ -358,10 +356,12 @@ namespace Pigeon.Tests
             expectMsg(2);
             supervisor.Tell(new SupervisorTestActor.ContextStop() { Name = names[1] });
             expectMsg(Tuple.Create("Terminated", names[1]));
+            Task.Delay(100).Wait();
             supervisor.Tell(new SupervisorTestActor.Count());
             expectMsg(1);
             supervisor.Tell(new SupervisorTestActor.Spawn() { Name = names[2] });
             expectMsg(Tuple.Create("Created", names[2]));
+            Task.Delay(100).Wait();
             supervisor.Tell(new SupervisorTestActor.Count());
             expectMsg(2);
             supervisor.Tell(new SupervisorTestActor.Stop() { Name = names[0] });
@@ -369,7 +369,7 @@ namespace Pigeon.Tests
             supervisor.Tell(new SupervisorTestActor.Stop() { Name = names[2] });
             expectMsg(Tuple.Create("Terminated", names[2]));
 
-            Task.Delay(300).Wait();
+            Task.Delay(100).Wait();
             supervisor.Tell(new SupervisorTestActor.Count());
             expectMsg(0);
         }

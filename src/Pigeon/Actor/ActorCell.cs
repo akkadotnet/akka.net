@@ -247,9 +247,9 @@ namespace Pigeon.Actor
             watchee.Tell(new Unwatch(watchee,Self));
         }
 
-        public void Kill()
-        {
-            Mailbox.Stop();
-        }
+        //public void Kill()
+        //{
+        //    Mailbox.Stop();
+        //}
     }
 }
