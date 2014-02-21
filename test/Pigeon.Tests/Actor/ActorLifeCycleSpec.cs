@@ -240,6 +240,7 @@ namespace Pigeon.Tests
                 }
             }
         }
+
         [TestMethod]
         public void ClearBehaviorStackUponRestart()
         {
@@ -272,5 +273,104 @@ namespace Pigeon.Tests
             expectMsg(42);
         }
 
+        public class SupervisorTestActor : UntypedActor
+        {
+            private ActorRef testActor;
+            public SupervisorTestActor(ActorRef testActor)
+            {
+                this.testActor = testActor;
+            }
+
+            protected override void OnReceive(object message)
+            {
+                ReceiveBuilder.Match(message)
+                    .With<Spawn>(m =>
+                    {
+                        Context.ActorOf(Props.Create(() => new KillableActor(testActor)), m.Name);
+                        testActor.Tell(Tuple.Create("Created", m.Name));
+                    })
+                    .With<ContextStop>(m =>
+                    {
+                        var child = Context.Child(m.Name);
+                        Context.Stop(child);
+                    })
+                    .With<Stop>(m =>
+                    {
+                        var child = Context.Child(m.Name);
+                        child.Stop();
+                    })
+                    .With<Terminated>(m =>
+                        testActor.Tell(Tuple.Create("Terminated", m.actorRef.Path.Name)))
+                    .With<Count>(m => 
+                        testActor.Tell(Context.GetChildren().Count()));
+            }
+
+            public class Spawn
+            {
+                public string Name { get; set; }
+            }
+
+            public class ContextStop
+            {
+                public string Name { get; set; }
+            }
+
+            public class Stop
+            {
+                public string Name { get; set; }
+            }
+
+            public class Count { }
+        }
+
+        public class KillableActor : UntypedActor
+        {
+            private ActorRef testActor;
+            public KillableActor(ActorRef testActor)
+            {
+                this.testActor = testActor;
+            }
+
+            protected override void PostStop()
+            {
+                testActor.Tell(Tuple.Create("Terminated", Self.Path.Name));
+            }
+
+            protected override void OnReceive(object message)
+            {
+            }
+        }
+
+        [Description("If a parent receives a Terminated event for a child actor, the parent should no longer supervise it")]
+        [TestMethod]
+        public void ClearChildUponTerminated()
+        {
+            var names = new[] {"Bob", "Jameson", "Natasha"};
+            var supervisor = sys.ActorOf(Props.Create(() => new SupervisorTestActor(testActor)));
+            supervisor.Tell(new SupervisorTestActor.Spawn(){ Name = names[0] });
+            expectMsg(Tuple.Create("Created",names[0]));
+            supervisor.Tell(new SupervisorTestActor.Count());
+            expectMsg(1);
+            supervisor.Tell(new SupervisorTestActor.Spawn() { Name = names[1] });
+            expectMsg(Tuple.Create("Created", names[1]));
+            supervisor.Tell(new SupervisorTestActor.Count());
+            expectMsg(2);
+            supervisor.Tell(new SupervisorTestActor.ContextStop() { Name = names[1] });
+            expectMsg(Tuple.Create("Terminated", names[1]));
+            supervisor.Tell(new SupervisorTestActor.Count());
+            expectMsg(1);
+            supervisor.Tell(new SupervisorTestActor.Spawn() { Name = names[2] });
+            expectMsg(Tuple.Create("Created", names[2]));
+            supervisor.Tell(new SupervisorTestActor.Count());
+            expectMsg(2);
+            supervisor.Tell(new SupervisorTestActor.Stop() { Name = names[0] });
+            expectMsg(Tuple.Create("Terminated", names[0]));
+            supervisor.Tell(new SupervisorTestActor.Count());
+            expectMsg(1);
+            supervisor.Tell(new SupervisorTestActor.Stop() { Name = names[2] });
+            expectMsg(Tuple.Create("Terminated", names[2]));
+            supervisor.Tell(new SupervisorTestActor.Count());
+            expectMsg(0);
+        }
     }
 }

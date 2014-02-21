@@ -90,7 +90,12 @@ namespace Pigeon.Actor
 
         private void ReceivedTerminated(Terminated m)
         {
-            global::System.Diagnostics.Debug.WriteLine("Terminated! actor: {0}", this.Self.Path);
+            var child = Child(m.actorRef.Path.Name);
+            if (!child.IsNobody()) //this terminated actor is a valid child
+            {
+                Stop(child); //unhooks the child from the supervisor container
+            }
+            Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), string.Format("Terminated! actor: {0}", m.actorRef.Path)));
         }
 
         public void SystemInvoke(Envelope envelope)
@@ -199,12 +204,14 @@ protected def terminate() {
         private void HandleTerminate(Terminate m)
         {
             isTerminating = true;
+            
             UnwatchWatchedActors(this.Actor);
             foreach (var child in this.GetChildren())
             {
                 child.Stop();
             }
 
+            Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "Terminating..."));
             FinishTerminate();
         }
 
@@ -226,10 +233,12 @@ protected def terminate() {
                 {
                     HandleNonFatalOrInterruptedException(() => Publish(new Error(x, Self.Path.ToString(), Actor.GetType(), x.Message)));
                 }
+                Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "Terminated."));
             }
             Actor = null;
             Mailbox.Invoke = m => { };
             Mailbox.SystemInvoke = m => { };
+            
         }
 
         private void HandleNonFatalOrInterruptedException(Action action)
@@ -404,9 +413,11 @@ protected def terminate() {
             //isTerminating = true;
             //Debug.WriteLine("stopping child: {0}", child.Path);
             child.Cell.Become(System.DeadLetters.Tell);
+            child.Cell.Stop();
             LocalActorRef tmp;
             var name = child.Path.Name;
             this.Children.TryRemove(name, out tmp);
+            Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), string.Format("Child Actor {0} stopped - no longer supervising", child.Path)));
         }
 
         private void Kill(Kill m)

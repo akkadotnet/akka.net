@@ -101,7 +101,7 @@ namespace Pigeon.Tests
 
         protected void EventFilter<T>(string message,int occurances, Action intercept) where T:Exception
         {
-            sys.EventStream.Subscribe(testActor,typeof(object));
+            sys.EventStream.Subscribe(testActor,typeof(Error));
             intercept();
             for(int i = 0;i<occurances;i++)
             {
