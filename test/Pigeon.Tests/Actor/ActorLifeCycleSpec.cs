@@ -356,6 +356,10 @@ namespace Pigeon.Tests
             expectMsg(2);
             supervisor.Tell(new SupervisorTestActor.ContextStop() { Name = names[1] });
             expectMsg(Tuple.Create("Terminated", names[1]));
+       
+            //we need to wait for the child actor to unregister itself from the parent.
+            //this is done after PostStop so we have no way to wait for it
+            //ideas?
             Task.Delay(100).Wait();
             supervisor.Tell(new SupervisorTestActor.Count());
             expectMsg(1);

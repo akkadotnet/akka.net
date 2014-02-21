@@ -39,10 +39,13 @@ namespace Pigeon.Actor
 
         protected ConcurrentDictionary<string, LocalActorRef> Children = new ConcurrentDictionary<string, LocalActorRef>();
         
-        public virtual LocalActorRef Child(string name)
+        public virtual InternalActorRef Child(string name)
         {
             LocalActorRef actorRef = null;
             Children.TryGetValue(name, out actorRef);
+            if (actorRef.IsNobody())
+                return ActorRef.Nobody;
+            else
             return actorRef;
         }
 
