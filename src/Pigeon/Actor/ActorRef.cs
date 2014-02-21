@@ -167,10 +167,9 @@ namespace Pigeon.Actor
 
     public sealed class Nobody : MinimalActorRef
     {
-
         public override ActorRefProvider Provider
         {
-            get { throw new NotSupportedException("Nobody does not proide"); }
+            get { throw new NotSupportedException("Nobody does not provide"); }
         }
     }
 
