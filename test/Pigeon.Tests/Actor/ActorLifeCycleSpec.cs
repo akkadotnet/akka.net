@@ -293,6 +293,7 @@ namespace Pigeon.Tests
                     {
                         var child = Context.Child(m.Name);
                         Context.Stop(child);
+                        testActor.Tell(Tuple.Create("Terminated", m.Name));
                     })
                     .With<Stop>(m =>
                     {
@@ -365,10 +366,10 @@ namespace Pigeon.Tests
             expectMsg(2);
             supervisor.Tell(new SupervisorTestActor.Stop() { Name = names[0] });
             expectMsg(Tuple.Create("Terminated", names[0]));
-            supervisor.Tell(new SupervisorTestActor.Count());
-            expectMsg(1);
             supervisor.Tell(new SupervisorTestActor.Stop() { Name = names[2] });
             expectMsg(Tuple.Create("Terminated", names[2]));
+
+            Task.Delay(300).Wait();
             supervisor.Tell(new SupervisorTestActor.Count());
             expectMsg(0);
         }
