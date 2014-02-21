@@ -9,7 +9,7 @@ namespace Pigeon.Actor
         void Become(Receive receive);
         void Unbecome();
         ActorRef Sender { get; }
-        LocalActorRef Child(string name);
+        InternalActorRef Child(string name);
         IEnumerable<LocalActorRef> GetChildren();
         ActorSystem System { get; }
         InternalActorRef Parent { get; }
@@ -32,6 +32,6 @@ namespace Pigeon.Actor
   def unwatch(subject: ActorRef): ActorRef
          */
 
-        void Stop(LocalActorRef child);
+        void Stop(InternalActorRef child);
     }
 }

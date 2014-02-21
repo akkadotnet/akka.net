@@ -95,7 +95,8 @@ namespace Pigeon.Actor
             {
                 Stop(child); //unhooks the child from the supervisor container
             }
-            Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), string.Format("Terminated! actor: {0}", m.actorRef.Path)));
+            if (System.Settings.DebugLifecycle)
+                Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), string.Format("Terminated actor: {0}", m.actorRef.Path)));
         }
 
         public void SystemInvoke(Envelope envelope)
@@ -434,7 +435,7 @@ protected def terminate() {
         }
 
         private volatile bool isTerminating = false;
-        public void Stop(LocalActorRef child)
+        public void Stop(InternalActorRef child)
         {
             //TODO: in akka this does some wild magic on childrefs and then just call child.stop();
 
@@ -448,7 +449,7 @@ protected def terminate() {
             //    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), string.Format("Child Actor {0} stopped - no longer supervising", child.Path)));
             //}
 
-            child.AsInstanceOf<InternalActorRef>().Stop();
+            child.Stop();
         }
 
         private void Kill(Kill m)
