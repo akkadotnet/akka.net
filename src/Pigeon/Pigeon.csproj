@@ -56,6 +56,7 @@
     <Compile Include="Actor\ActorCell.cs" />
     <Compile Include="Actor\ActorPath.cs" />
     <Compile Include="Actor\ActorRef.cs" />
+    <Compile Include="Actor\ActorRef.Extensions.cs" />
     <Compile Include="Actor\ActorRefProvider.cs" />
     <Compile Include="Actor\ActorSelection.cs" />
     <Compile Include="Actor\ActorSystem.cs" />
