@@ -8,7 +8,7 @@ namespace Pigeon.Actor
 {
     public abstract partial class ActorBase
     {
-        private SupervisorStrategy supervisorStrategy = null;
+        internal SupervisorStrategy supervisorStrategy = null;
         internal SupervisorStrategy SupervisorStrategyLazy()
         {
             if (supervisorStrategy == null)
@@ -18,7 +18,7 @@ namespace Pigeon.Actor
         }
         protected virtual SupervisorStrategy SupervisorStrategy()
         {
-            return new OneForOneStrategy(10, TimeSpan.FromSeconds(30), OneForOneStrategy.DefaultDecider);
+            return Actor.SupervisorStrategy.Default;
         }
     }
 }

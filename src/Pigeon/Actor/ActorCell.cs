@@ -136,6 +136,7 @@ namespace Pigeon.Actor
                 var deploy = System.Deployer.Lookup(deployPath);
                 behaviorStack.Clear();
                 var instance = Props.NewActor();
+                instance.supervisorStrategy = Props.SupervisorStrategy; //defaults to null - won't affect lazy instantion unless explicitly set in props
                 instance.AroundPreStart();                
             });
         }
