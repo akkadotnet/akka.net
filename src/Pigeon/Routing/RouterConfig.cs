@@ -43,6 +43,11 @@ namespace Pigeon.Routing
             this.paths = paths.ToArray();
         }
 
+        protected Group(IEnumerable<ActorRef> routees)
+        {
+            this.paths = routees.Select(x => x.Path.ToStringWithoutAddress()).ToArray();
+        }
+
         public override IEnumerable<Routee> GetRoutees(ActorSystem system)
         {
             foreach(var path in paths)
