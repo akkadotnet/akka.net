@@ -15,7 +15,8 @@ namespace Pigeon.Reflection
             var arguments = new List<object>();
             foreach (var argumentExpression in newExpression.Arguments)
             {
-                var l = Expression.Lambda<Func<object>>(argumentExpression);
+                Expression conversion = Expression.Convert(argumentExpression, typeof(object));
+                var l = Expression.Lambda<Func<object>>(conversion);
                 var f = l.Compile();
                 var res = f();
 
