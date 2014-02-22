@@ -96,9 +96,17 @@ namespace Pigeon.Actor
             elements.Add(name);
         }
 
+        private string Join()
+        {
+            var joined = string.Join("/", elements);
+            if (elements.Count == 1)
+                return joined + "/";
+            return joined;
+        }
+
         public string ToStringWithoutAddress()
         {
-            return string.Join("/", elements);
+            return Join();
         }
 
         public override string ToString()
@@ -143,7 +151,7 @@ namespace Pigeon.Actor
 
         public string ToStringWithAddress(Address address)
         {
-            return string.Format("{0}{1}", address, string.Join("/", elements));
+            return string.Format("{0}{1}", address, Join());
         }       
     }
 

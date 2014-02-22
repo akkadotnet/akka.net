@@ -41,7 +41,7 @@ namespace Pigeon.Tests.Actor
         {
             var a = new Address("akka.tcp", "mysys");
             //TODO: there must be a / after system name
-           // new RootActorPath(a).ToString().ShouldBe("akka.tcp://mysys/");
+            new RootActorPath(a).ToString().ShouldBe("akka.tcp://mysys/");
             (new RootActorPath(a) / "user").ToString().ShouldBe("akka.tcp://mysys/user");
             (new RootActorPath(a) / "user" / "foo").ToString().ShouldBe("akka.tcp://mysys/user/foo");
             (new RootActorPath(a) / "user" / "foo" / "bar").ToString().ShouldBe("akka.tcp://mysys/user/foo/bar");
@@ -52,7 +52,7 @@ namespace Pigeon.Tests.Actor
         {
             var a = new Address("akka.tcp", "mysys");
             //TODO: there must be a / after system name
-            // new RootActorPath(a).ToStringWithoutAddress().ShouldBe("/");
+            new RootActorPath(a).ToStringWithoutAddress().ShouldBe("/");
             (new RootActorPath(a) / "user").ToStringWithoutAddress().ShouldBe("/user");
             (new RootActorPath(a) / "user" / "foo").ToStringWithoutAddress().ShouldBe("/user/foo");
             (new RootActorPath(a) / "user" / "foo" / "bar").ToStringWithoutAddress().ShouldBe("/user/foo/bar");
