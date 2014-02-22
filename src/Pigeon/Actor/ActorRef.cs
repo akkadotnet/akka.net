@@ -41,12 +41,11 @@ namespace Pigeon.Actor
         }
     }
 
-    public abstract class ActorRef
+    public abstract class ActorRef : ICanTell
     {
         public static readonly Nobody Nobody = new Nobody();
         public static readonly ReservedActorRef Reserved = new ReservedActorRef();
 
-        public long UID { get; protected set; }
         public virtual ActorPath Path { get;protected set; }
 
         public void Tell(object message, ActorRef sender)
@@ -79,34 +78,9 @@ namespace Pigeon.Actor
 
         public static readonly ActorRef NoSender = new NoSender();
       
-        public Task<object> Ask(object message)
-        {
-            var result = new TaskCompletionSource<object>();
-            var path = ActorCell.Current.System.Provider.TempPath();
-            var provider = ActorCell.Current.System.Provider;
-            Action unregister = () => provider.UnregisterTempActor(path);
-            FutureActorRef future = new FutureActorRef(result, ActorCell.Current.Self, unregister,path);
-            ActorCell.Current.System.Provider.RegisterTempActor(future, path);
-            Tell(message, future);
-            return result.Task;
-        }
-
-        public Task<object> Ask(object message,ActorSystem system)
-        {
-            var result = new TaskCompletionSource<object>();
-            var path = system.Provider.TempPath();
-            var provider = system.Provider;
-            Action unregister = () => 
-                provider.UnregisterTempActor(path);
-            FutureActorRef future = new FutureActorRef(result, null, unregister,path);
-            system.Provider.RegisterTempActor(future, path);
-            Tell(message, future);
-            return result.Task;
-        }
-
         public override string ToString()
         {
-            return string.Format("[{0}#{1}]", this.Path.ToString(),UID);
+            return string.Format("[{0}]", this.Path.ToString());
         }
     }
 

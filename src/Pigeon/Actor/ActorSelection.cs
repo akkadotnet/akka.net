@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Actor
 {
-    public class ActorSelection 
+    public class ActorSelection : ICanTell
     {
         public ActorRef Anchor { get; private set; }
         public SelectionPathElement[] Elements { get; set; }
