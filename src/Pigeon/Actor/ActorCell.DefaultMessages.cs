@@ -384,11 +384,21 @@ protected def terminate() {
             this.UseThreadContext(() =>
             {
                 behaviorStack.Clear(); //clear earlier behaviors
+
+                //TODO: this should be activated in order to replace the actorref for each incarnation.
+                //however, the current impl of supervisorstrategy uses ActorRef as key for lookup
+                //this needs to be redesigned.
+
+
+                //var self = new LocalActorRef(Self.Path, this);
+                //this.Children.TryUpdate(self.Path.Name, self, Self);
+                //this.Self = self;
+
                 var created = this.Props.NewActor();
+                //ActorBase will register itself as the actor of this context
 
                 if (System.Settings.DebugLifecycle)
                     Publish(new Pigeon.Event.Debug(Self.Path.ToString(), created.GetType(), "started (" + created + ")"));
-
                 created.AroundPostRestart(m.Cause,null);
             });
         }
