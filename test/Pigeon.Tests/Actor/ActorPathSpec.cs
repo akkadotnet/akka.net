@@ -57,5 +57,34 @@ namespace Pigeon.Tests.Actor
             (new RootActorPath(a) / "user" / "foo").ToStringWithoutAddress().ShouldBe("/user/foo");
             (new RootActorPath(a) / "user" / "foo" / "bar").ToStringWithoutAddress().ShouldBe("/user/foo/bar");
         }
+
+        [TestMethod]
+        public void CreateCorrectToStringWithAddress()
+        {
+            var local = new Address("akka.tcp", "mysys");
+            var a = new Address("akka.tcp", "mysys", "aaa", 2552);
+            var b = new Address("akka.tcp", "mysys", "bb", 2552);
+            var c = new Address("akka.tcp", "mysys", "cccc" , 2552);
+            var root = new RootActorPath(local);
+            root.ToStringWithAddress(a).ShouldBe("akka.tcp://mysys@aaa:2552/");
+            (root / "user").ToStringWithAddress(a).ShouldBe("akka.tcp://mysys@aaa:2552/user");
+            (root / "user" / "foo").ToStringWithAddress(a).ShouldBe("akka.tcp://mysys@aaa:2552/user/foo");
+
+            root.ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@bb:2552/");
+            (root / "user").ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@bb:2552/user");
+            (root / "user" / "foo").ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@bb:2552/user/foo");
+
+            root.ToStringWithAddress(c).ShouldBe("akka.tcp://mysys@cccc:2552/");
+            (root / "user").ToStringWithAddress(c).ShouldBe("akka.tcp://mysys@cccc:2552/user");
+            (root / "user" / "foo").ToStringWithAddress(c).ShouldBe("akka.tcp://mysys@cccc:2552/user/foo");
+
+            //TODO: the akka tests contains this, but I dont see how this could be the case?
+            //WithAddress(b) should give address B, no?
+            //var rootA = new RootActorPath(a);
+            //rootA.ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@aaa:2552/");
+            //(rootA / "user").ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@aaa:2552/user");
+            //(rootA / "user" / "foo").ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@aaa:2552/user/foo");
+
+        }
     }
 }
