@@ -12,7 +12,7 @@ namespace Pigeon.Remote
 {
     //TODO: rewrite, this should take a RemoteTransport upon creation.
     //move all network related code to RemoteTransport and other remoting classes
-    public class RemoteActorRef : ActorRef
+    public class RemoteActorRef : MinimalActorRef
     {
         private ActorSystem system;
         protected string actorName;
@@ -61,6 +61,12 @@ namespace Pigeon.Remote
         {
             envelope.WriteDelimitedTo(stream);
             stream.Flush();
-        }        
+        }
+
+
+        public override ActorRefProvider Provider
+        {
+            get { return system.Provider; }
+        }
     }   
 }
