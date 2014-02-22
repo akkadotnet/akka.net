@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Pigeon.Actor;
 using Pigeon.Event;
 using System;
 using System.Collections.Generic;
@@ -196,5 +197,83 @@ namespace Pigeon.Tests.Event
             es.Unsubscribe(a3.Ref, typeof(CC)).Then(Assert.IsFalse);
             es.Unsubscribe(a4.Ref, typeof(CCATBT)).Then(Assert.IsTrue);
         }
+
+        public class SetTarget
+        {
+            public ActorRef Ref { get; private set; }
+            public SetTarget(ActorRef @ref)
+            {
+                this.Ref = @ref;
+            }
+        }
+
+        [TestMethod]
+        public void ManageLogLevels()
+        {
+          var bus = new EventStream(false);
+          bus.StartDefaultLoggers(sys);
+          bus.Publish(new SetTarget(testActor));
+          expectMsg("OK");
+
+          verifyLevel(bus, LogLevel.InfoLevel);
+          bus.SetLogLevel(LogLevel.WarningLevel);
+          verifyLevel(bus, LogLevel.WarningLevel);
+          bus.SetLogLevel(LogLevel.DebugLevel);
+          verifyLevel(bus, LogLevel.DebugLevel);
+          bus.SetLogLevel(LogLevel.ErrorLevel);
+          verifyLevel(bus, LogLevel.ErrorLevel);
+
+        }
+
+        protected override string GetConfig()
+        {
+            return @"
+akka {
+        actor.serialize-messages = off
+        stdout-loglevel = WARNING
+        loglevel = INFO
+        loggers = [""%logger%""]
+      }
+".Replace("%logger%", typeof(MyLog).AssemblyQualifiedName);
+
+        }
+
+        public class MyLog : UntypedActor
+        {
+            private ActorRef dst = Context.System.DeadLetters;
+
+            protected override void OnReceive(object message)
+            {
+                ReceiveBuilder.Match(message)
+                .With<InitializeLogger>(m =>
+                {
+                    var bus = m.LoggingBus;
+                    bus.Subscribe(this.Self, typeof(SetTarget));
+                    bus.Subscribe(this.Self, typeof(UnhandledMessage));
+
+                    Sender.Tell(new LoggerInitialized());
+                })
+                .With<SetTarget>(m =>
+                {
+                    dst = m.Ref;
+                    dst.Tell("OK");
+                })
+                .With<LogEvent>(m => dst.Tell(m))
+                .With<UnhandledMessage>(m => dst.Tell(m));
+            }
+        }
+
+        private void verifyLevel(LoggingBus bus,LogLevel level) 
+        {
+            var allmsg = new LogEvent[] {
+                new Debug("", null, "debug"),
+                new Info("", null, "info"),
+                new  Warning("", null, "warning"),
+                new Error(null,"", null, "error")};
+
+            var msg = allmsg.Where(l => l.LogLevel() >= level);
+            allmsg.ToList().ForEach(l => bus.Publish(l));
+            msg.ToList().ForEach(l => expectMsg(l));
+          }
     }
 }

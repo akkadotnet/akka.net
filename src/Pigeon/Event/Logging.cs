@@ -84,7 +84,8 @@ namespace Pigeon.Event
 
         private async Task AddLogger(ActorSystem system, Type actorClass, LogLevel logLevel, string logName)
         {
-            var name = "log" + system.Name + "-" + SimpleName(actorClass);
+            //TODO: remove the newguid stuff
+            var name = "log" + system.Name + "-" + SimpleName(actorClass) + Guid.NewGuid();
             var actor = system.SystemGuardian.Cell.ActorOf(Props.Create(actorClass), name);
             loggers.Add(actor);
             await actor.Ask(new InitializeLogger(this));

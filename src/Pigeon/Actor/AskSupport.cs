@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Pigeon.Dispatch;
+using Pigeon.Dispatch.SysMsg;
+using System.Threading;
 
 namespace Pigeon.Actor
 {
@@ -65,5 +67,50 @@ namespace Pigeon.Actor
             self.Tell(message, future);
             return result.Task;
         }
-    }    
+    }
+
+    //We need to somehow pass tasks to the current actors mailbox and complete them in the mailbox run
+    public class ActorTaskScheduler : TaskScheduler
+    {
+        public static readonly TaskScheduler Instance = new ActorTaskScheduler();
+
+        protected override IEnumerable<Task> GetScheduledTasks()
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void QueueTask(Task task)
+        {            
+            var self = ActorCell.Current.Self;
+            self.Tell(new ActorTask(task), ActorRef.NoSender);
+        }
+
+        protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
+        {
+            return false;
+        }
+    }
+
+    public class FooContext : SynchronizationContext
+    {
+        public override void OperationCompleted()
+        {
+            base.OperationCompleted();
+        }
+
+        public override void OperationStarted()
+        {
+            base.OperationStarted();
+        }
+
+        public override void Post(SendOrPostCallback d, object state)
+        {
+            base.Post(d, state);
+        }
+
+        public override void Send(SendOrPostCallback d, object state)
+        {
+            base.Send(d, state);
+        }
+    }
 }

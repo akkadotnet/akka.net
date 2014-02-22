@@ -85,6 +85,16 @@ namespace Pigeon.Dispatch.SysMsg
         public ActorRef Watcher { get;private set; }
     }
 
+    public class ActorTask : SystemMessage
+    {
+        public Task Task { get; private set; }
+
+        public ActorTask(Task task)
+        {
+            this.Task = task;
+        }
+    }
+
     public class CompleteFuture : SystemMessage
     {
         public CompleteFuture(Action action)
