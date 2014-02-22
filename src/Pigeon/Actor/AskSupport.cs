@@ -33,6 +33,7 @@ namespace Pigeon.Actor
             if (ActorCell.Current == null)
                 throw new NotSupportedException("This method may only be used when Asking from within an actor, use Ask(self,message,system) instead");
 
+            //by passing a replyTo arg (Self) we make sure that the TaskCompletionSource will get resolved in the actors mailbox and thus not break actor concurrency
             return Ask(self, ActorCell.Current.Self, message, ActorCell.Current.System.Provider);
         }
 
