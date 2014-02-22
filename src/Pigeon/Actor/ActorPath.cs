@@ -9,16 +9,25 @@ namespace Pigeon.Actor
 {
     public abstract class ActorPath : IEnumerable<string> , IEquatable<ActorPath>
     {
+        public long Uid { get;private set; }
+
+        public abstract ActorPath WithUid(long uid);
+
         public static readonly Regex ElementRegex = new Regex(@"(?:[-\w:@&=+,.!~*'_;]|%\\p{N}{2})(?:[-\w:@&=+,.!~*'$_;]|%\\p{N}{2})*",RegexOptions.Compiled);
 
         public static ActorPath operator /(ActorPath path, string name)
         {
-            return new ChildActorPath(path, name);
+            return new ChildActorPath(path, name,0);
         }
 
         public static ActorPath operator /(ActorPath path, IEnumerable<string> name)
         {
-            return new ChildActorPath(path, name);
+            var a = path;
+            foreach (var element in name)
+            {
+                a = a / element;
+            }
+            return a;
         }       
 
         public string Head
@@ -40,7 +49,7 @@ namespace Pigeon.Actor
             {                
                 var systemName = uri.Host;
                 var pathElements = uri.AbsolutePath.Split('/');
-                return new RootActorPath(new Address(protocol, systemName, null, null), pathElements);
+                return new RootActorPath(new Address(protocol, systemName, null, null)) / pathElements.Skip(1);
             }
             else
             {
@@ -48,7 +57,7 @@ namespace Pigeon.Actor
                 var host = uri.Host;
                 var port = uri.Port;
                 var pathElements = uri.AbsolutePath.Split('/');
-                return new RootActorPath(new Address(protocol, systemName, host, port), pathElements);
+                return new RootActorPath(new Address(protocol, systemName, host, port)) / pathElements.Skip(1);
             }
         }
 
@@ -73,46 +82,19 @@ namespace Pigeon.Actor
 
         private List<string> elements = new List<string>();
 
-        public ActorPath(IEnumerable<string> parts)
-        {
-            this.elements = parts.ToList();
-        }
-        public ActorPath(Address address, IEnumerable<string> parts)
-        {
-            this.Address = address;
-            this.elements = parts.ToList();
-        }
-        public ActorPath(string path)
-        {
-            elements = path.Split('/').ToList();
-        }
-
-        public ActorPath(string parentPath,string name)
-        {
-            elements = parentPath.Split('/').ToList();
-            elements.Add(name);
-        }
-
         public ActorPath(Address address, string name)
         {
             this.elements.Add(name);
             this.Address = address;
         }
 
-        public ActorPath(ActorPath parentPath, string name)
+        public ActorPath(ActorPath parentPath, string name,long uid)
         {
             this.Address = parentPath.Address;
+            this.Uid = uid;
             elements.AddRange(parentPath.elements);
             elements.Add(name);
         }
-
-        public ActorPath(ActorPath parentPath, IEnumerable<string> name)
-        {
-            this.Address = parentPath.Address;
-            elements.AddRange(parentPath.elements);
-            elements.AddRange(name);
-        }
-
 
         public string ToStringWithoutAddress()
         {
@@ -172,23 +154,34 @@ namespace Pigeon.Actor
 
         }
 
-        public RootActorPath(Address address, IEnumerable<string> elements)
-            : base(address,elements)
+        public override ActorPath WithUid(long uid)
         {
-
+            if (uid == 0)
+                return this;
+            else
+                throw new NotSupportedException("RootActorPath must have undefinedUid");
         }
     }
 
     public class ChildActorPath : ActorPath
     {
-        public ChildActorPath(ActorPath parentPath, string name)
-            : base(parentPath, name)
+        private ActorPath parent;
+        private string name;
+        public ChildActorPath(ActorPath parentPath, string name,long uid)
+            : base(parentPath, name,0)
         {
+            this.name = name;
+            this.parent = parentPath;
         }
 
-        public ChildActorPath(ActorPath parentPath, IEnumerable<string> name)
-            : base(parentPath, name)
+        public override ActorPath WithUid(long uid)
         {
+            if (uid == this.Uid)
+                return this;
+            else
+            {
+                return new ChildActorPath(parent, name,uid);
+            }
         }
     }
 }
