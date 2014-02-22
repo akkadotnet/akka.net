@@ -1,4 +1,5 @@
-﻿using Pigeon.Configuration;
+﻿using Pigeon.Actor;
+using Pigeon.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,6 +41,8 @@ namespace Pigeon.Routing
         {
 
         }
+
+        public RoundRobinGroup(IEnumerable<ActorRef> routees) : base(routees) { }
 
         public override RoutingLogic GetLogic()
         {
