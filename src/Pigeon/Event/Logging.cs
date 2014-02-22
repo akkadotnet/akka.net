@@ -85,8 +85,20 @@ namespace Pigeon.Event
         private async Task AddLogger(ActorSystem system, Type actorClass, LogLevel logLevel, string logName)
         {
             //TODO: remove the newguid stuff
-            var name = "log" + system.Name + "-" + SimpleName(actorClass) + Guid.NewGuid();
-            var actor = system.SystemGuardian.Cell.ActorOf(Props.Create(actorClass), name);
+            var name = "log" + system.Name + "-" + SimpleName(actorClass);
+            ActorRef actor = null;
+            try
+            {
+                actor = system.SystemGuardian.Cell.ActorOf(Props.Create(actorClass), name);
+            }
+            catch
+            {
+                //HACK: the EventStreamSpec tries to start up loggers for a new EventBus
+                //when doing so, this logger is already started and the name reserved.
+                //we need to examine how this is dealt with in akka.
+                name = name + Guid.NewGuid();
+                actor = system.SystemGuardian.Cell.ActorOf(Props.Create(actorClass), name);
+            }
             loggers.Add(actor);
             await actor.Ask(new InitializeLogger(this));
         }
