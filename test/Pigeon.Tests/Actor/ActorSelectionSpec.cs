@@ -31,7 +31,7 @@ namespace Pigeon.Tests.Actor
         public void CanAskActorSelection()
         {
             var selection = sys.ActorSelection("user/echo");
-            var task = selection.Ask("hello", sys);
+            var task = selection.Ask("hello");
             expectMsg("hello");
             task.Wait();
             Assert.AreEqual("hello", task.Result);

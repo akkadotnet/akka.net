@@ -19,22 +19,37 @@ namespace Pigeon.Actor
     public static class Futures
     {
         //when asking from outside of an actor, we need to pass a system, so the FutureActor can register itself there and be resolvable for local and remote calls
-        public static Task<object> Ask(this ICanTell self, object message, ActorSystem system)
-        {
-            if (ActorCell.Current != null)
-                throw new NotSupportedException("Do not use this method to Ask from within an actor, use Ask(self,message) instead");
-
-            return Ask(self, null ,message, system.Provider);
-        }
-
-        //when asking from within an actor, we already know what system the FutureActor should be long to, so we use the active context
         public static Task<object> Ask(this ICanTell self, object message)
         {
-            if (ActorCell.Current == null)
-                throw new NotSupportedException("This method may only be used when Asking from within an actor, use Ask(self,message,system) instead");
+            var provider = ResolveProvider(self);
+            if (provider == null)
+                throw new NotSupportedException("Unable to resolve the target Provider");
 
-            //by passing a replyTo arg (Self) we make sure that the TaskCompletionSource will get resolved in the actors mailbox and thus not break actor concurrency
-            return Ask(self, ActorCell.Current.Self, message, ActorCell.Current.System.Provider);
+            var replyTo = ResolveReplyTo();
+
+            return Ask(self, replyTo, message, provider);
+        }
+
+        private static ActorRef ResolveReplyTo()
+        {
+            if (ActorCell.Current != null)
+                return ActorCell.Current.Self;
+
+            return null;
+        }
+
+        private static ActorRefProvider ResolveProvider(ICanTell self)
+        {
+            if (ActorCell.Current != null)
+                return ActorCell.Current.System.Provider;
+
+            if (self is InternalActorRef)
+                return self.AsInstanceOf<InternalActorRef>().Provider;
+
+            if (self is ActorSelection)
+                return ResolveProvider(self.AsInstanceOf<ActorSelection>().Anchor);
+
+            return null;
         }
 
         private static Task<object> Ask(ICanTell self, ActorRef replyTo, object message, ActorRefProvider provider)
@@ -50,5 +65,5 @@ namespace Pigeon.Actor
             self.Tell(message, future);
             return result.Task;
         }
-    }
+    }    
 }

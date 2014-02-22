@@ -87,7 +87,7 @@ namespace Pigeon.Event
             var name = "log" + system.Name + "-" + SimpleName(actorClass);
             var actor = system.SystemGuardian.Cell.ActorOf(Props.Create(actorClass), name);
             loggers.Add(actor);
-            await actor.Ask(new InitializeLogger(this), system);
+            await actor.Ask(new InitializeLogger(this));
         }
 
         public void StartStdoutLogger(Settings config) 
