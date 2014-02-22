@@ -24,6 +24,11 @@ namespace Pigeon.Tests
         {
             body(other, self);
         }
+
+        public static void ShouldBe<T>(this T self, T other)
+        {
+            Assert.AreEqual(other, self);
+        }
     }
 
 
@@ -145,5 +150,25 @@ namespace Pigeon.Tests
         {
             return new TestProbe();
         }
+
+        //protected Tuple<T1> T<T1>(T1 item1)
+        //{
+        //    return Tuple.Create(item1);
+        //}
+
+        //protected Tuple<T1,T2> T<T1,T2>(T1 item1,T2 item2)
+        //{
+        //    return Tuple.Create(item1,item2);
+        //}
+
+        //protected Tuple<T1, T2,T3> T<T1, T2,T3>(T1 item1, T2 item2,T3 item3)
+        //{
+        //    return Tuple.Create(item1, item2, item3);
+        //}
+
+        //protected Tuple<T1, T2, T3, T4> T<T1, T2, T3, T4>(T1 item1, T2 item2, T3 item3, T4 item4)
+        //{
+        //    return Tuple.Create(item1, item2, item3, item4);
+        //}
     }
 }
