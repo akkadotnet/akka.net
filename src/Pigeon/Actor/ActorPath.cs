@@ -151,6 +151,9 @@ namespace Pigeon.Actor
 
         public string ToStringWithAddress(Address address)
         {
+            if (this.Address.Host != null && this.Address.Port.HasValue)
+                return string.Format("{0}{1}", this.Address, Join());
+
             return string.Format("{0}{1}", address, Join());
         }       
     }

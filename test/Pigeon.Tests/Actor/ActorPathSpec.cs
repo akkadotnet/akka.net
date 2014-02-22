@@ -78,12 +78,10 @@ namespace Pigeon.Tests.Actor
             (root / "user").ToStringWithAddress(c).ShouldBe("akka.tcp://mysys@cccc:2552/user");
             (root / "user" / "foo").ToStringWithAddress(c).ShouldBe("akka.tcp://mysys@cccc:2552/user/foo");
 
-            //TODO: the akka tests contains this, but I dont see how this could be the case?
-            //WithAddress(b) should give address B, no?
-            //var rootA = new RootActorPath(a);
-            //rootA.ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@aaa:2552/");
-            //(rootA / "user").ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@aaa:2552/user");
-            //(rootA / "user" / "foo").ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@aaa:2552/user/foo");
+            var rootA = new RootActorPath(a);
+            rootA.ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@aaa:2552/");
+            (rootA / "user").ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@aaa:2552/user");
+            (rootA / "user" / "foo").ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@aaa:2552/user/foo");
 
         }
     }
