@@ -44,6 +44,7 @@ namespace Pigeon.Actor
     public abstract class ActorRef
     {
         public static readonly Nobody Nobody = new Nobody();
+        public static readonly ReservedActorRef Reserved = new ReservedActorRef();
 
         public long UID { get; protected set; }
         public virtual ActorPath Path { get;protected set; }
@@ -166,6 +167,14 @@ namespace Pigeon.Actor
     }
 
     public sealed class Nobody : MinimalActorRef
+    {
+        public override ActorRefProvider Provider
+        {
+            get { throw new NotSupportedException("Nobody does not provide"); }
+        }
+    }
+
+    public sealed class ReservedActorRef : MinimalActorRef
     {
         public override ActorRefProvider Provider
         {

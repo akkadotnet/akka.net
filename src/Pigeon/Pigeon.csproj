@@ -65,6 +65,7 @@
     <Compile Include="Actor\AutoReceivedMessage.cs" />
     <Compile Include="Actor\BroadcastActorRef.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
+    <Compile Include="Actor\ChildrenContainer.cs" />
     <Compile Include="Actor\Deployer.cs" />
     <Compile Include="Actor\NoSerializationVerificationNeeded.cs" />
     <Compile Include="Actor\PreRestartException.cs" />

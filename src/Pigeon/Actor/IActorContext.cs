@@ -10,7 +10,7 @@ namespace Pigeon.Actor
         void Unbecome();
         ActorRef Sender { get; }
         InternalActorRef Child(string name);
-        IEnumerable<LocalActorRef> GetChildren();
+        IEnumerable<InternalActorRef> GetChildren();
         ActorSystem System { get; }
         InternalActorRef Parent { get; }
         void Watch(ActorRef subject);

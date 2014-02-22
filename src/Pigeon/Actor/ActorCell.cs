@@ -37,11 +37,11 @@ namespace Pigeon.Actor
             }
         }
 
-        protected ConcurrentDictionary<string, LocalActorRef> Children = new ConcurrentDictionary<string, LocalActorRef>();
+        protected ConcurrentDictionary<string, InternalActorRef> Children = new ConcurrentDictionary<string, InternalActorRef>();
         
         public virtual InternalActorRef Child(string name)
         {
-            LocalActorRef actorRef = null;
+            InternalActorRef actorRef = null;
             Children.TryGetValue(name, out actorRef);
             if (actorRef.IsNobody())
                 return ActorRef.Nobody;
@@ -94,15 +94,52 @@ namespace Pigeon.Actor
 
         public virtual LocalActorRef ActorOf(Props props, string name = null)
         {
-            var uid = GetNextUID();
-            name = GetActorName(props, name,uid);
-            var path = this.Self.Path / name;
-            var actor = System.Provider.ActorOf(System, props, this.Self, path, uid);
-            this.Children.TryAdd(name, actor);
-            return actor;
+            return MakeChild(props, name);
         }
 
-        private long GetNextUID()
+        private LocalActorRef MakeChild(Props props, string name)
+        {            
+            var uid = NewUid();
+            name = GetActorName(props, name, uid);
+            //reserve the name before we create the actor
+            ReserveChild(name);
+            try
+            {
+                var childPath = (this.Self.Path / name).WithUid(uid);
+                var actor = System.Provider.ActorOf(System, props, this.Self, childPath);
+                //replace the reservation with the real actor
+                InitChild(name, actor);
+                return actor;
+            }
+            catch
+            {
+                //if actor creation failed, unreserve the name
+                UnreserveChild(name);
+                throw;
+            }
+            
+        }
+
+        private void UnreserveChild(string name)
+        {
+            InternalActorRef tmp;
+            this.Children.TryRemove(name, out tmp);
+        }
+
+        private void InitChild(string name, LocalActorRef actor)
+        {
+            this.Children.TryUpdate(name, actor,ActorRef.Reserved);
+        }
+
+        private void ReserveChild(string name)
+        {
+            if (!this.Children.TryAdd(name, ActorRef.Reserved))
+            {
+                throw new Exception("The name is already reserved: " + name);
+            }
+        }
+
+        private long NewUid()
         {
             var auid = Interlocked.Increment(ref uid);
             return auid;
@@ -148,7 +185,7 @@ namespace Pigeon.Actor
         /// May be called from anyone
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<LocalActorRef> GetChildren()
+        public IEnumerable<InternalActorRef> GetChildren()
         {
             return this.Children.Values.ToArray();
         }

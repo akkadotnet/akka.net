@@ -196,10 +196,10 @@ namespace Pigeon.Actor
 
         private void HandleChildTerminated(ActorRef actor)
         {
-            LocalActorRef tmp;
+            InternalActorRef tmp;
             Children.TryRemove(actor.Path.Name, out tmp);
-            global::System.Diagnostics.Debug.WriteLine("removed child " + actor.Path.Name);
-            global::System.Diagnostics.Debug.WriteLine("count " + Children.Count());
+            //global::System.Diagnostics.Debug.WriteLine("removed child " + actor.Path.Name);
+            //global::System.Diagnostics.Debug.WriteLine("count " + Children.Count());
         }
 
 
@@ -384,15 +384,6 @@ protected def terminate() {
             this.UseThreadContext(() =>
             {
                 behaviorStack.Clear(); //clear earlier behaviors
-
-                //TODO: this should be activated in order to replace the actorref for each incarnation.
-                //however, the current impl of supervisorstrategy uses ActorRef as key for lookup
-                //this needs to be redesigned.
-
-
-                //var self = new LocalActorRef(Self.Path, this);
-                //this.Children.TryUpdate(self.Path.Name, self, Self);
-                //this.Self = self;
 
                 var created = this.Props.NewActor();
                 //ActorBase will register itself as the actor of this context

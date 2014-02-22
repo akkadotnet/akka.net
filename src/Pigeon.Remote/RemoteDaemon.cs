@@ -56,8 +56,8 @@ namespace Pigeon.Remote
             //TODO: find out what format "Path" should have
             var supervisor = (InternalActorRef)message.Supervisor;
             var props = message.Props;
-            ActorPath path = this.Path / message.Path.Split('/');         
-            var actor = System.Provider.ActorOf(System, props, supervisor, path, 0);
+            ActorPath path = this.Path / message.Path.Split('/');
+            var actor = System.Provider.ActorOf(System, props, supervisor, path);
             var name = message.Path;
             this.AddChild(name, actor);
             actor.Tell(new Watch(actor, this));
