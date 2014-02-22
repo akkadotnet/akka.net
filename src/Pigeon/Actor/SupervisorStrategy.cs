@@ -103,9 +103,21 @@ namespace Pigeon.Actor
                     actorCell.System.EventStream.Publish(new Error(cause, child.Path.ToString(), this.GetType(), cause.Message));
                     break;
             }
-            
-            
-        } 
+
+
+        }
+
+        #region Static methods
+
+        /// <summary>
+        /// Returns A NEW INSTANCE of the Default Supervisor strategy
+        /// </summary>
+        public static SupervisorStrategy Default
+        {
+            get { return new OneForOneStrategy(10, TimeSpan.FromSeconds(30), OneForOneStrategy.DefaultDecider); }
+        }
+
+        #endregion
     }
 
     public sealed class OneForOneStrategy : SupervisorStrategy

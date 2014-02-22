@@ -18,6 +18,7 @@ namespace Pigeon.Actor
         public string Mailbox { get; protected set; }
         public RouterConfig RouterConfig { get; protected set; }
         public Deploy Deploy { get; protected set; }
+        public SupervisorStrategy SupervisorStrategy { get; protected set; }
 
         public static Props Create<TActor>(Expression<Func<TActor>> factory) where TActor : ActorBase
         {
@@ -93,6 +94,13 @@ namespace Pigeon.Actor
             return copy;
         }
 
+        public Props WithSupervisorStrategy(SupervisorStrategy strategy)
+        {
+            var copy = Copy();
+            copy.SupervisorStrategy = strategy;
+            return copy;
+        }
+
         //TODO: use Linq Expressions so compile a creator
         //cache the creator
         public virtual ActorBase NewActor()
@@ -119,6 +127,7 @@ namespace Pigeon.Actor
                 RouterConfig = this.RouterConfig,
                 Type = this.Type,
                 Deploy = this.Deploy,
+                SupervisorStrategy = this.SupervisorStrategy
             };
         }
 
