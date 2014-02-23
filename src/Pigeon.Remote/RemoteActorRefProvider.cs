@@ -32,6 +32,8 @@ namespace Pigeon.Remote
 
             this.RemoteDaemon = new Remote.RemoteDaemon (this.System,RootPath / "remote",null);
             this.Transport = new Remoting(System, this);
+            this.RemoteSettings = new RemoteSettings(System.Settings.Config);
+            this.Transport.Start();
             RemoteHost.StartHost(System, port);
         }
 
@@ -131,5 +133,7 @@ namespace Pigeon.Remote
         }
 
         public Remoting Transport { get;private set; }
+
+        internal RemoteSettings RemoteSettings { get;private set; }
     }
 }

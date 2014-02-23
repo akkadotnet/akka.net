@@ -11,7 +11,7 @@ namespace Pigeon.Remote
     public abstract class RemoteTransport
     {
         public ActorSystem System { get; private set; }
-        public ActorRefProvider Provider { get; private set; }
+        public RemoteActorRefProvider Provider { get; private set; }
 
         public ConcurrentSet<Address> Addresses
         {
@@ -26,7 +26,7 @@ namespace Pigeon.Remote
             this.Addresses = new ConcurrentSet<Address>();
         }
 
-        public abstract void Startup();
+        public abstract void Start();
 
         public abstract void Send(object message, ActorRef sender, RemoteActorRef recipient);
 

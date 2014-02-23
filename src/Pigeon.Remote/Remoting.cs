@@ -1,4 +1,5 @@
 ﻿using Pigeon.Actor;
+using Pigeon.Event;
 using Pigeon.Remote.Transport;
 using Pigeon.Tools;
 using System;
@@ -15,10 +16,19 @@ namespace Pigeon.Remote
         public Remoting(ActorSystem system, RemoteActorRefProvider provider)
             : base(system, provider)
         {
+            log = Logging.GetLogger(this.System, "remoting");
         }
 
-        public override void Startup()
+        private LoggingAdapter log;
+        public override void Start()
         {
+            log.Info("Starting remoting");
+
+          //  val manager: ActorRef = system.asInstanceOf[ActorSystemImpl].systemActorOf(
+          //configureDispatcher(Props(classOf[EndpointManager], provider.remoteSettings.config, log)).withDeploy(Deploy.local),
+          //Remoting.EndpointManagerName)
+
+            this.EndpointManager = System.SystemActorOf(Props.Create(() => new EndpointManager(Provider.RemoteSettings.Config, log)).WithDeploy(Deploy.Local), Remoting.EndpointManagerName);
         }
 
         public override void Send(object message, Actor.ActorRef sender, RemoteActorRef recipient)
@@ -45,7 +55,7 @@ namespace Pigeon.Remote
                 if (responsibleTransports.Length == 0)
                 {
                     throw new RemoteTransportException(
-                "No transport is responsible for address:" + remote + " although protocol " + remote.Protocol + " is available." +
+                "No transport is responsible for address:[" + remote + "] although protocol 8" + remote.Protocol + "] is available." +
                 " Make sure at least one transport is configured to be responsible for the address.",
               null);
                 }
@@ -56,7 +66,7 @@ namespace Pigeon.Remote
                 else
                 {
                     throw new RemoteTransportException(
-              "Multiple transports are available for " + remote + ": " + string.Join(",",responsibleTransports.Select(t => t.ToString()))  + " " +
+              "Multiple transports are available for [" + remote + ": " + string.Join(",",responsibleTransports.Select(t => t.ToString()))  + "] " +
                 "Remoting cannot decide which transport to use to reach the remote system. Change your configuration " +
                 "so that only one transport is responsible for the address.",
               null);
@@ -64,7 +74,11 @@ namespace Pigeon.Remote
             }
 
             throw new RemoteTransportException(
-        "No transport is loaded for protocol: " + remote + ", available protocols: [" + string.Join(",", transportMapping.Keys.Select(t => t.ToString())) + "]", null);
+        "No transport is loaded for protocol: [" + remote.Protocol + "], available protocols: [" + string.Join(",", transportMapping.Keys.Select(t => t.ToString())) + "]", null);
         }
+
+        public static readonly string EndpointManagerName = "endpointManager";
+
+        public InternalActorRef EndpointManager { get;private set; }
     }
 }
