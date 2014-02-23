@@ -33,10 +33,12 @@ akka {
     }
 
     remote {
+        #this is the current remoting support 
         server {
             host = localhost
             port = 8081
         }
+        #this is the new upcoming remoting support, which enables multiple transports
         tcp-transport {
             transport-class = ""Pigeon.Remote.Transport.TcpTransport""
 		    applied-adapters = []
