@@ -5,6 +5,12 @@ open Pigeon.Actor
 type Actor()=
     inherit Pigeon.Actor.UntypedActor()
 
-let (<!) (actorRef:Pigeon.Actor.ActorRef) (msg: System.Object) =
+let (<!) (actorRef:ActorRef) (msg: obj) =
     actorRef.Tell msg
     ignore()
+
+let (<?) (tell:ICanTell) (msg: obj) =
+    tell.Ask msg
+    |> Async.AwaitIAsyncResult 
+    |> Async.Ignore
+
