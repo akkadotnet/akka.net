@@ -14,12 +14,9 @@ namespace Pigeon.Remote
     }
     public class Listen : RemotingCommand
     {
-        public Listen(Task<ProtocolTransportAddressPair[]> addressesPromise)
+        public Listen()
         {
-            this.AddressesPromise = addressesPromise;
         }
-
-        public Task<ProtocolTransportAddressPair[]> AddressesPromise { get;private set; }
     }
 /*
  sealed trait RemotingCommand extends NoSerializationVerificationNeeded

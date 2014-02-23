@@ -24,9 +24,15 @@ namespace Pigeon.Remote
             ReceiveBuilder.Match(message)
                 .With<Listen>(m => 
                 {
-
+                    var res = Listens();
+                    Sender.Tell(res);
                 });
 
+        }
+
+        private object Listens()
+        {
+            return "hello";
         }
     }
 }

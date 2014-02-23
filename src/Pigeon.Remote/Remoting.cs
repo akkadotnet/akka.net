@@ -24,12 +24,17 @@ namespace Pigeon.Remote
         {
             log.Info("Starting remoting");
 
-          //  val manager: ActorRef = system.asInstanceOf[ActorSystemImpl].systemActorOf(
-          //configureDispatcher(Props(classOf[EndpointManager], provider.remoteSettings.config, log)).withDeploy(Deploy.local),
-          //Remoting.EndpointManagerName)
-
             this.EndpointManager = System.SystemActorOf(Props.Create(() => new EndpointManager(Provider.RemoteSettings.Config, log)).WithDeploy(Deploy.Local), Remoting.EndpointManagerName);
+
+
+            var task = EndpointManager.Ask(new Listen());
+            if (!task.Wait(3000) || task.Result == null)
+            {
+                throw new RemoteTransportException("No transport drivers were loaded.", null);
+            }
         }
+
+        
 
         public override void Send(object message, Actor.ActorRef sender, RemoteActorRef recipient)
         {
