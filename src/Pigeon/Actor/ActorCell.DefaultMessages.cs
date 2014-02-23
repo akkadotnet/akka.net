@@ -108,25 +108,13 @@ namespace Pigeon.Actor
             {
                 try
                 {
-                    /*
-          case message: SystemMessage if shouldStash(message, currentState) ⇒ stash(message)
-          case f: Failed ⇒ handleFailure(f)
-          case DeathWatchNotification(a, ec, at) ⇒ watchedActorTerminated(a, ec, at)
-          case Create(failure) ⇒ create(failure)
-          case Watch(watchee, watcher) ⇒ addWatcher(watchee, watcher)
-          case Unwatch(watchee, watcher) ⇒ remWatcher(watchee, watcher)
-          case Recreate(cause) ⇒ faultRecreate(cause)
-          case Suspend() ⇒ faultSuspend()
-          case Resume(inRespToFailure) ⇒ faultResume(inRespToFailure)
-          case Terminate() ⇒ terminate()
-          case Supervise(child, async) ⇒ supervise(child, async)
-          case NoMessage ⇒ // only here to suppress warning
-                     */
                     ReceiveBuilder.Match(envelope.Message)
                         .With<CompleteFuture>(HandleCompleteFuture)
                         .With<Failed>(HandleFailed)
                         .With<DeathWatchNotification>(WatchedActorTerminated)
                         //TODO: add create?
+                        //TODO: see """final def init(sendSupervise: Boolean, mailboxType: MailboxType): this.type = {""" in dispatch.scala
+                        //case Create(failure) ⇒ create(failure)
                         .With<Watch>(HandleWatch)
                         .With<Unwatch>(HandleUnwatch)
                         .With<Recreate>(FaultRecreate)
@@ -134,7 +122,6 @@ namespace Pigeon.Actor
                         .With<Resume>(FaultResume)
                         .With<Terminate>(Terminate)
                         .With<Supervise>(HandleSupervise)
-                        .With<NoMessage>(m => { }) //only goes here to mimic Akka, which only goes here to supress pattern match warning :-P
                         .Default(m =>
                         {
                             throw new NotSupportedException("Unknown message " + m.GetType().Name);
@@ -340,7 +327,7 @@ protected def terminate() {
             Sender.Tell(new ActorIdentity(m.MessageId, this.Self));
         }
 
-        private void HandlePoisonPill(PoisonPill m)
+        private void HandlePoisonPill()
         {
             Self.Stop();
         }
@@ -453,7 +440,7 @@ protected def terminate() {
             child.Stop();
         }
 
-        private void Kill(Kill m)
+        private void Kill()
         {
             throw new ActorKilledException("Kill");
         }
@@ -477,9 +464,10 @@ protected def terminate() {
                 Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "now watched by " + m.Watcher));
         }
 
+        //TODO: find out why this is never called
         private void HandleUnwatch(Unwatch m)
-        {
-            WatchedBy.Remove(Sender);
+        {            
+            WatchedBy.Remove(m.Watcher);
         }
 
         private void HandleCompleteFuture(CompleteFuture m)

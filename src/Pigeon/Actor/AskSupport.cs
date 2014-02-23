@@ -72,17 +72,17 @@ namespace Pigeon.Actor
     //We need to somehow pass tasks to the current actors mailbox and complete them in the mailbox run
     public class ActorTaskScheduler : TaskScheduler
     {
+        protected override void QueueTask(Task task)
+        {            
+            var self = ActorCell.Current.Self;
+            self.Tell(new ActorTask(task), ActorRef.NoSender);
+        }
+
         public static readonly TaskScheduler Instance = new ActorTaskScheduler();
 
         protected override IEnumerable<Task> GetScheduledTasks()
         {
             throw new NotImplementedException();
-        }
-
-        protected override void QueueTask(Task task)
-        {            
-            var self = ActorCell.Current.Self;
-            self.Tell(new ActorTask(task), ActorRef.NoSender);
         }
 
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
