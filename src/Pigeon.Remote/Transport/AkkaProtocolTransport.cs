@@ -19,8 +19,22 @@ namespace Pigeon.Remote.Transport
 
         public Address Address { get; private set; }
     }
-    public abstract class AkkaProtocolTransport
+    public class AkkaProtocolTransport
     {
-        public abstract bool IsResponsibleFor(Address remote);
+        private Transport wrappedTransport;
+        private ActorSystem actorSystem;
+        private AkkaProtocolSettings akkaProtocolSettings;
+
+        public AkkaProtocolTransport(Transport wrappedTransport, ActorSystem actorSystem, AkkaProtocolSettings akkaProtocolSettings)
+        {
+            this.wrappedTransport = wrappedTransport;
+            this.actorSystem = actorSystem;
+            this.akkaProtocolSettings = akkaProtocolSettings;
+        }
+        
+        public bool IsResponsibleFor(Address remote)
+        {
+            return false;
+        }
     }
 }

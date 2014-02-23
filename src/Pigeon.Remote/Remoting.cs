@@ -24,18 +24,22 @@ namespace Pigeon.Remote
         {
             log.Info("Starting remoting");
 
-            this.EndpointManager = System.SystemActorOf(Props.Create(() => new EndpointManager(Provider.RemoteSettings.Config, log)).WithDeploy(Deploy.Local), Remoting.EndpointManagerName);
+            this.EndpointManager = System.SystemActorOf(Props.Create(() => new EndpointManager(Provider.RemoteSettings, log)).WithDeploy(Deploy.Local), Remoting.EndpointManagerName);
 
 
             var task = EndpointManager.Ask(new Listen());
-            if (!task.Wait(3000) || task.Result == null)
+            if (!task.Wait(3000) )
+            {
+                throw new RemoteTransportException("Transport loading timed out", null);
+            }
+            if (task.Result == null)
             {
                 throw new RemoteTransportException("No transport drivers were loaded.", null);
             }
+            var akkaProtocolTransports = (AkkaProtocolTransport[])task.Result;
+
         }
-
-        
-
+       
         public override void Send(object message, Actor.ActorRef sender, RemoteActorRef recipient)
         {
         }

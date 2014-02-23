@@ -60,6 +60,8 @@
     <Compile Include="..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="AkkaProtocolSettings.cs" />
+    <Compile Include="AkkaProtocolTransport.cs" />
     <Compile Include="EndpointManager.cs" />
     <Compile Include="EndpointManagerMessages.cs" />
     <Compile Include="MessageSerializer.cs" />
@@ -77,6 +79,8 @@
     <Compile Include="RemoteActorRefProvider.cs" />
     <Compile Include="RemoteHost.cs" />
     <Compile Include="Transport\AkkaProtocolTransport.cs" />
+    <Compile Include="Transport\TcpTransport.cs" />
+    <Compile Include="Transport\Transport.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Pigeon\Pigeon.csproj">
