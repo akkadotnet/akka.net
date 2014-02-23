@@ -27,8 +27,12 @@ namespace Pigeon.Configuration
 
         public static Config Default()
         {
+            return FromResource("Pigeon.Configuration.Pigeon.conf");
+        }
+
+        private static Config FromResource(string resourceName)
+        {
             var assembly = Assembly.GetExecutingAssembly();
-            var resourceName = "Pigeon.Configuration.Pigeon.conf";
 
             using (Stream stream = assembly.GetManifestResourceStream(resourceName))
             using (StreamReader reader = new StreamReader(stream))
