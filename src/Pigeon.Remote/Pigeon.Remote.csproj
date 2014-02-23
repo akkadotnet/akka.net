@@ -69,7 +69,7 @@
     <Compile Include="RemoteTransport.cs" />
     <Compile Include="Remoting.cs" />
     <Compile Include="Serialization\ProtobufSerializer.cs" />
-    <Compile Include="RemoteActorRef.cs" />
+    <Compile Include="BrokenRemoteActorRef.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteActorRefProvider.cs" />
     <Compile Include="RemoteHost.cs" />
