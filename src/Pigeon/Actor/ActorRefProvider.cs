@@ -68,6 +68,11 @@ namespace Pigeon.Actor
             get;
             set;
         }
+
+        public void AfterSendSystemMessage(object message)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class LocalActorRefProvider : ActorRefProvider

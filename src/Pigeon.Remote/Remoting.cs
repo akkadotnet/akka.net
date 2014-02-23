@@ -18,7 +18,7 @@ namespace Pigeon.Remote
         {
         }
 
-        public override void Send(object message, Actor.ActorRef sender, BrokenRemoteActorRef recipient)
+        public override void Send(object message, Actor.ActorRef sender, RemoteActorRef recipient)
         {
         }
 

@@ -9,8 +9,8 @@ namespace Pigeon.Remote
 {
     public abstract class RemoteTransport
     {
-        private RemoteActorRefProvider provider;
-        private ActorSystem system;
+        public ActorSystem System { get; private set; }
+        public ActorRefProvider Provider { get; private set; }
 
         public ISet<Address> Addresses
         {
@@ -20,13 +20,13 @@ namespace Pigeon.Remote
 
         public RemoteTransport(ActorSystem system, RemoteActorRefProvider provider)
         {
-            this.system = system;
-            this.provider = provider;
+            this.System = system;
+            this.Provider = provider;
         }
 
         public abstract void Startup();
 
-        public abstract void Send(object message, ActorRef sender, BrokenRemoteActorRef recipient);
+        public abstract void Send(object message, ActorRef sender, RemoteActorRef recipient);
 
         public abstract Task<bool> ManagementCommand(object cmd);
 
@@ -45,6 +45,6 @@ namespace Pigeon.Remote
         {
             get;
             protected set;
-        }
+        }        
     }
 }

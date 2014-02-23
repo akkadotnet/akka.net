@@ -88,6 +88,11 @@ namespace Pigeon.Remote
             }
         }
 
+        public void UseActorOnNode(RemoteActorRef actor, Props props, Deploy deploy, InternalActorRef parent)
+        {
+            throw new NotImplementedException();
+        }
+
         public Remoting RemoteTransport { get;private set; }
     }
 }
