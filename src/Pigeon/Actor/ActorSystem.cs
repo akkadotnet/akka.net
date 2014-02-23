@@ -99,7 +99,7 @@ namespace Pigeon.Actor
         private void Start()
         {
             if (Settings.LogDeadLetters > 0)
-                this.logDeadLetterListener = this.Provider.SystemActorOf<DeadLetterListener>("deadLetterListener");
+                this.logDeadLetterListener = this.SystemActorOf<DeadLetterListener>("deadLetterListener");
 
             EventStream.StartDefaultLoggers(this);
 

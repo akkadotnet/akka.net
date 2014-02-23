@@ -68,11 +68,6 @@ namespace Pigeon.Actor
             get;
             set;
         }
-
-        internal InternalActorRef SystemActorOf<T>(string name) where T:ActorBase
-        {
-            return this.SystemGuardian.Cell.ActorOf<T>(name);
-        }
     }
 
     public class LocalActorRefProvider : ActorRefProvider
