@@ -53,7 +53,7 @@ namespace Pigeon.Benchmark.PingPong
             var repeatsPerClient = repeat / numberOfClients;
             var system = new ActorSystem("PingPong");
 
-            var clients = new List<LocalActorRef>();
+            var clients = new List<ActorRef>();
             var tasks = new List<Task>();
             for (int i = 0; i < numberOfClients; i++)
             {

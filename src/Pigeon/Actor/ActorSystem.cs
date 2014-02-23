@@ -99,7 +99,7 @@ namespace Pigeon.Actor
         private void Start()
         {
             if (Settings.LogDeadLetters > 0)
-                this.logDeadLetterListener = this.Provider.SystemGuardian.Cell.ActorOf <DeadLetterListener>("deadLetterListener");
+                this.logDeadLetterListener = this.Provider.SystemActorOf<DeadLetterListener>("deadLetterListener");
 
             EventStream.StartDefaultLoggers(this);
 
@@ -122,7 +122,7 @@ namespace Pigeon.Actor
         public Serialization.Serialization Serialization { get;private set; }
 
         public LoggingAdapter log;
-        private LocalActorRef logDeadLetterListener;
+        private InternalActorRef logDeadLetterListener;
 
         public void Shutdown()
         {
@@ -134,12 +134,22 @@ namespace Pigeon.Actor
             this.Shutdown();
         }
 
-        public LocalActorRef ActorOf(Props props, string name = null)
+        public InternalActorRef SystemActorOf(Props props, string name = null)
+        {
+            return Provider.SystemGuardian.Cell.ActorOf(props, name);            
+        }
+
+        public InternalActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase
+        {
+            return Provider.SystemGuardian.Cell.ActorOf<TActor>(name);
+        }
+
+        public InternalActorRef ActorOf(Props props, string name = null)
         {
             return Provider.Guardian.Cell.ActorOf(props, name);
         }
 
-        public LocalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
+        public InternalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
         {
             return Provider.Guardian.Cell.ActorOf<TActor>( name);
         }
@@ -166,7 +176,7 @@ namespace Pigeon.Actor
             }
         }
 
-        public LocalActorRef Guardian
+        public InternalActorRef Guardian
         {
             get
             {
@@ -174,7 +184,7 @@ namespace Pigeon.Actor
             }
         }
 
-        public LocalActorRef SystemGuardian
+        public InternalActorRef SystemGuardian
         {
             get
             {

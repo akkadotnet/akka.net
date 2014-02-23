@@ -27,8 +27,8 @@ namespace Pigeon.Actor
 
             this.RootCell = new ActorCell(System, "", new ConcurrentQueueMailbox());
             this.DeadLetters = new DeadLetterActorRef(RootPath / "deadLetters", this.System.EventStream);
-            this.Guardian = RootCell.ActorOf<GuardianActor>("user");
-            this.SystemGuardian = RootCell.ActorOf<GuardianActor>("system");
+            this.Guardian = (LocalActorRef)RootCell.ActorOf<GuardianActor>("user");
+            this.SystemGuardian = (LocalActorRef)RootCell.ActorOf<GuardianActor>("system");
             this.TempContainer = new VirtualPathContainer(this, TempNode, null);
         }
 
@@ -53,7 +53,9 @@ namespace Pigeon.Actor
         public LocalActorRef Guardian { get; protected set; }
         public LocalActorRef SystemGuardian { get; protected set; }
 
-        public abstract LocalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path);
+
+
+        public abstract InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path);
         public ActorRef ResolveActorRef(string path){
             var actorPath = ActorPath.Parse(path);
             return ResolveActorRef(actorPath);
@@ -67,7 +69,10 @@ namespace Pigeon.Actor
             set;
         }
 
-        
+        internal InternalActorRef SystemActorOf<T>(string name) where T:ActorBase
+        {
+            return ((LocalActorRef)this.SystemGuardian).Cell.ActorOf<T>(name);
+        }
     }
 
     public class LocalActorRefProvider : ActorRefProvider
@@ -77,7 +82,7 @@ namespace Pigeon.Actor
             this.Address = new Address("akka", this.System.Name); //TODO: this should not work this way...
         }
 
-        public override LocalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path)
+        public override InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path)
         {
             var mailbox = System.Mailboxes.FromConfig(props.Mailbox);
 

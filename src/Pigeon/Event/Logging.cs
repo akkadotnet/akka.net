@@ -89,7 +89,7 @@ namespace Pigeon.Event
             ActorRef actor = null;
             try
             {
-                actor = system.SystemGuardian.Cell.ActorOf(Props.Create(actorClass), name);
+                actor = system.SystemActorOf(Props.Create(actorClass), name);
             }
             catch
             {
@@ -97,7 +97,7 @@ namespace Pigeon.Event
                 //when doing so, this logger is already started and the name reserved.
                 //we need to examine how this is dealt with in akka.
                 name = name + Guid.NewGuid();
-                actor = system.SystemGuardian.Cell.ActorOf(Props.Create(actorClass), name);
+                actor = system.SystemActorOf(Props.Create(actorClass), name);
             }
             loggers.Add(actor);
             await actor.Ask(new InitializeLogger(this));

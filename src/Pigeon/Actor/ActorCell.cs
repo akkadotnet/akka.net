@@ -79,25 +79,23 @@ namespace Pigeon.Actor
            }
         }
 
-        //TODO: this is not correct. actor selection should be an object with an anchor actorref and elements
-        //resolution of the members is done lazy
         public ActorSelection ActorSelection(ActorPath actorPath)
         {
             var actorRef = System.Provider.ResolveActorRef(actorPath);
             return new ActorSelection(actorRef, ""); 
         }
 
-        public virtual LocalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
+        public virtual InternalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
         {
             return ActorOf(Props.Create<TActor>(), name);
         }
 
-        public virtual LocalActorRef ActorOf(Props props, string name = null)
+        public virtual InternalActorRef ActorOf(Props props, string name = null)
         {
             return MakeChild(props, name);
         }
 
-        private LocalActorRef MakeChild(Props props, string name)
+        private InternalActorRef MakeChild(Props props, string name)
         {            
             var uid = NewUid();
             name = GetActorName(props, name, uid);
@@ -126,7 +124,7 @@ namespace Pigeon.Actor
             this.Children.TryRemove(name, out tmp);
         }
 
-        private void InitChild(string name, LocalActorRef actor)
+        private void InitChild(string name, InternalActorRef actor)
         {
             this.Children.TryUpdate(name, actor,ActorRef.Reserved);
         }
