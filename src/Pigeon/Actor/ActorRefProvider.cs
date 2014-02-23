@@ -71,7 +71,7 @@ namespace Pigeon.Actor
 
         internal InternalActorRef SystemActorOf<T>(string name) where T:ActorBase
         {
-            return ((LocalActorRef)this.SystemGuardian).Cell.ActorOf<T>(name);
+            return this.SystemGuardian.Cell.ActorOf<T>(name);
         }
     }
 
