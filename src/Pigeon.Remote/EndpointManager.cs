@@ -41,7 +41,7 @@ namespace Pigeon.Remote
                     {
                         throw new ArgumentException("The type [" + t.TransportClass + "] could not be resolved");
                     }
-                    var driver = (Transport.Transport)Activator.CreateInstance(driverType,Context.System,this.settings.Config);
+                    var driver = (Transport.Transport)Activator.CreateInstance(driverType,Context.System,t.Config);
                     var wrappedTransport = driver; //TODO: Akka applies adapters and other yet unknown stuff
                     var listen = driver.Listen();
                     return new ProtocolTransportAddressPair(new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(t.Config)), listen.Item1);

@@ -14,6 +14,7 @@ namespace Pigeon.Remote.Transport
         {
             this.System = system;
             this.Config = config;
+
         }
 
         public Config Config { get;private set; }

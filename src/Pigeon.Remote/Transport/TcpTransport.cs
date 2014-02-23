@@ -12,13 +12,17 @@ namespace Pigeon.Remote.Transport
     {
         public TcpTransport(ActorSystem system, Config config):base(system,config)
         {
+            var protocol = config.GetString("transport-protocol");
+            var host = config.GetString("host");
+            var port = config.GetInt("port");
+            this.Address = new Address(protocol, system.Name, host, port);
         }
 
         public override Tuple<Address, object> Listen()
-        {
-            var address = new Address("apa", this.System.Name, "gapa", 1233);
-
-            return Tuple.Create<Address,object>(address, "foo");
+        {           
+            return Tuple.Create<Address,object>(Address, "foo");
         }
+
+        public Address Address { get;private set; }
     }
 }

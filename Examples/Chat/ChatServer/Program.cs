@@ -37,6 +37,13 @@ akka {
             host = localhost
             port = 8081
         }
+        tcp-transport {
+            transport-class = ""Pigeon.Remote.Transport.TcpTransport""
+		    applied-adapters = []
+		    transport-protocol = tcp
+		    port = 8081
+		    hostname = localhost
+        }
     }
 }
 ");
