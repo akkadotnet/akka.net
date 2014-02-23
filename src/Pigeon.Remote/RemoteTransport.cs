@@ -1,4 +1,5 @@
 ﻿using Pigeon.Actor;
+using Pigeon.Tools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +13,7 @@ namespace Pigeon.Remote
         public ActorSystem System { get; private set; }
         public ActorRefProvider Provider { get; private set; }
 
-        public ISet<Address> Addresses
+        public ConcurrentSet<Address> Addresses
         {
             get;
             protected set;
@@ -22,6 +23,7 @@ namespace Pigeon.Remote
         {
             this.System = system;
             this.Provider = provider;
+            this.Addresses = new ConcurrentSet<Address>();
         }
 
         public abstract void Startup();

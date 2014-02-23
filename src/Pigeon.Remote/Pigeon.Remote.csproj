@@ -68,6 +68,7 @@
     <Compile Include="RemoteActorRef.cs" />
     <Compile Include="RemoteDaemon.cs" />
     <Compile Include="RemoteTransport.cs" />
+    <Compile Include="RemoteTransportException.cs" />
     <Compile Include="Remoting.cs" />
     <Compile Include="Serialization\ProtobufSerializer.cs" />
     <Compile Include="BrokenRemoteActorRef.cs" />
