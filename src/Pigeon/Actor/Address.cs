@@ -53,5 +53,10 @@ namespace Pigeon.Actor
 
             return this.ToString() == obj.ToString();
         }
+
+        public string HostPort()
+        {
+            return this.ToString().Substring(Protocol.Length + 3);
+        }
     }
 }

@@ -31,27 +31,64 @@ namespace Pigeon.Remote
             base.Init();
 
             this.RemoteDaemon = new Remote.RemoteDaemon (this.System,RootPath / "remote",null);
-            this.RemoteTransport = new Remoting(System, this);
+            this.Transport = new Remoting(System, this);
             RemoteHost.StartHost(System, port);
         }
 
         public override InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path)
         {
             var mailbox = System.Mailboxes.FromConfig(props.Mailbox);
-
-            ActorCell cell = null;
-            if (props.RouterConfig is NoRouter)
+           
+            if (props.Deploy != null && props.Deploy.Scope is RemoteScope)
             {
-                cell = new ActorCell(system,supervisor, props, path, mailbox);
-              
+                return RemoteActorOf(system, props, supervisor, path, mailbox);
             }
             else
             {
-                cell = new RoutedActorCell(system,supervisor, props, path, mailbox);
+                return LocalActorOf(system, props, supervisor, path, mailbox);
+            }
+        }
+
+        private bool HasAddress(Address address) 
+        {
+            return address == this.Address || this.Transport.Addresses.Any(a => a == address);
+        }
+
+        private InternalActorRef RemoteActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, Mailbox mailbox)
+        {
+            var scope = (RemoteScope)props.Deploy.Scope;
+            var d = props.Deploy;
+            var addr = scope.Address;
+
+            if (HasAddress(addr))
+            {
+                return LocalActorOf(System, props, supervisor, path, mailbox);
+            }
+
+            var localAddress = Transport.LocalAddressForRemote(addr);
+
+            var rpath = (new RootActorPath(addr) / "remote" / localAddress.Protocol / localAddress.HostPort() / path.Skip(2).ToArray()).
+              WithUid(path.Uid);
+            new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, d);
+
+            throw new NotImplementedException();
+        }
+
+        private static InternalActorRef LocalActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, Mailbox mailbox)
+        {
+            ActorCell cell = null;
+            if (props.RouterConfig is NoRouter)
+            {
+                cell = new ActorCell(system, supervisor, props, path, mailbox);
+
+            }
+            else
+            {
+                cell = new RoutedActorCell(system, supervisor, props, path, mailbox);
             }
 
             cell.NewActor();
-         //   parentContext.Watch(cell.Self);
+            //   parentContext.Watch(cell.Self);
             return cell.Self;
         }
 
@@ -93,6 +130,6 @@ namespace Pigeon.Remote
             throw new NotImplementedException();
         }
 
-        public Remoting RemoteTransport { get;private set; }
+        public Remoting Transport { get;private set; }
     }
 }
