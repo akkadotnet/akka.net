@@ -32,7 +32,7 @@ namespace Pigeon.Remote
 
         }
 
-        private AkkaProtocolTransport[] Listens()
+        private ProtocolTransportAddressPair[] Listens()
         {
             var transports = this.settings.Transports.Select(t =>
                 {
@@ -43,7 +43,8 @@ namespace Pigeon.Remote
                     }
                     var driver = (Transport.Transport)Activator.CreateInstance(driverType,Context.System,this.settings.Config);
                     var wrappedTransport = driver; //TODO: Akka applies adapters and other yet unknown stuff
-                    return new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(t.Config));
+                    var listen = driver.Listen();
+                    return new ProtocolTransportAddressPair(new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(t.Config)), listen.Item1);
                 }).ToArray();
             return transports;
         }

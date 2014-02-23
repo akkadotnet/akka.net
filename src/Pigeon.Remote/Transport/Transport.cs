@@ -19,5 +19,7 @@ namespace Pigeon.Remote.Transport
         public Config Config { get;private set; }
 
         public ActorSystem System { get; private set; }
+
+        public abstract Tuple<Address, object> Listen();
     }
 }

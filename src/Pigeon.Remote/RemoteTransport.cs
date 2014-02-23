@@ -13,7 +13,7 @@ namespace Pigeon.Remote
         public ActorSystem System { get; private set; }
         public RemoteActorRefProvider Provider { get; private set; }
 
-        public ConcurrentSet<Address> Addresses
+        public ISet<Address> Addresses
         {
             get;
             protected set;
@@ -23,7 +23,7 @@ namespace Pigeon.Remote
         {
             this.System = system;
             this.Provider = provider;
-            this.Addresses = new ConcurrentSet<Address>();
+            this.Addresses = null;
         }
 
         public abstract void Start();

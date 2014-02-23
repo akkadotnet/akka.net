@@ -36,8 +36,9 @@ namespace Pigeon.Remote
             {
                 throw new RemoteTransportException("No transport drivers were loaded.", null);
             }
-            var akkaProtocolTransports = (AkkaProtocolTransport[])task.Result;
+            var akkaProtocolTransports = (ProtocolTransportAddressPair[])task.Result;
 
+            this.Addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address));
         }
        
         public override void Send(object message, Actor.ActorRef sender, RemoteActorRef recipient)
