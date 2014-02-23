@@ -12,14 +12,14 @@ namespace Pigeon.Remote
 {
     //TODO: rewrite, this should take a RemoteTransport upon creation.
     //move all network related code to RemoteTransport and other remoting classes
-    public class RemoteActorRef : MinimalActorRef
+    public class BrokenRemoteActorRef : MinimalActorRef
     {
         private ActorSystem system;
         protected string actorName;
         private TcpClient client;
         private NetworkStream stream;
 
-        public RemoteActorRef(ActorSystem system, ActorPath remoteActorPath, int port)
+        public BrokenRemoteActorRef(ActorSystem system, ActorPath remoteActorPath, int port)
         {
             this.system = system;
             this.Path = remoteActorPath;

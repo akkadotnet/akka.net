@@ -31,6 +31,7 @@ namespace Pigeon.Remote
             base.Init();
 
             this.RemoteDaemon = new Remote.RemoteDaemon (this.System,RootPath / "remote",null);
+            this.RemoteTransport = new Remoting(System, this);
             RemoteHost.StartHost(System, port);
         }
 
@@ -83,8 +84,10 @@ namespace Pigeon.Remote
             }
             else
             {
-                return new RemoteActorRef(System, actorPath, this.Address.Port.Value);
+                return new BrokenRemoteActorRef(System, actorPath, this.Address.Port.Value);
             }
         }
+
+        public Remoting RemoteTransport { get;private set; }
     }
 }

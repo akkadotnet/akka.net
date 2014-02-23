@@ -67,6 +67,7 @@
     <Compile Include="Proto\Wireformats.cs" />
     <Compile Include="RemoteDaemon.cs" />
     <Compile Include="RemoteTransport.cs" />
+    <Compile Include="Remoting.cs" />
     <Compile Include="Serialization\ProtobufSerializer.cs" />
     <Compile Include="RemoteActorRef.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -26,7 +26,7 @@ namespace Pigeon.Remote
 
         public abstract void Startup();
 
-        public abstract void Send(object message, ActorRef sender, RemoteActorRef recipient);
+        public abstract void Send(object message, ActorRef sender, BrokenRemoteActorRef recipient);
 
         public abstract Task<bool> ManagementCommand(object cmd);
 
