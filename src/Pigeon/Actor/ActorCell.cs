@@ -69,7 +69,7 @@ namespace Pigeon.Actor
                    //absolute path
                    if (path.Split('/').First() == "")
                    {
-                       return new ActorSelection(this.System.Provider.RootCell.Self, path);
+                       return new ActorSelection(this.System.Provider.RootCell.Self, path.TrimStart('/'));
                    }                    
                    else // relative path
                    {
