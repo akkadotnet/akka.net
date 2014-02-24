@@ -45,8 +45,6 @@ akka {
     }
 }
 ");
-            //testing connectivity
-            Thread.Sleep(1000);
             using (var system = ActorSystem.Create("MyClient",config)) 
             {
                 var chatClient = system.ActorOf(Props.Create<ChatClientActor>());
