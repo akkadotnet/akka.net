@@ -145,7 +145,12 @@ namespace Pigeon.Remote
             }
             else
             {
-                return new BrokenRemoteActorRef(System, actorPath, this.Address.Port.Value);
+                return new RemoteActorRef(Transport,
+                    Transport.LocalAddressForRemote(actorPath.Address),
+                    actorPath,
+                    ActorRef.Nobody,
+                    Props.None,
+                    Deploy.None);               
             }
         }
 
