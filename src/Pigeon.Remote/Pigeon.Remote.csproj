@@ -62,6 +62,7 @@
     </Compile>
     <Compile Include="AkkaProtocolSettings.cs" />
     <Compile Include="AkkaProtocolTransport.cs" />
+    <Compile Include="Endpoint.cs" />
     <Compile Include="EndpointManager.cs" />
     <Compile Include="EndpointManagerMessages.cs" />
     <Compile Include="MessageSerializer.cs" />

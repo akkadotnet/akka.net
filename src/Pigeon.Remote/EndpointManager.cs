@@ -15,6 +15,8 @@ namespace Pigeon.Remote
     {
         private RemoteSettings settings;
         private LoggingAdapter log;
+        private IDictionary<Address, AkkaProtocolTransport> transportMapping = new Dictionary<Address, AkkaProtocolTransport>();
+        private Dictionary<Address, ActorRef> endpoints = new Dictionary<Address, ActorRef>();
 
         public EndpointManager(RemoteSettings settings, Event.LoggingAdapter log)
         {
@@ -24,12 +26,69 @@ namespace Pigeon.Remote
         protected override void OnReceive(object message)
         {
             ReceiveBuilder.Match(message)
-                .With<Listen>(m => 
+                .With<Listen>(m =>
                 {
                     var res = Listens();
+                    transportMapping = res.ToDictionary(k => k.Address, v => v.ProtocolTransport);
                     Sender.Tell(res);
-                });
+                })
+                .With<Send>(m =>
+                {
+                    var recipientAddress = m.Recipient.Path.Address;
+                    var localAddress = m.Recipient.LocalAddressToUse;
+                    ActorRef endpoint;
+                    AkkaProtocolTransport transport = null;
+                    transportMapping.TryGetValue(localAddress, out transport);
 
+
+                    //TODO: this is not how it should work, but we need an intermediate impl to get the new structure up and running
+                    if (this.endpoints.TryGetValue(recipientAddress, out endpoint))
+                    {
+                        //pass the message to the endpoint
+                        endpoint.Tell(message);
+                    }
+                    else
+                    {
+                        endpoint = Context.ActorOf(Props.Create(() => new EndpointActor(m.Recipient.LocalAddressToUse,recipientAddress,transport.Transport,this.settings)));
+                        this.endpoints.Add(recipientAddress, endpoint);
+                        endpoint.Tell(message);
+                    }
+                    /*
+val recipientAddress = recipientRef.path.address
+
+      def createAndRegisterWritingEndpoint(refuseUid: Option[Int]): ActorRef =
+        endpoints.registerWritableEndpoint(
+          recipientAddress,
+          createEndpoint(
+            recipientAddress,
+            recipientRef.localAddressToUse,
+            transportMapping(recipientRef.localAddressToUse),
+            settings,
+            handleOption = None,
+            writing = true,
+            refuseUid))
+
+      endpoints.writableEndpointWithPolicyFor(recipientAddress) match {
+        case Some(Pass(endpoint)) ⇒
+          endpoint ! s
+        case Some(Gated(timeOfRelease)) ⇒
+          if (timeOfRelease.isOverdue()) createAndRegisterWritingEndpoint(refuseUid = None) ! s
+          else extendedSystem.deadLetters ! s
+        case Some(Quarantined(uid, _)) ⇒
+          // timeOfRelease is only used for garbage collection reasons, therefore it is ignored here. We still have
+          // the Quarantined tombstone and we know what UID we don't want to accept, so use it.
+          createAndRegisterWritingEndpoint(refuseUid = Some(uid)) ! s
+        case None ⇒
+          createAndRegisterWritingEndpoint(refuseUid = None) ! s
+
+                     */
+                })
+                .Default(Unhandled);
+
+        }
+
+        private void CreateEndpoint()
+        {
         }
 
         private ProtocolTransportAddressPair[] Listens()

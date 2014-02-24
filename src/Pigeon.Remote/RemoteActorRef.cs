@@ -11,14 +11,14 @@ namespace Pigeon.Remote
     public class RemoteActorRef : InternalActorRef
     {
         private InternalActorRef parent;
-        private Address localAddressToUse;
-        private RemoteTransport remote;
+        public Address LocalAddressToUse { get; private set; }
+        public RemoteTransport Remote { get; private set; }
         private Deploy deploy;
         private Props props;
         public RemoteActorRef(RemoteTransport remote, Address localAddressToUse, ActorPath path, InternalActorRef parent, Props props, Deploy deploy)
         {
-            this.remote = remote;
-            this.localAddressToUse = localAddressToUse;
+            this.Remote = remote;
+            this.LocalAddressToUse = localAddressToUse;
             this.Path = path;
             this.parent = parent;
             this.props = props;
@@ -59,7 +59,7 @@ namespace Pigeon.Remote
         {
             try
             {
-                remote.Send(message, null, this);
+                Remote.Send(message, null, this);
                 Provider.AfterSendSystemMessage(message);
             }
             catch
@@ -70,14 +70,14 @@ namespace Pigeon.Remote
 
         public override ActorRefProvider Provider
         {
-            get { return this.remote.Provider; }
+            get { return this.Remote.Provider; }
         }
 
         protected override void TellInternal(object message, ActorRef sender)
         {
             try
             {
-                remote.Send(message, sender, this);
+                Remote.Send(message, sender, this);
             }
             catch
             {
@@ -88,7 +88,7 @@ namespace Pigeon.Remote
         public void Start()
         {
             if (props != null && deploy != null)
-                ((RemoteActorRefProvider)remote.Provider).UseActorOnNode(this, props, deploy, parent);
+                ((RemoteActorRefProvider)Remote.Provider).UseActorOnNode(this, props, deploy, parent);
         }
     }
 }

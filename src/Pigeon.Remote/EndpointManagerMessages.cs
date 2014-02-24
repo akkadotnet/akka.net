@@ -18,6 +18,20 @@ namespace Pigeon.Remote
         {
         }
     }
+
+    public class Send : RemotingCommand
+    {
+        public object Message { get; set; }
+        public ActorRef Sender { get; set; }
+        public RemoteActorRef Recipient { get; set; }
+
+        public Send(object message, ActorRef sender, RemoteActorRef recipient)
+        {
+            this.Message = message;
+            this.Sender = sender;
+            this.Recipient = recipient;
+        }
+    }
 /*
  sealed trait RemotingCommand extends NoSerializationVerificationNeeded
   case class Listen(addressesPromise: Promise[Seq[(AkkaProtocolTransport, Address)]]) extends RemotingCommand

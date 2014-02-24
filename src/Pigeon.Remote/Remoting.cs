@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -28,7 +29,7 @@ namespace Pigeon.Remote
 
 
             var task = EndpointManager.Ask(new Listen());
-            if (!task.Wait(3000) )
+            if (!task.Wait(30000) )
             {
                 throw new RemoteTransportException("Transport loading timed out", null);
             }
@@ -52,6 +53,17 @@ namespace Pigeon.Remote
        
         public override void Send(object message, Actor.ActorRef sender, RemoteActorRef recipient)
         {
+            if (EndpointManager == null)
+            {
+                throw new RemotingException("Attempted to send remote message but Remoting is not running.", null);
+            }
+            else
+            {
+                if (sender == null)
+                    sender = ActorRef.NoSender;
+
+                EndpointManager.Tell(new Send(message, sender, recipient), sender);
+            }
         }
 
         public override Task<bool> ManagementCommand(object cmd)
