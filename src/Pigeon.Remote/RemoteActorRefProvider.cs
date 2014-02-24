@@ -132,6 +132,10 @@ namespace Pigeon.Remote
                 {
                     //standard
                     var currentContext = RootCell;
+                    if (actorPath.ToStringWithoutAddress() == "/")
+                    {
+                        return currentContext.Self;
+                    }
                     foreach (var part in actorPath.Skip(1))
                     {
                         currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;

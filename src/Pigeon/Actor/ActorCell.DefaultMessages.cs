@@ -53,8 +53,12 @@ namespace Pigeon.Actor
 
             if (message is AutoReceivedMessage)
             {
+                Type actorType = null;
+                if (Actor != null)
+                    actorType = Actor.GetType();
+
                 if (System.Settings.DebugAutoReceive)
-                    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "received AutoReceiveMessage " + message));
+                    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));
 
                 ReceiveBuilder.Match(envelope.Message)
                .With<Terminated>(ReceivedTerminated)
