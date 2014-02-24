@@ -39,6 +39,15 @@ namespace Pigeon.Remote
             var akkaProtocolTransports = (ProtocolTransportAddressPair[])task.Result;
 
             this.Addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address));
+         //   this.transportMapping = akkaProtocolTransports
+         //       .ToDictionary(p => p.ProtocolTransport.Transport.SchemeIdentifier,);
+            var tmp = akkaProtocolTransports.GroupBy(t => t.ProtocolTransport.Transport.SchemeIdentifier);
+            transportMapping = new Dictionary<string, HashSet<ProtocolTransportAddressPair>>();
+            foreach (var g in tmp)
+            {
+                var set = new HashSet<ProtocolTransportAddressPair>(g);
+                transportMapping.Add(g.Key, set);
+            }
         }
        
         public override void Send(object message, Actor.ActorRef sender, RemoteActorRef recipient)
@@ -50,14 +59,14 @@ namespace Pigeon.Remote
             return null;
         }
 
-        private IDictionary<string, ConcurrentSet<ProtocolTransportAddressPair>> transportMapping = new ConcurrentDictionary<string, ConcurrentSet<ProtocolTransportAddressPair>>();
+        private IDictionary<string, HashSet<ProtocolTransportAddressPair>> transportMapping;
         public override Address LocalAddressForRemote(Address remote)
         {
             return LocalAddressForRemote(transportMapping,remote);
         }
-        private Address LocalAddressForRemote(IDictionary<string, ConcurrentSet<ProtocolTransportAddressPair>> transportMapping, Address remote)
+        private Address LocalAddressForRemote(IDictionary<string, HashSet<ProtocolTransportAddressPair>> transportMapping, Address remote)
         {
-            ConcurrentSet<ProtocolTransportAddressPair> transports;
+            HashSet<ProtocolTransportAddressPair> transports;
 
             if (transportMapping.TryGetValue(remote.Protocol, out transports))
             {
@@ -65,7 +74,7 @@ namespace Pigeon.Remote
                 if (responsibleTransports.Length == 0)
                 {
                     throw new RemoteTransportException(
-                "No transport is responsible for address:[" + remote + "] although protocol 8" + remote.Protocol + "] is available." +
+                "No transport is responsible for address:[" + remote + "] although protocol [" + remote.Protocol + "] is available." +
                 " Make sure at least one transport is configured to be responsible for the address.",
               null);
                 }

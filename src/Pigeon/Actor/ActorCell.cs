@@ -54,8 +54,8 @@ namespace Pigeon.Actor
            if (Uri.IsWellFormedUriString(path,UriKind.Absolute))
            {
                var actorPath = ActorPath.Parse(path);
-               var actorRef = System.Provider.ResolveActorRef(actorPath);
-               return new ActorSelection(actorRef, "");
+               var actorRef = System.Provider.RootGuardianAt(actorPath.Address);
+               return new ActorSelection(actorRef, actorPath.Skip(2).ToArray());
            }
            else
            {

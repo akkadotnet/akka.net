@@ -53,7 +53,10 @@ namespace Pigeon.Actor
         public LocalActorRef Guardian { get; protected set; }
         public LocalActorRef SystemGuardian { get; protected set; }
 
-
+        public virtual ActorRef RootGuardianAt(Address address)
+        {
+            return this.RootCell.Self;
+        }
 
         public abstract InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path);
         public ActorRef ResolveActorRef(string path){

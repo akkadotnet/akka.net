@@ -85,6 +85,8 @@ namespace Pigeon.Actor
         public string Mailbox { get;private set; }
         public string Dispatcher { get;private set; }
 
+
+        public static readonly Deploy None = null;
     }
 
     public class Scope

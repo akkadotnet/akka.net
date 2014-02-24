@@ -56,6 +56,24 @@ namespace Pigeon.Remote
             return address == this.Address || this.Transport.Addresses.Any(a => a == address);
         }
 
+        public override ActorRef RootGuardianAt(Address address)
+        {
+            if (HasAddress(address))
+            {
+                return this.RootCell.Self;
+            }
+            else
+            {
+                return new RemoteActorRef(
+                    Transport, 
+                    Transport.LocalAddressForRemote(address),
+                    new RootActorPath(address), 
+                    ActorRef.Nobody, 
+                    Props.None, 
+                    Deploy.None);
+            }
+        }
+
         private InternalActorRef RemoteActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, Mailbox mailbox)
         {
             var scope = (RemoteScope)props.Deploy.Scope;

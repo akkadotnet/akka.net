@@ -132,6 +132,8 @@ namespace Pigeon.Actor
         }
 
         public object[] Arguments { get; private set; }
+
+        public static readonly Props None = null;
     }
 
     /// <summary>

@@ -12,9 +12,9 @@ namespace Pigeon.Remote.Transport
     {
         private TcpServer server;
         public TcpTransport(ActorSystem system, Config config):base(system,config)
-        {
-            
-            var protocol = config.GetString("transport-protocol");
+        {            
+            var protocol = "akka."+config.GetString("transport-protocol");
+            this.SchemeIdentifier = protocol;
             var host = config.GetString("host");
             var port = config.GetInt("port");
             this.Address = new Address(protocol, system.Name, host, port);

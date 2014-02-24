@@ -21,13 +21,13 @@ namespace Pigeon.Remote.Transport
     }
     public class AkkaProtocolTransport
     {
-        private Transport wrappedTransport;
+        public Transport Transport { get; private set; }
         private ActorSystem actorSystem;
         private AkkaProtocolSettings akkaProtocolSettings;
 
         public AkkaProtocolTransport(Transport wrappedTransport, ActorSystem actorSystem, AkkaProtocolSettings akkaProtocolSettings)
         {
-            this.wrappedTransport = wrappedTransport;
+            this.Transport = wrappedTransport;
             this.actorSystem = actorSystem;
             this.akkaProtocolSettings = akkaProtocolSettings;
         }
@@ -36,5 +36,7 @@ namespace Pigeon.Remote.Transport
         {
             return false;
         }
+
+        
     }
 }

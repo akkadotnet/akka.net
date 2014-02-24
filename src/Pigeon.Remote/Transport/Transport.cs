@@ -22,5 +22,7 @@ namespace Pigeon.Remote.Transport
         public ActorSystem System { get; private set; }
 
         public abstract Address Listen();
+
+        public string SchemeIdentifier { get;protected set; }
     }
 }
