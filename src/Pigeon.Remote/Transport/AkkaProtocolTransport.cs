@@ -31,12 +31,5 @@ namespace Pigeon.Remote.Transport
             this.actorSystem = actorSystem;
             this.akkaProtocolSettings = akkaProtocolSettings;
         }
-        
-        public bool IsResponsibleFor(Address remote)
-        {
-            return false;
-        }
-
-        
     }
 }

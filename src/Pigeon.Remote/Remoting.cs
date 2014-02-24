@@ -70,7 +70,7 @@ namespace Pigeon.Remote
 
             if (transportMapping.TryGetValue(remote.Protocol, out transports))
             {
-                var responsibleTransports = transports.Where(t => t.ProtocolTransport.IsResponsibleFor(remote)).ToArray();
+                var responsibleTransports = transports.Where(t => t.ProtocolTransport.Transport.IsResponsibleFor(remote)).ToArray();
                 if (responsibleTransports.Length == 0)
                 {
                     throw new RemoteTransportException(

@@ -28,5 +28,10 @@ namespace Pigeon.Remote.Transport
         }
 
         public Address Address { get;private set; }
+
+        public override bool IsResponsibleFor(Address remote)
+        {
+            return true;
+        }
     }
 }

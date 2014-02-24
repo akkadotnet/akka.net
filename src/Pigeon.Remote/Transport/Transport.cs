@@ -24,5 +24,7 @@ namespace Pigeon.Remote.Transport
         public abstract Address Listen();
 
         public string SchemeIdentifier { get;protected set; }
+
+        public abstract bool IsResponsibleFor(Address remote);
     }
 }

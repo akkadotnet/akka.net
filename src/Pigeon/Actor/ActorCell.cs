@@ -55,7 +55,7 @@ namespace Pigeon.Actor
            {
                var actorPath = ActorPath.Parse(path);
                var actorRef = System.Provider.RootGuardianAt(actorPath.Address);
-               return new ActorSelection(actorRef, actorPath.Skip(2).ToArray());
+               return new ActorSelection(actorRef, actorPath.Skip(1).ToArray());
            }
            else
            {
