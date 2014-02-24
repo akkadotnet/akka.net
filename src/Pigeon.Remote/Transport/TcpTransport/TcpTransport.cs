@@ -21,10 +21,10 @@ namespace Pigeon.Remote.Transport
             server = new TcpServer(system, host, port);
         }
 
-        public override Tuple<Address, object> Listen()
+        public override Address Listen()
         {
             server.Start();
-            return Tuple.Create<Address,object>(Address, "foo");
+            return Address;
         }
 
         public Address Address { get;private set; }

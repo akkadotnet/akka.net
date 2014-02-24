@@ -43,8 +43,8 @@ namespace Pigeon.Remote
                     }
                     var driver = (Transport.Transport)Activator.CreateInstance(driverType,Context.System,t.Config);
                     var wrappedTransport = driver; //TODO: Akka applies adapters and other yet unknown stuff
-                    var listen = driver.Listen();
-                    return new ProtocolTransportAddressPair(new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(t.Config)), listen.Item1);
+                    var address = driver.Listen();
+                    return new ProtocolTransportAddressPair(new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(t.Config)), address);
                 }).ToArray();
             return transports;
         }
