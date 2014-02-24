@@ -36,5 +36,37 @@ namespace Pigeon.Tests.Actor
             task.Wait();
             Assert.AreEqual("hello", task.Result);
         }
+
+        #region Tests for verifying that ActorSelections made within an ActorContext can be resolved
+
+        /// <summary>
+        /// Accepts a Tuple containing a string representation of an ActorPath and a message, respectively
+        /// </summary>
+        public class ActorContextSelectionActor : TypedActor, IHandle<Tuple<string, string>>
+        {
+            public void Handle(Tuple<string, string> message)
+            {
+                var testActorSelection = Context.ActorSelection(message.Item1);
+                testActorSelection.Tell(message.Item2);
+            }
+        }
+
+        [TestMethod()]
+        public void CanResolveAbsoluteActorPathInActorContext()
+        {
+            var contextActor = sys.ActorOf<ActorContextSelectionActor>();
+            contextActor.Tell(new Tuple<string,string>("/user/test", "hello"));
+            expectMsg("hello");
+        }
+
+        [TestMethod()]
+        public void CanResolveRelativeActorPathInActorContext()
+        {
+            var contextActor = sys.ActorOf<ActorContextSelectionActor>();
+            contextActor.Tell(new Tuple<string, string>("../test/../../user/test", "hello"));
+            expectMsg("hello");
+        }
+
+        #endregion
     }
 }
