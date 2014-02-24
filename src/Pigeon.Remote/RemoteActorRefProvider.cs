@@ -34,7 +34,7 @@ namespace Pigeon.Remote
             this.Transport = new Remoting(System, this);
             this.RemoteSettings = new RemoteSettings(System.Settings.Config);
             this.Transport.Start();
-            RemoteHost.StartHost(System, port);
+      //      RemoteHost.StartHost(System, port);
         }
 
         public override InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path)

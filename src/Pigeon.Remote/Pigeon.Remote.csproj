@@ -79,7 +79,8 @@
     <Compile Include="RemoteActorRefProvider.cs" />
     <Compile Include="RemoteHost.cs" />
     <Compile Include="Transport\AkkaProtocolTransport.cs" />
-    <Compile Include="Transport\TcpTransport.cs" />
+    <Compile Include="Transport\TcpTransport\TcpListener.cs" />
+    <Compile Include="Transport\TcpTransport\TcpTransport.cs" />
     <Compile Include="Transport\Transport.cs" />
   </ItemGroup>
   <ItemGroup>
