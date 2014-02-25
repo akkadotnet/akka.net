@@ -23,7 +23,12 @@ namespace Pigeon.Actor
             this.Path = path;
             if (timeout != null)
             {
-                Task.Delay(timeout.Value).ContinueWith(t => timeout);
+                Task.Factory.StartNew(() =>
+                {
+                    Thread.Sleep(timeout.Value);
+                    Timeout();
+                });
+              //  Task.Delay(timeout.Value).ContinueWith(t => timeout);
             }
         }
 
@@ -33,7 +38,7 @@ namespace Pigeon.Actor
             if (Interlocked.Exchange(ref status, 1)==0)
             {
                 unregister();
-                if (sender != ActorRef.NoSender)
+                if (sender != null && sender != ActorRef.NoSender)
                 {
                     sender.Tell(new CompleteFuture(() => result.TrySetCanceled()));
                 }
