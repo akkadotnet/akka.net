@@ -9,6 +9,24 @@ using System.Threading.Tasks;
 
 namespace Routing
 {
+    public class HashableMessage : ConsistentHashable
+    {
+        public string Name { get; set; }
+        public int Id { get; set; }
+
+        public object ConsistentHashKey
+        {
+            get
+            {
+                return Id;
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0} {1}", Id, Name);
+        }
+    }
     class Program
     {
         static void Main(string[] args)
@@ -48,9 +66,15 @@ routees.paths = [
                 Console.WriteLine();
                 for (int i = 0; i < 5; i++)
                 {
-                    for (int j = 0; j < 4; j++)
+                    for (int j = 0; j < 7; j++)
                     {
-                        roundRobinGroup.Tell(j);
+                        var message = new HashableMessage()
+                        {
+                            Name = Guid.NewGuid().ToString(),
+                            Id = j,
+                        };
+
+                        hashGroup.Tell(message);
                     }
                 }
 
