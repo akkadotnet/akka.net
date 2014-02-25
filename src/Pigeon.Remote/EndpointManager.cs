@@ -36,12 +36,21 @@ namespace Pigeon.Remote
                 {
                     var recipientAddress = m.Recipient.Path.Address;
                     var localAddress = m.Recipient.LocalAddressToUse;
-                    ActorRef endpoint;
-                    AkkaProtocolTransport transport = null;
-                    transportMapping.TryGetValue(localAddress, out transport);
+
+                    Func<long?,ActorRef> createAndRegisterWritingEndpoint = uid =>
+                    {
+                        AkkaProtocolTransport transport = null;
+                        transportMapping.TryGetValue(localAddress, out transport);
+                        var recipientRef = m.Recipient;
+                        var localAddressToUse = recipientRef.LocalAddressToUse;
+                        var actor = CreateEndpoint(recipientAddress, transport, localAddressToUse);
+                        this.endpoints.Add(recipientAddress, actor);
+                        return actor;
+                    };
 
 
                     //TODO: this is not how it should work, but we need an intermediate impl to get the new structure up and running
+                    ActorRef endpoint;
                     if (this.endpoints.TryGetValue(recipientAddress, out endpoint))
                     {
                         //pass the message to the endpoint
@@ -49,9 +58,7 @@ namespace Pigeon.Remote
                     }
                     else
                     {
-                        endpoint = Context.ActorOf(Props.Create(() => new EndpointActor(m.Recipient.LocalAddressToUse,recipientAddress,transport.Transport,this.settings)));
-                        this.endpoints.Add(recipientAddress, endpoint);
-                        endpoint.Tell(message);
+                        createAndRegisterWritingEndpoint(null).Tell(message);
                     }
                     /*
 val recipientAddress = recipientRef.path.address
@@ -85,6 +92,13 @@ val recipientAddress = recipientRef.path.address
                 })
                 .Default(Unhandled);
 
+        }
+
+        private InternalActorRef CreateEndpoint(Address recipientAddress, AkkaProtocolTransport transport, Address localAddressToUse)
+        {
+            string name = string.Format("[{0}]", recipientAddress);
+            var actor = Context.ActorOf(Props.Create(() => new EndpointActor(localAddressToUse, recipientAddress, transport.Transport, this.settings)), name);
+            return actor;
         }
 
         private void CreateEndpoint()
