@@ -1,5 +1,5 @@
-﻿using Pigeon.Dispatch;
-using Pigeon.Dispatch.SysMsg;
+﻿using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public class FutureActorRef : MinimalActorRef
     {

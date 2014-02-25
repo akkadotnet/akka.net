@@ -1,10 +1,10 @@
 ﻿using ChatMessages;
-using Pigeon;
-using Pigeon.Actor;
-using Pigeon.Configuration;
-using Pigeon.Dispatch.SysMsg;
-using Pigeon.Event;
-using Pigeon.Remote;
+using Akka;
+using Akka.Actor;
+using Akka.Configuration;
+using Akka.Dispatch.SysMsg;
+using Akka.Event;
+using Akka.Remote;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -22,21 +22,16 @@ namespace ChatClient
             var config = ConfigurationFactory.ParseString(@"
 akka {  
     actor {
-        provider = ""Pigeon.Remote.RemoteActorRefProvider, Pigeon.Remote""
+        provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
         debug {
             lifecycle = on
             receive = on
         }
     }
     remote {
-        #this is the current remoting support 
-        server {
-            host = ""127.0.0.1""
-            port = 8091
-        }
         #this is the new upcoming remoting support, which enables multiple transports
         tcp-transport {
-            transport-class = ""Pigeon.Remote.Transport.TcpTransport""
+            transport-class = ""Akka.Remote.Transport.TcpTransport, Akka.Remote""
 		    applied-adapters = []
 		    transport-protocol = tcp
 		    port = 8091

@@ -1,4 +1,4 @@
-﻿using Pigeon.Configuration.Hocon;
+﻿using Akka.Configuration.Hocon;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Configuration
+namespace Akka.Configuration
 {
     public class Config
     {

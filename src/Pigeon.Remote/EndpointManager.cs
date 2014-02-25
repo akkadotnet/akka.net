@@ -1,15 +1,15 @@
-﻿using Pigeon.Actor;
-using Pigeon.Configuration;
-using Pigeon.Event;
-using Pigeon.Remote.Transport;
+﻿using Akka.Actor;
+using Akka.Configuration;
+using Akka.Event;
+using Akka.Remote.Transport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Pigeon.Remote.Transport;
+using Akka.Remote.Transport;
 
-namespace Pigeon.Remote
+namespace Akka.Remote
 {
     public class EndpointManager : UntypedActor
     {

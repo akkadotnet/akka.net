@@ -1,4 +1,4 @@
-﻿using Pigeon.Actor;
+﻿using Akka.Actor;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Pigeon.Dispatch
+namespace Akka.Dispatch
 {
     public abstract class MessageDispatcher
     {

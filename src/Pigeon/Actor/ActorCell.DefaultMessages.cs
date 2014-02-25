@@ -1,5 +1,5 @@
-﻿using Pigeon.Dispatch.SysMsg;
-using Pigeon.Event;
+﻿using Akka.Dispatch.SysMsg;
+using Akka.Event;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public partial class ActorCell 
     {
@@ -58,7 +58,7 @@ namespace Pigeon.Actor
                     actorType = Actor.GetType();
 
                 if (System.Settings.DebugAutoReceive)
-                    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));
+                    Publish(new Akka.Event.Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));
 
                 envelope.Message
                         .Match()
@@ -78,7 +78,7 @@ namespace Pigeon.Actor
                     CurrentBehavior(message);
                     var unhandled = UnhandledLookup(message);
 
-                    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "received " + (unhandled ? "unhandled" : "handled") + " message " + message));
+                    Publish(new Akka.Event.Debug(Self.Path.ToString(), Actor.GetType(), "received " + (unhandled ? "unhandled" : "handled") + " message " + message));
                 }
                 else
                 {
@@ -101,7 +101,7 @@ namespace Pigeon.Actor
                 Stop(child); //unhooks the child from the supervisor container
             }
             if (System.Settings.DebugLifecycle)
-                Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), string.Format("Terminated actor: {0}", m.actorRef.Path)));
+                Publish(new Akka.Event.Debug(Self.Path.ToString(), Actor.GetType(), string.Format("Terminated actor: {0}", m.actorRef.Path)));
         }
 
         public void SystemInvoke(Envelope envelope)
@@ -235,7 +235,7 @@ protected def terminate() {
                 child.Stop();
             }
 
-            if (System.Settings.DebugLifecycle) Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "stopping"));
+            if (System.Settings.DebugLifecycle) Publish(new Akka.Event.Debug(Self.Path.ToString(), Actor.GetType(), "stopping"));
             FinishTerminate();
         }
 
@@ -257,7 +257,7 @@ protected def terminate() {
             Parent.Tell(new DeathWatchNotification(Self, true, false));
             TellWatchersWeDied();
              if (System.Settings.DebugLifecycle)
-                    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "stopped"));
+                    Publish(new Akka.Event.Debug(Self.Path.ToString(), Actor.GetType(), "stopped"));
              UnwatchWatchedActors(a);
 
             Actor = null;
@@ -324,7 +324,7 @@ protected def terminate() {
                 if (Actor != null)
                     actorType = Actor.GetType();
 
-                Publish(new Pigeon.Event.Debug(Self.Path.ToString(), actorType, "now supervising " + m.Child.Path.ToString()));
+                Publish(new Akka.Event.Debug(Self.Path.ToString(), actorType, "now supervising " + m.Child.Path.ToString()));
             }
             //     case None ⇒ publish(Error(self.path.toString, clazz(actor), "received Supervise from unregistered child " + child + ", this will not end well"))
         }
@@ -360,7 +360,7 @@ protected def terminate() {
             var optionalMessage = this.CurrentMessage;
 
             if (System.Settings.DebugLifecycle) 
-                Publish(new Pigeon.Event.Debug(Self.Path.ToString(), failedActor.GetType(), "restarting"));
+                Publish(new Akka.Event.Debug(Self.Path.ToString(), failedActor.GetType(), "restarting"));
 
             try
             {
@@ -383,7 +383,7 @@ protected def terminate() {
                 //ActorBase will register itself as the actor of this context
 
                 if (System.Settings.DebugLifecycle)
-                    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), created.GetType(), "started (" + created + ")"));
+                    Publish(new Akka.Event.Debug(Self.Path.ToString(), created.GetType(), "started (" + created + ")"));
                 created.AroundPostRestart(m.Cause,null);
             });
         }
@@ -468,7 +468,7 @@ protected def terminate() {
         {
             WatchedBy.Add(Sender);
             if (System.Settings.DebugLifecycle)
-                Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "now watched by " + m.Watcher));
+                Publish(new Akka.Event.Debug(Self.Path.ToString(), Actor.GetType(), "now watched by " + m.Watcher));
         }
 
         //TODO: find out why this is never called

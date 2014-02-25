@@ -1,4 +1,4 @@
-﻿using Pigeon.Actor;
+﻿using Akka.Actor;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,7 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Remote.Transport
+namespace Akka.Remote.Transport
 {
     public class TcpServer
     {

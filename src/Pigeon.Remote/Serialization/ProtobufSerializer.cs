@@ -1,5 +1,5 @@
-﻿using Pigeon.Actor;
-using Pigeon.Serialization;
+﻿using Akka.Actor;
+using Akka.Serialization;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Remote.Serialization
+namespace Akka.Remote.Serialization
 {
     public class ProtobufSerializer : Serializer
     {

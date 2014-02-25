@@ -1,5 +1,5 @@
 ﻿
-using Pigeon.Actor;
+using Akka.Actor;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Pigeon.Benchmark.PingPong
+namespace Akka.Benchmark.PingPong
 {
     class Program
     {

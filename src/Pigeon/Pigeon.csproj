@@ -7,8 +7,8 @@
     <ProjectGuid>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Pigeon</RootNamespace>
-    <AssemblyName>Pigeon</AssemblyName>
+    <RootNamespace>Akka</RootNamespace>
+    <AssemblyName>Akka</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>

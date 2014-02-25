@@ -1,9 +1,9 @@
-﻿module Pigeon.FSharp
-open Pigeon.Actor
+﻿module Akka.FSharp
+open Akka.Actor
 
 [<AbstractClass>]
 type Actor()=
-    inherit Pigeon.Actor.UntypedActor()
+    inherit Akka.Actor.UntypedActor()
 
 let (<!) (actorRef:ActorRef) (msg: obj) =
     actorRef.Tell msg

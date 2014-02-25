@@ -1,10 +1,10 @@
-﻿using Pigeon.Configuration;
+﻿using Akka.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Pigeon.Remote
+namespace Akka.Remote
 {
     public class RemoteSettings
     {

@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Pigeon.Dispatch;
-using Pigeon.Dispatch.SysMsg;
+using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using System.Threading;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public interface ICanTell
     {

@@ -1,5 +1,5 @@
-﻿open Pigeon.Actor
-open Pigeon.FSharp
+﻿open Akka.Actor
+open Akka.FSharp
 open System
 
 type SomeActorMessages =

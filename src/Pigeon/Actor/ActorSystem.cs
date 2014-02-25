@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Pigeon.Actor;
+using Akka.Actor;
 using System.Collections.Concurrent;
-using Pigeon.Dispatch;
-using Pigeon.Configuration;
-using Pigeon.Event;
+using Akka.Dispatch;
+using Akka.Configuration;
+using Akka.Event;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public abstract class ActorSystemExtension
     {

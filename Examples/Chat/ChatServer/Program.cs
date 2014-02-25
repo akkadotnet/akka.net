@@ -1,8 +1,8 @@
 ﻿using ChatMessages;
-using Pigeon;
-using Pigeon.Actor;
-using Pigeon.Configuration;
-using Pigeon.Remote;
+using Akka;
+using Akka.Actor;
+using Akka.Configuration;
+using Akka.Remote;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +21,7 @@ akka {
     stdout-loglevel = DEBUG
     loglevel = ERROR
     actor {
-        provider = ""Pigeon.Remote.RemoteActorRefProvider, Pigeon.Remote""
+        provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
         
         debug {  
           receive = on 
@@ -33,14 +33,9 @@ akka {
     }
 
     remote {
-        #this is the current remoting support 
-        server {
-            host = localhost
-            port = 8081
-        }
         #this is the new upcoming remoting support, which enables multiple transports
         tcp-transport {
-            transport-class = ""Pigeon.Remote.Transport.TcpTransport""
+            transport-class = ""Akka.Remote.Transport.TcpTransport, Akka.Remote""
 		    applied-adapters = []
 		    transport-protocol = tcp
 		    port = 8081

@@ -1,4 +1,4 @@
-﻿using Pigeon.Actor;
+﻿using Akka.Actor;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace Pigeon.Reflection
+namespace Akka.Reflection
 {
     public static class ExpressionExtensions
     {

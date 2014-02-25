@@ -1,4 +1,4 @@
-﻿namespace Pigeon.Actor
+﻿namespace Akka.Actor
 {
     /// <summary>
     /// An extension method class for working with ActorRefs

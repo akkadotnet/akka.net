@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Pigeon.Configuration.Hocon
+namespace Akka.Configuration.Hocon
 {
     public enum TokenType
     {

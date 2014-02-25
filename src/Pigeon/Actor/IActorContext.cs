@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public interface IActorContext : IActorRefFactory
     {        

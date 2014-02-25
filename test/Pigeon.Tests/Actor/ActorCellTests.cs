@@ -1,6 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pigeon.Actor;
-using Pigeon.Configuration;
+using Akka.Actor;
+using Akka.Configuration;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Tests
+namespace Akka.Tests
 {
     [TestClass]
     public class ActorCellSpec : AkkaSpec

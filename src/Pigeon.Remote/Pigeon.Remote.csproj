@@ -7,8 +7,8 @@
     <ProjectGuid>{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Pigeon.Remote</RootNamespace>
-    <AssemblyName>Pigeon.Remote</AssemblyName>
+    <RootNamespace>Akka.Remote</RootNamespace>
+    <AssemblyName>Akka.Remote</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>

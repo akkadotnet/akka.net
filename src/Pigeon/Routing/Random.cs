@@ -1,4 +1,4 @@
-﻿using Pigeon.Configuration;
+﻿using Akka.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Pigeon.Routing
+namespace Akka.Routing
 {
     //TODO: there has to be a better way to do this?
     public class ThreadSafeRandom

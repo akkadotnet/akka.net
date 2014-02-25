@@ -1,12 +1,12 @@
-﻿using Pigeon.Actor;
-using Pigeon.Dispatch;
+﻿using Akka.Actor;
+using Akka.Dispatch;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Routing
+namespace Akka.Routing
 {
     public abstract class RouterConfig
     {

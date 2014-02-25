@@ -1,6 +1,6 @@
-﻿using Pigeon.Actor;
-using Pigeon.Configuration;
-using Pigeon.Configuration.Hocon;
+﻿using Akka.Actor;
+using Akka.Configuration;
+using Akka.Configuration.Hocon;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
@@ -10,7 +10,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Configuration
+namespace Akka.Configuration
 {
     public class ConfigurationFactory
     {
@@ -27,7 +27,7 @@ namespace Pigeon.Configuration
 
         public static Config Default()
         {
-            return FromResource("Pigeon.Configuration.Pigeon.conf");
+            return FromResource("Akka.Configuration.Pigeon.conf");
         }
 
         private static Config FromResource(string resourceName)

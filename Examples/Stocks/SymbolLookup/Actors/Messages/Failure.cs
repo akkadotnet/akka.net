@@ -1,5 +1,5 @@
 ﻿using System;
-using Pigeon.Actor;
+using Akka.Actor;
 
 namespace SymbolLookup.Actors.Messages
 {

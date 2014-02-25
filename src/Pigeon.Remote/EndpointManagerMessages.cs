@@ -1,12 +1,12 @@
-﻿using Pigeon.Actor;
-using Pigeon.Remote.Transport;
+﻿using Akka.Actor;
+using Akka.Remote.Transport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Remote
+namespace Akka.Remote
 {
     public interface RemotingCommand : NoSerializationVerificationNeeded
     {

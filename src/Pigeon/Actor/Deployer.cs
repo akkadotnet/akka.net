@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Pigeon.Configuration;
-using Pigeon.Routing;
+using Akka.Configuration;
+using Akka.Routing;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public class Deploy
     {

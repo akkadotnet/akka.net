@@ -1,7 +1,7 @@
-﻿using Pigeon.Actor;
-using Pigeon.Event;
-using Pigeon.Remote.Transport;
-using Pigeon.Tools;
+﻿using Akka.Actor;
+using Akka.Event;
+using Akka.Remote.Transport;
+using Akka.Tools;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ using System.Runtime.Remoting;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Remote
+namespace Akka.Remote
 {
     public class Remoting : RemoteTransport
     {

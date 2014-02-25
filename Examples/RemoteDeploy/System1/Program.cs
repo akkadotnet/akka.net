@@ -1,5 +1,5 @@
-﻿using Pigeon.Actor;
-using Pigeon.Configuration;
+﻿using Akka.Actor;
+using Akka.Configuration;
 using Shared;
 using System;
 using System.Collections.Generic;

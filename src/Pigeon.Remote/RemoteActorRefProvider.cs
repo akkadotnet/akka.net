@@ -1,14 +1,14 @@
-﻿using Pigeon.Actor;
-using Pigeon.Configuration;
-using Pigeon.Dispatch;
-using Pigeon.Routing;
+﻿using Akka.Actor;
+using Akka.Configuration;
+using Akka.Dispatch;
+using Akka.Routing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Remote
+namespace Akka.Remote
 {
     public class RemoteActorRefProvider : ActorRefProvider
     {

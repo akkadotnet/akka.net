@@ -1,13 +1,13 @@
-﻿using Pigeon.Dispatch;
-using Pigeon.Event;
-using Pigeon.Routing;
+﻿using Akka.Dispatch;
+using Akka.Event;
+using Akka.Routing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public abstract class ActorRefProvider
     {
