@@ -283,7 +283,7 @@ namespace Pigeon.Tests
 
             protected override void OnReceive(object message)
             {
-                ReceiveBuilder.Match(message)
+                PatternMatch.Match(message)
                     .With<Spawn>(m =>
                     {
                         Context.ActorOf(Props.Create(() => new KillableActor(testActor)), m.Name);

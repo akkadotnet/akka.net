@@ -60,23 +60,24 @@ namespace Pigeon.Actor
                 if (System.Settings.DebugAutoReceive)
                     Publish(new Pigeon.Event.Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));
 
-                ReceiveBuilder.Match(envelope.Message)
-               .With<Terminated>(ReceivedTerminated)
-               .With<Kill>(Kill)
-               .With<PoisonPill>(HandlePoisonPill)
-               .With<ActorSelectionMessage>(ReceiveSelection)
-               .With<Identity>(HandleIdentity);
+                envelope.Message
+                        .Match()
+                        .With<Terminated>(ReceivedTerminated)
+                        .With<Kill>(Kill)
+                        .With<PoisonPill>(HandlePoisonPill)
+                        .With<ActorSelectionMessage>(ReceiveSelection)
+                        .With<Identity>(HandleIdentity);
             }
             else
             {
                 if (System.Settings.AddLoggingReceive && Actor is ILogReceive)
                 {
                     //TODO: akka alters the receive handler for logging, but the effect is the same. keep it this way?
-                    var UnhandledLookup = Actor.GetUnhandled();                
-                
+                    var UnhandledLookup = Actor.GetUnhandled();
+
                     CurrentBehavior(message);
                     var unhandled = UnhandledLookup(message);
-                
+
                     Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), "received " + (unhandled ? "unhandled" : "handled") + " message " + message));
                 }
                 else
@@ -112,7 +113,9 @@ namespace Pigeon.Actor
             {
                 try
                 {
-                    ReceiveBuilder.Match(envelope.Message)
+                    envelope
+                        .Message
+                        .Match()
                         .With<CompleteFuture>(HandleCompleteFuture)
                         .With<Failed>(HandleFailed)
                         .With<DeathWatchNotification>(WatchedActorTerminated)

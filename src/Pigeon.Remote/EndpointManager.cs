@@ -25,7 +25,8 @@ namespace Pigeon.Remote
         }
         protected override void OnReceive(object message)
         {
-            ReceiveBuilder.Match(message)
+            message
+                .Match()
                 .With<Listen>(m =>
                 {
                     var res = Listens();
@@ -48,7 +49,8 @@ namespace Pigeon.Remote
                         return endpoint;
                     };
                     
-                    ReceiveBuilder.Match(endpoints.WritableEndpointWithPolicyFor(recipientAddress))
+                    endpoints.WritableEndpointWithPolicyFor(recipientAddress)
+                        .Match()
                         .With<Pass>(p => p.Endpoint.Tell(message))
                         .With<Gated>(p => {
                             if (p.TimeOfRelease.IsOverdue) 

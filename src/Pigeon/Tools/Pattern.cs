@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace Pigeon
 {
-    public static class ReceiveBuilder
+    public static class PatternMatch
     {
         //[Obsolete("This is horribly slow, should be replaced with standard 'is' checks",false)]
-        public static Case Match(object target)
+        public static Case Match(this object target)
         {
             return new Case(target);
         }

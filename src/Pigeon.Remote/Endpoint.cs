@@ -32,7 +32,8 @@ namespace Pigeon.Remote
         }
         protected override void OnReceive(object message)
         {
-            ReceiveBuilder.Match(message)
+            message
+                .Match()
                 .With<Send>(Send);
         }
 

@@ -244,7 +244,7 @@ akka {
 
             protected override void OnReceive(object message)
             {
-                ReceiveBuilder.Match(message)
+                PatternMatch.Match(message)
                 .With<InitializeLogger>(m =>
                 {
                     var bus = m.LoggingBus;

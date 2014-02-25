@@ -23,6 +23,8 @@ namespace Pigeon.Remote
             this.parent = parent;
             this.props = props;
             this.deploy = deploy;
+
+
         }
 
         public override InternalActorRef Parent

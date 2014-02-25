@@ -263,7 +263,8 @@ namespace Pigeon.Event
     {
         protected override void OnReceive(object message)
         {
-            ReceiveBuilder.Match(message)
+            message
+                .Match()
                 .With<InitializeLogger>(m => Sender.Tell(new LoggerInitialized()))
                 .With<LogEvent>(m => 
                     Console.WriteLine(m))
