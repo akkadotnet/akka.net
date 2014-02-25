@@ -38,18 +38,19 @@ namespace Pigeon.Remote
                     var recipientAddress = m.Recipient.Path.Address;
                     var localAddress = m.Recipient.LocalAddressToUse;
 
-                    Func<long?,ActorRef> createAndRegisterWritingEndpoint = uid =>
+                    Func<long?,ActorRef> createAndRegisterWritingEndpoint = refuseUid =>
                     {
                         AkkaProtocolTransport transport = null;
                         transportMapping.TryGetValue(localAddress, out transport);
                         var recipientRef = m.Recipient;
                         var localAddressToUse = recipientRef.LocalAddressToUse;
-                        var endpoint = CreateEndpoint(recipientAddress, transport, localAddressToUse);
+                        var endpoint = CreateEndpoint(recipientAddress, transport, localAddressToUse, refuseUid);
                         this.endpoints.RegisterWritableEndpoint(recipientAddress, endpoint);
                         return endpoint;
                     };
                     
-                    endpoints.WritableEndpointWithPolicyFor(recipientAddress)
+                    endpoints
+                        .WritableEndpointWithPolicyFor(recipientAddress)
                         .Match()
                         .With<Pass>(p => p.Endpoint.Tell(message))
                         .With<Gated>(p => {
@@ -95,9 +96,11 @@ val recipientAddress = recipientRef.path.address
 
         }
 
-        private InternalActorRef CreateEndpoint(Address recipientAddress, AkkaProtocolTransport transport, Address localAddressToUse)
+        private long endpointId = 0;
+        private InternalActorRef CreateEndpoint(Address recipientAddress, AkkaProtocolTransport transport, Address localAddressToUse, long? refuseUid)
         {
-            string name = string.Format("[{0}]", recipientAddress);
+            var escapedAddress = Uri.EscapeDataString(recipientAddress.ToString());
+            string name = string.Format("endpointWriter-{0}-{1}", escapedAddress ,endpointId++);
             var actor = Context.ActorOf(Props.Create(() => new EndpointActor(localAddressToUse, recipientAddress, transport.Transport, this.settings)), name);
             return actor;
         }
