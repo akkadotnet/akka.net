@@ -15,6 +15,13 @@ namespace Pigeon.Actor
 
         public static readonly Regex ElementRegex = new Regex(@"(?:[-\w:@&=+,.!~*'_;]|%\\p{N}{2})(?:[-\w:@&=+,.!~*'$_;]|%\\p{N}{2})*",RegexOptions.Compiled);
 
+        public IEnumerable<string> Elements
+        {
+            get
+            {
+                return this.elements;
+            }
+        }
         public static ActorPath operator /(ActorPath path, string name)
         {
             return new ChildActorPath(path, name,0);

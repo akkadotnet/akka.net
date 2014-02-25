@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Routing
 {
-    public class RoundRobinLogic : RoutingLogic
+    public class RoundRobinRoutingLogic : RoutingLogic
     {
         private int next=-1;
         public override Routee Select(object message, Routee[] routees)
@@ -46,7 +46,12 @@ namespace Pigeon.Routing
 
         public override RoutingLogic GetLogic()
         {
-            return new RoundRobinLogic();
+            return new RoundRobinRoutingLogic();
+        }
+
+        public override RouterActor CreateRouterActor()
+        {
+            return new RouterActor();
         }
     }
 }

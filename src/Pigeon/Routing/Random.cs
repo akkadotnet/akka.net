@@ -67,7 +67,7 @@ namespace Pigeon.Routing
 
         public override RoutingLogic GetLogic()
         {
-            return new RoundRobinLogic();
+            return new RoundRobinRoutingLogic();
         }
     }
 }

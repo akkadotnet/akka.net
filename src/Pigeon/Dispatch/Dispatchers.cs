@@ -76,6 +76,7 @@ namespace Pigeon.Dispatch
     public class Dispatchers
     {
         private ActorSystem system;
+        public static string DefaultDispatcherId;
         public Dispatchers(ActorSystem system)
         {
             this.system = system;

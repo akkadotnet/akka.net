@@ -111,6 +111,7 @@
     <Compile Include="Routing\ConsistentHash.cs" />
     <Compile Include="Routing\MurmurHash.cs" />
     <Compile Include="Routing\Random.cs" />
+    <Compile Include="Routing\Resizer.cs" />
     <Compile Include="Routing\RoundRobin.cs" />
     <Compile Include="Routing\RoutedActorCell.cs" />
     <Compile Include="Routing\RoutedActorRef.cs" />
