@@ -29,18 +29,12 @@ namespace Pigeon.Routing
     {
         public RoundRobinGroup(Config config)
             : base(config.GetStringList("routees.paths"))
-        {
-
-        }
+        { }
         public RoundRobinGroup(params string[] paths)
             : base(paths)
-        {
-
-        }
+        { }
         public RoundRobinGroup(IEnumerable<string> paths) : base(paths)
-        {
-
-        }
+        { }
 
         public RoundRobinGroup(IEnumerable<ActorRef> routees) : base(routees) { }
 
