@@ -1,12 +1,12 @@
-﻿using Pigeon.Actor;
-using Pigeon.Configuration;
+﻿using Akka.Actor;
+using Akka.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Remote.Transport
+namespace Akka.Remote.Transport
 {
     public abstract class Transport
     {
@@ -21,6 +21,10 @@ namespace Pigeon.Remote.Transport
 
         public ActorSystem System { get; private set; }
 
-        public abstract Tuple<Address, object> Listen();
+        public abstract Address Listen();
+
+        public string SchemeIdentifier { get;protected set; }
+
+        public abstract bool IsResponsibleFor(Address remote);
     }
 }

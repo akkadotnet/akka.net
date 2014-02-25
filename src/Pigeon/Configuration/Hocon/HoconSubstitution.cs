@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Configuration.Hocon
+namespace Akka.Configuration.Hocon
 {
     public class HoconSubstitution : IHoconElement
     {

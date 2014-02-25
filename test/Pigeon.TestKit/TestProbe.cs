@@ -1,12 +1,12 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pigeon.Actor;
+using Akka.Actor;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Pigeon.Tests
+namespace Akka.Tests
 {
     public class TestProbeActorRef : ActorRef
     {

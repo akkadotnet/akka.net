@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 
-namespace Pigeon.Configuration.Hocon
+namespace Akka.Configuration.Hocon
 {
     public class Tokenizer
     {

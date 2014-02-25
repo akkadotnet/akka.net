@@ -1,14 +1,14 @@
-﻿using Pigeon.Dispatch;
-using Pigeon.Routing;
+﻿using Akka.Dispatch;
+using Akka.Routing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
-using Pigeon.Reflection;
+using Akka.Reflection;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public class Props
     {
@@ -82,7 +82,7 @@ namespace Pigeon.Actor
         public Props WithRouter(RouterConfig routerConfig)
         {
             var copy = Copy();
-            copy.Type = typeof(RouterActor);
+        //    copy.Type = typeof(RouterActor);
             copy.RouterConfig = routerConfig;
             return copy;
         }
@@ -109,7 +109,7 @@ namespace Pigeon.Actor
         }
 
         private static Props empty = new Props();
-        public Props Empty
+        public static Props Empty
         {
             get
             {
@@ -132,6 +132,8 @@ namespace Pigeon.Actor
         }
 
         public object[] Arguments { get; private set; }
+
+        public static readonly Props None = null;
     }
 
     /// <summary>

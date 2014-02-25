@@ -1,6 +1,6 @@
-﻿using Pigeon.Actor;
-using Pigeon.Configuration;
-using Pigeon.Routing;
+﻿using Akka.Actor;
+using Akka.Configuration;
+using Akka.Routing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +9,24 @@ using System.Threading.Tasks;
 
 namespace Routing
 {
+    public class HashableMessage : ConsistentHashable
+    {
+        public string Name { get; set; }
+        public int Id { get; set; }
+
+        public object ConsistentHashKey
+        {
+            get
+            {
+                return Id;
+            }
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0} {1}", Id, Name);
+        }
+    }
     class Program
     {
         static void Main(string[] args)
@@ -23,13 +41,13 @@ namespace Routing
 
                 var config = ConfigurationFactory.ParseString(@"
 routees.paths = [
-    user/Worker1
+    ""akka://MySystem/user/Worker1"" #testing full path
     user/Worker2
     user/Worker3
     user/Worker4
 ]");
 
-                var actor = system.ActorOf(new Props().WithRouter(new RoundRobinGroup(config)));
+                var roundRobinGroup = system.ActorOf(Props.Empty.WithRouter(new RoundRobinGroup(config)));
                 //or: var actor = system.ActorOf(new Props().WithRouter(new RoundRobinGroup("user/Worker1", "user/Worker2", "user/Worker3", "user/Worker4")));
 
                 Console.WriteLine("Why is the order so strange if we use round robin?");
@@ -38,8 +56,46 @@ routees.paths = [
                 Console.WriteLine();
                 for (int i = 0; i < 20; i++)
                 {
-                    actor.Tell(i);
+                    roundRobinGroup.Tell(i);
                 }
+
+                Console.WriteLine("-----");
+
+                var hashGroup = system.ActorOf(Props.Empty.WithRouter(new ConsistentHashingGroup(config)));
+                Task.Delay(500).Wait();
+                Console.WriteLine();
+                for (int i = 0; i < 5; i++)
+                {
+                    for (int j = 0; j < 7; j++)
+                    {
+                        var message = new HashableMessage()
+                        {
+                            Name = Guid.NewGuid().ToString(),
+                            Id = j,
+                        };
+
+                        hashGroup.Tell(message);
+                    }
+                }
+
+                //var roundRobinPool = system.ActorOf(Props.Empty.WithRouter(new RoundRobinPool(
+                //    nrOfInstances: 10,
+                //    resizer: null,
+                //    supervisorStrategy: null,
+                //    routerDispatcher: null,
+                //    usePoolDispatcher: false)));
+                ////or: var actor = system.ActorOf(new Props().WithRouter(new RoundRobinGroup("user/Worker1", "user/Worker2", "user/Worker3", "user/Worker4")));
+
+                //Console.WriteLine("Why is the order so strange if we use round robin?");
+                //Console.WriteLine("This is because of the 'Throughput' setting of the MessageDispatcher");
+                //Console.WriteLine("it lets each actor process X message per scheduled run");
+                //Console.WriteLine();
+                //for (int i = 0; i < 20; i++)
+                //{
+                //    roundRobinPool.Tell(i);
+                //}
+
+
                 Console.ReadLine();
             }
         }

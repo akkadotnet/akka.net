@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Net.Http;
-using Pigeon.Actor;
+using Akka.Actor;
 using QDFeedParser;
 using SymbolLookup.Actors.Messages;
 using Failure = SymbolLookup.Actors.Messages.Failure;

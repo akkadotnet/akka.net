@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Tools
+namespace Akka.Tools
 {
 
     public class ConcurrentSet<T> : ICollection<T>, IEnumerable<T>, IEnumerable

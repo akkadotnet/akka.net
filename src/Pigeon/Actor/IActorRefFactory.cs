@@ -1,5 +1,5 @@
 ﻿using System;
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public interface IActorRefFactory
     {

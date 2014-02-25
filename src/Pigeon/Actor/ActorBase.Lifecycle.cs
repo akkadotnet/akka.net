@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public abstract partial class ActorBase
     {

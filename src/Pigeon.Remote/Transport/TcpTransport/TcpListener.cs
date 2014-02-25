@@ -1,36 +1,32 @@
-﻿using Pigeon.Actor;
-using Pigeon.Remote;
+﻿using Akka.Actor;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Remote
-{    
-    public class RemoteHost 
+namespace Akka.Remote.Transport
+{
+    public class TcpServer
     {
         private ActorSystem system;
         private int port;
         TcpListener server;
-        public static RemoteHost StartHost(ActorSystem system,int port)
+        private string host;
+
+        public TcpServer(ActorSystem system,string host, int port)
         {
-            var host = new RemoteHost(system,port);
-                           
-            return host;
+            this.system = system;
+            this.host = host;
+            this.port = port;
         }
 
-        public RemoteHost(ActorSystem system,int port)
+        public void Start()
         {
             try
             {
-                this.system = system;
-                this.port = port;
-
                 server = TcpListener.Create(port);
                 server.ExclusiveAddressUse = false;
                 server.AllowNatTraversal(true);

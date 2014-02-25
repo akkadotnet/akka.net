@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon
+namespace Akka
 {
     public static class Extensions
     {
@@ -16,6 +16,16 @@ namespace Pigeon
         public static T[] Add<T>(this T[] self,T add)
         {
             return self.Union(Enumerable.Repeat(add, 1)).ToArray();
+        }
+
+        public static IEnumerable<T> Drop<T>(this IEnumerable<T> self,int count)
+        {
+            return self.Skip(count);
+        }
+
+        public static string Join(this IEnumerable<string> self, string separator)
+        {
+            return string.Join(separator, self);
         }
     }
 }

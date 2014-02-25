@@ -1,7 +1,7 @@
-﻿using Pigeon.Dispatch;
-using Pigeon.Dispatch.SysMsg;
-using Pigeon.Event;
-using Pigeon.Routing;
+﻿using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
+using Akka.Event;
+using Akka.Routing;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public partial class ActorCell : IActorContext, IActorRefFactory
     {
@@ -23,10 +23,10 @@ namespace Pigeon.Actor
         public object CurrentMessage { get;private set; }
         public ActorRef Sender { get;private set; }
         internal Receive CurrentBehavior { get; private set; }
-        private Stack<Receive> behaviorStack = new Stack<Receive>();
-        private Mailbox Mailbox { get; set; }
+        protected Stack<Receive> behaviorStack = new Stack<Receive>();
+        protected Mailbox Mailbox { get; set; }
         public MessageDispatcher Dispatcher { get;private set; }
-        private HashSet<ActorRef> Watchees = new HashSet<ActorRef>();
+        protected HashSet<ActorRef> Watchees = new HashSet<ActorRef>();
         [ThreadStatic]
         private static ActorCell current;
         internal static ActorCell Current
@@ -54,8 +54,8 @@ namespace Pigeon.Actor
            if (Uri.IsWellFormedUriString(path,UriKind.Absolute))
            {
                var actorPath = ActorPath.Parse(path);
-               var actorRef = System.Provider.ResolveActorRef(actorPath);
-               return new ActorSelection(actorRef, "");
+               var actorRef = System.Provider.RootGuardianAt(actorPath.Address);
+               return new ActorSelection(actorRef, actorPath.Elements.Drop(1).ToArray());
            }
            else
            {
@@ -164,7 +164,7 @@ namespace Pigeon.Actor
             return name;
         }
 
-        public void NewActor()
+        public virtual void NewActor()
         {
             //set the thread static context or things will break
             this.UseThreadContext( () =>

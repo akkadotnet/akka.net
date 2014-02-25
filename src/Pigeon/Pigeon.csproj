@@ -7,8 +7,8 @@
     <ProjectGuid>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Pigeon</RootNamespace>
-    <AssemblyName>Pigeon</AssemblyName>
+    <RootNamespace>Akka</RootNamespace>
+    <AssemblyName>Akka</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
@@ -111,6 +111,8 @@
     <Compile Include="Routing\ConsistentHash.cs" />
     <Compile Include="Routing\MurmurHash.cs" />
     <Compile Include="Routing\Random.cs" />
+    <Compile Include="Routing\ResizablePoolActor.cs" />
+    <Compile Include="Routing\Resizer.cs" />
     <Compile Include="Routing\RoundRobin.cs" />
     <Compile Include="Routing\RoutedActorCell.cs" />
     <Compile Include="Routing\RoutedActorRef.cs" />
@@ -118,6 +120,7 @@
     <Compile Include="Routing\RouterActor.cs" />
     <Compile Include="Routing\RouterConfig.cs" />
     <Compile Include="Routing\RouterMsg.cs" />
+    <Compile Include="Routing\RouterPoolActor.cs" />
     <Compile Include="Serialization\Serialization.cs" />
     <Compile Include="Serialization\Serializer.cs" />
     <Compile Include="Tools\ConcurrentSet.cs" />

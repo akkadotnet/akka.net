@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
-using Pigeon.Dispatch.SysMsg;
-using Pigeon.Event;
+using Akka.Dispatch.SysMsg;
+using Akka.Event;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {   
     public interface ILogReceive
     {

@@ -1,13 +1,13 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pigeon.Actor;
-using Pigeon.Event;
+using Akka.Actor;
+using Akka.Event;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Tests.Event
+namespace Akka.Tests.Event
 {
     [TestClass]
     public class EventStreamSpec : AkkaSpec
@@ -244,7 +244,7 @@ akka {
 
             protected override void OnReceive(object message)
             {
-                ReceiveBuilder.Match(message)
+                PatternMatch.Match(message)
                 .With<InitializeLogger>(m =>
                 {
                     var bus = m.LoggingBus;

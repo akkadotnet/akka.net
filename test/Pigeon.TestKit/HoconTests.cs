@@ -1,13 +1,13 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pigeon.Configuration;
-using Pigeon.Configuration.Hocon;
+using Akka.Configuration;
+using Akka.Configuration.Hocon;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Tests
+namespace Akka.Tests
 {
     [TestClass]
     public class HoconTests

@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Pigeon.Actor;
+using Akka.Actor;
 
-namespace Pigeon.Tests.Serialization
+namespace Akka.Tests.Serialization
 {
     [TestClass]
     public class SerializationSpec : AkkaSpec

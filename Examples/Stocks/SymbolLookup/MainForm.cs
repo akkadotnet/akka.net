@@ -2,12 +2,12 @@
 using System.Collections.Immutable;
 using System.Linq;
 using System.Windows.Forms;
-using Pigeon.Actor;
+using Akka.Actor;
 using QDFeedParser;
 using SymbolLookup.Actors;
 using SymbolLookup.Actors.Messages;
 using SymbolLookup.YahooFinance;
-using Pigeon.Dispatch;
+using Akka.Dispatch;
 
 namespace SymbolLookup
 {

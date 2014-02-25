@@ -1,6 +1,6 @@
-﻿using Pigeon.Actor;
-using Pigeon.Dispatch;
-using Pigeon.Dispatch.SysMsg;
+﻿using Akka.Actor;
+using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Pigeon.Dispatch
+namespace Akka.Dispatch
 {
     public abstract class Mailbox : IDisposable
     {

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Pigeon.Configuration;
-using Pigeon.Routing;
+using Akka.Configuration;
+using Akka.Routing;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public class Deploy
     {
@@ -85,6 +85,8 @@ namespace Pigeon.Actor
         public string Mailbox { get;private set; }
         public string Dispatcher { get;private set; }
 
+
+        public static readonly Deploy None = null;
     }
 
     public class Scope

@@ -1,4 +1,4 @@
-﻿using Pigeon.Event;
+﻿using Akka.Event;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public abstract class SupervisorStrategy
     {

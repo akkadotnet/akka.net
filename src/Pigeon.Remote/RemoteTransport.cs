@@ -1,12 +1,12 @@
-﻿using Pigeon.Actor;
-using Pigeon.Tools;
+﻿using Akka.Actor;
+using Akka.Tools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Remote
+namespace Akka.Remote
 {
     public abstract class RemoteTransport
     {

@@ -1,11 +1,11 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pigeon.Tests;
-using Pigeon.Actor;
-using Pigeon.Configuration;
+using Akka.Tests;
+using Akka.Actor;
+using Akka.Configuration;
 using System.Collections.Concurrent;
 
-namespace Pigeon.Remote.Tests
+namespace Akka.Remote.Tests
 {
     [TestClass]
     public class RemoteDaemonSpec : AkkaSpec
@@ -31,7 +31,7 @@ namespace Pigeon.Remote.Tests
             return @"
 akka {  
     actor {
-        provider = ""Pigeon.Remote.RemoteActorRefProvider, Pigeon.Remote""
+        provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
     }
     remote {
         server {

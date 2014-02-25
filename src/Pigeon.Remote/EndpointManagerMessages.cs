@@ -1,12 +1,12 @@
-﻿using Pigeon.Actor;
-using Pigeon.Remote.Transport;
+﻿using Akka.Actor;
+using Akka.Remote.Transport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Remote
+namespace Akka.Remote
 {
     public interface RemotingCommand : NoSerializationVerificationNeeded
     {
@@ -16,6 +16,20 @@ namespace Pigeon.Remote
     {
         public Listen()
         {
+        }
+    }
+
+    public class Send : RemotingCommand
+    {
+        public object Message { get; set; }
+        public ActorRef Sender { get; set; }
+        public RemoteActorRef Recipient { get; set; }
+
+        public Send(object message, ActorRef sender, RemoteActorRef recipient)
+        {
+            this.Message = message;
+            this.Sender = sender;
+            this.Recipient = recipient;
         }
     }
 /*

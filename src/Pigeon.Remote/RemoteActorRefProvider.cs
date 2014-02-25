@@ -1,14 +1,14 @@
-﻿using Pigeon.Actor;
-using Pigeon.Configuration;
-using Pigeon.Dispatch;
-using Pigeon.Routing;
+﻿using Akka.Actor;
+using Akka.Configuration;
+using Akka.Dispatch;
+using Akka.Routing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Remote
+namespace Akka.Remote
 {
     public class RemoteActorRefProvider : ActorRefProvider
     {
@@ -24,9 +24,12 @@ namespace Pigeon.Remote
 
         public override void Init()
         {
-            var host = config.GetString("server.host");
-            var port = config.GetInt("server.port");
-            this.Address = new Address("akka.tcp", System.Name, host, port);
+            //TODO: this should not be here
+            this.Address = new Address("akka", this.System.Name); //TODO: this should not work this way...
+            //TODO: this should not be here
+            //var host = config.GetString("server.host");
+            //var port = config.GetInt("server.port");
+            //this.Address = new Address("akka.tcp", System.Name, host, port);
 
             base.Init();
 
@@ -34,7 +37,7 @@ namespace Pigeon.Remote
             this.Transport = new Remoting(System, this);
             this.RemoteSettings = new RemoteSettings(System.Settings.Config);
             this.Transport.Start();
-            RemoteHost.StartHost(System, port);
+      //      RemoteHost.StartHost(System, port);
         }
 
         public override InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path)
@@ -53,7 +56,25 @@ namespace Pigeon.Remote
 
         private bool HasAddress(Address address) 
         {
-            return address == this.Address || this.Transport.Addresses.Any(a => a == address);
+            return address == this.Address || this.Transport.Addresses.Any(a => a.Equals(address));
+        }
+
+        public override ActorRef RootGuardianAt(Address address)
+        {
+            if (HasAddress(address))
+            {
+                return this.RootCell.Self;
+            }
+            else
+            {
+                return new RemoteActorRef(
+                    Transport, 
+                    Transport.LocalAddressForRemote(address),
+                    new RootActorPath(address), 
+                    ActorRef.Nobody, 
+                    Props.None, 
+                    Deploy.None);
+            }
         }
 
         private InternalActorRef RemoteActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, Mailbox mailbox)
@@ -69,7 +90,7 @@ namespace Pigeon.Remote
 
             var localAddress = Transport.LocalAddressForRemote(addr);
 
-            var rpath = (new RootActorPath(addr) / "remote" / localAddress.Protocol / localAddress.HostPort() / path.Skip(2).ToArray()).
+            var rpath = (new RootActorPath(addr) / "remote" / localAddress.Protocol / localAddress.HostPort() / path.Elements.Drop(2).ToArray()).
               WithUid(path.Uid);
             new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, d);
 
@@ -96,25 +117,29 @@ namespace Pigeon.Remote
 
         public override ActorRef ResolveActorRef(ActorPath actorPath)
         {
-            if (this.Address.Equals(actorPath.Address))
+            if (HasAddress(actorPath.Address))
             {
                 if (actorPath.Head == "remote")
                 {
                     //skip ""/"remote", 
-                    var parts = actorPath.Skip(2).ToArray();
+                    var parts = actorPath.Elements.Drop(2).ToArray();
                     return RemoteDaemon.GetChild(parts);
                 }
                 else if (actorPath.Head == "temp")
                 {
                     //skip ""/"temp", 
-                    var parts = actorPath.Skip(2).ToArray();
+                    var parts = actorPath.Elements.Drop(2).ToArray();
                     return TempContainer.GetChild(parts);
                 }
                 else
                 {
                     //standard
                     var currentContext = RootCell;
-                    foreach (var part in actorPath.Skip(1))
+                    if (actorPath.ToStringWithoutAddress() == "/")
+                    {
+                        return currentContext.Self;
+                    }
+                    foreach (var part in actorPath.Elements.Drop(1))
                     {
                         currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
                     }
@@ -123,7 +148,12 @@ namespace Pigeon.Remote
             }
             else
             {
-                return new BrokenRemoteActorRef(System, actorPath, this.Address.Port.Value);
+                return new RemoteActorRef(Transport,
+                    Transport.LocalAddressForRemote(actorPath.Address),
+                    actorPath,
+                    ActorRef.Nobody,
+                    Props.None,
+                    Deploy.None);               
             }
         }
 

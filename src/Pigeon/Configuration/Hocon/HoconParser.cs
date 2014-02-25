@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Pigeon.Configuration.Hocon
+namespace Akka.Configuration.Hocon
 {
     public class Parser
     {

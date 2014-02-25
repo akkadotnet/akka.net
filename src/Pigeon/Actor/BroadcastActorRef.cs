@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public class BroadcastActorRef : ActorRef
     {

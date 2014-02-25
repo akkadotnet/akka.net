@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pigeon.Actor;
+using Akka.Actor;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Pigeon.Tests
+namespace Akka.Tests
 {
     [TestClass]
     public class ActorLifeCycleSpec : AkkaSpec
@@ -108,7 +108,7 @@ namespace Pigeon.Tests
             string id = Guid.NewGuid().ToString();
             var supervisor = sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTestActor(testActor, id, generationProvider));
-            var restarter = (ActorRef)supervisor.Ask(restarterProps).Result;
+            var restarter = supervisor.Ask<ActorRef>(restarterProps).Result;
 
             expectMsg(Tuple.Create( "preStart", id, 0));
             restarter.Tell(new Kill());
@@ -140,7 +140,7 @@ namespace Pigeon.Tests
             string id = Guid.NewGuid().ToString();            
             var supervisor = sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(testActor, id, generationProvider));
-            var restarter = (ActorRef)supervisor.Ask(restarterProps).Result;
+            var restarter = supervisor.Ask<ActorRef>(restarterProps).Result;
 
             expectMsg(Tuple.Create("preStart", id, 0));
             restarter.Tell(new Kill());
@@ -172,7 +172,7 @@ namespace Pigeon.Tests
             string id = Guid.NewGuid().ToString();            
             var supervisor = sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(testActor, id, generationProvider));
-            var restarter = (InternalActorRef)supervisor.Ask(restarterProps).Result;
+            var restarter = supervisor.Ask<InternalActorRef>(restarterProps).Result;
 
             expectMsg(Tuple.Create("preStart", id, 0));
             restarter.Tell("status");
@@ -283,7 +283,7 @@ namespace Pigeon.Tests
 
             protected override void OnReceive(object message)
             {
-                ReceiveBuilder.Match(message)
+                PatternMatch.Match(message)
                     .With<Spawn>(m =>
                     {
                         Context.ActorOf(Props.Create(() => new KillableActor(testActor)), m.Name);

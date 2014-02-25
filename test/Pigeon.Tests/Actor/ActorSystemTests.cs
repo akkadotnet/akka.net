@@ -1,9 +1,9 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pigeon.Actor;
+using Akka.Actor;
 using System.Linq;
 
-namespace Pigeon.Tests
+namespace Akka.Tests
 {
     [TestClass]
     public class ActorSystemTests

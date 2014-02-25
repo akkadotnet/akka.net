@@ -1,13 +1,13 @@
-﻿using Pigeon.Dispatch;
-using Pigeon.Event;
-using Pigeon.Routing;
+﻿using Akka.Dispatch;
+using Akka.Event;
+using Akka.Routing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public abstract class ActorRefProvider
     {
@@ -53,7 +53,10 @@ namespace Pigeon.Actor
         public LocalActorRef Guardian { get; protected set; }
         public LocalActorRef SystemGuardian { get; protected set; }
 
-
+        public virtual ActorRef RootGuardianAt(Address address)
+        {
+            return this.RootCell.Self;
+        }
 
         public abstract InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path);
         public ActorRef ResolveActorRef(string path){
@@ -108,14 +111,14 @@ namespace Pigeon.Actor
                 if (actorPath.Head == "temp")
                 {
                     //skip ""/"temp", 
-                    var parts = actorPath.Skip(2).ToArray();
+                    var parts = actorPath.Elements.Drop(2).ToArray();
                     return TempContainer.GetChild(parts);
                 }
                 else
                 {
                     //standard
                     var currentContext = RootCell;
-                    foreach (var part in actorPath.Skip(1))
+                    foreach (var part in actorPath.Elements.Drop(1))
                     {
                         currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
                     }

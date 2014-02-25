@@ -1,11 +1,11 @@
-﻿using Pigeon.Actor;
+﻿using Akka.Actor;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Remote.Transport
+namespace Akka.Remote.Transport
 {
     public class ProtocolTransportAddressPair
     {
@@ -21,20 +21,15 @@ namespace Pigeon.Remote.Transport
     }
     public class AkkaProtocolTransport
     {
-        private Transport wrappedTransport;
+        public Transport Transport { get; private set; }
         private ActorSystem actorSystem;
         private AkkaProtocolSettings akkaProtocolSettings;
 
         public AkkaProtocolTransport(Transport wrappedTransport, ActorSystem actorSystem, AkkaProtocolSettings akkaProtocolSettings)
         {
-            this.wrappedTransport = wrappedTransport;
+            this.Transport = wrappedTransport;
             this.actorSystem = actorSystem;
             this.akkaProtocolSettings = akkaProtocolSettings;
-        }
-        
-        public bool IsResponsibleFor(Address remote)
-        {
-            return false;
         }
     }
 }

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Tests.Actor
+namespace Akka.Tests.Actor
 {
     [TestClass]
     public class ActorRefProviderSpec : AkkaSpec

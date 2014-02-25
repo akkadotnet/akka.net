@@ -1,4 +1,4 @@
-﻿using Pigeon.Actor;
+﻿using Akka.Actor;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pigeon.Event
+namespace Akka.Event
 {
     public class StandardOutLogger : MinimalActorRef
     {
@@ -263,7 +263,8 @@ namespace Pigeon.Event
     {
         protected override void OnReceive(object message)
         {
-            ReceiveBuilder.Match(message)
+            message
+                .Match()
                 .With<InitializeLogger>(m => Sender.Tell(new LoggerInitialized()))
                 .With<LogEvent>(m => 
                     Console.WriteLine(m))

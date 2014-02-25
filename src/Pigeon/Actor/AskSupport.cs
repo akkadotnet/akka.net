@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Pigeon.Dispatch;
-using Pigeon.Dispatch.SysMsg;
+using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using System.Threading;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
     public interface ICanTell
     {
@@ -21,7 +21,7 @@ namespace Pigeon.Actor
     public static class Futures
     {
         //when asking from outside of an actor, we need to pass a system, so the FutureActor can register itself there and be resolvable for local and remote calls
-        public static Task<object> Ask(this ICanTell self, object message)
+        public static Task<object> Ask(this ICanTell self, object message,TimeSpan? timeout = null)
         {
             var provider = ResolveProvider(self);
             if (provider == null)
@@ -29,7 +29,18 @@ namespace Pigeon.Actor
 
             var replyTo = ResolveReplyTo();
 
-            return Ask(self, replyTo, message, provider);
+            return Ask(self, replyTo, message, provider,timeout);
+        }
+
+        public static Task<T> Ask<T>(this ICanTell self, object message,TimeSpan? timeout = null)
+        {
+            var provider = ResolveProvider(self);
+            if (provider == null)
+                throw new NotSupportedException("Unable to resolve the target Provider");
+
+            var replyTo = ResolveReplyTo();
+
+            return Ask(self, replyTo, message, provider,timeout).ContinueWith<T>(t => (T)t.Result);
         }
 
         private static ActorRef ResolveReplyTo()
@@ -54,14 +65,14 @@ namespace Pigeon.Actor
             return null;
         }
 
-        private static Task<object> Ask(ICanTell self, ActorRef replyTo, object message, ActorRefProvider provider)
+        private static Task<object> Ask(ICanTell self, ActorRef replyTo, object message, ActorRefProvider provider,TimeSpan? timeout)
         {
             var result = new TaskCompletionSource<object>();
             //create a new tempcontainer path
             var path = provider.TempPath();
             //callback to unregister from tempcontainer
             Action unregister = () => provider.UnregisterTempActor(path);
-            FutureActorRef future = new FutureActorRef(result, replyTo, unregister, path);
+            FutureActorRef future = new FutureActorRef(result, replyTo, unregister, path,timeout);
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
             self.Tell(message, future);

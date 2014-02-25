@@ -5,9 +5,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Pigeon.Actor
+namespace Akka.Actor
 {
-    public abstract class ActorPath : IEnumerable<string> , IEquatable<ActorPath>
+    public abstract class ActorPath : IEquatable<ActorPath>
     {
         public long Uid { get;private set; }
 
@@ -15,6 +15,13 @@ namespace Pigeon.Actor
 
         public static readonly Regex ElementRegex = new Regex(@"(?:[-\w:@&=+,.!~*'_;]|%\\p{N}{2})(?:[-\w:@&=+,.!~*'$_;]|%\\p{N}{2})*",RegexOptions.Compiled);
 
+        public IEnumerable<string> Elements
+        {
+            get
+            {
+                return this.elements;
+            }
+        }
         public static ActorPath operator /(ActorPath path, string name)
         {
             return new ChildActorPath(path, name,0);
@@ -124,10 +131,6 @@ namespace Pigeon.Actor
             return elements.GetEnumerator();
         }
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            return elements.GetEnumerator();
-        }
 
         public override int GetHashCode()
         {
