@@ -16,7 +16,7 @@ namespace Pigeon.Remote
         private RemoteSettings settings;
         private LoggingAdapter log;
         private IDictionary<Address, AkkaProtocolTransport> transportMapping = new Dictionary<Address, AkkaProtocolTransport>();
-        private Dictionary<Address, ActorRef> endpoints = new Dictionary<Address, ActorRef>();
+        private EndpointRegistry endpoints = new EndpointRegistry();
 
         public EndpointManager(RemoteSettings settings, Event.LoggingAdapter log)
         {
@@ -43,23 +43,22 @@ namespace Pigeon.Remote
                         transportMapping.TryGetValue(localAddress, out transport);
                         var recipientRef = m.Recipient;
                         var localAddressToUse = recipientRef.LocalAddressToUse;
-                        var actor = CreateEndpoint(recipientAddress, transport, localAddressToUse);
-                        this.endpoints.Add(recipientAddress, actor);
-                        return actor;
+                        var endpoint = CreateEndpoint(recipientAddress, transport, localAddressToUse);
+                        this.endpoints.RegisterWritableEndpoint(recipientAddress, endpoint);
+                        return endpoint;
                     };
+                    
+                    ReceiveBuilder.Match(endpoints.WritableEndpointWithPolicyFor(recipientAddress))
+                        .With<Pass>(p => p.Endpoint.Tell(message))
+                        .With<Gated>(p => {
+                            if (p.TimeOfRelease.IsOverdue) 
+                                createAndRegisterWritingEndpoint(null).Tell(message);
+                            else
+                                Context.System.DeadLetters.Tell(message);
+                        })
+                        .With<Quarantined>(p => createAndRegisterWritingEndpoint(p.Uid).Tell(message))
+                        .Default(p => createAndRegisterWritingEndpoint(null).Tell(message));
 
-
-                    //TODO: this is not how it should work, but we need an intermediate impl to get the new structure up and running
-                    ActorRef endpoint;
-                    if (this.endpoints.TryGetValue(recipientAddress, out endpoint))
-                    {
-                        //pass the message to the endpoint
-                        endpoint.Tell(message);
-                    }
-                    else
-                    {
-                        createAndRegisterWritingEndpoint(null).Tell(message);
-                    }
                     /*
 val recipientAddress = recipientRef.path.address
 

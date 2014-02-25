@@ -65,6 +65,7 @@
     <Compile Include="Endpoint.cs" />
     <Compile Include="EndpointManager.cs" />
     <Compile Include="EndpointManagerMessages.cs" />
+    <Compile Include="EndpointRegistry.cs" />
     <Compile Include="MessageSerializer.cs" />
     <Compile Include="Proto\Containerformats.cs" />
     <Compile Include="Proto\Wireformats.cs" />
