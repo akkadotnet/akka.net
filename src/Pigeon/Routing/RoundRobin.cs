@@ -52,6 +52,9 @@ namespace Pigeon.Routing
 
     public class RoundRobinPool : Pool
     {
+        public RoundRobinPool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = false) : base(nrOfInstances,resizer,supervisorStrategy,routerDispatcher,usePoolDispatcher)
+        {
+        }
         public override IEnumerable<Routee> GetRoutees(ActorSystem system)
         {
             throw new NotImplementedException();

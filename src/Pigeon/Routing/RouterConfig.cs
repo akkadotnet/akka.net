@@ -23,6 +23,7 @@ namespace Pigeon.Routing
 
         public abstract Router CreateRouter();
         public abstract RouterActor CreateRouterActor();
+        public string RouterDispatcher { get;protected set; }
     }
 
     public class NoRouter : RouterConfig
@@ -74,9 +75,18 @@ namespace Pigeon.Routing
 
     public abstract class Pool : RouterConfig
     {
-        public int NrOfInstances { get;private set; }
+        public int NrOfInstances { get; protected set; }
 
-        public bool UsePoolDispatcher { get; private set; }
+        public bool UsePoolDispatcher { get; protected set; }
+
+        public Pool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = false)
+        {
+            this.NrOfInstances = nrOfInstances;
+            this.Resizer = resizer;
+            this.SupervisorStrategy = supervisorStrategy;
+            this.UsePoolDispatcher = usePoolDispatcher;
+            this.RouterDispatcher = routerDispatcher;
+        }
 
  //        private[akka] def newRoutee(routeeProps: Props, context: ActorContext): Routee =
  //   ActorRefRoutee(context.actorOf(enrichWithPoolDispatcher(routeeProps, context)))
@@ -102,8 +112,8 @@ namespace Pigeon.Routing
             return routeeProps;
         }
 
-        public Resizer Resizer { get;private set; }
-        public SupervisorStrategy SupervisorStrategy { get;private set; }
+        public Resizer Resizer { get;protected set; }
+        public SupervisorStrategy SupervisorStrategy { get; protected set; }
 
         public Props Props(Props routeeProps)
         {

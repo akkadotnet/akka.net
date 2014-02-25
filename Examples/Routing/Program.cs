@@ -29,7 +29,7 @@ routees.paths = [
     user/Worker4
 ]");
 
-                var actor = system.ActorOf(Props.Empty.WithRouter(new RoundRobinGroup(config)));
+                var roundRobinGroup = system.ActorOf(Props.Empty.WithRouter(new RoundRobinGroup(config)));
                 //or: var actor = system.ActorOf(new Props().WithRouter(new RoundRobinGroup("user/Worker1", "user/Worker2", "user/Worker3", "user/Worker4")));
 
                 Console.WriteLine("Why is the order so strange if we use round robin?");
@@ -38,8 +38,27 @@ routees.paths = [
                 Console.WriteLine();
                 for (int i = 0; i < 20; i++)
                 {
-                    actor.Tell(i);
+                    roundRobinGroup.Tell(i);
                 }
+
+                //var roundRobinPool = system.ActorOf(Props.Empty.WithRouter(new RoundRobinPool(
+                //    nrOfInstances: 10,
+                //    resizer: null,
+                //    supervisorStrategy: null,
+                //    routerDispatcher: null,
+                //    usePoolDispatcher: false)));
+                ////or: var actor = system.ActorOf(new Props().WithRouter(new RoundRobinGroup("user/Worker1", "user/Worker2", "user/Worker3", "user/Worker4")));
+
+                //Console.WriteLine("Why is the order so strange if we use round robin?");
+                //Console.WriteLine("This is because of the 'Throughput' setting of the MessageDispatcher");
+                //Console.WriteLine("it lets each actor process X message per scheduled run");
+                //Console.WriteLine();
+                //for (int i = 0; i < 20; i++)
+                //{
+                //    roundRobinPool.Tell(i);
+                //}
+
+
                 Console.ReadLine();
             }
         }
