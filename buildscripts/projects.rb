@@ -8,7 +8,7 @@ Projects = {
     :language => "en-US",
 
     :pigeon => {
-        :id => "Pigeon",
+        :id => "Akka",
         :dir => "Pigeon",
         :title => "Pigeon Distributed Actor Framework",
         :description => "Pigeon is a port of Akka actors for .NET.",
@@ -28,7 +28,7 @@ Projects = {
        },
       },
     :pigeon_fsharp => {
-        :id => "Pigeon.FSharp",
+        :id => "Akka.FSharp",
         :dir => "Pigeon.FSharp",
         :title => "Pigeon Distributed Actor Framework - F\# API",
         :description => "FSharp API support for Pigeon.",
@@ -43,7 +43,7 @@ Projects = {
         }
       },
     :pigeon_remote => {
-        :id => "Pigeon.Remote",
+        :id => "Akka.Remote",
         :dir => "Pigeon.Remote",
         :title => "Pigeon Distributed Actor Framework - Remote Actors",
         :description => "Remote actor support for Pigeon.",
