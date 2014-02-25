@@ -43,8 +43,9 @@ namespace Pigeon.Remote
             var publicPath = "";
             if (send.Sender is LocalActorRef)
             {
+                
                 var s = send.Sender as LocalActorRef;
-                publicPath = send.Sender.Path.ToStringWithAddress(Context.System.Provider.Address);
+                publicPath = send.Sender.Path.ToStringWithAddress(localAddress);
             }
             else
                 publicPath = send.Sender.Path.ToString();

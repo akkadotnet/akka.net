@@ -15,7 +15,7 @@ namespace Pigeon.Remote.Transport
         {            
             var protocol = "akka."+config.GetString("transport-protocol");
             this.SchemeIdentifier = protocol;
-            var host = config.GetString("host");
+            var host = config.GetString("hostname");
             var port = config.GetInt("port");
             this.Address = new Address(protocol, system.Name, host, port);
             server = new TcpServer(system, host, port);

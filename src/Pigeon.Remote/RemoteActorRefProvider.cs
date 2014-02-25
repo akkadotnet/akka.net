@@ -24,9 +24,12 @@ namespace Pigeon.Remote
 
         public override void Init()
         {
-            var host = config.GetString("server.host");
-            var port = config.GetInt("server.port");
-            this.Address = new Address("akka.tcp", System.Name, host, port);
+            //TODO: this should not be here
+            this.Address = new Address("akka", this.System.Name); //TODO: this should not work this way...
+            //TODO: this should not be here
+            //var host = config.GetString("server.host");
+            //var port = config.GetInt("server.port");
+            //this.Address = new Address("akka.tcp", System.Name, host, port);
 
             base.Init();
 
@@ -53,7 +56,7 @@ namespace Pigeon.Remote
 
         private bool HasAddress(Address address) 
         {
-            return address == this.Address || this.Transport.Addresses.Any(a => a == address);
+            return address == this.Address || this.Transport.Addresses.Any(a => a.Equals(address));
         }
 
         public override ActorRef RootGuardianAt(Address address)
@@ -114,7 +117,7 @@ namespace Pigeon.Remote
 
         public override ActorRef ResolveActorRef(ActorPath actorPath)
         {
-            if (this.Address.Equals(actorPath.Address))
+            if (HasAddress(actorPath.Address))
             {
                 if (actorPath.Head == "remote")
                 {
