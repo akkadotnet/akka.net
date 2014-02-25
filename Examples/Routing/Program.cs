@@ -41,6 +41,19 @@ routees.paths = [
                     roundRobinGroup.Tell(i);
                 }
 
+                Console.WriteLine("-----");
+
+                var hashGroup = system.ActorOf(Props.Empty.WithRouter(new ConsistentHashingGroup(config)));
+                Task.Delay(500).Wait();
+                Console.WriteLine();
+                for (int i = 0; i < 5; i++)
+                {
+                    for (int j = 0; j < 4; j++)
+                    {
+                        roundRobinGroup.Tell(j);
+                    }
+                }
+
                 //var roundRobinPool = system.ActorOf(Props.Empty.WithRouter(new RoundRobinPool(
                 //    nrOfInstances: 10,
                 //    resizer: null,
