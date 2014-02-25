@@ -23,7 +23,7 @@ namespace Routing
 
                 var config = ConfigurationFactory.ParseString(@"
 routees.paths = [
-    user/Worker1
+    ""akka://MySystem/user/Worker1"" #testing full path
     user/Worker2
     user/Worker3
     user/Worker4

@@ -65,11 +65,6 @@ namespace Pigeon.Routing
             }
         }
 
-        public override RoutingLogic GetLogic()
-        {
-            throw new NotImplementedException();
-        }
-
         public override RouterActor CreateRouterActor()
         {
             return new RouterActor();

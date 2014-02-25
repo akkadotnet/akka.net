@@ -48,10 +48,5 @@ namespace Pigeon.Routing
         {
             return new RoundRobinRoutingLogic();
         }
-
-        public override RouterActor CreateRouterActor()
-        {
-            return new RouterActor();
-        }
     }
 }
