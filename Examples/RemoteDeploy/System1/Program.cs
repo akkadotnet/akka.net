@@ -17,7 +17,7 @@ namespace System1
             var config = ConfigurationFactory.ParseString(@"
 akka {  
     actor {
-        provider = ""Pigeon.Remote.RemoteActorRefProvider, Pigeon.Remote""
+        provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
         debug {
             lifecycle = on
             receive = on

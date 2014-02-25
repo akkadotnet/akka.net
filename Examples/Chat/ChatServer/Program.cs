@@ -81,7 +81,7 @@ akka {
             clients.Add(this.Sender);
             Sender.Tell(new ConnectResponse
             {
-                Message = "Hello and welcome to Pigeon chat example",
+                Message = "Hello and welcome to Akka .NET chat example",
             }, Self);
         }
 
