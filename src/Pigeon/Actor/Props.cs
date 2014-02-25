@@ -82,7 +82,7 @@ namespace Pigeon.Actor
         public Props WithRouter(RouterConfig routerConfig)
         {
             var copy = Copy();
-            copy.Type = typeof(RouterActor);
+        //    copy.Type = typeof(RouterActor);
             copy.RouterConfig = routerConfig;
             return copy;
         }
@@ -109,7 +109,7 @@ namespace Pigeon.Actor
         }
 
         private static Props empty = new Props();
-        public Props Empty
+        public static Props Empty
         {
             get
             {

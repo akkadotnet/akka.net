@@ -18,5 +18,20 @@ namespace Pigeon.Routing
             Self = new RoutedActorRef(this.Router,path,this);
         }
         public Router Router { get; private set; }
+
+        public override void NewActor()
+        {
+            //set the thread static context or things will break
+            this.UseThreadContext(() =>
+            {
+                //TODO: where should deployment be handled?
+                var deployPath = Self.Path.ToStringWithoutAddress();
+                var deploy = System.Deployer.Lookup(deployPath);
+                behaviorStack.Clear();
+                var instance = Props.RouterConfig.CreateRouterActor();
+                instance.supervisorStrategy = Props.SupervisorStrategy; //defaults to null - won't affect lazy instantion unless explicitly set in props
+                instance.AroundPreStart();
+            });
+        }
     }
 }

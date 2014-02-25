@@ -23,10 +23,10 @@ namespace Pigeon.Actor
         public object CurrentMessage { get;private set; }
         public ActorRef Sender { get;private set; }
         internal Receive CurrentBehavior { get; private set; }
-        private Stack<Receive> behaviorStack = new Stack<Receive>();
-        private Mailbox Mailbox { get; set; }
+        protected Stack<Receive> behaviorStack = new Stack<Receive>();
+        protected Mailbox Mailbox { get; set; }
         public MessageDispatcher Dispatcher { get;private set; }
-        private HashSet<ActorRef> Watchees = new HashSet<ActorRef>();
+        protected HashSet<ActorRef> Watchees = new HashSet<ActorRef>();
         [ThreadStatic]
         private static ActorCell current;
         internal static ActorCell Current
@@ -164,7 +164,7 @@ namespace Pigeon.Actor
             return name;
         }
 
-        public void NewActor()
+        public virtual void NewActor()
         {
             //set the thread static context or things will break
             this.UseThreadContext( () =>

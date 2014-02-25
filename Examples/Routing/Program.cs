@@ -29,7 +29,7 @@ routees.paths = [
     user/Worker4
 ]");
 
-                var actor = system.ActorOf(new Props().WithRouter(new RoundRobinGroup(config)));
+                var actor = system.ActorOf(Props.Empty.WithRouter(new RoundRobinGroup(config)));
                 //or: var actor = system.ActorOf(new Props().WithRouter(new RoundRobinGroup("user/Worker1", "user/Worker2", "user/Worker3", "user/Worker4")));
 
                 Console.WriteLine("Why is the order so strange if we use round robin?");
