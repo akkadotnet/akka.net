@@ -32,6 +32,17 @@ namespace Pigeon.Actor
             return Ask(self, replyTo, message, provider);
         }
 
+        public static Task<T> Ask<T>(this ICanTell self, object message)
+        {
+            var provider = ResolveProvider(self);
+            if (provider == null)
+                throw new NotSupportedException("Unable to resolve the target Provider");
+
+            var replyTo = ResolveReplyTo();
+
+            return Ask(self, replyTo, message, provider).ContinueWith<T>(t => (T)t.Result);
+        }
+
         private static ActorRef ResolveReplyTo()
         {
             if (ActorCell.Current != null)
