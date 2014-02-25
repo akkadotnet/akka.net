@@ -111,14 +111,14 @@ namespace Pigeon.Actor
                 if (actorPath.Head == "temp")
                 {
                     //skip ""/"temp", 
-                    var parts = actorPath.Skip(2).ToArray();
+                    var parts = actorPath.Elements.Skip(2).ToArray();
                     return TempContainer.GetChild(parts);
                 }
                 else
                 {
                     //standard
                     var currentContext = RootCell;
-                    foreach (var part in actorPath.Skip(1))
+                    foreach (var part in actorPath.Elements.Skip(1))
                     {
                         currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
                     }

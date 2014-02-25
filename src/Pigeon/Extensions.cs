@@ -17,5 +17,10 @@ namespace Pigeon
         {
             return self.Union(Enumerable.Repeat(add, 1)).ToArray();
         }
+
+        public static IEnumerable<T> Drop<T>(this IEnumerable<T> self,int count)
+        {
+            return self.Skip(count);
+        }
     }
 }

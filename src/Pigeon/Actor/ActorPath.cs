@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Pigeon.Actor
 {
-    public abstract class ActorPath : IEnumerable<string> , IEquatable<ActorPath>
+    public abstract class ActorPath : IEquatable<ActorPath>
     {
         public long Uid { get;private set; }
 
@@ -131,10 +131,6 @@ namespace Pigeon.Actor
             return elements.GetEnumerator();
         }
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            return elements.GetEnumerator();
-        }
 
         public override int GetHashCode()
         {
