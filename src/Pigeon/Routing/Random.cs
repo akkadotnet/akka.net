@@ -67,7 +67,12 @@ namespace Pigeon.Routing
 
         public override RoutingLogic GetLogic()
         {
-            return new RoundRobinRoutingLogic();
+            return new RandomLogic();
+        }
+
+        public override Router CreateRouter()
+        {
+            return new Router(new RandomLogic());
         }
     }
 }

@@ -21,6 +21,7 @@ namespace Pigeon.Routing
             return this;
         }
 
+        public abstract Router CreateRouter();
         public abstract RouterActor CreateRouterActor();
     }
 
@@ -37,6 +38,11 @@ namespace Pigeon.Routing
         }
 
         public override RouterActor CreateRouterActor()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Router CreateRouter()
         {
             throw new NotImplementedException();
         }
@@ -96,7 +102,7 @@ namespace Pigeon.Routing
     //  routeeProps
             if (UsePoolDispatcher && routeeProps.Dispatcher == Dispatchers.DefaultDispatcherId)
             {
-                return routeeProps.WithDispatcher("akka.actor.deployment." + string.Join("/", context.Self.Path.Elements.Skip(1)) + ".pool-dispatcher");
+                return routeeProps.WithDispatcher("akka.actor.deployment." + context.Self.Path.Elements.Drop(1).Join("/") + ".pool-dispatcher");
             }
             return routeeProps;
         }
@@ -107,7 +113,14 @@ namespace Pigeon.Routing
         public Props Props(Props routeeProps)
         {
             return routeeProps.WithRouter(this);
+        }        
+
+        public override RouterActor CreateRouterActor()
+        {
+            if (Resizer == null)
+                return new RouterPoolActor(SupervisorStrategy);
+            else
+                return new ResizablePoolActor(SupervisorStrategy);
         }
-               
     }
 }

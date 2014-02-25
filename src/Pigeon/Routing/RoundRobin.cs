@@ -48,6 +48,34 @@ namespace Pigeon.Routing
         {
             return new RoundRobinRoutingLogic();
         }
+
+        public override Router CreateRouter()
+        {
+            return new Router(new RoundRobinRoutingLogic());
+        }
+    }
+
+    public class RoundRobinPool : Pool
+    {
+        public override RoutingLogic GetLogic()
+        {
+            return new RoundRobinRoutingLogic();
+        }
+
+        public override IEnumerable<Routee> GetRoutees(ActorSystem system)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override RouterActor CreateRouterActor()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Router CreateRouter()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
 

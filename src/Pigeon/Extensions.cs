@@ -22,5 +22,10 @@ namespace Pigeon
         {
             return self.Skip(count);
         }
+
+        public static string Join(this IEnumerable<string> self, string separator)
+        {
+            return string.Join(separator, self);
+        }
     }
 }
