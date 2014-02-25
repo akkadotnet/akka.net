@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Pigeon.Actor
@@ -14,24 +15,48 @@ namespace Pigeon.Actor
         private TaskCompletionSource<object> result;
         private ActorRef sender;
         private Action unregister;
-        public FutureActorRef(TaskCompletionSource<object> result, ActorRef sender, Action unregister,ActorPath path)
+        public FutureActorRef(TaskCompletionSource<object> result, ActorRef sender, Action unregister,ActorPath path,TimeSpan? timeout)
         {
             this.result = result;
             this.sender = sender;
             this.unregister = unregister;
             this.Path = path;
+            if (timeout != null)
+            {
+                Task.Delay(timeout.Value).ContinueWith(t => timeout);
+            }
+        }
+
+        private int status = 0;
+        private void Timeout()
+        {
+            if (Interlocked.Exchange(ref status, 1)==0)
+            {
+                unregister();
+                if (sender != ActorRef.NoSender)
+                {
+                    sender.Tell(new CompleteFuture(() => result.TrySetCanceled()));
+                }
+                else
+                {
+                    result.TrySetCanceled();
+                }
+            }
         }
 
         protected override void TellInternal(object message, ActorRef sender)
         {
-            unregister();
-            if (sender != ActorRef.NoSender)
+            if (Interlocked.Exchange(ref status, 2) == 0)
             {
-                sender.Tell(new CompleteFuture(() => result.SetResult(message)));
-            }
-            else
-            {
-                result.SetResult(message);
+                unregister();
+                if (sender != ActorRef.NoSender)
+                {
+                    sender.Tell(new CompleteFuture(() => result.SetResult(message)));
+                }
+                else
+                {
+                    result.SetResult(message);
+                }
             }
         }
 

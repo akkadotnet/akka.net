@@ -12,6 +12,16 @@ namespace Pigeon.Routing
          object ConsistentHashKey { get; }
     }
 
+     public class ConsistentHashableEnvelope : ConsistentHashable
+     {
+         public object Message { get; set; }
+         public object HashKey { get; set; }
+         public object ConsistentHashKey
+         {
+             get { return HashKey; }
+         }
+     }
+
      public class ConsistentHashingRoutingLogic : RoutingLogic
      {
          public override Routee Select(object message, Routee[] routees)
