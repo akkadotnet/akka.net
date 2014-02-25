@@ -14,7 +14,7 @@ namespace Pigeon.Routing
         {
             var routerConfig = props.RouterConfig;
             var routees = routerConfig.GetRoutees(this.System).ToArray();
-            this.Router = new Routing.Router(routerConfig.GetLogic(),routees);            
+            this.Router = routerConfig.CreateRouter().WithRoutees(routees);
             Self = new RoutedActorRef(this.Router,path,this);
         }
         public Router Router { get; private set; }

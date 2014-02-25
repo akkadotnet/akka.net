@@ -10,7 +10,7 @@ namespace Pigeon.Routing
 {
     public abstract class RouterConfig
     {
-        public abstract RoutingLogic GetLogic();
+      //  public abstract RoutingLogic GetLogic();
 
         public abstract IEnumerable<Routee> GetRoutees(ActorSystem system);
 
@@ -27,11 +27,6 @@ namespace Pigeon.Routing
 
     public class NoRouter : RouterConfig
     {
-        public override RoutingLogic GetLogic()
-        {
-            throw new NotImplementedException();
-        }
-
         public override IEnumerable<Routee> GetRoutees(ActorSystem system)
         {
             throw new NotImplementedException();

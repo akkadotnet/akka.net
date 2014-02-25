@@ -44,11 +44,6 @@ namespace Pigeon.Routing
 
         public RoundRobinGroup(IEnumerable<ActorRef> routees) : base(routees) { }
 
-        public override RoutingLogic GetLogic()
-        {
-            return new RoundRobinRoutingLogic();
-        }
-
         public override Router CreateRouter()
         {
             return new Router(new RoundRobinRoutingLogic());
@@ -57,11 +52,6 @@ namespace Pigeon.Routing
 
     public class RoundRobinPool : Pool
     {
-        public override RoutingLogic GetLogic()
-        {
-            return new RoundRobinRoutingLogic();
-        }
-
         public override IEnumerable<Routee> GetRoutees(ActorSystem system)
         {
             throw new NotImplementedException();
