@@ -37,13 +37,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Routing", "Routing", "{4521
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Routing", "Examples\Routing\Routing.csproj", "{2CEC4A63-31ED-44E8-B1A6-7EEEB190117D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon", "src\Pigeon\Pigeon.csproj", "{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka", "src\Pigeon\Akka.csproj", "{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Pigeon.FSharp", "src\Pigeon.FSharp\Pigeon.FSharp.fsproj", "{81574240-BC31-4BE4-B447-ADF0D32F4246}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Akka.FSharp", "src\Pigeon.FSharp\Akka.FSharp.fsproj", "{81574240-BC31-4BE4-B447-ADF0D32F4246}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon.Remote", "src\Pigeon.Remote\Pigeon.Remote.csproj", "{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote", "src\Pigeon.Remote\Akka.Remote.csproj", "{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon.Tests", "test\Pigeon.Tests\Pigeon.Tests.csproj", "{3F786C7D-70E3-4836-8B33-EC9A5AF72330}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Tests", "test\Pigeon.Tests\Akka.Tests.csproj", "{3F786C7D-70E3-4836-8B33-EC9A5AF72330}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{8A15341C-5596-4F4D-949D-2CD9A0006E12}"
 	ProjectSection(SolutionItems) = preProject
@@ -56,9 +56,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Stocks", "Stocks", "{D92D67
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SymbolLookup", "Examples\Stocks\SymbolLookup\SymbolLookup.csproj", "{3007A692-A050-4F12-9187-4AE6C6106A66}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon.TestKit", "test\Pigeon.TestKit\Pigeon.TestKit.csproj", "{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit", "test\Pigeon.TestKit\Akka.TestKit.csproj", "{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pigeon.Remote.Tests", "test\Pigeon.Remote.Tests\Pigeon.Remote.Tests.csproj", "{95E921AB-1F5A-4AF9-B7FE-284E317A97F4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote.Tests", "test\Pigeon.Remote.Tests\Akka.Remote.Tests.csproj", "{95E921AB-1F5A-4AF9-B7FE-284E317A97F4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RemoteDeploy", "RemoteDeploy", "{B555BA52-1911-426B-8018-D303D7228748}"
 EndProject

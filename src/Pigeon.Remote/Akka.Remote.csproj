@@ -84,9 +84,9 @@
     <Compile Include="Transport\Transport.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Pigeon\Pigeon.csproj">
+    <ProjectReference Include="..\Pigeon\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
-      <Name>Pigeon</Name>
+      <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

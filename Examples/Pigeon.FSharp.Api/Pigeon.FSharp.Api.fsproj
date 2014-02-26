@@ -51,13 +51,13 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Pigeon.FSharp\Pigeon.FSharp.fsproj">
-      <Name>Pigeon.FSharp</Name>
+    <ProjectReference Include="..\..\src\Pigeon.FSharp\Akka.FSharp.fsproj">
+      <Name>Akka.FSharp</Name>
       <Project>{81574240-bc31-4be4-b447-adf0d32f4246}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <ProjectReference Include="..\..\src\Pigeon\Pigeon.csproj">
-      <Name>Pigeon</Name>
+    <ProjectReference Include="..\..\src\Pigeon\Akka.csproj">
+      <Name>Akka</Name>
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Private>True</Private>
     </ProjectReference>

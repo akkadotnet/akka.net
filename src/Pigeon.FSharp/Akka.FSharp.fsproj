@@ -11,7 +11,7 @@
     <AssemblyName>Akka.FSharp</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
-    <Name>Pigeon.FSharp</Name>
+    <Name>Akka.FSharp</Name>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -45,8 +45,8 @@
     <Compile Include="FsApi.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Pigeon\Pigeon.csproj">
-      <Name>Pigeon</Name>
+    <ProjectReference Include="..\Pigeon\Akka.csproj">
+      <Name>Akka</Name>
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Private>True</Private>
     </ProjectReference>
