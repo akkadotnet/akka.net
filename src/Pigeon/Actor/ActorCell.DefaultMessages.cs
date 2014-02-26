@@ -66,7 +66,7 @@ namespace Akka.Actor
                         .With<Kill>(Kill)
                         .With<PoisonPill>(HandlePoisonPill)
                         .With<ActorSelectionMessage>(ReceiveSelection)
-                        .With<Identity>(HandleIdentity);
+                        .With<Identify>(HandleIdentity);
             }
             else
             {
@@ -329,7 +329,7 @@ protected def terminate() {
             //     case None ⇒ publish(Error(self.path.toString, clazz(actor), "received Supervise from unregistered child " + child + ", this will not end well"))
         }
 
-		private void HandleIdentity(Identity m)
+		private void HandleIdentity(Identify m)
         {
             Sender.Tell(new ActorIdentity(m.MessageId, this.Self));
         }

@@ -21,9 +21,9 @@ namespace Akka.Actor
     }
 
     //request to an actor ref, to get back the identity of the underlying actors
-    public class Identity : AutoReceivedMessage
+    public class Identify : AutoReceivedMessage
     {
-        public Identity(Guid messageId)
+        public Identify(Guid messageId)
         {
             MessageId = messageId;
         }
@@ -34,9 +34,9 @@ namespace Akka.Actor
     public class ActorIdentity : AutoReceivedMessage
     {
         public Guid MessageId { get; private set; }
-        public LocalActorRef Subject { get; private set; }
+        public ActorRef Subject { get; private set; }
 
-        public ActorIdentity(Guid messageId, LocalActorRef subject)
+        public ActorIdentity(Guid messageId, ActorRef subject)
         {
             this.MessageId = messageId;
             this.Subject = subject;

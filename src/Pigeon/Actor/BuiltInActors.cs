@@ -52,17 +52,33 @@ private[akka] class DeadLetterActorRef(_provider: ActorRefProvider,
     {
         private EventStream eventStream;
         private ActorPath path;
-        public DeadLetterActorRef(ActorPath path, EventStream eventStream)
+        private ActorRefProvider provider;
+        public DeadLetterActorRef(ActorRefProvider provider, ActorPath path, EventStream eventStream)
         {
             this.eventStream = eventStream;
             this.path = path;
+            this.provider = provider; 
+        }
+        private bool SpecialHandle(object message, ActorRef sender)
+        {
+            return false;
         }
 
         protected override void TellInternal(object message, ActorRef sender)
         {
-            //TODO: need to special handle some messages here
-            //e.g. identity,
-            eventStream.Publish(new DeadLetter(message, sender, this));
+            message
+                .Match()
+                .With<Identify>(m => sender.Tell(new ActorIdentity(m.MessageId, this)))
+                .With<DeadLetter>(m =>
+                {
+                    if (!SpecialHandle(m.Message, m.Sender))
+                        eventStream.Publish(m);
+                })
+                .Default(m =>
+                {
+                    if (!SpecialHandle(message, sender))
+                        eventStream.Publish(new DeadLetter(message, sender == ActorRef.NoSender ? provider.DeadLetters : sender, this));
+                });
         }        
     }
 }

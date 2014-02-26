@@ -26,7 +26,7 @@ namespace Akka.Actor
             this.TempNode = RootPath / "temp";
 
             this.RootCell = new ActorCell(System, "", new ConcurrentQueueMailbox());
-            this.DeadLetters = new DeadLetterActorRef(RootPath / "deadLetters", this.System.EventStream);
+            this.DeadLetters = new DeadLetterActorRef(this, RootPath / "deadLetters", this.System.EventStream);
             this.Guardian = (LocalActorRef)RootCell.ActorOf<GuardianActor>("user");
             this.SystemGuardian = (LocalActorRef)RootCell.ActorOf<GuardianActor>("system");
             this.TempContainer = new VirtualPathContainer(this, TempNode, null);
