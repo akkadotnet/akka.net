@@ -11,7 +11,7 @@ namespace Akka.Actor
     public class Scheduler
     {
         public CancellationTokenSource ScheduleOnce(TimeSpan initialDelay, ActorRef receiver, object message)
-        {
+        {            
             var source = new CancellationTokenSource();
             RunOnceTask(source.Token, initialDelay, () => receiver.Tell(message));
             return source;
@@ -26,17 +26,17 @@ namespace Akka.Actor
 
         private async void RunOnceTask(CancellationToken token, TimeSpan initialDelay, Action action)
         {
-            await Task.Delay(initialDelay);
+            await Task.Delay(initialDelay,token);
             action();
         }
 
         private async void RunTask(CancellationToken token, TimeSpan initialDelay, TimeSpan interval, Action action)
         {
-            await Task.Delay(initialDelay);
+            await Task.Delay(initialDelay,token);
             while (!token.IsCancellationRequested)
             {
                 action();
-                await Task.Delay(interval);
+                await Task.Delay(interval,token);
             }
         }
 
