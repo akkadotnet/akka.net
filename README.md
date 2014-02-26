@@ -2,7 +2,7 @@
 
 Akka .NET is a port of the popular Java/Scala framework Akka to .NET.
 
-This is a community driven port and is not affiliated with Typesafe who makes the Java/Scala version of the framework.
+This is a community driven port and is not affiliated with Typesafe who makes the original Java/Scala version.
 
 * Subscribe to the Pigeon dev feed: https://twitter.com/PigeonFramework
 
@@ -16,6 +16,7 @@ This is a community driven port and is not affiliated with Typesafe who makes th
 * [Routing](https://github.com/rogeralsing/Pigeon/wiki/Routing)
 * [EventBus](https://github.com/rogeralsing/Pigeon/wiki/EventBus)
 * Logging
+* Scheduling
 * [Performance](https://github.com/rogeralsing/Pigeon/wiki/Performance)
 * [The F# API](https://github.com/rogeralsing/Pigeon/wiki/FSharp-API)
 
