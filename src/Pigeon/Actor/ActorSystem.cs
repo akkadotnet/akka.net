@@ -41,7 +41,7 @@ namespace Akka.Actor
         public ActorSystem(string name,Config config=null,params ActorSystemExtension[] extensions)
         {
             this.Name = name;
-            
+            ConfigureScheduler();
             ConfigureSettings(config);
             ConfigureDeployer();
             ConfigureEventStream();
@@ -51,6 +51,11 @@ namespace Akka.Actor
             ConfigureProvider();
             ConfigureExtensions(extensions);
             this.Start();
+        }
+
+        private void ConfigureScheduler()
+        {
+            this.Scheduler = new Scheduler();
         }
 
         private void ConfigureDeployer()
@@ -195,5 +200,6 @@ namespace Akka.Actor
         public Dispatchers Dispatchers { get;private set; }
         public Mailboxes Mailboxes { get;private set; }
         public Deployer Deployer { get;private set; }
+        public Scheduler Scheduler { get;private set; }
     }
 }
