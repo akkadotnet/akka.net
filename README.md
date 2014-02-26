@@ -5,9 +5,7 @@ This is a community driven port and is not affiliated with Typesafe who makes th
 
 * Subscribe to the Pigeon dev feed: https://twitter.com/PigeonFramework
 
-Read more on:
-
-###Akka features
+###Features
 * [Actors](https://github.com/rogeralsing/Pigeon/wiki/Getting started)
 * [Configuration](https://github.com/rogeralsing/Pigeon/wiki/Configuration)
 * [Remoting](https://github.com/rogeralsing/Pigeon/wiki/Remoting)
@@ -17,13 +15,11 @@ Read more on:
 * [Routing](https://github.com/rogeralsing/Pigeon/wiki/Routing)
 * [EventBus](https://github.com/rogeralsing/Pigeon/wiki/EventBus)
 * Logging
+* [Performance](https://github.com/rogeralsing/Pigeon/wiki/Performance)
+* [The F# API](https://github.com/rogeralsing/Pigeon/wiki/FSharp-API)
 
 #####Not yet implemented:
 * Akka Cluster support
-
-###Pigeon specific
-* [Performance](https://github.com/rogeralsing/Pigeon/wiki/Performance)
-* [The F# API](https://github.com/rogeralsing/Pigeon/wiki/FSharp-API)
 
 #####Contribute
 If you are interested in helping porting the actor part of Akka to .NET please let me know.
