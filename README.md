@@ -1,16 +1,9 @@
-# Pigeon
+# Akka .NET
+
+Akka .NET is a port of the popular Java/Scala framework Akka to .NET.
+This is a community driven port and is not affiliated with Typesafe who makes the Java/Scala version of the framework.
 
 * Subscribe to the Pigeon dev feed: https://twitter.com/PigeonFramework
-* Discuss on the Pigeon support forum: https://groups.google.com/forum/#!forum/pigeon-framework
-
-*Early beta, do not use in production.*
-
-###High performance Actor Model framework.
-Pigeon is an unofficial port of the Scala/Java Akka actor model framework.
-
-Why not Akka# or dotAkka? 
-I simply assume that TypeSafe that makes Akka don’t want to be associated with spare time projects like this, so I try not to stain their brand name.
-Pigeon tries to stay as close to the Akka implementation as possible while still beeing .NET idiomatic.
 
 Read more on:
 
