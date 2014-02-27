@@ -17,7 +17,7 @@ namespace Akka.Actor
 
         public Task ScheduleOnce(TimeSpan initialDelay, ActorRef receiver, object message,CancellationToken cancellationToken)
         {
-            return RunOnceTask(cancellationToken, initialDelay, () => receiver.Tell(message));
+            return InternalScheduleOnce(initialDelay, () => receiver.Tell(message), cancellationToken);
         }
 
         public Task Schedule(TimeSpan initialDelay, TimeSpan interval, ActorRef receiver, object message)
@@ -27,7 +27,7 @@ namespace Akka.Actor
 
         public Task Schedule(TimeSpan initialDelay, TimeSpan interval, ActorRef receiver, object message, CancellationToken cancellationToken)
         {
-            return RunTask(cancellationToken, initialDelay, interval, () => receiver.Tell(message));
+            return InternalSchedule(initialDelay, interval, () => receiver.Tell(message), cancellationToken);
         }
 
         //the action will be wrapped so that it completes inside the currently active actors mailbox if there is called from within an actor
@@ -39,7 +39,7 @@ namespace Akka.Actor
         public Task Schedule(TimeSpan initialDelay, TimeSpan interval, Action action, CancellationToken cancellationToken)
         {
             Action wrapped = WrapActionInActorSafeAction(action);
-            return RunTask(cancellationToken, initialDelay, interval, wrapped);
+            return InternalSchedule(initialDelay, interval, wrapped, cancellationToken);
         }
 
         public Task ScheduleOnce(TimeSpan initialDelay, Action action)
@@ -49,16 +49,16 @@ namespace Akka.Actor
         public Task ScheduleOnce(TimeSpan initialDelay, Action action, CancellationToken cancellationToken)
         {
             Action wrapped = WrapActionInActorSafeAction(action);
-            return RunOnceTask(cancellationToken, initialDelay, wrapped);
+            return InternalScheduleOnce(initialDelay, wrapped, cancellationToken);
         }
 
-        private async Task RunOnceTask(CancellationToken token, TimeSpan initialDelay, Action action)
+        private async Task InternalScheduleOnce(TimeSpan initialDelay, Action action, CancellationToken token)
         {
             await Task.Delay(initialDelay, token);
             action();
         }
 
-        private async Task RunTask(CancellationToken token, TimeSpan initialDelay, TimeSpan interval, Action action)
+        private async Task InternalSchedule(TimeSpan initialDelay, TimeSpan interval, Action action, CancellationToken token)
         {
             await Task.Delay(initialDelay, token);
             while (!token.IsCancellationRequested)
