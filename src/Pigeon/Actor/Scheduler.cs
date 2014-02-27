@@ -10,53 +10,62 @@ namespace Akka.Actor
 {
     public class Scheduler
     {
-        public CancellationTokenSource ScheduleOnce(TimeSpan initialDelay, ActorRef receiver, object message)
-        {            
-            var source = new CancellationTokenSource();
-            RunOnceTask(source.Token, initialDelay, () => receiver.Tell(message));
-            return source;
+        public Task ScheduleOnce(TimeSpan initialDelay, ActorRef receiver, object message)
+        {
+            return ScheduleOnce(initialDelay, receiver, message, CancellationToken.None);
         }
 
-        public CancellationTokenSource Schedule(TimeSpan initialDelay, TimeSpan interval, ActorRef receiver, object message)
+        public Task ScheduleOnce(TimeSpan initialDelay, ActorRef receiver, object message,CancellationToken cancellationToken)
         {
-            var source = new CancellationTokenSource();
-            RunTask(source.Token, initialDelay, interval, () => receiver.Tell(message) );
-            return source;
+            return RunOnceTask(cancellationToken, initialDelay, () => receiver.Tell(message));
         }
 
-        private async void RunOnceTask(CancellationToken token, TimeSpan initialDelay, Action action)
+        public Task Schedule(TimeSpan initialDelay, TimeSpan interval, ActorRef receiver, object message)
         {
-            await Task.Delay(initialDelay,token);
-            action();
+            return Schedule(initialDelay, interval, receiver, message, CancellationToken.None);
         }
 
-        private async void RunTask(CancellationToken token, TimeSpan initialDelay, TimeSpan interval, Action action)
+        public Task Schedule(TimeSpan initialDelay, TimeSpan interval, ActorRef receiver, object message, CancellationToken cancellationToken)
         {
-            await Task.Delay(initialDelay,token);
-            while (!token.IsCancellationRequested)
-            {
-                action();
-                await Task.Delay(interval,token);
-            }
+            return RunTask(cancellationToken, initialDelay, interval, () => receiver.Tell(message));
         }
 
         //the action will be wrapped so that it completes inside the currently active actors mailbox if there is called from within an actor
-        public CancellationTokenSource Schedule(TimeSpan initialDelay, TimeSpan interval, Action action)
+        public Task Schedule(TimeSpan initialDelay, TimeSpan interval, Action action)
         {
-            var source = new CancellationTokenSource();
+            return Schedule(initialDelay, interval, action, CancellationToken.None);
+        }
+        
+        public Task Schedule(TimeSpan initialDelay, TimeSpan interval, Action action, CancellationToken cancellationToken)
+        {
             Action wrapped = WrapActionInActorSafeAction(action);
-
-            RunTask(source.Token, initialDelay, interval, wrapped);
-            return source;
+            return RunTask(cancellationToken, initialDelay, interval, wrapped);
         }
 
-        public CancellationTokenSource ScheduleOnce(TimeSpan initialDelay, Action action)
+        public Task ScheduleOnce(TimeSpan initialDelay, Action action)
         {
-            var source = new CancellationTokenSource();
+            return ScheduleOnce(initialDelay, action, CancellationToken.None);
+        }
+        public Task ScheduleOnce(TimeSpan initialDelay, Action action, CancellationToken cancellationToken)
+        {
             Action wrapped = WrapActionInActorSafeAction(action);
+            return RunOnceTask(cancellationToken, initialDelay, wrapped);
+        }
 
-            RunOnceTask(source.Token, initialDelay, wrapped);
-            return source;
+        private async Task RunOnceTask(CancellationToken token, TimeSpan initialDelay, Action action)
+        {
+            await Task.Delay(initialDelay, token);
+            action();
+        }
+
+        private async Task RunTask(CancellationToken token, TimeSpan initialDelay, TimeSpan interval, Action action)
+        {
+            await Task.Delay(initialDelay, token);
+            while (!token.IsCancellationRequested)
+            {
+                action();
+                await Task.Delay(interval, token);
+            }
         }
 
         private static Action WrapActionInActorSafeAction(Action action)
