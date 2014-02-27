@@ -23,8 +23,7 @@ namespace Akka.slf4net.Event.slf4net
 
         private void WithMDC(string logSource, LogEvent logEvent, Action<ILogger> logStatement)
         {
-            //TODO: complete this
-            var logger = global::slf4net.LoggerFactory.GetLogger("foo");
+            var logger = global::slf4net.LoggerFactory.GetLogger(this.GetType());
             logStatement(logger);
         }
 
