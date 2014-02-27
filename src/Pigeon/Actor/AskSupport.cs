@@ -68,11 +68,19 @@ namespace Akka.Actor
         private static Task<object> Ask(ICanTell self, ActorRef replyTo, object message, ActorRefProvider provider,TimeSpan? timeout)
         {
             var result = new TaskCompletionSource<object>();
+            CancellationTokenSource cancellationSource = null;
+            if (timeout.HasValue)
+            {
+                cancellationSource = new CancellationTokenSource();
+                cancellationSource.Token.Register(() => result.TrySetCanceled());
+                cancellationSource.CancelAfter(timeout.Value);
+            }
+            
             //create a new tempcontainer path
             var path = provider.TempPath();
             //callback to unregister from tempcontainer
             Action unregister = () => provider.UnregisterTempActor(path);
-            FutureActorRef future = new FutureActorRef(result, replyTo, unregister, path,timeout);
+            FutureActorRef future = new FutureActorRef(result, replyTo, unregister, path);
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
             self.Tell(message, future);

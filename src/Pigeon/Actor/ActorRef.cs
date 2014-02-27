@@ -15,54 +15,26 @@ namespace Akka.Actor
         private TaskCompletionSource<object> result;
         private ActorRef sender;
         private Action unregister;
-        public FutureActorRef(TaskCompletionSource<object> result, ActorRef sender, Action unregister,ActorPath path,TimeSpan? timeout)
+        public FutureActorRef(TaskCompletionSource<object> result, ActorRef sender, Action unregister,ActorPath path)
         {
             this.result = result;
             this.sender = sender;
             this.unregister = unregister;
-            this.Path = path;
-            if (timeout != null)
-            {
-                Task.Factory.StartNew(() =>
-                {
-                    Thread.Sleep(timeout.Value);
-                    Timeout();
-                });
-              //  Task.Delay(timeout.Value).ContinueWith(t => timeout);
-            }
-        }
-
-        private int status = 0;
-        private void Timeout()
-        {
-            if (Interlocked.Exchange(ref status, 1)==0)
-            {
-                unregister();
-                if (sender != null && sender != ActorRef.NoSender)
-                {
-                    sender.Tell(new CompleteFuture(() => result.TrySetCanceled()));
-                }
-                else
-                {
-                    result.TrySetCanceled();
-                }
-            }
+            this.Path = path;            
         }
 
         protected override void TellInternal(object message, ActorRef sender)
         {
-            if (Interlocked.Exchange(ref status, 2) == 0)
+            unregister();
+            if (sender != ActorRef.NoSender)
             {
-                unregister();
-                if (sender != ActorRef.NoSender)
-                {
-                    sender.Tell(new CompleteFuture(() => result.SetResult(message)));
-                }
-                else
-                {
-                    result.SetResult(message);
-                }
+                sender.Tell(new CompleteFuture(() => result.TrySetResult(message)));
             }
+            else
+            {
+                result.TrySetResult(message);
+            }
+
         }
 
         public override ActorRefProvider Provider
