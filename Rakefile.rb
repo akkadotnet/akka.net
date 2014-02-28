@@ -109,6 +109,7 @@ task :set_output_folders do
     Folders[:bin][:pigeon] = File.join(Folders[:src], Projects[:pigeon][:dir],"bin", @env_buildconfigname)
     Folders[:bin][:pigeon_fsharp] = File.join(Folders[:src], Projects[:pigeon_fsharp][:dir],"bin", @env_buildconfigname)
     Folders[:bin][:pigeon_remote] = File.join(Folders[:src], Projects[:pigeon_remote][:dir],"bin", @env_buildconfigname)
+    Folders[:bin][:akka_slf4net] = File.join(Folders[:src], Projects[:akka_slf4net][:dir],"bin", @env_buildconfigname)
 end
 
 desc "Wipes out the build folder so we have a clean slate to work with"
@@ -120,24 +121,27 @@ end
 desc "Creates all of the output folders we need for ILMerge / NuGet"
 task :create_output_folders => :clean_output_folders do
     create_dir(Folders[:out])
+    create_dir(Folders[:nuget_out])
 
     #NuGet folders - Pigeon
-    create_dir(Folders[:nuget_out])
     create_dir(Folders[:pigeon_nuspec][:root])
     create_dir(Folders[:pigeon_nuspec][:lib])
     create_dir(Folders[:pigeon_nuspec][:net45])
 
     #NuGet folders - Pigeon.FSharp
-    create_dir(Folders[:nuget_out])
     create_dir(Folders[:pigeon_fsharp_nuspec][:root])
     create_dir(Folders[:pigeon_fsharp_nuspec][:lib])
     create_dir(Folders[:pigeon_fsharp_nuspec][:net45])
 
     #NuGet folders - Pigeon.Remote
-    create_dir(Folders[:nuget_out])
     create_dir(Folders[:pigeon_remote_nuspec][:root])
     create_dir(Folders[:pigeon_remote_nuspec][:lib])
     create_dir(Folders[:pigeon_remote_nuspec][:net45])
+
+    #NuGet folders - Akka.slf4net
+    create_dir(Folders[:akka_slf4net_nuspec][:root])
+    create_dir(Folders[:akka_slf4net_nuspec][:lib])
+    create_dir(Folders[:akka_slf4net_nuspec][:net45])
 end
 
 #-----------------------
@@ -163,10 +167,18 @@ output :pigeon_remote_nuget_output => [:create_output_folders] do |out|
     out.file Files[:pigeon_remote][:google_serialization_protobuff]
 end
 
+output :akka_slf4net_nuget_output => [:create_output_folders] do |out|
+    out.from Folders[:bin][:akka_slf4net]
+    out.to Folders[:akka_slf4net_nuspec][:net45]
+    out.file Files[:akka_slf4net][:bin]
+end
+
+
 desc "Executes all file/copy tasks"
 task :all_output => [:pigeon_nuget_output, 
                     :pigeon_fsharp_nuget_output,
-                    :pigeon_remote_nuget_output]
+                    :pigeon_remote_nuget_output,
+                    :akka_slf4net_nuget_output]
 
 #-----------------------
 # NuSpec
@@ -230,10 +242,31 @@ nuspec :nuspec_pigeon_remote => [:all_output] do |nuspec|
     nuspec.reference Files[:pigeon_remote][:google_serialization_protobuff]
 end
 
+desc "Builds a nuspec file for Akka.slf4net"
+nuspec :nuspec_akka_slf4net => [:all_output] do |nuspec|
+    nuspec.id = Projects[:akka_slf4net][:id]
+    nuspec.title = Projects[:akka_slf4net][:title]
+    nuspec.version = env_nuget_version
+    nuspec.authors = Projects[:akka_slf4net][:authors]
+    nuspec.owners = Projects[:akka_slf4net][:company]
+    nuspec.description = Projects[:akka_slf4net][:description]
+    nuspec.projectUrl = Projects[:projectUrl]
+    nuspec.licenseUrl = Projects[:licenseUrl]
+    nuspec.language = Projects[:language]
+    nuspec.tags = Projects[:akka_slf4net][:nuget_tags]
+    nuspec.output_file = File.join(Folders[:nuget_out], "#{Projects[:akka_slf4net][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec");
+
+    nuspec.dependency Projects[:pigeon][:id], env_nuget_version
+    
+    #dependencies
+    nuspec.dependency Projects[:akka_slf4net][:dependencies][:slf4net][:package], Projects[:akka_slf4net][:dependencies][:slf4net][:version]
+end
+
 #executes all of the individual NuSpec tasks
 task :nuspec => [:nuspec_pigeon,
                 :nuspec_pigeon_fsharp,
-                :nuspec_pigeon_remote]
+                :nuspec_pigeon_remote,
+                :nuspec_akka_slf4net]
 
 #-----------------------
 # NuGet Pack
@@ -262,7 +295,16 @@ nugetpack :pack_pigeon_remote => [:nuspec] do |nuget|
     nuget.output = Folders[:nuget_out]
 end
 
+desc "Packs a build of Pigeon into a NuGet package"
+nugetpack :pack_akka_slf4net => [:nuspec] do |nuget|
+    nuget.command = Commands[:nuget]
+    nuget.nuspec = File.join(Folders[:nuget_out], "#{Projects[:akka_slf4net][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")
+    nuget.base_folder = Folders[:akka_slf4net_nuspec][:root]
+    nuget.output = Folders[:nuget_out]
+end
+
 desc "Packs all of the Pigeon NuGet packages"
 task :pack => [:pack_pigeon,
             :pack_pigeon_fsharp,
-            :pack_pigeon_remote]
+            :pack_pigeon_remote,
+            :pack_akka_slf4net]

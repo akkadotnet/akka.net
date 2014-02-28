@@ -10,8 +10,8 @@ Projects = {
     :pigeon => {
         :id => "Akka",
         :dir => "Pigeon",
-        :title => "Pigeon Distributed Actor Framework",
-        :description => "Pigeon is a port of Akka actors for .NET.",
+        :title => "Akka.NET Distributed Actor Framework",
+        :description => "Akka.NET is a port of Akka actors for .NET.",
         :copyright => " (c) Roger Alsing 2013-2014",
         :authors => "Roger Alsing",
         :test_dir => "Pigeon.Test",
@@ -30,7 +30,7 @@ Projects = {
     :pigeon_fsharp => {
         :id => "Akka.FSharp",
         :dir => "Pigeon.FSharp",
-        :title => "Pigeon Distributed Actor Framework - F\# API",
+        :title => "Akka.NET Distributed Actor Framework - F\# API",
         :description => "FSharp API support for Pigeon.",
         :copyright => " (c) Roger Alsing 2013-2014",
         :authors => "Roger Alsing",
@@ -45,7 +45,7 @@ Projects = {
     :pigeon_remote => {
         :id => "Akka.Remote",
         :dir => "Pigeon.Remote",
-        :title => "Pigeon Distributed Actor Framework - Remote Actors",
+        :title => "Akka.NET Distributed Actor Framework - Remote Actors",
         :description => "Remote actor support for Pigeon.",
         :copyright => " (c) Roger Alsing 2013-2014",
         :authors => "Roger Alsing",
@@ -60,5 +60,20 @@ Projects = {
                 :target => "lib\\net45\\"
            },
        },
+   },
+   :akka_slf4net => {
+        :id => "Akka.slf4net",
+        :dir => "Akka.slf4net",
+        :title => "slf4net logging adapter for Akka",
+        :description => "slf4net logging adapter for Akka",
+        :copyright => " (c) Roger Alsing 2013-2014",
+        :authors => "Roger Alsing",
+        :nuget_tags => "akka dlog4net slf4net akka pigeon",
+        :dependencies => {
+            :slf4net => {
+                :package => "slf4net",
+                :version => "0.1.32.1"
+           },
+       }
    },
 }
