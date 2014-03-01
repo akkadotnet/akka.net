@@ -1,26 +1,10 @@
-﻿// ***********************************************************************
-// Assembly         : Akka
-// Author           : Roger Alsing
-// Created          : 02-14-2014
-//
-// Last Modified By : Roger Alsing
-// Last Modified On : 03-01-2014
-// ***********************************************************************
-// <copyright file="ActorPath.cs" company="">
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-/// <summary>
-/// The Actor namespace.
-/// </summary>
 namespace Akka.Actor
 {
     /// <summary>

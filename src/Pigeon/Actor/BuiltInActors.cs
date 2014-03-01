@@ -7,48 +7,80 @@ using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// Class EventStreamActor.
+    /// </summary>
     public class EventStreamActor : UntypedActor
     {
+        /// <summary>
+        /// Processor for user defined messages.
+        /// </summary>
+        /// <param name="message">The message.</param>
         protected override void OnReceive(object message)
         {
         }
     }
 
+    /// <summary>
+    /// Class GuardianActor.
+    /// </summary>
     public class GuardianActor : UntypedActor
     {
+        /// <summary>
+        /// Processor for user defined messages.
+        /// </summary>
+        /// <param name="message">The message.</param>
         protected override void OnReceive(object message)
         {
             Unhandled(message);
         }
     }
 
-    /*
-  override protected def specialHandle(msg: Any, sender: ActorRef): Boolean = msg match {
-    case w: Watch ⇒
-      if (w.watchee != this && w.watcher != this)
-        w.watcher.sendSystemMessage(
-          DeathWatchNotification(w.watchee, existenceConfirmed = false, addressTerminated = false))
-      true
-    case _ ⇒ super.specialHandle(msg, sender)
-  }
-} 
-     */
+    /// <summary>
+    /// Class DeadLetterActorRef.
+    /// </summary>
     public class DeadLetterActorRef : ActorRef
     {
+        /// <summary>
+        /// The event stream
+        /// </summary>
         private EventStream eventStream;
+        /// <summary>
+        /// The path
+        /// </summary>
         private ActorPath path;
+        /// <summary>
+        /// The provider
+        /// </summary>
         private ActorRefProvider provider;
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DeadLetterActorRef"/> class.
+        /// </summary>
+        /// <param name="provider">The provider.</param>
+        /// <param name="path">The path.</param>
+        /// <param name="eventStream">The event stream.</param>
         public DeadLetterActorRef(ActorRefProvider provider, ActorPath path, EventStream eventStream)
         {
             this.eventStream = eventStream;
             this.path = path;
             this.provider = provider; 
         }
+        /// <summary>
+        /// Specials the handle.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="sender">The sender.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         private bool SpecialHandle(object message, ActorRef sender)
         {
             return false;
         }
 
+        /// <summary>
+        /// Tells the internal.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="sender">The sender.</param>
         protected override void TellInternal(object message, ActorRef sender)
         {
             message

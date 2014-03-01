@@ -7,9 +7,6 @@ using System.Threading;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
-/// <summary>
-/// The Actor namespace.
-/// </summary>
 namespace Akka.Actor
 {
     /// <summary>
