@@ -41,7 +41,7 @@ namespace Akka.Actor
         {
             get
             {
-                return elements[0];
+                return elements.FirstOrDefault();
             }
         }       
 
