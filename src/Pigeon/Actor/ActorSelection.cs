@@ -4,24 +4,56 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+/// <summary>
+/// The Actor namespace.
+/// </summary>
 namespace Akka.Actor
 {
+    /// <summary>
+    /// Class ActorSelection.
+    /// </summary>
     public class ActorSelection : ICanTell
     {
+        /// <summary>
+        /// Gets the anchor.
+        /// </summary>
+        /// <value>The anchor.</value>
         public ActorRef Anchor { get; private set; }
+        /// <summary>
+        /// Gets or sets the elements.
+        /// </summary>
+        /// <value>The elements.</value>
         public SelectionPathElement[] Elements { get; set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ActorSelection"/> class.
+        /// </summary>
         public ActorSelection() { }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ActorSelection"/> class.
+        /// </summary>
+        /// <param name="anchor">The anchor.</param>
+        /// <param name="path">The path.</param>
         public ActorSelection(ActorRef anchor,SelectionPathElement[] path)
         {
             this.Anchor = anchor;
             this.Elements = path;
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ActorSelection"/> class.
+        /// </summary>
+        /// <param name="anchor">The anchor.</param>
+        /// <param name="path">The path.</param>
         public ActorSelection(ActorRef anchor, string path) : this(anchor,path == "" ? new string[]{} : path.Split('/'))
         {            
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ActorSelection"/> class.
+        /// </summary>
+        /// <param name="anchor">The anchor.</param>
+        /// <param name="elements">The elements.</param>
         public ActorSelection(ActorRef anchor, IEnumerable<string> elements)
         {
             Anchor = anchor;
@@ -35,6 +67,10 @@ namespace Akka.Actor
             }).ToArray();
         }
 
+        /// <summary>
+        /// Tells the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public void Tell(object message)
         {
             var sender = ActorRef.NoSender;
@@ -43,11 +79,23 @@ namespace Akka.Actor
 
             Deliver(message, sender, 0, Anchor);
         }
+        /// <summary>
+        /// Tells the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="sender">The sender.</param>
         public void Tell(object message, ActorRef sender)
         {
             Deliver(message, sender, 0, Anchor);
         }
 
+        /// <summary>
+        /// Delivers the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="sender">The sender.</param>
+        /// <param name="pathIndex">Index of the path.</param>
+        /// <param name="current">The current.</param>
         private void Deliver(object message, ActorRef sender,int pathIndex,ActorRef current)
         {
             if (pathIndex == Elements.Length)
@@ -78,67 +126,133 @@ namespace Akka.Actor
         }
     }
 
+    /// <summary>
+    /// Class ActorSelectionMessage.
+    /// </summary>
     public class ActorSelectionMessage : AutoReceivedMessage
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ActorSelectionMessage"/> class.
+        /// </summary>
         public ActorSelectionMessage()
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ActorSelectionMessage"/> class.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="elements">The elements.</param>
         public ActorSelectionMessage(object message,SelectionPathElement[] elements)
         {
             this.Message = message;
             this.Elements = elements;
         }
 
+        /// <summary>
+        /// Gets or sets the message.
+        /// </summary>
+        /// <value>The message.</value>
         public object Message { get; set; }
 
+        /// <summary>
+        /// Gets or sets the elements.
+        /// </summary>
+        /// <value>The elements.</value>
         public SelectionPathElement[] Elements { get;  set; }
     }
 
+    /// <summary>
+    /// Class SelectionPathElement.
+    /// </summary>
     public abstract class SelectionPathElement
     {
 
     }
 
+    /// <summary>
+    /// Class SelectChildName.
+    /// </summary>
     public class SelectChildName : SelectionPathElement
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SelectChildName"/> class.
+        /// </summary>
         public SelectChildName() 
         { 
         }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SelectChildName"/> class.
+        /// </summary>
+        /// <param name="name">The name.</param>
         public SelectChildName(string name)
         {
             this.Name = name;
         }
 
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
         public string Name { get; set; }
 
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// </summary>
+        /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
         public override string ToString()
         {
             return this.Name;
         }
     }
 
+    /// <summary>
+    /// Class Pattern.
+    /// </summary>
     public class Pattern
     {
 
     }
 
+    /// <summary>
+    /// Class Helpers.
+    /// </summary>
     public static class Helpers
     {
+        /// <summary>
+        /// Makes the pattern.
+        /// </summary>
+        /// <param name="patternStr">The pattern string.</param>
+        /// <returns>Pattern.</returns>
         public static Pattern MakePattern(string patternStr)
         {
             return new Pattern();
         }
     }
+    /// <summary>
+    /// Class SelectChildPattern.
+    /// </summary>
     public class SelectChildPattern : SelectionPathElement
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SelectChildPattern"/> class.
+        /// </summary>
+        /// <param name="patternStr">The pattern string.</param>
         public SelectChildPattern(string patternStr)
         {
             this.Pattern = Helpers.MakePattern(patternStr);
         }
 
+        /// <summary>
+        /// Gets or sets the pattern.
+        /// </summary>
+        /// <value>The pattern.</value>
         public Pattern Pattern { get; set; }
 
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// </summary>
+        /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
         public override string ToString()
         {
             return Pattern.ToString();
@@ -146,8 +260,15 @@ namespace Akka.Actor
     }
 
 
+    /// <summary>
+    /// Class SelectParent.
+    /// </summary>
     public class SelectParent : SelectionPathElement
     {
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// </summary>
+        /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
         public override string ToString()
         {
             return "..";

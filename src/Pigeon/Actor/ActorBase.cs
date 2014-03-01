@@ -7,6 +7,9 @@ using System.Threading;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
+/// <summary>
+/// The Actor namespace.
+/// </summary>
 namespace Akka.Actor
 {
     /// <summary>
@@ -41,7 +44,7 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ActorBase"/> class.
+        /// Initializes a new instance of the <see cref="ActorBase" /> class.
         /// </summary>
         /// <exception cref="System.Exception">Do not create actors using 'new', always create them using an ActorContext/System</exception>
         protected ActorBase()
