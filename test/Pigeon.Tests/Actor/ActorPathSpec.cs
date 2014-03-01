@@ -84,5 +84,18 @@ namespace Akka.Tests.Actor
             (rootA / "user" / "foo").ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@aaa:2552/user/foo");
 
         }
+
+
+        /*
+ "have correct path elements" in {
+      (RootActorPath(Address("akka.tcp", "mysys")) / "user" / "foo" / "bar").elements.toSeq should be(Seq("user", "foo", "bar"))
+    }
+         */
+
+        [TestMethod]
+        public void HaveCorrectPathElements()
+        {
+            (new RootActorPath(new Address("akka.tcp", "mysys")) / "user" / "foo" / "bar").Elements.ShouldBe(new string[] {"user","foo","bar" });
+        }
     }
 }

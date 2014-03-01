@@ -90,7 +90,7 @@ namespace Akka.Remote
 
             var localAddress = Transport.LocalAddressForRemote(addr);
 
-            var rpath = (new RootActorPath(addr) / "remote" / localAddress.Protocol / localAddress.HostPort() / path.Elements.Drop(2).ToArray()).
+            var rpath = (new RootActorPath(addr) / "remote" / localAddress.Protocol / localAddress.HostPort() / path.Elements.Drop(1).ToArray()).
               WithUid(path.Uid);
             new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, d);
 
@@ -122,13 +122,13 @@ namespace Akka.Remote
                 if (actorPath.Head == "remote")
                 {
                     //skip ""/"remote", 
-                    var parts = actorPath.Elements.Drop(2).ToArray();
+                    var parts = actorPath.Elements.Drop(1).ToArray();
                     return RemoteDaemon.GetChild(parts);
                 }
                 else if (actorPath.Head == "temp")
                 {
                     //skip ""/"temp", 
-                    var parts = actorPath.Elements.Drop(2).ToArray();
+                    var parts = actorPath.Elements.Drop(1).ToArray();
                     return TempContainer.GetChild(parts);
                 }
                 else
@@ -139,7 +139,7 @@ namespace Akka.Remote
                     {
                         return currentContext.Self;
                     }
-                    foreach (var part in actorPath.Elements.Drop(1))
+                    foreach (var part in actorPath.Elements)
                     {
                         currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
                     }

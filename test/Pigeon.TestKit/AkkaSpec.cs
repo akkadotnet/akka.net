@@ -25,6 +25,17 @@ namespace Akka.Tests
             body(other, self);
         }
 
+        public static void ShouldBe<T>(this IEnumerable<T> self, IEnumerable<T> other)
+        {
+            if (self.SequenceEqual(other))
+            { }
+            else
+            {
+                Assert.Fail("Expected " + other.Select(i => string.Format("'{0}'", i)).Join(",") + " got " + self.Select(i => string.Format("'{0}'", i)).Join(","));
+
+            }
+        }
+
         public static void ShouldBe<T>(this T self, T other)
         {
             Assert.AreEqual(other, self);

@@ -41,7 +41,7 @@ namespace Akka.Actor
         {
             get
             {
-                return elements[1];
+                return elements[0];
             }
         }       
 
@@ -91,7 +91,9 @@ namespace Akka.Actor
 
         public ActorPath(Address address, string name)
         {
-            this.elements.Add(name);
+            if (name != "")
+                this.elements.Add(name);
+
             this.Address = address;
         }
 
@@ -106,9 +108,7 @@ namespace Akka.Actor
         private string Join()
         {
             var joined = string.Join("/", elements);
-            if (elements.Count == 1)
-                return joined + "/";
-            return joined;
+            return "/" + joined;
         }
 
         public string ToStringWithoutAddress()

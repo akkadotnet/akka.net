@@ -55,7 +55,7 @@ namespace Akka.Actor
            {
                var actorPath = ActorPath.Parse(path);
                var actorRef = System.Provider.RootGuardianAt(actorPath.Address);
-               return new ActorSelection(actorRef, actorPath.Elements.Drop(1).ToArray());
+               return new ActorSelection(actorRef, actorPath.Elements.ToArray());
            }
            else
            {
