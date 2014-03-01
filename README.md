@@ -16,7 +16,7 @@ This is a community driven port and is not affiliated with Typesafe who makes th
 * [Routing](https://github.com/rogeralsing/Pigeon/wiki/Routing)
 * [EventBus](https://github.com/rogeralsing/Pigeon/wiki/EventBus)
 * Logging
-* [Scheduling]((https://github.com/rogeralsing/Pigeon/wiki/Scheduler)
+* [Scheduling](https://github.com/rogeralsing/Pigeon/wiki/Scheduler)
 * [Performance](https://github.com/rogeralsing/Pigeon/wiki/Performance)
 * [The F# API](https://github.com/rogeralsing/Pigeon/wiki/FSharp-API)
 
