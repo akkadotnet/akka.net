@@ -7,6 +7,10 @@ using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// Settings are the overall ActorSystem Settings which also provides a convenient access to the Config object.
+    /// For more detailed information about the different possible configuration options, look in the Akka .NET Documentation under "Configuration"
+    /// </summary>
     public class Settings
     {        
         public Settings(ActorSystem system, Config config)

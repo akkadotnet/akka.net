@@ -16,21 +16,57 @@ namespace Akka.Actor
         public abstract void Start(ActorSystem system);
     }
 
+    /// <summary>
+    /// An actor system is a hierarchical group of actors which share common
+    /// configuration, e.g. dispatchers, deployments, remote capabilities and
+    /// addresses. It is also the entry point for creating or looking up actors.
+    ///
+    /// There are several possibilities for creating actors (see [[Akka.Actor.Props]]
+    /// for details on `props`):
+    ///
+    /// <code>
+    /// // C#
+    /// system.ActorOf(props, "name");
+    /// system.ActorOf(props);
+    ///
+    /// system.ActorOf(Props.Create(typeof(MyActor)), "name");
+    /// system.ActorOf(Props.Create(() => new MyActor(arg1, arg2), "name");
+    /// </code>
+    ///
+    /// Where no name is given explicitly, one will be automatically generated.
+    ///
+    /// <b><i>Important Notice:</i></b>
+    ///
+    /// This class is not meant to be extended by user code.
+    /// </summary>
     public class ActorSystem : IActorRefFactory , IDisposable
     {
         
         public ActorRefProvider Provider { get; private set; }
 
+        /// <summary>
+        /// Creates a new ActorSystem with the specified name, and the specified Config
+        /// </summary>
+        /// <param name="name">Name of the ActorSystem</param>
+        /// <param name="config">Configuration of the ActorSystem</param>
+        /// <param name="extensions">Extensions of the ActorSystem</param>
+        /// <returns></returns>
         public static ActorSystem Create(string name, Config config, params ActorSystemExtension[] extensions)
         {
             return new ActorSystem(name, config, extensions);
         }
+
 
         public static ActorSystem Create(string name, params ActorSystemExtension[] extensions)
         {
             return new ActorSystem(name, null, extensions);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public static ActorSystem Create(string name)
         {
             return new ActorSystem(name, null);
@@ -129,6 +165,12 @@ namespace Akka.Actor
         public LoggingAdapter log;
         private InternalActorRef logDeadLetterListener;
 
+        /// <summary>
+        /// Stop this actor system. This will stop the guardian actor, which in turn
+        /// will recursively stop all its child actors, then the system guardian
+        /// (below which the logging actors reside) and the execute all registered
+        /// termination handlers (see [[ActorSystem.RegisterOnTermination]]).
+        /// </summary>
         public void Shutdown()
         {
             Provider.RootCell.Stop();
