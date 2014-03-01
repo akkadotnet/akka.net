@@ -1,6 +1,7 @@
 ﻿using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Event;
 using Akka.Routing;
 using System;
 using System.Collections.Generic;
@@ -12,12 +13,14 @@ namespace Akka.Remote
 {
     public class RemoteActorRefProvider : ActorRefProvider
     {
+        private LoggingAdapter log;
         public RemoteDaemon RemoteDaemon { get;private set; }
 
         public RemoteActorRefProvider(ActorSystem system)
             : base(system)
         {
             this.config = system.Settings.Config.GetConfig("akka.remote");
+            this.log = Logging.GetLogger(system, this);
         }
 
         private Config config;
@@ -92,9 +95,9 @@ namespace Akka.Remote
 
             var rpath = (new RootActorPath(addr) / "remote" / localAddress.Protocol / localAddress.HostPort() / path.Elements.Drop(1).ToArray()).
               WithUid(path.Uid);
-            new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, d);
-
-            throw new NotImplementedException();
+            var remoteRef = new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, d);
+            remoteRef.Start();
+            return remoteRef;            
         }
 
         private static InternalActorRef LocalActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, Mailbox mailbox)
@@ -157,9 +160,11 @@ namespace Akka.Remote
             }
         }
 
-        public void UseActorOnNode(RemoteActorRef actor, Props props, Deploy deploy, InternalActorRef parent)
+        public void UseActorOnNode(RemoteActorRef actor, Props props, Deploy deploy, InternalActorRef supervisor)
         {
-            throw new NotImplementedException();
+            log.Debug("[{0}] Instantiating Remote Actor [{1}]", RootPath, actor.Path);
+            var remoteNode = ResolveActorRef(new RootActorPath(actor.Path.Address) / "remote");
+            remoteNode.Tell(new DaemonMsgCreate(props, deploy, actor.Path.ToStringWithAddress() /*TODO: toserializationformat*/, supervisor));
         }
 
         public Remoting Transport { get;private set; }
