@@ -8,7 +8,10 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
 namespace Akka.Actor
-{   
+{
+    /// <summary>
+    /// Interface ILogReceive
+    /// </summary>
     public interface ILogReceive
     {
 

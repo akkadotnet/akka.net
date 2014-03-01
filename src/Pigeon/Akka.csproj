@@ -51,7 +51,6 @@
     <Compile Include="..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="Actor\ActorBase.Ask.cs" />
     <Compile Include="Actor\ActorBase.cs" />
     <Compile Include="Actor\ActorCell.cs" />
     <Compile Include="Actor\ActorPath.cs" />
