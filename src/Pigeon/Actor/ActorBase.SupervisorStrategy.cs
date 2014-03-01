@@ -18,7 +18,7 @@ namespace Akka.Actor
         }
         protected virtual SupervisorStrategy SupervisorStrategy()
         {
-            return Actor.SupervisorStrategy.Default;
+            return Actor.SupervisorStrategy.DefaultStrategy;
         }
     }
 }
