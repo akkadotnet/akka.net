@@ -23,6 +23,11 @@ namespace Akka
             return self.Skip(count);
         }
 
+        public static T Head<T>(this IEnumerable<T> self)
+        {
+            return self.FirstOrDefault();
+        }
+
         public static string Join(this IEnumerable<string> self, string separator)
         {
             return string.Join(separator, self);

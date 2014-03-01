@@ -119,13 +119,13 @@ namespace Akka.Remote
         {
             if (HasAddress(actorPath.Address))
             {
-                if (actorPath.Head == "remote")
+                if (actorPath.Elements.Head() == "remote")
                 {
                     //skip ""/"remote", 
                     var parts = actorPath.Elements.Drop(1).ToArray();
                     return RemoteDaemon.GetChild(parts);
                 }
-                else if (actorPath.Head == "temp")
+                else if (actorPath.Elements.Head() == "temp")
                 {
                     //skip ""/"temp", 
                     var parts = actorPath.Elements.Drop(1).ToArray();

@@ -108,7 +108,7 @@ namespace Akka.Actor
         {
             if (this.Address.Equals(actorPath.Address))
             {
-                if (actorPath.Head == "temp")
+                if (actorPath.Elements.Head() == "temp")
                 {
                     //skip ""/"temp", 
                     var parts = actorPath.Elements.Drop(1).ToArray();

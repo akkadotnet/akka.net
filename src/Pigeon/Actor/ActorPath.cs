@@ -35,15 +35,7 @@ namespace Akka.Actor
                 a = a / element;
             }
             return a;
-        }       
-
-        public string Head
-        {
-            get
-            {
-                return elements.FirstOrDefault();
-            }
-        }       
+        }           
 
         public static ActorPath Parse(string path)
         {
