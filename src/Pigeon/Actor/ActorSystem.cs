@@ -169,7 +169,7 @@ namespace Akka.Actor
         /// Stop this actor system. This will stop the guardian actor, which in turn
         /// will recursively stop all its child actors, then the system guardian
         /// (below which the logging actors reside) and the execute all registered
-        /// termination handlers (see [[ActorSystem.RegisterOnTermination]]).
+        /// termination handlers (<see cref="ActorSystem.RegisterOnTermination"/>).
         /// </summary>
         public void Shutdown()
         {
