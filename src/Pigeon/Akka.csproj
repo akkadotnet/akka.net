@@ -67,7 +67,6 @@
     <Compile Include="Actor\ChildrenContainer.cs" />
     <Compile Include="Actor\Deployer.cs" />
     <Compile Include="Actor\NoSerializationVerificationNeeded.cs" />
-    <Compile Include="Actor\PreRestartException.cs" />
     <Compile Include="Actor\Scheduler.cs" />
     <Compile Include="Actor\Settings.cs" />
     <Compile Include="Configuration\ConfigurationFactory.cs" />
