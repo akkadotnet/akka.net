@@ -25,6 +25,10 @@ namespace Akka.Remote.Serialization
             get { return false; }
         }
 
+        private ActorRefData SerializeActorRef(ActorRef @ref)
+        {
+            return null;
+        }
         private ByteString Serialize(object obj)
         {
             var serializer = this.system.Serialization.FindSerializerFor(obj);
@@ -41,6 +45,7 @@ namespace Akka.Remote.Serialization
 
             var msg = (DaemonMsgCreate)obj;
             var props = msg.Props;
+            var deploy = msg.Deploy;
 
             Func<Deploy, DeployData> deployProto = d =>
             {
@@ -63,11 +68,32 @@ namespace Akka.Remote.Serialization
                 .SetClazz(props.Type.AssemblyQualifiedName)
                 .SetDeploy(deployProto(props.Deploy));
 
+                foreach (var arg in props.Arguments)
+                {
+                    builder = builder.AddArgs(Serialize(arg));
+                    //TODO: deal with null?
+                    builder = builder.AddClasses(arg.GetType().AssemblyQualifiedName);
+                }
     
                 return builder.Build();
             };
 
-            return null;
+            /*
+ DaemonMsgCreateData.newBuilder.
+        setProps(propsProto).
+        setDeploy(deployProto(deploy)).
+        setPath(path).
+        setSupervisor(serializeActorRef(supervisor)).
+        build.toByteArray
+*/
+            var daemonBuilder = DaemonMsgCreateData.CreateBuilder()
+                .SetProps(propsProto())
+                .SetDeploy(deployProto(msg.Deploy))
+                .SetPath(msg.Path)
+                .SetSupervisor(SerializeActorRef(msg.Supervisor))
+                .Build();
+
+            return daemonBuilder.ToByteArray();
         }
 
         public override object FromBinary(byte[] bytes, Type type)
