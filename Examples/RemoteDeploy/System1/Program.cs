@@ -16,17 +16,27 @@ namespace System1
         {
             var config = ConfigurationFactory.ParseString(@"
 akka {  
+    log-config-on-start = on
+    stdout-loglevel = DEBUG
+    loglevel = ERROR
     actor {
         provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-        debug {
-            lifecycle = on
-            receive = on
+        
+        debug {  
+          receive = on 
+          autoreceive = on
+          lifecycle = on
+          event-stream = on
+          unhandled = on
         }
     }
     remote {
-        server {
-            host = ""127.0.0.1""
-            port = 8091
+        tcp-transport {
+            transport-class = ""Akka.Remote.Transport.TcpTransport, Akka.Remote""
+		    applied-adapters = []
+		    transport-protocol = tcp
+		    port = 8090
+		    hostname = localhost
         }
     }
 }
@@ -39,8 +49,9 @@ akka {
                 var remoteAddress = new Address("akka.tcp", "system2", "127.0.0.1", 8080);
                 //TODO: this is not yet implemented so this example will fail - 2014-02-23 //Roger
                 var remote = system.ActorOf(Props.Create(typeof(SomeActor)).WithDeploy(new Deploy(new RemoteScope(remoteAddress))), "remote");
-
+                Console.ReadLine();
             }
+            
         }
     }
 }

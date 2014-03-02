@@ -124,6 +124,10 @@ namespace Akka.Remote
             {
                 if (actorPath.Elements.Head() == "remote")
                 {
+                    if (actorPath.ToStringWithoutAddress() == "/remote")
+                    {
+                        return RemoteDaemon;
+                    }
                     //skip ""/"remote", 
                     var parts = actorPath.Elements.Drop(1).ToArray();
                     return RemoteDaemon.GetChild(parts);

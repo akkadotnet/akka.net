@@ -235,29 +235,46 @@ protected def terminate() {
                 child.Stop();
             }
 
-            if (System.Settings.DebugLifecycle) Publish(new Akka.Event.Debug(Self.Path.ToString(), Actor.GetType(), "stopping"));
+            if (System.Settings.DebugLifecycle)
+                Publish(new Akka.Event.Debug(Self.Path.ToString(), ActorType, "stopping"));
             FinishTerminate();
+        }
+
+        private Type ActorType
+        {
+            get
+            {
+                if (Actor != null)
+                    return Actor.GetType();
+                else
+                    return this.GetType();
+            }
         }
 
         private void FinishTerminate()
         {
+            if (Actor == null)
+            {
+                //TODO: this is the root actor, do something....
+                return;
+            }
+
             var a = Actor;
             if (a != null)
             {
                 try
                 {
-                    global::System.Diagnostics.Debug.WriteLine("before post stop");
                     Actor.AroundPostStop();
                 }
                 catch(Exception x) 
                 {
-                    HandleNonFatalOrInterruptedException(() => Publish(new Error(x, Self.Path.ToString(), Actor.GetType(), x.Message)));
+                    HandleNonFatalOrInterruptedException(() => Publish(new Error(x, Self.Path.ToString(), ActorType, x.Message)));
                 }
             }
             Parent.Tell(new DeathWatchNotification(Self, true, false));
             TellWatchersWeDied();
              if (System.Settings.DebugLifecycle)
-                    Publish(new Akka.Event.Debug(Self.Path.ToString(), Actor.GetType(), "stopped"));
+                    Publish(new Akka.Event.Debug(Self.Path.ToString(), ActorType, "stopped"));
              UnwatchWatchedActors(a);
 
             Actor = null;
@@ -320,11 +337,7 @@ protected def terminate() {
             //       handleSupervise(child, async)
             if (System.Settings.DebugLifecycle)
             {
-                Type actorType = null; //TODO: the root guardian has no actor and thus this is null.. what does akka do here?
-                if (Actor != null)
-                    actorType = Actor.GetType();
-
-                Publish(new Akka.Event.Debug(Self.Path.ToString(), actorType, "now supervising " + m.Child.Path.ToString()));
+                Publish(new Akka.Event.Debug(Self.Path.ToString(), ActorType, "now supervising " + m.Child.Path.ToString()));
             }
             //     case None ⇒ publish(Error(self.path.toString, clazz(actor), "received Supervise from unregistered child " + child + ", this will not end well"))
         }
@@ -468,7 +481,7 @@ protected def terminate() {
         {
             WatchedBy.Add(Sender);
             if (System.Settings.DebugLifecycle)
-                Publish(new Akka.Event.Debug(Self.Path.ToString(), Actor.GetType(), "now watched by " + m.Watcher));
+                Publish(new Akka.Event.Debug(Self.Path.ToString(), ActorType, "now watched by " + m.Watcher));
         }
 
         //TODO: find out why this is never called

@@ -1,4 +1,5 @@
 ﻿using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Routing;
 using System;
@@ -72,9 +73,21 @@ namespace Akka.Actor
             set;
         }
 
-        public void AfterSendSystemMessage(object message)
+        public void AfterSendSystemMessage(SystemMessage message)
         {
-            throw new NotImplementedException();
+            message.Match()
+                .With<Watch>(m => { })
+                .With<Unwatch>(m => { });
+                
+    //    message match {
+    //  // Sending to local remoteWatcher relies strong delivery guarantees of local send, i.e.
+    //  // default dispatcher must not be changed to an implementation that defeats that
+    //  case rew: RemoteWatcher.Rewatch ⇒
+    //    remoteWatcher ! RemoteWatcher.RewatchRemote(rew.watchee, rew.watcher)
+    //  case Watch(watchee, watcher)   ⇒ remoteWatcher ! RemoteWatcher.WatchRemote(watchee, watcher)
+    //  case Unwatch(watchee, watcher) ⇒ remoteWatcher ! RemoteWatcher.UnwatchRemote(watchee, watcher)
+    //  case _                         ⇒
+    //}
         }
     }
 
