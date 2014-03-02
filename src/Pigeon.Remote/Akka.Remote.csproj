@@ -75,6 +75,8 @@
     <Compile Include="RemoteTransport.cs" />
     <Compile Include="RemoteTransportException.cs" />
     <Compile Include="Remoting.cs" />
+    <Compile Include="Serialization\DaemonMsgCreateSerializer.cs" />
+    <Compile Include="Serialization\MessageContainerSerializer.cs" />
     <Compile Include="Serialization\ProtobufSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteActorRefProvider.cs" />
