@@ -41,14 +41,20 @@ namespace Akka.Remote
         private void Send(Send send)
         {
             var publicPath = "";
-            if (send.Sender is LocalActorRef)
+            if (send.Sender is NoSender)
             {
-                
+                publicPath = null;
+            }
+            else if (send.Sender is LocalActorRef)
+            {
+
                 var s = send.Sender as LocalActorRef;
                 publicPath = send.Sender.Path.ToStringWithAddress(localAddress);
             }
             else
+            {
                 publicPath = send.Sender.Path.ToString();
+            }
 
             var serializedMessage = MessageSerializer.Serialize(Context.System, send.Message);
 
