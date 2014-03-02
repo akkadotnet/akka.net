@@ -12,9 +12,9 @@ namespace Akka.Actor
     {
         public static readonly Deploy Local = new Deploy(Scope.Local);
 
-        private static readonly string NoDispatcherGiven = null;
-        private static readonly string NoMailboxGiven = null;
-        private static readonly Scope NoScopeGiven = null;
+        public static readonly string NoDispatcherGiven = null;
+        public static readonly string NoMailboxGiven = null;
+        public static readonly Scope NoScopeGiven = null;
         /*
          path: String = "",
   config: Config = ConfigFactory.empty,
