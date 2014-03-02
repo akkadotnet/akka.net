@@ -40,10 +40,11 @@ namespace Akka.Remote.Serialization
             }
 
             var msg = (DaemonMsgCreate)obj;
+            var props = msg.Props;
 
             Func<Deploy, DeployData> deployProto = d =>
             {
-                var res = new DeployData.Builder()
+                var res = DeployData.CreateBuilder()
                 .SetPath(d.Path);
                 if (d.Config != ConfigurationFactory.Empty)
                     res = res.SetConfig(Serialize(d.Config));
@@ -55,6 +56,15 @@ namespace Akka.Remote.Serialization
                     res = res.SetDispatcher(d.Dispatcher);
 
                 return res.Build();
+            };
+
+            Func<PropsData> propsProto = () => {
+                var builder = PropsData.CreateBuilder()
+                .SetClazz(props.Type.AssemblyQualifiedName)
+                .SetDeploy(deployProto(props.Deploy));
+
+    
+                return builder.Build();
             };
 
             return null;
