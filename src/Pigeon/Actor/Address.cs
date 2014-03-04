@@ -11,6 +11,10 @@ namespace Akka.Actor
     /// </summary>
     public class Address
     {
+        [Obsolete("For Serialization only", true)]
+        public Address()
+        {
+        }
         /// <summary>
         /// Pseudo address for all systems
         /// </summary>
@@ -50,22 +54,22 @@ namespace Akka.Actor
         /// Gets the host.
         /// </summary>
         /// <value>The host.</value>
-        public string Host { get; private set; }
+        public string Host { get; set; } //TODO: make private, we need a new serializer
         /// <summary>
         /// Gets the port.
         /// </summary>
         /// <value>The port.</value>
-        public int? Port { get; private set; }
+        public int? Port { get; set; } //TODO: make private, we need a new serializer
         /// <summary>
         /// Gets the system.
         /// </summary>
         /// <value>The system.</value>
-        public string System { get; private set; }
+        public string System { get; set; } //TODO: make private, we need a new serializer
         /// <summary>
         /// Gets the protocol.
         /// </summary>
         /// <value>The protocol.</value>
-        public string Protocol { get; private set; }
+        public string Protocol { get; set; } //TODO: make private, we need a new serializer
 
         /// <summary>
         /// Returns a <see cref="System.String" /> that represents this instance.

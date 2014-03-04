@@ -13,6 +13,10 @@ namespace Akka.Configuration
         private HoconValue node;
         private Config fallback;
 
+        public Config()
+        {
+        }
+
         public Config(HoconValue node)
         {
             this.node = node;

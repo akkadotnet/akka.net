@@ -52,6 +52,15 @@ namespace Akka.Actor
             this.RouterConfig = routerConfig;
         }
 
+        public Deploy(string path, Config config, RouterConfig routerConfig, Scope scope, string dispatcher)
+        {
+            this.Path = path;
+            this.Config = config;
+            this.RouterConfig = routerConfig;
+            this.Scope = scope;
+            this.Dispatcher = dispatcher;
+        }
+
         public Deploy WithFallback(Deploy other)
         {
             return new Deploy
@@ -84,8 +93,6 @@ namespace Akka.Actor
         public Scope Scope { get;private set; }
         public string Mailbox { get;private set; }
         public string Dispatcher { get;private set; }
-
-
         public static readonly Deploy None = null;
     }
 
@@ -117,13 +124,17 @@ namespace Akka.Actor
 
     public class RemoteScope : Scope
     {
+        [Obsolete("For Serialization only",true)]
+        public RemoteScope()
+        { 
+        }
         public RemoteScope(Address address)
         {
             this.Address = address;
 
         }
 
-        public Address Address { get;private set; }
+        public Address Address { get; set; }
     }
 
 

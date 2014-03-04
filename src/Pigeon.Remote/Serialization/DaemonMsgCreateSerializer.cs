@@ -1,5 +1,6 @@
 ﻿using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Routing;
 using Akka.Serialization;
 using Google.ProtocolBuffers;
@@ -27,13 +28,22 @@ namespace Akka.Remote.Serialization
 
         private ActorRefData SerializeActorRef(ActorRef @ref)
         {
-            return null;
+            return ActorRefData.CreateBuilder()
+                .SetPath(@ref.Path.ToStringWithAddress())
+                .Build();
         }
         private ByteString Serialize(object obj)
         {
             var serializer = this.system.Serialization.FindSerializerFor(obj);
             var bytes= serializer.ToBinary(obj);
             return ByteString.CopyFrom(bytes);
+        }
+
+        private object Deserialize(ByteString bytes,Type type)
+        {
+            var serializer = this.system.Serialization.FindSerializerForType(type);
+            var o = serializer.FromBinary(bytes.ToByteArray(),type);
+            return o;
         }
 
         public override byte[] ToBinary(object obj)
@@ -98,7 +108,57 @@ namespace Akka.Remote.Serialization
 
         public override object FromBinary(byte[] bytes, Type type)
         {
-            throw new NotImplementedException();
+            var proto = DaemonMsgCreateData.ParseFrom(bytes);
+
+            Func<DeployData, Deploy> deploy = protoDeploy =>
+            {
+                Config config = null;
+                if (protoDeploy.HasConfig)
+                    config = (Config)Deserialize(protoDeploy.Config, typeof(Config));
+                else
+                    config = ConfigurationFactory.Empty;
+
+                RouterConfig routerConfig = null;
+                if (protoDeploy.HasRouterConfig)
+                    routerConfig = (RouterConfig)Deserialize(protoDeploy.RouterConfig, typeof(RouterConfig));
+                else
+                    routerConfig = RouterConfig.NoRouter;
+
+                Scope scope = null;
+                if (protoDeploy.HasScope)
+                    scope = (Scope)Deserialize(protoDeploy.Scope, typeof(Scope));
+                else
+                    scope = Deploy.NoScopeGiven;
+
+                string dispatcher = null;
+                if (protoDeploy.HasDispatcher)
+                    dispatcher = protoDeploy.Dispatcher;
+                else
+                    dispatcher = Deploy.NoDispatcherGiven;
+
+                return new Deploy(protoDeploy.Path, config, routerConfig, scope, dispatcher);
+            };
+
+            var clazz = Type.GetType(proto.Props.Clazz);
+
+            var args = new object[] { };
+            //  val args: Vector[AnyRef] = (proto.getProps.getArgsList.asScala zip proto.getProps.getClassesList.asScala)
+            //    .map(p ⇒ deserialize(p._1, system.dynamicAccess.getClassFor[AnyRef](p._2).get))(collection.breakOut)
+            Props props = new Props(deploy(proto.Props.Deploy), clazz, args);
+
+
+            return new DaemonMsgCreate(
+              props,
+              deploy(proto.Deploy),
+              proto.Path,
+              DeserializeActorRef(system, proto.Supervisor));
+        }
+
+        private ActorRef DeserializeActorRef(ActorSystem system,ActorRefData actorRefData)
+        {
+ 	        var path = actorRefData.Path;
+            var @ref = system.Provider.ResolveActorRef(path);
+            return @ref;
         }
     }
 }

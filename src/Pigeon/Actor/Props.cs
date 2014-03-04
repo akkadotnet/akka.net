@@ -135,6 +135,13 @@ namespace Akka.Actor
             this.Arguments = new object[] { };
         }
 
+        public Props(Actor.Deploy deploy, System.Type type, IEnumerable<object> args)
+        {
+            this.Deploy = deploy;
+            this.Type = type;
+            this.Arguments = args.ToArray();
+        }
+
         /// <summary>
         /// Returns a new Props with the specified mailbox set.
         /// </summary>

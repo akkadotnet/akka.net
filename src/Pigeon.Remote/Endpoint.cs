@@ -43,7 +43,7 @@ namespace Akka.Remote
             var publicPath = "";
             if (send.Sender is NoSender)
             {
-                publicPath = null;
+                publicPath = "";
             }
             else if (send.Sender is LocalActorRef)
             {

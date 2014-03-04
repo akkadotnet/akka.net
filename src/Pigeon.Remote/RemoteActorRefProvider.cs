@@ -35,6 +35,9 @@ namespace Akka.Remote
             //this.Address = new Address("akka.tcp", System.Name, host, port);
 
             base.Init();
+            var daemonMsgCreateSerializer = new Serialization.DaemonMsgCreateSerializer(this.System);
+            this.System.Serialization.AddSerializer(daemonMsgCreateSerializer);
+            this.System.Serialization.AddSerializationMap(typeof(DaemonMsgCreate), daemonMsgCreateSerializer);
 
             this.RemoteDaemon = new Remote.RemoteDaemon (this.System,RootPath / "remote",null);
             this.Transport = new Remoting(System, this);
