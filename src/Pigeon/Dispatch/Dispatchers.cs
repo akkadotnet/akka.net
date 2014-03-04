@@ -89,6 +89,14 @@ namespace Akka.Dispatch
 
         public MessageDispatcher FromConfig(string path)
         {
+            //TODO: this should not exist, it is only here because we dont serialize dispathcer when doing remote deploy..
+            if (path == null)
+            {
+                var disp = new ThreadPoolDispatcher();
+                disp.Throughput = 100;
+                return disp;
+            }
+
             var config = system.Settings.Config.GetConfig(path);
             var type = config.GetString("type");
             var throughput = config.GetInt("throughput");

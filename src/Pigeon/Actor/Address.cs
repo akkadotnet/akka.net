@@ -14,6 +14,7 @@ namespace Akka.Actor
         [Obsolete("For Serialization only", true)]
         public Address()
         {
+            CreateLazyToString();
         }
         /// <summary>
         /// Pseudo address for all systems
@@ -33,6 +34,11 @@ namespace Akka.Actor
             this.System = system;
             this.Host = host;
             this.Port = port;
+            CreateLazyToString();
+        }
+
+        private void CreateLazyToString()
+        {
             toString = new Lazy<string>(() =>
             {
                 var sb = new StringBuilder();

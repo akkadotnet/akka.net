@@ -17,6 +17,12 @@ namespace Akka.Dispatch
 
         public Mailbox FromConfig(string path)
         {
+            //TODO: this should not exist, its a temp hack because we are not serializing mailbox info when doing remote deply..
+            if (path == null)
+            {
+                return new ConcurrentQueueMailbox();
+            }
+
             var config = system.Settings.Config.GetConfig(path);
             var type = config.GetString("mailbox-type");
 
