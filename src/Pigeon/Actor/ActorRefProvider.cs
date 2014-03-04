@@ -61,6 +61,9 @@ namespace Akka.Actor
 
         public abstract InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path);
         public ActorRef ResolveActorRef(string path){
+            if (path == "")
+                return ActorRef.NoSender;
+
             var actorPath = ActorPath.Parse(path);
             return ResolveActorRef(actorPath);
         }

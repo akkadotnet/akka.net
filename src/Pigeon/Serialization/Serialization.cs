@@ -7,6 +7,11 @@ using System.Threading.Tasks;
 
 namespace Akka.Serialization
 {
+    public class Information
+    {
+        public Address Address { get; set; }
+        public ActorSystem System { get; set; }
+    }
     public class Serialization
     {
         private Dictionary<int, Serializer> serializers = new Dictionary<int, Serializer>();
@@ -14,6 +19,9 @@ namespace Akka.Serialization
         private Serializer javaSerializer;
         private Serializer nullSerializer;
         private Serializer byteArraySerializer;
+
+        [ThreadStatic]
+        public Information CurrentTransportInformation;
 
         private Dictionary<Type, Serializer> serializerMap = new Dictionary<Type, Serializer>();
 
@@ -71,5 +79,40 @@ namespace Akka.Serialization
         }
 
         public ActorSystem System { get;private set; }
+
+        public string SerializedActorPath(ActorRef @ref)
+        {
+            /*
+val path = actorRef.path
+    val originalSystem: ExtendedActorSystem = actorRef match {
+      case a: ActorRefWithCell ⇒ a.underlying.system.asInstanceOf[ExtendedActorSystem]
+      case _                   ⇒ null
+    }
+    Serialization.currentTransportInformation.value match {
+      case null ⇒ originalSystem match {
+        case null ⇒ path.toSerializationFormat
+        case system ⇒
+          try path.toSerializationFormatWithAddress(system.provider.getDefaultAddress)
+          catch { case NonFatal(_) ⇒ path.toSerializationFormat }
+      }
+      case Information(address, system) ⇒
+        if (originalSystem == null || originalSystem == system)
+          path.toSerializationFormatWithAddress(address)
+        else {
+          val provider = originalSystem.provider
+          path.toSerializationFormatWithAddress(provider.getExternalAddressFor(address).getOrElse(provider.getDefaultAddress))
+        }
+    }*/
+            ActorSystem originalSystem = null;
+            if (@ref is ActorRefWithCell)
+            {
+                originalSystem = @ref.AsInstanceOf<ActorRefWithCell>().Cell.System;
+                return @ref.Path.ToStringWithAddress(CurrentTransportInformation.Address);
+            }
+            else
+            {
+                return @ref.Path.ToSerializationFormat();
+            }            
+        }
     }
 }

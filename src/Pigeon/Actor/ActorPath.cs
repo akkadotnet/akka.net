@@ -240,6 +240,11 @@ namespace Akka.Actor
             return ToStringWithAddress(Address);
         }
 
+        public string ToSerializationFormat()
+        {
+            return ToStringWithAddress();
+        }
+
         /// <summary>
         /// Generate String representation, replacing the Address in the RootActorPath
         /// with the given one unless this path’s address includes host and port
