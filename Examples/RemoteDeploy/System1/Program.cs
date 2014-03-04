@@ -46,7 +46,7 @@ akka {
             using (var system = ActorSystem.Create("system1", config))
             {
                 var local = system.ActorOf(Props.Create(typeof(SomeActor)).WithDeploy(Deploy.Local), "local");
-                var remoteAddress = new Address("akka.tcp", "system2", "127.0.0.1", 8080);
+                var remoteAddress = new Address("akka.tcp", "system2", "localhost", 8080);
                 //TODO: this is not yet implemented so this example will fail - 2014-02-23 //Roger
                 var remote = system.ActorOf(Props.Create(typeof(SomeActor)).WithDeploy(new Deploy(new RemoteScope(remoteAddress))), "remote");
                 Console.ReadLine();
