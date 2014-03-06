@@ -134,13 +134,6 @@ namespace Akka.Actor
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorSelectionMessage"/> class.
         /// </summary>
-        public ActorSelectionMessage()
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ActorSelectionMessage"/> class.
-        /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="elements">The elements.</param>
         public ActorSelectionMessage(object message,SelectionPathElement[] elements)
@@ -153,13 +146,13 @@ namespace Akka.Actor
         /// Gets or sets the message.
         /// </summary>
         /// <value>The message.</value>
-        public object Message { get; set; }
+        public object Message { get;private set; }
 
         /// <summary>
         /// Gets or sets the elements.
         /// </summary>
         /// <value>The elements.</value>
-        public SelectionPathElement[] Elements { get;  set; }
+        public SelectionPathElement[] Elements { get;private  set; }
     }
 
     /// <summary>
@@ -178,12 +171,6 @@ namespace Akka.Actor
         /// <summary>
         /// Initializes a new instance of the <see cref="SelectChildName"/> class.
         /// </summary>
-        public SelectChildName() 
-        { 
-        }
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SelectChildName"/> class.
-        /// </summary>
         /// <param name="name">The name.</param>
         public SelectChildName(string name)
         {
@@ -194,7 +181,7 @@ namespace Akka.Actor
         /// Gets or sets the name.
         /// </summary>
         /// <value>The name.</value>
-        public string Name { get; set; }
+        public string Name { get;private set; }
 
         /// <summary>
         /// Returns a <see cref="System.String" /> that represents this instance.
@@ -247,7 +234,7 @@ namespace Akka.Actor
         /// Gets or sets the pattern.
         /// </summary>
         /// <value>The pattern.</value>
-        public Pattern Pattern { get; set; }
+        public Pattern Pattern { get;private set; }
 
         /// <summary>
         /// Returns a <see cref="System.String" /> that represents this instance.
