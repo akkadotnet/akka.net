@@ -21,7 +21,10 @@ namespace Akka.Serialization
         private Serializer byteArraySerializer;
 
         [ThreadStatic]
-        public Information CurrentTransportInformation;
+        public static Information CurrentTransportInformation;
+
+        [ThreadStatic]
+        public static ActorSystem CurrentSystem;
 
         private Dictionary<Type, Serializer> serializerMap = new Dictionary<Type, Serializer>();
 
@@ -80,7 +83,7 @@ namespace Akka.Serialization
 
         public ActorSystem System { get;private set; }
 
-        public string SerializedActorPath(ActorRef @ref)
+        public static string SerializedActorPath(ActorRef @ref)
         {
             /*
 val path = actorRef.path

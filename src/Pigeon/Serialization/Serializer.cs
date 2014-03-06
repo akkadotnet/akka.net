@@ -82,12 +82,6 @@ namespace Akka.Serialization
 
     public class JsonSerializer : Serializer
     {
-        //this is needed to let the serializer know what system to use when deserializing
-        //since fastJSON only supports 
-        [ThreadStatic]
-        private static ActorSystem currentSystem;
-
-
         static JsonSerializer()
         {
             //TODO: need a cleaner way of finding all actorref types
@@ -116,7 +110,7 @@ namespace Akka.Serialization
 
         private static object DeserializeActorRef(string data)
         {
-            return currentSystem.Provider.ResolveActorRef(data);
+            return Akka.Serialization.Serialization.CurrentSystem.Provider.ResolveActorRef(data);
         }        
 
         public override bool IncludeManifest
@@ -125,7 +119,7 @@ namespace Akka.Serialization
         }
         public override object FromBinary(byte[] bytes, Type type)
         {
-            currentSystem = this.system;
+            Akka.Serialization.Serialization.CurrentSystem = this.system;
             var data = Encoding.Default.GetString(bytes);
             
             return fastJSON.JSON.Instance.ToObject(data);

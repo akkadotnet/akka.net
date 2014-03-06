@@ -131,6 +131,9 @@ namespace Akka.Actor
     /// </summary>
     public class ActorSelectionMessage : AutoReceivedMessage
     {
+        public ActorSelectionMessage()
+        {
+        }
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorSelectionMessage"/> class.
         /// </summary>
@@ -146,13 +149,13 @@ namespace Akka.Actor
         /// Gets or sets the message.
         /// </summary>
         /// <value>The message.</value>
-        public object Message { get;private set; }
+        public object Message { get; set; }
 
         /// <summary>
         /// Gets or sets the elements.
         /// </summary>
         /// <value>The elements.</value>
-        public SelectionPathElement[] Elements { get;private  set; }
+        public SelectionPathElement[] Elements { get; set; }
     }
 
     /// <summary>
@@ -168,6 +171,9 @@ namespace Akka.Actor
     /// </summary>
     public class SelectChildName : SelectionPathElement
     {
+        public SelectChildName()
+        {
+        }
         /// <summary>
         /// Initializes a new instance of the <see cref="SelectChildName"/> class.
         /// </summary>
@@ -181,7 +187,7 @@ namespace Akka.Actor
         /// Gets or sets the name.
         /// </summary>
         /// <value>The name.</value>
-        public string Name { get;private set; }
+        public string Name { get; set; }
 
         /// <summary>
         /// Returns a <see cref="System.String" /> that represents this instance.
@@ -221,6 +227,9 @@ namespace Akka.Actor
     /// </summary>
     public class SelectChildPattern : SelectionPathElement
     {
+        public SelectChildPattern()
+        {
+        }
         /// <summary>
         /// Initializes a new instance of the <see cref="SelectChildPattern"/> class.
         /// </summary>
@@ -234,7 +243,7 @@ namespace Akka.Actor
         /// Gets or sets the pattern.
         /// </summary>
         /// <value>The pattern.</value>
-        public Pattern Pattern { get;private set; }
+        public Pattern Pattern { get; set; }
 
         /// <summary>
         /// Returns a <see cref="System.String" /> that represents this instance.

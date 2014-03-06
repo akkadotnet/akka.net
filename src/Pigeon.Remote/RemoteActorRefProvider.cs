@@ -169,7 +169,7 @@ namespace Akka.Remote
 
         public void UseActorOnNode(RemoteActorRef actor, Props props, Deploy deploy, InternalActorRef supervisor)
         {
-            System.Serialization.CurrentTransportInformation = new Akka.Serialization.Information()
+            Akka.Serialization.Serialization.CurrentTransportInformation = new Akka.Serialization.Information()
             {
                 System = this.System,
                 Address = actor.LocalAddressToUse,

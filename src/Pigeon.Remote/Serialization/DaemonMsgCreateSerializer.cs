@@ -29,7 +29,7 @@ namespace Akka.Remote.Serialization
         private ActorRefData SerializeActorRef(ActorRef @ref)
         {
             return ActorRefData.CreateBuilder()
-                .SetPath(system.Serialization.SerializedActorPath(@ref))
+                .SetPath(Akka.Serialization.Serialization.SerializedActorPath(@ref))
                 .Build();
         }
         private ByteString Serialize(object obj)

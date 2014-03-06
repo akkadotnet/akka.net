@@ -43,6 +43,16 @@ namespace Akka.Actor
         }
     }
 
+    public class ActorRefSurrogate
+    {
+        public ActorRefSurrogate(string path)
+        {
+            Path = path;
+        }
+        public string Path { get;private set; }
+    }
+
+
     public abstract class ActorRef : ICanTell
     {
         public static readonly Nobody Nobody = new Nobody();
@@ -83,6 +93,21 @@ namespace Akka.Actor
         public override string ToString()
         {
             return string.Format("[{0}]", this.Path.ToString());
+        }
+
+        public static implicit operator ActorRefSurrogate(ActorRef @ref)
+        {
+            if (@ref != null)
+            {
+                return new ActorRefSurrogate(Akka.Serialization.Serialization.SerializedActorPath(@ref));
+            }
+
+            return null;
+        }
+
+        public static implicit operator ActorRef(ActorRefSurrogate surrogate)
+        {
+            return Serialization.Serialization.CurrentSystem.Provider.ResolveActorRef(surrogate.Path);
         }
     }
 
