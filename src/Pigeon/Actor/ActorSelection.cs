@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ProtoBuf;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -129,6 +130,7 @@ namespace Akka.Actor
     /// <summary>
     /// Class ActorSelectionMessage.
     /// </summary>
+    [ProtoContract]
     public class ActorSelectionMessage : AutoReceivedMessage
     {
         public ActorSelectionMessage()
@@ -149,18 +151,24 @@ namespace Akka.Actor
         /// Gets or sets the message.
         /// </summary>
         /// <value>The message.</value>
+        [ProtoMember(1,DynamicType=true)]
         public object Message { get; set; }
 
         /// <summary>
         /// Gets or sets the elements.
         /// </summary>
         /// <value>The elements.</value>
+        [ProtoMember(2)]
         public SelectionPathElement[] Elements { get; set; }
     }
 
     /// <summary>
     /// Class SelectionPathElement.
     /// </summary>
+    [ProtoContract]
+    [ProtoInclude(6,typeof(SelectChildName))]
+    [ProtoInclude(7,typeof(SelectChildPattern))]
+    [ProtoInclude(8,typeof(SelectParent))]
     public abstract class SelectionPathElement
     {
 
@@ -169,6 +177,7 @@ namespace Akka.Actor
     /// <summary>
     /// Class SelectChildName.
     /// </summary>
+    [ProtoContract]
     public class SelectChildName : SelectionPathElement
     {
         public SelectChildName()
@@ -187,6 +196,7 @@ namespace Akka.Actor
         /// Gets or sets the name.
         /// </summary>
         /// <value>The name.</value>
+        [ProtoMember(1)]
         public string Name { get; set; }
 
         /// <summary>
@@ -202,6 +212,7 @@ namespace Akka.Actor
     /// <summary>
     /// Class Pattern.
     /// </summary>
+    [ProtoContract]
     public class Pattern
     {
 
@@ -225,6 +236,7 @@ namespace Akka.Actor
     /// <summary>
     /// Class SelectChildPattern.
     /// </summary>
+    [ProtoContract]
     public class SelectChildPattern : SelectionPathElement
     {
         public SelectChildPattern()
@@ -243,6 +255,7 @@ namespace Akka.Actor
         /// Gets or sets the pattern.
         /// </summary>
         /// <value>The pattern.</value>
+        [ProtoMember(1)]
         public Pattern Pattern { get; set; }
 
         /// <summary>
@@ -259,6 +272,7 @@ namespace Akka.Actor
     /// <summary>
     /// Class SelectParent.
     /// </summary>
+    [ProtoContract]
     public class SelectParent : SelectionPathElement
     {
         /// <summary>

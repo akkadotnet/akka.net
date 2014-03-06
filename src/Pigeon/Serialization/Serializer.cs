@@ -199,4 +199,52 @@ namespace Akka.Serialization
             return bytes;
         }
     }
+
+    public class ProtoBufNetSerializer : Serializer
+    {
+        static ProtoBufNetSerializer()
+        {
+            ProtoBuf.Meta.RuntimeTypeModel.Default[typeof(SelectionPathElement)]
+                .AddSubType(1,typeof(SelectChildName))
+                .AddSubType(2,typeof(SelectChildPattern))
+                .AddSubType(3,typeof(SelectParent));
+        }
+
+        public ProtoBufNetSerializer(ActorSystem system)
+            : base(system)
+        {
+        }
+
+        public override int Identifier
+        {
+            get { return -2; }
+        }
+
+        public override bool IncludeManifest
+        {
+            get { return true; }
+        }
+
+        public override byte[] ToBinary(object obj)
+        {
+            using (var ms = new MemoryStream())
+            {
+                ProtoBuf.Serializer.NonGeneric.Serialize(ms, obj);
+                var bytes = ms.ToArray();
+                return bytes;
+            }
+        
+        }
+
+        public override object FromBinary(byte[] bytes, Type type)
+        {
+            using (var ms = new MemoryStream())
+            {
+                ms.Write(bytes, 0, bytes.Length);
+                ms.Position = 0;
+                var res = ProtoBuf.Serializer.NonGeneric.Deserialize(type, ms);
+                return res;
+            }
+        }
+    }
 }

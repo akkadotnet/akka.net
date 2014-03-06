@@ -15,6 +15,7 @@ namespace Akka.Serialization
     public class Serialization
     {
         private Dictionary<int, Serializer> serializers = new Dictionary<int, Serializer>();
+        private Serializer protobufnetSerializer;
         private Serializer jsonSerializer;
         private Serializer javaSerializer;
         private Serializer nullSerializer;
@@ -32,15 +33,18 @@ namespace Akka.Serialization
         public Serialization(ActorSystem system)
         {
             this.System = system;
+            protobufnetSerializer = new ProtoBufNetSerializer(system);
             jsonSerializer = new JsonSerializer(system);
             javaSerializer = new JavaSerializer(system);
             nullSerializer = new NullSerializer(system);
             byteArraySerializer = new ByteArraySerializer(system);
 
+            serializers.Add(protobufnetSerializer.Identifier, protobufnetSerializer);
             serializers.Add(jsonSerializer.Identifier, jsonSerializer);
             serializers.Add(javaSerializer.Identifier, javaSerializer);
             serializers.Add(nullSerializer.Identifier,nullSerializer);
             serializers.Add(byteArraySerializer.Identifier,byteArraySerializer);
+            
             serializerMap.Add(typeof(object), jsonSerializer);
         }
 
