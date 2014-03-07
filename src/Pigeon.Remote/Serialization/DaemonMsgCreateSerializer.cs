@@ -62,13 +62,13 @@ namespace Akka.Remote.Serialization
                 var res = DeployData.CreateBuilder()
                 .SetPath(d.Path);
                 if (d.Config != ConfigurationFactory.Empty)
-                    res = res.SetConfig(Serialize(d.Config));
+                    res.SetConfig(Serialize(d.Config));
                 if (d.RouterConfig != RouterConfig.NoRouter)
-                    res = res.SetRouterConfig(Serialize(d.RouterConfig));
+                    res.SetRouterConfig(Serialize(d.RouterConfig));
                 if (d.Scope != Deploy.NoScopeGiven)
-                    res = res.SetScope(Serialize(d.Scope));
+                    res.SetScope(Serialize(d.Scope));
                 if (d.Dispatcher != Deploy.NoDispatcherGiven)
-                    res = res.SetDispatcher(d.Dispatcher);
+                    res.SetDispatcher(d.Dispatcher);
 
                 return res.Build();
             };
