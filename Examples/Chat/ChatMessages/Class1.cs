@@ -12,50 +12,50 @@ namespace ChatMessages
     [DataContract]
     public class ConnectRequest 
     {
-        [DataMember]
+        [DataMember(Order=1)]
         public string Username { get; set; }
     }
 
     [DataContract]
     public class ConnectResponse 
     {
-        [DataMember]
+        [DataMember(Order = 1)]
         public string Message { get; set; }
     }
 
     [DataContract]
     public class NickRequest 
     {
-        [DataMember]
+        [DataMember(Order = 1)]
         public string OldUsername { get; set; }
-        [DataMember]
+        [DataMember(Order = 2)]
         public string NewUsername { get; set; }
     }
 
     [DataContract]
     public class NickResponse 
     {
-        [DataMember]
+        [DataMember(Order = 1)]
         public string OldUsername { get; set; }
-        [DataMember]
+        [DataMember(Order = 2)]
         public string NewUsername { get; set; }
     }
 
     [DataContract]
     public class SayRequest 
     {
-        [DataMember]
+        [DataMember(Order = 1)]
         public string Username { get; set; }
-        [DataMember]
+        [DataMember(Order = 2)]
         public string Text { get; set; }
     }
 
     [DataContract]
     public class SayResponse 
     {
-        [DataMember]
+        [DataMember(Order = 1)]
         public string Username { get; set; }
-        [DataMember]
+        [DataMember(Order = 2)]
         public string Text { get; set; }
     }
 

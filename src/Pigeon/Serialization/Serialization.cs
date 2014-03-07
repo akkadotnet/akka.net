@@ -45,7 +45,7 @@ namespace Akka.Serialization
             serializers.Add(nullSerializer.Identifier,nullSerializer);
             serializers.Add(byteArraySerializer.Identifier,byteArraySerializer);
             
-            serializerMap.Add(typeof(object), jsonSerializer);
+            serializerMap.Add(typeof(object), protobufnetSerializer);
         }
 
         public void AddSerializer(Serializer serializer)
