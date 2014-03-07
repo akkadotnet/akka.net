@@ -70,7 +70,7 @@ namespace Akka.Remote.Serialization
             {
                 element.Match()
                     .With<SelectChildName>(m => builder.AddPattern(BuildPattern(m.Name, PatternType.CHILD_NAME)))
-                    .With<SelectChildPattern>(m => builder.AddPattern(BuildPattern(m.Pattern.ToString(), PatternType.CHILD_PATTERN)))
+                    .With<SelectChildPattern>(m => builder.AddPattern(BuildPattern(m.PatternStr, PatternType.CHILD_PATTERN)))
                     .With<SelectParent>(m => builder.AddPattern(BuildPattern(null, PatternType.PARENT)));                    
             }
 

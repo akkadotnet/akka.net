@@ -130,12 +130,8 @@ namespace Akka.Actor
     /// <summary>
     /// Class ActorSelectionMessage.
     /// </summary>
-    [ProtoContract]
     public class ActorSelectionMessage : AutoReceivedMessage
     {
-        public ActorSelectionMessage()
-        {
-        }
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorSelectionMessage"/> class.
         /// </summary>
@@ -151,24 +147,18 @@ namespace Akka.Actor
         /// Gets or sets the message.
         /// </summary>
         /// <value>The message.</value>
-        [ProtoMember(1,DynamicType=true)]
-        public object Message { get; set; }
+        public object Message { get;private set; }
 
         /// <summary>
         /// Gets or sets the elements.
         /// </summary>
         /// <value>The elements.</value>
-        [ProtoMember(2)]
-        public SelectionPathElement[] Elements { get; set; }
+        public SelectionPathElement[] Elements { get;private set; }
     }
 
     /// <summary>
     /// Class SelectionPathElement.
     /// </summary>
-    [ProtoContract]
-    [ProtoInclude(6,typeof(SelectChildName))]
-    [ProtoInclude(7,typeof(SelectChildPattern))]
-    [ProtoInclude(8,typeof(SelectParent))]
     public abstract class SelectionPathElement
     {
 
@@ -177,12 +167,8 @@ namespace Akka.Actor
     /// <summary>
     /// Class SelectChildName.
     /// </summary>
-    [ProtoContract]
     public class SelectChildName : SelectionPathElement
     {
-        public SelectChildName()
-        {
-        }
         /// <summary>
         /// Initializes a new instance of the <see cref="SelectChildName"/> class.
         /// </summary>
@@ -196,7 +182,6 @@ namespace Akka.Actor
         /// Gets or sets the name.
         /// </summary>
         /// <value>The name.</value>
-        [ProtoMember(1)]
         public string Name { get; set; }
 
         /// <summary>
@@ -212,7 +197,6 @@ namespace Akka.Actor
     /// <summary>
     /// Class Pattern.
     /// </summary>
-    [ProtoContract]
     public class Pattern
     {
 
@@ -236,18 +220,15 @@ namespace Akka.Actor
     /// <summary>
     /// Class SelectChildPattern.
     /// </summary>
-    [ProtoContract]
     public class SelectChildPattern : SelectionPathElement
     {
-        public SelectChildPattern()
-        {
-        }
         /// <summary>
-        /// Initializes a new instance of the <see cref="SelectChildPattern"/> class.
+        /// Initializes a new instance of the <see cref="SelectChildPattern" /> class.
         /// </summary>
         /// <param name="patternStr">The pattern string.</param>
         public SelectChildPattern(string patternStr)
         {
+            this.PatternStr = patternStr;
             this.Pattern = Helpers.MakePattern(patternStr);
         }
 
@@ -255,8 +236,7 @@ namespace Akka.Actor
         /// Gets or sets the pattern.
         /// </summary>
         /// <value>The pattern.</value>
-        [ProtoMember(1)]
-        public Pattern Pattern { get; set; }
+        public Pattern Pattern { get;private set; }
 
         /// <summary>
         /// Returns a <see cref="System.String" /> that represents this instance.
@@ -266,13 +246,18 @@ namespace Akka.Actor
         {
             return Pattern.ToString();
         }
+
+        /// <summary>
+        /// Gets the pattern string.
+        /// </summary>
+        /// <value>The pattern string.</value>
+        public string PatternStr { get;private set; }
     }
 
 
     /// <summary>
     /// Class SelectParent.
     /// </summary>
-    [ProtoContract]
     public class SelectParent : SelectionPathElement
     {
         /// <summary>
