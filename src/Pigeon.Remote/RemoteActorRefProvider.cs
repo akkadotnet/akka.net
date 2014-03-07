@@ -36,8 +36,11 @@ namespace Akka.Remote
 
             base.Init();
             var daemonMsgCreateSerializer = new Serialization.DaemonMsgCreateSerializer(this.System);
+            var messageContainerSerializer = new Serialization.MessageContainerSerializer(this.System);
             this.System.Serialization.AddSerializer(daemonMsgCreateSerializer);
             this.System.Serialization.AddSerializationMap(typeof(DaemonMsgCreate), daemonMsgCreateSerializer);
+            this.System.Serialization.AddSerializer(messageContainerSerializer);
+            this.System.Serialization.AddSerializationMap(typeof(ActorSelectionMessage), messageContainerSerializer);
 
             this.RemoteDaemon = new Remote.RemoteDaemon (this.System,RootPath / "remote",null);
             this.Transport = new Remoting(System, this);
