@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Akka.Remote
 {
@@ -12,7 +9,7 @@ namespace Akka.Remote
         {
         }
 
-        public RemoteTransportException(string message,object foo)
+        public RemoteTransportException(string message, object foo)
             : base(message)
         {
         }

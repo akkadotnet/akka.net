@@ -1,30 +1,15 @@
-﻿using Akka.Configuration;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using Akka.Configuration;
 
 namespace Akka.Remote
 {
     public class RemoteSettings
     {
-        public class TransportSettings
+        public RemoteSettings(Config config)
         {
-            public TransportSettings(Config config)
-            {
-                this.TransportClass = config.GetString("transport-class");
-                this.Config = config;
-            }
-
-            public Config Config { get; set; }
-
-            public string TransportClass { get; set; }
-        }
-
-        public RemoteSettings(Configuration.Config config)
-        {
-
-            this.Config = config;
+            Config = config;
             LogReceive = config.GetBoolean("akka.remote.log-received-messages");
             LogSend = config.GetBoolean("akka.remote.log-sent-messages");
             UntrustedMode = config.GetBoolean("akka.remote.untrusted-mode");
@@ -33,17 +18,11 @@ namespace Akka.Remote
             ShutdownTimeout = config.GetMillisDuration("akka.remote.shutdown-timeout");
             TransportNames = config.GetStringList("akka.remote.enabled-transports");
             Transports = (from transportName in TransportNames
-                          let transportConfig = TransportConfigFor(transportName)
-                          select new TransportSettings(transportConfig)).ToArray();
-
+                let transportConfig = TransportConfigFor(transportName)
+                select new TransportSettings(transportConfig)).ToArray();
         }
 
-        private Config TransportConfigFor(string transportName)
-        {
-            return Config.GetConfig(transportName);
-        }
-
-        public Config Config { get;private set; }
+        public Config Config { get; private set; }
 
         public HashSet<string> TrustedSelectionPaths { get; set; }
 
@@ -60,5 +39,23 @@ namespace Akka.Remote
         public IList<string> TransportNames { get; set; }
 
         public TransportSettings[] Transports { get; set; }
+
+        private Config TransportConfigFor(string transportName)
+        {
+            return Config.GetConfig(transportName);
+        }
+
+        public class TransportSettings
+        {
+            public TransportSettings(Config config)
+            {
+                TransportClass = config.GetString("transport-class");
+                Config = config;
+            }
+
+            public Config Config { get; set; }
+
+            public string TransportClass { get; set; }
+        }
     }
 }

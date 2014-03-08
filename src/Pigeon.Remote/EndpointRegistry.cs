@@ -1,9 +1,6 @@
-﻿using Akka.Actor;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.Actor;
 
 namespace Akka.Remote
 {
@@ -13,61 +10,62 @@ namespace Akka.Remote
 
     public class Pass : EndpointPolicy
     {
-        public ActorRef Endpoint { get; private set; }
         public Pass(ActorRef endpoint)
-          
+
         {
-            this.Endpoint = endpoint;
+            Endpoint = endpoint;
         }
+
+        public ActorRef Endpoint { get; private set; }
     }
 
     public class Gated : EndpointPolicy
     {
         public Gated(Deadline deadline)
         {
-            this.TimeOfRelease = deadline;
+            TimeOfRelease = deadline;
         }
 
-        public Deadline TimeOfRelease { get;private set; }
+        public Deadline TimeOfRelease { get; private set; }
     }
 
     public class Deadline
     {
         public Deadline(DateTime when)
         {
-            this.When = when;
+            When = when;
         }
 
         public bool IsOverdue
         {
-            get
-            {
-                return DateTime.Now > When;
-            }
+            get { return DateTime.Now > When; }
         }
 
-        public DateTime When { get;private set; }
+        public DateTime When { get; private set; }
     }
 
     public class Quarantined : EndpointPolicy
     {
         public Quarantined(long uid, Deadline deadline)
         {
-            this.Uid = uid;
-            this.Deadline = deadline;
+            Uid = uid;
+            Deadline = deadline;
         }
 
-        public long Uid { get;private set; }
+        public long Uid { get; private set; }
 
         public Deadline Deadline { get; private set; }
     }
 
     public class EndpointRegistry
     {
-        private Dictionary<Address,EndpointPolicy> addressToWritable = new Dictionary<Address,EndpointPolicy>();
-        private Dictionary<ActorRef,Address> writableToAddress = new Dictionary<ActorRef,Address>();
-        private Dictionary<Address,ActorRef> addressToReadonly = new Dictionary<Address,ActorRef>();
-        private Dictionary<ActorRef, Address> readonlyToAddress = new Dictionary<ActorRef, Address>();
+        private readonly Dictionary<Address, ActorRef> addressToReadonly = new Dictionary<Address, ActorRef>();
+
+        private readonly Dictionary<Address, EndpointPolicy> addressToWritable =
+            new Dictionary<Address, EndpointPolicy>();
+
+        private readonly Dictionary<ActorRef, Address> readonlyToAddress = new Dictionary<ActorRef, Address>();
+        private readonly Dictionary<ActorRef, Address> writableToAddress = new Dictionary<ActorRef, Address>();
 
         /*
 def registerWritableEndpoint(address: Address, endpoint: ActorRef): ActorRef = addressToWritable.get(address) match {
@@ -79,19 +77,18 @@ def registerWritableEndpoint(address: Address, endpoint: ActorRef): ActorRef = a
         endpoint
     }
 */
+
         public ActorRef RegisterWritableEndpoint(Address address, ActorRef endpoint)
         {
             EndpointPolicy existing;
             if (addressToWritable.TryGetValue(address, out existing))
             {
-                throw new ArgumentException("Attempting to overwrite existing endpoint " + existing + " with " + endpoint);
+                throw new ArgumentException("Attempting to overwrite existing endpoint " + existing + " with " +
+                                            endpoint);
             }
-            else
-            {
-                addressToWritable.Add(address, new Pass(endpoint));
-                writableToAddress.Add(endpoint, address);
-                return endpoint;
-            }             
+            addressToWritable.Add(address, new Pass(endpoint));
+            writableToAddress.Add(endpoint, address);
+            return endpoint;
         }
 
         /*
@@ -101,6 +98,7 @@ def registerWritableEndpoint(address: Address, endpoint: ActorRef): ActorRef = a
       endpoint
     }
 */
+
         public ActorRef RegisterReadOnlyEndpoint(Address address, ActorRef endpoint)
         {
             addressToReadonly.Add(address, endpoint);
@@ -117,15 +115,17 @@ def registerWritableEndpoint(address: Address, endpoint: ActorRef): ActorRef = a
 
       def writableEndpointWithPolicyFor(address: Address): Option[EndpointPolicy] = addressToWritable.get(address)
 */
+
         public ActorRef ReadOnlyEndpointFor(Address address)
         {
             ActorRef tmp;
-            if (addressToReadonly.TryGetValue(address,out tmp))
+            if (addressToReadonly.TryGetValue(address, out tmp))
             {
                 return tmp;
             }
             return null;
         }
+
         public bool IsWritable(ActorRef endpoint)
         {
             return writableToAddress.ContainsKey(endpoint);

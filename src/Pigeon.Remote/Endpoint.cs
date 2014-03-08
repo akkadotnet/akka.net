@@ -1,25 +1,19 @@
-﻿using Akka.Actor;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Net.Sockets;
+using Akka.Actor;
 
 namespace Akka.Remote
 {
     public class EndpointActor : UntypedActor
     {
-        private Address localAddress;
+        private readonly Address localAddress;
+        private readonly NetworkStream stream;
+        private TcpClient client;
+        private Address remoteAddress;
         private RemoteSettings settings;
         private Transport.Transport transport;
-        private Address remoteAddress;
 
-        //TODO: this does not belong here
-        private TcpClient client;
-        private NetworkStream stream;
-
-        public EndpointActor(Address localAddress,Address remoteAddress,Transport.Transport transport,RemoteSettings settings)
+        public EndpointActor(Address localAddress, Address remoteAddress, Transport.Transport transport,
+            RemoteSettings settings)
         {
             this.localAddress = localAddress;
             this.remoteAddress = remoteAddress;
@@ -30,6 +24,7 @@ namespace Akka.Remote
             client.Connect(remoteAddress.Host, remoteAddress.Port.Value);
             stream = client.GetStream();
         }
+
         protected override void OnReceive(object message)
         {
             message
@@ -40,14 +35,13 @@ namespace Akka.Remote
 
         private void Send(Send send)
         {
-            var publicPath = "";
+            string publicPath = "";
             if (send.Sender is NoSender)
             {
                 publicPath = "";
             }
             else if (send.Sender is LocalActorRef)
             {
-
                 var s = send.Sender as LocalActorRef;
                 publicPath = send.Sender.Path.ToStringWithAddress(localAddress);
             }
@@ -56,16 +50,16 @@ namespace Akka.Remote
                 publicPath = send.Sender.Path.ToString();
             }
 
-            var serializedMessage = MessageSerializer.Serialize(Context.System, send.Message);
+            SerializedMessage serializedMessage = MessageSerializer.Serialize(Context.System, send.Message);
 
-            var remoteEnvelope = new RemoteEnvelope.Builder()
-            .SetSender(new ActorRefData.Builder()
-                .SetPath(publicPath))
-            .SetRecipient(new ActorRefData.Builder()
-                .SetPath(send.Recipient.Path.ToStringWithAddress()))
-            .SetMessage(serializedMessage)
-            .SetSeq(1)
-            .Build();
+            RemoteEnvelope remoteEnvelope = new RemoteEnvelope.Builder()
+                .SetSender(new ActorRefData.Builder()
+                    .SetPath(publicPath))
+                .SetRecipient(new ActorRefData.Builder()
+                    .SetPath(send.Recipient.Path.ToStringWithAddress()))
+                .SetMessage(serializedMessage)
+                .SetSeq(1)
+                .Build();
 
             remoteEnvelope.WriteDelimitedTo(stream);
             stream.Flush();

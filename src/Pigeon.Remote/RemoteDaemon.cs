@@ -1,24 +1,21 @@
-﻿using Akka.Actor;
-using Akka.Dispatch.SysMsg;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Dispatch.SysMsg;
 
 namespace Akka.Remote
-{   
+{
     public class DaemonMsgCreate
     {
-        public DaemonMsgCreate(Props props,Deploy deploy,string path,ActorRef supervisor)
+        public DaemonMsgCreate(Props props, Deploy deploy, string path, ActorRef supervisor)
         {
-            this.Props = props;
-            this.Deploy = deploy;
-            this.Path = path;
-            this.Supervisor = supervisor;
+            Props = props;
+            Deploy = deploy;
+            Path = path;
+            Supervisor = supervisor;
         }
 
-        public Props Props { get;private set; }
+        public Props Props { get; private set; }
 
         public Deploy Deploy { get; private set; }
 
@@ -29,21 +26,20 @@ namespace Akka.Remote
 
     public class RemoteDaemon : VirtualPathContainer
     {
-        public ActorSystem System { get;private set; }
-        public RemoteDaemon(ActorSystem system,ActorPath path,InternalActorRef parent) : base(system.Provider,path,parent)
+        public RemoteDaemon(ActorSystem system, ActorPath path, InternalActorRef parent)
+            : base(system.Provider, path, parent)
         {
-            this.System = system;
+            System = system;
         }
+
+        public ActorSystem System { get; private set; }
+
         protected void OnReceive(object message)
         {
             if (message is DaemonMsgCreate)
             {
-                HandleDaemonMsgCreate((DaemonMsgCreate)message);
+                HandleDaemonMsgCreate((DaemonMsgCreate) message);
             }
-            else
-            {
-              //  Unhandled(message);
-            }            
         }
 
         protected override void TellInternal(object message, ActorRef sender)
@@ -54,12 +50,12 @@ namespace Akka.Remote
         private void HandleDaemonMsgCreate(DaemonMsgCreate message)
         {
             //TODO: find out what format "Path" should have
-            var supervisor = (InternalActorRef)message.Supervisor;
-            var props = message.Props;
-            ActorPath path = this.Path / message.Path.Split('/');
-            var actor = System.Provider.ActorOf(System, props, supervisor, path);
-            var name = message.Path;
-            this.AddChild(name, actor);
+            var supervisor = (InternalActorRef) message.Supervisor;
+            Props props = message.Props;
+            ActorPath path = Path/message.Path.Split('/');
+            InternalActorRef actor = System.Provider.ActorOf(System, props, supervisor, path);
+            string name = message.Path;
+            AddChild(name, actor);
             actor.Tell(new Watch(actor, this));
         }
 
@@ -69,26 +65,22 @@ namespace Akka.Remote
             if (!name.Any())
                 return this;
 
-            var n = name.First();
+            string n = name.First();
             if (string.IsNullOrEmpty(n))
                 return this;
-            else
+            string[] parts = name.ToArray();
+            for (int i = parts.Length; i >= 0; i--)
             {
-                var parts = name.ToArray();
-                for(int i=parts.Length;i>=0;i--)
+                string joined = string.Join("/", parts, 0, i);
+                InternalActorRef child;
+                if (children.TryGetValue(joined, out child))
                 {
-                    var joined = string.Join("/", parts, 0, i);
-                    InternalActorRef child;
-                    if (children.TryGetValue(joined, out child))
-                    {
-                        //longest match found
-                        var rest = parts.Skip(i);
-                        return child.GetChild(rest);
-                    }
+                    //longest match found
+                    IEnumerable<string> rest = parts.Skip(i);
+                    return child.GetChild(rest);
                 }
-                return Nobody;
-                    
             }
+            return Nobody;
         }
     }
 }

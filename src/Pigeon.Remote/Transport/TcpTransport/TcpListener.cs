@@ -1,22 +1,18 @@
-﻿using Akka.Actor;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading.Tasks;
+using Akka.Actor;
 
 namespace Akka.Remote.Transport
 {
     public class TcpServer
     {
-        private ActorSystem system;
-        private int port;
-        TcpListener server;
+        private readonly int port;
+        private readonly ActorSystem system;
         private string host;
+        private TcpListener server;
 
-        public TcpServer(ActorSystem system,string host, int port)
+        public TcpServer(ActorSystem system, string host, int port)
         {
             this.system = system;
             this.host = host;
@@ -41,8 +37,8 @@ namespace Akka.Remote.Transport
         }
 
         private async void WaitForClient()
-        {            
-            var client = await server.AcceptTcpClientAsync();
+        {
+            TcpClient client = await server.AcceptTcpClientAsync();
             ProcessSocket(client);
             await Task.Yield();
             WaitForClient();
@@ -52,20 +48,20 @@ namespace Akka.Remote.Transport
         {
             try
             {
-                var stream = client.GetStream();
+                NetworkStream stream = client.GetStream();
                 while (client.Connected)
                 {
-                    var remoteEnvelope = RemoteEnvelope.ParseDelimitedFrom(stream);
-                    var message = MessageSerializer.Deserialize(this.system, remoteEnvelope.Message);
-                    var recipient = system.Provider.ResolveActorRef(remoteEnvelope.Recipient.Path);
-                    var sender = system.Provider.ResolveActorRef(remoteEnvelope.Sender.Path);
+                    RemoteEnvelope remoteEnvelope = RemoteEnvelope.ParseDelimitedFrom(stream);
+                    object message = MessageSerializer.Deserialize(system, remoteEnvelope.Message);
+                    ActorRef recipient = system.Provider.ResolveActorRef(remoteEnvelope.Recipient.Path);
+                    ActorRef sender = system.Provider.ResolveActorRef(remoteEnvelope.Sender.Path);
 
                     recipient.Tell(message, sender);
                 }
             }
-            catch (IOException io)
+            catch // (IOException io)
             {
-            //    throw;
+                //    throw;
             }
         }
     }

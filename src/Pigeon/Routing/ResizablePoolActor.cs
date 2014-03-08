@@ -4,7 +4,7 @@ namespace Akka.Routing
 {
     public class ResizablePoolActor : RouterActor
     {
-        private SupervisorStrategy supervisorStrategy;
+   //     private SupervisorStrategy supervisorStrategy;
 
         public ResizablePoolActor(SupervisorStrategy supervisorStrategy)
         {

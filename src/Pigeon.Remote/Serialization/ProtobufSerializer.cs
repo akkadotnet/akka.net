@@ -1,21 +1,24 @@
-﻿using Akka.Actor;
-using Akka.Serialization;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Serialization;
 
 namespace Akka.Remote.Serialization
 {
     public class ProtobufSerializer : Serializer
     {
-        public ProtobufSerializer(ActorSystem system) : base(system) { }
+        public ProtobufSerializer(ActorSystem system) : base(system)
+        {
+        }
 
         public override bool IncludeManifest
         {
             get { return true; }
+        }
+
+        public override int Identifier
+        {
+            get { return 2; }
         }
 
         public override byte[] ToBinary(object obj)
@@ -33,11 +36,6 @@ namespace Akka.Remote.Serialization
             {
                 return ProtoBuf.Serializer.NonGeneric.Deserialize(type, stream);
             }
-        }
-
-        public override int Identifier
-        {
-            get { return 2; }
         }
     }
 }

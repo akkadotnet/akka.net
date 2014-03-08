@@ -1,35 +1,38 @@
-﻿using Akka.Actor;
-using Akka.Dispatch.SysMsg;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Dispatch.SysMsg;
 
 namespace Akka.Remote
 {
     public class RemoteActorRef : InternalActorRef
     {
-        private InternalActorRef parent;
-        public Address LocalAddressToUse { get; private set; }
-        public RemoteTransport Remote { get; private set; }
-        private Deploy deploy;
-        private Props props;
-        public RemoteActorRef(RemoteTransport remote, Address localAddressToUse, ActorPath path, InternalActorRef parent, Props props, Deploy deploy)
+        private readonly Deploy deploy;
+        private readonly InternalActorRef parent;
+        private readonly Props props;
+
+        public RemoteActorRef(RemoteTransport remote, Address localAddressToUse, ActorPath path, InternalActorRef parent,
+            Props props, Deploy deploy)
         {
-            this.Remote = remote;
-            this.LocalAddressToUse = localAddressToUse;
-            this.Path = path;
+            Remote = remote;
+            LocalAddressToUse = localAddressToUse;
+            Path = path;
             this.parent = parent;
             this.props = props;
             this.deploy = deploy;
-
-
         }
+
+        public Address LocalAddressToUse { get; private set; }
+        public RemoteTransport Remote { get; private set; }
 
         public override InternalActorRef Parent
         {
             get { return parent; }
+        }
+
+        public override ActorRefProvider Provider
+        {
+            get { return Remote.Provider; }
         }
 
         public override ActorRef GetChild(IEnumerable<string> name)
@@ -70,11 +73,6 @@ namespace Akka.Remote
             }
         }
 
-        public override ActorRefProvider Provider
-        {
-            get { return this.Remote.Provider; }
-        }
-
         protected override void TellInternal(object message, ActorRef sender)
         {
             try
@@ -90,7 +88,7 @@ namespace Akka.Remote
         public void Start()
         {
             if (props != null && deploy != null)
-                ((RemoteActorRefProvider)Remote.Provider).UseActorOnNode(this, props, deploy, parent);
+                Remote.Provider.UseActorOnNode(this, props, deploy, parent);
         }
     }
 }

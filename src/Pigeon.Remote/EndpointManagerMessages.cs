@@ -1,37 +1,29 @@
 ﻿using Akka.Actor;
-using Akka.Remote.Transport;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Akka.Remote
 {
     public interface RemotingCommand : NoSerializationVerificationNeeded
     {
-
     }
+
     public class Listen : RemotingCommand
     {
-        public Listen()
-        {
-        }
     }
 
     public class Send : RemotingCommand
     {
+        public Send(object message, ActorRef sender, RemoteActorRef recipient)
+        {
+            Message = message;
+            Sender = sender;
+            Recipient = recipient;
+        }
+
         public object Message { get; set; }
         public ActorRef Sender { get; set; }
         public RemoteActorRef Recipient { get; set; }
-
-        public Send(object message, ActorRef sender, RemoteActorRef recipient)
-        {
-            this.Message = message;
-            this.Sender = sender;
-            this.Recipient = recipient;
-        }
     }
+
 /*
  sealed trait RemotingCommand extends NoSerializationVerificationNeeded
   case class Listen(addressesPromise: Promise[Seq[(AkkaProtocolTransport, Address)]]) extends RemotingCommand

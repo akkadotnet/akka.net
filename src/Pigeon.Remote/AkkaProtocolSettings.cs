@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Akka.Configuration;
 
 namespace Akka.Remote
 {
     public class AkkaProtocolSettings
     {
-        private Configuration.Config config;
+        private Config config;
 
-        public AkkaProtocolSettings(Configuration.Config config)
+        public AkkaProtocolSettings(Config config)
         {
             // TODO: Complete member initialization
             this.config = config;

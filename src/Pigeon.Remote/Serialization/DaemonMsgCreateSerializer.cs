@@ -1,20 +1,17 @@
-﻿using Akka.Actor;
+﻿using System;
+using Akka.Actor;
 using Akka.Configuration;
-using Akka.Dispatch;
 using Akka.Routing;
 using Akka.Serialization;
 using Google.ProtocolBuffers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Akka.Remote.Serialization
 {
     public class DaemonMsgCreateSerializer : Serializer
     {
-        public DaemonMsgCreateSerializer(ActorSystem system) : base(system) { }
+        public DaemonMsgCreateSerializer(ActorSystem system) : base(system)
+        {
+        }
 
         public override int Identifier
         {
@@ -32,17 +29,18 @@ namespace Akka.Remote.Serialization
                 .SetPath(Akka.Serialization.Serialization.SerializedActorPath(@ref))
                 .Build();
         }
+
         private ByteString Serialize(object obj)
         {
-            var serializer = this.system.Serialization.FindSerializerFor(obj);
-            var bytes= serializer.ToBinary(obj);
+            Serializer serializer = system.Serialization.FindSerializerFor(obj);
+            byte[] bytes = serializer.ToBinary(obj);
             return ByteString.CopyFrom(bytes);
         }
 
-        private object Deserialize(ByteString bytes,Type type)
+        private object Deserialize(ByteString bytes, Type type)
         {
-            var serializer = this.system.Serialization.FindSerializerForType(type);
-            var o = serializer.FromBinary(bytes.ToByteArray(),type);
+            Serializer serializer = system.Serialization.FindSerializerForType(type);
+            object o = serializer.FromBinary(bytes.ToByteArray(), type);
             return o;
         }
 
@@ -50,17 +48,18 @@ namespace Akka.Remote.Serialization
         {
             if (!(obj is DaemonMsgCreate))
             {
-                throw new ArgumentException("Can't serialize a non-DaemonMsgCreate message using DaemonMsgCreateSerializer");
+                throw new ArgumentException(
+                    "Can't serialize a non-DaemonMsgCreate message using DaemonMsgCreateSerializer");
             }
 
-            var msg = (DaemonMsgCreate)obj;
-            var props = msg.Props;
-            var deploy = msg.Deploy;
+            var msg = (DaemonMsgCreate) obj;
+            Props props = msg.Props;
+            Deploy deploy = msg.Deploy;
 
             Func<Deploy, DeployData> deployProto = d =>
             {
-                var res = DeployData.CreateBuilder()
-                .SetPath(d.Path);
+                DeployData.Builder res = DeployData.CreateBuilder()
+                    .SetPath(d.Path);
                 if (d.Config != ConfigurationFactory.Empty)
                     res.SetConfig(Serialize(d.Config));
                 if (d.RouterConfig != RouterConfig.NoRouter)
@@ -73,18 +72,19 @@ namespace Akka.Remote.Serialization
                 return res.Build();
             };
 
-            Func<PropsData> propsProto = () => {
-                var builder = PropsData.CreateBuilder()
-                .SetClazz(props.Type.AssemblyQualifiedName)
-                .SetDeploy(deployProto(props.Deploy));
+            Func<PropsData> propsProto = () =>
+            {
+                PropsData.Builder builder = PropsData.CreateBuilder()
+                    .SetClazz(props.Type.AssemblyQualifiedName)
+                    .SetDeploy(deployProto(props.Deploy));
 
-                foreach (var arg in props.Arguments)
+                foreach (object arg in props.Arguments)
                 {
                     builder = builder.AddArgs(Serialize(arg));
                     //TODO: deal with null?
                     builder = builder.AddClasses(arg.GetType().AssemblyQualifiedName);
                 }
-    
+
                 return builder.Build();
             };
 
@@ -96,7 +96,7 @@ namespace Akka.Remote.Serialization
         setSupervisor(serializeActorRef(supervisor)).
         build.toByteArray
 */
-            var daemonBuilder = DaemonMsgCreateData.CreateBuilder()
+            DaemonMsgCreateData daemonBuilder = DaemonMsgCreateData.CreateBuilder()
                 .SetProps(propsProto())
                 .SetDeploy(deployProto(msg.Deploy))
                 .SetPath(msg.Path)
@@ -108,25 +108,25 @@ namespace Akka.Remote.Serialization
 
         public override object FromBinary(byte[] bytes, Type type)
         {
-            var proto = DaemonMsgCreateData.ParseFrom(bytes);
+            DaemonMsgCreateData proto = DaemonMsgCreateData.ParseFrom(bytes);
 
             Func<DeployData, Deploy> deploy = protoDeploy =>
             {
                 Config config = null;
                 if (protoDeploy.HasConfig)
-                    config = (Config)Deserialize(protoDeploy.Config, typeof(Config));
+                    config = (Config) Deserialize(protoDeploy.Config, typeof (Config));
                 else
                     config = ConfigurationFactory.Empty;
 
                 RouterConfig routerConfig = null;
                 if (protoDeploy.HasRouterConfig)
-                    routerConfig = (RouterConfig)Deserialize(protoDeploy.RouterConfig, typeof(RouterConfig));
+                    routerConfig = (RouterConfig) Deserialize(protoDeploy.RouterConfig, typeof (RouterConfig));
                 else
                     routerConfig = RouterConfig.NoRouter;
 
                 Scope scope = null;
                 if (protoDeploy.HasScope)
-                    scope = (Scope)Deserialize(protoDeploy.Scope, typeof(Scope));
+                    scope = (Scope) Deserialize(protoDeploy.Scope, typeof (Scope));
                 else
                     scope = Deploy.NoScopeGiven;
 
@@ -139,25 +139,25 @@ namespace Akka.Remote.Serialization
                 return new Deploy(protoDeploy.Path, config, routerConfig, scope, dispatcher);
             };
 
-            var clazz = Type.GetType(proto.Props.Clazz);
+            Type clazz = Type.GetType(proto.Props.Clazz);
 
-            var args = new object[] { };
+            var args = new object[] {};
             //  val args: Vector[AnyRef] = (proto.getProps.getArgsList.asScala zip proto.getProps.getClassesList.asScala)
             //    .map(p ⇒ deserialize(p._1, system.dynamicAccess.getClassFor[AnyRef](p._2).get))(collection.breakOut)
-            Props props = new Props(deploy(proto.Props.Deploy), clazz, args);
+            var props = new Props(deploy(proto.Props.Deploy), clazz, args);
 
 
             return new DaemonMsgCreate(
-              props,
-              deploy(proto.Deploy),
-              proto.Path,
-              DeserializeActorRef(system, proto.Supervisor));
+                props,
+                deploy(proto.Deploy),
+                proto.Path,
+                DeserializeActorRef(system, proto.Supervisor));
         }
 
-        private ActorRef DeserializeActorRef(ActorSystem system,ActorRefData actorRefData)
+        private ActorRef DeserializeActorRef(ActorSystem system, ActorRefData actorRefData)
         {
- 	        var path = actorRefData.Path;
-            var @ref = system.Provider.ResolveActorRef(path);
+            string path = actorRefData.Path;
+            ActorRef @ref = system.Provider.ResolveActorRef(path);
             return @ref;
         }
     }
