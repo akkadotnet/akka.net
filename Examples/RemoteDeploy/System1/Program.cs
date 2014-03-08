@@ -57,6 +57,9 @@ akka {
 
                 var remoteAddress = new Address("akka.tcp", "system2", "localhost", 8080);
                 var remote = system.ActorOf(Props.Create(typeof(SomeActor)).WithDeploy(new Deploy(new RemoteScope(remoteAddress))), "remote");
+
+                local.Tell("Local message");
+                remote.Tell("Remote message");
                 Console.ReadLine();
             }
             

@@ -11,6 +11,7 @@ namespace Shared
     {
         protected override void OnReceive(object message)
         {
+            Console.WriteLine("SomeActor got {0}", message);
             Sender.Tell("hello");
         }
     }
