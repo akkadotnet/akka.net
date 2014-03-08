@@ -58,10 +58,30 @@ namespace Akka.Actor
                     LogFailure(actorCell, child, cause, directive);
                     ProcessFailure(actorCell, false, child, cause);
                     return true;
-                default:
-                    break;
             }
             return false;
+        }
+
+        /// <summary>
+        ///     When supervisorStrategy is not specified for an actor this
+        ///     [[Decider]] is used by default in the supervisor strategy.
+        ///     The child will be stopped when [[Akka.Actor.ActorInitializationException]],
+        ///     [[Akka.Actor.ActorKilledException]], or [[Akka.Actor.DeathPactException]] is
+        ///     thrown. It will be restarted for other `Exception` types.
+        ///     The error is escalated if it's a `Exception`, i.e. `Error`.
+        /// </summary>
+        /// <param name="exception">The exception.</param>
+        /// <returns>Directive.</returns>
+        public static Directive DefaultDecider(Exception exception)
+        {
+            if (exception is ActorInitializationException)
+                return Directive.Stop;
+            if (exception is ActorKilledException)
+                return Directive.Stop;
+            if (exception is DeathPactException)
+                return Directive.Stop;
+
+            return Directive.Restart;
         }
 
         /// <summary>
@@ -166,7 +186,7 @@ namespace Akka.Actor
         public static SupervisorStrategy DefaultStrategy
         {
             //TODO: should be -1 retries, inf timeout, fix bug that prevents test to pass
-            get { return new OneForOneStrategy(10, TimeSpan.FromSeconds(10), OneForOneStrategy.DefaultDecider); }
+            get { return new OneForOneStrategy(10, TimeSpan.FromSeconds(10), DefaultDecider); }
         }
 
         #endregion
@@ -215,29 +235,6 @@ namespace Akka.Actor
         public Func<Exception, Directive> Decider { get; private set; }
 
         /// <summary>
-        ///     When supervisorStrategy is not specified for an actor this
-        ///     [[Decider]] is used by default in the supervisor strategy.
-        ///     The child will be stopped when [[Akka.Actor.ActorInitializationException]],
-        ///     [[Akka.Actor.ActorKilledException]], or [[Akka.Actor.DeathPactException]] is
-        ///     thrown. It will be restarted for other `Exception` types.
-        ///     The error is escalated if it's a `Exception`, i.e. `Error`.
-        /// </summary>
-        /// <param name="exception">The exception.</param>
-        /// <returns>Directive.</returns>
-        public static Directive DefaultDecider(Exception exception)
-        {
-            if (exception is ActorInitializationException)
-                return Directive.Stop;
-            if (exception is ActorKilledException)
-                return Directive.Stop;
-            if (exception is DeathPactException)
-                return Directive.Stop;
-
-            return Directive.Restart;
-        }
-
-
-        /// <summary>
         ///     Handles the specified child.
         /// </summary>
         /// <param name="child">The child.</param>
@@ -245,7 +242,7 @@ namespace Akka.Actor
         /// <returns>Directive.</returns>
         public override Directive Handle(ActorRef child, Exception x)
         {
-            Failures failures = null;
+            Failures failures;
             actorFailures.TryGetValue(child, out failures);
             //create if missing
             if (failures == null)

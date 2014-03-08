@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Akka.Configuration.Hocon;
 
 namespace Akka.Configuration
@@ -27,11 +28,11 @@ namespace Akka.Configuration
         private HoconValue GetNode(string path)
         {
             string[] elements = path.Split('.');
-            HoconValue node = this.node;
+            HoconValue currentNode = node;
             foreach (string key in elements)
             {
-                node = node.GetChildObject(key);
-                if (node == null)
+                currentNode = currentNode.GetChildObject(key);
+                if (currentNode == null)
                 {
                     if (fallback != null)
                         return fallback.GetNode(path);
@@ -39,139 +40,142 @@ namespace Akka.Configuration
                     return null;
                 }
             }
-            return node;
+            return currentNode;
         }
 
         public bool GetBoolean(string path, bool @default = false)
         {
-            HoconValue node = GetNode(path);
-            if (node == null)
+            HoconValue value = GetNode(path);
+            if (value == null)
                 return @default;
 
-            return node.GetBoolean();
+            return value.GetBoolean();
         }
 
         public int GetInt(string path, int @default = 0)
         {
-            HoconValue node = GetNode(path);
-            if (node == null)
+            HoconValue value = GetNode(path);
+            if (value == null)
                 return @default;
 
-            return node.GetInt();
+            return value.GetInt();
         }
 
         public long GetLong(string path, long @default = 0)
         {
-            HoconValue node = GetNode(path);
-            if (node == null)
+            HoconValue value = GetNode(path);
+            if (value == null)
                 return @default;
 
-            return node.GetLong();
+            return value.GetLong();
         }
 
         public string GetString(string path, string @default = null)
         {
-            HoconValue node = GetNode(path);
-            if (node == null)
+            HoconValue value = GetNode(path);
+            if (value == null)
                 return @default;
 
-            return node.GetString();
+            return value.GetString();
         }
 
         public float GetFloat(string path, float @default = 0)
         {
-            HoconValue node = GetNode(path);
-            if (node == null)
+            HoconValue value = GetNode(path);
+            if (value == null)
                 return @default;
 
-            return node.GetFloat();
+            return value.GetFloat();
         }
 
         public decimal GetDecimal(string path, decimal @default = 0)
         {
-            HoconValue node = GetNode(path);
-            if (node == null)
+            HoconValue value = GetNode(path);
+            if (value == null)
                 return @default;
 
-            return node.GetDecimal();
+            return value.GetDecimal();
         }
 
         public double GetDouble(string path, double @default = 0)
         {
-            HoconValue node = GetNode(path);
-            if (node == null)
+            HoconValue value = GetNode(path);
+            if (value == null)
                 return @default;
 
-            return node.GetDouble();
+            return value.GetDouble();
         }
 
         public IList<Boolean> GetBooleanList(string path)
         {
-            HoconValue node = GetNode(path);
-            return node.GetBooleanList();
+            HoconValue value = GetNode(path);
+            return value.GetBooleanList();
         }
 
         public IList<decimal> GetDecimalList(string path)
         {
-            HoconValue node = GetNode(path);
-            return node.GetDecimalList();
+            HoconValue value = GetNode(path);
+            return value.GetDecimalList();
         }
 
         public IList<float> GetFloatList(string path)
         {
-            HoconValue node = GetNode(path);
-            return node.GetFloatList();
+            HoconValue value = GetNode(path);
+            return value.GetFloatList();
         }
 
         public IList<double> GetDoubleList(string path)
         {
-            HoconValue node = GetNode(path);
-            return node.GetDoubleList();
+            HoconValue value = GetNode(path);
+            return value.GetDoubleList();
         }
 
         public IList<int> GetIntList(string path)
         {
-            HoconValue node = GetNode(path);
-            return node.GetIntList();
+            HoconValue value = GetNode(path);
+            return value.GetIntList();
         }
 
         public IList<long> GetLongList(string path)
         {
-            HoconValue node = GetNode(path);
-            return node.GetLongList();
+            HoconValue value = GetNode(path);
+            return value.GetLongList();
         }
 
         public IList<byte> GetByteList(string path)
         {
-            HoconValue node = GetNode(path);
-            return node.GetByteList();
+            HoconValue value = GetNode(path);
+            return value.GetByteList();
         }
 
         public IList<string> GetStringList(string path)
         {
-            HoconValue node = GetNode(path);
-            return node.GetStringList();
+            HoconValue value = GetNode(path);
+            return value.GetStringList();
         }
 
         public Config GetConfig(string path)
         {
-            HoconValue node = GetNode(path);
-            return new Config(node);
+            HoconValue value = GetNode(path);
+            return new Config(value);
         }
 
         public HoconValue GetValue(string path)
         {
-            HoconValue node = GetNode(path);
-            return node;
+            HoconValue value = GetNode(path);
+            return value;
         }
 
         public TimeSpan GetMillisDuration(string path, TimeSpan? @default = null)
         {
-            HoconValue node = GetNode(path);
-            if (node == null)
+            HoconValue value = GetNode(path);
+            if (value == null)
+            {
+                Debug.Assert(@default != null, "@default != null");
                 return @default.Value;
+            }
 
-            return node.GetMillisDuration();
+            return value.GetMillisDuration();
         }
 
         public override string ToString()

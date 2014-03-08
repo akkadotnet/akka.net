@@ -6,42 +6,92 @@ using Akka.Actor;
 
 namespace Akka.Event
 {
+    /// <summary>
+    /// Class Subscription.
+    /// </summary>
+    /// <typeparam name="TSubscriber">The type of the t subscriber.</typeparam>
+    /// <typeparam name="TClassifier">The type of the t classifier.</typeparam>
     public class Subscription<TSubscriber, TClassifier>
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Subscription{TSubscriber, TClassifier}"/> class.
+        /// </summary>
+        /// <param name="subscriber">The subscriber.</param>
+        /// <param name="unsubscriptions">The unsubscriptions.</param>
         public Subscription(TSubscriber subscriber, IEnumerable<TClassifier> unsubscriptions)
         {
             Subscriber = subscriber;
             Unsubscriptions = new HashSet<TClassifier>(unsubscriptions);
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Subscription{TSubscriber, TClassifier}"/> class.
+        /// </summary>
+        /// <param name="subscriber">The subscriber.</param>
         public Subscription(TSubscriber subscriber)
         {
             Subscriber = subscriber;
             Unsubscriptions = new HashSet<TClassifier>();
         }
 
+        /// <summary>
+        /// Gets the subscriber.
+        /// </summary>
+        /// <value>The subscriber.</value>
         public TSubscriber Subscriber { get; private set; }
+        /// <summary>
+        /// Gets the unsubscriptions.
+        /// </summary>
+        /// <value>The unsubscriptions.</value>
         public ISet<TClassifier> Unsubscriptions { get; private set; }
     }
 
+    /// <summary>
+    /// Class EventBus.
+    /// </summary>
+    /// <typeparam name="TEvent">The type of the t event.</typeparam>
+    /// <typeparam name="TClassifier">The type of the t classifier.</typeparam>
+    /// <typeparam name="TSubscriber">The type of the t subscriber.</typeparam>
     public abstract class EventBus<TEvent, TClassifier, TSubscriber>
     {
+        /// <summary>
+        /// The classifiers
+        /// </summary>
         private readonly Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>> classifiers =
             new Dictionary<TClassifier, List<Subscription<TSubscriber, TClassifier>>>();
 
+        /// <summary>
+        /// The cache
+        /// </summary>
         private volatile ConcurrentDictionary<TClassifier, List<TSubscriber>> cache =
             new ConcurrentDictionary<TClassifier, List<TSubscriber>>();
 
+        /// <summary>
+        /// Simples the name.
+        /// </summary>
+        /// <param name="source">The source.</param>
+        /// <returns>System.String.</returns>
         protected string SimpleName(object source)
         {
             return SimpleName(source.GetType());
         }
 
+        /// <summary>
+        /// Simples the name.
+        /// </summary>
+        /// <param name="source">The source.</param>
+        /// <returns>System.String.</returns>
         protected string SimpleName(Type source)
         {
             return source.Name;
         }
 
+        /// <summary>
+        /// Subscribes the specified subscriber.
+        /// </summary>
+        /// <param name="subscriber">The subscriber.</param>
+        /// <param name="classifier">The classifier.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public virtual bool Subscribe(TSubscriber subscriber, TClassifier classifier)
         {
             lock (classifiers)
@@ -64,6 +114,11 @@ namespace Akka.Event
             }
         }
 
+        /// <summary>
+        /// Unsubscribes the specified subscriber.
+        /// </summary>
+        /// <param name="subscriber">The subscriber.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public virtual bool Unsubscribe(TSubscriber subscriber)
         {
             lock (classifiers)
@@ -83,6 +138,12 @@ namespace Akka.Event
             }
         }
 
+        /// <summary>
+        /// Unsubscribes the specified subscriber.
+        /// </summary>
+        /// <param name="subscriber">The subscriber.</param>
+        /// <param name="classifier">The classifier.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public virtual bool Unsubscribe(TSubscriber subscriber, TClassifier classifier)
         {
             lock (classifiers)
@@ -116,19 +177,48 @@ namespace Akka.Event
             }
         }
 
+        /// <summary>
+        /// Clears the cache.
+        /// </summary>
         private void ClearCache()
         {
             cache = new ConcurrentDictionary<TClassifier, List<TSubscriber>>();
         }
 
+        /// <summary>
+        /// Determines whether [is sub classification] [the specified parent].
+        /// </summary>
+        /// <param name="parent">The parent.</param>
+        /// <param name="child">The child.</param>
+        /// <returns><c>true</c> if [is sub classification] [the specified parent]; otherwise, <c>false</c>.</returns>
         protected abstract bool IsSubClassification(TClassifier parent, TClassifier child);
 
+        /// <summary>
+        /// Publishes the specified event.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        /// <param name="subscriber">The subscriber.</param>
         protected abstract void Publish(TEvent @event, TSubscriber subscriber);
 
+        /// <summary>
+        /// Classifies the specified event.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        /// <param name="classifier">The classifier.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         protected abstract bool Classify(TEvent @event, TClassifier classifier);
 
+        /// <summary>
+        /// Gets the classifier.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        /// <returns>`1.</returns>
         protected abstract TClassifier GetClassifier(TEvent @event);
 
+        /// <summary>
+        /// Publishes the specified event.
+        /// </summary>
+        /// <param name="event">The event.</param>
         public virtual void Publish(TEvent @event)
         {
             TClassifier eventClass = GetClassifier(@event);
@@ -145,6 +235,11 @@ namespace Akka.Event
             }
         }
 
+        /// <summary>
+        /// Publishes to subscribers.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        /// <param name="cachedSubscribers">The cached subscribers.</param>
         private void PublishToSubscribers(TEvent @event, List<TSubscriber> cachedSubscribers)
         {
             foreach (TSubscriber subscriber in cachedSubscribers)
@@ -153,6 +248,12 @@ namespace Akka.Event
             }
         }
 
+        /// <summary>
+        /// Updates the cache for event classifier.
+        /// </summary>
+        /// <param name="event">The event.</param>
+        /// <param name="eventClass">The event class.</param>
+        /// <returns>List{`2}.</returns>
         private List<TSubscriber> UpdateCacheForEventClassifier(TEvent @event, TClassifier eventClass)
         {
             lock (classifiers)
@@ -181,6 +282,11 @@ namespace Akka.Event
         }
     }
 
+    /// <summary>
+    /// Class ActorEventBus.
+    /// </summary>
+    /// <typeparam name="TEvent">The type of the t event.</typeparam>
+    /// <typeparam name="TClassifier">The type of the t classifier.</typeparam>
     public abstract class ActorEventBus<TEvent, TClassifier> : EventBus<TEvent, TClassifier, ActorRef>
     {
     }
