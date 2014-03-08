@@ -1,45 +1,43 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
     /// <summary>
-    /// Class AkkaException.
+    ///     Class AkkaException.
     /// </summary>
     public abstract class AkkaException : Exception
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="AkkaException"/> class.
+        ///     Initializes a new instance of the <see cref="AkkaException" /> class.
         /// </summary>
         public AkkaException()
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="T:System.Exception" /> class with a specified error message.
+        ///     Initializes a new instance of the <see cref="T:System.Exception" /> class with a specified error message.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
         public AkkaException(string message)
             : base(message)
-        { }
+        {
+        }
     }
+
     /// <summary>
-    /// Class ActorInitializationException.
+    ///     Class ActorInitializationException.
     /// </summary>
     public class ActorInitializationException : AkkaException
     {
     }
 
     /// <summary>
-    /// Class ActorKilledException.
+    ///     Class ActorKilledException.
     /// </summary>
     public class ActorKilledException : AkkaException
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ActorKilledException"/> class.
+        ///     Initializes a new instance of the <see cref="ActorKilledException" /> class.
         /// </summary>
         /// <param name="message">The message.</param>
         public ActorKilledException(string message) : base(message)
@@ -48,14 +46,14 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Class DeathPactException.
+    ///     Class DeathPactException.
     /// </summary>
     public class DeathPactException : AkkaException
     {
     }
 
     /// <summary>
-    /// Class PreRestartException.
+    ///     Class PreRestartException.
     /// </summary>
     public class PreRestartException : AkkaException
     {
@@ -64,11 +62,12 @@ namespace Akka.Actor
         private Exception exception;
         private object optionalMessage;
 
-        public PreRestartException(LocalActorRef actor, Exception restartException, Exception cause, object optionalMessage)
+        public PreRestartException(LocalActorRef actor, Exception restartException, Exception cause,
+            object optionalMessage)
         {
-            this.Actor = actor;
-            this.e = restartException;
-            this.exception = cause;
+            Actor = actor;
+            e = restartException;
+            exception = cause;
             this.optionalMessage = optionalMessage;
         }
     }

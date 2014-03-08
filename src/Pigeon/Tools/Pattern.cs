@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Akka
 {
@@ -17,8 +13,9 @@ namespace Akka
 
     public class Case
     {
-        private bool _handled = false;
-        private object _message;
+        private readonly object _message;
+        private bool _handled;
+
         public Case(object message)
         {
             _message = message;
@@ -39,7 +36,7 @@ namespace Akka
         {
             if (!_handled && _message is TMessage)
             {
-                action((TMessage)_message);
+                action((TMessage) _message);
                 _handled = true;
             }
 

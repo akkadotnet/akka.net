@@ -2,26 +2,27 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Akka.Configuration.Hocon
 {
     public class HoconValue
     {
-        private List<IHoconElement> values = new List<IHoconElement>();
+        private readonly List<IHoconElement> values = new List<IHoconElement>();
+
         public void AppendValue(IHoconElement value)
         {
-            this.values.Add(value);
+            values.Add(value);
         }
+
         public void Clear()
         {
-            this.values.Clear();
+            values.Clear();
         }
+
         public void NewValue(IHoconElement value)
         {
-            this.values.Clear();
-            this.values.Add(value);
+            values.Clear();
+            values.Add(value);
         }
 
         public bool IsString()
@@ -31,7 +32,7 @@ namespace Akka.Configuration.Hocon
 
         private string ConcatString()
         {
-            var concat = string.Join("", values.Select(l => l.GetString())).Trim();
+            string concat = string.Join("", values.Select(l => l.GetString())).Trim();
 
             if (concat == "null")
                 return null;
@@ -40,7 +41,7 @@ namespace Akka.Configuration.Hocon
         }
 
         public HoconObject GetObject()
-        {    
+        {
             //TODO: merge objects?
             var o = values.FirstOrDefault() as HoconObject;
             return o;
@@ -58,7 +59,7 @@ namespace Akka.Configuration.Hocon
 
         public bool GetBoolean()
         {
-            var v = GetString();
+            string v = GetString();
             switch (v)
             {
                 case "on":
@@ -73,7 +74,7 @@ namespace Akka.Configuration.Hocon
                     throw new NotSupportedException("Unknown boolean format: " + v);
             }
         }
-      
+
         public string GetString()
         {
             if (IsString())
@@ -115,66 +116,66 @@ namespace Akka.Configuration.Hocon
 
         public IList<byte> GetByteList()
         {
-            return this.GetArray().Select(v => v.GetByte()).ToList();
+            return GetArray().Select(v => v.GetByte()).ToList();
         }
 
         public IList<int> GetIntList()
         {
-            return this.GetArray().Select(v => v.GetInt()).ToList();
+            return GetArray().Select(v => v.GetInt()).ToList();
         }
 
         public IList<long> GetLongList()
         {
-            return this.GetArray().Select(v => v.GetLong()).ToList();
+            return GetArray().Select(v => v.GetLong()).ToList();
         }
 
         public IList<bool> GetBooleanList()
         {
-            return this.GetArray().Select(v => v.GetBoolean()).ToList();
+            return GetArray().Select(v => v.GetBoolean()).ToList();
         }
 
         public IList<float> GetFloatList()
         {
-            return this.GetArray().Select(v => v.GetFloat()).ToList();
+            return GetArray().Select(v => v.GetFloat()).ToList();
         }
 
         public IList<double> GetDoubleList()
         {
-            return this.GetArray().Select(v => v.GetDouble()).ToList();
+            return GetArray().Select(v => v.GetDouble()).ToList();
         }
 
         public IList<decimal> GetDecimalList()
         {
-            return this.GetArray().Select(v => v.GetDecimal()).ToList();
+            return GetArray().Select(v => v.GetDecimal()).ToList();
         }
 
         public IList<string> GetStringList()
         {
-            return this.GetArray().Select(v => v.GetString()).ToList();
+            return GetArray().Select(v => v.GetString()).ToList();
         }
 
         public IList<HoconValue> GetArray()
         {
-            var x = from arr in this.values
-                    where arr.IsArray()
-                    from e in arr.GetArray()
-                    select e;
+            IEnumerable<HoconValue> x = from arr in values
+                where arr.IsArray()
+                from e in arr.GetArray()
+                select e;
 
             return x.ToList();
         }
 
         public bool IsArray()
         {
-            return this.GetArray() != null;
+            return GetArray() != null;
         }
 
         //TODO: implement this
         public TimeSpan GetMillisDuration()
         {
-            var res = this.GetString();
+            string res = GetString();
             if (res.EndsWith("s"))
             {
-                var v = res.Substring(0, res.Length - 1);
+                string v = res.Substring(0, res.Length - 1);
                 return TimeSpan.FromSeconds(double.Parse(v));
             }
 
@@ -188,19 +189,19 @@ namespace Akka.Configuration.Hocon
 
         public virtual string ToString(int indent)
         {
-            if (this.IsString())
+            if (IsString())
             {
-                var text = QuoteIfNeeded(this.GetString());
+                string text = QuoteIfNeeded(GetString());
                 return text;
             }
-            if (this.IsObject())
+            if (IsObject())
             {
-                var i = new string(' ', indent * 2);
-                return string.Format("{{\r\n{1}{0}}}",i, this.GetObject().ToString(indent+1));
+                var i = new string(' ', indent*2);
+                return string.Format("{{\r\n{1}{0}}}", i, GetObject().ToString(indent + 1));
             }
-            if (this.IsArray())
+            if (IsArray())
             {
-                return string.Format("[{0}]", string.Join(",", this.GetArray().Select(e => e.ToString())));
+                return string.Format("[{0}]", string.Join(",", GetArray().Select(e => e.ToString())));
             }
             return "aa";
         }

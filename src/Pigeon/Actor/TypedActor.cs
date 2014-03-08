@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Reflection;
 
 namespace Akka.Actor
 {
@@ -13,16 +9,16 @@ namespace Akka.Actor
 
     public abstract class TypedActor : ActorBase
     {
-        protected sealed override void OnReceive(object message)
+        protected override sealed void OnReceive(object message)
         {
-            var method = this.GetType().GetMethod("Handle", new[] { message.GetType() });
+            MethodInfo method = GetType().GetMethod("Handle", new[] {message.GetType()});
             if (method == null)
             {
                 Unhandled(message);
                 return;
             }
 
-            method.Invoke(this, new[] { message });
+            method.Invoke(this, new[] {message});
         }
     }
 }

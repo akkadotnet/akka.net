@@ -35,7 +35,7 @@ namespace Akka.Tests.Actor
         }
 
         [TestMethod]
-        public void CanAskActorWithTimer()
+        public void CanAskActorWithTimeout()
         {
             var actor = sys.ActorOf<SomeActor>();
             actor.Ask<string>("answer",TimeSpan.FromSeconds(10)).Result.ShouldBe("answer");

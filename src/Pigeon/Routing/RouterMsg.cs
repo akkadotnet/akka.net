@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Akka.Routing
 {
@@ -13,20 +10,19 @@ namespace Akka.Routing
 
     public abstract class RouterManagementMesssage
     {
-        
     }
 
     public sealed class GetRoutees : RouterManagementMesssage
     {
-
     }
 
-    public sealed class Routees 
+    public sealed class Routees
     {
-        public IEnumerable<Routee> Members { get;private set; }
         public Routees(IEnumerable<Routee> routees)
         {
-            this.Members = routees.ToArray();
+            Members = routees.ToArray();
         }
+
+        public IEnumerable<Routee> Members { get; private set; }
     }
 }

@@ -1,26 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Akka.Actor
 {
     public class LocalActorRef : ActorRefWithCell
-    {      
+    {
+        public LocalActorRef(ActorPath path, ActorCell context)
+        {
+            Path = path;
+            Cell = context;
+        }
+
         public override ActorRefProvider Provider
         {
-            get
-            {
-                return Cell.System.Provider;
-            }
+            get { return Cell.System.Provider; }
         }
 
         public override InternalActorRef Parent
         {
-            get
-            {
-                return this.Cell.Parent;
-            }
+            get { return Cell.Parent; }
+        }
+
+        public override IEnumerable<ActorRef> Children
+        {
+            get { return Cell.GetChildren(); }
         }
 
         public override void Stop()
@@ -43,23 +47,9 @@ namespace Akka.Actor
             Cell.Restart(cause);
         }
 
-        public LocalActorRef(ActorPath path,ActorCell context)
-        {
-            this.Path = path;
-            this.Cell = context;
-        }
-
         protected override void TellInternal(object message, ActorRef sender)
         {
-            this.Cell.Post(sender, message);
-        }
-
-        public override IEnumerable<ActorRef> Children
-        {
-            get 
-            { 
-                return Cell.GetChildren();
-            }
+            Cell.Post(sender, message);
         }
 
         public override InternalActorRef GetSingleChild(string name)
@@ -69,9 +59,9 @@ namespace Akka.Actor
 
         public override ActorRef GetChild(IEnumerable<string> name)
         {
-            var current = (ActorRef)this;
+            var current = (ActorRef) this;
             int index = 0;
-            foreach (var element in name)
+            foreach (string element in name)
             {
                 index++;
                 if (current is LocalActorRef)
@@ -82,23 +72,21 @@ namespace Akka.Actor
                     }
                     else if (element == "")
                     {
-
                     }
                     else
                     {
                         current = current.AsInstanceOf<LocalActorRef>().GetSingleChild(element);
                     }
                 }
-                else if (current is InternalActorRef)
+                else if (current != null)
                 {
-                    var rest = name.Skip(index).ToArray();
+                    string[] rest = name.Skip(index).ToArray();
                     return current.AsInstanceOf<InternalActorRef>().GetChild(rest);
                 }
                 else
                 {
                     throw new NotSupportedException("Bug, we should not get here");
                 }
-                
             }
             return current;
         }

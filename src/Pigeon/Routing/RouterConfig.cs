@@ -1,20 +1,18 @@
-﻿using Akka.Actor;
-using Akka.Dispatch;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Dispatch;
 
 namespace Akka.Routing
 {
     public abstract class RouterConfig
     {
-      //  public abstract RoutingLogic GetLogic();
-
-        public abstract IEnumerable<Routee> GetRoutees(ActorSystem system);
+        //  public abstract RoutingLogic GetLogic();
 
         public static readonly RouterConfig NoRouter = new NoRouter();
+        public string RouterDispatcher { get; protected set; }
+        public abstract IEnumerable<Routee> GetRoutees(ActorSystem system);
 
         public virtual RouterConfig WithFallback(RouterConfig routerConfig)
         {
@@ -23,7 +21,6 @@ namespace Akka.Routing
 
         public abstract Router CreateRouter();
         public abstract RouterActor CreateRouterActor();
-        public string RouterDispatcher { get;protected set; }
     }
 
     public class NoRouter : RouterConfig
@@ -46,7 +43,7 @@ namespace Akka.Routing
 
     public abstract class Group : RouterConfig
     {
-        private string[] paths;
+        private readonly string[] paths;
 
         public Group(IEnumerable<string> paths)
         {
@@ -55,14 +52,14 @@ namespace Akka.Routing
 
         protected Group(IEnumerable<ActorRef> routees)
         {
-            this.paths = routees.Select(x => x.Path.ToStringWithAddress()).ToArray();
+            paths = routees.Select(x => x.Path.ToStringWithAddress()).ToArray();
         }
 
         public override IEnumerable<Routee> GetRoutees(ActorSystem system)
         {
-            foreach(var path in paths)
+            foreach (string path in paths)
             {
-                var actor = system.ActorSelection(path);
+                ActorSelection actor = system.ActorSelection(path);
                 yield return new ActorSelectionRoutee(actor);
             }
         }
@@ -75,22 +72,22 @@ namespace Akka.Routing
 
     public abstract class Pool : RouterConfig
     {
+        public Pool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher,
+            bool usePoolDispatcher = false)
+        {
+            NrOfInstances = nrOfInstances;
+            Resizer = resizer;
+            SupervisorStrategy = supervisorStrategy;
+            UsePoolDispatcher = usePoolDispatcher;
+            RouterDispatcher = routerDispatcher;
+        }
+
         public int NrOfInstances { get; protected set; }
 
         public bool UsePoolDispatcher { get; protected set; }
 
-        public Pool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = false)
-        {
-            this.NrOfInstances = nrOfInstances;
-            this.Resizer = resizer;
-            this.SupervisorStrategy = supervisorStrategy;
-            this.UsePoolDispatcher = usePoolDispatcher;
-            this.RouterDispatcher = routerDispatcher;
-        }
-
- //        private[akka] def newRoutee(routeeProps: Props, context: ActorContext): Routee =
- //   ActorRefRoutee(context.actorOf(enrichWithPoolDispatcher(routeeProps, context)))
-
+        public Resizer Resizer { get; protected set; }
+        public SupervisorStrategy SupervisorStrategy { get; protected set; }
 
         public Routee NewRoutee(Props routeeProps, IActorContext context)
         {
@@ -98,34 +95,32 @@ namespace Akka.Routing
             return routee;
         }
 
-        private Props EnrichWithPoolDispatcher(Props routeeProps,IActorContext context)
+        private Props EnrichWithPoolDispatcher(Props routeeProps, IActorContext context)
         {
-    //        if (usePoolDispatcher && routeeProps.dispatcher == Dispatchers.DefaultDispatcherId)
-    //  routeeProps.withDispatcher("akka.actor.deployment." + context.self.path.elements.drop(1).mkString("/", "/", "")
-    //    + ".pool-dispatcher")
-    //else
-    //  routeeProps
+            //        if (usePoolDispatcher && routeeProps.dispatcher == Dispatchers.DefaultDispatcherId)
+            //  routeeProps.withDispatcher("akka.actor.deployment." + context.self.path.elements.drop(1).mkString("/", "/", "")
+            //    + ".pool-dispatcher")
+            //else
+            //  routeeProps
             if (UsePoolDispatcher && routeeProps.Dispatcher == Dispatchers.DefaultDispatcherId)
             {
-                return routeeProps.WithDispatcher("akka.actor.deployment." + context.Self.Path.Elements.Drop(1).Join("/") + ".pool-dispatcher");
+                return
+                    routeeProps.WithDispatcher("akka.actor.deployment." + context.Self.Path.Elements.Drop(1).Join("/") +
+                                               ".pool-dispatcher");
             }
             return routeeProps;
         }
 
-        public Resizer Resizer { get;protected set; }
-        public SupervisorStrategy SupervisorStrategy { get; protected set; }
-
         public Props Props(Props routeeProps)
         {
             return routeeProps.WithRouter(this);
-        }        
+        }
 
         public override RouterActor CreateRouterActor()
         {
             if (Resizer == null)
                 return new RouterPoolActor(SupervisorStrategy);
-            else
-                return new ResizablePoolActor(SupervisorStrategy);
+            return new ResizablePoolActor(SupervisorStrategy);
         }
     }
 }

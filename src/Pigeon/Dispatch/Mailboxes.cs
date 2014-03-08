@@ -1,15 +1,13 @@
-﻿using Akka.Actor;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
+using Akka.Actor;
+using Akka.Configuration;
 
 namespace Akka.Dispatch
 {
     public class Mailboxes
     {
-        private ActorSystem system;
+        private readonly ActorSystem system;
+
         public Mailboxes(ActorSystem system)
         {
             this.system = system;
@@ -23,11 +21,11 @@ namespace Akka.Dispatch
                 return new ConcurrentQueueMailbox();
             }
 
-            var config = system.Settings.Config.GetConfig(path);
-            var type = config.GetString("mailbox-type");
+            Config config = system.Settings.Config.GetConfig(path);
+            string type = config.GetString("mailbox-type");
 
             Type mailboxType = Type.GetType(type);
-            var mailbox = (Mailbox)Activator.CreateInstance(mailboxType);
+            var mailbox = (Mailbox) Activator.CreateInstance(mailboxType);
             return mailbox;
 
             /*

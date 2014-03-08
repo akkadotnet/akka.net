@@ -1,10 +1,6 @@
-﻿using Akka.Configuration;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using Akka.Configuration;
 
 namespace Akka.Routing
 {
@@ -12,8 +8,7 @@ namespace Akka.Routing
     public class ThreadSafeRandom
     {
         private static readonly Random _global = new Random();
-        [ThreadStatic]
-        private static Random _local;
+        [ThreadStatic] private static Random _local;
 
         public int Next(int maxValue)
         {
@@ -33,17 +28,15 @@ namespace Akka.Routing
 
     public class RandomLogic : RoutingLogic
     {
-        private ThreadSafeRandom rnd = new ThreadSafeRandom();
+        private readonly ThreadSafeRandom rnd = new ThreadSafeRandom();
+
         public override Routee Select(object message, Routee[] routees)
         {
             if (routees == null || routees.Length == 0)
             {
                 return Routee.NoRoutee;
             }
-            else
-            {
-                return routees[rnd.Next(routees.Length-1) % routees.Length];
-            }
+            return routees[rnd.Next(routees.Length - 1)%routees.Length];
         }
     }
 
@@ -52,17 +45,16 @@ namespace Akka.Routing
         public RandomGroup(Config config)
             : base(config.GetStringList("routees.paths"))
         {
-
         }
+
         public RandomGroup(params string[] paths)
             : base(paths)
         {
-
         }
+
         public RandomGroup(IEnumerable<string> paths)
             : base(paths)
         {
-
         }
 
         public override Router CreateRouter()

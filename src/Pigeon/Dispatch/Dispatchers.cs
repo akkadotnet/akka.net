@@ -1,24 +1,23 @@
-﻿using Akka.Actor;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Configuration;
 
 namespace Akka.Dispatch
 {
     public abstract class MessageDispatcher
     {
-        public const int DefaultThroughput = 5;        
-        public long? ThroughputDeadlineTime { get; set; }
-        public int Throughput { get; set; }
+        public const int DefaultThroughput = 5;
 
         protected MessageDispatcher()
         {
             Throughput = DefaultThroughput;
         }
+
+        public long? ThroughputDeadlineTime { get; set; }
+        public int Throughput { get; set; }
 
         public abstract void Schedule(Action<object> run);
     }
@@ -27,20 +26,21 @@ namespace Akka.Dispatch
     {
         public override void Schedule(Action<object> run)
         {
-            WaitCallback wc = new WaitCallback(run);
+            var wc = new WaitCallback(run);
             ThreadPool.UnsafeQueueUserWorkItem(wc, null);
         }
     }
 
     /// <summary>
-    /// Dispatcher that dispatches messages on the current synchronization context, e.g. WinForms or WPF GUI thread
+    ///     Dispatcher that dispatches messages on the current synchronization context, e.g. WinForms or WPF GUI thread
     /// </summary>
     public class CurrentSynchronizationContextDispatcher : MessageDispatcher
     {
-        private  TaskScheduler scheduler;
+        private readonly TaskScheduler scheduler;
+
         public CurrentSynchronizationContextDispatcher()
         {
-            this.scheduler = TaskScheduler.FromCurrentSynchronizationContext();
+            scheduler = TaskScheduler.FromCurrentSynchronizationContext();
         }
 
         public override void Schedule(Action<object> run)
@@ -52,16 +52,17 @@ namespace Akka.Dispatch
 
     public class SingleThreadDispatcher : MessageDispatcher
     {
+        private readonly ConcurrentQueue<Action<object>> queue = new ConcurrentQueue<Action<object>>();
         private volatile bool running = true;
-        private ConcurrentQueue<Action<object>> queue = new ConcurrentQueue<Action<object>>();
+
         public SingleThreadDispatcher()
         {
-            BlockingCollection<Action<object>> b = new BlockingCollection<Action<object>>(queue);
+            var b = new BlockingCollection<Action<object>>(queue);
             var t = new Thread(_ =>
             {
                 while (running)
                 {
-                    var next = b.Take();
+                    Action<object> next = b.Take();
                     next(null);
                 }
             });
@@ -75,8 +76,9 @@ namespace Akka.Dispatch
 
     public class Dispatchers
     {
-        private ActorSystem system;
         public static string DefaultDispatcherId;
+        private readonly ActorSystem system;
+
         public Dispatchers(ActorSystem system)
         {
             this.system = system;
@@ -97,16 +99,16 @@ namespace Akka.Dispatch
                 return disp;
             }
 
-            var config = system.Settings.Config.GetConfig(path);
-            var type = config.GetString("type");
-            var throughput = config.GetInt("throughput");
+            Config config = system.Settings.Config.GetConfig(path);
+            string type = config.GetString("type");
+            int throughput = config.GetInt("throughput");
             //shutdown-timeout
             //throughput-deadline-time
             //attempt-teamwork
             //mailbox-requirement
 
             MessageDispatcher dispatcher = null;
-            switch(type)
+            switch (type)
             {
                 case "Dispatcher":
                     dispatcher = new ThreadPoolDispatcher();
@@ -118,13 +120,13 @@ namespace Akka.Dispatch
                     dispatcher = new CurrentSynchronizationContextDispatcher();
                     break;
                 default:
-                    var dispatcherType = Type.GetType(type);
-                    dispatcher = (MessageDispatcher)Activator.CreateInstance(dispatcherType);
+                    Type dispatcherType = Type.GetType(type);
+                    dispatcher = (MessageDispatcher) Activator.CreateInstance(dispatcherType);
                     break;
             }
 
             dispatcher.Throughput = throughput;
-          //  dispatcher.ThroughputDeadlineTime 
+            //  dispatcher.ThroughputDeadlineTime 
 
             return dispatcher;
         }

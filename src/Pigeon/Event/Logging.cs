@@ -1,10 +1,9 @@
-﻿using Akka.Actor;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor;
 
 namespace Akka.Event
 {
@@ -24,15 +23,18 @@ namespace Akka.Event
         {
             if (message == null)
                 throw new Exception("message is null");
-            var tmp = Console.ForegroundColor;
-        //    Console.ForegroundColor = ConsoleColor.Green;
+            ConsoleColor tmp = Console.ForegroundColor;
+            //    Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine(message);
-        //    Console.ForegroundColor = ConsoleColor.White;
+            //    Console.ForegroundColor = ConsoleColor.White;
         }
     }
+
     public class LoggingBus : ActorEventBus<object, Type>
     {
-        private List<ActorRef> loggers = new List<ActorRef>();
+        private static readonly LogLevel[] AllLogLevels = Enum.GetValues(typeof (LogLevel)).Cast<LogLevel>().ToArray();
+        private readonly List<ActorRef> loggers = new List<ActorRef>();
+        public LogLevel LogLevel { get; private set; }
 
         protected override bool IsSubClassification(Type parent, Type child)
         {
@@ -56,36 +58,36 @@ namespace Akka.Event
 
         public async void StartDefaultLoggers(ActorSystem system)
         {
-            var logName = SimpleName(this) + "(" + system.Name + ")";
-            var logLevel = Logging.LogLevelFor(system.Settings.LogLevel);
-            var loggerTypes = system.Settings.Loggers;
-            foreach(var loggerType in loggerTypes)
+            string logName = SimpleName(this) + "(" + system.Name + ")";
+            LogLevel logLevel = Logging.LogLevelFor(system.Settings.LogLevel);
+            IList<string> loggerTypes = system.Settings.Loggers;
+            foreach (string loggerType in loggerTypes)
             {
-                var actorClass = Type.GetType(loggerType);
+                Type actorClass = Type.GetType(loggerType);
                 if (actorClass == null)
                 {
                     //TODO: create real exceptions and refine error messages
                     throw new Exception("Can not use logger of type:" + loggerType);
                 }
-                var timeout = system.Settings.LoggerStartTimeout;
-                var task = AddLogger(system, actorClass, logLevel, logName);
+                TimeSpan timeout = system.Settings.LoggerStartTimeout;
+                Task task = AddLogger(system, actorClass, logLevel, logName);
                 if (await Task.WhenAny(task, Task.Delay(timeout)) == task)
                 {
-
                 }
                 else
                 {
-                     Publish(new Warning(logName, this.GetType(), "Logger " + logName + " did not respond within " + timeout + " to InitializeLogger(bus)")); 
+                    Publish(new Warning(logName, GetType(),
+                        "Logger " + logName + " did not respond within " + timeout + " to InitializeLogger(bus)"));
                 }
             }
-            Publish(new Debug(logName, this.GetType(), "Default Loggers started"));
-            this.SetLogLevel(logLevel);
+            Publish(new Debug(logName, GetType(), "Default Loggers started"));
+            SetLogLevel(logLevel);
         }
 
         private async Task AddLogger(ActorSystem system, Type actorClass, LogLevel logLevel, string logName)
         {
             //TODO: remove the newguid stuff
-            var name = "log" + system.Name + "-" + SimpleName(actorClass);
+            string name = "log" + system.Name + "-" + SimpleName(actorClass);
             ActorRef actor = null;
             try
             {
@@ -103,77 +105,77 @@ namespace Akka.Event
             await actor.Ask(new InitializeLogger(this));
         }
 
-        public void StartStdoutLogger(Settings config) 
+        public void StartStdoutLogger(Settings config)
         {
             SetUpStdoutLogger(config);
-            Publish(new Debug(SimpleName(this), this.GetType(), "StandardOutLogger started"));
+            Publish(new Debug(SimpleName(this), GetType(), "StandardOutLogger started"));
         }
 
         private void SetUpStdoutLogger(Settings config)
         {
-            var logLevel = Logging.LogLevelFor(config.StdoutLogLevel);
-            foreach (var level in AllLogLevels.Where(l => l >= logLevel))
+            LogLevel logLevel = Logging.LogLevelFor(config.StdoutLogLevel);
+            foreach (LogLevel level in AllLogLevels.Where(l => l >= logLevel))
             {
-                this.Subscribe(Logging.StandardOutLogger, Logging.ClassFor(level));
+                Subscribe(Logging.StandardOutLogger, Logging.ClassFor(level));
             }
         }
-  
-        private static readonly LogLevel[] AllLogLevels = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToArray();
 
-        public LogLevel LogLevel { get; private set; }
         public void SetLogLevel(LogLevel logLevel)
         {
-            this.LogLevel = LogLevel;
-            foreach(var logger in loggers)
+            LogLevel = LogLevel;
+            foreach (ActorRef logger in loggers)
             {
                 //subscribe to given log level and above
-                foreach (var level in AllLogLevels.Where(l => l >= logLevel))
+                foreach (LogLevel level in AllLogLevels.Where(l => l >= logLevel))
                 {
-                    this.Subscribe(logger, Logging.ClassFor(level));
+                    Subscribe(logger, Logging.ClassFor(level));
                 }
                 //unsubscribe to all levels below loglevel
-                foreach (var level in AllLogLevels.Where(l => l < logLevel))
+                foreach (LogLevel level in AllLogLevels.Where(l => l < logLevel))
                 {
-                    this.Unsubscribe(logger, Logging.ClassFor(level));
+                    Unsubscribe(logger, Logging.ClassFor(level));
                 }
             }
         }
-    } 
+    }
 
     public enum LogLevel
     {
         DebugLevel,
-        InfoLevel,        
+        InfoLevel,
         WarningLevel,
         ErrorLevel,
     }
+
     public abstract class LogEvent : NoSerializationVerificationNeeded
     {
         public LogEvent()
         {
-            this.Timestamp = DateTime.Now;
-            this.Thread = System.Threading.Thread.CurrentThread;
+            Timestamp = DateTime.Now;
+            Thread = Thread.CurrentThread;
         }
-        public abstract LogLevel LogLevel();
+
         public DateTime Timestamp { get; private set; }
-        public System.Threading.Thread Thread { get;private set; }
+        public Thread Thread { get; private set; }
         public string LogSource { get; protected set; }
         public Type LogClass { get; protected set; }
         public object Message { get; protected set; }
+        public abstract LogLevel LogLevel();
 
         public override string ToString()
         {
-            return string.Format("{0} {1} {2} - {3} [Thread {4}]", Timestamp, LogLevel(), LogSource, Message, Thread.ManagedThreadId);
+            return string.Format("{0} {1} {2} - {3} [Thread {4}]", Timestamp, LogLevel(), LogSource, Message,
+                Thread.ManagedThreadId);
         }
     }
 
     public class Info : LogEvent
     {
-        public Info(string logSource,Type logClass,object message)
+        public Info(string logSource, Type logClass, object message)
         {
-            this.LogSource = logSource;
-            this.LogClass = logClass;
-            this.Message = message;
+            LogSource = logSource;
+            LogClass = logClass;
+            Message = message;
         }
 
         public override LogLevel LogLevel()
@@ -186,9 +188,9 @@ namespace Akka.Event
     {
         public Debug(string logSource, Type logClass, object message)
         {
-            this.LogSource = logSource;
-            this.LogClass = logClass;
-            this.Message = message;
+            LogSource = logSource;
+            LogClass = logClass;
+            Message = message;
         }
 
         public override LogLevel LogLevel()
@@ -201,29 +203,28 @@ namespace Akka.Event
     {
         public Warning(string logSource, Type logClass, object message)
         {
-            this.LogSource = logSource;
-            this.LogClass = logClass;
-            this.Message = message;
+            LogSource = logSource;
+            LogClass = logClass;
+            Message = message;
         }
 
         public override LogLevel LogLevel()
-        {            
+        {
             return Event.LogLevel.WarningLevel;
         }
     }
 
     public class Error : LogEvent
     {
-
         public Error(Exception cause, string logSource, Type logClass, object message)
         {
-            this.Cause = cause;
-            this.LogSource = logSource;
-            this.LogClass = logClass;
-            this.Message = message;
+            Cause = cause;
+            LogSource = logSource;
+            LogClass = logClass;
+            Message = message;
         }
 
-        public Exception Cause { get;private set; }
+        public Exception Cause { get; private set; }
 
         public override LogLevel LogLevel()
         {
@@ -231,13 +232,13 @@ namespace Akka.Event
         }
     }
 
-    public class UnhandledMessage 
+    public class UnhandledMessage
     {
         internal UnhandledMessage(object message, ActorRef sender, ActorRef recipient)
         {
-            this.Message = message;
-            this.Sender = sender;
-            this.Recipient = recipient;
+            Message = message;
+            Sender = sender;
+            Recipient = recipient;
         }
 
         internal object Message { get; private set; }
@@ -249,10 +250,10 @@ namespace Akka.Event
     {
         public InitializeLogger(LoggingBus loggingBus)
         {
-            this.LoggingBus = loggingBus;
+            LoggingBus = loggingBus;
         }
 
-        public LoggingBus LoggingBus { get;private set; }
+        public LoggingBus LoggingBus { get; private set; }
     }
 
     public class LoggerInitialized : NoSerializationVerificationNeeded
@@ -266,7 +267,7 @@ namespace Akka.Event
             message
                 .Match()
                 .With<InitializeLogger>(m => Sender.Tell(new LoggerInitialized()))
-                .With<LogEvent>(m => 
+                .With<LogEvent>(m =>
                     Console.WriteLine(m))
                 .Default(Unhandled);
         }
@@ -274,20 +275,19 @@ namespace Akka.Event
 
     public abstract class LoggingAdapter
     {
+        protected bool isDebugEnabled;
+        protected bool isErrorEnabled;
+        protected bool isInfoEnabled;
+        protected bool isWarningEnabled;
         protected abstract void NotifyError(string message);
-        protected abstract void NotifyError(Exception cause,string message);
+        protected abstract void NotifyError(Exception cause, string message);
         protected abstract void NotifyWarning(string message);
         protected abstract void NotifyInfo(string message);
         protected abstract void NotifyDebug(string message);
 
-        protected bool isErrorEnabled;
-        protected bool isWarningEnabled;
-        protected bool isInfoEnabled;
-        protected bool isDebugEnabled;
-
         protected bool IsEnabled(LogLevel logLevel)
         {
-            switch(logLevel)
+            switch (logLevel)
             {
                 case LogLevel.DebugLevel:
                     return isDebugEnabled;
@@ -302,7 +302,7 @@ namespace Akka.Event
             }
         }
 
-        protected void NotifyLog(LogLevel logLevel,string message)
+        protected void NotifyLog(LogLevel logLevel, string message)
         {
             switch (logLevel)
             {
@@ -346,6 +346,7 @@ namespace Akka.Event
             if (isErrorEnabled)
                 NotifyError(message);
         }
+
         public void Info(string message)
         {
             if (isInfoEnabled)
@@ -353,10 +354,10 @@ namespace Akka.Event
         }
 
 
-        public void Debug(string format,params object[] args)
+        public void Debug(string format, params object[] args)
         {
             if (isDebugEnabled)
-                NotifyDebug(string.Format(format,args));
+                NotifyDebug(string.Format(format, args));
         }
 
         public void Warn(string format, params object[] args)
@@ -376,6 +377,7 @@ namespace Akka.Event
             if (isErrorEnabled)
                 NotifyError(string.Format(format, args));
         }
+
         public void Info(string format, params object[] args)
         {
             if (isInfoEnabled)
@@ -395,10 +397,11 @@ namespace Akka.Event
 
     public class BusLogging : LoggingAdapter
     {
-        private LoggingBus bus;
-        private string logSource;
-        private Type logClass;
-        public BusLogging (LoggingBus bus, string logSource, Type logClass)
+        private readonly LoggingBus bus;
+        private readonly Type logClass;
+        private readonly string logSource;
+
+        public BusLogging(LoggingBus bus, string logSource, Type logClass)
         {
             this.bus = bus;
             this.logSource = logSource;
@@ -409,6 +412,7 @@ namespace Akka.Event
             isInfoEnabled = bus.LogLevel <= LogLevel.InfoLevel;
             isDebugEnabled = bus.LogLevel <= LogLevel.DebugLevel;
         }
+
         protected override void NotifyError(string message)
         {
             bus.Publish(new Error(null, logSource, logClass, message));
@@ -433,42 +437,44 @@ namespace Akka.Event
         {
             bus.Publish(new Debug(logSource, logClass, message));
         }
-
     }
 
     public static class Logging
     {
         public static readonly StandardOutLogger StandardOutLogger = new StandardOutLogger();
+
         public static Type ClassFor(LogLevel logLevel)
         {
             switch (logLevel)
             {
                 case LogLevel.DebugLevel:
-                    return typeof(Debug);
+                    return typeof (Debug);
                 case LogLevel.InfoLevel:
-                    return typeof(Info);
+                    return typeof (Info);
                 case LogLevel.WarningLevel:
-                    return typeof(Warning);
+                    return typeof (Warning);
                 case LogLevel.ErrorLevel:
-                    return typeof(Error);
+                    return typeof (Error);
                 default:
                     throw new ArgumentException("Unknown LogLevel", "logLevel");
             }
         }
+
         public static LoggingAdapter GetLogger(IActorContext cell)
         {
             string logSource = cell.Self.ToString();
             Type logClass = cell.Props.Type;
-           
+
             return new BusLogging(cell.System.EventStream, logSource, logClass);
         }
-        public static LoggingAdapter GetLogger(ActorSystem system,object logSourceObj)
+
+        public static LoggingAdapter GetLogger(ActorSystem system, object logSourceObj)
         {
             //TODO: refine this
-            string logSource = logSourceObj.ToString() ;
+            string logSource = logSourceObj.ToString();
             Type logClass = null;
             if (logSourceObj is Type)
-                logClass = (Type)logSourceObj;
+                logClass = (Type) logSourceObj;
             else
                 logClass = logSourceObj.GetType();
 

@@ -1,19 +1,14 @@
 ﻿using Akka.Event;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
     /// <summary>
-    /// Class EventStreamActor.
+    ///     Class EventStreamActor.
     /// </summary>
     public class EventStreamActor : UntypedActor
     {
         /// <summary>
-        /// Processor for user defined messages.
+        ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
         protected override void OnReceive(object message)
@@ -22,12 +17,12 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Class GuardianActor.
+    ///     Class GuardianActor.
     /// </summary>
     public class GuardianActor : UntypedActor
     {
         /// <summary>
-        /// Processor for user defined messages.
+        ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
         protected override void OnReceive(object message)
@@ -37,24 +32,27 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Class DeadLetterActorRef.
+    ///     Class DeadLetterActorRef.
     /// </summary>
     public class DeadLetterActorRef : ActorRef
     {
         /// <summary>
-        /// The event stream
+        ///     The event stream
         /// </summary>
-        private EventStream eventStream;
+        private readonly EventStream eventStream;
+
         /// <summary>
-        /// The path
+        ///     The provider
+        /// </summary>
+        private readonly ActorRefProvider provider;
+
+        /// <summary>
+        ///     The path
         /// </summary>
         private ActorPath path;
+
         /// <summary>
-        /// The provider
-        /// </summary>
-        private ActorRefProvider provider;
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DeadLetterActorRef"/> class.
+        ///     Initializes a new instance of the <see cref="DeadLetterActorRef" /> class.
         /// </summary>
         /// <param name="provider">The provider.</param>
         /// <param name="path">The path.</param>
@@ -63,10 +61,11 @@ namespace Akka.Actor
         {
             this.eventStream = eventStream;
             this.path = path;
-            this.provider = provider; 
+            this.provider = provider;
         }
+
         /// <summary>
-        /// Specials the handle.
+        ///     Specials the handle.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
@@ -77,7 +76,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Tells the internal.
+        ///     Tells the internal.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
@@ -94,8 +93,9 @@ namespace Akka.Actor
                 .Default(m =>
                 {
                     if (!SpecialHandle(message, sender))
-                        eventStream.Publish(new DeadLetter(message, sender == ActorRef.NoSender ? provider.DeadLetters : sender, this));
+                        eventStream.Publish(new DeadLetter(message, sender == NoSender ? provider.DeadLetters : sender,
+                            this));
                 });
-        }        
+        }
     }
 }

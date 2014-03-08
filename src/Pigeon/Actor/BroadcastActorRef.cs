@@ -1,18 +1,16 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
     public class BroadcastActorRef : ActorRef
     {
-        private ConcurrentDictionary<ActorRef, ActorRef> actors = new ConcurrentDictionary<ActorRef, ActorRef>();
+        private readonly ConcurrentDictionary<ActorRef, ActorRef> actors =
+            new ConcurrentDictionary<ActorRef, ActorRef>();
+
         public BroadcastActorRef(params ActorRef[] actors)
         {
-            foreach (var a in actors)
+            foreach (ActorRef a in actors)
                 this.actors.TryAdd(a, a);
         }
 

@@ -1,18 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+
 namespace Akka.Actor
 {
     public interface IActorContext : IActorRefFactory
-    {        
+    {
         LocalActorRef Self { get; }
         Props Props { get; }
-        void Become(Receive receive);
-        void Unbecome();
         ActorRef Sender { get; }
-        InternalActorRef Child(string name);
-        IEnumerable<InternalActorRef> GetChildren();
         ActorSystem System { get; }
         InternalActorRef Parent { get; }
+        void Become(Receive receive);
+        void Unbecome();
+        InternalActorRef Child(string name);
+        IEnumerable<InternalActorRef> GetChildren();
         void Watch(ActorRef subject);
         void Unwatch(ActorRef subject);
 

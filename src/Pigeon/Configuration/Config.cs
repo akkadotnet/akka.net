@@ -1,17 +1,13 @@
-﻿using Akka.Configuration.Hocon;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.Configuration.Hocon;
 
 namespace Akka.Configuration
 {
     public class Config
     {
-        private HoconValue node;
-        private Config fallback;
+        private readonly Config fallback;
+        private readonly HoconValue node;
 
         public Config()
         {
@@ -22,17 +18,17 @@ namespace Akka.Configuration
             this.node = node;
         }
 
-        public Config(Config source,Config fallback)
+        public Config(Config source, Config fallback)
         {
-            this.node = source.node;
+            node = source.node;
             this.fallback = fallback;
         }
 
         private HoconValue GetNode(string path)
         {
-            var elements = path.Split('.');
-            var node = this.node;
-            foreach (var key in elements)
+            string[] elements = path.Split('.');
+            HoconValue node = this.node;
+            foreach (string key in elements)
             {
                 node = node.GetChildObject(key);
                 if (node == null)
@@ -48,16 +44,16 @@ namespace Akka.Configuration
 
         public bool GetBoolean(string path, bool @default = false)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             if (node == null)
                 return @default;
 
             return node.GetBoolean();
         }
 
-        public int GetInt(string path,int @default=0)
+        public int GetInt(string path, int @default = 0)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             if (node == null)
                 return @default;
 
@@ -66,26 +62,25 @@ namespace Akka.Configuration
 
         public long GetLong(string path, long @default = 0)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             if (node == null)
                 return @default;
 
             return node.GetLong();
         }
 
-        public string GetString(string path,string @default=null)
+        public string GetString(string path, string @default = null)
         {
-        
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             if (node == null)
                 return @default;
 
-            return (string)node.GetString();
+            return node.GetString();
         }
 
         public float GetFloat(string path, float @default = 0)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             if (node == null)
                 return @default;
 
@@ -94,7 +89,7 @@ namespace Akka.Configuration
 
         public decimal GetDecimal(string path, decimal @default = 0)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             if (node == null)
                 return @default;
 
@@ -103,7 +98,7 @@ namespace Akka.Configuration
 
         public double GetDouble(string path, double @default = 0)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             if (node == null)
                 return @default;
 
@@ -112,67 +107,67 @@ namespace Akka.Configuration
 
         public IList<Boolean> GetBooleanList(string path)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             return node.GetBooleanList();
         }
 
         public IList<decimal> GetDecimalList(string path)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             return node.GetDecimalList();
         }
 
         public IList<float> GetFloatList(string path)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             return node.GetFloatList();
         }
 
         public IList<double> GetDoubleList(string path)
         {
-            var node = GetNode(path);           
+            HoconValue node = GetNode(path);
             return node.GetDoubleList();
         }
 
         public IList<int> GetIntList(string path)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             return node.GetIntList();
         }
 
         public IList<long> GetLongList(string path)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             return node.GetLongList();
         }
 
         public IList<byte> GetByteList(string path)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             return node.GetByteList();
         }
 
         public IList<string> GetStringList(string path)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             return node.GetStringList();
         }
 
         public Config GetConfig(string path)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             return new Config(node);
         }
 
         public HoconValue GetValue(string path)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             return node;
         }
 
-        public TimeSpan GetMillisDuration(string path,TimeSpan? @default=null)
+        public TimeSpan GetMillisDuration(string path, TimeSpan? @default = null)
         {
-            var node = GetNode(path);
+            HoconValue node = GetNode(path);
             if (node == null)
                 return @default.Value;
 
@@ -181,7 +176,7 @@ namespace Akka.Configuration
 
         public override string ToString()
         {
-            return this.node.ToString();
+            return node.ToString();
         }
 
         public Config WithFallback(Config fallback)

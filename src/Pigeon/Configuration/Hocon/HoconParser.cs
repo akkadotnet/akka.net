@@ -1,51 +1,50 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Akka.Configuration.Hocon
 {
     public class Parser
     {
+        private readonly List<HoconSubstitution> substitutions = new List<HoconSubstitution>();
+        private HoconTokenizer reader;
+        private HoconValue root;
+
         public static HoconValue Parse(string text)
         {
             return new Parser().ParseText(text);
         }
 
-        private HoconTokenizer reader;
-        private HoconValue root;
-        private List<HoconSubstitution> substitutions = new List<HoconSubstitution>();
         private HoconValue ParseText(string text)
         {
             root = new HoconValue();
             reader = new HoconTokenizer(text);
             reader.PullWhitespaceAndComments();
-            ParseObject( root,true);
+            ParseObject(root, true);
 
-            Config c = new Config(root);
-            foreach(var sub in substitutions)
+            var c = new Config(root);
+            foreach (HoconSubstitution sub in substitutions)
             {
-                var res = c.GetValue(sub.Path);
+                HoconValue res = c.GetValue(sub.Path);
                 if (res == null)
                     throw new Exception("Unresolved substitution:" + sub.Path);
                 sub.ResolvedValue = res;
-
             }
             return root;
         }
 
-        private void ParseObject( HoconValue owner,bool root)
+        private void ParseObject(HoconValue owner, bool root)
         {
             if (owner.IsObject())
             {
                 //the value of this KVP is already an object
             }
             else
-            {      
+            {
                 //the value of this KVP is not an object, thus, we should add a new
-                owner.NewValue(new HoconObject()); 
+                owner.NewValue(new HoconObject());
             }
 
-            var currentObject = owner.GetObject();
+            HoconObject currentObject = owner.GetObject();
 
             while (!reader.EoF)
             {
@@ -55,13 +54,13 @@ namespace Akka.Configuration.Hocon
                     case TokenType.EoF:
                         break;
                     case TokenType.Key:
-                        var value = currentObject.GetOrCreateKey(t.Value.ToString());
-                        ParseKeyContent( value);
+                        HoconValue value = currentObject.GetOrCreateKey(t.Value);
+                        ParseKeyContent(value);
                         if (!root)
                             return;
                         break;
-                    
-                    case TokenType.ObjectEnd:                        
+
+                    case TokenType.ObjectEnd:
                         return;
                 }
             }
@@ -75,19 +74,19 @@ namespace Akka.Configuration.Hocon
                 switch (t.Type)
                 {
                     case TokenType.Dot:
-                        ParseObject(value,false);
-                        return; 
+                        ParseObject(value, false);
+                        return;
                     case TokenType.Assign:
                         ParseValue(value);
                         return;
                     case TokenType.ObjectStart:
-                        ParseObject( value,true);
+                        ParseObject(value, true);
                         return;
                 }
-            }            
+            }
         }
 
-        public void ParseValue( HoconValue owner)
+        public void ParseValue(HoconValue owner)
         {
             if (reader.EoF)
                 throw new Exception("End of file reached while trying to read a value");
@@ -109,22 +108,22 @@ namespace Akka.Configuration.Hocon
                             isObject = false;
                             owner.Clear();
                         }
-                        var lit = new HoconLiteral()
+                        var lit = new HoconLiteral
                         {
                             Value = t.Value
                         };
                         owner.AppendValue(lit);
-                        
+
                         break;
                     case TokenType.ObjectStart:
                         ParseObject(owner, true);
                         break;
                     case TokenType.ArrayStart:
-                        var arr = ParseArray();
+                        HoconArray arr = ParseArray();
                         owner.AppendValue(arr);
                         break;
                     case TokenType.Substitute:
-                        var sub = ParseSubstitution((string)t.Value);
+                        HoconSubstitution sub = ParseSubstitution(t.Value);
                         substitutions.Add(sub);
                         owner.AppendValue(sub);
                         break;
@@ -134,15 +133,15 @@ namespace Akka.Configuration.Hocon
                     ParseTrailingWhitespace(owner);
                 }
             }
-            
+
             IgnoreComma();
         }
 
         private void ParseTrailingWhitespace(HoconValue owner)
         {
-            var ws = reader.PullSpaceOrTab();
+            Token ws = reader.PullSpaceOrTab();
             //single line ws should be included if string concat
-            if (((string)ws.Value).Length > 0)
+            if (ws.Value.Length > 0)
             {
                 var wsLit = new HoconLiteral
                 {
@@ -152,7 +151,7 @@ namespace Akka.Configuration.Hocon
             }
         }
 
-        private static HoconSubstitution ParseSubstitution(string value )
+        private static HoconSubstitution ParseSubstitution(string value)
         {
             return new HoconSubstitution(value);
         }
@@ -169,7 +168,7 @@ namespace Akka.Configuration.Hocon
             }
             reader.PullArrayEnd();
             return arr;
-        }   
+        }
 
         private void IgnoreComma()
         {

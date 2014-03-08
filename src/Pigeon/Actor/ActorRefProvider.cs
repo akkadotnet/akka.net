@@ -1,111 +1,215 @@
-﻿using Akka.Dispatch;
-using Akka.Dispatch.SysMsg;
-using Akka.Event;
-using Akka.Routing;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
+using Akka.Routing;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    ///     Class ActorRefProvider.
+    /// </summary>
     public abstract class ActorRefProvider
     {
-        public ActorRefProvider(ActorSystem system)
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="ActorRefProvider" /> class.
+        /// </summary>
+        /// <param name="system">The system.</param>
+        protected ActorRefProvider(ActorSystem system)
         {
-            this.System = system;            
+            System = system;
         }
 
-        public ActorPath RootPath { get;private set; }
-        public ActorPath TempNode { get;private set; }
-        
+        /// <summary>
+        ///     Gets the root path.
+        /// </summary>
+        /// <value>The root path.</value>
+        public ActorPath RootPath { get; private set; }
 
+        /// <summary>
+        ///     Gets the temporary node.
+        /// </summary>
+        /// <value>The temporary node.</value>
+        public ActorPath TempNode { get; private set; }
+
+
+        /// <summary>
+        ///     Gets the temporary container.
+        /// </summary>
+        /// <value>The temporary container.</value>
+        public VirtualPathContainer TempContainer { get; private set; }
+
+        /// <summary>
+        ///     Gets or sets the system.
+        /// </summary>
+        /// <value>The system.</value>
+        public ActorSystem System { get; protected set; }
+
+        /// <summary>
+        ///     Gets or sets the root cell.
+        /// </summary>
+        /// <value>The root cell.</value>
+        public ActorCell RootCell { get; protected set; }
+
+        /// <summary>
+        ///     Gets or sets the dead letters.
+        /// </summary>
+        /// <value>The dead letters.</value>
+        public ActorRef DeadLetters { get; protected set; }
+
+        /// <summary>
+        ///     Gets or sets the guardian.
+        /// </summary>
+        /// <value>The guardian.</value>
+        public LocalActorRef Guardian { get; protected set; }
+
+        /// <summary>
+        ///     Gets or sets the system guardian.
+        /// </summary>
+        /// <value>The system guardian.</value>
+        public LocalActorRef SystemGuardian { get; protected set; }
+
+        /// <summary>
+        ///     Gets or sets the address.
+        /// </summary>
+        /// <value>The address.</value>
+        public virtual Address Address { get; set; }
+
+        /// <summary>
+        ///     Initializes this instance.
+        /// </summary>
         public virtual void Init()
         {
-            this.RootPath = new RootActorPath(this.Address,"");
-            this.TempNode = RootPath / "temp";
+            RootPath = new RootActorPath(Address);
+            TempNode = RootPath/"temp";
 
-            this.RootCell = new ActorCell(System, "", new ConcurrentQueueMailbox());
-            this.DeadLetters = new DeadLetterActorRef(this, RootPath / "deadLetters", this.System.EventStream);
-            this.Guardian = (LocalActorRef)RootCell.ActorOf<GuardianActor>("user");
-            this.SystemGuardian = (LocalActorRef)RootCell.ActorOf<GuardianActor>("system");
-            this.TempContainer = new VirtualPathContainer(this, TempNode, null);
+            RootCell = new ActorCell(System, "", new ConcurrentQueueMailbox());
+            DeadLetters = new DeadLetterActorRef(this, RootPath/"deadLetters", System.EventStream);
+            Guardian = (LocalActorRef) RootCell.ActorOf<GuardianActor>("user");
+            SystemGuardian = (LocalActorRef) RootCell.ActorOf<GuardianActor>("system");
+            TempContainer = new VirtualPathContainer(this, TempNode, null);
         }
 
-        public void RegisterTempActor(InternalActorRef actorRef,ActorPath path)
+        /// <summary>
+        ///     Registers the temporary actor.
+        /// </summary>
+        /// <param name="actorRef">The actor reference.</param>
+        /// <param name="path">The path.</param>
+        public void RegisterTempActor(InternalActorRef actorRef, ActorPath path)
         {
             TempContainer.AddChild(path.Name, actorRef);
         }
 
+        /// <summary>
+        ///     Unregisters the temporary actor.
+        /// </summary>
+        /// <param name="path">The path.</param>
         public void UnregisterTempActor(ActorPath path)
         {
             TempContainer.RemoveChild(path.Name);
         }
+
+        /// <summary>
+        ///     Temporaries the path.
+        /// </summary>
+        /// <returns>ActorPath.</returns>
         public ActorPath TempPath()
         {
-            return TempNode / Guid.NewGuid().ToString();
+            return TempNode/Guid.NewGuid().ToString();
         }
 
-        public VirtualPathContainer TempContainer { get;private set; }
-        public ActorSystem System { get;protected set; }
-        public ActorCell RootCell { get; protected set; }
-        public ActorRef DeadLetters { get; protected set; }
-        public LocalActorRef Guardian { get; protected set; }
-        public LocalActorRef SystemGuardian { get; protected set; }
-
+        /// <summary>
+        ///     Roots the guardian at.
+        /// </summary>
+        /// <param name="address">The address.</param>
+        /// <returns>ActorRef.</returns>
         public virtual ActorRef RootGuardianAt(Address address)
         {
-            return this.RootCell.Self;
+            return RootCell.Self;
         }
 
-        public abstract InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path);
-        public ActorRef ResolveActorRef(string path){
+        /// <summary>
+        ///     Actors the of.
+        /// </summary>
+        /// <param name="system">The system.</param>
+        /// <param name="props">The props.</param>
+        /// <param name="supervisor">The supervisor.</param>
+        /// <param name="path">The path.</param>
+        /// <returns>InternalActorRef.</returns>
+        public abstract InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
+            ActorPath path);
+
+        /// <summary>
+        ///     Resolves the actor reference.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns>ActorRef.</returns>
+        public ActorRef ResolveActorRef(string path)
+        {
             if (path == "")
                 return ActorRef.NoSender;
 
-            var actorPath = ActorPath.Parse(path);
+            ActorPath actorPath = ActorPath.Parse(path);
             return ResolveActorRef(actorPath);
         }
 
+        /// <summary>
+        ///     Resolves the actor reference.
+        /// </summary>
+        /// <param name="actorPath">The actor path.</param>
+        /// <returns>ActorRef.</returns>
         public abstract ActorRef ResolveActorRef(ActorPath actorPath);
 
-        public virtual Address Address
-        {
-            get;
-            set;
-        }
-
+        /// <summary>
+        ///     Afters the send system message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public void AfterSendSystemMessage(SystemMessage message)
         {
             message.Match()
                 .With<Watch>(m => { })
                 .With<Unwatch>(m => { });
-                
-    //    message match {
-    //  // Sending to local remoteWatcher relies strong delivery guarantees of local send, i.e.
-    //  // default dispatcher must not be changed to an implementation that defeats that
-    //  case rew: RemoteWatcher.Rewatch ⇒
-    //    remoteWatcher ! RemoteWatcher.RewatchRemote(rew.watchee, rew.watcher)
-    //  case Watch(watchee, watcher)   ⇒ remoteWatcher ! RemoteWatcher.WatchRemote(watchee, watcher)
-    //  case Unwatch(watchee, watcher) ⇒ remoteWatcher ! RemoteWatcher.UnwatchRemote(watchee, watcher)
-    //  case _                         ⇒
-    //}
+
+            //    message match {
+            //  // Sending to local remoteWatcher relies strong delivery guarantees of local send, i.e.
+            //  // default dispatcher must not be changed to an implementation that defeats that
+            //  case rew: RemoteWatcher.Rewatch ⇒
+            //    remoteWatcher ! RemoteWatcher.RewatchRemote(rew.watchee, rew.watcher)
+            //  case Watch(watchee, watcher)   ⇒ remoteWatcher ! RemoteWatcher.WatchRemote(watchee, watcher)
+            //  case Unwatch(watchee, watcher) ⇒ remoteWatcher ! RemoteWatcher.UnwatchRemote(watchee, watcher)
+            //  case _                         ⇒
+            //}
         }
     }
 
-    public class LocalActorRefProvider : ActorRefProvider
+    /// <summary>
+    ///     Class LocalActorRefProvider. This class cannot be inherited.
+    /// </summary>
+    public sealed class LocalActorRefProvider : ActorRefProvider
     {
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="LocalActorRefProvider" /> class.
+        /// </summary>
+        /// <param name="system">The system.</param>
         public LocalActorRefProvider(ActorSystem system) : base(system)
         {
-            this.Address = new Address("akka", this.System.Name); //TODO: this should not work this way...
+            Address = new Address("akka", System.Name); //TODO: this should not work this way...
         }
 
-        public override InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path)
+        /// <summary>
+        ///     Actors the of.
+        /// </summary>
+        /// <param name="system">The system.</param>
+        /// <param name="props">The props.</param>
+        /// <param name="supervisor">The supervisor.</param>
+        /// <param name="path">The path.</param>
+        /// <returns>InternalActorRef.</returns>
+        public override InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
+            ActorPath path)
         {
-            var mailbox = System.Mailboxes.FromConfig(props.Mailbox);
+            Mailbox mailbox = System.Mailboxes.FromConfig(props.Mailbox);
 
-            ActorCell cell = null;
+            ActorCell cell;
             if (props.RouterConfig is NoRouter)
             {
                 cell = new ActorCell(system, supervisor, props, path, mailbox);
@@ -116,35 +220,35 @@ namespace Akka.Actor
             }
             cell.NewActor();
 
-          //  parentContext.Watch(cell.Self);
+            //  parentContext.Watch(cell.Self);
             return cell.Self;
         }
 
+        /// <summary>
+        ///     Resolves the actor reference.
+        /// </summary>
+        /// <param name="actorPath">The actor path.</param>
+        /// <returns>ActorRef.</returns>
+        /// <exception cref="System.NotSupportedException">The provided actor path is not valid in the LocalActorRefProvider</exception>
         public override ActorRef ResolveActorRef(ActorPath actorPath)
         {
-            if (this.Address.Equals(actorPath.Address))
+            if (Address.Equals(actorPath.Address))
             {
                 if (actorPath.Elements.Head() == "temp")
                 {
                     //skip ""/"temp", 
-                    var parts = actorPath.Elements.Drop(1).ToArray();
+                    string[] parts = actorPath.Elements.Drop(1).ToArray();
                     return TempContainer.GetChild(parts);
                 }
-                else
+                //standard
+                ActorCell currentContext = RootCell;
+                foreach (string part in actorPath.Elements)
                 {
-                    //standard
-                    var currentContext = RootCell;
-                    foreach (var part in actorPath.Elements)
-                    {
-                        currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
-                    }
-                    return currentContext.Self;
-                }                
+                    currentContext = ((LocalActorRef) currentContext.Child(part)).Cell;
+                }
+                return currentContext.Self;
             }
-            else
-            {
-                throw new NotSupportedException("The provided actor path is not valid in the LocalActorRefProvider");
-            }
+            throw new NotSupportedException("The provided actor path is not valid in the LocalActorRefProvider");
         }
     }
 }

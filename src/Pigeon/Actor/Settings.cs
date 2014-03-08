@@ -1,46 +1,44 @@
-﻿using Akka.Configuration;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.Configuration;
 
 namespace Akka.Actor
 {
     /// <summary>
-    /// Settings are the overall ActorSystem Settings which also provides a convenient access to the Config object.
-    /// For more detailed information about the different possible configuration options, look in the Akka .NET Documentation under "Configuration"
+    ///     Settings are the overall ActorSystem Settings which also provides a convenient access to the Config object.
+    ///     For more detailed information about the different possible configuration options, look in the Akka .NET
+    ///     Documentation under "Configuration"
     /// </summary>
     public class Settings
-    {        
+    {
         public Settings(ActorSystem system, Config config)
         {
-            var fallback = ConfigurationFactory.Default();
+            Config fallback = ConfigurationFactory.Default();
 
-            var merged =  config == null ? fallback : new Config(config, fallback);
+            Config merged = config == null ? fallback : new Config(config, fallback);
 
-            this.System = system;
-            this.Config = merged;
+            System = system;
+            Config = merged;
 
-            this.ConfigVersion = Config.GetString("akka.version");
-            this.ProviderClass = Config.GetString("akka.actor.provider");
-            this.SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy");
+            ConfigVersion = Config.GetString("akka.version");
+            ProviderClass = Config.GetString("akka.actor.provider");
+            SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy");
 
-            this.CreationTimeout = Config.GetMillisDuration("akka.actor.creation-timeout");
-            this.UnstartedPushTimeout = Config.GetMillisDuration("akka.actor.unstarted-push-timeout");
+            CreationTimeout = Config.GetMillisDuration("akka.actor.creation-timeout");
+            UnstartedPushTimeout = Config.GetMillisDuration("akka.actor.unstarted-push-timeout");
 
-            this.SerializeAllMessages = Config.GetBoolean("akka.actor.serialize-messages");
-            this.SerializeAllCreators = Config.GetBoolean("akka.actor.serialize-creators");
+            SerializeAllMessages = Config.GetBoolean("akka.actor.serialize-messages");
+            SerializeAllCreators = Config.GetBoolean("akka.actor.serialize-creators");
 
-            this.LogLevel = Config.GetString("akka.loglevel");
-            this.StdoutLogLevel = Config.GetString("akka.stdout-loglevel");
-            this.Loggers = Config.GetStringList("akka.loggers");
+            LogLevel = Config.GetString("akka.loglevel");
+            StdoutLogLevel = Config.GetString("akka.stdout-loglevel");
+            Loggers = Config.GetStringList("akka.loggers");
 
-            this.LoggerStartTimeout = Config.GetMillisDuration("akka.logger-startup-timeout");
+            LoggerStartTimeout = Config.GetMillisDuration("akka.logger-startup-timeout");
 
             //handled
-            this.LogConfigOnStart = Config.GetBoolean("akka.log-config-on-start");
-            this.LogDeadLetters = 0;
+            LogConfigOnStart = Config.GetBoolean("akka.log-config-on-start");
+            LogDeadLetters = 0;
             switch (Config.GetString("akka.log-dead-letters"))
             {
                 case "on":
@@ -55,14 +53,14 @@ namespace Akka.Actor
                     LogDeadLetters = Config.GetInt("akka.log-dead-letters");
                     break;
             }
-            this.LogDeadLettersDuringShutdown = Config.GetBoolean("akka.log-dead-letters-during-shutdown");
-            this.AddLoggingReceive = Config.GetBoolean("akka.actor.debug.receive");
-            this.DebugAutoReceive = Config.GetBoolean("akka.actor.debug.autoreceive");
-            this.DebugLifecycle = Config.GetBoolean("akka.actor.debug.lifecycle");
-            this.DebugEventStream = Config.GetBoolean("akka.actor.debug.event-stream");
-            this.DebugUnhandledMessage = Config.GetBoolean("akka.actor.debug.unhandled");
-            this.DebugRouterMisConfiguration = Config.GetBoolean("akka.actor.debug.router-misConfiguration");
-            this.Home = Config.GetString("akka.home") ?? "";
+            LogDeadLettersDuringShutdown = Config.GetBoolean("akka.log-dead-letters-during-shutdown");
+            AddLoggingReceive = Config.GetBoolean("akka.actor.debug.receive");
+            DebugAutoReceive = Config.GetBoolean("akka.actor.debug.autoreceive");
+            DebugLifecycle = Config.GetBoolean("akka.actor.debug.lifecycle");
+            DebugEventStream = Config.GetBoolean("akka.actor.debug.event-stream");
+            DebugUnhandledMessage = Config.GetBoolean("akka.actor.debug.unhandled");
+            DebugRouterMisConfiguration = Config.GetBoolean("akka.actor.debug.router-misConfiguration");
+            Home = Config.GetString("akka.home") ?? "";
 
             //TODO: dunno.. we dont have FiniteStateMachines, dont know what the rest is
             /*              
@@ -74,14 +72,14 @@ namespace Akka.Actor
         }
 
         public ActorSystem System { get; private set; }
-        public Config Config { get;private set; }
+        public Config Config { get; private set; }
 
-        public string ConfigVersion { get;private set; }
+        public string ConfigVersion { get; private set; }
         public string ProviderClass { get; private set; }
         public string SupervisorStrategyClass { get; private set; }
-        public bool SerializeAllMessages { get;private set; }
+        public bool SerializeAllMessages { get; private set; }
         public bool SerializeAllCreators { get; private set; }
-        public TimeSpan CreationTimeout { get;private set; }
+        public TimeSpan CreationTimeout { get; private set; }
         public TimeSpan UnstartedPushTimeout { get; private set; }
         public string LogLevel { get; private set; }
         public string StdoutLogLevel { get; private set; }

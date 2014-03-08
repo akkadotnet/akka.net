@@ -1,20 +1,15 @@
-﻿using Akka.Actor;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System;
 using System.Threading.Tasks;
+using Akka.Actor;
 
 namespace Akka.Dispatch.SysMsg
 {
-
- /**
+    /**
  * public API
  */
 //@SerialVersionUID(1L)
 //private[akka] case class Create(failure: Option[ActorInitializationException]) extends SystemMessage // sent to self from Dispatcher.register
-///**
-
+    /// **
     public abstract class SystemMessage : NoSerializationVerificationNeeded
     {
     }
@@ -25,52 +20,55 @@ namespace Akka.Dispatch.SysMsg
 
     public class DeathWatchNotification : SystemMessage
     {
-        public DeathWatchNotification(ActorRef actor,bool existenceConfirmed,bool addressTerminated)
+        public DeathWatchNotification(ActorRef actor, bool existenceConfirmed, bool addressTerminated)
         {
-            this.Actor = actor;
-            this.ExistenceConfirmed = existenceConfirmed;
-            this.AddressTerminated = addressTerminated;
+            Actor = actor;
+            ExistenceConfirmed = existenceConfirmed;
+            AddressTerminated = addressTerminated;
         }
 
-        public ActorRef Actor { get;private set; }
+        public ActorRef Actor { get; private set; }
 
-        public bool ExistenceConfirmed { get;private set; }
+        public bool ExistenceConfirmed { get; private set; }
 
-        public bool AddressTerminated { get;private set; }
+        public bool AddressTerminated { get; private set; }
     }
 
     public class Failed : SystemMessage
     {
         public Failed(ActorRef child, Exception cause)
         {
-            this.Child = child;
-            this.Cause = cause;
+            Child = child;
+            Cause = cause;
         }
-        public ActorRef Child { get;private set; }
+
+        public ActorRef Child { get; private set; }
         public Exception Cause { get; private set; }
     }
 
     public class Supervise : SystemMessage
     {
-        public Supervise(ActorRef child,bool async)
+        public Supervise(ActorRef child, bool async)
         {
-            this.Child = child;
-            this.Async = async;
+            Child = child;
+            Async = async;
         }
 
-        public bool Async { get;private set; }
-        public ActorRef Child { get;private set; }
+        public bool Async { get; private set; }
+        public ActorRef Child { get; private set; }
     }
+
     //used to start watching another actor (deathwatch)
     public class Watch : SystemMessage
     {
-        public Watch(ActorRef watchee,ActorRef watcher)
+        public Watch(ActorRef watchee, ActorRef watcher)
         {
-            this.Watchee = watchee;
-            this.Watcher = watcher;
+            Watchee = watchee;
+            Watcher = watcher;
         }
-        public ActorRef Watchee { get;private set; }
-        public ActorRef Watcher { get;private set; }
+
+        public ActorRef Watchee { get; private set; }
+        public ActorRef Watcher { get; private set; }
     }
 
     //used to unsubscribe to deathwatch
@@ -78,29 +76,31 @@ namespace Akka.Dispatch.SysMsg
     {
         public Unwatch(ActorRef watchee, ActorRef watcher)
         {
-            this.Watchee = watchee;
-            this.Watcher = watcher;
+            Watchee = watchee;
+            Watcher = watcher;
         }
-        public ActorRef Watchee { get;private set; }
-        public ActorRef Watcher { get;private set; }
+
+        public ActorRef Watchee { get; private set; }
+        public ActorRef Watcher { get; private set; }
     }
 
     public class ActorTask : SystemMessage
     {
-        public Task Task { get; private set; }
-
         public ActorTask(Task task)
         {
-            this.Task = task;
+            Task = task;
         }
+
+        public Task Task { get; private set; }
     }
 
     public class CompleteFuture : SystemMessage
     {
         public CompleteFuture(Action action)
         {
-            this.SetResult = action;
+            SetResult = action;
         }
+
         public Action SetResult { get; private set; }
     }
 
@@ -112,17 +112,17 @@ namespace Akka.Dispatch.SysMsg
     {
         public Recreate(Exception cause)
         {
-            this.Cause = cause;
+            Cause = cause;
         }
 
-        public Exception Cause { get;private set; }
+        public Exception Cause { get; private set; }
     }
 
     public class Resume : SystemMessage
     {
         public Resume(Exception causedByFailure)
         {
-            this.CausedByFailure = causedByFailure;
+            CausedByFailure = causedByFailure;
         }
 
         public Exception CausedByFailure { get; set; }
@@ -140,8 +140,9 @@ namespace Akka.Dispatch.SysMsg
     {
         public StopChild(LocalActorRef child)
         {
-            this.Child = child;
+            Child = child;
         }
+
         public LocalActorRef Child { get; private set; }
     }
 
@@ -149,17 +150,14 @@ namespace Akka.Dispatch.SysMsg
     {
         public Escalate(Exception reason)
         {
-            this.Reason = reason;
+            Reason = reason;
         }
+
         public Exception Reason { get; private set; }
     }
-
-    
-
 
 
     public class Terminate : SystemMessage
     {
     }
-
 }

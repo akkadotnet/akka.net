@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Akka.Tools
 {
-
     public class ConcurrentSet<T> : ICollection<T>, IEnumerable<T>, IEnumerable
     {
-        ConcurrentDictionary<T, byte> storage;
+        private readonly ConcurrentDictionary<T, byte> storage;
 
         public ConcurrentSet()
         {
@@ -30,7 +26,8 @@ namespace Akka.Tools
 
         public ConcurrentSet(IEnumerable<T> collection, IEqualityComparer<T> comparer)
         {
-            storage = new ConcurrentDictionary<T, byte>(collection.Select(_ => new KeyValuePair<T, byte>(_, 0)), comparer);
+            storage = new ConcurrentDictionary<T, byte>(collection.Select(_ => new KeyValuePair<T, byte>(_, 0)),
+                comparer);
         }
 
         public ConcurrentSet(int concurrencyLevel, int capacity)
@@ -40,7 +37,8 @@ namespace Akka.Tools
 
         public ConcurrentSet(int concurrencyLevel, IEnumerable<T> collection, IEqualityComparer<T> comparer)
         {
-            storage = new ConcurrentDictionary<T, byte>(concurrencyLevel, collection.Select(_ => new KeyValuePair<T, byte>(_, 0)), comparer);
+            storage = new ConcurrentDictionary<T, byte>(concurrencyLevel,
+                collection.Select(_ => new KeyValuePair<T, byte>(_, 0)), comparer);
         }
 
         public ConcurrentSet(int concurrencyLevel, int capacity, IEqualityComparer<T> comparer)
@@ -48,9 +46,15 @@ namespace Akka.Tools
             storage = new ConcurrentDictionary<T, byte>(concurrencyLevel, capacity, comparer);
         }
 
-        public int Count { get { return storage.Count; } }
+        public bool IsEmptry
+        {
+            get { return storage.IsEmpty; }
+        }
 
-        public bool IsEmptry { get { return storage.IsEmpty; } }
+        public int Count
+        {
+            get { return storage.Count; }
+        }
 
         public void Clear()
         {
@@ -62,25 +66,14 @@ namespace Akka.Tools
             return storage.ContainsKey(item);
         }
 
-        public bool TryAdd(T item)
-        {
-            return storage.TryAdd(item, 0);
-        }
-
-        public bool TryRemove(T item)
-        {
-            byte dontCare;
-            return storage.TryRemove(item, out dontCare);
-        }
-
         void ICollection<T>.Add(T item)
         {
-            ((ICollection<KeyValuePair<T, byte>>)storage).Add(new KeyValuePair<T, byte>(item, 0));
+            ((ICollection<KeyValuePair<T, byte>>) storage).Add(new KeyValuePair<T, byte>(item, 0));
         }
 
         void ICollection<T>.CopyTo(T[] array, int arrayIndex)
         {
-            foreach (KeyValuePair<T, byte> pair in storage)
+            foreach (var pair in storage)
                 array[arrayIndex++] = pair.Key;
         }
 
@@ -102,6 +95,17 @@ namespace Akka.Tools
         IEnumerator IEnumerable.GetEnumerator()
         {
             return storage.Keys.GetEnumerator();
+        }
+
+        public bool TryAdd(T item)
+        {
+            return storage.TryAdd(item, 0);
+        }
+
+        public bool TryRemove(T item)
+        {
+            byte dontCare;
+            return storage.TryRemove(item, out dontCare);
         }
     }
 }

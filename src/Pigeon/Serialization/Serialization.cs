@@ -1,9 +1,6 @@
-﻿using Akka.Actor;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.Actor;
 
 namespace Akka.Serialization
 {
@@ -12,28 +9,24 @@ namespace Akka.Serialization
         public Address Address { get; set; }
         public ActorSystem System { get; set; }
     }
+
     public class Serialization
     {
-        private Dictionary<int, Serializer> serializers = new Dictionary<int, Serializer>();
-        private Serializer newtonsoftJsonSerializer; 
-        //private Serializer protobufnetSerializer;
-        //private Serializer jsonSerializer;
-        private Serializer javaSerializer;
-        private Serializer nullSerializer;
+        [ThreadStatic] public static Information CurrentTransportInformation;
+
+        [ThreadStatic] public static ActorSystem CurrentSystem;
+        private readonly Serializer nullSerializer;
+
+        private readonly Dictionary<Type, Serializer> serializerMap = new Dictionary<Type, Serializer>();
+        private readonly Dictionary<int, Serializer> serializers = new Dictionary<int, Serializer>();
         private Serializer byteArraySerializer;
-
-        [ThreadStatic]
-        public static Information CurrentTransportInformation;
-
-        [ThreadStatic]
-        public static ActorSystem CurrentSystem;
-
-        private Dictionary<Type, Serializer> serializerMap = new Dictionary<Type, Serializer>();
+        private Serializer javaSerializer;
+        private Serializer newtonsoftJsonSerializer;
 
 
         public Serialization(ActorSystem system)
         {
-            this.System = system;
+            System = system;
             newtonsoftJsonSerializer = new NewtonSoftJsonSerializer(system);
             //protobufnetSerializer = new ProtoBufNetSerializer(system);
             //jsonSerializer = new FastJsonSerializer(system);
@@ -45,22 +38,25 @@ namespace Akka.Serialization
             //serializers.Add(protobufnetSerializer.Identifier, protobufnetSerializer);
             //serializers.Add(jsonSerializer.Identifier, jsonSerializer);
             serializers.Add(javaSerializer.Identifier, javaSerializer);
-            serializers.Add(nullSerializer.Identifier,nullSerializer);
-            serializers.Add(byteArraySerializer.Identifier,byteArraySerializer);
-            
-            serializerMap.Add(typeof(object), newtonsoftJsonSerializer);
+            serializers.Add(nullSerializer.Identifier, nullSerializer);
+            serializers.Add(byteArraySerializer.Identifier, byteArraySerializer);
+
+            serializerMap.Add(typeof (object), newtonsoftJsonSerializer);
         }
+
+        public ActorSystem System { get; private set; }
 
         public void AddSerializer(Serializer serializer)
         {
-            this.serializers.Add(serializer.Identifier,serializer);
-        }
-        public void AddSerializationMap(Type type, Serializer serializer)
-        {
-            this.serializerMap.Add(type, serializer);
+            serializers.Add(serializer.Identifier, serializer);
         }
 
-        public object Deserialize(byte[] bytes,int serializerId,Type type)
+        public void AddSerializationMap(Type type, Serializer serializer)
+        {
+            serializerMap.Add(type, serializer);
+        }
+
+        public object Deserialize(byte[] bytes, int serializerId, Type type)
         {
             return serializers[serializerId].FromBinary(bytes, type);
         }
@@ -72,13 +68,13 @@ namespace Akka.Serialization
             //if (obj is byte[])
             //    return byteArraySerializer;
 
-            var type = obj.GetType();
+            Type type = obj.GetType();
             return FindSerializerForType(type);
         }
 
         public Serializer FindSerializerForType(Type objectType)
         {
-            var type = objectType;
+            Type type = objectType;
             while (type != null)
             {
                 if (serializerMap.ContainsKey(type))
@@ -87,8 +83,6 @@ namespace Akka.Serialization
             }
             throw new Exception("Serializer not found for type " + objectType.Name);
         }
-
-        public ActorSystem System { get;private set; }
 
         public static string SerializedActorPath(ActorRef @ref)
         {
@@ -121,20 +115,14 @@ val path = actorRef.path
                 {
                     return @ref.Path.ToSerializationFormat();
                 }
-                else
-                {
-                    return @ref.Path.ToStringWithAddress(CurrentTransportInformation.Address);
-                }
+                return @ref.Path.ToStringWithAddress(CurrentTransportInformation.Address);
             }
-            else
-            {
-                return @ref.Path.ToSerializationFormat();
-            }            
+            return @ref.Path.ToSerializationFormat();
         }
 
         public Serializer GetSerializerById(int serializerId)
         {
-            return this.serializers[serializerId];
+            return serializers[serializerId];
         }
     }
 }

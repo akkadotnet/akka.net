@@ -1,15 +1,11 @@
-﻿using Akka.Actor;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
+using Akka.Actor;
 
 namespace Akka.Routing
 {
     public class RouterActor : UntypedActor
     {
-        public RouterActor() : base()
+        public RouterActor()
         {
             if (!(Context is RoutedActorCell))
             {
@@ -19,23 +15,19 @@ namespace Akka.Routing
 
         protected RoutedActorCell Cell
         {
-            get
-            {
-                return Context.AsInstanceOf<RoutedActorCell>();
-            }
+            get { return Context.AsInstanceOf<RoutedActorCell>(); }
         }
 
         protected override void PreRestart(Exception cause, object message)
         {
- 	 
         }
-        
+
         protected override void OnReceive(object message)
         {
             if (message is GetRoutees)
             {
-                Sender.Tell(new Routees(this.Cell.Router.Routees));
-            }                
+                Sender.Tell(new Routees(Cell.Router.Routees));
+            }
         }
     }
 }

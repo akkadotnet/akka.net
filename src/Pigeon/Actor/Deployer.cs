@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Routing;
 
@@ -15,6 +11,7 @@ namespace Akka.Actor
         public static readonly string NoDispatcherGiven = null;
         public static readonly string NoMailboxGiven = null;
         public static readonly Scope NoScopeGiven = null;
+        public static readonly Deploy None = null;
         /*
          path: String = "",
   config: Config = ConfigFactory.empty,
@@ -29,37 +26,44 @@ namespace Akka.Actor
             Path = "";
             Config = ConfigurationFactory.Empty;
             RouterConfig = RouterConfig.NoRouter;
-            Scope = Deploy.NoScopeGiven;
-            Dispatcher = Deploy.NoDispatcherGiven;
-            Mailbox = Deploy.NoMailboxGiven;
+            Scope = NoScopeGiven;
+            Dispatcher = NoDispatcherGiven;
+            Mailbox = NoMailboxGiven;
         }
 
         public Deploy(Scope scope)
             : this()
         {
-            this.Scope = scope;
+            Scope = scope;
         }
 
         public Deploy(RouterConfig routerConfig, Scope scope)
             : this()
         {
-            this.RouterConfig = routerConfig;
-            this.Scope = scope;
+            RouterConfig = routerConfig;
+            Scope = scope;
         }
 
         public Deploy(RouterConfig routerConfig)
         {
-            this.RouterConfig = routerConfig;
+            RouterConfig = routerConfig;
         }
 
         public Deploy(string path, Config config, RouterConfig routerConfig, Scope scope, string dispatcher)
         {
-            this.Path = path;
-            this.Config = config;
-            this.RouterConfig = routerConfig;
-            this.Scope = scope;
-            this.Dispatcher = dispatcher;
+            Path = path;
+            Config = config;
+            RouterConfig = routerConfig;
+            Scope = scope;
+            Dispatcher = dispatcher;
         }
+
+        public string Path { get; private set; }
+        public Config Config { get; private set; }
+        public RouterConfig RouterConfig { get; private set; }
+        public Scope Scope { get; private set; }
+        public string Mailbox { get; private set; }
+        public string Dispatcher { get; private set; }
 
         public Deploy WithFallback(Deploy other)
         {
@@ -71,29 +75,21 @@ namespace Akka.Actor
                 Scope = Scope.WithFallback(other.Scope),
                 Dispatcher = Dispatcher == NoDispatcherGiven ? other.Dispatcher : Dispatcher,
                 Mailbox = Mailbox == NoMailboxGiven ? other.Mailbox : Mailbox,
-
             };
         }
 
         private Deploy Copy()
         {
-            return new Deploy(){
-                Config = this.Config,
-                Dispatcher = this.Dispatcher,
-                Mailbox = this.Mailbox,
-                Path = this.Path,
-                RouterConfig = this.RouterConfig,
-                Scope = this.Scope,
+            return new Deploy
+            {
+                Config = Config,
+                Dispatcher = Dispatcher,
+                Mailbox = Mailbox,
+                Path = Path,
+                RouterConfig = RouterConfig,
+                Scope = Scope,
             };
         }
-
-        public string Path { get;private set; }
-        public Config Config { get;private set; }
-        public RouterConfig RouterConfig { get;private set; }
-        public Scope Scope { get;private set; }
-        public string Mailbox { get;private set; }
-        public string Dispatcher { get;private set; }
-        public static readonly Deploy None = null;
     }
 
     public class Scope
@@ -103,35 +99,34 @@ namespace Akka.Actor
 
         public Scope WithFallback(Scope other)
         {
-            var copy = Copy();
+            Scope copy = Copy();
             copy.fallback = other;
             return copy;
         }
 
         private Scope Copy()
         {
-            return new Scope()
+            return new Scope
             {
-                fallback = this.fallback,
+                fallback = fallback,
             };
         }
     }
 
     public class LocalScope : Scope
     {
-        
     }
 
     public class RemoteScope : Scope
     {
-        [Obsolete("For Serialization only",true)]
+        [Obsolete("For Serialization only", true)]
         public RemoteScope()
-        { 
+        {
         }
+
         public RemoteScope(Address address)
         {
-            this.Address = address;
-
+            Address = address;
         }
 
         public Address Address { get; set; }
@@ -140,19 +135,20 @@ namespace Akka.Actor
 
     public class Deployer
     {
+        private readonly Config deployment;
+        private readonly Config fallback;
         private Settings settings;
-        private Config deployment;
-        private Config fallback;
+
         public Deployer(Settings settings)
         {
             this.settings = settings;
             deployment = settings.Config.GetConfig("akka.actor.deployment");
-            fallback = deployment.GetConfig("default");            
+            fallback = deployment.GetConfig("default");
         }
 
         public Deploy Lookup(string path)
         {
-            var config = deployment.GetConfig(path).WithFallback(fallback);
+            Config config = deployment.GetConfig(path).WithFallback(fallback);
             //TODO: implement this
 
             return Deploy.Local;

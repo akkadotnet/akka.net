@@ -1,21 +1,16 @@
-﻿using Akka.Actor;
+﻿using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Dispatch.SysMsg;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Akka.Dispatch
 {
     public class FutureActor : ActorBase
     {
-        private TaskCompletionSource<object> result;
         private ActorRef RespondTo;
+        private TaskCompletionSource<object> result;
 
         public FutureActor()
         {
-            
         }
 
         public FutureActor(TaskCompletionSource<object> completionSource, ActorRef respondTo)
@@ -28,8 +23,8 @@ namespace Akka.Dispatch
         {
             if (message is SetRespondTo)
             {
-                this.result = ((SetRespondTo)message).Result;
-                this.RespondTo = this.Sender;
+                result = ((SetRespondTo) message).Result;
+                RespondTo = Sender;
             }
             else
             {
@@ -48,11 +43,11 @@ namespace Akka.Dispatch
 
                     result.SetResult(message);
                 }
-            }            
+            }
         }
     }
 
-    public class SetRespondTo 
+    public class SetRespondTo
     {
         public TaskCompletionSource<object> Result { get; set; }
     }

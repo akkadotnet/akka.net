@@ -79,7 +79,6 @@ namespace Akka.Configuration.Hocon
         }
     }
 
-    
 
     public class HoconTokenizer : Tokenizer
     {
@@ -389,7 +388,7 @@ namespace Akka.Configuration.Hocon
             {
                 return PullStartOfObject();
             }
-  
+
             if (IsStartOfTrippleQuotedText())
             {
                 return PullTrippleQuotedText();
@@ -417,7 +416,8 @@ namespace Akka.Configuration.Hocon
                 return PullSubstitution();
             }
 
-            throw new Exception("Expected value: Null literal, Array, Number, Boolean, Quoted Text, Unquoted Text, Tripple quoted Text, Object or End of array");
+            throw new Exception(
+                "Expected value: Null literal, Array, Number, Boolean, Quoted Text, Unquoted Text, Tripple quoted Text, Object or End of array");
         }
 
         public bool IsSubstitutionStart()
@@ -429,7 +429,7 @@ namespace Akka.Configuration.Hocon
         {
             var sb = new StringBuilder();
             Take(2);
-            while(!EoF && IsUnquotedText())
+            while (!EoF && IsUnquotedText())
             {
                 sb.Append(Take());
             }
@@ -451,7 +451,7 @@ namespace Akka.Configuration.Hocon
         //private bool IsStartNumber()
         //{
         //    return Matches("-", "+") || char.IsDigit(Peek());
-       // }
+        // }
 
         public bool IsStartSimpleValue()
         {
