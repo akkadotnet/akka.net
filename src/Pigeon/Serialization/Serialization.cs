@@ -15,6 +15,7 @@ namespace Akka.Serialization
     public class Serialization
     {
         private Dictionary<int, Serializer> serializers = new Dictionary<int, Serializer>();
+        private Serializer newtonsoftJsonSerializer; 
         private Serializer protobufnetSerializer;
         private Serializer jsonSerializer;
         private Serializer javaSerializer;
@@ -33,19 +34,21 @@ namespace Akka.Serialization
         public Serialization(ActorSystem system)
         {
             this.System = system;
+            newtonsoftJsonSerializer = new NewtonSoftJsonSerializer(system);
             protobufnetSerializer = new ProtoBufNetSerializer(system);
-            jsonSerializer = new JsonSerializer(system);
+            jsonSerializer = new FastJsonSerializer(system);
             javaSerializer = new JavaSerializer(system);
             nullSerializer = new NullSerializer(system);
             byteArraySerializer = new ByteArraySerializer(system);
 
+            serializers.Add(newtonsoftJsonSerializer.Identifier, newtonsoftJsonSerializer);
             serializers.Add(protobufnetSerializer.Identifier, protobufnetSerializer);
             serializers.Add(jsonSerializer.Identifier, jsonSerializer);
             serializers.Add(javaSerializer.Identifier, javaSerializer);
             serializers.Add(nullSerializer.Identifier,nullSerializer);
             serializers.Add(byteArraySerializer.Identifier,byteArraySerializer);
             
-            serializerMap.Add(typeof(object), protobufnetSerializer);
+            serializerMap.Add(typeof(object), newtonsoftJsonSerializer);
         }
 
         public void AddSerializer(Serializer serializer)
@@ -120,6 +123,11 @@ val path = actorRef.path
             {
                 return @ref.Path.ToSerializationFormat();
             }            
+        }
+
+        public Serializer GetSerializerById(int serializerId)
+        {
+            return this.serializers[serializerId];
         }
     }
 }

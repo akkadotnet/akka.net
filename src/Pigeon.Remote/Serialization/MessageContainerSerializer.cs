@@ -41,9 +41,9 @@ namespace Akka.Remote.Serialization
             return ByteString.CopyFrom(bytes);
         }
 
-        private object Deserialize(ByteString bytes, Type type)
+        private object Deserialize(ByteString bytes, Type type,int serializerId)
         {
-            var serializer = this.system.Serialization.FindSerializerForType(type);
+            var serializer = this.system.Serialization.GetSerializerById(serializerId);
             var o = serializer.FromBinary(bytes.ToByteArray(), type);
             return o;
         }
@@ -63,7 +63,7 @@ namespace Akka.Remote.Serialization
             builder.SetEnclosedMessage(ByteString.CopyFrom(serializer.ToBinary(sel.Message)));
             builder.SetSerializerId(serializer.Identifier);
             if (serializer.IncludeManifest)
-            {
+            {           
                 builder.SetMessageManifest(ByteString.CopyFromUtf8(sel.Message.GetType().AssemblyQualifiedName));
             }
             foreach (var element in sel.Elements)
@@ -85,7 +85,8 @@ namespace Akka.Remote.Serialization
             {
                 msgType = Type.GetType(selectionEnvelope.MessageManifest.ToStringUtf8());
             }
-            var msg = Deserialize(selectionEnvelope.EnclosedMessage, msgType);
+            var serializerId = selectionEnvelope.SerializerId;
+            var msg = Deserialize(selectionEnvelope.EnclosedMessage, msgType,serializerId);
             var elements = selectionEnvelope.PatternList.Select<Selection, SelectionPathElement>(p =>
             {
                 if (p.Type == PatternType.PARENT)

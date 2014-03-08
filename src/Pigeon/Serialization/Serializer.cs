@@ -1,4 +1,5 @@
 ﻿using Akka.Actor;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -80,9 +81,71 @@ namespace Akka.Serialization
         }
     }
 
-    public class JsonSerializer : Serializer
+    public class NewtonSoftJsonSerializer : Serializer
     {
-        static JsonSerializer()
+        public class ActorRefConverter : JsonConverter
+        {
+            public override bool CanConvert(Type objectType)
+            {
+                return (typeof(ActorRef).IsAssignableFrom(objectType));
+            }
+
+            public override object ReadJson(Newtonsoft.Json.JsonReader reader, Type objectType, object existingValue, Newtonsoft.Json.JsonSerializer serializer)
+            {
+                var surrogate = serializer.Deserialize<ActorRefSurrogate>(reader);
+                return Serialization.CurrentSystem.Provider.ResolveActorRef(surrogate.Path);
+            }
+
+            public override void WriteJson(Newtonsoft.Json.JsonWriter writer, object value, Newtonsoft.Json.JsonSerializer serializer)
+            {
+                ActorRef @ref = (ActorRef)value;
+                var surrogate = new ActorRefSurrogate(Serialization.SerializedActorPath(@ref));
+                serializer.Serialize(writer, surrogate);
+            }
+        }
+
+        private static readonly JsonSerializerSettings JsonSerializerSettings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All };
+
+        public NewtonSoftJsonSerializer(ActorSystem system)
+            : base(system)
+        {
+            //TODO: we should use an instanced serializer to be threadsafe for other ActorSystems
+            JsonConvert.DefaultSettings = () => new JsonSerializerSettings
+            {
+                Converters = new List<JsonConverter> { new ActorRefConverter() }
+            };
+        }
+
+        public override int Identifier
+        {
+            get { return -3; }
+        }
+
+        public override bool IncludeManifest
+        {
+            get { return false; }
+        }
+
+        public override byte[] ToBinary(object obj)
+        {
+            Serialization.CurrentSystem = this.system;
+            var data = JsonConvert.SerializeObject(obj, Formatting.None, JsonSerializerSettings);
+            var bytes = Encoding.Default.GetBytes(data);
+            return bytes;
+        }
+
+        public override object FromBinary(byte[] bytes, Type type)
+        {
+            Serialization.CurrentSystem = this.system;
+            var data = Encoding.Default.GetString(bytes);
+
+            return JsonConvert.DeserializeObject(data, JsonSerializerSettings);
+        }
+    }
+
+    public class FastJsonSerializer : Serializer
+    {
+        static FastJsonSerializer()
         {
             //TODO: need a cleaner way of finding all actorref types
             var actorRefTypes =
@@ -97,7 +160,7 @@ namespace Akka.Serialization
             }           
         }
 
-        public JsonSerializer(ActorSystem system)
+        public FastJsonSerializer(ActorSystem system)
             : base(system)
         {
             
