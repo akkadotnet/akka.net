@@ -35,14 +35,13 @@ namespace Akka.Remote
 
         private void Send(Send send)
         {
-            string publicPath = "";
+            string publicPath;
             if (send.Sender is NoSender)
             {
                 publicPath = "";
             }
             else if (send.Sender is LocalActorRef)
             {
-                var s = send.Sender as LocalActorRef;
                 publicPath = send.Sender.Path.ToStringWithAddress(localAddress);
             }
             else

@@ -66,38 +66,17 @@ namespace Akka.Remote
 
         private readonly Dictionary<ActorRef, Address> readonlyToAddress = new Dictionary<ActorRef, Address>();
         private readonly Dictionary<ActorRef, Address> writableToAddress = new Dictionary<ActorRef, Address>();
-
-        /*
-def registerWritableEndpoint(address: Address, endpoint: ActorRef): ActorRef = addressToWritable.get(address) match {
-      case Some(Pass(e)) ⇒
-        throw new IllegalArgumentException(s"Attempting to overwrite existing endpoint [$e] with [$endpoint]")
-      case _ ⇒
-        addressToWritable += address -> Pass(endpoint)
-        writableToAddress += endpoint -> address
-        endpoint
-    }
-*/
-
         public ActorRef RegisterWritableEndpoint(Address address, ActorRef endpoint)
         {
             EndpointPolicy existing;
             if (addressToWritable.TryGetValue(address, out existing))
             {
-                throw new ArgumentException("Attempting to overwrite existing endpoint " + existing + " with " +
-                                            endpoint);
+                throw new ArgumentException("Attempting to overwrite existing endpoint " + existing + " with " + endpoint);
             }
             addressToWritable.Add(address, new Pass(endpoint));
             writableToAddress.Add(endpoint, address);
             return endpoint;
         }
-
-        /*
-    def registerReadOnlyEndpoint(address: Address, endpoint: ActorRef): ActorRef = {
-      addressToReadonly += address -> endpoint
-      readonlyToAddress += endpoint -> address
-      endpoint
-    }
-*/
 
         public ActorRef RegisterReadOnlyEndpoint(Address address, ActorRef endpoint)
         {
