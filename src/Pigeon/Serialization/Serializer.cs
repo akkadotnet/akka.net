@@ -143,64 +143,6 @@ namespace Akka.Serialization
         }
     }
 
-    public class FastJsonSerializer : Serializer
-    {
-        static FastJsonSerializer()
-        {
-            //TODO: need a cleaner way of finding all actorref types
-            var actorRefTypes =
-                                 from a in AppDomain.CurrentDomain.GetAssemblies()
-                                 from t in a.GetTypes()
-                                 where typeof(ActorRef).IsAssignableFrom(t)
-                                 select t;
-
-            foreach(var type in actorRefTypes)
-            {
-                fastJSON.JSON.Instance.RegisterCustomType(type, SerializeActorRef, DeserializeActorRef);
-            }           
-        }
-
-        public FastJsonSerializer(ActorSystem system)
-            : base(system)
-        {
-            
-        }
-
-        private static string SerializeActorRef(object data)
-        {
-            return ((ActorRef)data).Path.ToStringWithAddress();
-        }
-
-        private static object DeserializeActorRef(string data)
-        {
-            return Akka.Serialization.Serialization.CurrentSystem.Provider.ResolveActorRef(data);
-        }        
-
-        public override bool IncludeManifest
-        {
-            get { return false; }
-        }
-        public override object FromBinary(byte[] bytes, Type type)
-        {
-            Akka.Serialization.Serialization.CurrentSystem = this.system;
-            var data = Encoding.Default.GetString(bytes);
-            
-            return fastJSON.JSON.Instance.ToObject(data);
-        }
-
-        public override byte[] ToBinary(object obj)
-        {
-            var data = fastJSON.JSON.Instance.ToJSON(obj);
-            var bytes = Encoding.Default.GetBytes(data);
-            return bytes;
-        }
-
-        public override int Identifier
-        {
-            get { return -1; }
-        }
-    }    
-
     /**
      * This is a special Serializer that Serializes and deserializes nulls only
      */
@@ -263,51 +205,52 @@ namespace Akka.Serialization
         }
     }
 
-    public class ProtoBufNetSerializer : Serializer
-    {
-        static ProtoBufNetSerializer()
-        {
-            ProtoBuf.Meta.RuntimeTypeModel.Default[typeof(SelectionPathElement)]
-                .AddSubType(1,typeof(SelectChildName))
-                .AddSubType(2,typeof(SelectChildPattern))
-                .AddSubType(3,typeof(SelectParent));
-        }
+    //TODO: add as an extra project??
+    //public class ProtoBufNetSerializer : Serializer
+    //{
+    //    static ProtoBufNetSerializer()
+    //    {
+    //        ProtoBuf.Meta.RuntimeTypeModel.Default[typeof(SelectionPathElement)]
+    //            .AddSubType(1,typeof(SelectChildName))
+    //            .AddSubType(2,typeof(SelectChildPattern))
+    //            .AddSubType(3,typeof(SelectParent));
+    //    }
 
-        public ProtoBufNetSerializer(ActorSystem system)
-            : base(system)
-        {
-        }
+    //    public ProtoBufNetSerializer(ActorSystem system)
+    //        : base(system)
+    //    {
+    //    }
 
-        public override int Identifier
-        {
-            get { return -2; }
-        }
+    //    public override int Identifier
+    //    {
+    //        get { return -2; }
+    //    }
 
-        public override bool IncludeManifest
-        {
-            get { return true; }
-        }
+    //    public override bool IncludeManifest
+    //    {
+    //        get { return true; }
+    //    }
 
-        public override byte[] ToBinary(object obj)
-        {
-            using (var ms = new MemoryStream())
-            {
-                ProtoBuf.Serializer.NonGeneric.Serialize(ms, obj);
-                var bytes = ms.ToArray();
-                return bytes;
-            }
+    //    public override byte[] ToBinary(object obj)
+    //    {
+    //        using (var ms = new MemoryStream())
+    //        {
+    //            ProtoBuf.Serializer.NonGeneric.Serialize(ms, obj);
+    //            var bytes = ms.ToArray();
+    //            return bytes;
+    //        }
         
-        }
+    //    }
 
-        public override object FromBinary(byte[] bytes, Type type)
-        {
-            using (var ms = new MemoryStream())
-            {
-                ms.Write(bytes, 0, bytes.Length);
-                ms.Position = 0;
-                var res = ProtoBuf.Serializer.NonGeneric.Deserialize(type, ms);
-                return res;
-            }
-        }
-    }
+    //    public override object FromBinary(byte[] bytes, Type type)
+    //    {
+    //        using (var ms = new MemoryStream())
+    //        {
+    //            ms.Write(bytes, 0, bytes.Length);
+    //            ms.Position = 0;
+    //            var res = ProtoBuf.Serializer.NonGeneric.Deserialize(type, ms);
+    //            return res;
+    //        }
+    //    }
+    //}
 }

@@ -16,8 +16,8 @@ namespace Akka.Serialization
     {
         private Dictionary<int, Serializer> serializers = new Dictionary<int, Serializer>();
         private Serializer newtonsoftJsonSerializer; 
-        private Serializer protobufnetSerializer;
-        private Serializer jsonSerializer;
+        //private Serializer protobufnetSerializer;
+        //private Serializer jsonSerializer;
         private Serializer javaSerializer;
         private Serializer nullSerializer;
         private Serializer byteArraySerializer;
@@ -35,15 +35,15 @@ namespace Akka.Serialization
         {
             this.System = system;
             newtonsoftJsonSerializer = new NewtonSoftJsonSerializer(system);
-            protobufnetSerializer = new ProtoBufNetSerializer(system);
-            jsonSerializer = new FastJsonSerializer(system);
+            //protobufnetSerializer = new ProtoBufNetSerializer(system);
+            //jsonSerializer = new FastJsonSerializer(system);
             javaSerializer = new JavaSerializer(system);
             nullSerializer = new NullSerializer(system);
             byteArraySerializer = new ByteArraySerializer(system);
 
             serializers.Add(newtonsoftJsonSerializer.Identifier, newtonsoftJsonSerializer);
-            serializers.Add(protobufnetSerializer.Identifier, protobufnetSerializer);
-            serializers.Add(jsonSerializer.Identifier, jsonSerializer);
+            //serializers.Add(protobufnetSerializer.Identifier, protobufnetSerializer);
+            //serializers.Add(jsonSerializer.Identifier, jsonSerializer);
             serializers.Add(javaSerializer.Identifier, javaSerializer);
             serializers.Add(nullSerializer.Identifier,nullSerializer);
             serializers.Add(byteArraySerializer.Identifier,byteArraySerializer);
@@ -117,7 +117,14 @@ val path = actorRef.path
             if (@ref is ActorRefWithCell)
             {
                 originalSystem = @ref.AsInstanceOf<ActorRefWithCell>().Cell.System;
-                return @ref.Path.ToStringWithAddress(CurrentTransportInformation.Address);
+                if (CurrentTransportInformation == null)
+                {
+                    return @ref.Path.ToSerializationFormat();
+                }
+                else
+                {
+                    return @ref.Path.ToStringWithAddress(CurrentTransportInformation.Address);
+                }
             }
             else
             {
