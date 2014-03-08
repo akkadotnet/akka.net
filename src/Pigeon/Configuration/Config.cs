@@ -29,6 +29,13 @@ namespace Akka.Configuration
         {
             string[] elements = path.Split('.');
             HoconValue currentNode = node;
+            if (currentNode == null)
+            {
+                if (fallback != null)
+                    return fallback.GetNode(path);
+
+                return null;
+            }
             foreach (string key in elements)
             {
                 currentNode = currentNode.GetChildObject(key);

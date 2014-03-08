@@ -29,6 +29,17 @@ akka {
           event-stream = on
           unhandled = on
         }
+
+        deployment {
+            /local {
+                dispatcher = """"
+                mailbox = """"
+                router = from-code
+            }
+            /remote {
+                remote = akka.tcp://system2@localhost:8080
+            }
+        }
     }
     remote {
         tcp-transport {
@@ -46,8 +57,8 @@ akka {
             using (var system = ActorSystem.Create("system1", config))
             {
                 var local = system.ActorOf(Props.Create(typeof(SomeActor)).WithDeploy(Deploy.Local), "local");
+
                 var remoteAddress = new Address("akka.tcp", "system2", "localhost", 8080);
-                //TODO: this is not yet implemented so this example will fail - 2014-02-23 //Roger
                 var remote = system.ActorOf(Props.Create(typeof(SomeActor)).WithDeploy(new Deploy(new RemoteScope(remoteAddress))), "remote");
                 Console.ReadLine();
             }

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Data;
+using System.Linq;
 using Akka.Configuration;
 using Akka.Routing;
 
@@ -48,7 +50,6 @@ namespace Akka.Actor
         {
             RouterConfig = routerConfig;
         }
-
         public Deploy(string path, Config config, RouterConfig routerConfig, Scope scope, string dispatcher)
         {
             Path = path;
@@ -56,6 +57,16 @@ namespace Akka.Actor
             RouterConfig = routerConfig;
             Scope = scope;
             Dispatcher = dispatcher;
+        }
+
+        public Deploy(string path, Config config, RouterConfig routerConfig, Scope scope, string dispatcher,string mailbox)
+        {
+            Path = path;
+            Config = config;
+            RouterConfig = routerConfig;
+            Scope = scope;
+            Dispatcher = dispatcher;
+            Mailbox = mailbox;
         }
 
         public string Path { get; private set; }
@@ -136,22 +147,52 @@ namespace Akka.Actor
     public class Deployer
     {
         private readonly Config deployment;
-        private readonly Config fallback;
+        private readonly Config @default;
         private Settings settings;
 
         public Deployer(Settings settings)
         {
             this.settings = settings;
             deployment = settings.Config.GetConfig("akka.actor.deployment");
-            fallback = deployment.GetConfig("default");
+            @default = deployment.GetConfig("default");
         }
 
-        public Deploy Lookup(string path)
+        public Deploy Lookup(ActorPath path)
         {
-            Config config = deployment.GetConfig(path).WithFallback(fallback);
-            //TODO: implement this
+            if (path.Elements.Head() != "user" || path.Elements.Count() < 2)
+                return Deploy.Local;
 
-            return Deploy.Local;
+            var elements = path.Elements.Drop(1);
+            var pathStr = "/" + elements.Join("/");            
+            var deploy = ParseConfig(pathStr);
+            return deploy;
+        }
+
+  //        def parseConfig(key: String, config: Config): Option[Deploy] = {
+  //  val deployment = config.withFallback(default)
+  //  val router = createRouterConfig(deployment.getString("router"), key, config, deployment)
+  //  val dispatcher = deployment.getString("dispatcher")
+  //  val mailbox = deployment.getString("mailbox")
+  //  Some(Deploy(key, deployment, router, NoScopeGiven, dispatcher, mailbox))
+  //}
+
+        private Deploy ParseConfig(string key)
+        {
+            Config config = deployment.GetConfig(key).WithFallback(@default);
+            var routerType = config.GetString("router");
+            var router = CreateRouterConfig(routerType, key, config, deployment);
+            var dispatcher = config.GetString("dispatcher");
+            var mailbox = config.GetString("mailbox");
+            var deploy = new Deploy(key, deployment, router, Deploy.NoScopeGiven,dispatcher,mailbox);
+            return deploy;
+        }
+
+        private RouterConfig CreateRouterConfig(string routerType, string key, Config config, Config deployment)
+        {
+            if (routerType == "from-code")
+                return RouterConfig.NoRouter;
+
+            throw new NotImplementedException("Implement this");
         }
     }
 }

@@ -226,8 +226,7 @@ namespace Akka.Actor
             UseThreadContext(() =>
             {
                 //TODO: where should deployment be handled?
-                string deployPath = Self.Path.ToStringWithoutAddress();
-                Deploy deploy = System.Deployer.Lookup(deployPath);
+                Deploy deploy = System.Deployer.Lookup(Self.Path);
                 behaviorStack.Clear();
                 ActorBase instance = Props.NewActor();
                 instance.supervisorStrategy = Props.SupervisorStrategy;

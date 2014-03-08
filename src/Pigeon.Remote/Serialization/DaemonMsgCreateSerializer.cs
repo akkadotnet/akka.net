@@ -134,7 +134,7 @@ namespace Akka.Remote.Serialization
                 if (protoDeploy.HasDispatcher)
                     dispatcher = protoDeploy.Dispatcher;
                 else
-                    dispatcher = Deploy.NoDispatcherGiven;
+                    dispatcher = Deploy.NoDispatcherGiven; 
 
                 return new Deploy(protoDeploy.Path, config, routerConfig, scope, dispatcher);
             };
