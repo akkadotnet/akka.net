@@ -100,7 +100,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Actor\TypedActor.cs" />
     <Compile Include="Routing\Balancing.cs" />
-    <Compile Include="Routing\Broadcast.cs" />
     <Compile Include="Routing\ConsistentHash.cs" />
     <Compile Include="Routing\MurmurHash.cs" />
     <Compile Include="Routing\Random.cs" />

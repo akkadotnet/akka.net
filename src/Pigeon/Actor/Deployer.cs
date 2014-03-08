@@ -163,18 +163,10 @@ namespace Akka.Actor
                 return Deploy.Local;
 
             var elements = path.Elements.Drop(1);
-            var pathStr = "/" + elements.Join("/");            
-            var deploy = ParseConfig(pathStr);
+            var key = "/" + elements.Join("/");            
+            var deploy = ParseConfig(key);
             return deploy;
         }
-
-  //        def parseConfig(key: String, config: Config): Option[Deploy] = {
-  //  val deployment = config.withFallback(default)
-  //  val router = createRouterConfig(deployment.getString("router"), key, config, deployment)
-  //  val dispatcher = deployment.getString("dispatcher")
-  //  val mailbox = deployment.getString("mailbox")
-  //  Some(Deploy(key, deployment, router, NoScopeGiven, dispatcher, mailbox))
-  //}
 
         private Deploy ParseConfig(string key)
         {

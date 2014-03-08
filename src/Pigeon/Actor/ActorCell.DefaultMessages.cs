@@ -581,15 +581,6 @@ protected def terminate() {
         }
 
         /// <summary>
-        ///     Defaults the specified m.
-        /// </summary>
-        /// <param name="m">The m.</param>
-        private void Default(object m)
-        {
-            CurrentBehavior(m);
-        }
-
-        /// <summary>
         ///     Handles the failed.
         /// </summary>
         /// <param name="m">The m.</param>

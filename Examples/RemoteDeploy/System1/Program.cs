@@ -36,9 +36,6 @@ akka {
                 mailbox = """"
                 router = from-code
             }
-            /remote {
-                remote = akka.tcp://system2@localhost:8080
-            }
         }
     }
     remote {

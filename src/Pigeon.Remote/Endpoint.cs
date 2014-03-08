@@ -1,5 +1,6 @@
 ﻿using System.Net.Sockets;
 using Akka.Actor;
+using Akka.Serialization;
 
 namespace Akka.Remote
 {
@@ -35,6 +36,13 @@ namespace Akka.Remote
 
         private void Send(Send send)
         {
+            //TODO: should this be here?
+            Akka.Serialization.Serialization.CurrentTransportInformation = new Information
+            {
+                System = Context.System,
+                Address = localAddress,
+            };
+
             string publicPath;
             if (send.Sender is NoSender)
             {

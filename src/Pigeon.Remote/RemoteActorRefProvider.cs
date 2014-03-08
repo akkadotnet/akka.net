@@ -109,7 +109,7 @@ namespace Akka.Remote
             ActorPath path, Mailbox mailbox)
         {
             ActorCell cell = null;
-            if (props.RouterConfig is NoRouter)
+            if (props.RouterConfig is NoRouter || props.RouterConfig == null) //TODO: should not need nullcheck here
             {
                 cell = new ActorCell(system, supervisor, props, path, mailbox);
             }

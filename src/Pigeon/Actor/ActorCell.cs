@@ -10,7 +10,7 @@ using Akka.Serialization;
 
 namespace Akka.Actor
 {
-    public partial class ActorCell : IActorContext, IActorRefFactory
+    public partial class ActorCell : IActorContext
     {
         private const string Base64Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
         [ThreadStatic] private static ActorCell current;
