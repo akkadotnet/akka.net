@@ -40,6 +40,12 @@ akka {
                 ]
             }
             /remote {
+                router = round-robin-group
+                routees.paths = [
+                    ""akka.tcp://system1@localhost:8090/user/w1""
+                    ""akka.tcp://system1@localhost:8090/user/w2""
+                    ""akka.tcp://system1@localhost:8090/user/w3""
+                ]
                 remote = ""akka.tcp://system2@localhost:8080""
             }
         }

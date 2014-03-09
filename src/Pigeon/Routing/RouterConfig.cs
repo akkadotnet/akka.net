@@ -43,9 +43,15 @@ namespace Akka.Routing
 
     public abstract class Group : RouterConfig
     {
-        private readonly string[] paths;
+        private string[] paths;
 
-        public Group(IEnumerable<string> paths)
+        public string[] Paths
+        {
+            get { return paths; }
+            private set { paths = value; }
+        }
+
+        protected Group(IEnumerable<string> paths)
         {
             this.paths = paths.ToArray();
         }

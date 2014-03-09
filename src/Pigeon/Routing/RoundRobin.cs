@@ -37,6 +37,11 @@ namespace Akka.Routing
     /// </summary>
     public class RoundRobinGroup : Group
     {
+        [Obsolete("For serialization only",true)]
+        public RoundRobinGroup() : base(new String[] {})
+        {
+            
+        }
         /// <summary>
         ///     Initializes a new instance of the <see cref="RoundRobinGroup" /> class.
         /// </summary>
