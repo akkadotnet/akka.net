@@ -23,19 +23,21 @@ namespace Akka.Remote.Serialization
 
         public override byte[] ToBinary(object obj)
         {
-            using (var stream = new MemoryStream())
-            {
-                ProtoBuf.Serializer.Serialize(stream, obj);
-                return stream.ToArray();
-            }
+            throw new NotImplementedException();
+            //using (var stream = new MemoryStream())
+            //{
+            //    global::ProtoBuf.Serializer.Serialize(stream, obj);
+            //    return stream.ToArray();
+            //}
         }
 
         public override object FromBinary(byte[] bytes, Type type)
         {
-            using (var stream = new MemoryStream(bytes))
-            {
-                return ProtoBuf.Serializer.NonGeneric.Deserialize(type, stream);
-            }
+            throw new NotImplementedException();
+            //using (var stream = new MemoryStream(bytes))
+            //{
+            //    return global::ProtoBuf.Serializer.NonGeneric.Deserialize(type, stream);
+            //}
         }
     }
 }

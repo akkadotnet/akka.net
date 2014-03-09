@@ -11,8 +11,15 @@ namespace Shared
     {
         protected override void OnReceive(object message)
         {
-            Console.WriteLine("{0} got {1}", Self.Path.ToStringWithAddress() , message);
-            Sender.Tell("hello");
+            if (message is long)
+            {
+                Console.Write(".");
+            }
+            else
+            {
+                Console.WriteLine("{0} got {1}", Self.Path.ToStringWithAddress(), message);
+                Sender.Tell("hello");
+            }
         }
     }
 }
