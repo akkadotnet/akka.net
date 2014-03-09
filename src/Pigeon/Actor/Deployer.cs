@@ -182,7 +182,7 @@ namespace Akka.Actor
         public Deploy Lookup(ActorPath path)
         {
             if (path.Elements.Head() != "user" || path.Elements.Count() < 2)
-                return Deploy.Local;
+                return Deploy.None;
 
             var elements = path.Elements.Drop(1);
             var key = "/" + elements.Join("/");            

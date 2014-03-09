@@ -17,7 +17,7 @@ namespace Akka.Remote.Transport
             int port = config.GetInt("port");
             Address = new Address(protocol, system.Name, host, port);
             log = Logging.GetLogger(system, this);
-            server = new TcpServer(system, host, port);
+            server = new TcpServer(system, Address);
         }
 
         public Address Address { get; private set; }

@@ -57,7 +57,7 @@ namespace Akka.Remote
             ActorPath path = Path/subPath;
             InternalActorRef actor = System.Provider.ActorOf(System, props, supervisor, path);
             string childName = subPath.Join("/");
-            AddChild(childName, actor);
+            AddChild(childName, actor);           
             actor.Tell(new Watch(actor, this));
         }
 

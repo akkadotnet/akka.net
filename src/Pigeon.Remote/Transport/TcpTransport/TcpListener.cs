@@ -2,28 +2,28 @@
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Serialization;
 
 namespace Akka.Remote.Transport
 {
     public class TcpServer
     {
-        private readonly int port;
         private readonly ActorSystem system;
-        private string host;
+        private readonly Address localAddress;
         private TcpListener server;
+        
 
-        public TcpServer(ActorSystem system, string host, int port)
+        public TcpServer(ActorSystem system, Address localAddress)
         {
             this.system = system;
-            this.host = host;
-            this.port = port;
+            this.localAddress = localAddress;
         }
 
         public void Start()
         {
             try
             {
-                server = TcpListener.Create(port);
+                server = TcpListener.Create(localAddress.Port.Value);
                 server.ExclusiveAddressUse = false;
                 server.AllowNatTraversal(true);
                 server.Start(100);
@@ -52,6 +52,13 @@ namespace Akka.Remote.Transport
                 while (client.Connected)
                 {
                     RemoteEnvelope remoteEnvelope = RemoteEnvelope.ParseDelimitedFrom(stream);
+
+                    Akka.Serialization.Serialization.CurrentTransportInformation = new Information
+                    {
+                        System = system,
+                        Address = localAddress,
+                    };
+
                     object message = MessageSerializer.Deserialize(system, remoteEnvelope.Message);
                     ActorRef recipient = system.Provider.ResolveActorRef(remoteEnvelope.Recipient.Path);
                     ActorRef sender = system.Provider.ResolveActorRef(remoteEnvelope.Sender.Path);

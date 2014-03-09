@@ -42,9 +42,9 @@ akka {
             /remote {
                 router = round-robin-group
                 routees.paths = [
-                    ""akka.tcp://system1@localhost:8090/user/w1""
-                    ""akka.tcp://system1@localhost:8090/user/w2""
-                    ""akka.tcp://system1@localhost:8090/user/w3""
+                    /user/remotew1
+                    /user/remotew2
+                    /user/remotew3
                 ]
                 remote = ""akka.tcp://system2@localhost:8080""
             }
@@ -82,7 +82,11 @@ akka {
                 local.Tell("Local message 5");
 
                 //this should reach the remote deployed ref
-                remote.Tell("Remote message");
+                remote.Tell("Remote message 1");
+                remote.Tell("Remote message 2");
+                remote.Tell("Remote message 3");
+                remote.Tell("Remote message 4");
+                remote.Tell("Remote message 5");
                 Console.ReadLine();
             }            
         }

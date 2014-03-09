@@ -48,7 +48,11 @@ namespace Akka.Routing
         public string[] Paths
         {
             get { return paths; }
-            private set { paths = value; }
+            set { paths = value; }
+        }
+
+        protected Group()
+        {
         }
 
         protected Group(IEnumerable<string> paths)

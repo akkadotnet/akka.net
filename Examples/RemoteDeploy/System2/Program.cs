@@ -42,7 +42,10 @@ akka {
 ");
             //testing connectivity
             using (var system = ActorSystem.Create("system2", config))
-            {       
+            {
+                system.ActorOf<SomeActor>("remotew1");
+                system.ActorOf<SomeActor>("remotew2");
+                system.ActorOf<SomeActor>("remotew3");
                 Console.ReadLine();
             }
         }

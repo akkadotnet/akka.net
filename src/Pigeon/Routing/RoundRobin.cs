@@ -38,7 +38,7 @@ namespace Akka.Routing
     public class RoundRobinGroup : Group
     {
         [Obsolete("For serialization only",true)]
-        public RoundRobinGroup() : base(new String[] {})
+        public RoundRobinGroup()
         {
             
         }
