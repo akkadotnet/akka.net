@@ -32,10 +32,8 @@ akka {
 
         deployment {
             /local {
-                router = from-code
             }
             /remote {
-                router = from-code
                 remote = ""akka.tcp://system2@localhost:8080""
             }
         }
