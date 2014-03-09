@@ -57,14 +57,25 @@ akka {
 ");
             using (var system = ActorSystem.Create("system1", config))
             {
-                var worker1 = system.ActorOf<SomeActor>("w1");
-                var worker2 = system.ActorOf<SomeActor>("w2");
-                var worker3 = system.ActorOf<SomeActor>("w3");
+                //create some workers
+                system.ActorOf<SomeActor>("w1");
+                system.ActorOf<SomeActor>("w2");
+                system.ActorOf<SomeActor>("w3");
 
+                //create a local group router (see config)
                 var local = system.ActorOf<SomeActor>("local");
+
+                //create a remote deployed actor
                 var remote = system.ActorOf<SomeActor> ("remote");
 
-                local.Tell("Local message");
+                //these messages should reach the workers via the routed local ref
+                local.Tell("Local message 1");
+                local.Tell("Local message 2");
+                local.Tell("Local message 3");
+                local.Tell("Local message 4");
+                local.Tell("Local message 5");
+
+                //this should reach the remote deployed ref
                 remote.Tell("Remote message");
                 Console.ReadLine();
             }            

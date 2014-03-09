@@ -90,7 +90,7 @@ namespace Akka.Actor
             };
         }
 
-        private Deploy Copy()
+        public Deploy Copy()
         {
             return new Deploy
             {
@@ -101,6 +101,27 @@ namespace Akka.Actor
                 RouterConfig = RouterConfig,
                 Scope = Scope,
             };
+        }
+
+        public Deploy WithMailbox(string path)
+        {
+            var copy = this.Copy();
+            copy.Mailbox = path;
+            return copy;
+        }
+
+        public Deploy WithDispatcher(string path)
+        {
+            var copy = this.Copy();
+            copy.Dispatcher = path;
+            return copy;
+        }
+
+        public Deploy WithRouterConfig(RouterConfig routerConfig)
+        {
+            var copy = this.Copy();
+            copy.RouterConfig = routerConfig;
+            return copy;
         }
     }
 

@@ -36,10 +36,11 @@ namespace Akka.Actor
         /// </summary>
         public Props()
         {
-            RouterConfig = RouterConfig.NoRouter;
             Arguments = new object[] {};
-            Dispatcher = "akka.actor.default-dispatcher";
-            Mailbox = "akka.actor.default-mailbox";
+            Deploy =
+                new Deploy()
+                .WithMailbox("akka.actor.default-mailbox")
+                .WithDispatcher("akka.actor.default-dispatcher");
         }
 
         /// <summary>
@@ -90,19 +91,28 @@ namespace Akka.Actor
         ///     Gets or sets the dispatcher.
         /// </summary>
         /// <value>The dispatcher.</value>
-        public string Dispatcher { get; protected set; }
+        public string Dispatcher
+        {
+            get { return Deploy.Dispatcher; }
+        }
 
         /// <summary>
         ///     Gets or sets the mailbox.
         /// </summary>
         /// <value>The mailbox.</value>
-        public string Mailbox { get; protected set; }
+        public string Mailbox
+        {
+            get { return Deploy.Mailbox; }
+        }
 
         /// <summary>
         ///     Gets or sets the router configuration.
         /// </summary>
         /// <value>The router configuration.</value>
-        public RouterConfig RouterConfig { get; protected set; }
+        public RouterConfig RouterConfig
+        {
+            get { return Deploy.RouterConfig; }
+        }
 
         /// <summary>
         ///     Gets or sets the deploy.
@@ -180,7 +190,7 @@ namespace Akka.Actor
         public Props WithMailbox(string path)
         {
             Props copy = Copy();
-            copy.Mailbox = path;
+            copy.Deploy = Deploy.WithMailbox(path);
             return copy;
         }
 
@@ -192,7 +202,7 @@ namespace Akka.Actor
         public Props WithDispatcher(string path)
         {
             Props copy = Copy();
-            copy.Dispatcher = path;
+            copy.Deploy = Deploy.WithDispatcher(path);
             return copy;
         }
 
@@ -204,8 +214,7 @@ namespace Akka.Actor
         public Props WithRouter(RouterConfig routerConfig)
         {
             Props copy = Copy();
-            //    copy.Type = typeof(RouterActor);
-            copy.RouterConfig = routerConfig;
+            copy.Deploy.WithRouterConfig(routerConfig);
             return copy;
         }
 
@@ -254,9 +263,6 @@ namespace Akka.Actor
             return new Props
             {
                 Arguments = Arguments,
-                Dispatcher = Dispatcher,
-                Mailbox = Mailbox,
-                RouterConfig = RouterConfig,
                 Type = Type,
                 Deploy = Deploy,
                 SupervisorStrategy = SupervisorStrategy
@@ -305,9 +311,6 @@ namespace Akka.Actor
         /// <param name="invoker">The invoker.</param>
         protected DynamicProps(Props copy, Func<TActor> invoker)
         {
-            Dispatcher = copy.Dispatcher;
-            Mailbox = copy.Mailbox;
-            RouterConfig = copy.RouterConfig;
             Type = copy.Type;
             Deploy = copy.Deploy;
             this.invoker = invoker;
