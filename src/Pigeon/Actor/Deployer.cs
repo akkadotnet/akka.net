@@ -168,15 +168,21 @@ namespace Akka.Actor
             return deploy;
         }
 
-        private Deploy ParseConfig(string key)
+        protected  virtual Deploy ParseConfig(string key)
         {
             Config config = deployment.GetConfig(key).WithFallback(@default);
             var routerType = config.GetString("router");
             var router = CreateRouterConfig(routerType, key, config, deployment);
             var dispatcher = config.GetString("dispatcher");
             var mailbox = config.GetString("mailbox");
-            var deploy = new Deploy(key, deployment, router, Deploy.NoScopeGiven,dispatcher,mailbox);
+            var scope = ParseScope(config);
+            var deploy = new Deploy(key, deployment, router, scope ,dispatcher,mailbox);
             return deploy;
+        }
+
+        protected virtual Scope ParseScope(Config config)
+        {
+            return Deploy.NoScopeGiven;
         }
 
         private RouterConfig CreateRouterConfig(string routerType, string key, Config config, Config deployment)

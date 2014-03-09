@@ -180,6 +180,8 @@ namespace Akka.Actor
             //  case _                         ⇒
             //}
         }
+
+        public Deployer Deployer { get;protected set; }
     }
 
     /// <summary>
@@ -187,6 +189,12 @@ namespace Akka.Actor
     /// </summary>
     public sealed class LocalActorRefProvider : ActorRefProvider
     {
+        public override void Init()
+        {
+            Deployer = new Deployer(System.Settings);
+            base.Init();
+        }
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="LocalActorRefProvider" /> class.
         /// </summary>

@@ -32,9 +32,11 @@ akka {
 
         deployment {
             /local {
-                dispatcher = """"
-                mailbox = """"
                 router = from-code
+            }
+            /remote {
+                router = from-code
+                remote = ""akka.tcp://system2@localhost:8080""
             }
         }
     }
@@ -49,14 +51,10 @@ akka {
     }
 }
 ");
-            //testing connectivity
-            Thread.Sleep(1000);
             using (var system = ActorSystem.Create("system1", config))
             {
-                var local = system.ActorOf(Props.Create(typeof(SomeActor)).WithDeploy(Deploy.Local), "local");
-
-                var remoteAddress = new Address("akka.tcp", "system2", "localhost", 8080);
-                var remote = system.ActorOf(Props.Create(typeof(SomeActor)).WithDeploy(new Deploy(new RemoteScope(remoteAddress))), "remote");
+                var local = system.ActorOf<SomeActor>("local");
+                var remote = system.ActorOf<SomeActor> ("remote");
 
                 local.Tell("Local message");
                 remote.Tell("Remote message");

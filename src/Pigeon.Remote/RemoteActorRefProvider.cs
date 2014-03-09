@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -31,12 +32,9 @@ namespace Akka.Remote
         {
             //TODO: this should not be here
             Address = new Address("akka", System.Name); //TODO: this should not work this way...
-            //TODO: this should not be here
-            //var host = config.GetString("server.host");
-            //var port = config.GetInt("server.port");
-            //this.Address = new Address("akka.tcp", System.Name, host, port);
-
+            Deployer = new RemoteDeployer(System.Settings);
             base.Init();
+
             var daemonMsgCreateSerializer = new DaemonMsgCreateSerializer(System);
             var messageContainerSerializer = new MessageContainerSerializer(System);
             System.Serialization.AddSerializer(daemonMsgCreateSerializer);
@@ -55,6 +53,32 @@ namespace Akka.Remote
             ActorPath path)
         {
             Mailbox mailbox = System.Mailboxes.FromConfig(props.Mailbox);
+            //TODO: resolve config props
+            if (props.Deploy == null || props.Deploy.RouterConfig == RouterConfig.NoRouter)
+            {
+                Deploy configDeploy = System.Provider.Deployer.Lookup(path);
+                var deploy = configDeploy ?? props.Deploy ?? Deploy.None;
+                if (deploy.Mailbox != null)
+                    props = props.WithMailbox(deploy.Mailbox);
+                if (deploy.Dispatcher != null)
+                    props = props.WithDispatcher(deploy.Dispatcher);
+                if (deploy.Scope is RemoteScope)
+                {
+
+                }
+                props = props.WithDeploy(deploy);
+
+                if (string.IsNullOrEmpty(props.Mailbox))
+                {
+                    //   throw new NotSupportedException("Mailbox can not be configured as null or empty");
+                }
+                if (string.IsNullOrEmpty(props.Dispatcher))
+                {
+                    //TODO: fix this..
+                    //    throw new NotSupportedException("Dispatcher can not be configured as null or empty");
+                }
+            }
+
 
             if (props.Deploy != null && props.Deploy.Scope is RemoteScope)
             {

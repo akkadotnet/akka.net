@@ -164,7 +164,13 @@ namespace Akka.Configuration
         public Config GetConfig(string path)
         {
             HoconValue value = GetNode(path);
-            return new Config(value);
+            if (fallback != null)
+            {
+                Config f = fallback.GetConfig(path);
+                return new Config(new Config(value), f);
+            }
+
+            return  new Config(value);
         }
 
         public HoconValue GetValue(string path)

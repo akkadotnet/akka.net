@@ -66,7 +66,6 @@ namespace Akka.Actor
             Name = name;
             ConfigureScheduler();
             ConfigureSettings(config);
-            ConfigureDeployer();
             ConfigureEventStream();
             ConfigureSerialization();
             ConfigureMailboxes();
@@ -145,11 +144,6 @@ namespace Akka.Actor
         /// <value>The mailboxes.</value>
         public Mailboxes Mailboxes { get; private set; }
 
-        /// <summary>
-        ///     Gets the deployer.
-        /// </summary>
-        /// <value>The deployer.</value>
-        public Deployer Deployer { get; private set; }
 
         /// <summary>
         ///     Gets the scheduler.
@@ -262,14 +256,6 @@ namespace Akka.Actor
         private void ConfigureScheduler()
         {
             Scheduler = new Scheduler();
-        }
-
-        /// <summary>
-        ///     Configures the deployer.
-        /// </summary>
-        private void ConfigureDeployer()
-        {
-            Deployer = new Deployer(Settings);
         }
 
         /// <summary>

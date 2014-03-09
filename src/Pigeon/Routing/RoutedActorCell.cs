@@ -23,7 +23,7 @@ namespace Akka.Routing
             UseThreadContext(() =>
             {
                 //TODO: where should deployment be handled?
-                Deploy deploy = System.Deployer.Lookup(Self.Path);
+                Deploy deploy = System.Provider.Deployer.Lookup(Self.Path);
                 behaviorStack.Clear();
                 RouterActor instance = Props.RouterConfig.CreateRouterActor();
                 instance.supervisorStrategy = Props.SupervisorStrategy;

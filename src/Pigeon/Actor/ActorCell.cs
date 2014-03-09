@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
+using Akka.Routing;
 using Akka.Serialization;
 
 namespace Akka.Actor
@@ -225,8 +226,6 @@ namespace Akka.Actor
             //set the thread static context or things will break
             UseThreadContext(() =>
             {
-                //TODO: where should deployment be handled?
-                Deploy deploy = System.Deployer.Lookup(Self.Path);
                 behaviorStack.Clear();
                 ActorBase instance = Props.NewActor();
                 instance.supervisorStrategy = Props.SupervisorStrategy;
