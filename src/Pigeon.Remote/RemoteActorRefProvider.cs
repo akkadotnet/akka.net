@@ -54,7 +54,7 @@ namespace Akka.Remote
         {
             Mailbox mailbox = System.Mailboxes.FromConfig(props.Mailbox);
             //TODO: resolve config props
-            if (props.Deploy == null || props.Deploy.RouterConfig == RouterConfig.NoRouter)
+            if (/*props.Deploy == null || props.Deploy.RouterConfig == RouterConfig.NoRouter*/ true)
             {
                 Deploy configDeploy = System.Provider.Deployer.Lookup(path);
                 var deploy = configDeploy ?? props.Deploy ?? Deploy.None;
@@ -78,7 +78,6 @@ namespace Akka.Remote
                     //    throw new NotSupportedException("Dispatcher can not be configured as null or empty");
                 }
             }
-
 
             if (props.Deploy != null && props.Deploy.Scope is RemoteScope)
             {

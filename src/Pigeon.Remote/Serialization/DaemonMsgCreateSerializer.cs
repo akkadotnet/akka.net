@@ -52,7 +52,7 @@ namespace Akka.Remote.Serialization
                     "Can't serialize a non-DaemonMsgCreate message using DaemonMsgCreateSerializer");
             }
 
-            var msg = (DaemonMsgCreate) obj;
+            var msg = (DaemonMsgCreate) obj;            
             Props props = msg.Props;
             Deploy deploy = msg.Deploy;
 

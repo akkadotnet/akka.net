@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using Akka.Configuration;
 using Akka.Routing;
@@ -185,12 +186,18 @@ namespace Akka.Actor
             return Deploy.NoScopeGiven;
         }
 
-        private RouterConfig CreateRouterConfig(string routerType, string key, Config config, Config deployment)
+        private RouterConfig CreateRouterConfig(string routerTypeAlias, string key, Config config, Config deployment)
         {
-            if (routerType == "from-code")
+            if (routerTypeAlias == "from-code")
                 return RouterConfig.NoRouter;
 
-            throw new NotImplementedException("Implement this");
+            var path = string.Format("akka.actor.router.type-mapping.{0}", routerTypeAlias);
+            var routerTypeName = settings.Config.GetString(path);
+            var routerType = Type.GetType(routerTypeName);
+            Debug.Assert(routerType != null, "routerType != null");
+            var routerConfig = (RouterConfig)Activator.CreateInstance(routerType, config);
+
+            return routerConfig;
         }
     }
 }

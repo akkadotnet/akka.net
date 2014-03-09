@@ -32,6 +32,12 @@ akka {
 
         deployment {
             /local {
+                router = round-robin-group
+                routees.paths = [
+                    /user/w1
+                    /user/w2
+                    /user/w3
+                ]
             }
             /remote {
                 remote = ""akka.tcp://system2@localhost:8080""
@@ -51,6 +57,10 @@ akka {
 ");
             using (var system = ActorSystem.Create("system1", config))
             {
+                var worker1 = system.ActorOf<SomeActor>("w1");
+                var worker2 = system.ActorOf<SomeActor>("w2");
+                var worker3 = system.ActorOf<SomeActor>("w3");
+
                 var local = system.ActorOf<SomeActor>("local");
                 var remote = system.ActorOf<SomeActor> ("remote");
 
