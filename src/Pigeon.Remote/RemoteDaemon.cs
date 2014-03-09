@@ -52,10 +52,12 @@ namespace Akka.Remote
             //TODO: find out what format "Path" should have
             var supervisor = (InternalActorRef) message.Supervisor;
             Props props = message.Props;
-            ActorPath path = Path/message.Path.Split('/');
+            ActorPath childPath = ActorPath.Parse(message.Path);
+            var subPath = childPath.Elements.Drop(1);
+            ActorPath path = Path/subPath;
             InternalActorRef actor = System.Provider.ActorOf(System, props, supervisor, path);
-            string name = message.Path;
-            AddChild(name, actor);
+            string childName = subPath.Join("/");
+            AddChild(childName, actor);
             actor.Tell(new Watch(actor, this));
         }
 

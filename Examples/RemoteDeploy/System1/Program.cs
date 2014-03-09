@@ -61,8 +61,7 @@ akka {
                 local.Tell("Local message");
                 remote.Tell("Remote message");
                 Console.ReadLine();
-            }
-            
+            }            
         }
     }
 }
