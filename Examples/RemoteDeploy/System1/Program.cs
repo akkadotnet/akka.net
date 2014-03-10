@@ -69,7 +69,7 @@ akka {
                 system.ActorOf<SomeActor>("w3");
 
                 //create a local group router (see config)
-                var local = system.ActorOf<SomeActor>("local");
+                var local = system.ActorOf(Props.Empty, "local");
 
                 //create a remote deployed actor
                 var remote = system.ActorOf<SomeActor> ("remote");

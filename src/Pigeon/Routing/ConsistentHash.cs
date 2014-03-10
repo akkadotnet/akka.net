@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 
@@ -57,9 +58,9 @@ namespace Akka.Routing
         {
         }
 
-        public override Router CreateRouter()
+        public override Router CreateRouter(ActorSystem system)
         {
-            return new Router(new ConsistentHashingRoutingLogic());
+            return new Router(new ConsistentHashingRoutingLogic(),GetRoutees(system).ToArray());
         }
     }
 }

@@ -12,30 +12,24 @@ namespace Akka.Routing
 
         public static readonly RouterConfig NoRouter = new NoRouter();
         public string RouterDispatcher { get; protected set; }
-        public abstract IEnumerable<Routee> GetRoutees(ActorSystem system);
 
         public virtual RouterConfig WithFallback(RouterConfig routerConfig)
         {
             return this;
         }
 
-        public abstract Router CreateRouter();
+        public abstract Router CreateRouter(ActorSystem system);
         public abstract RouterActor CreateRouterActor();
     }
 
     public class NoRouter : RouterConfig
     {
-        public override IEnumerable<Routee> GetRoutees(ActorSystem system)
-        {
-            throw new NotImplementedException();
-        }
-
         public override RouterActor CreateRouterActor()
         {
             throw new NotImplementedException();
         }
 
-        public override Router CreateRouter()
+        public override Router CreateRouter(ActorSystem system)
         {
             throw new NotImplementedException();
         }
@@ -65,13 +59,9 @@ namespace Akka.Routing
             paths = routees.Select(x => x.Path.ToStringWithAddress()).ToArray();
         }
 
-        public override IEnumerable<Routee> GetRoutees(ActorSystem system)
+        public IEnumerable<Routee> GetRoutees(ActorSystem system)
         {
-            foreach (string path in paths)
-            {
-                ActorSelection actor = system.ActorSelection(path);
-                yield return new ActorSelectionRoutee(actor);
-            }
+            return paths.Select(system.ActorSelection).Select(actor => new ActorSelectionRoutee(actor));
         }
 
         public override RouterActor CreateRouterActor()
@@ -82,7 +72,7 @@ namespace Akka.Routing
 
     public abstract class Pool : RouterConfig
     {
-        public Pool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher,
+        protected Pool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher,
             bool usePoolDispatcher = false)
         {
             NrOfInstances = nrOfInstances;
@@ -90,6 +80,12 @@ namespace Akka.Routing
             SupervisorStrategy = supervisorStrategy;
             UsePoolDispatcher = usePoolDispatcher;
             RouterDispatcher = routerDispatcher;
+        }
+
+        protected Pool(Configuration.Config config)
+        {
+            NrOfInstances = config.GetInt("nr-of-instances");
+
         }
 
         public int NrOfInstances { get; protected set; }

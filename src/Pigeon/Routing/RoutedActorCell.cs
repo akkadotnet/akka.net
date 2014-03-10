@@ -10,8 +10,7 @@ namespace Akka.Routing
             Mailbox mailbox) : base(system, supervisor, props, path, mailbox)
         {
             RouterConfig routerConfig = props.RouterConfig;
-            Routee[] routees = routerConfig.GetRoutees(System).ToArray();
-            Router = routerConfig.CreateRouter().WithRoutees(routees);
+            Router = routerConfig.CreateRouter(system);
             Self = new RoutedActorRef(Router, path, this);
         }
 

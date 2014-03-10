@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Akka.Actor;
 using Akka.Configuration;
 
 namespace Akka.Routing
@@ -101,9 +103,9 @@ namespace Akka.Routing
         /// Creates the router.
         /// </summary>
         /// <returns>Router.</returns>
-        public override Router CreateRouter()
+        public override Router CreateRouter(ActorSystem system)
         {
-            return new Router(new RandomLogic());
+            return new Router(new RandomLogic(),GetRoutees(system).ToArray());
         }
     }
 }

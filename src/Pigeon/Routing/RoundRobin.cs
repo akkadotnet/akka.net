@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
@@ -80,9 +81,9 @@ namespace Akka.Routing
         ///     Creates the router.
         /// </summary>
         /// <returns>Router.</returns>
-        public override Router CreateRouter()
+        public override Router CreateRouter(ActorSystem system)
         {
-            return new Router(new RoundRobinRoutingLogic());
+            return new Router(new RoundRobinRoutingLogic(),GetRoutees(system).ToArray());
         }
     }
 
@@ -105,14 +106,9 @@ namespace Akka.Routing
         {
         }
 
-        /// <summary>
-        ///     Gets the routees.
-        /// </summary>
-        /// <param name="system">The system.</param>
-        /// <returns>IEnumerable{Routee}.</returns>
-        public override IEnumerable<Routee> GetRoutees(ActorSystem system)
+        public RoundRobinPool(Config config) : base(config)
         {
-            throw new NotImplementedException();
+            
         }
 
         /// <summary>
@@ -128,9 +124,9 @@ namespace Akka.Routing
         ///     Creates the router.
         /// </summary>
         /// <returns>Router.</returns>
-        public override Router CreateRouter()
+        public override Router CreateRouter(ActorSystem system)
         {
-            throw new NotImplementedException();
+            return new Router(new RoundRobinRoutingLogic());
         }
     }
 }
