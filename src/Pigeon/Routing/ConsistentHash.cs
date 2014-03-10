@@ -60,7 +60,7 @@ namespace Akka.Routing
 
         public override Router CreateRouter(ActorSystem system)
         {
-            return new Router(new ConsistentHashingRoutingLogic(),GetRoutees(system).ToArray());
+            return new Router(new ConsistentHashingRoutingLogic());
         }
     }
 }

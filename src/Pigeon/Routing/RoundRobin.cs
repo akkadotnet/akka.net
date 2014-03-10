@@ -34,7 +34,12 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    ///     Class RoundRobinGroup.
+    /// A router group that uses round-robin to select a routee. For concurrent calls,
+    /// round robin is just a best effort.
+    ///
+    /// The configuration parameter trumps the constructor arguments. This means that
+    /// if you provide `paths` during instantiation they will be ignored if
+    /// the router is defined in the configuration file for the actor being used.
     /// </summary>
     public class RoundRobinGroup : Group
     {
@@ -83,7 +88,7 @@ namespace Akka.Routing
         /// <returns>Router.</returns>
         public override Router CreateRouter(ActorSystem system)
         {
-            return new Router(new RoundRobinRoutingLogic(),GetRoutees(system).ToArray());
+            return new Router(new RoundRobinRoutingLogic());
         }
     }
 
@@ -93,7 +98,7 @@ namespace Akka.Routing
     public class RoundRobinPool : Pool
     {
         /// <summary>
-        ///     Initializes a new instance of the <see cref="RoundRobinPool" /> class.
+
         /// </summary>
         /// <param name="nrOfInstances">The nr of instances.</param>
         /// <param name="resizer">The resizer.</param>

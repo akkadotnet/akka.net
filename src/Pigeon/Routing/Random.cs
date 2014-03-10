@@ -105,7 +105,7 @@ namespace Akka.Routing
         /// <returns>Router.</returns>
         public override Router CreateRouter(ActorSystem system)
         {
-            return new Router(new RandomLogic(),GetRoutees(system).ToArray());
+            return new Router(new RandomLogic());
         }
     }
 }

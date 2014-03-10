@@ -20,6 +20,9 @@ namespace Akka.Routing
 
         public abstract Router CreateRouter(ActorSystem system);
         public abstract RouterActor CreateRouterActor();
+
+        public abstract IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell);
+
     }
 
     public class NoRouter : RouterConfig
@@ -30,6 +33,11 @@ namespace Akka.Routing
         }
 
         public override Router CreateRouter(ActorSystem system)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
         {
             throw new NotImplementedException();
         }
@@ -59,14 +67,19 @@ namespace Akka.Routing
             paths = routees.Select(x => x.Path.ToStringWithAddress()).ToArray();
         }
 
-        public IEnumerable<Routee> GetRoutees(ActorSystem system)
-        {
-            return paths.Select(system.ActorSelection).Select(actor => new ActorSelectionRoutee(actor));
-        }
-
         public override RouterActor CreateRouterActor()
         {
             return new RouterActor();
+        }
+
+        public override Router CreateRouter(ActorSystem system)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
+        {
+            return paths.Select(routedActorCell.System.ActorSelection).Select(actor => new ActorSelectionRoutee(actor));
         }
     }
 
@@ -127,6 +140,20 @@ namespace Akka.Routing
             if (Resizer == null)
                 return new RouterPoolActor(SupervisorStrategy);
             return new ResizablePoolActor(SupervisorStrategy);
+        }
+
+        public override Router CreateRouter(ActorSystem system)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
+        {
+            for (int i = 0; i < NrOfInstances; i++)
+            {
+                //TODO: where do we get props?
+                yield return NewRoutee(Akka.Actor.Props.Empty , routedActorCell);
+            }
         }
     }
 }
