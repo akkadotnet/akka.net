@@ -6,10 +6,10 @@ namespace Akka.Routing
     public class RoutedActorRef : LocalActorRef
     {
         private readonly Router router;
-
-        public RoutedActorRef(Router router, ActorPath path, ActorCell context) : base(path, context)
+        private readonly RoutedActorCell cell;
+        public RoutedActorRef( ActorPath path, RoutedActorCell context) : base(path, context)
         {
-            this.router = router;
+            this.cell = context;
         }
 
         protected override void TellInternal(object message, ActorRef sender)
@@ -20,7 +20,7 @@ namespace Akka.Routing
             }
             else
             {
-                router.Route(message, sender);    
+                cell.Router.Route(message, sender);    
             }            
         }
     }

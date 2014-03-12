@@ -15,7 +15,7 @@ namespace Akka.Routing
             Router = routerConfig.CreateRouter(system);
             var routees = routerConfig.GetRoutees(this).ToArray();
             AddRoutees(routees);
-            Self = new RoutedActorRef(Router, path, this);            
+            Self = new RoutedActorRef(path, this);            
         }
        
         private void AddRoutees(Routee[] routees)

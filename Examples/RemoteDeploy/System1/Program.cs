@@ -32,12 +32,8 @@ akka {
 
         deployment {
             /local {
-                router = round-robin-group
-                routees.paths = [
-                    /user/w1
-                    /user/w2
-                    /user/w3
-                ]
+                router = round-robin-pool
+                nr-of-instances = 5
             }
             /remote {
                 router = round-robin-group
