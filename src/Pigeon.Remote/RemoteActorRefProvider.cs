@@ -136,7 +136,8 @@ namespace Akka.Remote
             }
             else
             {
-                cell = new RoutedActorCell(system, supervisor, props, path, mailbox);
+                var routeeProps = props.WithRouter(RouterConfig.NoRouter);
+                cell = new RoutedActorCell(system, supervisor, props, routeeProps, path, mailbox);
             }
 
             cell.NewActor();

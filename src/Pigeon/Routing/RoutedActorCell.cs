@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Akka.Actor;
 using Akka.Dispatch;
 
@@ -8,13 +9,33 @@ namespace Akka.Routing
     {
         private readonly RouterConfig routerConfig;
         public Router Router { get; private set; }
-        public RoutedActorCell(ActorSystem system, InternalActorRef supervisor, Props props, ActorPath path,
-            Mailbox mailbox) : base(system, supervisor, props, path, mailbox)
+        public Props RouteeProps { get; private set; }
+        public RoutedActorCell(ActorSystem system, InternalActorRef supervisor, Props routerProps,Props routeeProps, ActorPath path,
+            Mailbox mailbox)
+            : base(system, supervisor, routerProps, path, mailbox)
         {
-            routerConfig = props.RouterConfig;
+            RouteeProps = routeeProps;
+            routerConfig = routerProps.RouterConfig;
             Router = routerConfig.CreateRouter(system);
-            var routees = routerConfig.GetRoutees(this).ToArray();
-            AddRoutees(routees);
+            routerConfig.Match()
+                .With<Pool>(r =>
+                {
+                    var routees = new List<Routee>();
+                    for (int i = 0; i < r.NrOfInstances; i++)
+                    {
+                        var routee = this.ActorOf(RouteeProps);
+                        routees.Add(new ActorRefRoutee(routee));
+                    }
+                    AddRoutees(routees.ToArray());
+                })
+                .With<Group>(r =>
+                {
+                    var routees = routerConfig.GetRoutees(this).ToArray();
+                    AddRoutees(routees);
+                });
+
+
+            
             Self = new RoutedActorRef(path, this);            
         }
        
@@ -35,5 +56,7 @@ namespace Akka.Routing
                 instance.AroundPreStart();
             });
         }
+
+        
     }
 }

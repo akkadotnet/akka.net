@@ -33,7 +33,7 @@ akka {
         deployment {
             /local {
                 router = round-robin-pool
-                nr-of-instances = 5
+                nr-of-instances = 10
             }
             /remote {
                 router = round-robin-group
@@ -65,7 +65,7 @@ akka {
                 system.ActorOf<SomeActor>("w3");
 
                 //create a local group router (see config)
-                var local = system.ActorOf(Props.Empty, "local");
+                var local = system.ActorOf<SomeActor>( "local");
 
                 //create a remote deployed actor
                 var remote = system.ActorOf<SomeActor> ("remote");

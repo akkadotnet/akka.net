@@ -224,7 +224,7 @@ namespace Akka.Actor
             }
             else
             {
-                cell = new RoutedActorCell(system, supervisor, props, path, mailbox);
+                cell = new RoutedActorCell(system, supervisor, props,props, path, mailbox);
             }
             cell.NewActor();
 
