@@ -214,7 +214,7 @@ namespace Akka.Actor
         public Props WithRouter(RouterConfig routerConfig)
         {
             Props copy = Copy();
-            copy.Deploy.WithRouterConfig(routerConfig);
+            copy.Deploy = Deploy.WithRouterConfig(routerConfig);
             return copy;
         }
 

@@ -117,15 +117,6 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        ///     Creates the router actor.
-        /// </summary>
-        /// <returns>RouterActor.</returns>
-        public override RouterActor CreateRouterActor()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
         ///     Creates the router.
         /// </summary>
         /// <returns>Router.</returns>
