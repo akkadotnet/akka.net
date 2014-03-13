@@ -63,8 +63,6 @@ Files = {
     :pigeon_remote => {
         :bin => "#{Projects[:pigeon_remote][:id]}.dll",
         :pdb => "#{Projects[:pigeon_remote][:id]}.pdb",
-        :google_protobuff => "#{Projects[:pigeon_remote][:references][:google_protobuf][:file]}.dll",
-        :google_serialization_protobuff => "#{Projects[:pigeon_remote][:references][:google_protobuf_serialization][:file]}.dll",
     },
 
     :akka_slf4net => {

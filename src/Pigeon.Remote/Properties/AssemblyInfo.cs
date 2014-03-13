@@ -5,9 +5,9 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 
-[assembly: AssemblyTitle("Pigeon.Remote")]
+[assembly: AssemblyTitle("Akka.Remote")]
 [assembly: AssemblyDescription("")]
-[assembly: AssemblyProduct("Pigeon.Remote")]
+[assembly: AssemblyProduct("Akka.Remote")]
 [assembly: AssemblyCulture("")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 

@@ -163,8 +163,6 @@ output :pigeon_remote_nuget_output => [:create_output_folders] do |out|
     out.from Folders[:bin][:pigeon_remote]
     out.to Folders[:pigeon_remote_nuspec][:net45]
     out.file Files[:pigeon_remote][:bin]
-    out.file Files[:pigeon_remote][:google_protobuff]
-    out.file Files[:pigeon_remote][:google_serialization_protobuff]
 end
 
 output :akka_slf4net_nuget_output => [:create_output_folders] do |out|
@@ -196,8 +194,9 @@ nuspec :nuspec_pigeon => [:all_output] do |nuspec|
     nuspec.language = Projects[:language]   
 
     #dependencies
-    nuspec.dependency Projects[:pigeon][:dependencies][:fast_json][:package], Projects[:pigeon][:dependencies][:fast_json][:version]
-    nuspec.dependency Projects[:pigeon][:dependencies][:protobuf_net][:package], Projects[:pigeon][:dependencies][:protobuf_net][:version]
+    Projects[:pigeon][:dependencies].each do |key, array|
+        nuspec.dependency array[:package], array[:version]
+    end
     
     nuspec.tags = Projects[:pigeon][:nuget_tags]
     nuspec.output_file = File.join(Folders[:nuget_out], "#{Projects[:pigeon][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec");
@@ -216,6 +215,7 @@ nuspec :nuspec_pigeon_fsharp => [:all_output] do |nuspec|
     nuspec.language = Projects[:language]
     nuspec.tags = Projects[:pigeon_fsharp][:nuget_tags]
     nuspec.output_file = File.join(Folders[:nuget_out], "#{Projects[:pigeon_fsharp][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec");
+
     nuspec.dependency Projects[:pigeon][:id], env_nuget_version
     #Framework (GAC) assembly references
     Projects[:pigeon_fsharp ][:framework_assemblies].each do |key, array|
@@ -238,8 +238,11 @@ nuspec :nuspec_pigeon_remote => [:all_output] do |nuspec|
     nuspec.output_file = File.join(Folders[:nuget_out], "#{Projects[:pigeon_remote][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec");
 
     nuspec.dependency Projects[:pigeon][:id], env_nuget_version
-    nuspec.reference Files[:pigeon_remote][:google_protobuff]
-    nuspec.reference Files[:pigeon_remote][:google_serialization_protobuff]
+
+    #dependencies
+    Projects[:pigeon_remote][:dependencies].each do |key, array|
+        nuspec.dependency array[:package], array[:version]
+    end
 end
 
 desc "Builds a nuspec file for Akka.slf4net"
