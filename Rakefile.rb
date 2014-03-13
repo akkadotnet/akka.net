@@ -277,33 +277,33 @@ task :nuspec => [:nuspec_pigeon,
 desc "Packs a build of Pigeon into a NuGet package"
 nugetpack :pack_pigeon => [:nuspec] do |nuget|
     nuget.command = Commands[:nuget]
-    nuget.nuspec = File.join(Folders[:nuget_out], "#{Projects[:pigeon][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")
-    nuget.base_folder = Folders[:pigeon_nuspec][:root]
-    nuget.output = Folders[:nuget_out]
+    nuget.nuspec = "\"#{File.join(Folders[:nuget_out], "#{Projects[:pigeon][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")}\""
+    nuget.base_folder = "\"#{Folders[:pigeon_nuspec][:root]}\""
+    nuget.output = "\"#{Folders[:nuget_out]}\""
 end
 
 desc "Packs a build of Pigeon into a NuGet package"
 nugetpack :pack_pigeon_fsharp => [:nuspec] do |nuget|
     nuget.command = Commands[:nuget]
-    nuget.nuspec = File.join(Folders[:nuget_out], "#{Projects[:pigeon_fsharp][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")
-    nuget.base_folder = Folders[:pigeon_fsharp_nuspec][:root]
-    nuget.output = Folders[:nuget_out]
+    nuget.nuspec = "\"#{File.join(Folders[:nuget_out], "#{Projects[:pigeon_fsharp][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")}\""
+    nuget.base_folder = "\"#{Folders[:pigeon_fsharp_nuspec][:root]}\""
+    nuget.output = "\"#{Folders[:nuget_out]}\""
 end
 
 desc "Packs a build of Pigeon into a NuGet package"
 nugetpack :pack_pigeon_remote => [:nuspec] do |nuget|
     nuget.command = Commands[:nuget]
-    nuget.nuspec = File.join(Folders[:nuget_out], "#{Projects[:pigeon_remote][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")
-    nuget.base_folder = Folders[:pigeon_remote_nuspec][:root]
-    nuget.output = Folders[:nuget_out]
+    nuget.nuspec = "\"#{File.join(Folders[:nuget_out], "#{Projects[:pigeon_remote][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")}\""
+    nuget.base_folder = "\"#{Folders[:pigeon_remote_nuspec][:root]}\""
+    nuget.output = "\"#{Folders[:nuget_out]}\""
 end
 
 desc "Packs a build of Pigeon into a NuGet package"
 nugetpack :pack_akka_slf4net => [:nuspec] do |nuget|
     nuget.command = Commands[:nuget]
-    nuget.nuspec = File.join(Folders[:nuget_out], "#{Projects[:akka_slf4net][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")
-    nuget.base_folder = Folders[:akka_slf4net_nuspec][:root]
-    nuget.output = Folders[:nuget_out]
+    nuget.nuspec = "\"#{File.join(Folders[:nuget_out], "#{Projects[:akka_slf4net][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")}\""
+    nuget.base_folder = "\"#{Folders[:akka_slf4net_nuspec][:root]}\""
+    nuget.output = "\"#{Folders[:nuget_out]}\""
 end
 
 desc "Packs all of the Pigeon NuGet packages"
