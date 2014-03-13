@@ -117,6 +117,12 @@ namespace Akka.Routing
         }
 
         /// <summary>
+        /// Simple form of RoundRobin constructor
+        /// </summary>
+        /// <param name="nrOfInstances">The nr of instances.</param>
+        public RoundRobinPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null) { }
+
+        /// <summary>
         ///     Creates the router.
         /// </summary>
         /// <returns>Router.</returns>
