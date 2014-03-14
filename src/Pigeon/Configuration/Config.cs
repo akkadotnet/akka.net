@@ -200,5 +200,11 @@ namespace Akka.Configuration
         {
             return new Config(this, fallback);
         }
+
+        public bool HasPath(string path)
+        {
+            var value = GetNode(path);
+            return value != null;
+        }
     }
 }

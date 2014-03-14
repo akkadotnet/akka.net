@@ -90,7 +90,7 @@ namespace Akka.Routing
         {
             NrOfInstances = nrOfInstances;
             Resizer = resizer;
-            SupervisorStrategy = supervisorStrategy;
+            SupervisorStrategy = supervisorStrategy ?? Pool.DefaultStrategy;
             UsePoolDispatcher = usePoolDispatcher;
             RouterDispatcher = routerDispatcher;
         }
@@ -98,7 +98,8 @@ namespace Akka.Routing
         protected Pool(Configuration.Config config)
         {
             NrOfInstances = config.GetInt("nr-of-instances");
-
+            //Resizer = DefaultResizer.fromConfig(config);
+            UsePoolDispatcher = config.HasPath("pool-dispatcher");
         }
 
         public int NrOfInstances { get; protected set; }
@@ -155,5 +156,18 @@ namespace Akka.Routing
                 yield return NewRoutee(Akka.Actor.Props.Empty , routedActorCell);
             }
         }
+
+        #region Static methods
+
+        /// <summary>
+        ///     When supervisorStrategy is not specified for an actor this
+        ///     is used by default. OneForOneStrategy with a decider which escalates by default.
+        /// </summary>
+        public static SupervisorStrategy DefaultStrategy
+        {
+            get { return new OneForOneStrategy(10, TimeSpan.FromSeconds(10), (ex) => Directive.Escalate); }
+        }
+
+        #endregion
     }
 }
