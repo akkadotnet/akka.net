@@ -81,12 +81,12 @@ namespace Akka.Actor
         public virtual void Init()
         {
             RootPath = new RootActorPath(Address);
-            TempNode = RootPath/"temp";
+            TempNode = RootPath / "temp";
 
             RootCell = new ActorCell(System, "", new ConcurrentQueueMailbox());
-            DeadLetters = new DeadLetterActorRef(this, RootPath/"deadLetters", System.EventStream);
-            Guardian = (LocalActorRef) RootCell.ActorOf<GuardianActor>("user");
-            SystemGuardian = (LocalActorRef) RootCell.ActorOf<GuardianActor>("system");
+            DeadLetters = new DeadLetterActorRef(this, RootPath / "deadLetters", System.EventStream);
+            Guardian = (LocalActorRef)RootCell.ActorOf<GuardianActor>("user");
+            SystemGuardian = (LocalActorRef)RootCell.ActorOf<GuardianActor>("system");
             TempContainer = new VirtualPathContainer(this, TempNode, null);
         }
 
@@ -115,7 +115,7 @@ namespace Akka.Actor
         /// <returns>ActorPath.</returns>
         public ActorPath TempPath()
         {
-            return TempNode/Guid.NewGuid().ToString();
+            return TempNode / Guid.NewGuid().ToString();
         }
 
         /// <summary>
@@ -181,7 +181,7 @@ namespace Akka.Actor
             //}
         }
 
-        public Deployer Deployer { get;protected set; }
+        public Deployer Deployer { get; protected set; }
     }
 
     /// <summary>
@@ -199,7 +199,8 @@ namespace Akka.Actor
         ///     Initializes a new instance of the <see cref="LocalActorRefProvider" /> class.
         /// </summary>
         /// <param name="system">The system.</param>
-        public LocalActorRefProvider(ActorSystem system) : base(system)
+        public LocalActorRefProvider(ActorSystem system)
+            : base(system)
         {
             Address = new Address("akka", System.Name); //TODO: this should not work this way...
         }
@@ -215,6 +216,7 @@ namespace Akka.Actor
         public override InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
             ActorPath path)
         {
+            ActorCell cell = null;
             Mailbox mailbox = System.Mailboxes.FromConfig(props.Mailbox);
 
             Deploy configDeploy = System.Provider.Deployer.Lookup(path);
@@ -227,7 +229,6 @@ namespace Akka.Actor
             {
 
             }
-            props = props.WithDeploy(deploy);
 
             if (string.IsNullOrEmpty(props.Mailbox))
             {
@@ -244,28 +245,35 @@ namespace Akka.Actor
             {
                 throw new NotSupportedException("LocalActorRefProvider can not deploy remote");
             }
-            return LocalActorOf(system, props, supervisor, path, mailbox);
-        }
 
-
-        private static InternalActorRef LocalActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
-            ActorPath path, Mailbox mailbox)
-        {
-            ActorCell cell = null;
-            if (props.RouterConfig is NoRouter || props.RouterConfig == null) //TODO: should not need nullcheck here
+            if (props.RouterConfig is NoRouter || props.RouterConfig == null)
             {
+
+                props = props.WithDeploy(deploy);
                 cell = new ActorCell(system, supervisor, props, path, mailbox);
+
             }
             else
             {
-                var routeeProps = props.WithRouter(RouterConfig.NoRouter);
-                cell = new RoutedActorCell(system, supervisor, props, routeeProps, path, mailbox);
-            }
+                if (deploy.RouterConfig is NoRouter) //if no config value was specified, override with procedural input
+                {
+                    deploy = deploy.WithRouterConfig(props.RouterConfig);
+                }
 
+                var routerProps =
+                    Props.Create<RouterActor>()
+                        .WithDeploy(deploy);
+
+                var routeeProps = props.WithRouter(RouterConfig.NoRouter);
+
+                cell = new RoutedActorCell(system, supervisor, routerProps, routeeProps, path, mailbox);
+
+            }
             cell.NewActor();
             //   parentContext.Watch(cell.Self);
             return cell.Self;
         }
+
 
         /// <summary>
         ///     Resolves the actor reference.
@@ -287,7 +295,7 @@ namespace Akka.Actor
                 ActorCell currentContext = RootCell;
                 foreach (string part in actorPath.Elements)
                 {
-                    currentContext = ((LocalActorRef) currentContext.Child(part)).Cell;
+                    currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
                 }
                 return currentContext.Self;
             }

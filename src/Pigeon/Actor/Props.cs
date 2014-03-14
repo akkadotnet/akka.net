@@ -265,7 +265,7 @@ namespace Akka.Actor
                 Arguments = Arguments,
                 Type = Type,
                 Deploy = Deploy,
-                SupervisorStrategy = SupervisorStrategy
+                SupervisorStrategy = SupervisorStrategy,
             };
         }
     }
