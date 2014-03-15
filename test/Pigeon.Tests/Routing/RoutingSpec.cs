@@ -66,6 +66,7 @@ namespace Pigeon.Tests.Routing
             expectMsgType<ActorRef>().ShouldBe(c1);           
             expectMsgType<ActorRef>().ShouldBe(c1);
             sys.Stop(c1);
+            //TODO: don't know why we dont get terminated for c1 first
             expectTerminated(router).ExistenceConfirmed.ShouldBe(true);
         }
     }

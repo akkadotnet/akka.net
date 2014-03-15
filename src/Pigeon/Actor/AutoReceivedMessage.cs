@@ -21,6 +21,11 @@ namespace Akka.Actor
         public bool AddressTerminated { get; private set; }
 
         public bool ExistenceConfirmed { get; private set; }
+
+        public override string ToString()
+        {
+            return string.Format("Terminated {0}", ActorRef);
+        }
     }
 
     //request to an actor ref, to get back the identity of the underlying actors
