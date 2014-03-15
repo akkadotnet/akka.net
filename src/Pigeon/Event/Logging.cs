@@ -298,7 +298,7 @@ namespace Akka.Event
         /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
         public override string ToString()
         {
-            return string.Format("[{0}][{1}][{2}] - {3} [Thread {4}]", LogLevel().ToString().Replace("Level",""),Timestamp , LogSource, Message,
+            return string.Format("[{0}][{1}][{2}] {3} [Thread {4}]", LogLevel().ToString().Replace("Level",""),Timestamp , LogSource, Message,
                 Thread.ManagedThreadId);
         }
     }
