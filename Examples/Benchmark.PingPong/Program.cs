@@ -15,10 +15,14 @@ namespace Akka.Benchmark.PingPong
     {
         public static uint CPUSpeed()
         {
+#if !mono
             ManagementObject Mo = new ManagementObject("Win32_Processor.DeviceID='CPU0'");
             uint sp = (uint)(Mo["CurrentClockSpeed"]);
             Mo.Dispose();
             return sp;
+#else
+            return 0;
+#endif
         }
 
         static void Main(string[] args)
@@ -52,6 +56,7 @@ namespace Akka.Benchmark.PingPong
             var repeat = 30000L * repeatFactor;
             var repeatsPerClient = repeat / numberOfClients;
             var system = new ActorSystem("PingPong");
+            
 
             var clients = new List<ActorRef>();
             var tasks = new List<Task>();

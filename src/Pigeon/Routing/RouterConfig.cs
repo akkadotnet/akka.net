@@ -50,7 +50,7 @@ namespace Akka.Routing
         public string[] Paths
         {
             get { return paths; }
-            set { paths = value; }
+            set { paths = value; } //should be private, fails for serialization atm, JSON.NET should be able to set private setters, right?
         }
 
         protected Group()
@@ -83,8 +83,14 @@ namespace Akka.Routing
         }
     }
 
+
+    //TODO: ensure this can be serialized/deserialized fully
     public abstract class Pool : RouterConfig
     {
+        protected Pool() //for serialization
+        {            
+        }
+
         protected Pool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher,
             bool usePoolDispatcher = false)
         {
@@ -141,11 +147,6 @@ namespace Akka.Routing
             if (Resizer == null)
                 return new RouterPoolActor(SupervisorStrategy);
             return new ResizablePoolActor(SupervisorStrategy);
-        }
-
-        public override Router CreateRouter(ActorSystem system)
-        {
-            throw new NotImplementedException();
         }
 
         public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)

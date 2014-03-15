@@ -55,37 +55,37 @@ namespace Akka.Dispatch
         }
     }
 
-    /// <summary>
-    ///     Class DaemonMailbox.
-    /// </summary>
-    public class DaemonMailbox : Mailbox
-    {
-        /// <summary>
-        ///     Posts the specified envelope.
-        /// </summary>
-        /// <param name="envelope">The envelope.</param>
-        public override void Post(Envelope envelope)
-        {
-            if (envelope.Message is SystemMessage)
-                SystemInvoke(envelope);
-            else
-                Invoke(envelope);
-        }
+    ///// <summary>
+    /////     Class DaemonMailbox.
+    ///// </summary>
+    //public class DaemonMailbox : Mailbox
+    //{
+    //    /// <summary>
+    //    ///     Posts the specified envelope.
+    //    /// </summary>
+    //    /// <param name="envelope">The envelope.</param>
+    //    public override void Post(Envelope envelope)
+    //    {
+    //        if (envelope.Message is SystemMessage)
+    //            SystemInvoke(envelope);
+    //        else
+    //            Invoke(envelope);
+    //    }
 
-        /// <summary>
-        ///     Stops this instance.
-        /// </summary>
-        public override void Stop()
-        {
-        }
+    //    /// <summary>
+    //    ///     Stops this instance.
+    //    /// </summary>
+    //    public override void Stop()
+    //    {
+    //    }
 
-        /// <summary>
-        ///     Disposes this instance.
-        /// </summary>
-        public override void Dispose()
-        {
-        }
-    }
+    //    /// <summary>
+    //    ///     Disposes this instance.
+    //    /// </summary>
+    //    public override void Dispose()
+    //    {
+    //    }
+    //}
 
     /// <summary>
     ///     Class ConcurrentQueueMailbox.
