@@ -66,12 +66,37 @@ namespace Akka.Tests
         protected ActorRef testActor;
         protected ActorRef echoActor;
 
-        protected void expectMsg(object expected)
+        protected Terminated expectTerminated(ActorRef @ref)
+        {
+            var actual = queue.Take();
+
+            Assert.IsTrue(actual is Terminated);
+
+            return (Terminated)actual;
+        }
+
+        protected object expectMsg(object expected)
         {
             var actual = queue.Take();
 
             global::System.Diagnostics.Debug.WriteLine("actual: " + actual);
-            Assert.AreEqual(expected, actual);            
+            Assert.AreEqual(expected, actual);
+            return actual;
+        }
+
+        protected void watch(ActorRef @ref)
+        {
+            var l = testActor as ActorRefWithCell;
+            l.Cell.Watch(@ref);
+        }
+
+        protected TMessage expectMsgType<TMessage>()
+        {
+            var actual = queue.Take();
+
+            global::System.Diagnostics.Debug.WriteLine("actual: " + actual);
+            Assert.IsTrue(actual is TMessage);
+            return (TMessage)actual;
         }
 
         protected void expectNoMsg(TimeSpan duration)

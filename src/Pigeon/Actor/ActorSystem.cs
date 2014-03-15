@@ -375,5 +375,14 @@ namespace Akka.Actor
         {
             return Provider.SystemGuardian.Cell.ActorOf<TActor>(name);
         }
+
+        public void Stop(ActorRef @ref)
+        {
+            if (@ref is LocalActorRef)
+            {
+                var l = @ref as LocalActorRef;
+                l.Stop();
+            }
+        }
     }
 }

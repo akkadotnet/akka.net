@@ -8,12 +8,19 @@ namespace Akka.Actor
 
     public class Terminated : AutoReceivedMessage
     {
-        public Terminated(ActorRef actorRef)
+        public Terminated(ActorRef actorRef, bool existenceConfirmed, bool addressTerminated)
         {
             ActorRef = actorRef;
+            ExistenceConfirmed = existenceConfirmed;
+            AddressTerminated = addressTerminated;
         }
 
         public ActorRef ActorRef { get; private set; }
+
+
+        public bool AddressTerminated { get; private set; }
+
+        public bool ExistenceConfirmed { get; private set; }
     }
 
     //request to an actor ref, to get back the identity of the underlying actors

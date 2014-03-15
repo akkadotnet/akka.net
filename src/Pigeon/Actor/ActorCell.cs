@@ -142,7 +142,7 @@ namespace Akka.Actor
         public void Watch(ActorRef watchee)
         {
             Watchees.Add(watchee);
-            watchee.Tell(new Watch(watchee, Self));
+            watchee.Tell(new Watch(watchee, Self),Self);
         }
 
         /// <summary>

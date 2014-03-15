@@ -155,6 +155,7 @@ namespace Akka.Actor
         /// <param name="m">The m.</param>
         private void ReceivedTerminated(Terminated m)
         {
+            //TODO: we can get here from actors that we just watch, we should not try to stop things if we are not the parent of the actor(?)
             InternalActorRef child = Child(m.ActorRef.Path.Name);
             if (!child.IsNobody()) //this terminated actor is a valid child
             {
@@ -258,7 +259,8 @@ namespace Akka.Actor
             //if (childrenRefs.getByRef(actor).isDefined) handleChildTerminated(actor)
             if (!isTerminating)
             {
-                Self.Tell(new Terminated(m.Actor), m.Actor);
+                //TODO: what params should be used for the bools?
+                Self.Tell(new Terminated(m.Actor,true,false), m.Actor);
             }
             if (Children.ContainsKey(m.Actor.Path.Name))
             {
@@ -597,7 +599,7 @@ protected def terminate() {
         /// <param name="m">The m.</param>
         private void HandleWatch(Watch m)
         {
-            WatchedBy.Add(Sender);
+            WatchedBy.Add(m.Watcher);
             if (System.Settings.DebugLifecycle)
                 Publish(new Debug(Self.Path.ToString(), ActorType, "now watched by " + m.Watcher));
         }
