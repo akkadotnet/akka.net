@@ -126,7 +126,7 @@ namespace Akka.Actor
                     //TODO: akka alters the receive handler for logging, but the effect is the same. keep it this way?
                     Func<object, bool> UnhandledLookup = Actor.GetUnhandled();
 
-                    CurrentBehavior(message);
+                    ReceiveMessage(message);
                     bool unhandled = UnhandledLookup(message);
 
                     Publish(new Debug(Self.Path.ToString(), Actor.GetType(),
@@ -134,7 +134,7 @@ namespace Akka.Actor
                 }
                 else
                 {
-                    CurrentBehavior(message);
+                    ReceiveMessage(message);
                 }
             }
         }
@@ -155,15 +155,18 @@ namespace Akka.Actor
         /// <param name="m">The m.</param>
         private void ReceivedTerminated(Terminated m)
         {
-            //TODO: we can get here from actors that we just watch, we should not try to stop things if we are not the parent of the actor(?)
-            InternalActorRef child = Child(m.ActorRef.Path.Name);
-            if (!child.IsNobody()) //this terminated actor is a valid child
-            {
-                Stop(child); //unhooks the child from the supervisor container
-            }
-            if (System.Settings.DebugLifecycle)
-                Publish(new Debug(Self.Path.ToString(), Actor.GetType(),
-                    string.Format("Terminated actor: {0}", m.ActorRef.Path)));
+            ////TODO: we can get here from actors that we just watch, we should not try to stop things if we are not the parent of the actor(?)
+            //InternalActorRef child = Child(m.ActorRef.Path.Name);
+            //if (!child.IsNobody()) //this terminated actor is a valid child
+            //{
+            //    Stop(child); //unhooks the child from the supervisor container
+            //}
+            //if (System.Settings.DebugLifecycle)
+            //    Publish(new Debug(Self.Path.ToString(), Actor.GetType(),
+            //        string.Format("Terminated actor: {0}", m.ActorRef.Path)));
+
+            //
+            this.ReceiveMessage(m);
         }
 
         /// <summary>

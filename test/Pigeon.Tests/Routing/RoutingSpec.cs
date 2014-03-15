@@ -57,7 +57,7 @@ namespace Pigeon.Tests.Routing
             watch(router);
             watch(c2);
             sys.Stop(c2);
-      //      expectTerminated(c2);
+            expectTerminated(c2);
         }
     }
 }

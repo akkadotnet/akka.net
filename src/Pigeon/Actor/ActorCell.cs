@@ -52,7 +52,7 @@ namespace Akka.Actor
 
         public ActorBase Actor { get; internal set; }
         public object CurrentMessage { get; private set; }
-        internal Receive CurrentBehavior { get; private set; }
+        internal Receive ReceiveMessage { get; private set; }
         protected Mailbox Mailbox { get; set; }
         public MessageDispatcher Dispatcher { get; private set; }
 
@@ -127,12 +127,12 @@ namespace Akka.Actor
         public void Become(Receive receive)
         {
             behaviorStack.Push(receive);
-            CurrentBehavior = receive;
+            ReceiveMessage = receive;
         }
 
         public void Unbecome()
         {
-            CurrentBehavior = behaviorStack.Pop();
+            ReceiveMessage = behaviorStack.Pop();
         }
 
         /// <summary>
