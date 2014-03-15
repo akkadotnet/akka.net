@@ -10,7 +10,7 @@ namespace Akka.Routing
         private readonly RouterConfig routerConfig;
         public Router Router { get; private set; }
         public Props RouteeProps { get; private set; }
-        public RoutedActorCell(ActorSystem system, InternalActorRef supervisor, Props routerProps,Props routeeProps, ActorPath path,
+        public RoutedActorCell(ActorSystem system, InternalActorRef supervisor, Props routerProps, Props routeeProps, ActorPath path,
             Mailbox mailbox)
             : base(system, supervisor, routerProps, path, mailbox)
         {
@@ -35,12 +35,20 @@ namespace Akka.Routing
                 });
 
 
-            
-            Self = new RoutedActorRef(path, this);            
+
+            Self = new RoutedActorRef(path, this);
         }
-       
+
         private void AddRoutees(Routee[] routees)
         {
+            foreach (var routee in routees)
+            {
+                if (routee is ActorRefRoutee)
+                {
+                    var @ref = ((ActorRefRoutee)routee).Actor;
+                    Watch(@ref);
+                }
+            }
             Router = Router.WithRoutees(routees);
         }
 
@@ -52,11 +60,30 @@ namespace Akka.Routing
                 behaviorStack.Clear();
                 RouterActor instance = routerConfig.CreateRouterActor();
                 instance.supervisorStrategy = Props.SupervisorStrategy;
-                    //defaults to null - won't affect lazy instantion unless explicitly set in props
+                //defaults to null - won't affect lazy instantion unless explicitly set in props
                 instance.AroundPreStart();
             });
         }
 
-        
+
+
+        internal void RemoveRoutee(ActorRef actorRef, bool stopChild)
+        {
+            var routees = this.Router.Routees.ToList();
+            routees.RemoveAll(r =>
+            {
+                var routee = r as ActorRefRoutee;
+                if (routee != null)
+                {
+                    return routee.Actor == actorRef;
+                }
+                return false;
+            });
+            Router = Router.WithRoutees(routees.ToArray());
+            if (stopChild)
+            {
+                
+            }
+        }
     }
 }

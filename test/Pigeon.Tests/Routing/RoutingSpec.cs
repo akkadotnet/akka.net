@@ -1,4 +1,5 @@
-﻿using Akka.Actor;
+﻿using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Routing;
 using Akka.Tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -58,11 +59,14 @@ namespace Pigeon.Tests.Routing
             watch(c2);
             sys.Stop(c2);
             expectTerminated(c2).ExistenceConfirmed.ShouldBe(true);
+            // it might take a while until the Router has actually processed the Terminated message
+            Task.Delay(100).Wait();
             router.Tell("", testActor);
             router.Tell("", testActor);
+            expectMsgType<ActorRef>().ShouldBe(c1);           
             expectMsgType<ActorRef>().ShouldBe(c1);
-            //TODO: pool needs to watch routees and remove terminated routees
-        //    expectMsgType<ActorRef>().ShouldBe(c1);
+            sys.Stop(c1);
+            expectTerminated(router).ExistenceConfirmed.ShouldBe(true);
         }
     }
 }

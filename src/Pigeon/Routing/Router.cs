@@ -25,16 +25,16 @@ namespace Akka.Routing
 
     public class ActorRefRoutee : Routee
     {
-        private readonly ActorRef actor;
+        public ActorRef Actor { get; private set; }
 
         public ActorRefRoutee(ActorRef actor)
         {
-            this.actor = actor;
+            this.Actor = actor;
         }
 
         public override void Send(object message, ActorRef sender)
         {
-            actor.Tell(message, sender);
+            Actor.Tell(message, sender);
         }
     }
 

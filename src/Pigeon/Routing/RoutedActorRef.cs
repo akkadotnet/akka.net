@@ -20,7 +20,14 @@ namespace Akka.Routing
             }
             else
             {
-                cell.Router.Route(message, sender);    
+                if (message is AutoReceivedMessage)
+                {
+                    cell.Post(sender, message);
+                }
+                else
+                {
+                    cell.Router.Route(message, sender);
+                }
             }            
         }
     }

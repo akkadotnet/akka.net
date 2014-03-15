@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Akka.Actor;
 
 namespace Akka.Routing
@@ -27,6 +28,14 @@ namespace Akka.Routing
             if (message is GetRoutees)
             {
                 Sender.Tell(new Routees(Cell.Router.Routees));
+            }
+        }
+
+        protected void StopIfAllRouteesRemoved()
+        {
+            if (!Cell.Router.Routees.Any())
+            {
+                Context.Stop(Self);
             }
         }
     }

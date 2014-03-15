@@ -15,5 +15,26 @@ namespace Akka.Routing
         {
             return supervisorStrategy;
         }
+
+        protected override void OnReceive(object message)
+        {
+            var terminated = message as Terminated;
+            if (terminated != null)
+            {
+                var t = terminated;
+                Cell.RemoveRoutee(t.ActorRef, false);
+                StopIfAllRouteesRemoved();
+            }
+                //if (message is AdjustPoolSize)
+                //{
+                
+                //}
+            else
+            {
+                base.OnReceive(message);
+            }
+        }
+
+
     }
 }
