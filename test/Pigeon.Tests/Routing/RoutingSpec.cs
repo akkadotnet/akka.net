@@ -11,8 +11,16 @@ namespace Pigeon.Tests.Routing
     {
         protected override string GetConfig()
         {
-            return  @"
+            return @"
     akka.actor.serialize-messages = off
+    akka.actor.debug {  
+          receive = on 
+          autoreceive = on
+          lifecycle = on
+          event-stream = on
+          unhandled = on
+        }
+    akka.stdout-loglevel = DEBUG
     akka.actor.deployment {
       /router1 {
         router = round-robin-pool
@@ -66,7 +74,6 @@ namespace Pigeon.Tests.Routing
             expectMsgType<ActorRef>().ShouldBe(c1);           
             expectMsgType<ActorRef>().ShouldBe(c1);
             sys.Stop(c1);
-            //TODO: don't know why we dont get terminated for c1 first
             expectTerminated(router).ExistenceConfirmed.ShouldBe(true);
         }
     }

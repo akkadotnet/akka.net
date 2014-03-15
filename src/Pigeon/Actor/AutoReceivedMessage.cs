@@ -24,7 +24,7 @@ namespace Akka.Actor
 
         public override string ToString()
         {
-            return string.Format("Terminated {0}", ActorRef);
+            return string.Format("Terminated - ActorRef: {0} - ExistenceConfirmed: {1}", ActorRef,ExistenceConfirmed);
         }
     }
 
