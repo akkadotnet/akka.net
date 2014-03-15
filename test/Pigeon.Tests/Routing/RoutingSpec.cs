@@ -57,7 +57,12 @@ namespace Pigeon.Tests.Routing
             watch(router);
             watch(c2);
             sys.Stop(c2);
-            expectTerminated(c2);
+            expectTerminated(c2).ExistenceConfirmed.ShouldBe(true);
+            router.Tell("", testActor);
+            router.Tell("", testActor);
+            expectMsgType<ActorRef>().ShouldBe(c1);
+            //TODO: pool needs to watch routees and remove terminated routees
+        //    expectMsgType<ActorRef>().ShouldBe(c1);
         }
     }
 }
