@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Tools;
 
 namespace Akka.Actor
 {
@@ -10,6 +12,8 @@ namespace Akka.Actor
     /// </summary>
     public partial class ActorCell
     {
+        //terminatedqueue should never be used outside the message loop
+        private readonly HashSet<ActorRef> terminatedQueue = new HashSet<ActorRef>();
         /// <summary>
         ///     The watched by
         /// </summary>
@@ -155,6 +159,12 @@ namespace Akka.Actor
         /// <param name="m">The m.</param>
         private void ReceivedTerminated(Terminated m)
         {
+            if (terminatedQueue.Contains(m.ActorRef))
+            {
+                terminatedQueue.Remove(m.ActorRef);
+                this.ReceiveMessage(m);
+            }
+
             ////TODO: we can get here from actors that we just watch, we should not try to stop things if we are not the parent of the actor(?)
             //InternalActorRef child = Child(m.ActorRef.Path.Name);
             //if (!child.IsNobody()) //this terminated actor is a valid child
@@ -166,7 +176,7 @@ namespace Akka.Actor
             //        string.Format("Terminated actor: {0}", m.ActorRef.Path)));
 
             //
-            this.ReceiveMessage(m);
+            
         }
 
         /// <summary>
@@ -263,12 +273,19 @@ namespace Akka.Actor
             if (!isTerminating)
             {
                 //TODO: what params should be used for the bools?
+
                 Self.Tell(new Terminated(m.Actor,true,false), m.Actor);
+                TerminatedQueueFor(m.Actor);
             }
             if (Children.ContainsKey(m.Actor.Path.Name))
             {
                 HandleChildTerminated(m.Actor);
             }
+        }
+
+        private void TerminatedQueueFor(ActorRef actorRef)
+        {
+            terminatedQueue.Add(actorRef);
         }
 
         /// <summary>
@@ -425,9 +442,17 @@ protected def terminate() {
         /// <param name="actorBase">The actor base.</param>
         private void UnwatchWatchedActors(ActorBase actorBase)
         {
-            foreach (ActorRef watchee in Watchees)
+            try
             {
-                watchee.Tell(new Unwatch(watchee, Self));
+                foreach (ActorRef watchee in Watchees)
+                {
+                    watchee.Tell(new Unwatch(watchee, Self));
+                }
+            }
+            finally
+            {
+                Watchees.Clear();
+                terminatedQueue.Clear();
             }
         }
 
@@ -615,6 +640,7 @@ protected def terminate() {
         private void HandleUnwatch(Unwatch m)
         {
             WatchedBy.Remove(m.Watcher);
+            terminatedQueue.Remove(m.Watchee);
         }
 
         /// <summary>
