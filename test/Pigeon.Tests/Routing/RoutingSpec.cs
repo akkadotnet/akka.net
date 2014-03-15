@@ -58,7 +58,7 @@ namespace Pigeon.Tests.Routing
         [TestMethod]
         public void EvictTerminatedRoutees()
         {
-            var router = sys.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>()));
+            var router = sys.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>()),"router");
             router.Tell("",testActor);
             router.Tell("",testActor);
             var c1 = expectMsgType<ActorRef>();
