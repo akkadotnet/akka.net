@@ -73,9 +73,19 @@ namespace Akka.Remote.Serialization
 
             foreach (object arg in props.Arguments)
             {
-                builder = builder.AddArgs(Serialize(arg));
+                
                 //TODO: deal with null?
-                builder = builder.AddClasses(arg.GetType().AssemblyQualifiedName);
+                if (arg == null)
+                {
+                    builder = builder.AddArgs(ByteString.Empty);
+                    builder = builder.AddClasses("null");
+                }
+                else
+                {
+                    builder = builder.AddArgs(Serialize(arg));
+                    builder = builder.AddClasses(arg.GetType().AssemblyQualifiedName);
+                }
+                
             }
 
             return builder.Build();
@@ -145,10 +155,17 @@ namespace Akka.Remote.Serialization
             for (int i = 0; i < args.Length; i++)
             {
                 var typeName = proto.Props.GetClasses(i);
-                Type t = null;
-                if (typeName != null)
-                    t = Type.GetType(typeName);
-                args[i] = Deserialize(proto.Props.GetArgs(i), t);
+                if (typeName == "null")
+                {
+                    args[i] = null;
+                }
+                else
+                {
+                    Type t = null;
+                    if (typeName != null)
+                        t = Type.GetType(typeName);
+                    args[i] = Deserialize(proto.Props.GetArgs(i), t);
+                }
             }
             return args;
         }

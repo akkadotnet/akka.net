@@ -59,7 +59,7 @@ akka {
                 var local = system.ActorOf(Props.Create(() =>  new SomeActor("hello",123)),  "local");
 
                 //create a remote deployed actor
-                var remote = system.ActorOf(Props.Create(() => new SomeActor("hello", 123)), "remote");
+                var remote = system.ActorOf(Props.Create(() => new SomeActor(null, 123)), "remote");
 
                 //these messages should reach the workers via the routed local ref
                 local.Tell("Local message 1");
