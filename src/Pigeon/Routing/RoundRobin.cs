@@ -116,6 +116,12 @@ namespace Akka.Routing
             
         }
 
+        [Obsolete("for serialization only",true)]
+        public RoundRobinPool()
+        {
+            
+        }
+
         /// <summary>
         /// Simple form of RoundRobin constructor
         /// </summary>
