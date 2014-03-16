@@ -9,6 +9,10 @@ namespace Shared
 {
     public class SomeActor : UntypedActor
     {
+        public SomeActor(string someArg, long otherArg)
+        {
+            Console.WriteLine("Constructuing SomeActor with {0},{1}",someArg,otherArg);
+        }
         protected override void OnReceive(object message)
         {
             if (message is long)
