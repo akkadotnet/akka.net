@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Routing;
@@ -72,9 +71,7 @@ namespace Akka.Remote.Serialization
                 .SetDeploy(GetDeployData(props.Deploy));
 
             foreach (object arg in props.Arguments)
-            {
-                
-                //TODO: deal with null?
+            {               
                 if (arg == null)
                 {
                     builder = builder.AddArgs(ByteString.Empty);
@@ -84,8 +81,7 @@ namespace Akka.Remote.Serialization
                 {
                     builder = builder.AddArgs(Serialize(arg));
                     builder = builder.AddClasses(arg.GetType().AssemblyQualifiedName);
-                }
-                
+                }                
             }
 
             return builder.Build();
