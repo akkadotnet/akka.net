@@ -75,7 +75,7 @@ namespace Akka.Remote.Serialization
                 if (arg == null)
                 {
                     builder = builder.AddArgs(ByteString.Empty);
-                    builder = builder.AddClasses("null");
+                    builder = builder.AddClasses("");
                 }
                 else
                 {
@@ -149,9 +149,10 @@ namespace Akka.Remote.Serialization
         {
             var args = new object[proto.Props.ArgsCount];
             for (int i = 0; i < args.Length; i++)
-            {
+            {                
                 var typeName = proto.Props.GetClasses(i);
-                if (typeName == "null")
+                var arg = proto.Props.GetArgs(i);
+                if (typeName == "" && ByteString.Empty.Equals(arg))
                 {
                     args[i] = null;
                 }
@@ -160,7 +161,7 @@ namespace Akka.Remote.Serialization
                     Type t = null;
                     if (typeName != null)
                         t = Type.GetType(typeName);
-                    args[i] = Deserialize(proto.Props.GetArgs(i), t);
+                    args[i] = Deserialize(arg, t);
                 }
             }
             return args;
