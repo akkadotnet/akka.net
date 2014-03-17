@@ -45,7 +45,6 @@
   <ItemGroup>
     <Compile Include="Tests.fs" />
     <Compile Include="ComputationExpression.fs" />
-    <None Include="Script.fsx" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Pigeon.FSharp\Akka.FSharp.fsproj">
