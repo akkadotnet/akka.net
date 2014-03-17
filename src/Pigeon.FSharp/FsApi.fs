@@ -60,6 +60,15 @@ type ActorBuilder() =
                    | false,r -> r 
                 )
 
+    member this.While(condition: unit -> bool, f: Cont<'m,unit>) : Cont<'m, unit> =
+        Func(fun m ->
+            if condition() then
+                match f with
+                | Func fn -> this.While(condition, fn m)
+                | _ -> f
+            else
+                Return () )
+
     member this.Delay(f: unit -> Cont<_,_>) = 
         f()
 
@@ -147,7 +156,7 @@ module System =
     /// </summary>
     /// <param name="name">The system name.</param>
     /// <param name="configStr">The configuration</param>
-    let create name config =
+    let create name (config: Configuration.Config) =
         let system = ActorSystem.Create(name, config)
         let serializer = new Serialization.ExprSerializer(system)
         system.Serialization.AddSerializer(serializer)
