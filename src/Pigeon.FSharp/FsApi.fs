@@ -147,7 +147,7 @@ module System =
     /// </summary>
     /// <param name="name">The system name.</param>
     /// <param name="configStr">The configuration</param>
-    let create name config =
+    let create name (config: Configuration.Config) =
         let system = ActorSystem.Create(name, config)
         let serializer = new Serialization.ExprSerializer(system)
         system.Serialization.AddSerializer(serializer)
