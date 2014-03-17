@@ -60,6 +60,15 @@ type ActorBuilder() =
                    | false,r -> r 
                 )
 
+    member this.While(condition: unit -> bool, f: Cont<'m,unit>) : Cont<'m, unit> =
+        Func(fun m ->
+            if condition() then
+                match f with
+                | Func fn -> this.While(condition, fn m)
+                | _ -> f
+            else
+                Return () )
+
     member this.Delay(f: unit -> Cont<_,_>) = 
         f()
 
