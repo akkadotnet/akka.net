@@ -56,8 +56,8 @@ type ActorBuilder() =
                     | ex -> false, c ex
                 | _ -> false, f
                 |> function
-                   | true,r -> this.TryWith(r, c)
-                   | false,r -> r 
+                   | true, (Func _ as r) -> this.TryWith(r, c)
+                   | _, r -> r 
                 )
 
     member this.While(condition: unit -> bool, f: Cont<'m,unit>) : Cont<'m, unit> =
