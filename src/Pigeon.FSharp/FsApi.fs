@@ -46,36 +46,52 @@ type ActorBuilder() =
 
     member this.Zero() = Return ()
 
-    member this.TryWith(f:Cont<'m,'a>,c: exn -> Cont<'m,'a>): Cont<'m,'a> =
-        Func(fun m ->
-                match f with
-                | Func fn ->
-                    try
-                        true, fn m
-                    with
-                    | ex -> false, c ex
-                | _ -> false, f
-                |> function
-                   | true, (Func _ as r) -> this.TryWith(r, c)
-                   | _, r -> r 
-                )
+    member this.TryWith(f:unit -> Cont<'m,'a>,c: exn -> Cont<'m,'a>): Cont<'m,'a> =
+        try
+            true, f()
+        with
+        | ex -> false, c ex
+        |> function
+           | true, Func fn -> Func(fun m -> this.TryWith((fun () -> fn m), c) )
+           | _, v -> v
 
-    member this.While(condition: unit -> bool, f: Cont<'m,unit>) : Cont<'m, unit> =
-        Func(fun m ->
-            if condition() then
-                match f with
-                | Func fn -> this.While(condition, fn m)
-                | _ -> f
-            else
-                Return () )
+
+    member this.While(condition: unit -> bool, f: unit -> Cont<'m,unit>) : Cont<'m, unit> =
+        if condition() then
+            match f() with
+            | Func fn -> Func(fun m -> 
+                            fn m |> ignore
+                            this.While(condition, f))
+            | v -> this.While(condition, f)
+        else
+            Return ()
 
     member this.Delay(f: unit -> Cont<_,_>) = 
-        f()
+        f
 
-    member this.Combine(f,g) =
+    member this.Run(f: unit -> Cont<_,_>) = f()
+    member this.Run(f: Cont<_,_>) = f
+
+    member this.Combine(f: unit -> Cont<'m, _>,g: unit -> Cont<'m,'v>) : Cont<'m,'v> =
+        match f() with
+        | Func fx -> Func(fun m -> this.Combine((fun() -> fx m), g))
+        | Return _ -> g()
+
+    member this.Combine(f: Cont<'m, _>,g: unit -> Cont<'m,'v>) : Cont<'m,'v> =
         match f with
         | Func fx -> Func(fun m -> this.Combine(fx m, g))
-        | Return v -> g
+        | Return _ -> g()
+
+    member this.Combine(f: unit -> Cont<'m, _>,g: Cont<'m,'v>) : Cont<'m,'v> =
+        match f() with
+        | Func fx -> Func(fun m -> this.Combine((fun() -> fx m), g))
+        | Return _ -> g
+
+    member this.Combine(f: Cont<'m, _>,g: Cont<'m,'v>) : Cont<'m,'v> =
+        match f with
+        | Func fx -> Func(fun m -> this.Combine(fx m, g))
+        | Return _ -> g
+
 
 /// <summary>
 /// Builds an actor message handler using an actor expression syntax.

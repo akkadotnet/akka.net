@@ -82,7 +82,7 @@ type ComputationExpression() =
         |> equals 3
 
     [<TestMethod>]
-    member x.``try catch can catch exceptions``() =
+    member x.``try catch should catch exceptions after getting message``() =
        actor {
             try
                 let! m = IO<int>.Input
@@ -97,6 +97,21 @@ type ComputationExpression() =
        |> equals (Some "Should stop here !")
 
     [<TestMethod>]
+    member x.``try catch should catch exceptions befor getting message``() =
+       actor {
+            try
+                failwith "Should stop here !"
+                let! m = IO<int>.Input
+                let! n = IO<int>.Input
+
+                return None
+            with
+            | ex -> return Some ex.Message }
+       |> value
+       |> equals (Some "Should stop here !")
+
+
+    [<TestMethod>]
      member x.``try catch returns body content when no exception occure``() =
        actor {
             try
@@ -109,4 +124,34 @@ type ComputationExpression() =
        |> send 1
        |> value
        |> equals None
-       
+
+    [<TestMethod>]
+    member x.``While should loop only when condition holds``() =
+        let cont = ref true
+        let count = ref 0
+        let r = 
+            actor {
+                while !cont do
+                    let! m = IO<int>.Input
+                    count := !count + 1
+
+                return !count
+            }
+            |> send 1
+            |> send 2
+        cont := false 
+        r
+        |> send 3
+        |> value
+        |> equals 3
+
+    [<TestMethod>]
+    member x.``Loops without message input should loop``() =
+        let count = ref 0
+        actor {
+            while !count<10 do
+                count := !count + 1
+
+            return !count }
+        |> value
+        |> equals  10
