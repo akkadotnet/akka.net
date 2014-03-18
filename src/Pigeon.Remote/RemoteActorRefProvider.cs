@@ -64,7 +64,18 @@ namespace Akka.Remote
             {
 
             }
+
+            //If this actor is a Router
+            if (!(props.RouterConfig is NoRouter || props.RouterConfig == null))
+            {
+                //if no Router config value was specified, override with procedural input
+                if (deploy.RouterConfig is NoRouter)
+                {
+                    deploy = deploy.WithRouterConfig(props.RouterConfig);
+                }
+            }
             props = props.WithDeploy(deploy);
+            
 
             if (string.IsNullOrEmpty(props.Mailbox))
             {
