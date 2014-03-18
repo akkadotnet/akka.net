@@ -283,3 +283,40 @@ type ComputationExpression() =
             | ex -> Choice2Of2 ex.Message
 
         (!disposeCalled, result) |> equals (true, Choice1Of2 (1,2))
+
+    [<TestMethod>]
+    member x.``for should loop message handler``() =
+        actor {
+            let total = ref 0
+            for i in [1 .. 3] do
+                let! m = IO<int>.Input 
+                total := !total + m
+            return !total }
+        |> send 1
+        |> send 2
+        |> send 3
+        |> value
+        |> equals 6
+
+
+    [<TestMethod>]
+    member x.``for should loop with no message handler``() =
+        actor {
+            let total = ref 0
+            for i in [1 .. 3] do
+                total := !total + i
+            return !total }
+        |> value
+        |> equals 6
+
+
+    [<TestMethod>]
+    member x.``for should do nothing when source is empty``() =
+        actor {
+            let total = ref 0
+            for i in [] do
+                let! m = IO<int>.Input 
+                total := !total + i
+            return !total }
+        |> value
+        |> equals 0

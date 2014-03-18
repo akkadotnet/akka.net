@@ -80,6 +80,20 @@ type ActorBuilder() =
             | v -> this.While(condition, f)
         else
             Return ()
+    
+    member this.For(source: 's seq, f: 's -> Cont<'m, unit>) : Cont<'m, unit> =
+        use e = source.GetEnumerator()
+        let rec loop() =
+            if e.MoveNext() then
+                match f e.Current with
+                | Func fn -> Func(fun m -> 
+                         fn m |> ignore
+                         loop())
+                | r -> loop()
+            else
+                Return ()
+        loop()
+
 
     member this.Delay(f: unit -> Cont<_,_>) = 
         f
