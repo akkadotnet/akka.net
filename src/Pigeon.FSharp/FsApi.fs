@@ -1,5 +1,6 @@
 ﻿module Akka.FSharp
 open Akka.Actor
+open System
 
 
 [<AbstractClass>]
@@ -66,6 +67,9 @@ type ActorBuilder() =
         | ex ->
             fnl()
             reraise()
+
+    member this.Using(d: #IDisposable, f:  _-> Cont<'m,'v>) : Cont<'m,'v> =
+        this.TryFinally((fun () -> f d), fun() -> if d <> null then d.Dispose())
 
     member this.While(condition: unit -> bool, f: unit -> Cont<'m,unit>) : Cont<'m, unit> =
         if condition() then

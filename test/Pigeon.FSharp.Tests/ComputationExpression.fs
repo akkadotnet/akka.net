@@ -1,7 +1,7 @@
 ﻿namespace Akka.FSharp.Tests
 
 open Akka.FSharp
-
+open System
 
 
 [<TestClass>]
@@ -222,3 +222,64 @@ type ComputationExpression() =
             | ex -> Choice2Of2 ex.Message
 
         (!finallyCalled, result) |> equals (true, Choice1Of2 (1,2))
+
+    [<TestMethod>]
+    member x.``use should be disposed when an exception occures before before message``() =
+        let disposeCalled = ref false
+        let result =
+            try
+                actor {
+                    use d = { new IDisposable with member x.Dispose() = disposeCalled := true }
+                    failwith "exception"
+                    let! m = IO<int>.Input
+                    let! n = IO<int>.Input
+
+                    return m }
+                |> value
+                |> Choice1Of2
+            with
+            | ex -> Choice2Of2 ex.Message
+
+        (!disposeCalled, result) |> equals (true, Choice2Of2 "exception")
+
+    [<TestMethod>]
+    member x.``use should be disposed when an exception occures before after message``() =
+        let disposeCalled = ref false
+        let result =
+            try
+                actor {
+                    use d = { new IDisposable with member x.Dispose() = disposeCalled := true }
+                    let! m = IO<int>.Input
+                    let! n = IO<int>.Input
+
+                    failwith "exception"
+                    return m }
+                |> send 1
+                |> send 2
+                |> value
+                |> Choice1Of2
+            with
+            | ex -> Choice2Of2 ex.Message
+
+        (!disposeCalled, result) |> equals (true, Choice2Of2 "exception")
+
+
+    [<TestMethod>]
+    member x.``use should be disposed when no exception occures``() =
+        let disposeCalled = ref false
+        let result =
+            try
+                actor {
+                    use d = { new IDisposable with member x.Dispose() = disposeCalled := true}
+                    let! m = IO<int>.Input
+                    let! n = IO<int>.Input
+                    return m,n
+                }
+                |> send 1
+                |> send 2
+                |> value
+                |> Choice1Of2
+            with
+            | ex -> Choice2Of2 ex.Message
+
+        (!disposeCalled, result) |> equals (true, Choice1Of2 (1,2))
