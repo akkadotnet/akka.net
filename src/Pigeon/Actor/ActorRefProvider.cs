@@ -255,7 +255,8 @@ namespace Akka.Actor
             }
             else
             {
-                if (deploy.RouterConfig is NoRouter) //if no config value was specified, override with procedural input
+                //if no Router config value was specified, override with procedural input
+                if (deploy.RouterConfig is NoRouter) 
                 {
                     deploy = deploy.WithRouterConfig(props.RouterConfig);
                 }
