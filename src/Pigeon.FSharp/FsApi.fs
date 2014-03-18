@@ -55,6 +55,17 @@ type ActorBuilder() =
            | true, Func fn -> Func(fun m -> this.TryWith((fun () -> fn m), c) )
            | _, v -> v
 
+    member this.TryFinally(f: unit -> Cont<'m,'a>, fnl: unit -> unit) : Cont<'m,'a> =
+        try
+            match f() with
+            | Func fn -> Func(fun m -> this.TryFinally((fun() -> fn m), fnl))
+            | r ->
+                fnl()
+                r
+        with
+        | ex ->
+            fnl()
+            reraise()
 
     member this.While(condition: unit -> bool, f: unit -> Cont<'m,unit>) : Cont<'m, unit> =
         if condition() then

@@ -155,3 +155,70 @@ type ComputationExpression() =
             return !count }
         |> value
         |> equals  10
+
+    [<TestMethod>]
+    member x.``finally should be executed when an exception occures before first message``() =
+        let finallyCalled = ref false
+        let result =
+            try
+                actor {
+                    try
+                        failwith "exception"
+                        let! m = IO<int>.Input
+                        return m
+                    finally
+                        finallyCalled := true
+                } 
+                |> value
+                |> Choice1Of2
+            with
+            | ex -> Choice2Of2 ex.Message
+
+        (!finallyCalled, result) |> equals (true, Choice2Of2 "exception")
+
+    [<TestMethod>]
+    member x.``finally should be executed when an exception occures before after message``() =
+        let finallyCalled = ref false
+        let result =
+            try
+                actor {
+                    try
+                        let! m = IO<int>.Input
+                        let! n = IO<int>.Input
+
+                        failwith "exception"
+
+                        return m
+                    finally
+                        finallyCalled := true
+                }
+                |> send 1
+                |> send 2
+                |> value
+                |> Choice1Of2
+            with
+            | ex -> Choice2Of2 ex.Message
+
+        (!finallyCalled, result) |> equals (true, Choice2Of2 "exception")
+
+    [<TestMethod>]
+    member x.``finally should be executed when no exception occures``() =
+        let finallyCalled = ref false
+        let result =
+            try
+                actor {
+                    try
+                        let! m = IO<int>.Input
+                        let! n = IO<int>.Input
+                        return m,n
+                    finally
+                        finallyCalled := true
+                }
+                |> send 1
+                |> send 2
+                |> value
+                |> Choice1Of2
+            with
+            | ex -> Choice2Of2 ex.Message
+
+        (!finallyCalled, result) |> equals (true, Choice1Of2 (1,2))
