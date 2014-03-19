@@ -10,18 +10,18 @@ The project was previously known as "Pigeon" before we got OK from Typesafe to u
 * Subscribe to the Akka.NET dev feed: https://twitter.com/AkkaDotNet
 
 ###Features
-* [Actors](https://github.com/rogeralsing/akka.net/wiki/Getting started)
-* [Configuration](https://github.com/rogeralsing/akka.net/wiki/Configuration)
-* [Remoting](https://github.com/rogeralsing/akka.net/wiki/Remoting)
-* [Hotswap](https://github.com/rogeralsing/akka.net/wiki/Hotswap)
-* [Supervision](https://github.com/rogeralsing/akka.net/wiki/Supervision)
-* [Actor Lifecycle](https://github.com/rogeralsing/akka.net/blob/master/akka.net.Tests/ActorLifeCycleSpec.cs)
-* [Routing](https://github.com/rogeralsing/akka.net/wiki/Routing)
-* [EventBus](https://github.com/rogeralsing/akka.net/wiki/EventBus)
-* [Logging](https://github.com/rogeralsing/akka.net/wiki/Logging)
-* [Scheduling](https://github.com/rogeralsing/akka.net/wiki/Scheduler)
-* [Performance](https://github.com/rogeralsing/akka.net/wiki/Performance)
-* [The F# API](https://github.com/rogeralsing/akka.net/wiki/FSharp-API)
+* [Actors](https://github.com/akkadotnet/akka.net/wiki/Getting started)
+* [Configuration](https://github.com/akkadotnet/akka.net/wiki/Configuration)
+* [Remoting](https://github.com/akkadotnet/akka.net/wiki/Remoting)
+* [Hotswap](https://github.com/akkadotnet/akka.net/wiki/Hotswap)
+* [Supervision](https://github.com/akkadotnet/akka.net/wiki/Supervision)
+* [Actor Lifecycle](https://github.com/akkadotnet/akka.net/blob/master/akka.net.Tests/ActorLifeCycleSpec.cs)
+* [Routing](https://github.com/akkadotnet/akka.net/wiki/Routing)
+* [EventBus](https://github.com/akkadotnet/akka.net/wiki/EventBus)
+* [Logging](https://github.com/akkadotnet/akka.net/wiki/Logging)
+* [Scheduling](https://github.com/akkadotnet/akka.net/wiki/Scheduler)
+* [Performance](https://github.com/akkadotnet/akka.net/wiki/Performance)
+* [The F# API](https://github.com/akkadotnet/akka.net/wiki/FSharp-API)
 
 #####Not yet implemented:
 * Akka Cluster support
