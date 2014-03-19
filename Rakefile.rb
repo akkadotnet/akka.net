@@ -19,7 +19,8 @@ require File.expand_path(File.dirname(__FILE__)) + '/buildscripts/nuspec'
 @env_buildconfigname = "Release"
 
 def env_buildversion
-    version = /[[:digit:]]/.match(bumper_version.to_s).to_a.join(".")
+    version = bumper_version.to_s.split(/\W/)
+    "#{version[0]}.#{version[1]}.#{version[2]}.#{version[3]}"
 end
 
 def env_nuget_version
