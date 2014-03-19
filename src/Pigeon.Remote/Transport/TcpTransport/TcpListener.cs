@@ -38,7 +38,6 @@ namespace Akka.Remote.Transport
         
         private async void WaitForClient()
         {
-           // Console.WriteLine("waiting for client!!!!");
             while (true)
             {
                 TcpClient client = await server.AcceptTcpClientAsync();
@@ -46,8 +45,9 @@ namespace Akka.Remote.Transport
             }
         }
 
-        private void ProcessSocket(TcpClient client)
+        private async void ProcessSocket(TcpClient client)
         {
+            await Task.Yield();
             try
             {
                 NetworkStream stream = client.GetStream();
