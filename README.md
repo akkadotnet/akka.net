@@ -26,6 +26,23 @@ The project was previously known as "Pigeon" before we got OK from Typesafe to u
 #####Not yet implemented:
 * Akka Cluster support
 
+#####Install Akka.NET via NuGet
+
+If you want to include Akka.NET in your project, you can [install it directly from NuGet](https://www.nuget.org/packages/Akka)
+
+To install Akka.NET Distributed Actor Framework, run the following command in the Package Manager Console
+
+````
+PM> Install-Package Akka -Pre
+PM> Install-Package Akka.Remote -Pre
+````
+
+And if you need F# support:
+
+````
+PM> Install-Package Akka.FSharp -Pre
+````
+
 #####Contribute
 If you are interested in helping porting the actor part of Akka to .NET please let me know.
 
