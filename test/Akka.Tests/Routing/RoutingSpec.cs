@@ -4,7 +4,7 @@ using Akka.Routing;
 using Akka.Tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Pigeon.Tests.Routing
+namespace Akka.Tests.Routing
 {
     [TestClass]
     public class RoutingSpec : AkkaSpec

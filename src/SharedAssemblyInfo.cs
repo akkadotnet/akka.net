@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 
-[assembly: AssemblyCompany("Pigeon")]
+[assembly: AssemblyCompany("Akka")]
 [assembly: AssemblyCopyright("Copyright © Roger Asling 2013-2014")]
 [assembly: AssemblyTrademark("")]
 
