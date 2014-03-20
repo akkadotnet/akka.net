@@ -7,8 +7,8 @@
     <ProjectGuid>{956F7D26-4505-4A26-86D0-73135BD35A93}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Pigeon.Benchmark.PingPong</RootNamespace>
-    <AssemblyName>Pigeon.Benchmark.PingPong</AssemblyName>
+    <RootNamespace>PingPong</RootNamespace>
+    <AssemblyName>PingPong</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
@@ -73,7 +73,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Pigeon\Akka.csproj">
+    <ProjectReference Include="..\..\src\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
