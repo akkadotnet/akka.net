@@ -3,11 +3,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{3F786C7D-70E3-4836-8B33-EC9A5AF72330}</ProjectGuid>
+    <ProjectGuid>{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Pigeon.Tests</RootNamespace>
-    <AssemblyName>Pigeon.Tests</AssemblyName>
+    <RootNamespace>Akka.TestKit</RootNamespace>
+    <AssemblyName>Akka.TestKit</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -16,7 +16,7 @@
     <ReferencePath>$(ProgramFiles)\Common Files\microsoft shared\VSTT\$(VisualStudioVersion)\UITestExtensionPackages</ReferencePath>
     <IsCodedUITest>False</IsCodedUITest>
     <TestProjectType>UnitTest</TestProjectType>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -55,8 +55,7 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="fastjson, Version=2.0.0.0, Culture=neutral, PublicKeyToken=6b75a806b86095cd, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="fastjson">
       <HintPath>..\..\packages\fastJSON.2.0.27.1\lib\net40\fastjson.dll</HintPath>
     </Reference>
     <Reference Include="System" />
@@ -74,33 +73,22 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="Actor\ActorCellTests.cs" />
-    <Compile Include="Actor\ActorLifeCycleSpec.cs" />
-    <Compile Include="Actor\ActorPathSpec.cs" />
-    <Compile Include="Actor\ActorRefProviderSpec.cs" />
-    <Compile Include="Actor\ActorSelectionSpec.cs" />
-    <Compile Include="Actor\ActorSystemTests.cs" />
-    <Compile Include="Actor\AskSpec.cs" />
-    <Compile Include="Actor\DeadLettersSpec.cs" />
-    <Compile Include="Event\EventBusSpec.cs" />
-    <Compile Include="Event\EventStreamSpec.cs" />
+    <Compile Include="AkkaSpec.cs" />
+    <Compile Include="AtomicInteger.cs" />
+    <Compile Include="Comparable.cs" />
     <Compile Include="HoconTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Routing\RoutingSpec.cs" />
-    <Compile Include="Serialization\SerializationSpec.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Pigeon\Akka.csproj">
-      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
-      <Name>Akka</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Pigeon.TestKit\Akka.TestKit.csproj">
-      <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
-      <Name>Akka.TestKit</Name>
-    </ProjectReference>
+    <Compile Include="Supervisor.cs" />
+    <Compile Include="TestProbe.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Akka\Akka.csproj">
+      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Name>Akka</Name>
+    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

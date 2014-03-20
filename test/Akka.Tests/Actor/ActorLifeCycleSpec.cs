@@ -265,10 +265,7 @@ namespace Akka.Tests
             expectMsg("ok");
             a.Tell("hello");
             expectMsg(43);
-            EventFilter<Exception>("buh", 1, () =>
-            {                
-                a.Tell("fail");
-            });
+            EventFilter<Exception>("buh", 1, () => a.Tell("fail"));
             a.Tell("hello");
             expectMsg(42);
         }
