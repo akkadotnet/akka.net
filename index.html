@@ -4,11 +4,11 @@
   <head>
     <meta charset='utf-8' />
     <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="Pigeon : Port of Akka actors for .NET" />
+    <meta name="description" content="akka.net : Port of Akka actors for .NET" />
 
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
 
-    <title>Pigeon</title>
+    <title>akka.net</title>
   </head>
 
   <body>
@@ -16,14 +16,14 @@
     <!-- HEADER -->
     <div id="header_wrap" class="outer">
         <header class="inner">
-          <a id="forkme_banner" href="https://github.com/rogeralsing/Pigeon">View on GitHub</a>
+          <a id="forkme_banner" href="https://github.com/akkadotnet/akka.net">View on GitHub</a>
 
-          <h1 id="project_title">Pigeon</h1>
+          <h1 id="project_title">akka.net</h1>
           <h2 id="project_tagline">Port of Akka actors for .NET</h2>
 
             <section id="downloads">
-              <a class="zip_download_link" href="https://github.com/rogeralsing/Pigeon/zipball/master">Download this project as a .zip file</a>
-              <a class="tar_download_link" href="https://github.com/rogeralsing/Pigeon/tarball/master">Download this project as a tar.gz file</a>
+              <a class="zip_download_link" href="https://github.com/akkadotnet/akka.net/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/akkadotnet/akka.net/tarball/master">Download this project as a tar.gz file</a>
             </section>
         </header>
     </div>
@@ -32,46 +32,61 @@
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
         <h1>
-<a name="pigeon" class="anchor" href="#pigeon"><span class="octicon octicon-link"></span></a>Pigeon</h1>
+<a name="akka-net" class="anchor" href="#akka-net"><span class="octicon octicon-link"></span></a>Akka .NET</h1>
 
-<p><em>Alpha stage, do not use in production.</em></p>
+<p>Akka .NET is a port of the popular Java/Scala framework Akka to .NET.</p>
 
-<h3>
-<a name="high-performance-actor-model-framework" class="anchor" href="#high-performance-actor-model-framework"><span class="octicon octicon-link"></span></a>High performance Actor Model framework.</h3>
+<p>Early beta, do not use in production!</p>
 
-<p>Pigeon is an unofficial port of the Scala/Java Akka actor model framework.</p>
-
-<p>Why not Akka# or dotAkka? 
-I simply assume that TypeSafe that makes Akka don’t want to be associated with spare time projects like this, so I try not to stain their brand name.
-Pigeon tries to stay as close to the Akka implementation as possible while still beeing .NET idiomatic.</p>
-
-<p>Read more on:</p>
-
-<h3>
-<a name="akka-features" class="anchor" href="#akka-features"><span class="octicon octicon-link"></span></a>Akka features</h3>
+<p>This is a community driven port and is not affiliated with Typesafe who makes the original Java/Scala version.
+The project was previously known as "Pigeon" before we got OK from Typesafe to use the name Akka.NET.</p>
 
 <ul>
-<li><a href="https://github.com/rogeralsing/Pigeon/wiki/Getting%20started">Getting started</a></li>
-<li><a href="https://github.com/rogeralsing/Pigeon/wiki/Configuration">Configuration</a></li>
-<li><a href="https://github.com/rogeralsing/Pigeon/wiki/Remoting">Remoting</a></li>
-<li><a href="https://github.com/rogeralsing/Pigeon/wiki/Hotswap">Hotswap</a></li>
-<li><a href="https://github.com/rogeralsing/Pigeon/wiki/Supervision">Supervision</a></li>
+<li>Subscribe to the Akka.NET dev feed: <a href="https://twitter.com/AkkaDotNet">https://twitter.com/AkkaDotNet</a>
+</li>
+</ul><h3>
+<a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h3>
+
+<ul>
+<li><a href="https://github.com/akkadotnet/akka.net/wiki/Getting%20started">Actors</a></li>
+<li><a href="https://github.com/akkadotnet/akka.net/wiki/Configuration">Configuration</a></li>
+<li><a href="https://github.com/akkadotnet/akka.net/wiki/Remoting">Remoting</a></li>
+<li><a href="https://github.com/akkadotnet/akka.net/wiki/Hotswap">Hotswap</a></li>
+<li><a href="https://github.com/akkadotnet/akka.net/wiki/Supervision">Supervision</a></li>
+<li><a href="https://github.com/akkadotnet/akka.net/blob/master/akka.net.Tests/ActorLifeCycleSpec.cs">Actor Lifecycle</a></li>
+<li><a href="https://github.com/akkadotnet/akka.net/wiki/Routing">Routing</a></li>
+<li><a href="https://github.com/akkadotnet/akka.net/wiki/EventBus">EventBus</a></li>
+<li><a href="https://github.com/akkadotnet/akka.net/wiki/Logging">Logging</a></li>
+<li><a href="https://github.com/akkadotnet/akka.net/wiki/Scheduler">Scheduling</a></li>
+<li><a href="https://github.com/akkadotnet/akka.net/wiki/Performance">Performance</a></li>
+<li><a href="https://github.com/akkadotnet/akka.net/wiki/FSharp-API">The F# API</a></li>
 </ul><h5>
 <a name="not-yet-implemented" class="anchor" href="#not-yet-implemented"><span class="octicon octicon-link"></span></a>Not yet implemented:</h5>
 
 <ul>
-<li>Full Akka actor life cycle management</li>
 <li>Akka Cluster support</li>
-</ul><h3>
-<a name="pigeon-specific" class="anchor" href="#pigeon-specific"><span class="octicon octicon-link"></span></a>Pigeon specific</h3>
-
-<ul>
-<li><a href="../../wiki/Performance">Performance</a></li>
-<li><a href="../../wiki/FSharp-API">The F# API</a></li>
 </ul><h5>
+<a name="install-akkanet-via-nuget" class="anchor" href="#install-akkanet-via-nuget"><span class="octicon octicon-link"></span></a>Install Akka.NET via NuGet</h5>
+
+<p>If you want to include Akka.NET in your project, you can <a href="https://www.nuget.org/packages/Akka">install it directly from NuGet</a></p>
+
+<p>To install Akka.NET Distributed Actor Framework, run the following command in the Package Manager Console</p>
+
+<pre><code>PM&gt; Install-Package Akka -Pre
+PM&gt; Install-Package Akka.Remote -Pre
+</code></pre>
+
+<p>And if you need F# support:</p>
+
+<pre><code>PM&gt; Install-Package Akka.FSharp -Pre
+</code></pre>
+
+<h5>
 <a name="contribute" class="anchor" href="#contribute"><span class="octicon octicon-link"></span></a>Contribute</h5>
 
 <p>If you are interested in helping porting the actor part of Akka to .NET please let me know.</p>
+
+<p>Also, please see <a href="https://github.com/rogeralsing/akka.net/wiki/Building-and-Distributing-Pigeon">Building Akka .NET</a>.</p>
 
 <h5>
 <a name="contact" class="anchor" href="#contact"><span class="octicon octicon-link"></span></a>Contact</h5>
@@ -85,7 +100,7 @@ Pigeon tries to stay as close to the Akka implementation as possible while still
     <!-- FOOTER  -->
     <div id="footer_wrap" class="outer">
       <footer class="inner">
-        <p class="copyright">Pigeon maintained by <a href="https://github.com/rogeralsing">rogeralsing</a></p>
+        <p class="copyright">akka.net maintained by <a href="https://github.com/akkadotnet">akkadotnet</a></p>
         <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
       </footer>
     </div>
