@@ -12,19 +12,19 @@ Folders = {
     :nuget_out => File.join(root_folder, "build", "nuget"),
 
     #Output folder for creating Akka.NET nuget distributions
-    :pigeon_nuspec => {
+    :akka_nuspec => {
         :root => File.join(root_folder, "build", "nuget", "Akka"),
         :lib => File.join(root_folder, "build", "nuget", "Akka", "lib"),
         :net45 => File.join(root_folder, "build", "nuget", "Akka", "lib", "net45"),
     },
 
-    :pigeon_fsharp_nuspec => {
+    :akka_fsharp_nuspec => {
         :root => File.join(root_folder, "build", "nuget", "Akka.FSharp"),
         :lib => File.join(root_folder, "build", "nuget", "Akka.FSharp", "lib"),
         :net45 => File.join(root_folder, "build", "nuget", "Akka.FSharp", "lib", "net45"),
     },
 
-    :pigeon_remote_nuspec => {
+    :akka_remote_nuspec => {
         :root => File.join(root_folder, "build", "nuget", "Akka.Remote"),
         :lib => File.join(root_folder, "build", "nuget", "Akka.Remote", "lib"),
         :net45 => File.join(root_folder, "build", "nuget", "Akka.Remote", "lib", "net45"),
@@ -38,9 +38,9 @@ Folders = {
 
     #specifies the locations of the binary DLLs we want to use in NuGet / NUnit
     :bin => {
-        :pigeon => 'placeholder - specify build environment',
-        :pigeon_fsharp => 'placeholder - specify build environment',
-        :pigeon_remote => 'placeholder - specify build environment',
+        :akka => 'placeholder - specify build environment',
+        :akka_fsharp => 'placeholder - specify build environment',
+        :akka_remote => 'placeholder - specify build environment',
         :akka_slf4net => 'placeholder - specify build environment',
     }
 }
@@ -50,19 +50,19 @@ Files = {
     :version => "VERSION",
     :assembly_info => "SharedAssemblyInfo.cs",
 
-    :pigeon => {
-        :bin => "#{Projects[:pigeon][:id]}.dll",
-        :pdb => "#{Projects[:pigeon][:id]}.pdb"
+    :akka => {
+        :bin => "#{Projects[:akka][:id]}.dll",
+        :pdb => "#{Projects[:akka][:id]}.pdb"
     },
 
-    :pigeon_fsharp => {
-        :bin => "#{Projects[:pigeon_fsharp][:id]}.dll",
-        :pdb => "#{Projects[:pigeon_fsharp][:id]}.pdb"
+    :akka_fsharp => {
+        :bin => "#{Projects[:akka_fsharp][:id]}.dll",
+        :pdb => "#{Projects[:akka_fsharp][:id]}.pdb"
     },
 
-    :pigeon_remote => {
-        :bin => "#{Projects[:pigeon_remote][:id]}.dll",
-        :pdb => "#{Projects[:pigeon_remote][:id]}.pdb",
+    :akka_remote => {
+        :bin => "#{Projects[:akka_remote][:id]}.dll",
+        :pdb => "#{Projects[:akka_remote][:id]}.pdb",
     },
 
     :akka_slf4net => {

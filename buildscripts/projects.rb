@@ -3,34 +3,34 @@
 #----------------------------------
 
 Projects = {
-    :licenseUrl => "https://github.com/rogeralsing/Pigeon/blob/master/LICENSE",
-    :projectUrl => "https://github.com/rogeralsing/Pigeon",
+    :licenseUrl => "https://github.com/akkadotnet/akka.net/blob/master/LICENSE",
+    :projectUrl => "https://github.com/akkadotnet/akka.net",
     :language => "en-US",
 
-    :pigeon => {
+    :akka => {
         :id => "Akka",
-        :dir => "Pigeon",
+        :dir => "Akka",
         :title => "Akka.NET Distributed Actor Framework",
         :description => "Akka.NET is a port of Akka actors for .NET.",
         :copyright => " (c) Roger Alsing 2013-2014",
         :authors => "Roger Alsing",
-        :test_dir => "Pigeon.Test",
+        :test_dir => "Akka.Test",
         :dependencies => {
             :newtonsoft_json => {
                 :package => "Newtonsoft.Json",
                 :version => "6.0.1"
            },
          },
-         :nuget_tags => "akka actors actor model pigeon concurrency",
+         :nuget_tags => "akka actors actor model Akka concurrency",
        },
-    :pigeon_fsharp => {
+    :akka_fsharp => {
         :id => "Akka.FSharp",
-        :dir => "Pigeon.FSharp",
+        :dir => "Akka.FSharp",
         :title => "Akka.NET Distributed Actor Framework - F\# API",
-        :description => "FSharp API support for Pigeon.",
+        :description => "FSharp API support for Akka.",
         :copyright => " (c) Roger Alsing 2013-2014",
         :authors => "Roger Alsing",
-        :nuget_tags => "akka actors actor model pigeon concurrency",
+        :nuget_tags => "akka actors actor model Akka concurrency",
         :framework_assemblies => {
            :fsharp_core => {
             :assemblyName => "FSharp.Core",
@@ -38,14 +38,14 @@ Projects = {
            },
         }
       },
-    :pigeon_remote => {
+    :akka_remote => {
         :id => "Akka.Remote",
-        :dir => "Pigeon.Remote",
+        :dir => "Akka.Remote",
         :title => "Akka.NET Distributed Actor Framework - Remote Actors",
-        :description => "Remote actor support for Pigeon.",
+        :description => "Remote actor support for Akka.",
         :copyright => " (c) Roger Alsing 2013-2014",
         :authors => "Roger Alsing",
-        :nuget_tags => "akka distributed actors remote actor model pigeon concurrency",
+        :nuget_tags => "akka Akka distributed actors remote actor model concurrency",
         :dependencies => {
             :google_protocolbuffers => {
                 :package => "Google.ProtocolBuffers",
@@ -60,7 +60,7 @@ Projects = {
         :description => "slf4net logging adapter for Akka",
         :copyright => " (c) Roger Alsing 2013-2014",
         :authors => "Roger Alsing",
-        :nuget_tags => "akka dlog4net slf4net akka pigeon",
+        :nuget_tags => "akka dlog4net slf4net akka akka",
         :dependencies => {
             :slf4net => {
                 :package => "slf4net",
