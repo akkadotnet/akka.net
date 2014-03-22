@@ -128,20 +128,35 @@ task :create_output_folders => :clean_output_folders do
     create_dir(Folders[:out])
     create_dir(Folders[:nuget_out])
 
-    #NuGet folders - Pigeon
+    #NuGet folders - Akka
     create_dir(Folders[:akka_nuspec][:root])
     create_dir(Folders[:akka_nuspec][:lib])
     create_dir(Folders[:akka_nuspec][:net45])
 
-    #NuGet folders - Pigeon.FSharp
+    create_dir(Folders[:akka_symbol_nuspec][:root])
+    create_dir(Folders[:akka_symbol_nuspec][:lib])
+    create_dir(Folders[:akka_symbol_nuspec][:src])
+    create_dir(Folders[:akka_symbol_nuspec][:net45])
+
+    #NuGet folders - Akka.FSharp
     create_dir(Folders[:akka_fsharp_nuspec][:root])
     create_dir(Folders[:akka_fsharp_nuspec][:lib])
     create_dir(Folders[:akka_fsharp_nuspec][:net45])
 
-    #NuGet folders - Pigeon.Remote
+    create_dir(Folders[:akka_fsharp_symbol_nuspec][:root])
+    create_dir(Folders[:akka_fsharp_symbol_nuspec][:lib])
+    create_dir(Folders[:akka_fsharp_symbol_nuspec][:src])
+    create_dir(Folders[:akka_fsharp_symbol_nuspec][:net45])
+
+    #NuGet folders - Akka.Remote
     create_dir(Folders[:akka_remote_nuspec][:root])
     create_dir(Folders[:akka_remote_nuspec][:lib])
     create_dir(Folders[:akka_remote_nuspec][:net45])
+
+    create_dir(Folders[:akka_remote_symbol_nuspec][:root])
+    create_dir(Folders[:akka_remote_symbol_nuspec][:lib])
+    create_dir(Folders[:akka_remote_symbol_nuspec][:src])
+    create_dir(Folders[:akka_remote_symbol_nuspec][:net45])
 
     #NuGet folders - Akka.slf4net
     create_dir(Folders[:akka_slf4net_nuspec][:root])
@@ -152,23 +167,80 @@ end
 #-----------------------
 # NuGet Output
 #-----------------------
-output :akka_nuget_output => [:create_output_folders] do |out|
+output :akka_main_nuget_output => [:create_output_folders] do |out|
     out.from Folders[:bin][:akka]
     out.to Folders[:akka_nuspec][:net45]
     out.file Files[:akka][:bin]
 end
 
-output :akka_fsharp_nuget_output => [:create_output_folders] do |out|
+output :akka_symbol_nuget_output => [:create_output_folders] do |out|
+    out.from Folders[:bin][:akka]
+    out.to Folders[:akka_symbol_nuspec][:net45]
+    out.file Files[:akka][:bin]
+    out.file Files[:akka][:pdb]
+end
+
+task :akka_symbol_src_nuget_output => [:create_output_folders] do |out|
+    src = File.join(Folders[:src], Projects[:akka][:dir])
+    dest = Folders[:akka_symbol_nuspec][:src]
+    FileUtils.cp_r Dir.glob(src + '/*.cs'), dest
+    FileUtils.cp_r File.join(src, "Actor"), dest
+    FileUtils.cp_r File.join(src, "Configuration"), dest
+    FileUtils.cp_r File.join(src, "Dispatch"), dest
+    FileUtils.cp_r File.join(src, "Event"), dest
+    FileUtils.cp_r File.join(src, "Routing"), dest
+    FileUtils.cp_r File.join(src, "Properties"), dest
+    FileUtils.cp_r File.join(src, "Serialization"), dest
+    FileUtils.cp_r File.join(src, "Tools"), dest
+end
+
+task :akka_nuget_output => [:akka_main_nuget_output, :akka_symbol_nuget_output, :akka_symbol_src_nuget_output]
+
+output :akka_main_fsharp_nuget_output => [:create_output_folders] do |out|
     out.from Folders[:bin][:akka_fsharp]
     out.to Folders[:akka_fsharp_nuspec][:net45]
     out.file Files[:akka_fsharp][:bin]
 end
 
-output :akka_remote_nuget_output => [:create_output_folders] do |out|
+output :akka_fsharp_symbol_nuget_output => [:create_output_folders] do |out|
+    out.from Folders[:bin][:akka_fsharp]
+    out.to Folders[:akka_fsharp_symbol_nuspec][:net45]
+    out.file Files[:akka_fsharp][:bin]
+    out.file Files[:akka_fsharp][:pdb]
+end
+
+task :akka_fsharp_symbol_src_nuget_output => [:create_output_folders] do |out|
+    src = File.join(Folders[:src], Projects[:akka_fsharp][:dir])
+    dest = Folders[:akka_fsharp_symbol_nuspec][:src]
+    FileUtils.cp_r Dir.glob(src + '/*.fs'), dest
+end
+
+task :akka_fsharp_nuget_output => [:akka_main_fsharp_nuget_output, :akka_fsharp_symbol_nuget_output, :akka_fsharp_symbol_src_nuget_output]
+
+output :akka_main_remote_nuget_output => [:create_output_folders] do |out|
     out.from Folders[:bin][:akka_remote]
     out.to Folders[:akka_remote_nuspec][:net45]
     out.file Files[:akka_remote][:bin]
 end
+
+output :akka_remote_symbol_nuget_output => [:create_output_folders] do |out|
+    out.from Folders[:bin][:akka_remote]
+    out.to Folders[:akka_remote_symbol_nuspec][:net45]
+    out.file Files[:akka_remote][:bin]
+    out.file Files[:akka_remote][:pdb]
+end
+
+task :akka_remote_symbol_src_nuget_output => [:create_output_folders] do |out|
+    src = File.join(Folders[:src], Projects[:akka_remote][:dir])
+    dest = Folders[:akka_remote_symbol_nuspec][:src]
+    FileUtils.cp_r Dir.glob(src + '/*.cs'), dest
+    FileUtils.cp_r File.join(src, "Proto"), dest
+    FileUtils.cp_r File.join(src, "Properties"), dest
+    FileUtils.cp_r File.join(src, "Serialization"), dest
+    FileUtils.cp_r File.join(src, "Transport"), dest
+end
+
+task :akka_remote_nuget_output => [:akka_main_remote_nuget_output, :akka_remote_symbol_nuget_output, :akka_remote_symbol_src_nuget_output]
 
 output :akka_slf4net_nuget_output => [:create_output_folders] do |out|
     out.from Folders[:bin][:akka_slf4net]
@@ -279,7 +351,7 @@ task :nuspec => [:nuspec_akka,
 #-----------------------
 # NuGet Pack
 #-----------------------
-desc "Packs a build of Pigeon into a NuGet package"
+desc "Packs a build of Akka into a NuGet package"
 nugetpack :pack_akka => [:nuspec] do |nuget|
     nuget.command = Commands[:nuget]
     nuget.nuspec = "\"#{File.join(Folders[:nuget_out], "#{Projects[:akka][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")}\""
@@ -287,7 +359,16 @@ nugetpack :pack_akka => [:nuspec] do |nuget|
     nuget.output = "\"#{Folders[:nuget_out]}\""
 end
 
-desc "Packs a build of Pigeon into a NuGet package"
+desc "Packs a build of Akka into a NuGet Symbol package"
+nugetpack :pack_akka_symbol => [:nuspec] do |nuget|
+    nuget.command = Commands[:nuget]
+    nuget.nuspec = "\"#{File.join(Folders[:nuget_out], "#{Projects[:akka][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")}\""
+    nuget.base_folder = "\"#{Folders[:akka_symbol_nuspec][:root]}\""
+    nuget.output = "\"#{Folders[:nuget_out]}\""
+    nuget.symbols = true
+end
+
+desc "Packs a build of Akka's FSharp support into a NuGet package"
 nugetpack :pack_akka_fsharp => [:nuspec] do |nuget|
     nuget.command = Commands[:nuget]
     nuget.nuspec = "\"#{File.join(Folders[:nuget_out], "#{Projects[:akka_fsharp][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")}\""
@@ -295,7 +376,16 @@ nugetpack :pack_akka_fsharp => [:nuspec] do |nuget|
     nuget.output = "\"#{Folders[:nuget_out]}\""
 end
 
-desc "Packs a build of Pigeon into a NuGet package"
+desc "Packs a build of Akka's FSharp support into a NuGet Symbol package"
+nugetpack :pack_akka_fsharp_symbol => [:nuspec] do |nuget|
+    nuget.command = Commands[:nuget]
+    nuget.nuspec = "\"#{File.join(Folders[:nuget_out], "#{Projects[:akka_fsharp][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")}\""
+    nuget.base_folder = "\"#{Folders[:akka_fsharp_symbol_nuspec][:root]}\""
+    nuget.output = "\"#{Folders[:nuget_out]}\""
+    nuget.symbols = true
+end
+
+desc "Packs a build of Akka.Remote into a NuGet package"
 nugetpack :pack_akka_remote => [:nuspec] do |nuget|
     nuget.command = Commands[:nuget]
     nuget.nuspec = "\"#{File.join(Folders[:nuget_out], "#{Projects[:akka_remote][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")}\""
@@ -303,7 +393,16 @@ nugetpack :pack_akka_remote => [:nuspec] do |nuget|
     nuget.output = "\"#{Folders[:nuget_out]}\""
 end
 
-desc "Packs a build of Pigeon into a NuGet package"
+desc "Packs a build of Akka.Remote into a NuGet Symbol package"
+nugetpack :pack_akka_remote_symbol => [:nuspec] do |nuget|
+    nuget.command = Commands[:nuget]
+    nuget.nuspec = "\"#{File.join(Folders[:nuget_out], "#{Projects[:akka_remote][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")}\""
+    nuget.base_folder = "\"#{Folders[:akka_remote_symbol_nuspec][:root]}\""
+    nuget.output = "\"#{Folders[:nuget_out]}\""
+    nuget.symbols = true
+end
+
+desc "Packs a build of Akka into a NuGet package"
 nugetpack :pack_akka_slf4net => [:nuspec] do |nuget|
     nuget.command = Commands[:nuget]
     nuget.nuspec = "\"#{File.join(Folders[:nuget_out], "#{Projects[:akka_slf4net][:id]}-v#{env_nuget_version}(#{@env_buildconfigname}).nuspec")}\""
@@ -312,7 +411,7 @@ nugetpack :pack_akka_slf4net => [:nuspec] do |nuget|
 end
 
 desc "Packs all of the Pigeon NuGet packages"
-task :pack => [:pack_akka,
-            :pack_akka_fsharp,
-            :pack_akka_remote,
+task :pack => [:pack_akka, :pack_akka_symbol,
+            :pack_akka_fsharp, :pack_akka_fsharp_symbol,
+            :pack_akka_remote, :pack_akka_remote_symbol,
             :pack_akka_slf4net]

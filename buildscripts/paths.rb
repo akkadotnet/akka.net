@@ -30,6 +30,27 @@ Folders = {
         :net45 => File.join(root_folder, "build", "nuget", "Akka.Remote", "lib", "net45"),
     },
 
+    :akka_symbol_nuspec => {
+        :root => File.join(root_folder, "build", "nuget", "Akka-Symbol"),
+        :lib => File.join(root_folder, "build", "nuget", "Akka-Symbol", "lib"),
+        :src => File.join(root_folder, "build", "nuget", "Akka-Symbol", "src"),
+        :net45 => File.join(root_folder, "build", "nuget", "Akka-Symbol", "lib", "net45"),
+    },
+
+    :akka_fsharp_symbol_nuspec => {
+        :root => File.join(root_folder, "build", "nuget", "Akka.FSharp-Symbol"),
+        :lib => File.join(root_folder, "build", "nuget", "Akka.FSharp-Symbol", "lib"),
+        :src => File.join(root_folder, "build", "nuget", "Akka.FSharp-Symbol", "src"),
+        :net45 => File.join(root_folder, "build", "nuget", "Akka.FSharp-Symbol", "lib", "net45"),
+    },
+
+    :akka_remote_symbol_nuspec => {
+        :root => File.join(root_folder, "build", "nuget", "Akka.Remote-Symbol"),
+        :lib => File.join(root_folder, "build", "nuget", "Akka.Remote-Symbol", "lib"),
+        :src => File.join(root_folder, "build", "nuget", "Akka.Remote-Symbol", "src"),
+        :net45 => File.join(root_folder, "build", "nuget", "Akka.Remote-Symbol", "lib", "net45"),
+    },
+
     :akka_slf4net_nuspec => {
         :root => File.join(root_folder, "build", "nuget", "Akka.slf4net"),
         :lib => File.join(root_folder, "build", "nuget", "Akka.slf4net", "lib"),
