@@ -21,5 +21,13 @@ namespace Akka.Tests.Actor
                   "hallo%welt",
                   "hallo/welt"}).ForEach(n => intercept<ArgumentException>(() => ActorSystem.Create(n)));
         }
+
+        [TestMethod]
+        public void AnActorSystemMustAllowValidNames()
+        {
+            ActorSystem
+                .Create("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-")
+                .Shutdown();
+        }
     }
 }
