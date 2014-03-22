@@ -123,10 +123,9 @@ namespace Akka.Dispatch
         private int status;
 
         /// <summary>
-        ///     Runs the specified _.
+        ///     Runs the Message Pump.
         /// </summary>
-        /// <param name="_">The _.</param>
-        private void Run(object _)
+        private void Run()
         {
             if (isClosed)
             {
@@ -166,7 +165,7 @@ namespace Akka.Dispatch
                 if (isClosed)
                     return;
 
-                if (left == 0 && userMessages.TryPeek(out envelope) ||
+                if ((left == 0 && userMessages.TryPeek(out envelope)) ||
                     (dispatcher.ThroughputDeadlineTime.HasValue &&
                      deadLineTimer.ElapsedTicks > dispatcher.ThroughputDeadlineTime.Value))
                 {
@@ -179,13 +178,15 @@ namespace Akka.Dispatch
                     break;
                 }
             }
-
-            Interlocked.Exchange(ref status, MailboxStatus.Idle);
-
+           
             if (hasUnscheduledMessages)
             {
                 hasUnscheduledMessages = false;
-                Schedule();
+                dispatcher.Schedule(Run);
+            }
+            else
+            {
+                Interlocked.Exchange(ref status, MailboxStatus.Idle);
             }
         }
 
@@ -294,10 +295,10 @@ namespace Akka.Dispatch
         private int status;
 
         /// <summary>
-        ///     Runs the specified _.
+        ///     Runs the Message Pump.
         /// </summary>
         /// <param name="_">The _.</param>
-        private void Run(object _)
+        private void Run()
         {
             if (isClosed)
             {

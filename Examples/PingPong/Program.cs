@@ -16,8 +16,8 @@ namespace Akka.Benchmark.PingPong
         public static uint CPUSpeed()
         {
 #if !mono
-            ManagementObject Mo = new ManagementObject("Win32_Processor.DeviceID='CPU0'");
-            uint sp = (uint)(Mo["CurrentClockSpeed"]);
+            var Mo = new ManagementObject("Win32_Processor.DeviceID='CPU0'");
+            var sp = (uint)(Mo["CurrentClockSpeed"]);
             Mo.Dispose();
             return sp;
 #else
@@ -52,8 +52,10 @@ namespace Akka.Benchmark.PingPong
         private static long bestThroughput = 0;
         private static bool Benchmark(int numberOfClients)
         {
-            var repeatFactor = 500;
-            var repeat = 30000L * repeatFactor;
+            const int repeatFactor = 1500;
+            const long repeat = 30000L * repeatFactor;
+            const long totalMessagesReceived = repeat * 2; //times 2 since the client and the destination both send messages
+
             var repeatsPerClient = repeat / numberOfClients;
             var system = new ActorSystem("PingPong");
             
@@ -74,7 +76,7 @@ namespace Akka.Benchmark.PingPong
             var sw = Stopwatch.StartNew();
             Task.WaitAll(tasks.ToArray());
             sw.Stop();
-            var totalMessagesReceived = repeat * 2; //times 2 since the client and the destination both send messages
+            
             system.Shutdown();
             long throughput = totalMessagesReceived / sw.ElapsedMilliseconds * 1000;
             if (throughput > bestThroughput)

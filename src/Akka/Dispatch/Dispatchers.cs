@@ -15,7 +15,7 @@ namespace Akka.Dispatch
         /// <summary>
         ///     The default throughput
         /// </summary>
-        public const int DefaultThroughput = 5;
+        public const int DefaultThroughput = 100;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MessageDispatcher" /> class.
@@ -41,22 +41,30 @@ namespace Akka.Dispatch
         ///     Schedules the specified run.
         /// </summary>
         /// <param name="run">The run.</param>
-        public abstract void Schedule(Action<object> run);
+        public abstract void Schedule(Action run);
     }
 
     /// <summary>
     ///     Class ThreadPoolDispatcher.
     /// </summary>
-    public class ThreadPoolDispatcher : MessageDispatcher
+    public class ThreadPoolDispatcherOld : MessageDispatcher
     {
         /// <summary>
         ///     Schedules the specified run.
         /// </summary>
         /// <param name="run">The run.</param>
-        public override void Schedule(Action<object> run)
+        public override void Schedule(Action run)
         {
-            var wc = new WaitCallback(run);
+            var wc = new WaitCallback(_ => run());
             ThreadPool.UnsafeQueueUserWorkItem(wc, null);
+        }
+    }
+
+    public class ThreadPoolDispatcher : MessageDispatcher
+    {
+        public override void Schedule(Action run)
+        {
+            Task.Factory.StartNew(run);
         }
     }
 
@@ -82,9 +90,9 @@ namespace Akka.Dispatch
         ///     Schedules the specified run.
         /// </summary>
         /// <param name="run">The run.</param>
-        public override void Schedule(Action<object> run)
+        public override void Schedule(Action run)
         {
-            var t = new Task(() => run(null));
+            var t = new Task(run);
             t.Start(scheduler);
         }
     }
@@ -97,7 +105,7 @@ namespace Akka.Dispatch
         /// <summary>
         ///     The queue
         /// </summary>
-        private readonly ConcurrentQueue<Action<object>> queue = new ConcurrentQueue<Action<object>>();
+        private readonly ConcurrentQueue<Action> queue = new ConcurrentQueue<Action>();
 
         /// <summary>
         ///     The running
@@ -109,13 +117,13 @@ namespace Akka.Dispatch
         /// </summary>
         public SingleThreadDispatcher()
         {
-            var b = new BlockingCollection<Action<object>>(queue);
-            var t = new Thread(_ =>
+            var b = new BlockingCollection<Action>(queue);
+            new Thread(_ =>
             {
                 while (running)
                 {
-                    Action<object> next = b.Take();
-                    next(null);
+                    Action next = b.Take();
+                    next();
                 }
             });
         }
@@ -124,7 +132,7 @@ namespace Akka.Dispatch
         ///     Schedules the specified run.
         /// </summary>
         /// <param name="run">The run.</param>
-        public override void Schedule(Action<object> run)
+        public override void Schedule(Action run)
         {
             queue.Enqueue(run);
         }
@@ -188,7 +196,7 @@ namespace Akka.Dispatch
             //attempt-teamwork
             //mailbox-requirement
 
-            MessageDispatcher dispatcher = null;
+            MessageDispatcher dispatcher;
             switch (type)
             {
                 case "Dispatcher":
