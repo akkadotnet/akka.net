@@ -74,6 +74,7 @@
     </Compile>
     <Compile Include="AkkaProtocolSettings.cs" />
     <Compile Include="AkkaProtocolTransport.cs" />
+    <Compile Include="AssociationEvent.cs" />
     <Compile Include="Endpoint.cs" />
     <Compile Include="EndpointManager.cs" />
     <Compile Include="EndpointManagerMessages.cs" />
@@ -88,6 +89,7 @@
     <Compile Include="RemoteTransport.cs" />
     <Compile Include="RemoteTransportException.cs" />
     <Compile Include="Remoting.cs" />
+    <Compile Include="RemotingLifecycleEvent.cs" />
     <Compile Include="Serialization\DaemonMsgCreateSerializer.cs" />
     <Compile Include="Serialization\MessageContainerSerializer.cs" />
     <Compile Include="Serialization\ProtobufSerializer.cs" />
