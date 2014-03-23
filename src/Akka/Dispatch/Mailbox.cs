@@ -165,6 +165,8 @@ namespace Akka.Dispatch
                 if (isClosed)
                     return;
 
+              //  Thread.Sleep(10);
+
                 if ((left == 0 && userMessages.TryPeek(out envelope)) ||
                     (dispatcher.ThroughputDeadlineTime.HasValue &&
                      deadLineTimer.ElapsedTicks > dispatcher.ThroughputDeadlineTime.Value))
@@ -186,8 +188,8 @@ namespace Akka.Dispatch
             }
             else
             {
-                Interlocked.Exchange(ref status, MailboxStatus.Idle);
-            }
+                Interlocked.Exchange(ref status, MailboxStatus.Idle);                
+            }            
         }
 
 
@@ -297,7 +299,6 @@ namespace Akka.Dispatch
         /// <summary>
         ///     Runs the Message Pump.
         /// </summary>
-        /// <param name="_">The _.</param>
         private void Run()
         {
             if (isClosed)
