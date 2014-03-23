@@ -82,6 +82,7 @@
     <Compile Include="Actor\ActorSystemTests.cs" />
     <Compile Include="Actor\AskSpec.cs" />
     <Compile Include="Actor\DeadLettersSpec.cs" />
+    <Compile Include="Actor\ActorSystemSpec.cs" />
     <Compile Include="Event\EventBusSpec.cs" />
     <Compile Include="Event\EventStreamSpec.cs" />
     <Compile Include="HoconTests.cs" />
