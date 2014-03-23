@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
@@ -63,6 +64,11 @@ namespace Akka.Actor
         /// <param name="extensions">The extensions.</param>
         public ActorSystem(string name, Config config = null, params ActorSystemExtension[] extensions)
         {
+            if (!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
+                throw new ArgumentException(
+                    "invalid ActorSystem name [" + name +
+                    "], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')");
+
             Name = name;
             ConfigureScheduler();
             ConfigureSettings(config);
