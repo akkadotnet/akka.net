@@ -64,7 +64,7 @@ namespace Akka.Dispatch
     {
         public override void Schedule(Action run)
         {
-            Task.Factory.StartNew(run,TaskCreationOptions.PreferFairness);
+            Task.Factory.StartNew(run, TaskCreationOptions.PreferFairness);
         }
     }
 

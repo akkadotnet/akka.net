@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
@@ -132,6 +134,7 @@ namespace Akka.Dispatch
                 return;
             }
 
+            //if ThroughputDeadlineTime is enabled, start a stopwatch
             if (dispatcher.ThroughputDeadlineTime.HasValue)
             {
                 if (deadLineTimer != null)
@@ -144,20 +147,29 @@ namespace Akka.Dispatch
                 }
             }
 
+            //we are about to process all enqueued messages
             hasUnscheduledMessages = false;
             Envelope envelope;
+
+            //start with system messages, they have the highest priority
             while (systemMessages.TryDequeue(out envelope))
             {
                 SystemInvoke(envelope);
             }
 
+            //we should process x messages in this run
             int left = dispatcher.Throughput;
 
+            //try dequeue a user message
             while (userMessages.TryDequeue(out envelope))
             {
+                //run the receive handler
                 Invoke(envelope);
+
+                //check if any system message have arrived while processing user messages
                 if (systemMessages.TryDequeue(out envelope))
                 {
+                    //handle system message
                     SystemInvoke(envelope);
                     break;
                 }
@@ -165,31 +177,34 @@ namespace Akka.Dispatch
                 if (isClosed)
                     return;
 
-              //  Thread.Sleep(10);
-
-                if ((left == 0 && userMessages.TryPeek(out envelope)) ||
-                    (dispatcher.ThroughputDeadlineTime.HasValue &&
-                     deadLineTimer.ElapsedTicks > dispatcher.ThroughputDeadlineTime.Value))
+                //if deadline time have expired, stop and break
+                if (dispatcher.ThroughputDeadlineTime.HasValue && deadLineTimer.ElapsedTicks > dispatcher.ThroughputDeadlineTime.Value)
                 {
-                    if (dispatcher.ThroughputDeadlineTime.HasValue)
-                    {
-                        deadLineTimer.Stop();
-                    }
-                    // we have processed throughput messages, and there are still envelopes left
-                    hasUnscheduledMessages = true;
+                    deadLineTimer.Stop();
+                    break;
+                }
+
+                //we are done processing messages for this run
+                if (left == 0)
+                {
                     break;
                 }
             }
-           
+
+            //there are still messages that needs to be processed
+            if (userMessages.Count > 0)
+            {
+                hasUnscheduledMessages = true;
+            }
+
             if (hasUnscheduledMessages)
             {
-                hasUnscheduledMessages = false;
                 dispatcher.Schedule(Run);
             }
             else
             {
-                Interlocked.Exchange(ref status, MailboxStatus.Idle);                
-            }            
+                Interlocked.Exchange(ref status, MailboxStatus.Idle);
+            }
         }
 
 

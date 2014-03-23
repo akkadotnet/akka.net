@@ -52,12 +52,12 @@ namespace Akka.Benchmark.PingPong
         private static long bestThroughput = 0;
         private static bool Benchmark(int numberOfClients)
         {
-            const int repeatFactor = 1500;
+            const int repeatFactor = 500;
             const long repeat = 30000L * repeatFactor;
             const long totalMessagesReceived = repeat * 2; //times 2 since the client and the destination both send messages
 
             var repeatsPerClient = repeat / numberOfClients;
-            var system = new ActorSystem("PingPong");
+            var system = ActorSystem.Create("PingPong");
             
 
             var clients = new List<ActorRef>();
@@ -99,20 +99,8 @@ namespace Akka.Benchmark.PingPong
             return true;
         }
 
-        private static void WaitForEmptyThreadPool()
-        {
-            int count = 100;
-            var tasks = new Task[count];
-            for (int i = 0; i < count; i++)
-            {
-                tasks[i] = Task.Factory.StartNew(() => { });
-            }
-
-            Task.WaitAll(tasks);
-        }
-
-        private static object Msg = new object();
-        private static object Run = new object();
+        private static readonly object Msg = new object();
+        private static readonly object Run = new object();
 
         public class Destination : UntypedActor
         {
