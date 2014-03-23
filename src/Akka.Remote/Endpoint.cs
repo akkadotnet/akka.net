@@ -1,10 +1,11 @@
 ﻿using System.Net.Sockets;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Serialization;
 
 namespace Akka.Remote
 {
-    public class EndpointActor : UntypedActor
+    public class EndpointActor : UntypedActor, IActorLogging
     {
         private readonly Address localAddress;
         private readonly NetworkStream stream;
@@ -13,9 +14,15 @@ namespace Akka.Remote
         private RemoteSettings settings;
         private Transport.Transport transport;
 
+        private readonly LoggingAdapter _log = Logging.GetLogger(Context);
+        public LoggingAdapter Log { get { return _log; } }
+
+        private EventPublisher _eventPublisher;
+
         public EndpointActor(Address localAddress, Address remoteAddress, Transport.Transport transport,
             RemoteSettings settings)
         {
+            _eventPublisher = new EventPublisher(Context.System, Log, Logging.LogLevelFor(settings.RemoteLifecycleEventsLogLevel));
             this.localAddress = localAddress;
             this.remoteAddress = remoteAddress;
             this.transport = transport;
@@ -71,5 +78,7 @@ namespace Akka.Remote
             remoteEnvelope.WriteDelimitedTo(stream);
             stream.Flush();
         }
+
+        
     }
 }

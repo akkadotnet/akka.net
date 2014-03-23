@@ -444,19 +444,19 @@ namespace Akka.Event
         ///     Gets the message.
         /// </summary>
         /// <value>The message.</value>
-        internal object Message { get; private set; }
+        public object Message { get; private set; }
 
         /// <summary>
         ///     Gets the sender.
         /// </summary>
         /// <value>The sender.</value>
-        internal ActorRef Sender { get; private set; }
+        public ActorRef Sender { get; private set; }
 
         /// <summary>
         ///     Gets the recipient.
         /// </summary>
         /// <value>The recipient.</value>
-        internal ActorRef Recipient { get; private set; }
+        public ActorRef Recipient { get; private set; }
     }
 
     /// <summary>
