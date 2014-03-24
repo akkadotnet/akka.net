@@ -33,8 +33,7 @@ namespace Akka.Actor
             Dispatcher = System.Dispatchers.FromConfig("akka.actor.default-dispatcher");
             mailbox.Setup(Dispatcher);
             Mailbox = mailbox;
-            Mailbox.Invoke = Invoke;
-            Mailbox.SystemInvoke = SystemInvoke;
+            Mailbox.ActorCell = this;
         }
 
         public ActorCell(ActorSystem system, InternalActorRef supervisor, Props props, ActorPath path, Mailbox mailbox)
@@ -46,8 +45,7 @@ namespace Akka.Actor
             Dispatcher = System.Dispatchers.FromConfig(props.Dispatcher);
             mailbox.Setup(Dispatcher);
             Mailbox = mailbox;
-            Mailbox.Invoke = Invoke;
-            Mailbox.SystemInvoke = SystemInvoke;
+            Mailbox.ActorCell = this;
         }
 
         public ActorBase Actor { get; internal set; }

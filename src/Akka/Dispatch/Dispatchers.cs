@@ -47,7 +47,7 @@ namespace Akka.Dispatch
     /// <summary>
     ///     Class ThreadPoolDispatcher.
     /// </summary>
-    public class ThreadPoolDispatcherX : MessageDispatcher
+    public class ThreadPoolDispatcher : MessageDispatcher
     {
         /// <summary>
         ///     Schedules the specified run.
@@ -60,7 +60,7 @@ namespace Akka.Dispatch
         }
     }
 
-    public class ThreadPoolDispatcher : MessageDispatcher
+    public class ThreadPoolDispatcheryy : MessageDispatcher
     {
         public override void Schedule(Action run)
         {

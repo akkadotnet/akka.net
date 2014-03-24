@@ -379,8 +379,7 @@ protected def terminate() {
             UnwatchWatchedActors(a);
 
             Actor = null;
-            Mailbox.Invoke = m => { };
-            Mailbox.SystemInvoke = m => { };
+            Mailbox.Stop();
         }
 
         /// <summary>
