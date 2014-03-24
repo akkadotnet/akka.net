@@ -5,7 +5,7 @@ namespace Akka.Remote.Transport
 {
     public abstract class Transport
     {
-        public Transport(ActorSystem system, Config config)
+        protected Transport(ActorSystem system, Config config)
         {
             System = system;
             Config = config;
@@ -19,5 +19,10 @@ namespace Akka.Remote.Transport
         public abstract Address Listen();
 
         public abstract bool IsResponsibleFor(Address remote);
+    }
+
+    sealed class AssoicationHandle
+    {
+        public LocalAddress
     }
 }
