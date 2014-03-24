@@ -275,7 +275,7 @@ namespace Akka.Actor
                 Self.Tell(new Terminated(m.Actor,true,false), m.Actor);
                 TerminatedQueueFor(m.Actor);
             }
-            if (Children.ContainsKey(m.Actor.Path.Name))
+            if (children.ContainsKey(m.Actor.Path.Name))
             {
                 HandleChildTerminated(m.Actor);
             }
@@ -293,7 +293,7 @@ namespace Akka.Actor
         private void HandleChildTerminated(ActorRef actor)
         {
             InternalActorRef tmp;
-            Children.TryRemove(actor.Path.Name, out tmp);
+            children.TryRemove(actor.Path.Name, out tmp);
             //global::System.Diagnostics.Debug.WriteLine("removed child " + actor.Path.Name);
             //global::System.Diagnostics.Debug.WriteLine("count " + Children.Count());
         }
@@ -441,14 +441,14 @@ protected def terminate() {
         {
             try
             {
-                foreach (ActorRef watchee in Watchees)
+                foreach (ActorRef watchee in watchees)
                 {
                     watchee.Tell(new Unwatch(watchee, Self));
                 }
             }
             finally
             {
-                Watchees.Clear();
+                watchees.Clear();
                 terminatedQueue.Clear();
             }
         }

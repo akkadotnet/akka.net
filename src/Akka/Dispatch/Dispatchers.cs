@@ -60,7 +60,7 @@ namespace Akka.Dispatch
         }
     }
 
-    public class ThreadPoolDispatcheryy : MessageDispatcher
+    public class TaskDispatcher : MessageDispatcher
     {
         public override void Schedule(Action run)
         {

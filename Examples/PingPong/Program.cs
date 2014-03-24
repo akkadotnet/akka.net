@@ -1,31 +1,40 @@
-﻿
-using Akka.Actor;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Management;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor;
 
-namespace Akka.Benchmark.PingPong
+namespace PingPong
 {
-    class Program
+    internal class Program
     {
-        public static uint CPUSpeed()
+        private static int redCount;
+        private static long bestThroughput;
+
+        private static readonly object msg = new object();
+        private static readonly object run = new object();
+
+        public static uint CpuSpeed()
         {
 #if !mono
-            var Mo = new ManagementObject("Win32_Processor.DeviceID='CPU0'");
-            var sp = (uint)(Mo["CurrentClockSpeed"]);
-            Mo.Dispose();
+            var mo = new ManagementObject("Win32_Processor.DeviceID='CPU0'");
+            var sp = (uint) (mo["CurrentClockSpeed"]);
+            mo.Dispose();
             return sp;
 #else
             return 0;
 #endif
         }
 
-        static void Main(string[] args)
+        private static void Main()
+        {
+            Start();
+            Console.ReadKey();
+        }
+
+        private static async void Start()
         {
             int workerThreads;
             int completionPortThreads;
@@ -34,51 +43,51 @@ namespace Akka.Benchmark.PingPong
             Console.WriteLine("Worker threads: {0}", workerThreads);
             Console.WriteLine("OSVersion: {0}", Environment.OSVersion);
             Console.WriteLine("ProcessorCount: {0}", Environment.ProcessorCount);
-            Console.WriteLine("ClockSpeed: {0} MHZ", CPUSpeed());
+            Console.WriteLine("ClockSpeed: {0} MHZ", CpuSpeed());
 
             Console.WriteLine("Actor count, Messages/sec");
 
             for (int i = 1; i < 20; i++)
             {
-                if (!Benchmark(i))
+                if (!await Benchmark(i))
                     break;
             }
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.WriteLine("Done..");
-            Console.ReadKey();
         }
 
-        private static int redCount = 0;
-        private static long bestThroughput = 0;
-        private static bool Benchmark(int numberOfClients)
+        private static async Task<bool> Benchmark(int numberOfClients)
         {
             const int repeatFactor = 500;
-            const long repeat = 30000L * repeatFactor;
-            const long totalMessagesReceived = repeat * 2; //times 2 since the client and the destination both send messages
+            const long repeat = 30000L*repeatFactor;
+            const long totalMessagesReceived = repeat*2;
+                //times 2 since the client and the destination both send messages
 
-            var repeatsPerClient = repeat / numberOfClients;
-            var system = ActorSystem.Create("PingPong");
-            
+            long repeatsPerClient = repeat/numberOfClients;
+            ActorSystem system = ActorSystem.Create("PingPong");
+
 
             var clients = new List<ActorRef>();
             var tasks = new List<Task>();
             for (int i = 0; i < numberOfClients; i++)
             {
-                var destination = system.ActorOf<Destination>();
+                InternalActorRef destination = system.ActorOf<Destination>();
                 var ts = new TaskCompletionSource<bool>();
                 tasks.Add(ts.Task);
-                var client = system.ActorOf(Props.Create(() => new Client(destination,repeatsPerClient,ts)));                
+                InternalActorRef client =
+                    system.ActorOf(Props.Create(() => new Client(destination, repeatsPerClient, ts)));
                 clients.Add(client);
             }
 
-            clients.ForEach(c => c.Tell(Run));
+            clients.ForEach(c => c.Tell(run));
 
-            var sw = Stopwatch.StartNew();
-            Task.WaitAll(tasks.ToArray());
+            Stopwatch sw = Stopwatch.StartNew();
+
+            await Task.WhenAll(tasks.ToArray());
             sw.Stop();
-            
+
             system.Shutdown();
-            long throughput = totalMessagesReceived / sw.ElapsedMilliseconds * 1000;
+            long throughput = totalMessagesReceived/sw.ElapsedMilliseconds*1000;
             if (throughput > bestThroughput)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
@@ -91,7 +100,7 @@ namespace Akka.Benchmark.PingPong
                 Console.ForegroundColor = ConsoleColor.Red;
             }
 
-            Console.WriteLine("{0}, {1} messages/s", numberOfClients * 2, throughput);
+            Console.WriteLine("{0}, {1} messages/s", numberOfClients*2, throughput);
 
             if (redCount > 3)
                 return false;
@@ -99,56 +108,55 @@ namespace Akka.Benchmark.PingPong
             return true;
         }
 
-        private static readonly object Msg = new object();
-        private static readonly object Run = new object();
+        public class Client : UntypedActor
+        {
+            private readonly ActorRef actor;
+            private readonly TaskCompletionSource<bool> latch;
+            public long received;
+            public long repeat;
+            public long sent;
+
+            public Client(ActorRef actor, long repeat, TaskCompletionSource<bool> latch)
+            {
+                this.actor = actor;
+                this.repeat = repeat;
+                this.latch = latch;
+                //     Console.WriteLine("starting {0}", Self.Path);
+            }
+
+            protected override void OnReceive(object message)
+            {
+                if (message == msg)
+                {
+                    received++;
+                    if (sent < repeat)
+                    {
+                        actor.Tell(msg);
+                        sent++;
+                    }
+                    else if (received >= repeat)
+                    {
+                        //       Console.WriteLine("done {0}", Self.Path);
+                        latch.SetResult(true);
+                    }
+                }
+                if (message == run)
+                {
+                    for (int i = 0; i < Math.Min(1000, repeat); i++)
+                    {
+                        actor.Tell(msg);
+                        sent++;
+                    }
+                }
+            }
+        }
 
         public class Destination : UntypedActor
         {
             protected override void OnReceive(object message)
             {
-                if (message == Msg)
-                    Sender.Tell(Msg);
-            }
-        }
-
-        public class Client : UntypedActor
-        {
-            public long received;
-            public long sent;
-
-            public long repeat;
-            private ActorRef actor;
-            private TaskCompletionSource<bool> latch;
-
-            public Client(ActorRef actor,long repeat,TaskCompletionSource<bool> latch )
-            {
-                this.actor = actor;
-                this.repeat = repeat;
-                this.latch = latch;
-            }
-            protected override void OnReceive(object message)
-            {
-                if (message == Msg)
-                {
-                    received++;
-                    if (sent < repeat)
-                    {
-                        actor.Tell(Msg);
-                        sent++;
-                    }
-                    else if (received >= repeat)
-                    {
-                        latch.SetResult(true);
-                    }
-                }
-                if (message == Run)
-                {
-                    for (int i = 0; i < Math.Min(1000,repeat); i++)
-                    {
-                        actor.Tell(Msg);
-                        sent++;
-                    }
-                }
+                if (message == msg)
+                    Sender.Tell(msg);
             }
         }
     }

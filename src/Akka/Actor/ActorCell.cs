@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
-using Akka.Routing;
 using Akka.Serialization;
 
 namespace Akka.Actor
@@ -16,10 +15,10 @@ namespace Akka.Actor
         private const string Base64Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
         [ThreadStatic] private static ActorCell current;
 
-        protected ConcurrentDictionary<string, InternalActorRef> Children =
+        protected ConcurrentDictionary<string, InternalActorRef> children =
             new ConcurrentDictionary<string, InternalActorRef>();
 
-        protected HashSet<ActorRef> Watchees = new HashSet<ActorRef>();
+        protected HashSet<ActorRef> watchees = new HashSet<ActorRef>();
         protected Stack<Receive> behaviorStack = new Stack<Receive>();
         private long uid;
 
@@ -67,8 +66,8 @@ namespace Akka.Actor
 
         public virtual InternalActorRef Child(string name)
         {
-            InternalActorRef actorRef = null;
-            Children.TryGetValue(name, out actorRef);
+            InternalActorRef actorRef;
+            children.TryGetValue(name, out actorRef);
             if (actorRef.IsNobody())
                 return ActorRef.Nobody;
             return actorRef;
@@ -119,7 +118,7 @@ namespace Akka.Actor
         /// <returns></returns>
         public IEnumerable<InternalActorRef> GetChildren()
         {
-            return Children.Values.ToArray();
+            return children.Values.ToArray();
         }
 
         public void Become(Receive receive)
@@ -139,7 +138,7 @@ namespace Akka.Actor
         /// <param name="watchee"></param>
         public void Watch(ActorRef watchee)
         {
-            Watchees.Add(watchee);
+            watchees.Add(watchee);
             watchee.Tell(new Watch(watchee, Self),Self);
         }
 
@@ -149,7 +148,7 @@ namespace Akka.Actor
         /// <param name="watchee"></param>
         public void Unwatch(ActorRef watchee)
         {
-            Watchees.Remove(watchee);
+            watchees.Remove(watchee);
             watchee.Tell(new Unwatch(watchee, Self));
         }
 
@@ -178,17 +177,17 @@ namespace Akka.Actor
         private void UnreserveChild(string name)
         {
             InternalActorRef tmp;
-            Children.TryRemove(name, out tmp);
+            children.TryRemove(name, out tmp);
         }
 
         private void InitChild(string name, InternalActorRef actor)
         {
-            Children.TryUpdate(name, actor, ActorRef.Reserved);
+            children.TryUpdate(name, actor, ActorRef.Reserved);
         }
 
         private void ReserveChild(string name)
         {
-            if (!Children.TryAdd(name, ActorRef.Reserved))
+            if (!children.TryAdd(name, ActorRef.Reserved))
             {
                 throw new Exception("The name is already reserved: " + name);
             }
