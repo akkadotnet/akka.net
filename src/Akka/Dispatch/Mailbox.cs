@@ -136,77 +136,81 @@ namespace Akka.Dispatch
                 return;
             }
 
-            //if ThroughputDeadlineTime is enabled, start a stopwatch
-            if (dispatcher.ThroughputDeadlineTime.HasValue)
+            ActorCell.UseThreadContext(() =>
             {
-                if (deadLineTimer != null)
+                //if ThroughputDeadlineTime is enabled, start a stopwatch
+                if (dispatcher.ThroughputDeadlineTime.HasValue)
                 {
-                    deadLineTimer.Restart();
+                    if (deadLineTimer != null)
+                    {
+                        deadLineTimer.Restart();
+                    }
+                    else
+                    {
+                        deadLineTimer = Stopwatch.StartNew();
+                    }
+                }
+
+                //we are about to process all enqueued messages
+                hasUnscheduledMessages = false;
+                Envelope envelope;
+
+                //start with system messages, they have the highest priority
+                while (systemMessages.TryDequeue(out envelope))
+                {
+                    ActorCell.SystemInvoke(envelope);
+                }
+
+                //we should process x messages in this run
+                int left = dispatcher.Throughput;
+
+                //try dequeue a user message
+                while (userMessages.TryDequeue(out envelope))
+                {
+                    //run the receive handler
+                    ActorCell.Invoke(envelope);
+
+                    //check if any system message have arrived while processing user messages
+                    if (systemMessages.TryDequeue(out envelope))
+                    {
+                        //handle system message
+                        ActorCell.SystemInvoke(envelope);
+                        break;
+                    }
+                    left--;
+                    if (isClosed)
+                        return;
+
+                    //if deadline time have expired, stop and break
+                    if (dispatcher.ThroughputDeadlineTime.HasValue &&
+                        deadLineTimer.ElapsedTicks > dispatcher.ThroughputDeadlineTime.Value)
+                    {
+                        deadLineTimer.Stop();
+                        break;
+                    }
+
+                    //we are done processing messages for this run
+                    if (left == 0)
+                    {
+                        break;
+                    }
+                }
+
+                //there are still messages that needs to be processed
+                if (userMessages.Count > 0)
+                {
+                    hasUnscheduledMessages = true;
+                }
+
+                if (hasUnscheduledMessages)
+                {
+                    dispatcher.Schedule(Run);
                 }
                 else
                 {
-                    deadLineTimer = Stopwatch.StartNew();
+                    Interlocked.Exchange(ref status, MailboxStatus.Idle);
                 }
-            }
-
-            //we are about to process all enqueued messages
-            hasUnscheduledMessages = false;
-            Envelope envelope;
-
-            //start with system messages, they have the highest priority
-            while (systemMessages.TryDequeue(out envelope))
-            {
-                ActorCell.SystemInvoke(envelope);
-            }
-
-            //we should process x messages in this run
-            int left = dispatcher.Throughput;
-
-            //try dequeue a user message
-            while (userMessages.TryDequeue(out envelope))
-            {
-                //run the receive handler
-                ActorCell.Invoke(envelope);
-
-                //check if any system message have arrived while processing user messages
-                if (systemMessages.TryDequeue(out envelope))
-                {
-                    //handle system message
-                    ActorCell.SystemInvoke(envelope);
-                    break;
-                }
-                left--;
-                if (isClosed)
-                    return;
-
-                //if deadline time have expired, stop and break
-                if (dispatcher.ThroughputDeadlineTime.HasValue && deadLineTimer.ElapsedTicks > dispatcher.ThroughputDeadlineTime.Value)
-                {
-                    deadLineTimer.Stop();
-                    break;
-                }
-
-                //we are done processing messages for this run
-                if (left == 0)
-                {
-                    break;
-                }
-            }
-
-            //there are still messages that needs to be processed
-            if (userMessages.Count > 0)
-            {
-                hasUnscheduledMessages = true;
-            }
-
-            if (hasUnscheduledMessages)
-            {
-                dispatcher.Schedule(Run);
-            }
-            else
-            {
-                Interlocked.Exchange(ref status, MailboxStatus.Idle);
-            }
+            });
         }
 
 

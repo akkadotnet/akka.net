@@ -68,8 +68,7 @@ namespace Akka.Actor
             CurrentMessage = envelope.Message;
             Sender = envelope.Sender;
             //set the current context
-            UseThreadContext(() =>
-            {
+
                 try
                 {
                     AutoReceiveMessage(envelope);
@@ -78,7 +77,7 @@ namespace Akka.Actor
                 {
                     Parent.Tell(new Failed(Self, cause));
                 }
-            });
+
         }
 
 
@@ -188,8 +187,7 @@ namespace Akka.Actor
             CurrentMessage = envelope.Message;
             Sender = envelope.Sender;
             //set the current context
-            UseThreadContext(() =>
-            {
+
                 try
                 {
                     envelope
@@ -214,7 +212,7 @@ namespace Akka.Actor
                 {
                     Parent.Tell(new Failed(Self, cause));
                 }
-            });
+
         }
 
         /// <summary>
