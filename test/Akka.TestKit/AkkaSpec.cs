@@ -176,6 +176,10 @@ namespace Akka.Tests
             {
                 intercept();
             }
+            catch (AggregateException ex) //need to flatten AggregateExceptions
+            {
+                if (ex.InnerExceptions.Any(x => x is T)) return;
+            }
             catch(Exception x)
             {
                 if(x is T)

@@ -79,6 +79,29 @@ namespace Akka.Remote.Tests.Transport{
             Assert.AreEqual(addressB, associateAttempt.RemoteAddress);
         }
 
+        [TestMethod]
+        public void TestTransport_fail_to_association_with_nonexisting_Address()
+        {
+            //arrange
+            var registry = new AssociationRegistry();
+            var transportA = new TestTransport(addressA, registry);
+
+            //act
+            var cts1 = new CancellationTokenSource(DefaultTimeout);
+            var result = transportA.Listen();
+            result.Wait((cts1.Token));
+            result.Result.Item2.SetResult(new ActorAssociationEventListener(Self));
+
+            //assert
+            intercept<InvalidAssociationException>(() =>
+            {
+                var cts = new CancellationTokenSource(DefaultTimeout);
+                var associateTask = transportA.Associate(nonExistantAddress);
+                associateTask.Wait(cts.Token);
+                var fireException = associateTask.Result;
+            });
+        }
+
         #endregion
     }
 }
