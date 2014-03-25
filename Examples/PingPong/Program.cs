@@ -51,8 +51,7 @@ namespace PingPong
 
             foreach(var t in GetThroughputSettings())
             {
-                if (!await Benchmark(t))
-                    break;
+                await Benchmark(t);
             }
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.WriteLine("Done..");
