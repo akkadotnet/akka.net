@@ -101,21 +101,21 @@ namespace Akka.Tests
             return (TMessage)actual;
         }
 
-        protected TMessage expectMsgPF<TMessage>(TimeSpan duration, string hint, Func<TMessage, bool> pf)
+        protected T expectMsgPF<T>(TimeSpan duration, string hint, Func<object, T> pf)
         {
             object t;
             if (queue.TryTake(out t, duration))
             {
                 Assert.IsNotNull(t, "expected {0} but got null message", hint);
-                Assert.IsInstanceOfType(t, typeof(TMessage), string.Format("expected {0} but got {1} instead", hint, t));
-                Assert.IsTrue(pf.Invoke(t.AsInstanceOf<TMessage>()));
+                Assert.IsTrue(pf.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
+                return pf.Invoke(t);
             }
             else
             {
                 Assert.Fail("timeout {0} during expectMsg: {1}", duration, hint);
             }
 
-            return (TMessage) t;
+            return default(T);
         }
 
         protected void expectNoMsg(TimeSpan duration)

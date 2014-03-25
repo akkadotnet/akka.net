@@ -110,14 +110,19 @@ namespace Akka.Remote.Transport
                 var remoteHandlerTask = remoteHandle.ReadHandlerSource.Task;
 
                 //registration of reader at local finishes the registration and enables communication
-                await Task.WhenAll(remoteHandlerTask, localHandle.ReadHandlerSource.Task);
+                await remoteHandlerTask;
 
                 var remoteListener = remoteHandlerTask.Result;
-                var localListener = localHandle.ReadHandlerSource.Task.Result;
 
-                _registry.RegisterListenerPair(localHandle.Key, new Tuple<IHandleEventListener, IHandleEventListener>(localListener, remoteListener));
-                localHandle.Writeable = true;
-                remoteHandle.Writeable = true;
+#pragma warning disable 4014
+                localHandle.ReadHandlerSource.Task.ContinueWith(result =>
+#pragma warning restore 4014
+                {
+                    var localListener = result.Result;
+                    _registry.RegisterListenerPair(localHandle.Key, new Tuple<IHandleEventListener, IHandleEventListener>(localListener, remoteListener));
+                    localHandle.Writeable = true;
+                    remoteHandle.Writeable = true;
+                }, TaskContinuationOptions.ExecuteSynchronously);
 
                 return (AssociationHandle)localHandle;
 
@@ -456,7 +461,7 @@ namespace Akka.Remote.Transport
         public void RegisterListenerPair(Tuple<Address, Address> key,
             Tuple<IHandleEventListener, IHandleEventListener> listeners)
         {
-            _listenersTable.TryAdd(key, listeners);
+            _listenersTable.AddOrUpdate(key, x => listeners, (x,y) => listeners);
         }
 
         /// <summary>

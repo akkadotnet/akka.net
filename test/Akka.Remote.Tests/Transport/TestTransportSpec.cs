@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Remote.Transport;
 using Akka.Tests;
+using Google.ProtocolBuffers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Akka.Remote.Tests.Transport{
@@ -31,9 +33,8 @@ namespace Akka.Remote.Tests.Transport{
             var transportA = new TestTransport(addressA, registry);
 
             //act
-            var cts = new CancellationTokenSource(DefaultTimeout);
             var result = transportA.Listen();
-            result.Wait((cts.Token));
+            result.Wait(DefaultTimeout);
 
             //assert
             Assert.AreEqual(addressA, result.Result.Item1);
@@ -56,22 +57,20 @@ namespace Akka.Remote.Tests.Transport{
             //act
 
             //must complete returned promises to receive events
-            var cts1 = new CancellationTokenSource(DefaultTimeout);
             var localConnectionFuture = transportA.Listen();
-            localConnectionFuture.Wait((cts1.Token));
+            localConnectionFuture.Wait(DefaultTimeout);
             localConnectionFuture.Result.Item2.SetResult(new ActorAssociationEventListener(Self));
 
-            var cts2 = new CancellationTokenSource(DefaultTimeout);
             var remoteConnectionFuture = transportB.Listen();
-            remoteConnectionFuture.Wait(cts2.Token);
+            remoteConnectionFuture.Wait(DefaultTimeout);
             remoteConnectionFuture.Result.Item2.SetResult(new ActorAssociationEventListener(Self));
 
             var ready = registry.TransportsReady(addressA, addressB);
             Assert.IsTrue(ready);
 
             transportA.Associate(addressB);
-            expectMsgPF<InboundAssociation>(DefaultTimeout, "Expect InboundAssociation from A",
-                m => m.Association.RemoteAddress.Equals(addressA));
+            expectMsgPF<AssociationHandle>(DefaultTimeout, "Expect InboundAssociation from A",
+                m => m.AsInstanceOf<InboundAssociation>().Association);
 
             //assert
             var associateAttempt = (registry.LogSnapshot().Single(x => x is AssociateAttempt)).AsInstanceOf<AssociateAttempt>();
@@ -87,19 +86,75 @@ namespace Akka.Remote.Tests.Transport{
             var transportA = new TestTransport(addressA, registry);
 
             //act
-            var cts1 = new CancellationTokenSource(DefaultTimeout);
             var result = transportA.Listen();
-            result.Wait((cts1.Token));
+            result.Wait(DefaultTimeout);
             result.Result.Item2.SetResult(new ActorAssociationEventListener(Self));
 
             //assert
             intercept<InvalidAssociationException>(() =>
             {
-                var cts = new CancellationTokenSource(DefaultTimeout);
                 var associateTask = transportA.Associate(nonExistantAddress);
-                associateTask.Wait(cts.Token);
+                associateTask.Wait(DefaultTimeout);
                 var fireException = associateTask.Result;
             });
+        }
+
+        [TestMethod]
+        public void TestTransport_should_emulate_sending_PDUs()
+        {
+            //arrange
+            var registry = new AssociationRegistry();
+            var transportA = new TestTransport(addressA, registry);
+            var transportB = new TestTransport(addressB, registry);
+
+            //act
+
+            //must complete returned promises to receive events
+            var localConnectionFuture = transportA.Listen();
+            localConnectionFuture.Wait(DefaultTimeout);
+            localConnectionFuture.Result.Item2.SetResult(new ActorAssociationEventListener(Self));
+
+            var remoteConnectionFuture = transportB.Listen();
+            remoteConnectionFuture.Wait(DefaultTimeout);
+            remoteConnectionFuture.Result.Item2.SetResult(new ActorAssociationEventListener(Self));
+
+            var ready = registry.TransportsReady(addressA, addressB);
+            Assert.IsTrue(ready);
+
+            var associate = transportA.Associate(addressB);
+            var handleB = expectMsgPF<AssociationHandle>(DefaultTimeout, "Expect InboundAssociation from A", o =>
+            {
+                var handle = o as InboundAssociation;
+                if (handle != null && handle.Association.RemoteAddress.Equals(addressA)) return handle.Association;
+                return null;
+            });
+            handleB.ReadHandlerSource.SetResult(new ActorHandleEventListener(Self));
+
+            associate.Wait(DefaultTimeout);
+            var handleA = associate.Result;
+
+            //Initialize handles
+            handleA.ReadHandlerSource.SetResult(new ActorHandleEventListener(Self));
+            handleA.ReadHandlerSource.Task.Wait(DefaultTimeout);
+
+            var akkaPDU = ByteString.CopyFromUtf8("AkkaPDU");
+
+            var exists = registry.ExistsAssociation(addressA, addressB);
+            Assert.IsTrue(exists);
+
+            handleA.Write(akkaPDU);
+
+            //assert
+            expectMsgPF(DefaultTimeout, "Expect InboundPayload from A", o =>
+            {
+                var payload = o as InboundPayload;
+                if (payload != null && payload.Payload.Equals(akkaPDU)) return akkaPDU;
+                return null;
+            });
+
+            var writeAttempt = (registry.LogSnapshot().Single(x => x is WriteAttempt)).AsInstanceOf<WriteAttempt>();
+            Assert.IsTrue(writeAttempt.Sender.Equals(addressA) && writeAttempt.Recipient.Equals(addressB)
+                && writeAttempt.Payload.Equals(akkaPDU));
         }
 
         #endregion
