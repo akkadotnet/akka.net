@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 
@@ -243,7 +245,78 @@ namespace Akka.Remote.Transport
 
         private Task<ActorRef> RegisterManager()
         {
-            
+            return System.ActorSelection("/system/transports").Ask<ActorRef>(new RegisterTransportActor(managerProps, managerName));
         }
+
+        protected override Task<IAssociationEventListener> InterceptListen(Address listenAddress, Task<IAssociationEventListener> listenerTask)
+        {
+            return RegisterManager().ContinueWith(mgrTask =>
+            {
+                manager = mgrTask.Result;
+                manager.Tell(new ListenUnderlying(listenAddress, listenerTask));
+                return (IAssociationEventListener)new ActorAssociationEventListener(manager);
+            }, TaskContinuationOptions.ExecuteSynchronously);
+        }
+
+        protected override void InterceptAssociate(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusPromise)
+        {
+            manager.Tell(new AssociateUnderlying(remoteAddress, statusPromise));
+        }
+
+        public override Task<bool> Shutdown()
+        {
+            /*
+             * TODO: Add graceful stop support and associated remote settings
+             */
+            var stopTask = manager.Ask(new PoisonPill());
+            var transportStopTask = WrappedTransport.Shutdown();
+            return Task.WhenAll(stopTask, transportStopTask).ContinueWith(x => x.IsCompleted, TaskContinuationOptions.ExecuteSynchronously);
+        }
+    }
+
+    public abstract class ActorTransportAdapterManager : ActorBase
+    {
+        /// <summary>
+        /// Lightweight Stash implementation
+        /// </summary>
+       protected Queue<object> DelayedEvents = new Queue<object>();
+
+        protected IAssociationEventListener associationListener;
+        protected Address localAddress;
+        protected long uniqueId = 0L;
+
+        protected long nextId()
+        {
+            return Interlocked.Increment(ref uniqueId);
+        }
+
+        protected override void OnReceive(object message)
+        {
+            PatternMatch.Match(message)
+                .With<ListenUnderlying>(listen =>
+                {
+                    localAddress = listen.ListenAddress;
+                    listen.UpstreamListener.ContinueWith(
+                        listenerRegistered => Self.Tell(new ListenerRegistered(listenerRegistered.Result)),
+                        TaskContinuationOptions.AttachedToParent);
+                })
+                .With<ListenerRegistered>(listener =>
+                {
+                    associationListener = listener.Listener;
+                    foreach (var dEvent in DelayedEvents)
+                    {
+                        Self.Tell(dEvent, ActorRef.NoSender);
+                    }
+                    DelayedEvents = new Queue<object>();
+                    Context.Become(Ready);
+                })
+                .Default(m => DelayedEvents.Enqueue(m));
+        }
+
+        /// <summary>
+        /// Method to be implemented for child classes - processes messages once the transport is ready to send / receive
+        /// </summary>
+        /// <param name="message"></param>
+        protected abstract void Ready(object message);
     }
 }

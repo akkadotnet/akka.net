@@ -145,7 +145,7 @@ namespace Akka.Remote
                      * See https://github.com/akka/akka/blob/master/akka-remote/src/main/scala/akka/remote/RemoteSettings.scala#L42 
                      * and https://github.com/akka/akka/blob/master/akka-remote/src/main/scala/akka/remote/Remoting.scala#L95
                      */
-                    Context.ActorOf(r.Props.WithDeploy(Deploy.Local), r.Name);
+                    Sender.Tell(Context.ActorOf(r.Props.WithDeploy(Deploy.Local), r.Name));
                 });
         }
     }
