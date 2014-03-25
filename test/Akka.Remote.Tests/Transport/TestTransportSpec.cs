@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using Akka.Actor;
 using Akka.Remote.Transport;
 using Akka.Tests;
@@ -135,7 +132,6 @@ namespace Akka.Remote.Tests.Transport{
 
             //Initialize handles
             handleA.ReadHandlerSource.SetResult(new ActorHandleEventListener(Self));
-            handleA.ReadHandlerSource.Task.Wait(DefaultTimeout);
 
             var akkaPDU = ByteString.CopyFromUtf8("AkkaPDU");
 
@@ -155,6 +151,60 @@ namespace Akka.Remote.Tests.Transport{
             var writeAttempt = (registry.LogSnapshot().Single(x => x is WriteAttempt)).AsInstanceOf<WriteAttempt>();
             Assert.IsTrue(writeAttempt.Sender.Equals(addressA) && writeAttempt.Recipient.Equals(addressB)
                 && writeAttempt.Payload.Equals(akkaPDU));
+        }
+
+        [TestMethod]
+        public void TestTransport_should_emulate_disassociation()
+        {
+            //arrange
+            var registry = new AssociationRegistry();
+            var transportA = new TestTransport(addressA, registry);
+            var transportB = new TestTransport(addressB, registry);
+
+            //act
+
+            //must complete returned promises to receive events
+            var localConnectionFuture = transportA.Listen();
+            localConnectionFuture.Wait(DefaultTimeout);
+            localConnectionFuture.Result.Item2.SetResult(new ActorAssociationEventListener(Self));
+
+            var remoteConnectionFuture = transportB.Listen();
+            remoteConnectionFuture.Wait(DefaultTimeout);
+            remoteConnectionFuture.Result.Item2.SetResult(new ActorAssociationEventListener(Self));
+
+            var ready = registry.TransportsReady(addressA, addressB);
+            Assert.IsTrue(ready);
+
+            var associate = transportA.Associate(addressB);
+            var handleB = expectMsgPF<AssociationHandle>(DefaultTimeout, "Expect InboundAssociation from A", o =>
+            {
+                var handle = o as InboundAssociation;
+                if (handle != null && handle.Association.RemoteAddress.Equals(addressA)) return handle.Association;
+                return null;
+            });
+            handleB.ReadHandlerSource.SetResult(new ActorHandleEventListener(Self));
+
+            associate.Wait(DefaultTimeout);
+            var handleA = associate.Result;
+
+            //Initialize handles
+            handleA.ReadHandlerSource.SetResult(new ActorHandleEventListener(Self));
+
+            var exists = registry.ExistsAssociation(addressA, addressB);
+            Assert.IsTrue(exists);
+
+            handleA.Disassociate();
+
+            var msg = expectMsgPF(DefaultTimeout, "Expected Disassociated", o => o.AsInstanceOf<Disassociated>());
+
+            //assert
+            Assert.IsNotNull(msg);
+
+            exists = registry.ExistsAssociation(addressA, addressB);
+            Assert.IsTrue(!exists, "Association should no longer exist");
+
+            var disassociateAttempt = registry.LogSnapshot().Single(x => x is DisassociateAttempt).AsInstanceOf<DisassociateAttempt>();
+            Assert.IsTrue(disassociateAttempt.Requestor.Equals(addressA) && disassociateAttempt.Remote.Equals(addressB));
         }
 
         #endregion
