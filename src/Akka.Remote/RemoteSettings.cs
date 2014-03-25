@@ -20,6 +20,7 @@ namespace Akka.Remote
             Transports = (from transportName in TransportNames
                 let transportConfig = TransportConfigFor(transportName)
                 select new TransportSettings(transportConfig)).ToArray();
+            Adapters = ConfigToMap(config.GetConfig("akka.remote.adapters"));
         }
 
         public Config Config { get; private set; }
@@ -37,6 +38,8 @@ namespace Akka.Remote
         public TimeSpan ShutdownTimeout { get; set; }
 
         public IList<string> TransportNames { get; set; }
+
+        public IDictionary<string, string> Adapters { get; set; }
 
         public TransportSettings[] Transports { get; set; }
 
@@ -56,6 +59,12 @@ namespace Akka.Remote
             public Config Config { get; set; }
 
             public string TransportClass { get; set; }
+        }
+
+        private static IDictionary<string, string> ConfigToMap(Config cfg)
+        {
+            if(cfg.IsEmpty) return new Dictionary<string, string>();
+            return cfg.Root.GetObject().Unwrapped.ToDictionary(k => k.Key, v => v.Value.ToString());
         }
     }
 }

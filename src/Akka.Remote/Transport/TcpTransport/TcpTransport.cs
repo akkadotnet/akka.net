@@ -9,7 +9,8 @@ namespace Akka.Remote.Transport
     //    private readonly LoggingAdapter log;
     //    private readonly TcpServer server;
 
-    //    public TcpTransport(ActorSystem system, Config config) : base(system, config)
+    //    public TcpTransport(ActorSystem system, Config config)
+    //        : base(system, config)
     //    {
     //        string protocol = "akka." + config.GetString("transport-protocol");
     //        SchemeIdentifier = protocol;
@@ -33,5 +34,15 @@ namespace Akka.Remote.Transport
     //    {
     //        return true;
     //    }
+    //}
+
+    //public class TcpAssociationHandle : AssociationHandle
+    //{
+    //    public TcpAssociationHandle(Address localAddress, Address remoteAddress, TcpTransport transport) : base(localAddress, remoteAddress)
+    //    {
+    //        Transport = transport;
+    //    }
+
+    //    public TcpTransport Transport { get; private set; }
     //}
 }

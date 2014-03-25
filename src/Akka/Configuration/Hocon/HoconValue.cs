@@ -9,6 +9,11 @@ namespace Akka.Configuration.Hocon
     {
         private readonly List<IHoconElement> values = new List<IHoconElement>();
 
+        public bool IsEmpty
+        {
+            get { return values.Count == 0; }
+        }
+
         public void AppendValue(IHoconElement value)
         {
             values.Add(value);
