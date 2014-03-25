@@ -77,6 +77,7 @@
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
   <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.fs" />
     <Compile Include="FsApi.fs" />
     <None Include="packages.config" />
   </ItemGroup>
