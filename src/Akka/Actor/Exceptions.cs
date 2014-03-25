@@ -10,7 +10,7 @@ namespace Akka.Actor
         /// <summary>
         ///     Initializes a new instance of the <see cref="AkkaException" /> class.
         /// </summary>
-        public AkkaException()
+        protected AkkaException()
         {
         }
 
@@ -18,8 +18,9 @@ namespace Akka.Actor
         ///     Initializes a new instance of the <see cref="T:System.Exception" /> class with a specified error message.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public AkkaException(string message)
-            : base(message)
+        /// <param name="cause">An inner exception responsible for this error.</param>
+        protected AkkaException(string message, Exception cause = null)
+            : base(message, cause)
         {
         }
     }

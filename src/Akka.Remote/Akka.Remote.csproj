@@ -98,6 +98,7 @@
     <Compile Include="Transport\AkkaProtocolTransport.cs" />
     <Compile Include="Transport\TcpTransport\TcpListener.cs" />
     <Compile Include="Transport\TcpTransport\TcpTransport.cs" />
+    <Compile Include="Transport\TestTransport.cs" />
     <Compile Include="Transport\Transport.cs" />
   </ItemGroup>
   <ItemGroup>
