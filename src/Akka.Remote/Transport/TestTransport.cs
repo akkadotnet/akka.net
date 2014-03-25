@@ -9,6 +9,8 @@ using Google.ProtocolBuffers;
 
 namespace Akka.Remote.Transport
 {
+
+    public delegate void AkkaVoid();
     /// <summary>
     /// Transport implementation used for testing.
     /// 
@@ -18,34 +20,184 @@ namespace Akka.Remote.Transport
     /// </summary>
     public class TestTransport : Transport
     {
+
+
         public readonly Address LocalAddress;
 
-        public TestTransport(ActorSystem system, Config config, Address localAddress) : base(system, config)
+        private readonly AssociationRegistry _registry;
+
+        private TaskCompletionSource<IAssociationEventListener> _associationListenerPromise
         {
-            LocalAddress = localAddress;
+            get
+            {
+                return new TaskCompletionSource<IAssociationEventListener>();
+            }
         }
 
-        public override Address Listen()
+        public TestTransport(ActorSystem system, Config config, Address localAddress, AssociationRegistry registry) : base(system, config)
         {
-            throw new System.NotImplementedException();
+            LocalAddress = localAddress;
+            _registry = registry;
+            ListenBehavior =
+                new SwitchableLoggedBehavior<bool, Tuple<Address, TaskCompletionSource<IAssociationEventListener>>>(
+                    x => DefaultListen(), x => _registry.LogActivity(new ListenAttempt(LocalAddress)));
+            AssociateBehavior = 
+                new SwitchableLoggedBehavior<Address, AssociationHandle>(DefaultAssociate, address => registry.LogActivity(new AssociateAttempt(LocalAddress, address)));
+            ShutdownBehavior = new SwitchableLoggedBehavior<bool, bool>(x => DefaultShutdown(), x => registry.LogActivity(new ShutdownAttempt(LocalAddress)));
+            DisassociateBehavior = new SwitchableLoggedBehavior<TestAssociationHandle, bool>(x =>
+            {
+                DefaultDisassociate(x);
+                return Task.Run(() => true);
+            }, remote => _registry.LogActivity(new DisassociateAttempt(remote.LocalAddress, remote.RemoteAddress)));
+
+            WriteBehavior =new SwitchableLoggedBehavior<Tuple<TestAssociationHandle, ByteString>, bool>(
+                args => DefaultWriteBehavior(args.Item1, args.Item2), 
+                data => _registry.LogActivity(new WriteAttempt(data.Item1.LocalAddress, data.Item1.RemoteAddress, data.Item2)));
         }
+
+        /*
+         * Programmable behaviors
+         */
+        public readonly SwitchableLoggedBehavior<bool, Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> ListenBehavior;
+        public readonly SwitchableLoggedBehavior<Address, AssociationHandle> AssociateBehavior;
+        public readonly SwitchableLoggedBehavior<bool, bool> ShutdownBehavior;
+        public readonly SwitchableLoggedBehavior<TestAssociationHandle, bool> DisassociateBehavior;
+        public readonly SwitchableLoggedBehavior<Tuple<TestAssociationHandle, ByteString>, bool> WriteBehavior;
 
         public override bool IsResponsibleFor(Address remote)
         {
             return true;
         }
 
+        #region Listener methods
+
+        public override Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen()
+        {
+            return ListenBehavior.Apply(true);
+        }
+
+        public Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> DefaultListen()
+        {
+            var promise = _associationListenerPromise;
+            _registry.RegisterTransport(this, promise.Task);
+            return
+                Task.Run(() => new Tuple<Address, TaskCompletionSource<IAssociationEventListener>>(LocalAddress, promise));
+        }
+
+        #endregion
+
+        #region Association methods
+
         public override Task<AssociationHandle> Associate(Address remoteAddress)
         {
-            throw new NotImplementedException();
+            return AssociateBehavior.Apply(remoteAddress);
         }
 
-        public bool Write(TestAssociationHandle handle, ByteString payload)
+        private Task<AssociationHandle> DefaultAssociate(Address remoteAddress)
         {
-            throw new System.NotImplementedException();
+            var transport = _registry.TransportFor(remoteAddress);
+            if (transport != null)
+            {
+                var remoteAssociationListenerTask = transport.Item2;
+                var handlers = CreateHandlePair(transport.Item1, remoteAddress);
+                var localHandle = handlers.Item1;
+                var remoteHandle = handlers.Item2;
+                localHandle.Writeable = false;
+                remoteHandle.Writeable = false;
+
+                transport.Item2.Wait(); //wait for the task to be completed
+                return remoteAssociationListenerTask.ContinueWith(remoteAssociationListener =>
+                {
+                    //pass a non-writeable handle to remote first
+                    remoteAssociationListener.Result.Notify(new InboundAssociation(remoteHandle));
+                    var remoteHandlerTask = remoteHandle.ReadHandlerSource.Task;
+
+                    //registration of reader at local finishes the registration and enables communication
+                    return localHandle.ReadHandlerSource.Task.ContinueWith(localListener =>
+                    {
+                        remoteHandlerTask.Wait();
+                        var remoteListener = remoteHandlerTask.Result;
+                        _registry.RegisterListenerPair(localHandle.Key, new Tuple<IHandleEventListener, IHandleEventListener>(localListener.Result, remoteListener));
+                        localHandle.Writeable = true;
+                        remoteHandle.Writeable = true;
+
+                        return (AssociationHandle)localHandle;
+                    }).Result;
+
+                });
+            }
+
+            return new Task<AssociationHandle>(() => { throw new InvalidAssociationException(string.Format("No registered transport: {0}", remoteAddress)); });
         }
 
-        public void Disassociate(TestAssociationHandle handle) { }
+        private Tuple<TestAssociationHandle, TestAssociationHandle> CreateHandlePair(TestTransport remoteTransport,
+            Address remoteAddress)
+        {
+            var localHandle = new TestAssociationHandle(LocalAddress, remoteAddress, this, false);
+            var remoteHandle = new TestAssociationHandle(remoteAddress, LocalAddress, remoteTransport, true);
+
+            return new Tuple<TestAssociationHandle, TestAssociationHandle>(localHandle, remoteHandle);
+        }
+
+        #endregion
+
+        #region Disassociation methods
+
+        public Task Disassociate(TestAssociationHandle handle)
+        {
+            return DisassociateBehavior.Apply(handle);
+        }
+
+        public Task DefaultDisassociate(TestAssociationHandle handle)
+        {
+            var handlers = _registry.DeregisterAssociation(handle.Key);
+            handlers.Item1.Notify(new Disassociated(DisassociateInfo.Unknown));
+            handlers.Item2.Notify(new Disassociated(DisassociateInfo.Unknown));
+
+            return Task.Run(() => { });
+        }
+
+        #endregion
+
+        #region Shutdown methods
+
+        public override Task<bool> Shutdown()
+        {
+            return ShutdownBehavior.Apply(true);
+        }
+
+        private Task<bool> DefaultShutdown()
+        {
+            return Task.Run(() => true);
+        }
+
+        #endregion
+
+        #region Write methods
+
+        public Task<bool> Write(TestAssociationHandle handle, ByteString payload)
+        {
+            return WriteBehavior.Apply(new Tuple<TestAssociationHandle, ByteString>(handle, payload));
+        }
+
+        private Task<bool> DefaultWriteBehavior(TestAssociationHandle handle, ByteString payload)
+        {
+            var remoteReadHandler = _registry.GetRemoteReadHandlerFor(handle);
+
+            if (remoteReadHandler != null)
+            {
+                remoteReadHandler.Notify(new InboundPayload(payload));
+                return Task.Run(() => true);
+            }
+
+            return Task.Run(() =>
+            {
+                throw new ArgumentException("No association present");
+                return true;
+            });
+        }
+
+        #endregion
     }
 
     /// <summary>
@@ -113,6 +265,107 @@ namespace Akka.Remote.Transport
         public Address Requestor { get; private set; }
 
         public Address Remote { get; private set; }
+    }
+
+    /// <summary>
+    /// Test utility to make bhavior of functions that return some Task controllable form tests.
+    /// 
+    /// This tool is able to override default behavior with any generic behavior, including failure, and exposes
+    /// control to the timing of completion of the associated Task.
+    /// 
+    /// The utility is implemented as a stack of behaviors, where the behavior on the top of the stack represents the
+    /// currently active behavior. The bottom of the stack alway contains the <see cref="DefaultBehavior"/> which
+    /// can not be popped out.
+    /// </summary>
+    public class SwitchableLoggedBehavior<TIn, TOut>
+    {
+        public Func<TIn, Task<TOut>> DefaultBehavior { get; private set; }
+
+        public Action<TIn> LogCallback { get; private set; }
+
+        private readonly ConcurrentStack<Func<TIn, Task<TOut>>> _behaviorStack =
+            new ConcurrentStack<Func<TIn, Task<TOut>>>();
+
+        public SwitchableLoggedBehavior(Func<TIn, Task<TOut>> defaultBehavior, Action<TIn> logCallback)
+        {
+            LogCallback = logCallback;
+            DefaultBehavior = defaultBehavior;
+            _behaviorStack.Push(DefaultBehavior);
+        }
+
+        public Func<TIn, Task<TOut>> CurrentBehavior
+        {
+            get
+            {
+                Func<TIn, Task<TOut>> behavior;
+                if (_behaviorStack.TryPeek(out behavior))
+                    return behavior;
+                return DefaultBehavior; //otherwise, return the default behavior
+            }
+        }
+
+        /// <summary>
+        /// Changes the current behavior to the provided one
+        /// </summary>
+        /// <param name="behavior">Function that takes a parameter type <typeparam name="TIn"/> and returns a Task<typeparam name="TOut"></typeparam></param>
+        public void Push(Func<TIn, Task<TOut>> behavior)
+        {
+            _behaviorStack.Push(behavior);
+        }
+
+        /// <summary>
+        /// Changes the behavior to return a completed Task with the given constant value.
+        /// </summary>
+        /// <param name="result">The constant the Task will be completed with.</param>
+        public void PushConstant(TOut result)
+        {
+            Push((x) => Task.Run(() => result));
+        }
+
+        /// <summary>
+        /// Changes the behavior to return a faulted Task with the given exception
+        /// </summary>
+        /// <param name="e">The exception responsible for faulting this task</param>
+        public void PushError(Exception e)
+        {
+            Push((x) => Task.Run(() =>
+            {
+                throw e;
+                return default(TOut);
+            }));
+        }
+
+        /// <summary>
+        /// Enables control of the completion of the previously active behavior. Wraps the previous behavior in
+        /// </summary>
+        /// <returns></returns>
+        public TaskCompletionSource<bool> PushDelayed()
+        {
+            var controlPromise = new TaskCompletionSource<bool>();
+            var originalBehavior = CurrentBehavior;
+            Push((x) =>
+            {
+                controlPromise.Task.Wait();
+                return originalBehavior.Invoke(x);
+            });
+
+            return controlPromise;
+        }
+
+        public void Pop()
+        {
+            if (_behaviorStack.Count > 1)
+            {
+                Func<TIn, Task<TOut>> behavior;
+                _behaviorStack.TryPop(out behavior);
+            }
+        }
+
+        public Task<TOut> Apply(TIn param)
+        {
+            LogCallback(param);
+            return CurrentBehavior(param);
+        }
     }
 
     /// <summary>
@@ -287,7 +540,7 @@ namespace Akka.Remote.Transport
 
     public sealed class TestAssociationHandle : AssociationHandle
     {
-        public TestAssociationHandle(Address localAddress, Address remoteAddress, bool inbound, TestTransport transport) : base(localAddress, remoteAddress)
+        public TestAssociationHandle(Address localAddress, Address remoteAddress, TestTransport transport, bool inbound) : base(localAddress, remoteAddress)
         {
             Inbound = inbound;
             _transport = transport;
@@ -313,7 +566,14 @@ namespace Akka.Remote.Transport
 
         public override bool Write(ByteString payload)
         {
-            return Writeable && _transport.Write(this, payload);
+            if (Writeable)
+            {
+                var result = _transport.Write(this, payload);
+                result.Wait();
+                return result.Result;
+            }
+
+            return false;
         }
 
         public override void Disassociate()

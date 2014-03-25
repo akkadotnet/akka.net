@@ -19,7 +19,7 @@ namespace Akka.Remote.Transport
         public ActorSystem System { get; private set; }
 
         public string SchemeIdentifier { get; protected set; }
-        public abstract Address Listen();
+        public abstract Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen();
 
         public abstract bool IsResponsibleFor(Address remote);
 
@@ -34,6 +34,26 @@ namespace Akka.Remote.Transport
         /// <param name="remoteAddress">The address of the remote transport entity.</param>
         /// <returns>A status representing the failure or success containing an <see cref="AssociationHandle"/>.</returns>
         public abstract Task<AssociationHandle> Associate(Address remoteAddress);
+
+        /// <summary>
+        /// Shuts down the transport layer and releases all of the corresponding resources. Shutdown is asynchronous and is signaled
+        /// by the result of the returned Task.
+        /// 
+        /// The transport SHOULD try flushing pending writes before becoming completely closed.
+        /// </summary>
+        /// <returns>Task signlaing the completion of the shutdown.</returns>
+        public abstract Task<bool> Shutdown();
+
+        /// <summary>
+        /// This method allows upper layers to send management commands to the transport. It is the responsibility of the sender to
+        /// send appropriate commands to different transport implementations. Unknown commands will be ignored.
+        /// </summary>
+        /// <param name="message">Command message to send to the transport.</param>
+        /// <returns>A Task that succeeeds whent he command was handled or dropped.</returns>
+        public virtual Task<bool> ManagementCommand(object message)
+        {
+            return Task.Run(() => true);
+        }
     }
 
     /// <summary>
@@ -41,7 +61,8 @@ namespace Akka.Remote.Transport
     /// </summary>
     public class InvalidAssociationException : AkkaException
     {
-        public InvalidAssociationException(string message, Exception cause = null) : base(message, cause)
+        public InvalidAssociationException(string message, Exception cause = null)
+            : base(message, cause)
         {
         }
     }
@@ -49,7 +70,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Marker interface for events that the registered listener for a <see cref="AssociationHandle"/> might receive.
     /// </summary>
-    public interface IHandleEvent{ }
+    public interface IHandleEvent { }
 
     /// <summary>
     /// Message sent to the listener registered to an association (via the TaskCompletionSource returned by <see cref="AssociationHandle.ReadHandlerSource"/>)
@@ -82,11 +103,12 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Supertype of possible disassociation reasons
     /// </summary>
-    public abstract class DisassociateInfo { }
-
-    public class Unknown : DisassociateInfo { }
-    public class Shutdown : DisassociateInfo { }
-    public class Quarantined : DisassociateInfo { }
+    public enum DisassociateInfo
+    {
+        Unknown = 0,
+        Shutdown = 1,
+        Quarantined = 2
+    }
 
     /// <summary>
     /// An interface that needs to be implemented by a user of an <see cref="AssociationHandle"/>
@@ -122,7 +144,7 @@ namespace Akka.Remote.Transport
     /// </summary>
     public interface IAssociationEvent
     {
-         
+
     }
 
     /// <summary>
