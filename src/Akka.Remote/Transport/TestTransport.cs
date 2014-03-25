@@ -9,8 +9,6 @@ using Google.ProtocolBuffers;
 
 namespace Akka.Remote.Transport
 {
-
-    public delegate void AkkaVoid();
     /// <summary>
     /// Transport implementation used for testing.
     /// 
@@ -34,10 +32,11 @@ namespace Akka.Remote.Transport
             }
         }
 
-        public TestTransport(ActorSystem system, Config config, Address localAddress, AssociationRegistry registry) : base(system, config)
+        public TestTransport(Address localAddress, AssociationRegistry registry, string schemeIdentifier = "test")
         {
             LocalAddress = localAddress;
             _registry = registry;
+            SchemeIdentifier = schemeIdentifier;
             ListenBehavior =
                 new SwitchableLoggedBehavior<bool, Tuple<Address, TaskCompletionSource<IAssociationEventListener>>>(
                     x => DefaultListen(), x => _registry.LogActivity(new ListenAttempt(LocalAddress)));
@@ -391,14 +390,6 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// Private constructor - used to enforce the Singleton (one <see cref="AssociationRegistry"/> per <see cref="ActorSystem"/>) nature of the class
-        /// </summary>
-        private AssociationRegistry()
-        {
-            
-        }
-
-        /// <summary>
         /// Returns the remote endpoint for a pair of endpoints relative to the owner of the supplied <see cref="TestAssociationHandle"/>.
         /// </summary>
         /// <param name="handle">The reference handle to determine the remote endpoint relative to</param>
@@ -454,7 +445,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         /// <param name="addresses">The listen addresses of transports that participate in the test case.</param>
         /// <returns>True if all transports are successfully registered.</returns>
-        public bool TransportsReady(IList<Address> addresses)
+        public bool TransportsReady(params Address[] addresses)
         {
             return addresses.All(x => _transportTable.ContainsKey(x));
         }

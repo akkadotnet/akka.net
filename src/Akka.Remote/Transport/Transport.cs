@@ -8,15 +8,9 @@ namespace Akka.Remote.Transport
 {
     public abstract class Transport
     {
-        protected Transport(ActorSystem system, Config config)
-        {
-            System = system;
-            Config = config;
-        }
+        public Config Config { get; protected set; }
 
-        public Config Config { get; private set; }
-
-        public ActorSystem System { get; private set; }
+        public ActorSystem System { get; protected set; }
 
         public string SchemeIdentifier { get; protected set; }
         public abstract Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen();

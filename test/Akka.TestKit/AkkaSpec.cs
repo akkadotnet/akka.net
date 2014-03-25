@@ -66,6 +66,8 @@ namespace Akka.Tests
         protected ActorRef testActor;
         protected ActorRef echoActor;
 
+        public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(1.5);
+
         protected Terminated expectTerminated(ActorRef @ref)
         {
             var actual = queue.Take();
@@ -97,6 +99,23 @@ namespace Akka.Tests
             global::System.Diagnostics.Debug.WriteLine("actual: " + actual);
             Assert.IsTrue(actual is TMessage);
             return (TMessage)actual;
+        }
+
+        protected TMessage expectMsgPF<TMessage>(TimeSpan duration, string hint, Func<TMessage, bool> pf)
+        {
+            object t;
+            if (queue.TryTake(out t, duration))
+            {
+                Assert.IsNotNull(t, "expected {0} but got null message", hint);
+                Assert.IsInstanceOfType(t, typeof(TMessage), string.Format("expected {0} but got {1} instead", hint, t));
+                Assert.IsTrue(pf.Invoke(t.AsInstanceOf<TMessage>()));
+            }
+            else
+            {
+                Assert.Fail("timeout {0} during expectMsg: {1}", duration, hint);
+            }
+
+            return (TMessage) t;
         }
 
         protected void expectNoMsg(TimeSpan duration)
