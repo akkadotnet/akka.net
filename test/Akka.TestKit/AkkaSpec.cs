@@ -207,4 +207,10 @@ namespace Akka.Tests
         //    return Tuple.Create(item1, item2, item3, item4);
         //}
     }
+
+// ReSharper disable once InconsistentNaming
+    public interface ImplicitSender
+    {
+        ActorRef Self { get; }
+    }
 }
