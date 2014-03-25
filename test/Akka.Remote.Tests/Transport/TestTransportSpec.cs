@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System;
+using System.Linq;
+using System.Threading;
 using Akka.Actor;
 using Akka.Remote.Transport;
 using Akka.Tests;
@@ -67,14 +69,14 @@ namespace Akka.Remote.Tests.Transport{
             var ready = registry.TransportsReady(addressA, addressB);
             Assert.IsTrue(ready);
 
-            var cts3 = new CancellationTokenSource(DefaultTimeout);
-            var associationHandle = transportA.Associate(addressB);
-            associationHandle.Wait(cts3.Token);
+            transportA.Associate(addressB);
             expectMsgPF<InboundAssociation>(DefaultTimeout, "Expect InboundAssociation from A",
                 m => m.Association.RemoteAddress.Equals(addressA));
 
             //assert
-            Assert.IsTrue(registry.LogSnapshot().Contains(new AssociateAttempt(addressA, addressB)));
+            var associateAttempt = (registry.LogSnapshot().Single(x => x is AssociateAttempt)).AsInstanceOf<AssociateAttempt>();
+            Assert.AreEqual(addressA, associateAttempt.LocalAddress);
+            Assert.AreEqual(addressB, associateAttempt.RemoteAddress);
         }
 
         #endregion

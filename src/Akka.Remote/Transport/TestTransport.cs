@@ -40,7 +40,7 @@ namespace Akka.Remote.Transport
             ListenBehavior =
                 new SwitchableLoggedBehavior<bool, Tuple<Address, TaskCompletionSource<IAssociationEventListener>>>(
                     x => DefaultListen(), x => _registry.LogActivity(new ListenAttempt(LocalAddress)));
-            AssociateBehavior = 
+            AssociateBehavior =
                 new SwitchableLoggedBehavior<Address, AssociationHandle>(DefaultAssociate, address => registry.LogActivity(new AssociateAttempt(LocalAddress, address)));
             ShutdownBehavior = new SwitchableLoggedBehavior<bool, bool>(x => DefaultShutdown(), x => registry.LogActivity(new ShutdownAttempt(LocalAddress)));
             DisassociateBehavior = new SwitchableLoggedBehavior<TestAssociationHandle, bool>(x =>
@@ -49,8 +49,8 @@ namespace Akka.Remote.Transport
                 return Task.Run(() => true);
             }, remote => _registry.LogActivity(new DisassociateAttempt(remote.LocalAddress, remote.RemoteAddress)));
 
-            WriteBehavior =new SwitchableLoggedBehavior<Tuple<TestAssociationHandle, ByteString>, bool>(
-                args => DefaultWriteBehavior(args.Item1, args.Item2), 
+            WriteBehavior = new SwitchableLoggedBehavior<Tuple<TestAssociationHandle, ByteString>, bool>(
+                args => DefaultWriteBehavior(args.Item1, args.Item2),
                 data => _registry.LogActivity(new WriteAttempt(data.Item1.LocalAddress, data.Item1.RemoteAddress, data.Item2)));
         }
 
@@ -92,7 +92,7 @@ namespace Akka.Remote.Transport
             return AssociateBehavior.Apply(remoteAddress);
         }
 
-        private Task<AssociationHandle> DefaultAssociate(Address remoteAddress)
+        private async Task<AssociationHandle> DefaultAssociate(Address remoteAddress)
         {
             var transport = _registry.TransportFor(remoteAddress);
             if (transport != null)
@@ -104,29 +104,26 @@ namespace Akka.Remote.Transport
                 localHandle.Writeable = false;
                 remoteHandle.Writeable = false;
 
-                transport.Item2.Wait(); //wait for the task to be completed
-                return remoteAssociationListenerTask.ContinueWith(remoteAssociationListener =>
-                {
-                    //pass a non-writeable handle to remote first
-                    remoteAssociationListener.Result.Notify(new InboundAssociation(remoteHandle));
-                    var remoteHandlerTask = remoteHandle.ReadHandlerSource.Task;
+                //pass a non-writeable handle to remote first
+                var remoteAssociationListener = remoteAssociationListenerTask.Result;
+                remoteAssociationListener.Notify(new InboundAssociation(remoteHandle));
+                var remoteHandlerTask = remoteHandle.ReadHandlerSource.Task;
 
-                    //registration of reader at local finishes the registration and enables communication
-                    return localHandle.ReadHandlerSource.Task.ContinueWith(localListener =>
-                    {
-                        remoteHandlerTask.Wait();
-                        var remoteListener = remoteHandlerTask.Result;
-                        _registry.RegisterListenerPair(localHandle.Key, new Tuple<IHandleEventListener, IHandleEventListener>(localListener.Result, remoteListener));
-                        localHandle.Writeable = true;
-                        remoteHandle.Writeable = true;
+                //registration of reader at local finishes the registration and enables communication
+                await Task.WhenAll(remoteHandlerTask, localHandle.ReadHandlerSource.Task);
 
-                        return (AssociationHandle)localHandle;
-                    }).Result;
+                var remoteListener = remoteHandlerTask.Result;
+                var localListener = localHandle.ReadHandlerSource.Task.Result;
 
-                });
+                _registry.RegisterListenerPair(localHandle.Key, new Tuple<IHandleEventListener, IHandleEventListener>(localListener, remoteListener));
+                localHandle.Writeable = true;
+                remoteHandle.Writeable = true;
+
+                return (AssociationHandle)localHandle;
+
             }
 
-            return new Task<AssociationHandle>(() => { throw new InvalidAssociationException(string.Format("No registered transport: {0}", remoteAddress)); });
+            throw new InvalidAssociationException(string.Format("No registered transport: {0}", remoteAddress));
         }
 
         private Tuple<TestAssociationHandle, TestAssociationHandle> CreateHandlePair(TestTransport remoteTransport,
@@ -493,7 +490,7 @@ namespace Akka.Remote.Transport
         /// <returns>The option that contains the listener if it exists.</returns>
         public IHandleEventListener GetRemoteReadHandlerFor(TestAssociationHandle localHandle)
         {
-            Tuple<IHandleEventListener,IHandleEventListener> listeners;
+            Tuple<IHandleEventListener, IHandleEventListener> listeners;
             if (_listenersTable.TryGetValue(localHandle.Key, out listeners))
             {
                 return RemoteListenerRelativeTo(localHandle, listeners);
@@ -531,7 +528,8 @@ namespace Akka.Remote.Transport
 
     public sealed class TestAssociationHandle : AssociationHandle
     {
-        public TestAssociationHandle(Address localAddress, Address remoteAddress, TestTransport transport, bool inbound) : base(localAddress, remoteAddress)
+        public TestAssociationHandle(Address localAddress, Address remoteAddress, TestTransport transport, bool inbound)
+            : base(localAddress, remoteAddress)
         {
             Inbound = inbound;
             _transport = transport;
