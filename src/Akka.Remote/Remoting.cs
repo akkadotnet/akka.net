@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Remoting;
 using System.Threading.Tasks;
@@ -110,6 +111,42 @@ namespace Akka.Remote
             throw new RemoteTransportException(
                 "No transport is loaded for protocol: [" + remote.Protocol + "], available protocols: [" +
                 string.Join(",", transportMapping.Keys.Select(t => t.ToString())) + "]", null);
+        }
+    }
+
+    public sealed class RegisterTransportActor
+    {
+        public RegisterTransportActor(Props props, string name)
+        {
+            Props = props;
+            Name = name;
+        }
+
+        public Props Props { get; private set; }
+
+        public string Name { get; private set; }
+    }
+
+    internal class TransportSupervisor : ActorBase
+    {
+        private readonly SupervisorStrategy _strategy = new OneForOneStrategy(-1, TimeSpan.MaxValue, exception => Directive.Restart);
+        protected override SupervisorStrategy SupervisorStrategy()
+        {
+            return _strategy;
+        }
+
+        protected override void OnReceive(object message)
+        {
+            PatternMatch.Match(message)
+                .With<RegisterTransportActor>(r =>
+                {
+                    /*
+                     * TODO: need to add support for RemoteDispatcher here.
+                     * See https://github.com/akka/akka/blob/master/akka-remote/src/main/scala/akka/remote/RemoteSettings.scala#L42 
+                     * and https://github.com/akka/akka/blob/master/akka-remote/src/main/scala/akka/remote/Remoting.scala#L95
+                     */
+                    Context.ActorOf(r.Props.WithDeploy(Deploy.Local), r.Name);
+                });
         }
     }
 }

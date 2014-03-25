@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.Actor;
 
 namespace Akka.Remote.Transport
@@ -17,7 +18,7 @@ namespace Akka.Remote.Transport
         public TransportAdapters(ActorSystem system)
         {
             System = system;
-            Settings = ((RemoteActorRefProvider) system.Provider).RemoteSettings;
+            Settings = ((RemoteActorRefProvider)system.Provider).RemoteSettings;
         }
 
         public ActorSystem System { get; private set; }
@@ -35,7 +36,7 @@ namespace Akka.Remote.Transport
                 try
                 {
                     var adapterTypeName = Type.GetType(adapter.Value);
-// ReSharper disable once AssignNullToNotNullAttribute
+                    // ReSharper disable once AssignNullToNotNullAttribute
                     var newAdapter = (ITransportAdapterProvider)Activator.CreateInstance(adapterTypeName);
                     _adaptersTable.Add(adapter.Key, newAdapter);
                 }
@@ -56,6 +57,193 @@ namespace Akka.Remote.Transport
             }
 
             throw new ArgumentException(string.Format("There is no registered transport adapter provider with name {0}", name));
+        }
+    }
+
+    public class SchemeAugmenter
+    {
+        public SchemeAugmenter(string addedSchemeIdentifier)
+        {
+            AddedSchemeIdentifier = addedSchemeIdentifier;
+        }
+
+        public readonly string AddedSchemeIdentifier;
+
+        public string AugmentScheme(string originalScheme)
+        {
+            return string.Format("{0}.{1}", AddedSchemeIdentifier, originalScheme);
+        }
+
+        public Address AugmentScheme(Address address)
+        {
+            return address.Copy(protocol: AugmentScheme(address.Protocol));
+        }
+
+        public string RemoveScheme(string scheme)
+        {
+            if (scheme.StartsWith(string.Format("{0}.", AddedSchemeIdentifier)))
+                return scheme.Remove(0, AddedSchemeIdentifier.Length + 1);
+            return scheme;
+        }
+
+        public Address RemoveScheme(Address address)
+        {
+            return address.Copy(protocol: RemoveScheme(address.Protocol));
+        }
+    }
+
+    /// <summary>
+    /// An adapter that wraps a transport and provides interception capabilities
+    /// </summary>
+    public abstract class AbstractTransportAdapter : Transport
+    {
+        protected AbstractTransportAdapter(Transport wrappedTransport)
+        {
+            WrappedTransport = wrappedTransport;
+        }
+
+        protected Transport WrappedTransport;
+
+        protected abstract SchemeAugmenter SchemeAugmenter { get; }
+
+        public override string SchemeIdentifier
+        {
+            get
+            {
+                return SchemeAugmenter.AugmentScheme(WrappedTransport.SchemeIdentifier);
+            }
+        }
+
+        protected abstract Task<IAssociationEventListener> InterceptListen(Address listenAddress,
+            Task<IAssociationEventListener> listenerTask);
+
+        protected abstract void InterceptAssociate(Address remoteAddress,
+            TaskCompletionSource<AssociationHandle> statusPromise);
+
+        public override bool IsResponsibleFor(Address remote)
+        {
+            return WrappedTransport.IsResponsibleFor(remote);
+        }
+
+        public override Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen()
+        {
+            var upstreamListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
+            return WrappedTransport.Listen().ContinueWith(async listenerTask =>
+            {
+                var listenAddress = listenerTask.Result.Item1;
+                var listenerPromise = listenerTask.Result.Item2;
+                listenerPromise.TrySetResult(await InterceptListen(listenAddress, upstreamListenerPromise.Task));
+                return
+                    new Tuple<Address, TaskCompletionSource<IAssociationEventListener>>(
+                        SchemeAugmenter.AugmentScheme(listenAddress), upstreamListenerPromise);
+            }, TaskContinuationOptions.ExecuteSynchronously).Unwrap();
+        }
+
+        public override Task<AssociationHandle> Associate(Address remoteAddress)
+        {
+            var statusPromise = new TaskCompletionSource<AssociationHandle>();
+            InterceptAssociate(remoteAddress, statusPromise);
+            return statusPromise.Task;
+        }
+
+        public override Task<bool> Shutdown()
+        {
+            return WrappedTransport.Shutdown();
+        }
+    }
+
+    public abstract class AbstractTransportAdapterHandle : AssociationHandle
+    {
+        protected AbstractTransportAdapterHandle(Address originalLocalAddress, Address originalRemoteAddress, AssociationHandle wrappedHandle, string addedSchemeIdentifier) : base(originalLocalAddress, originalRemoteAddress)
+        {
+            WrappedHandle = wrappedHandle;
+            OriginalRemoteAddress = originalRemoteAddress;
+            OriginalLocalAddress = originalLocalAddress;
+            SchemeAugmenter = new SchemeAugmenter(addedSchemeIdentifier);
+            RemoteAddress = SchemeAugmenter.AugmentScheme(OriginalRemoteAddress);
+            LocalAddress = SchemeAugmenter.AugmentScheme(OriginalLocalAddress);
+        }
+
+        public Address OriginalLocalAddress { get; private set; }
+
+        public Address OriginalRemoteAddress { get; private set; }
+
+        public AssociationHandle WrappedHandle { get; private set; }
+
+        protected SchemeAugmenter SchemeAugmenter { get; private set; }
+    }
+
+    /// <summary>
+    /// Marker interface for all transport operations
+    /// </summary>
+    public abstract class TransportOperation
+    {
+        public static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(5);
+    }
+
+    public sealed class ListenerRegistered : TransportOperation
+    {
+        public ListenerRegistered(IAssociationEventListener listener)
+        {
+            Listener = listener;
+        }
+
+        public IAssociationEventListener Listener { get; private set; }
+    }
+
+    public sealed class AssociateUnderlying : TransportOperation
+    {
+        public AssociateUnderlying(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusPromise)
+        {
+            RemoteAddress = remoteAddress;
+            StatusPromise = statusPromise;
+        }
+
+        public Address RemoteAddress { get; private set; }
+
+        public TaskCompletionSource<AssociationHandle> StatusPromise { get; private set; }
+    }
+
+    public sealed class ListenUnderlying : TransportOperation
+    {
+        public ListenUnderlying(Address listenAddress, Task<IAssociationEventListener> upstreamListener)
+        {
+            UpstreamListener = upstreamListener;
+            ListenAddress = listenAddress;
+        }
+
+        public Address ListenAddress { get; private set; }
+
+        public Task<IAssociationEventListener> UpstreamListener { get; private set; }
+    }
+
+    public sealed class DisassociateUnderlying : TransportOperation
+    {
+        public DisassociateUnderlying(DisassociateInfo info = DisassociateInfo.Unknown)
+        {
+            Info = info;
+        }
+
+        public DisassociateInfo Info { get; private set; }
+    }
+
+    public abstract class ActorTransportAdapter : AbstractTransportAdapter
+    {
+        protected ActorTransportAdapter(Transport wrappedTransport, ActorSystem system) : base(wrappedTransport)
+        {
+            System = system;
+        }
+
+        protected new ActorSystem System;
+
+        protected string managerName;
+        protected Props managerProps;
+
+        protected volatile ActorRef manager;
+
+        private Task<ActorRef> RegisterManager()
+        {
+            
         }
     }
 }

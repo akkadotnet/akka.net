@@ -12,7 +12,7 @@ namespace Akka.Remote.Transport
 
         public ActorSystem System { get; protected set; }
 
-        public string SchemeIdentifier { get; protected set; }
+        public virtual string SchemeIdentifier { get; protected set; }
         public abstract Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen();
 
         public abstract bool IsResponsibleFor(Address remote);
