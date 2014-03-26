@@ -81,7 +81,7 @@
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Actor\ChildrenContainer.cs" />
     <Compile Include="Actor\Deployer.cs" />
-    <Compile Include="Actor\FSMStates.cs" />
+    <Compile Include="Actor\FSM.cs" />
     <Compile Include="Actor\NoSerializationVerificationNeeded.cs" />
     <Compile Include="Actor\Scheduler.cs" />
     <Compile Include="Actor\Settings.cs" />

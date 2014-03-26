@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Routing;
 using Akka.Tools;
 
 namespace Akka.Actor
@@ -202,7 +203,7 @@ namespace Akka.Actor
         {
             public State(TS stateName, TD stateData, TimeSpan? timeout = null, Reason stopReason = null, List<object> replies = null)
             {
-                Replies = replies;
+                Replies = replies ?? new List<object>();
                 StopReason = stopReason;
                 Timeout = timeout;
                 StateData = stateData;
@@ -309,7 +310,7 @@ namespace Akka.Actor
     /// </summary>
     /// <typeparam name="TS">The state name type</typeparam>
     /// <typeparam name="TD">The state data type</typeparam>
-    public abstract class FSM<TS, TD> : ActorBase, IActorLogging
+    public abstract class FSM<TS, TD> : ActorBase, IActorLogging, IListeners
     {
         public delegate FSMStates.State<TS, TD> StateFunction(FSMStates.Event<TD> fsmEvent);
 
@@ -415,11 +416,101 @@ namespace Akka.Actor
         /// <param name="repeat">send once if false, scheduleAtFixedRate if true</param>
         public void SetTimer(string name, object msg, TimeSpan timeout, bool repeat = false)
         {
-            if (debugEvent)
+            if (DebugEvent)
                 Log.Debug(string.Format("setting " + (repeat ? "repeating" : "") + "timer '{0}' / {1}: {2}", name, timeout, msg));
             if(timers.ContainsKey(name))
                 timers[name].Cancel();
             var timer = new FSMStates.Timer(name, msg, repeat, timerGen.Next, Context);
+            timer.Schedule(Self, timeout);
+
+            if (!timers.ContainsKey(name))
+                timers.Add(name, timer);
+            else
+                timers[name] = timer;
+        }
+
+        /// <summary>
+        /// Cancel a named <see cref="FSMStates.Timer"/>, ensuring that the message is not subsequently delivered (no race.)
+        /// </summary>
+        /// <param name="name">The name of the timer to cancel.</param>
+        public void CancelTimer(string name)
+        {
+            if (DebugEvent)
+            {
+                Log.Debug("Cancelling timer {0}", name);
+            }
+
+            if (timers.ContainsKey(name))
+            {
+                timers[name].Cancel();
+                timers.Remove(name);
+            }
+        }
+
+        /// <summary>
+        /// Determines whether the named timer is still active. Returns true 
+        /// unless the timer does not exist, has previously been cancelled, or
+        /// if it was a single-shot timer whose message was already received.
+        /// </summary>
+        public bool IsTimerActive(string name)
+        {
+            return timers.ContainsKey(name);
+        }
+
+        /// <summary>
+        /// Set the state timeout explicitly. This method can be safely used from
+        /// within a state handler.
+        /// </summary>
+        public void SetStateTimeout(TS state, TimeSpan? timeout)
+        {
+            if(!stateTimeouts.ContainsKey(state))
+                stateTimeouts.Add(state, timeout);
+            else
+                stateTimeouts[state] = timeout;
+        }
+
+        /// <summary>
+        /// INTERNAL API. Used for testing.
+        /// </summary>
+        internal bool IsStateTimerActive
+        {
+            get
+            {
+                return timeoutFuture != null;
+            }
+        }
+
+        /// <summary>
+        /// Set handler which is called upon each state transition, i.e. not when
+        /// staying in the same state. 
+        /// </summary>
+        public void OnTransition(TransitionHandler transitionHandler)
+        {
+            transitionEvent.Add(transitionHandler);
+        }
+
+        /// <summary>
+        /// Set the handler which is called upon termination of this FSM actor. Calling this
+        /// method again will overwrite the previous contents.
+        /// </summary>
+        public void OnTermination(Action<FSMStates.StopEvent<TS, TD>> terminationHandler)
+        {
+            terminateEvent = terminationHandler;
+        }
+
+        /// <summary>
+        /// Set handler which i called upon reception of unhandled FSM messages. Calling
+        /// this method again will overwrite the previous contents.
+        /// </summary>
+        /// <param name="stateFunction"></param>
+        public void WhenUnhandled(StateFunction stateFunction)
+        {
+            handleEvent = OrElse(stateFunction, handleEventDefault);
+        }
+
+        public void Initialize()
+        {
+            
         }
 
         /// <summary>
@@ -456,14 +547,20 @@ namespace Akka.Actor
 
         #region Internal implementation details
 
-        private bool debugEvent;
+        private readonly ListenerSupport _listener = new ListenerSupport();
+        public ListenerSupport Listeners { get { return _listener; } }
+
+        /// <summary>
+        /// Can be set to enable debugging on certain actions taken by the FSM
+        /// </summary>
+        protected bool DebugEvent;
 
         /// <summary>
         /// FSM state data and current timeout handling
         /// </summary>
         private FSMStates.State<TS, TD> currentState;
 
-        private CancellationTokenSource timeoutSource = null;
+        private CancellationTokenSource timeoutFuture;
         private FSMStates.State<TS, TD> nextState;
         private long generation = 0L;
 
@@ -508,6 +605,15 @@ namespace Akka.Actor
             }
         }
 
+        private StateFunction _handleEvent;
+
+        private StateFunction handleEvent
+        {
+            get { return _handleEvent ?? (_handleEvent = handleEventDefault); }
+            set { _handleEvent = value; }
+        }
+        
+
         /// <summary>
         /// Termination handling
         /// </summary>
@@ -551,5 +657,122 @@ namespace Akka.Actor
 
         #endregion
 
+        #region Actor methods
+
+        /// <summary>
+        /// Main actor receive method
+        /// </summary>
+        /// <param name="message"></param>
+        protected override void OnReceive(object message)
+        {
+            PatternMatch.Match(message)
+                .With<FSMStates.TimeoutMarker>(marker =>
+                {
+                    if (generation == marker.Generation)
+                    {
+                        ProcessMsg(new FSMStates.StateTimeout(), "state timeout");
+                    }
+                })
+                .With<FSMStates.Timer>(t =>
+                {
+                    if (timers.ContainsKey(t.Name) && timers[t.Name].Generation == t.Generation)
+                    {
+                        if (timeoutFuture != null)
+                        {
+                            timeoutFuture.Cancel(false);
+                            timeoutFuture = null;
+                        }
+                        generation++;
+                        if (!t.Repeat)
+                        {
+                            timers.Remove(t.Name);
+                        }
+                        ProcessMsg(t.Message,t);
+                    }
+                })
+                .With<FSMStates.SubscribeTransitionCallBack>(cb =>
+                {
+                    
+                });
+        }
+
+        private void ProcessMsg(object any, object source)
+        {
+            var fsmEvent = new FSMStates.Event<TD>(any, currentState.StateData);
+            ProcessEvent(fsmEvent, source);
+        }
+
+        private void ProcessEvent(FSMStates.Event<TD> fsmEvent, object source)
+        {
+            var stateFunc = stateFunctions[currentState.StateName];
+            var upcomingState = stateFunc != null ? stateFunc(fsmEvent) : handleEvent(fsmEvent);
+            ApplyState(upcomingState);
+        }
+
+        private void ApplyState(FSMStates.State<TS, TD> upcomingState)
+        {
+            if (upcomingState.StopReason == null) MakeTransition(upcomingState);
+            var replies = nextState.Replies;
+            replies.Reverse();
+            foreach (var reply in replies)
+            {
+                Sender.Tell(reply);
+            }
+            Terminate(upcomingState);
+            Context.Stop(Self);
+        }
+
+        private void MakeTransition(FSMStates.State<TS, TD> upcomingState)
+        {
+            if (!stateFunctions.ContainsKey(upcomingState.StateName))
+            {
+                Terminate(
+                    Stay()
+                        .WithStopReason(
+                            new FSMStates.Failure(string.Format("Next state {0} does not exist", upcomingState.StateName))));
+            }
+            else
+            {
+                var replies = upcomingState.Replies;
+                replies.Reverse();
+                foreach (var r in replies) { Sender.Tell(r); }
+                if (!currentState.StateName.Equals(upcomingState.StateName))
+                {
+                    nextState = upcomingState;
+                    HandleTransition(currentState.StateName, nextState.StateName);
+                    nextState = null;
+                }
+                currentState = upcomingState;
+                var timeout = currentState.Timeout ?? stateTimeouts[currentState.StateName];
+                if (timeout.HasValue)
+                {
+                    var t = timeout.Value;
+                    if (t < TimeSpan.MaxValue)
+                    {
+                        timeoutFuture = new CancellationTokenSource();
+                        Context.System.Scheduler.ScheduleOnce(t, Self,
+                            new FSMStates.TimeoutMarker(generation), timeoutFuture.Token);
+                    }
+                }
+            }
+        }
+
+        private void Terminate(FSMStates.State<TS, TD> upcomingState)
+        {
+            if (currentState.StopReason == null)
+            {
+                var reason = upcomingState.StopReason;
+                foreach (var t in timers) { t.Value.Cancel(); }
+                timers.Clear();
+                currentState = upcomingState;
+
+                var stopEvent = new FSMStates.StopEvent<TS, TD>(reason, currentState.StateName, currentState.StateData);
+                terminateEvent(stopEvent);
+            }
+        }
+
+        #endregion
+
+        
     }
 }
