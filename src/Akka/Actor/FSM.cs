@@ -742,8 +742,10 @@ namespace Akka.Actor
 
         private void ApplyState(FSMStates.State<TS, TD> upcomingState)
         {
-            if (upcomingState.StopReason == null) MakeTransition(upcomingState);
-            var replies = nextState.Replies;
+            if (upcomingState.StopReason == null){ MakeTransition(upcomingState);
+                return;
+            }
+            var replies = upcomingState.Replies;
             replies.Reverse();
             foreach (var reply in replies)
             {

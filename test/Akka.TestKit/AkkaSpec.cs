@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System.IO;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -66,6 +67,9 @@ namespace Akka.Tests
         protected ActorRef testActor;
         protected ActorRef echoActor;
 
+        private DateTime end = DateTime.MinValue;
+        private bool lastWasNoMsg = false;
+
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(1.5);
 
         protected Terminated expectTerminated(ActorRef @ref)
@@ -84,6 +88,15 @@ namespace Akka.Tests
             global::System.Diagnostics.Debug.WriteLine("actual: " + actual);
             Assert.AreEqual(expected, actual);
             return actual;
+        }
+
+        protected object expectMsg(object expected, Func<object, object, bool> comparer)
+        {
+            var actual = queue.Take();
+
+            Assert.IsTrue(comparer(expected, actual));
+            return actual;
+            
         }
 
         protected void watch(ActorRef @ref)
@@ -125,6 +138,59 @@ namespace Akka.Tests
             {
                 Assert.Fail("Expected no messages during the duration");
             }
+        }
+
+        /// <summary>
+        /// Execute code block while bounding its execution time between <see cref="min"/> and <see cref="max"/>.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="min"></param>
+        /// <param name="max"></param>
+        /// <param name="function"></param>
+        /// <returns></returns>
+        protected T Within<T>(TimeSpan min, TimeSpan max, Func<T> function)
+        {
+            var start = DateTime.UtcNow;
+            var rem = end == DateTime.MinValue ? TimeSpan.MaxValue : end - start;
+            Assert.IsTrue(rem >= min, "Required min time {0} not possible, only {1} left", min, rem);
+
+            lastWasNoMsg = false;
+
+            var max_diff = Min(max, rem);
+            var prev_end = end;
+            end = start + max_diff;
+
+            T ret;
+            try
+            {
+                ret = function();
+            }
+            finally
+            {
+                end = prev_end;
+            }
+
+            var diff = DateTime.UtcNow - start;
+            Assert.IsTrue(min <= diff, "block took {0}, should have at least been {1}", diff, min);
+            if (!lastWasNoMsg)
+            {
+                Assert.IsTrue(diff <= max_diff, "block took {0}, exceeding {1}", diff, max_diff);
+            }
+
+            return ret;
+        }
+
+        protected T Within<T>(TimeSpan max, Func<T> function)
+        {
+            return Within(TimeSpan.FromSeconds(0), max, function);
+        }
+
+        protected static TimeSpan Min(TimeSpan t1, TimeSpan t2)
+        {
+            if (t1 > t2)
+                return t2;
+            else
+                return t1;
         }
 
         public class TestActor : UntypedActor

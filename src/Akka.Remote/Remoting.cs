@@ -48,7 +48,7 @@ namespace Akka.Remote
             //   this.transportMapping = akkaProtocolTransports
             //       .ToDictionary(p => p.ProtocolTransport.Transport.SchemeIdentifier,);
             IEnumerable<IGrouping<string, ProtocolTransportAddressPair>> tmp =
-                akkaProtocolTransports.GroupBy(t => t.ProtocolTransport.Transport.SchemeIdentifier);
+                akkaProtocolTransports.GroupBy(t => t.ProtocolTransport.SchemeIdentifier);
             transportMapping = new Dictionary<string, HashSet<ProtocolTransportAddressPair>>();
             foreach (var g in tmp)
             {
@@ -87,7 +87,7 @@ namespace Akka.Remote
             if (transportMapping.TryGetValue(remote.Protocol, out transports))
             {
                 ProtocolTransportAddressPair[] responsibleTransports =
-                    transports.Where(t => t.ProtocolTransport.Transport.IsResponsibleFor(remote)).ToArray();
+                    transports.Where(t => t.ProtocolTransport.IsResponsibleFor(remote)).ToArray();
                 if (responsibleTransports.Length == 0)
                 {
                     throw new RemoteTransportException(

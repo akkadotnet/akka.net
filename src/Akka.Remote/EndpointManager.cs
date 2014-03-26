@@ -14,7 +14,7 @@ namespace Akka.Remote
         private long endpointId;
         private LoggingAdapter log;
 
-        private IDictionary<Address, AkkaProtocolTransport> transportMapping =
+        private Dictionary<Address, AkkaProtocolTransport> transportMapping =
             new Dictionary<Address, AkkaProtocolTransport>();
 
         public EndpointManager(RemoteSettings settings, LoggingAdapter log)

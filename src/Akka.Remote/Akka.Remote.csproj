@@ -73,7 +73,6 @@
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="AkkaProtocolSettings.cs" />
-    <Compile Include="AkkaProtocolTransport.cs" />
     <Compile Include="AssociationEvent.cs" />
     <Compile Include="Endpoint.cs" />
     <Compile Include="EndpointManager.cs" />
