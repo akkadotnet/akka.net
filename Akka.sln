@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+VisualStudioVersion = 12.0.30110.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatMessages", "Examples\Chat\ChatMessages\ChatMessages.csproj", "{819221CB-82B7-43D3-A4DE-E00AF17F2FDF}"
 EndProject
@@ -253,8 +253,5 @@ Global
 		{93EDACD8-F6BA-43A7-9FD7-D3D4156ADBC0} = {B555BA52-1911-426B-8018-D303D7228748}
 		{14873709-8C2E-485E-BF74-2423227DB59B} = {B555BA52-1911-426B-8018-D303D7228748}
 		{56B7C019-AA7A-4194-AFA5-3D3F1A4B6393} = {B555BA52-1911-426B-8018-D303D7228748}
-	EndGlobalSection
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal
