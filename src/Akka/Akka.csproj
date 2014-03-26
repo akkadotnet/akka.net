@@ -81,6 +81,7 @@
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Actor\ChildrenContainer.cs" />
     <Compile Include="Actor\Deployer.cs" />
+    <Compile Include="Actor\FSMStates.cs" />
     <Compile Include="Actor\NoSerializationVerificationNeeded.cs" />
     <Compile Include="Actor\Scheduler.cs" />
     <Compile Include="Actor\Settings.cs" />
@@ -134,6 +135,7 @@
     <Compile Include="Routing\RouterPoolActor.cs" />
     <Compile Include="Serialization\Serialization.cs" />
     <Compile Include="Serialization\Serializer.cs" />
+    <Compile Include="Tools\AtomicCounter.cs" />
     <Compile Include="Tools\ConcurrentSet.cs" />
     <Compile Include="Tools\ExpressionExtensions.cs" />
     <Compile Include="Tools\Pattern.cs" />
