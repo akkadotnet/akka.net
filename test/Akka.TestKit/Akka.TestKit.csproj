@@ -80,6 +80,7 @@
     <Compile Include="ImplicitSenderSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Supervisor.cs" />
+    <Compile Include="TestLatch.cs" />
     <Compile Include="TestProbe.cs" />
   </ItemGroup>
   <ItemGroup>

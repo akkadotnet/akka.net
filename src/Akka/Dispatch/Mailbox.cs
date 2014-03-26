@@ -57,6 +57,59 @@ namespace Akka.Dispatch
         {
             this.dispatcher = dispatcher;
         }
+
+        /// <summary>
+        ///     The has unscheduled messages
+        /// </summary>
+        protected volatile bool hasUnscheduledMessages;
+
+        internal bool HasUnscheduledMessages
+        {
+            get
+            {
+                return hasUnscheduledMessages;
+            }
+        }
+
+        /// <summary>
+        ///     The status
+        /// </summary>
+        protected volatile int status;
+
+        internal int Status
+        {
+            get
+            {
+                return status;
+            }
+        }
+
+        /// <summary>
+        ///     Class MailboxStatus.
+        /// </summary>
+        internal static class MailboxStatus
+        {
+            /// <summary>
+            ///     The idle
+            /// </summary>
+            public const int Idle = 0;
+
+            /// <summary>
+            ///     The busy
+            /// </summary>
+            public const int Busy = 1;
+        }
+
+        protected abstract int GetNumberOfMessages();
+
+        internal int NumberOfMessages
+        {
+            get
+            {
+                return GetNumberOfMessages();
+            }
+        }
+
     }
 
     ///// <summary>
@@ -111,20 +164,12 @@ namespace Akka.Dispatch
         /// </summary>
         private Stopwatch deadLineTimer;
 
-        /// <summary>
-        ///     The has unscheduled messages
-        /// </summary>
-        private volatile bool hasUnscheduledMessages;
 
         /// <summary>
         ///     The is closed
         /// </summary>
         private volatile bool isClosed;
 
-        /// <summary>
-        ///     The status
-        /// </summary>
-        private int status;
 
         /// <summary>
         ///     Runs the Message Pump.
@@ -264,20 +309,10 @@ namespace Akka.Dispatch
             isClosed = true;
         }
 
-        /// <summary>
-        ///     Class MailboxStatus.
-        /// </summary>
-        private static class MailboxStatus
-        {
-            /// <summary>
-            ///     The idle
-            /// </summary>
-            public const int Idle = 0;
 
-            /// <summary>
-            ///     The busy
-            /// </summary>
-            public const int Busy = 1;
+        protected override int GetNumberOfMessages()
+        {
+            return userMessages.Count;
         }
     }
 

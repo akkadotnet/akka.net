@@ -45,37 +45,65 @@ namespace PingPong
             Console.WriteLine("ProcessorCount: {0}", Environment.ProcessorCount);
             Console.WriteLine("ClockSpeed: {0} MHZ", CpuSpeed());
 
-            Console.WriteLine("Actor count, Messages/sec");
+            Console.WriteLine("Actor Count: {0}", Environment.ProcessorCount*2);
+            Console.WriteLine("");
+            Console.WriteLine("Throughput Setting, Messages/sec");
 
-            for (int i = 1; i < 20; i++)
+            foreach(var t in GetThroughputSettings())
             {
-                if (!await Benchmark(i))
-                    break;
+                await Benchmark(t);
             }
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.WriteLine("Done..");
         }
 
-        private static async Task<bool> Benchmark(int numberOfClients)
+        public static IEnumerable<int> GetThroughputSettings()
+        {
+            yield return 1;
+            yield return 5;
+            yield return 10;
+            yield return 15;
+            for (int i = 20; i < 100; i += 10)
+            {
+                yield return i;
+            }
+            for (int i = 100; i < 1000; i += 100)
+            {
+                yield return i;
+            }
+        }
+
+        private static async Task<bool> Benchmark(int factor)
         {
             const int repeatFactor = 500;
             const long repeat = 30000L*repeatFactor;
             const long totalMessagesReceived = repeat*2;
                 //times 2 since the client and the destination both send messages
 
+            var numberOfClients = Environment.ProcessorCount;
+            if (numberOfClients == 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Failed to read processor count..");
+                return false;
+            }
             long repeatsPerClient = repeat/numberOfClients;
             ActorSystem system = ActorSystem.Create("PingPong");
 
 
             var clients = new List<ActorRef>();
             var tasks = new List<Task>();
+
             for (int i = 0; i < numberOfClients; i++)
             {
-                InternalActorRef destination = system.ActorOf<Destination>();
+                var destination = (ActorRefWithCell)system.ActorOf<Destination>();
+                destination.Cell.Dispatcher.Throughput = factor;
+
                 var ts = new TaskCompletionSource<bool>();
                 tasks.Add(ts.Task);
-                InternalActorRef client =
-                    system.ActorOf(Props.Create(() => new Client(destination, repeatsPerClient, ts)));
+                var client =
+                    (ActorRefWithCell)system.ActorOf(Props.Create(() => new Client(destination, repeatsPerClient, ts)));
+                client.Cell.Dispatcher.Throughput = factor;
                 clients.Add(client);
             }
 
@@ -100,7 +128,7 @@ namespace PingPong
                 Console.ForegroundColor = ConsoleColor.Red;
             }
 
-            Console.WriteLine("{0}, {1} messages/s", numberOfClients*2, throughput);
+            Console.WriteLine("{0}, {1} messages/s", factor, throughput);
 
             if (redCount > 3)
                 return false;
