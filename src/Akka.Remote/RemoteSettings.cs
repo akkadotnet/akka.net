@@ -24,6 +24,11 @@ namespace Akka.Remote
             Adapters = ConfigToMap(config.GetConfig("akka.remote.adapters"));
         }
 
+        /// <summary>
+        /// Used for augmenting outbound messages with the Akka scheme
+        /// </summary>
+        public static readonly string AkkaScheme = "akka";
+
         public Config Config { get; private set; }
 
         public HashSet<string> TrustedSelectionPaths { get; set; }
