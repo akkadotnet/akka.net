@@ -55,7 +55,7 @@ namespace Akka.Routing
     /// </summary>
     public class ListenerSupport
     {
-        protected HashSet<ActorRef> Listeners = new HashSet<ActorRef>();
+        protected readonly HashSet<ActorRef> Listeners = new HashSet<ActorRef>();
 
         /// <summary>
         /// Chain this into the <see cref="ActorBase.OnReceive"/> function.
@@ -65,8 +65,8 @@ namespace Akka.Routing
             get{ return message =>
             {
                 PatternMatch.Match(message)
-                    .With<Listen>(m => Listeners.Add(m.Listener))
-                    .With<Deafen>(d => Listeners.Remove(d.Listener))
+                    .With<Listen>(m => Add(m.Listener))
+                    .With<Deafen>(d => Remove(d.Listener))
                     .With<WithListeners>(f =>
                     {
                         foreach (var listener in Listeners)
@@ -75,6 +75,18 @@ namespace Akka.Routing
                         }
                     });
             };}
+        }
+
+        public void Add(ActorRef actor)
+        {
+            if(!Listeners.Contains(actor))
+                Listeners.Add(actor);
+        }
+
+        public void Remove(ActorRef actor)
+        {
+            if(Listeners.Contains(actor))
+                Listeners.Remove(actor);
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -692,7 +693,37 @@ namespace Akka.Actor
                 })
                 .With<FSMStates.SubscribeTransitionCallBack>(cb =>
                 {
-                    
+                    Context.Watch(cb.ActorRef);
+                    Listeners.Add(cb.ActorRef);
+                    //send the current state back as a reference point
+                    cb.ActorRef.Tell(new FSMStates.CurrentState<TS>(Self, currentState.StateName));
+                })
+                .With<Listen>(l =>
+                {
+                    Context.Watch(l.Listener);
+                    Listeners.Add(l.Listener);
+                    l.Listener.Tell(new FSMStates.CurrentState<TS>(Self, currentState.StateName));
+                })
+                .With<FSMStates.UnsubscribeTransitionCallBack>(ucb =>
+                {
+                    Context.Unwatch(ucb.ActorRef);
+                    Listeners.Remove(ucb.ActorRef);
+                })
+                .With<Deafen>(d =>
+                {
+                    Context.Unwatch(d.Listener);
+                    Listeners.Remove(d.Listener);
+                })
+                .With<Terminated>(t => Listeners.Remove(t.ActorRef))
+                .Default(msg =>
+                {
+                    if (timeoutFuture != null)
+                    {
+                        timeoutFuture.Cancel(false);
+                        timeoutFuture = null;
+                    }
+                    generation++;
+                    ProcessMsg(msg, Sender);
                 });
         }
 
@@ -740,6 +771,7 @@ namespace Akka.Actor
                 {
                     nextState = upcomingState;
                     HandleTransition(currentState.StateName, nextState.StateName);
+                    Listeners.Gossip(new FSMStates.Transition<TS>(Self, currentState.StateName, nextState.StateName));
                     nextState = null;
                 }
                 currentState = upcomingState;
@@ -762,6 +794,7 @@ namespace Akka.Actor
             if (currentState.StopReason == null)
             {
                 var reason = upcomingState.StopReason;
+                LogTermination(reason);
                 foreach (var t in timers) { t.Value.Cancel(); }
                 timers.Clear();
                 currentState = upcomingState;
@@ -771,8 +804,44 @@ namespace Akka.Actor
             }
         }
 
+        /// <summary>
+        /// Call the <see cref="OnTermination"/> hook if you want to retain this behavior.
+        /// When overriding make sure to call base.PostStop();
+        /// 
+        /// Please note that this method is called by default from <see cref="ActorBase.PreRestart"/> so
+        /// override that one if <see cref="OnTermination"/> shall not be called during restart.
+        /// </summary>
+        protected override void PostStop()
+        {
+            /*
+             * Setting this instance's state to Terminated does no harm during restart, since
+             * the new instance will initialize fresh using StartWith.
+             */
+            Terminate(Stay().WithStopReason(new FSMStates.Shutdown()));
+            base.PostStop();
+        }
+
         #endregion
 
-        
+        /// <summary>
+        /// By default, <see cref="FSMStates.Failure"/> is logged at error level and other
+        /// reason types are not logged. It is possible to override this behavior.
+        /// </summary>
+        /// <param name="reason"></param>
+        protected virtual void LogTermination(FSMStates.Reason reason)
+        {
+            PatternMatch.Match(reason)
+                .With<FSMStates.Failure>(f =>
+                {
+                    if (f.Cause is Exception)
+                    {
+                        Log.Error(f.Cause.AsInstanceOf<Exception>(), "terminating due to Failure");
+                    }
+                    else
+                    {
+                        Log.Error(f.Cause.ToString());
+                    }
+                });
+        }
     }
 }
