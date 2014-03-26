@@ -10,13 +10,13 @@ using Akka.Tools;
 
 namespace Akka.Actor
 {
-
-// ReSharper disable once InconsistentNaming
-    public static class FSMStates
+    public abstract class FSMBase : ActorBase
     {
+        #region States
+
         /// <summary>
-        /// Message type which is sent directly to the subscriber Actor in <see cref="FSMStates.SubscribeTransitionCallBack"/>
-        /// before sending any <see cref="FSMStates.Transition[TS]"/> messages.
+        /// Message type which is sent directly to the subscriber Actor in <see cref="SubscribeTransitionCallBack"/>
+        /// before sending any <see cref="Transition{TS}"/> messages.
         /// </summary>
         /// <typeparam name="TS">The type of the state being used in this finite state machine.</typeparam>
         public class CurrentState<TS>
@@ -34,7 +34,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// Message type which is used to communicate transitions between states to all subscribed listeners
-        /// (use <see cref="FSMStates.SubscribeTransitionCallBack"/>)
+        /// (use <see cref="SubscribeTransitionCallBack"/>)
         /// </summary>
         /// <typeparam name="TS">The type of state used</typeparam>
         public class Transition<TS>
@@ -54,9 +54,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Send this to an <see cref="FSMStates"/> to request first the <see cref="FSMStates.CurrentState"/>
-        /// followed by a series of <see cref="FSMStates.Transition"/> updates. Cancel the subscription using
-        /// <see cref="FSMStates.UnsubscribeTransitionCallBack"/>.
+        /// Send this to an <see cref="SubscribeTransitionCallBack"/> to request first the <see cref="UnsubscribeTransitionCallBack"/>
+        /// followed by a series of <see cref="Transition{TS}"/> updates. Cancel the subscription using
+        /// <see cref="CurrentState{TS}"/>.
         /// </summary>
         public class SubscribeTransitionCallBack
         {
@@ -69,8 +69,8 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Unsubscribe from <see cref="FSMStates.Transition"/> notifications which were
-        /// initializd by sending the corresponding <see cref="FSMStates.SubscribeTransitionCallBack"/>.
+        /// Unsubscribe from <see cref="SubscribeTransitionCallBack"/> notifications which were
+        /// initializd by sending the corresponding <see cref="Transition{TS}"/>.
         /// </summary>
         public class UnsubscribeTransitionCallBack
         {
@@ -83,9 +83,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Reason why this <see cref="FSMActor"/> is shutting down
+        /// Reason why this <see cref="FSM{T,S}"/> is shutting down
         /// </summary>
-        public abstract class Reason {}
+        public abstract class Reason { }
 
         /// <summary>
         /// Default <see cref="Reason"/> if calling Stop().
@@ -93,15 +93,15 @@ namespace Akka.Actor
         public class Normal : Reason { }
 
         /// <summary>
-        /// Reason given when someone as calling <see cref="ActorSystem.Stop(FSMActor)"/> from outside;
-        /// also applies to <see cref="Stop"/> supervision directive.
+        /// Reason given when someone as calling <see cref="Stop"/> from outside;
+        /// also applies to <see cref="ActorSystem"/> supervision directive.
         /// </summary>
         public class Shutdown : Reason { }
 
         /// <summary>
-        /// Signifies that the <see cref="FSMActor"/> is shutting itself down because of an error,
+        /// Signifies that the <see cref="FSM{T,S}"/> is shutting itself down because of an error,
         /// e.g. if the state to transition into does not exist. You can use this to communicate a more
-        /// precise cause to the <see cref="OnTermination"/> block.
+        /// precise cause to the <see cref="FSM{T,S}.OnTermination"/> block.
         /// </summary>
         public class Failure : Reason
         {
@@ -121,6 +121,7 @@ namespace Akka.Actor
         /*
          * INTERNAL API - used for ensuring that state changes occur on-time
          */
+
         internal class TimeoutMarker
         {
             public TimeoutMarker(long generation)
@@ -194,12 +195,12 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// This captures all of the managed state of the <see cref="FSMActor"/>: the state name,
+        /// This captures all of the managed state of the <see cref="FSM{T,S}"/>: the state name,
         /// the state data, possibly custom timeout, stop reason, and repleis accumulated while
         /// processing the last message.
         /// </summary>
-        /// <typeparam name="TS"></typeparam>
-        /// <typeparam name="TD"></typeparam>
+        /// <typeparam name="TS">The name of the state</typeparam>
+        /// <typeparam name="TD">The data of the state</typeparam>
         public class State<TS, TD>
         {
             public State(TS stateName, TD stateData, TimeSpan? timeout = null, Reason stopReason = null, List<object> replies = null)
@@ -244,7 +245,7 @@ namespace Akka.Actor
             /// <returns></returns>
             public State<TS, TD> Replying(object replyValue)
             {
-                if(Replies == null) Replies = new List<object>();
+                if (Replies == null) Replies = new List<object>();
                 var newReplies = Replies.ToArray().ToList();
                 newReplies.Add(replyValue);
                 return Copy(Timeout, replies: newReplies);
@@ -269,7 +270,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// All messages sent to the <see cref="FSMActor"/> will be wrapped inside an <see cref="Event[TD]"/>,
+        /// All messages sent to the <see cref="FSM{TS,TD}"/> will be wrapped inside an <see cref="Event{TD}"/>,
         /// which allows pattern matching to extract both state and data.
         /// </summary>
         /// <typeparam name="TD">The state data for this event</typeparam>
@@ -287,7 +288,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Class respresenting the stae of the <see cref="FSMActor"/> within the OnTermination block.
+        /// Class respresenting the stae of the <see cref="FSM{TS,TD}"/> within the OnTermination block.
         /// </summary>
         public class StopEvent<TS, TD> : NoSerializationVerificationNeeded
         {
@@ -304,6 +305,8 @@ namespace Akka.Actor
 
             public TD StateData { get; private set; }
         }
+
+        #endregion
     }
 
     /// <summary>
@@ -311,9 +314,10 @@ namespace Akka.Actor
     /// </summary>
     /// <typeparam name="TS">The state name type</typeparam>
     /// <typeparam name="TD">The state data type</typeparam>
-    public abstract class FSM<TS, TD> : ActorBase, IActorLogging, IListeners
+    public abstract class FSM<TS, TD> : FSMBase, IActorLogging, IListeners
     {
-        public delegate FSMStates.State<TS, TD> StateFunction(FSMStates.Event<TD> fsmEvent);
+
+        public delegate State<TS, TD> StateFunction(Event<TD> fsmEvent);
 
         public delegate void TransitionHandler(TS initialState, TS nextState);
 
@@ -325,7 +329,7 @@ namespace Akka.Actor
         /// <summary>
         /// Insert a new <see cref="StateFunction"/> at the end of the processing chain for the
         /// given state. If the stateTimeout parameter is set, entering this state without a
-        /// differing explicit timeout setting will trigger a <see cref="FSMStates.StateTimeout"/>.
+        /// differing explicit timeout setting will trigger a <see cref="FSMBase.StateTimeout"/>.
         /// </summary>
         /// <param name="stateName">designator for the state</param>
         /// <param name="func">delegate describing this state's response to input</param>
@@ -345,7 +349,7 @@ namespace Akka.Actor
         /// <param name="timeout">State timeout for the initial state, overriding the default timeout for that state.</param>
         public void StartWith(TS stateName, TD stateData, TimeSpan? timeout = null)
         {
-            currentState = new FSMStates.State<TS, TD>(stateName, stateData, timeout);
+            currentState = new State<TS, TD>(stateName, stateData, timeout);
         }
 
         /// <summary>
@@ -354,9 +358,9 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="nextStateName">State designator for the next state</param>
         /// <returns>State transition descriptor</returns>
-        public FSMStates.State<TS, TD> GoTo(TS nextStateName)
+        public State<TS, TD> GoTo(TS nextStateName)
         {
-            return new FSMStates.State<TS, TD>(nextStateName, currentState.StateData);
+            return new State<TS, TD>(nextStateName, currentState.StateData);
         }
 
         /// <summary>
@@ -364,28 +368,28 @@ namespace Akka.Actor
         /// when no state change is to be effected.
         /// </summary>
         /// <returns>Descriptor for staying in the current state.</returns>
-        public FSMStates.State<TS, TD> Stay()
+        public State<TS, TD> Stay()
         {
             return GoTo(currentState.StateName);
         }
 
         /// <summary>
-        /// Produce change descriptor to stop this FSM actor with <see cref="FSMStates.Reason"/> <see cref="FSMStates.Normal"/>
+        /// Produce change descriptor to stop this FSM actor with <see cref="Reason"/> <see cref="Normal"/>
         /// </summary>
-        public FSMStates.State<TS, TD> Stop()
+        public State<TS, TD> Stop()
         {
-            return Stop(new FSMStates.Normal());
+            return Stop(new Normal());
         }
 
         /// <summary>
-        /// Produce change descriptor to stop this FSM actor with the specified <see cref="FSMStates.Reason"/>.
+        /// Produce change descriptor to stop this FSM actor with the specified <see cref="Reason"/>.
         /// </summary>
-        public FSMStates.State<TS, TD> Stop(FSMStates.Reason reason)
+        public State<TS, TD> Stop(Reason reason)
         {
             return Stop(reason, currentState.StateData);
         }
 
-        public FSMStates.State<TS, TD> Stop(FSMStates.Reason reason, TD stateData)
+        public State<TS, TD> Stop(Reason reason, TD stateData)
         {
             return Stay().Using(stateData).WithStopReason(reason);
         }
@@ -399,7 +403,7 @@ namespace Akka.Actor
 
             public StateFunction Func { get; private set; }
 
-            public StateFunction Using(Func<FSMStates.State<TS, TD>,FSMStates.State<TS, TD>> andThen)
+            public StateFunction Using(Func<State<TS, TD>, State<TS, TD>> andThen)
             {
                 StateFunction continuedDelegate = @event => andThen.Invoke(Func.Invoke(@event));
                 return continuedDelegate;
@@ -418,10 +422,10 @@ namespace Akka.Actor
         public void SetTimer(string name, object msg, TimeSpan timeout, bool repeat = false)
         {
             if (DebugEvent)
-                Log.Debug(string.Format("setting " + (repeat ? "repeating" : "") + "timer '{0}' / {1}: {2}", name, timeout, msg));
+                Log.Debug(String.Format("setting " + (repeat ? "repeating" : "") + "timer '{0}' / {1}: {2}", name, timeout, msg));
             if(timers.ContainsKey(name))
                 timers[name].Cancel();
-            var timer = new FSMStates.Timer(name, msg, repeat, timerGen.Next, Context);
+            var timer = new Timer(name, msg, repeat, timerGen.Next, Context);
             timer.Schedule(Self, timeout);
 
             if (!timers.ContainsKey(name))
@@ -431,7 +435,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Cancel a named <see cref="FSMStates.Timer"/>, ensuring that the message is not subsequently delivered (no race.)
+        /// Cancel a named <see cref="Timer"/>, ensuring that the message is not subsequently delivered (no race.)
         /// </summary>
         /// <param name="name">The name of the timer to cancel.</param>
         public void CancelTimer(string name)
@@ -494,7 +498,7 @@ namespace Akka.Actor
         /// Set the handler which is called upon termination of this FSM actor. Calling this
         /// method again will overwrite the previous contents.
         /// </summary>
-        public void OnTermination(Action<FSMStates.StopEvent<TS, TD>> terminationHandler)
+        public void OnTermination(Action<StopEvent<TS, TD>> terminationHandler)
         {
             terminateEvent = terminationHandler;
         }
@@ -564,16 +568,16 @@ namespace Akka.Actor
         /// <summary>
         /// FSM state data and current timeout handling
         /// </summary>
-        private FSMStates.State<TS, TD> currentState;
+        private State<TS, TD> currentState;
 
         private CancellationTokenSource timeoutFuture;
-        private FSMStates.State<TS, TD> nextState;
+        private State<TS, TD> nextState;
         private long generation = 0L;
 
         /// <summary>
         /// Timer handling
         /// </summary>
-        private IDictionary<string, FSMStates.Timer> timers = new Dictionary<string, FSMStates.Timer>();
+        private IDictionary<string, Timer> timers = new Dictionary<string, Timer>();
         private AtomicCounter timerGen = new AtomicCounter(0);
 
         /// <summary>
@@ -603,9 +607,9 @@ namespace Akka.Actor
         {
             get
             {
-                return delegate(FSMStates.Event<TD> @event)
+                return delegate(Event<TD> @event)
                 {
-                    Log.Warn(string.Format("unhandled event {0} in state {1}", @event.FsmEvent, StateName));
+                    Log.Warn(String.Format("unhandled event {0} in state {1}", @event.FsmEvent, StateName));
                     return Stay();
                 };
             }
@@ -623,7 +627,7 @@ namespace Akka.Actor
         /// <summary>
         /// Termination handling
         /// </summary>
-        private Action<FSMStates.StopEvent<TS, TD>> terminateEvent = @event =>
+        private Action<StopEvent<TS, TD>> terminateEvent = @event =>
         {
 
         };
@@ -631,7 +635,7 @@ namespace Akka.Actor
         /// <summary>
         /// Transition handling
         /// </summary>
-        private IList<TransitionHandler> transitionEvent = new List<FSM<TS,TD>.TransitionHandler>();
+        private IList<TransitionHandler> transitionEvent = new List<TransitionHandler>();
 
         private void HandleTransition(TS previous, TS next)
         {
@@ -651,7 +655,7 @@ namespace Akka.Actor
         /// <returns>A <see cref="StateFunction"/> which combines both the results of <see cref="original"/> and <see cref="fallback"/></returns>
         private static StateFunction OrElse(StateFunction original, StateFunction fallback)
         {
-            StateFunction chained = delegate(FSMStates.Event<TD> @event)
+            StateFunction chained = delegate(Event<TD> @event)
             {
                 var originalResult = original.Invoke(@event);
                 if (originalResult == null) return fallback.Invoke(@event);
@@ -672,14 +676,14 @@ namespace Akka.Actor
         protected override void OnReceive(object message)
         {
             PatternMatch.Match(message)
-                .With<FSMStates.TimeoutMarker>(marker =>
+                .With<TimeoutMarker>(marker =>
                 {
                     if (generation == marker.Generation)
                     {
-                        ProcessMsg(new FSMStates.StateTimeout(), "state timeout");
+                        ProcessMsg(new StateTimeout(), "state timeout");
                     }
                 })
-                .With<FSMStates.Timer>(t =>
+                .With<Timer>(t =>
                 {
                     if (timers.ContainsKey(t.Name) && timers[t.Name].Generation == t.Generation)
                     {
@@ -696,20 +700,20 @@ namespace Akka.Actor
                         ProcessMsg(t.Message,t);
                     }
                 })
-                .With<FSMStates.SubscribeTransitionCallBack>(cb =>
+                .With<SubscribeTransitionCallBack>(cb =>
                 {
                     Context.Watch(cb.ActorRef);
                     Listeners.Add(cb.ActorRef);
                     //send the current state back as a reference point
-                    cb.ActorRef.Tell(new FSMStates.CurrentState<TS>(Self, currentState.StateName));
+                    cb.ActorRef.Tell(new CurrentState<TS>(Self, currentState.StateName));
                 })
                 .With<Listen>(l =>
                 {
                     Context.Watch(l.Listener);
                     Listeners.Add(l.Listener);
-                    l.Listener.Tell(new FSMStates.CurrentState<TS>(Self, currentState.StateName));
+                    l.Listener.Tell(new CurrentState<TS>(Self, currentState.StateName));
                 })
-                .With<FSMStates.UnsubscribeTransitionCallBack>(ucb =>
+                .With<UnsubscribeTransitionCallBack>(ucb =>
                 {
                     Context.Unwatch(ucb.ActorRef);
                     Listeners.Remove(ucb.ActorRef);
@@ -734,18 +738,18 @@ namespace Akka.Actor
 
         private void ProcessMsg(object any, object source)
         {
-            var fsmEvent = new FSMStates.Event<TD>(any, currentState.StateData);
+            var fsmEvent = new Event<TD>(any, currentState.StateData);
             ProcessEvent(fsmEvent, source);
         }
 
-        private void ProcessEvent(FSMStates.Event<TD> fsmEvent, object source)
+        private void ProcessEvent(Event<TD> fsmEvent, object source)
         {
             var stateFunc = stateFunctions[currentState.StateName];
             var upcomingState = stateFunc != null ? stateFunc(fsmEvent) : handleEvent(fsmEvent);
             ApplyState(upcomingState);
         }
 
-        private void ApplyState(FSMStates.State<TS, TD> upcomingState)
+        private void ApplyState(State<TS, TD> upcomingState)
         {
             if (upcomingState.StopReason == null){ MakeTransition(upcomingState);
                 return;
@@ -760,14 +764,14 @@ namespace Akka.Actor
             Context.Stop(Self);
         }
 
-        private void MakeTransition(FSMStates.State<TS, TD> upcomingState)
+        private void MakeTransition(State<TS, TD> upcomingState)
         {
             if (!stateFunctions.ContainsKey(upcomingState.StateName))
             {
                 Terminate(
                     Stay()
                         .WithStopReason(
-                            new FSMStates.Failure(string.Format("Next state {0} does not exist", upcomingState.StateName))));
+                            new Failure(String.Format((string) "Next state {0} does not exist", (object) upcomingState.StateName))));
             }
             else
             {
@@ -778,7 +782,7 @@ namespace Akka.Actor
                 {
                     nextState = upcomingState;
                     HandleTransition(currentState.StateName, nextState.StateName);
-                    Listeners.Gossip(new FSMStates.Transition<TS>(Self, currentState.StateName, nextState.StateName));
+                    Listeners.Gossip(new Transition<TS>(Self, currentState.StateName, nextState.StateName));
                     nextState = null;
                 }
                 currentState = upcomingState;
@@ -790,13 +794,13 @@ namespace Akka.Actor
                     {
                         timeoutFuture = new CancellationTokenSource();
                         Context.System.Scheduler.ScheduleOnce(t, Self,
-                            new FSMStates.TimeoutMarker(generation), timeoutFuture.Token);
+                            new TimeoutMarker(generation), timeoutFuture.Token);
                     }
                 }
             }
         }
 
-        private void Terminate(FSMStates.State<TS, TD> upcomingState)
+        private void Terminate(State<TS, TD> upcomingState)
         {
             if (currentState.StopReason == null)
             {
@@ -806,7 +810,7 @@ namespace Akka.Actor
                 timers.Clear();
                 currentState = upcomingState;
 
-                var stopEvent = new FSMStates.StopEvent<TS, TD>(reason, currentState.StateName, currentState.StateData);
+                var stopEvent = new StopEvent<TS, TD>(reason, currentState.StateName, currentState.StateData);
                 terminateEvent(stopEvent);
             }
         }
@@ -824,21 +828,21 @@ namespace Akka.Actor
              * Setting this instance's state to Terminated does no harm during restart, since
              * the new instance will initialize fresh using StartWith.
              */
-            Terminate(Stay().WithStopReason(new FSMStates.Shutdown()));
+            Terminate(Stay().WithStopReason(new Shutdown()));
             base.PostStop();
         }
 
         #endregion
 
         /// <summary>
-        /// By default, <see cref="FSMStates.Failure"/> is logged at error level and other
+        /// By default, <see cref="Failure"/> is logged at error level and other
         /// reason types are not logged. It is possible to override this behavior.
         /// </summary>
         /// <param name="reason"></param>
-        protected virtual void LogTermination(FSMStates.Reason reason)
+        protected virtual void LogTermination(Reason reason)
         {
             PatternMatch.Match(reason)
-                .With<FSMStates.Failure>(f =>
+                .With<Failure>(f =>
                 {
                     if (f.Cause is Exception)
                     {
