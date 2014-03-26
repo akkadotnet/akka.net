@@ -66,9 +66,41 @@ namespace Akka.Tests.Actor
                 expectMsg(new FSMStates.CurrentState<int>(fsm, 0), FSMSpecHelpers.CurrentStateExpector);
                 forward.Stop();
                 fsm.Tell("tick");
-                expectNoMsg(TimeSpan.FromMilliseconds(30));
+                expectNoMsg(TimeSpan.FromMilliseconds(300));
                 return true;
             });
+
+            //assert
+        }
+
+        [TestMethod]
+        public void FSM_must_make_previous_and_next_state_data_available_in_OnTransition()
+        {
+            //arrange
+            var fsm = sys.ActorOf(Props.Create(() => new OtherFSM(testActor)));
+
+            //act
+            Within(TimeSpan.FromSeconds(1), () =>
+            {
+                fsm.Tell("tick");
+                expectMsg(new Tuple<int, int>(0, 1));
+                return true;
+            });
+
+            //assert
+        }
+
+        [TestMethod]
+        public void FSM_must_not_leak_memory_in_nextState()
+        {
+            //arrange
+            var fsmref = sys.ActorOf<LeakyFSM>();
+
+            //act
+            fsmref.Tell("switch", Self);
+            expectMsg(Tuple.Create(0, 1));
+            fsmref.Tell("test", Self);
+            expectMsg("ok");
 
             //assert
         }
@@ -134,6 +166,46 @@ namespace Akka.Tests.Actor
             }
 
             public ActorRef Target { get; private set; }
+        }
+
+        public class LeakyFSM : FSM<int, ActorRef>
+        {
+            public LeakyFSM()
+            {
+                StartWith(0, null);
+                When(0, @event =>
+                {
+                    if (@event.FsmEvent.Equals("switch"))
+                    {
+                        return GoTo(1).Using(Sender);
+                    }
+
+                    return null;
+                });
+
+                OnTransition((state, i) =>
+                {
+                    NextStateData.Tell(Tuple.Create(state, i));
+                });
+
+                When(1, @event =>
+                {
+                    if (@event.FsmEvent.Equals("test"))
+                    {
+                        try
+                        {
+                            Sender.Tell(string.Format("failed: {0}", NextStateData));
+                        }
+                        catch (InvalidOperationException ex)
+                        {
+                            Sender.Tell("ok");
+                        }
+
+                        return Stay();
+                    }
+                    return null;
+                });
+            }
         }
 
         public class Forwarder : UntypedActor

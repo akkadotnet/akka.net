@@ -136,7 +136,7 @@ namespace Akka.Tests
             object t;
             if (queue.TryTake(out t,duration))
             {
-                Assert.Fail("Expected no messages during the duration");
+                Assert.Fail("Expected no messages during the duration, instead we received {0}", t);
             }
         }
 

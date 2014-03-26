@@ -509,9 +509,14 @@ namespace Akka.Actor
             handleEvent = OrElse(stateFunction, handleEventDefault);
         }
 
+        /// <summary>
+        /// Verify the existence of initial state and setup timers. This should be the
+        /// last call within the constructor or <see cref="ActorBase.PreStart"/> and
+        /// <see cref="ActorBase.PostRestart"/>.
+        /// </summary>
         public void Initialize()
         {
-            
+            MakeTransition(currentState);
         }
 
         /// <summary>
