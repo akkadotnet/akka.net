@@ -50,7 +50,7 @@ namespace Akka.Actor
         public ActorBase Actor { get; internal set; }
         public object CurrentMessage { get; private set; }
         internal Receive ReceiveMessage { get; private set; }
-        protected Mailbox Mailbox { get; set; }
+        public Mailbox Mailbox { get; protected set; }
         public MessageDispatcher Dispatcher { get; private set; }
 
         internal static ActorCell Current
