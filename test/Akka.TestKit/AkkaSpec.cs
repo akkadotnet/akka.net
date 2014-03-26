@@ -180,6 +180,40 @@ namespace Akka.Tests
             return ret;
         }
 
+        /// <summary>
+        /// Wait until a given condition evaluates to true or timeout, whichever happens first
+        /// </summary>
+        public static async Task<bool> AwaitCond(Func<bool> evaluator, TimeSpan max, bool noThrow = false)
+        {
+            return await AwaitCond(evaluator, max, TimeSpan.FromMilliseconds(100), noThrow);
+        }
+
+        /// <summary>
+        /// Wait until a given condition evaluates to true or timeout, whichever happens first
+        /// </summary>
+        public static async Task<bool> AwaitCond(Func<bool> evaluator, TimeSpan max, TimeSpan interval, bool noThrow = false)
+        {
+            var stop = DateTime.UtcNow + max;
+            return await Task.Run(() =>
+            {
+                while (!evaluator())
+                {
+                    var sleep = stop - DateTime.UtcNow;
+                    if (sleep <= TimeSpan.Zero)
+                    {
+                        if (noThrow) return false;
+                        else Assert.Fail("timeout {0} expired", max);
+                    }
+                    else
+                    {
+                        Thread.Sleep(Min(sleep, interval));
+                    }
+                }
+
+                return true;
+            });
+        }
+
         protected T Within<T>(TimeSpan max, Func<T> function)
         {
             return Within(TimeSpan.FromSeconds(0), max, function);

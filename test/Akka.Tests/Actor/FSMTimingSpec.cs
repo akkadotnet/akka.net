@@ -107,7 +107,7 @@ namespace Akka.Tests.Actor
                     @event.FsmEvent.Match()
                         .With<Tick>(t =>
                         {
-                            tester.Tell(new Tick());
+                            Tester.Tell(new Tick());
                             nextState = GoTo(State.Initial);
                         });
                     return nextState;
@@ -121,7 +121,49 @@ namespace Akka.Tests.Actor
 
                 When(State.TestSingleTimerResubmit, @event =>
                 {
-                    
+                    State<State, int> nextState = null;
+                    @event.FsmEvent.Match()
+                        .With<Tick>(tick =>
+                        {
+                            Tester.Tell(new Tick());
+                            SetTimer("blah", new Tock(), TimeSpan.FromMilliseconds(500));
+                            nextState = Stay();
+                        })
+                        .With<Tock>(tock =>
+                        {
+                            Tester.Tell(new Tock());
+                            GoTo(State.Initial);
+                        });
+
+                    return nextState;
+                });
+
+                When(State.TestCancelTimer, @event =>
+                {
+                    State<State, int> nextState = null;
+
+                    @event.FsmEvent.Match()
+                        .With<Tick>(async tick =>
+                        {
+                            SetTimer("hallo", new Tock(), TimeSpan.FromMilliseconds(1));
+                            await AwaitCond(() => Context.AsInstanceOf<ActorCell>().Mailbox.HasUnscheduledMessages, TimeSpan.FromSeconds(1));
+                            CancelTimer("hallo");
+                            Sender.Tell(new Tick());
+                            SetTimer("hallo", new Tock(), TimeSpan.FromMilliseconds(500));
+                            nextState = Stay();
+                        })
+                        .With<Tock>(tock =>
+                        {
+                            Tester.Tell(new Tock());
+                            nextState = Stay();
+                        })
+                        .With<Cancel>(c =>
+                        {
+                            CancelTimer("hallo");
+                            nextState = GoTo(State.Initial);
+                        });
+
+                    return nextState;
                 });
             }
 
