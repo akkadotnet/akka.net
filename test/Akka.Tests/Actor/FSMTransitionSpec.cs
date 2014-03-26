@@ -60,11 +60,11 @@ namespace Akka.Tests.Actor
             var fsm = sys.ActorOf(Props.Create(() => new MyFSM(testActor)));
 
             //act
-            Within(TimeSpan.FromSeconds(1), () =>
+            Within(TimeSpan.FromSeconds(1), async () =>
             {
                 fsm.Tell(new FSMStates.SubscribeTransitionCallBack(forward));
                 expectMsg(new FSMStates.CurrentState<int>(fsm, 0), FSMSpecHelpers.CurrentStateExpector);
-                forward.Stop();
+                await forward.GracefulStop(TimeSpan.FromSeconds(5));
                 fsm.Tell("tick");
                 expectNoMsg(TimeSpan.FromMilliseconds(300));
                 return true;
