@@ -81,6 +81,7 @@
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Actor\ChildrenContainer.cs" />
     <Compile Include="Actor\Deployer.cs" />
+    <Compile Include="Actor\FSM.cs" />
     <Compile Include="Actor\NoSerializationVerificationNeeded.cs" />
     <Compile Include="Actor\Scheduler.cs" />
     <Compile Include="Actor\Settings.cs" />
@@ -120,6 +121,7 @@
     <Compile Include="Routing\Balancing.cs" />
     <Compile Include="Routing\Broadcast.cs" />
     <Compile Include="Routing\ConsistentHash.cs" />
+    <Compile Include="Routing\Listeners.cs" />
     <Compile Include="Routing\MurmurHash.cs" />
     <Compile Include="Routing\Random.cs" />
     <Compile Include="Routing\ResizablePoolActor.cs" />
@@ -134,6 +136,7 @@
     <Compile Include="Routing\RouterPoolActor.cs" />
     <Compile Include="Serialization\Serialization.cs" />
     <Compile Include="Serialization\Serializer.cs" />
+    <Compile Include="Tools\AtomicCounter.cs" />
     <Compile Include="Tools\ConcurrentSet.cs" />
     <Compile Include="Tools\ExpressionExtensions.cs" />
     <Compile Include="Tools\Pattern.cs" />
