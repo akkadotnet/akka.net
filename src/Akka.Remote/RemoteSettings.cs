@@ -22,6 +22,7 @@ namespace Akka.Remote
                 let transportConfig = TransportConfigFor(transportName)
                 select new TransportSettings(transportConfig)).ToArray();
             Adapters = ConfigToMap(config.GetConfig("akka.remote.adapters"));
+            BackoffPeriod = config.GetMillisDuration("akka.remote.backoff-internal", TimeSpan.FromSeconds(3));
         }
 
         /// <summary>
@@ -48,6 +49,7 @@ namespace Akka.Remote
         public IDictionary<string, string> Adapters { get; set; }
 
         public TransportSettings[] Transports { get; set; }
+        public TimeSpan BackoffPeriod { get; set; }
 
         private Config TransportConfigFor(string transportName)
         {

@@ -14,15 +14,15 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Akka.Tests
-{    
+{
     public static class AkkaSpecExtensions
     {
-        public static void Then<T>(this T self,Action<T> body)
+        public static void Then<T>(this T self, Action<T> body)
         {
             body(self);
         }
 
-        public static void Then<T>(this T self,Action<T,T> body,T other)
+        public static void Then<T>(this T self, Action<T, T> body, T other)
         {
             body(other, self);
         }
@@ -97,8 +97,8 @@ namespace Akka.Tests
             var config = ConfigurationFactory.ParseString(GetConfig());
             queue = new BlockingCollection<object>();
             messages = new List<object>();
-            sys = ActorSystem.Create("test",config);
-            testActor = sys.ActorOf(Props.Create(() => new TestActor(queue,messages)),"test");
+            sys = ActorSystem.Create("test", config);
+            testActor = sys.ActorOf(Props.Create(() => new TestActor(queue, messages)), "test");
             echoActor = sys.ActorOf(Props.Create(() => new EchoActor(testActor)), "echo");
         }
         protected BlockingCollection<object> queue;
@@ -150,7 +150,7 @@ namespace Akka.Tests
 
             Assert.IsTrue(comparer(expected, actual));
             return actual;
-            
+
         }
 
         protected object expectMsg(object expected, Func<object, object, bool> comparer, TimeSpan timeout)
@@ -161,7 +161,7 @@ namespace Akka.Tests
                 Assert.IsNotNull(t, "exected message {0} but timed out after {1}", expected, timeout);
                 Assert.IsTrue(comparer(expected, t));
             }
-            
+
             return t;
         }
 
@@ -212,7 +212,7 @@ namespace Akka.Tests
         protected void expectNoMsg(TimeSpan duration)
         {
             object t;
-            if (queue.TryTake(out t,duration))
+            if (queue.TryTake(out t, duration))
             {
                 Assert.Fail("Expected no messages during the duration, instead we received {0}", t);
             }
@@ -306,7 +306,7 @@ namespace Akka.Tests
         {
             object t;
 
-            if(duration.Milliseconds < 0) return null;
+            if (duration.Milliseconds < 0) return null;
 
             if (queue.TryTake(out t, duration))
             {
@@ -336,45 +336,32 @@ namespace Akka.Tests
         protected IList<T> receiveWhile<T>(TimeSpan max, TimeSpan idle, Func<object, T> filter, int msgs = int.MaxValue)
         {
             var stop = DateTime.UtcNow + max;
-            Message msg = new NullMessage();
 
             Func<IList<T>, int, IEnumerable<T>> accumulatorFunc = null;
-            accumulatorFunc = (acc, count) =>
-            {
-                if (count >= msgs) return acc.Reverse();
-                else
-                {
-                    var returnValue = acc.Reverse();
-                    receiveOne(Min((stop - DateTime.UtcNow), idle));
-                    lastMessage.Match()
-                        .With<RealMessage>(r =>
-                        {
-                            var fr = filter(r.Msg);
-                            if (fr == null) //this value was excluded by our filter and needs to be re-queued
-                            {
-                                queue.Add(lastMessage);
-                                lastMessage = msg;
-                                returnValue = acc.Reverse();
-                            }
-                            else
-                            {
-                                msg = lastMessage;
-                                returnValue = accumulatorFunc(acc.Concat(new T[] { fr }).ToList(), count + 1);
-                            }
-                           
-                        })
-                        .With<NullMessage>(n =>
-                        {
-                            lastMessage = msg;
-                            returnValue = acc.Reverse();
-                        });
-                    return returnValue;
-                }
-            };
+            var count = 0;
+            var acc = new List<T>();
 
-            var ret = accumulatorFunc(new List<T>(), 0);
+            while (count < msgs)
+            {
+                var obj = receiveOne(Min((stop - DateTime.UtcNow), idle));
+                if (obj != null)
+                {
+                    var fr = filter(obj);
+                    if (fr != null)
+                    {
+                        acc.Add(fr);
+                        count++;
+                    }
+                    var debug2 = true;
+                    continue;
+                }
+
+                var debug1 = true;
+                break;
+            } 
+            
             lastWasNoMsg = true;
-            return ret.ToList();
+            return acc;
         }
 
         protected static TimeSpan Min(TimeSpan t1, TimeSpan t2)
@@ -389,7 +376,7 @@ namespace Akka.Tests
         {
             private BlockingCollection<object> queue;
             private List<object> messages;
-            public TestActor(BlockingCollection<object> queue,List<object> messages)
+            public TestActor(BlockingCollection<object> queue, List<object> messages)
             {
                 this.queue = queue;
                 this.messages = messages;
@@ -428,7 +415,7 @@ namespace Akka.Tests
 
         //}
 
-        protected void intercept<T>(Action intercept) where T:Exception
+        protected void intercept<T>(Action intercept) where T : Exception
         {
             try
             {
@@ -438,9 +425,9 @@ namespace Akka.Tests
             {
                 if (ex.Flatten().InnerExceptions.Any(x => x is T)) return;
             }
-            catch(Exception x)
+            catch (Exception x)
             {
-                if(x is T)
+                if (x is T)
                 {
                     return;
                 }
@@ -448,17 +435,17 @@ namespace Akka.Tests
             Assert.Fail("Expected exception of type " + typeof(T).Name);
         }
 
-        protected void EventFilter<T>(string message,int occurances, Action intercept) where T:Exception
+        protected void EventFilter<T>(string message, int occurances, Action intercept) where T : Exception
         {
-            sys.EventStream.Subscribe(testActor,typeof(Error));
+            sys.EventStream.Subscribe(testActor, typeof(Error));
             intercept();
-            for(int i = 0;i<occurances;i++)
+            for (int i = 0; i < occurances; i++)
             {
                 var res = queue.Take();
                 var error = (Error)res;
 
                 Assert.AreEqual(typeof(T), error.Cause.GetType());
-                Assert.AreEqual(message, error.Message);                
+                Assert.AreEqual(message, error.Message);
             }
         }
 
@@ -489,7 +476,7 @@ namespace Akka.Tests
         //}
     }
 
-// ReSharper disable once InconsistentNaming
+    // ReSharper disable once InconsistentNaming
     public interface ImplicitSender
     {
         ActorRef Self { get; }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Google.ProtocolBuffers;
@@ -38,6 +39,7 @@ namespace Akka.Remote.Transport
         public AkkaProtocolSettings Settings { get; private set; }
 
         private readonly SchemeAugmenter _schemeAugmenter = new SchemeAugmenter(RemoteSettings.AkkaScheme);
+
         protected override SchemeAugmenter SchemeAugmenter
         {
             get { return _schemeAugmenter; }
@@ -100,9 +102,10 @@ namespace Akka.Remote.Transport
     {
         Closed = 0,
         WaitHandshake = 1,
-        Open = 2,
-        HeartbeatTimer = 3
+        Open = 2
     }
+
+    public class HeartbeatTimer : NoSerializationVerificationNeeded { }
 
     public sealed class HandleMsg : NoSerializationVerificationNeeded
     {
@@ -213,7 +216,7 @@ namespace Akka.Remote.Transport
         public AssociationHandle WrappedHandle { get; private set; }
     }
 
-    public class ProtocolStateActor : ActorBase
+    public class ProtocolStateActor : FSM<AssociationState, ProtocolStateData>
     {
         private InitialProtocolStateData _initialData;
         private HandshakeInfo _localHandshakeInfo;
@@ -250,12 +253,77 @@ namespace Akka.Remote.Transport
             _settings = settings;
             _refuseUid = refuseUid;
             _localAddress = _localHandshakeInfo.Origin;
+            InitializeFSM();
         }
 
-        protected override void OnReceive(object message)
+        #region FSM bindings
+
+        private void InitializeFSM()
         {
-            throw new System.NotImplementedException();
+            _initialData.Match()
+                .With<OutboundUnassociated>(d =>
+                {
+                    d.Transport.Associate(d.RemoteAddress)
+                        .ContinueWith(result => Self.Tell(result.Result),
+                            TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+                    StartWith(AssociationState.Closed, d);
+                })
+                .With<InboundUnassociated>(d =>
+                {
+                    d.WrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(Self));
+                    StartWith(AssociationState.WaitHandshake, d);
+                });
+
+            When(AssociationState.Closed, fsmEvent =>
+            {
+                State<AssociationState, ProtocolStateData> nextState = null;
+                //Transport layer events for outbound associations
+                fsmEvent.FsmEvent.Match()
+                    .With<Tuple<Status.Failure, OutboundUnassociated>>(f =>
+                    {
+                        f.Item2.StatusCompletionSource.SetException(f.Item1.Cause);
+                        nextState = Stop();
+                    })
+                    .With<Tuple<AssociationHandle, OutboundUnassociated>>(h =>
+                    {
+                        var wrappedHandle = h.Item1;
+                        var statusPromise = h.Item2.StatusCompletionSource;
+                        wrappedHandle.ReadHandlerSource.TrySetResult(new ActorHandleEventListener(Self));
+                        if (SendAssociate(wrappedHandle, _localHandshakeInfo))
+                        {
+                            throw new NotImplementedException();
+                            nextState =
+                                GoTo(AssociationState.WaitHandshake)
+                                    .Using(new OutboundUnderlyingAssociated(statusPromise, wrappedHandle));
+                        }
+                        else
+                        {
+                            SetTimer("associate-retry", wrappedHandle,
+                                Context.System.Provider.AsInstanceOf<RemoteActorRefProvider>()
+                                    .RemoteSettings.BackoffPeriod, repeat: false);
+                            nextState = Stay();
+                        }
+                    })
+                    .With<DisassociateUnderlying>(d =>
+                    {
+                        nextState = Stop();
+                    })
+                    .Default(m => { nextState = Stay(); });
+
+                return nextState;
+            });
         }
+
+        #endregion
+
+        #region Internal protocol messaging methods
+
+        private bool SendAssociate(AssociationHandle wrappedHandle, HandshakeInfo info)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
 
         #region Static methods
 
