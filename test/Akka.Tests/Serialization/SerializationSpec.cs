@@ -44,7 +44,7 @@ namespace Akka.Tests.Serialization
             sys.EventStream.Subscribe(testActor,typeof(object));
             var empty = sys.ActorOf<EmptyActor>();
             empty.Ask("hello");
-            var f = (FutureActorRef)receiveOne();
+            var f = (FutureActorRef)queue.Take();
 
 
             var message = new SomeMessage

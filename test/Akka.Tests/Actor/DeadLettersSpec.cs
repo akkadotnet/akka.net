@@ -17,7 +17,7 @@ namespace Akka.Tests
         {
             sys.EventStream.Subscribe(testActor, typeof(DeadLetter));
             sys.DeadLetters.Tell("foobar");
-            var message = receiveOne();
+            var message = queue.Take();
             Assert.IsInstanceOfType(message, typeof(DeadLetter));
             var deadLetter = (DeadLetter)message;
             var payload = (string)deadLetter.Message;
