@@ -39,7 +39,7 @@ namespace Akka.Routing
             Self = new RoutedActorRef(path, this);
         }
 
-        private void AddRoutees(Routee[] routees)
+        protected void AddRoutees(Routee[] routees)
         {
             foreach (var routee in routees)
             {
