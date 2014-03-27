@@ -135,31 +135,7 @@ Target "RunTests" <| fun _ ->
 // Nuget targets 
 //--------------------------------------------------------------------------------
 
-// Xml utilities to read dependencies from packages.config
-module Xml =
-    open System.Xml.Linq
-
-    let load s = XDocument.Load (s:string)
-    let xname = XName.op_Implicit
-    let descendants n (d: XDocument) = d.Descendants (xname n)
-    let (?) (e:XElement) n = 
-        match e.Attribute (xname n) with
-        | null -> ""
-        | a -> a.Value
-
-
 module Nuget = 
-    open Xml
-
-    // extract dependencies from packages.config
-    let getDependencies packages =
-        if fileExists packages then
-            load packages
-            |> descendants "package"
-            |> Seq.map (fun d -> d?id, d?version)
-            |> Seq.toList
-        else []
-
     // add Akka dependency for other projects
     let getAkkaDependency project =
         match project with
@@ -174,15 +150,8 @@ module Nuget =
         | "Akka.slf4net" -> "slf4net logging adapter for Akka."
         | _ -> description
 
-module Path =
-    let ext = Path.GetExtension
-    let chExt e s = Path.ChangeExtension(s,e)
-    let hasExt e s = ext s = e
-    let filename = Path.GetFileName 
-    let directory  = Path.GetDirectoryName
-
 open Nuget
-open Path
+
 //--------------------------------------------------------------------------------
 // Clean nuget directory
 
@@ -254,7 +223,7 @@ Target "Nuget" <| fun _ ->
         // copy to nuget directory with .symbols.nupkg extension
         let pkg = (!! (workingDir @@ "*.nupkg")) |> Seq.head
 
-        let destFile = pkg |> filename |> chExt ".symbols.nupkg" 
+        let destFile = pkg |> filename |> changeExt ".symbols.nupkg" 
         let dest = nugetDir @@ destFile
         
         CopyFile dest pkg
