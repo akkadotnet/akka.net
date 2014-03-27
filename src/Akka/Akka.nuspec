@@ -8,7 +8,7 @@
     <summary>@summary@</summary>
     <licenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</licenseUrl>
     <projectUrl>https://github.com/akkadotnet/akka.net</projectUrl>
-    <!--iconUrl>@iconUrl@</iconUrl-->
+    <iconUrl>https://raw.githubusercontent.com/akkadotnet/akka.net/gh-pages/images/icon.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>@description@</description>
     <releaseNotes>@releaseNotes@</releaseNotes>
