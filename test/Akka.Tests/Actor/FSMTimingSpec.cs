@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -144,6 +145,56 @@ namespace Akka.Tests.Actor
             });
         }
 
+        [TestMethod]
+        public void FSM_must_correctly_cancel_a_named_timer()
+        {
+            fsm.Tell(State.TestCancelTimer, Self);
+            expectMsg(new FSMBase.Transition<State>(fsm, State.Initial, State.TestCancelTimer), FSMSpecHelpers.TransitionStateExpector<State>());
+            Within(TimeSpan.FromMilliseconds(500), () =>
+            {
+                fsm.Tell(new Tick(), Self);
+                expectMsgType<Tick>();
+                return true;
+            });
+
+            Within(TimeSpan.FromMilliseconds(300), TimeSpan.FromSeconds(1), () =>
+            {
+                expectMsgType<Tock>();
+                return true;
+            });
+            fsm.Tell(new Cancel(), Self);
+            expectMsg(new FSMBase.Transition<State>(fsm, State.TestCancelTimer, State.Initial),
+                FSMSpecHelpers.TransitionStateExpector<State>(), TimeSpan.FromSeconds(1));
+        }
+
+        [TestMethod]
+        public void FSM_must_not_get_confused_between_named_and_state_timers()
+        {
+            fsm.Tell(State.TestCancelStateTimerInNamedTimerMessage, Self);
+            fsm.Tell(new Tick(), Self);
+            expectMsg(new FSMBase.Transition<State>(fsm, State.Initial, State.TestCancelStateTimerInNamedTimerMessage), FSMSpecHelpers.TransitionStateExpector<State>());
+            expectMsgType<Tick>(TimeSpan.FromMilliseconds(500));
+            Task.Delay(TimeSpan.FromMilliseconds(200));
+            Resume(fsm);
+            expectMsg(new FSMBase.Transition<State>(fsm, State.TestCancelStateTimerInNamedTimerMessage, State.TestCancelStateTimerInNamedTimerMessage2),
+                FSMSpecHelpers.TransitionStateExpector<State>(), TimeSpan.FromMilliseconds(500));
+            fsm.Tell(new Cancel(), Self);
+            Within(TimeSpan.FromMilliseconds(500), () =>
+            {
+                expectMsgType<Cancel>();
+                expectMsg(
+                    new FSMBase.Transition<State>(fsm, State.TestCancelStateTimerInNamedTimerMessage2, State.Initial),
+                    FSMSpecHelpers.TransitionStateExpector<State>());
+                return true;
+            });
+        }
+
+        [TestMethod]
+        public void FSM_must_receive_and_cancel_a_repeated_timer()
+        {
+            fsm.Tell(State.TestRepeatedTimer, Self);
+        }
+
         #region Actors
 
         static void Suspend(ActorRef actorRef)
@@ -278,10 +329,11 @@ namespace Akka.Tests.Actor
                     State<State, int> nextState = null;
 
                     @event.FsmEvent.Match()
-                        .With<Tick>(async tick =>
+                        .With<Tick>(tick =>
                         {
                             SetTimer("hallo", new Tock(), TimeSpan.FromMilliseconds(1));
-                            await AwaitCond(() => Context.AsInstanceOf<ActorCell>().Mailbox.HasUnscheduledMessages, TimeSpan.FromSeconds(1));
+                            var contextLocal = Context;
+                            AwaitCond(() => contextLocal.AsInstanceOf<ActorCell>().Mailbox.HasUnscheduledMessages, TimeSpan.FromSeconds(1)).Wait();
                             CancelTimer("hallo");
                             Sender.Tell(new Tick());
                             SetTimer("hallo", new Tock(), TimeSpan.FromMilliseconds(500));
@@ -330,13 +382,13 @@ namespace Akka.Tests.Actor
                     State<State, int> nextState = null;
 
                     @event.FsmEvent.Match()
-                        .With<Tick>(async tick =>
+                        .With<Tick>(tick =>
                         {
                             Suspend(Self);
                             SetTimer("named", new Tock(), TimeSpan.FromMilliseconds(1));
-                            await
-                                AwaitCond(() => Context.AsInstanceOf<ActorCell>().Mailbox.HasUnscheduledMessages,
-                                    TimeSpan.FromSeconds(1));
+                            var contextLocal = Context;
+                            AwaitCond(() => contextLocal.AsInstanceOf<ActorCell>().Mailbox.HasUnscheduledMessages,
+                                    TimeSpan.FromSeconds(1)).Wait();
                             nextState = Stay().ForMax(TimeSpan.FromMilliseconds(1)).Replying(new Tick());
                         })
                         .With<Tock>(tock =>

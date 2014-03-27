@@ -134,7 +134,19 @@ namespace Akka.Tests
             var actual = queue.Take();
 
             global::System.Diagnostics.Debug.WriteLine("actual: " + actual);
-            Assert.IsTrue(actual is TMessage);
+            Assert.IsTrue(actual is TMessage, "expected message of type {0} but received {1} instead", typeof(TMessage), actual.GetType());
+            return (TMessage)actual;
+        }
+
+        protected TMessage expectMsgType<TMessage>(TimeSpan timeout)
+        {
+            object actual;
+            if (queue.TryTake(out actual, timeout))
+            {
+                Assert.IsTrue(actual is TMessage, "expected message of type {0} but received {1} instead", typeof(TMessage), actual.GetType());
+            }
+
+            global::System.Diagnostics.Debug.WriteLine("actual: " + actual);
             return (TMessage)actual;
         }
 
