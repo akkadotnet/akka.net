@@ -1,6 +1,6 @@
-# Akka .NET
+# Akka.NET
 
-Akka .NET is a port of the popular Java/Scala framework Akka to .NET.
+Akka.NET is a port of the popular Java/Scala framework Akka to .NET.
 
 Early beta, do not use in production!
 
