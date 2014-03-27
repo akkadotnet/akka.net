@@ -177,8 +177,15 @@ module Nuget =
         | "Akka.slf4net" -> "slf4net logging adapter for Akka."
         | _ -> description
 
-open Nuget
+module Path =
+    let ext = Path.GetExtension
+    let chExt e s = Path.ChangeExtension(s,e)
+    let hasExt e s = ext s = e
+    let filename = Path.GetFileName 
+    let directory  = Path.GetDirectoryName
 
+open Nuget
+open Path
 //--------------------------------------------------------------------------------
 // Clean nuget directory
 
@@ -199,30 +206,62 @@ Target "Nuget" <| fun () ->
         let releaseDir = projectDir @@ @"bin\Release"
         let packages = projectDir @@ "packages.config"
 
+        let pack outputDir =
+            NuGetHelper.NuGet
+            <| fun p ->
+                { p with
+                    Description = description project
+                    Authors = authors
+                    Copyright = copyright
+                    Project =  project
+                    Properties = ["Configuration", "Release"]
+                    ReleaseNotes = release.Notes |> String.concat "\n"
+                    Version = release.NugetVersion
+                    Tags = tags |> String.concat " "
+                    OutputPath = outputDir
+                    WorkingDir = workingDir
+                    AccessKey = getBuildParamOrDefault "nugetkey" ""
+                    Publish = hasBuildParam "nugetkey"
+                    
+                    Dependencies = getDependencies packages @ getAkkaDependency project
+                     }    
+            <| nuspec
+        // pack nuget (with only dll and xml files)
+
         ensureDirectory libDir
         !! (releaseDir @@ project + ".dll")
         ++ (releaseDir @@ project + ".xml")
         |> CopyFiles libDir
 
-        NuGetHelper.NuGet
-        <| fun p ->
-            { p with
-                Description = description project
-                Authors = authors
-                Copyright = copyright
-                Project =  project
-                Properties = ["Configuration", "Release"]
-                ReleaseNotes = release.Notes |> String.concat "\n"
-                Version = release.NugetVersion
-                Tags = tags |> String.concat " "
-                OutputPath = nugetDir
-                WorkingDir = workingDir
-                AccessKey = getBuildParamOrDefault "nugetkey" ""
-                Publish = hasBuildParam "nugetkey"
+        pack nugetDir
 
-                Dependencies = getDependencies packages @ getAkkaDependency project
-                 }    
-        <| nuspec
+        // pack symbol packages (adds .pdb and sources)
+
+        !! (releaseDir @@ project + ".pdb")
+        |> CopyFiles libDir
+
+        let nugetSrcDir = workingDir @@ @"src\"
+        CreateDir nugetSrcDir
+
+        let isCs = hasExt ".cs"
+        let isFs = hasExt ".fs"
+        let isAssemblyInfo f = (filename f).Contains("AssemblyInfo")
+        let isSrc f = (isCs f || isFs f) && not (isAssemblyInfo f) 
+
+        CopyDir nugetSrcDir projectDir isSrc
+        DeleteDir (nugetSrcDir @@ "obj")
+        DeleteDir (nugetSrcDir @@ "bin")
+
+        // pack in working dir
+        pack workingDir
+        
+        // copy to nuget directory with .symbols.nupkg extension
+        let pkg = (!! (workingDir @@ "*.nupkg")) |> Seq.head
+
+        let destFile = pkg |> filename |> chExt ".symbols.nupkg" 
+        let dest = nugetDir @@ destFile
+        
+        CopyFile dest pkg
 
     DeleteDir workingDir
 
