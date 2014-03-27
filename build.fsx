@@ -8,7 +8,6 @@ open Fake.FileUtils
 
 cd __SOURCE_DIRECTORY__
 let (!!) includes = (!! includes).SetBaseDirectory __SOURCE_DIRECTORY__
-
 let binDir = "bin"
 
 let product = "Akka.net"
@@ -95,7 +94,30 @@ Target "RunTests" <| fun () ->
     MSTest
     <| fun p -> { p with ResultsDir = testOutput }
     <| testAssemblies
-    
+
+Target "Nuget" <| fun () ->
+    let nugetDir = binDir @@ "nuget"
+    let workingDir = binDir @@ "build"
+    let libDir = workingDir @@ @"lib\net45\"
+    mkdir nugetDir
+    mkdir libDir
+    CopyDir @"src\Akka\bin\Release\" libDir allFiles
+
+    NuGetHelper.NuGet
+    <| fun p ->
+        { p with
+            Description = description
+            Authors = authors
+            Copyright = copyright
+            Project = "Akka.net" 
+            Properties = ["Configuration", "Release"]
+            ReleaseNotes = release.Notes |> String.concat "\n"
+            Version = release.NugetVersion
+            OutputPath = nugetDir
+            WorkingDir = workingDir 
+            }    
+    <| @"src\Akka\Akka.nuspec"
+
 Target "All" DoNothing
 
 Target "Help" <| fun () ->
