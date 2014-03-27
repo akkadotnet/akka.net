@@ -9,28 +9,45 @@ open Fake.FileUtils
 
 cd __SOURCE_DIRECTORY__
 let (!!) includes = (!! includes).SetBaseDirectory __SOURCE_DIRECTORY__
-let binDir = "bin"
+
+//--------------------------------------------------------------------------------
+// Information about the project for Nuget and Assembly info files
+//--------------------------------------------------------------------------------
+
 
 let product = "Akka.net"
-let authors = [
-    "Roger Alsing"
-    "Aaron Stannard"
-    "Jérémie Chassaing"
-    "Stefan Alfbo" ]
+let authors = [ "Roger Alsing"; "Aaron Stannard"; "Jérémie Chassaing"; "Stefan Alfbo" ]
 let copyright = "Copyright © Roger Asling 2013-2014"
 let company = "Akka.net"
 let description = "Akka .NET is a port of the popular Java/Scala framework Akka to .NET."
 let tags = ["akka";"actors";"actor";"model";"Akka";"concurrency"]
 let configuration = "Release"
 
-let testOutput = "TestResults"
+// Read release notes and version
 
 let release =
     File.ReadLines "RELEASE_NOTES.md"
     |> ReleaseNotesHelper.parseReleaseNotes
 
+//--------------------------------------------------------------------------------
+// Directories
+
+let binDir = "bin"
+let testOutput = "TestResults"
+
+let nugetDir = binDir @@ "nuget"
+let workingDir = binDir @@ "build"
+let libDir = workingDir @@ @"lib\net45\"
+
+//--------------------------------------------------------------------------------
+// Clean build results
+
 Target "Clean" <| fun () ->
     DeleteDir binDir
+
+//--------------------------------------------------------------------------------
+// Generate AssemblyInfo files with the version for release notes 
+
 
 open AssemblyInfoFile
 Target "AssemblyInfo" <| fun() ->
@@ -61,11 +78,18 @@ Target "AssemblyInfo" <| fun() ->
             Attribute.Version version
             Attribute.FileVersion version ] { GenerateClass = false; UseNamespace = "System" }
 
+//--------------------------------------------------------------------------------
+// Build the solution
+
 Target "Build" <| fun () ->
 
     !!"Akka.sln"
     |> MSBuildRelease "" "Rebuild"
     |> ignore
+
+//--------------------------------------------------------------------------------
+// Copy the build output to bin directory
+//--------------------------------------------------------------------------------
 
 Target "CopyOutput" <| fun () ->
     
@@ -79,12 +103,22 @@ Target "CopyOutput" <| fun () ->
       "Akka.slf4net" ]
     |> List.iter copyOutput
 
-
-
 Target "BuildRelease" DoNothing
+
+"Clean" ==> "AssemblyInfo" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
+
+
+//--------------------------------------------------------------------------------
+// Tests targets
+//--------------------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------
+// Clean test output
 
 Target "CleanTests" <| fun () ->
     DeleteDir testOutput
+//--------------------------------------------------------------------------------
+// Run tests
 
 open MSTest
 Target "RunTests" <| fun () ->
@@ -96,8 +130,14 @@ Target "RunTests" <| fun () ->
     <| fun p -> { p with ResultsDir = testOutput }
     <| testAssemblies
 
+"CleanTests" ==> "RunTests"
 
 
+//--------------------------------------------------------------------------------
+// Nuget targets 
+//--------------------------------------------------------------------------------
+
+// Xml utilities to read dependencies from packages.config
 module Xml =
     open System.Xml.Linq
 
@@ -109,9 +149,11 @@ module Xml =
         | null -> ""
         | a -> a.Value
 
+
 module Nuget = 
     open Xml
 
+    // extract dependencies from packages.config
     let getDependencies packages =
         if fileExists packages then
             load packages
@@ -120,12 +162,13 @@ module Nuget =
             |> Seq.toList
         else []
 
+    // add Akka dependency for other projects
     let getAkkaDependency project =
         match project with
         | "Akka" -> []
         | _ -> ["Akka", release.NugetVersion]
 
-
+    // selected nuget description
     let description project =
         match project with
         | "Akka.FSharp" -> "FSharp API support for Akka."
@@ -135,12 +178,17 @@ module Nuget =
 
 open Nuget
 
-Target "Nuget" <| fun () ->
-    let nugetDir = binDir @@ "nuget"
-    let workingDir = binDir @@ "build"
-    let libDir = workingDir @@ @"lib\net45\"
+//--------------------------------------------------------------------------------
+// Clean nuget directory
 
+Target "CleanNuget" <| fun () ->
     CleanDir nugetDir
+
+//--------------------------------------------------------------------------------
+// Pack nuget for all projects
+// Publish to nuget.org if nugetkey is specified
+
+Target "Nuget" <| fun () ->
 
     for nuspec in !! "src/**/*.nuspec" do
         CleanDir workingDir
@@ -175,7 +223,11 @@ Target "Nuget" <| fun () ->
 
     DeleteDir workingDir
 
-Target "All" DoNothing
+"CleanNuget" ==> "BuildRelease" ==> "Nuget"
+
+//--------------------------------------------------------------------------------
+// Help 
+//--------------------------------------------------------------------------------
 
 Target "Help" <| fun () ->
     List.iter printfn [
@@ -194,11 +246,11 @@ Target "Help" <| fun () ->
       " * Help - Display this help"
     ]
 
-"Clean" ==> "AssemblyInfo" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
+//--------------------------------------------------------------------------------
+//  Target dependencies
+//--------------------------------------------------------------------------------
 
-"BuildRelease" ==> "Nuget"
-
-"CleanTests" ==> "RunTests"
+Target "All" DoNothing
 
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
