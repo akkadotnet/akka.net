@@ -52,7 +52,7 @@ namespace Akka.Tests
             return "";
         }
         [TestInitialize]
-        public void Setup()
+        public virtual void Setup()
         {
             var config = ConfigurationFactory.ParseString(GetConfig());
             queue = new BlockingCollection<object>();
@@ -90,6 +90,18 @@ namespace Akka.Tests
             return actual;
         }
 
+        protected object expectMsg(object expected, TimeSpan timeout)
+        {
+            object t;
+            if (queue.TryTake(out t, timeout))
+            {
+                Assert.IsNotNull(t, "exected message {0} but timed out after {1}", expected, timeout);
+                Assert.AreEqual(expected, t);
+            }
+
+            return t;
+        }
+
         protected object expectMsg(object expected, Func<object, object, bool> comparer)
         {
             var actual = queue.Take();
@@ -97,6 +109,18 @@ namespace Akka.Tests
             Assert.IsTrue(comparer(expected, actual));
             return actual;
             
+        }
+
+        protected object expectMsg(object expected, Func<object, object, bool> comparer, TimeSpan timeout)
+        {
+            object t;
+            if (queue.TryTake(out t, timeout))
+            {
+                Assert.IsNotNull(t, "exected message {0} but timed out after {1}", expected, timeout);
+                Assert.IsTrue(comparer(expected, t));
+            }
+            
+            return t;
         }
 
         protected void watch(ActorRef @ref)

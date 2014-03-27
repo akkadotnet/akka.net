@@ -1,29 +1,10 @@
 ﻿using System;
 using Akka.Actor;
+using Akka.TestKit;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Akka.Tests.Actor
 {
-    public static class FSMSpecHelpers
-    {
-        public static Func<object, object, bool> CurrentStateExpector = (expected, actual) =>
-        {
-            var expectedFsmState = expected.AsInstanceOf<FSMBase.CurrentState<int>>();
-            var actualFsmState = actual.AsInstanceOf<FSMBase.CurrentState<int>>();
-            return expectedFsmState.FsmRef.Equals(actualFsmState.FsmRef) &&
-                   expectedFsmState.State == actualFsmState.State;
-        };
-
-        public static Func<object, object, bool> TransitionStateExpector = (expected, actual) =>
-        {
-            var expectedFsmState = expected.AsInstanceOf<FSMBase.Transition<int>>();
-            var actualFsmState = actual.AsInstanceOf<FSMBase.Transition<int>>();
-            return expectedFsmState.FsmRef.Equals(actualFsmState.FsmRef) &&
-                   expectedFsmState.To == actualFsmState.To &&
-                   expectedFsmState.From == actualFsmState.From;
-        };
-    }
-
     [TestClass]
     public class FSMTransitionSpec : AkkaSpec, ImplicitSender
     {
@@ -41,11 +22,11 @@ namespace Akka.Tests.Actor
             Within(TimeSpan.FromSeconds(1), () =>
             {
                 fsm.Tell(new FSMBase.SubscribeTransitionCallBack(testActor));
-                expectMsg(new FSMBase.CurrentState<int>(fsm, 0), FSMSpecHelpers.CurrentStateExpector);
+                expectMsg(new FSMBase.CurrentState<int>(fsm, 0), FSMSpecHelpers.CurrentStateExpector<int>());
                 fsm.Tell("tick");
-                expectMsg(new FSMBase.Transition<int>(fsm, 0, 1), FSMSpecHelpers.TransitionStateExpector);
+                expectMsg(new FSMBase.Transition<int>(fsm, 0, 1), FSMSpecHelpers.TransitionStateExpector<int>());
                 fsm.Tell("tick");
-                expectMsg(new FSMBase.Transition<int>(fsm, 1, 0), FSMSpecHelpers.TransitionStateExpector);
+                expectMsg(new FSMBase.Transition<int>(fsm, 1, 0), FSMSpecHelpers.TransitionStateExpector<int>());
                 return true;
             });
 
@@ -63,7 +44,7 @@ namespace Akka.Tests.Actor
             Within(TimeSpan.FromSeconds(1), async () =>
             {
                 fsm.Tell(new FSMBase.SubscribeTransitionCallBack(forward));
-                expectMsg(new FSMBase.CurrentState<int>(fsm, 0), FSMSpecHelpers.CurrentStateExpector);
+                expectMsg(new FSMBase.CurrentState<int>(fsm, 0), FSMSpecHelpers.CurrentStateExpector<int>());
                 await forward.GracefulStop(TimeSpan.FromSeconds(5));
                 fsm.Tell("tick");
                 expectNoMsg(TimeSpan.FromMilliseconds(300));

@@ -374,7 +374,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Produce change descriptor to stop this FSM actor with <see cref="Reason"/> <see cref="Normal"/>
+        /// Produce change descriptor to stop this FSM actor with <see cref="FSMBase.Reason"/> <see cref="FSMBase.Normal"/>
         /// </summary>
         public State<TS, TD> Stop()
         {
@@ -382,7 +382,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Produce change descriptor to stop this FSM actor with the specified <see cref="Reason"/>.
+        /// Produce change descriptor to stop this FSM actor with the specified <see cref="FSMBase.Reason"/>.
         /// </summary>
         public State<TS, TD> Stop(Reason reason)
         {
@@ -745,7 +745,18 @@ namespace Akka.Actor
         private void ProcessEvent(Event<TD> fsmEvent, object source)
         {
             var stateFunc = stateFunctions[currentState.StateName];
-            var upcomingState = stateFunc != null ? stateFunc(fsmEvent) : handleEvent(fsmEvent);
+            State<TS, TD> upcomingState = null;
+
+            if (stateFunc != null)
+            {
+                upcomingState = stateFunc(fsmEvent);
+            }
+
+            if (upcomingState == null)
+            {
+                upcomingState = handleEvent(fsmEvent);
+            }
+
             ApplyState(upcomingState);
         }
 
