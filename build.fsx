@@ -8,7 +8,6 @@ open Fake
 open Fake.FileUtils
 
 cd __SOURCE_DIRECTORY__
-let (!!) includes = (!! includes).SetBaseDirectory __SOURCE_DIRECTORY__
 
 //--------------------------------------------------------------------------------
 // Information about the project for Nuget and Assembly info files
@@ -42,7 +41,7 @@ let libDir = workingDir @@ @"lib\net45\"
 //--------------------------------------------------------------------------------
 // Clean build results
 
-Target "Clean" <| fun () ->
+Target "Clean" <| fun _ ->
     DeleteDir binDir
 
 //--------------------------------------------------------------------------------
@@ -50,7 +49,7 @@ Target "Clean" <| fun () ->
 
 
 open AssemblyInfoFile
-Target "AssemblyInfo" <| fun() ->
+Target "AssemblyInfo" <| fun _ ->
     for file in !! "src/**/AssemblyInfo.fs" do
         let title =
             file
@@ -81,7 +80,7 @@ Target "AssemblyInfo" <| fun() ->
 //--------------------------------------------------------------------------------
 // Build the solution
 
-Target "Build" <| fun () ->
+Target "Build" <| fun _ ->
 
     !!"Akka.sln"
     |> MSBuildRelease "" "Rebuild"
@@ -92,7 +91,7 @@ Target "Build" <| fun () ->
 // Copy the build output to bin directory
 //--------------------------------------------------------------------------------
 
-Target "CopyOutput" <| fun () ->
+Target "CopyOutput" <| fun _ ->
     
     let copyOutput project =
         let src = "src" @@ project @@ @"bin\release\"
@@ -106,7 +105,6 @@ Target "CopyOutput" <| fun () ->
 
 Target "BuildRelease" DoNothing
 
-"Clean" ==> "AssemblyInfo" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
 
 
 //--------------------------------------------------------------------------------
@@ -116,22 +114,21 @@ Target "BuildRelease" DoNothing
 //--------------------------------------------------------------------------------
 // Clean test output
 
-Target "CleanTests" <| fun () ->
+Target "CleanTests" <| fun _ ->
     DeleteDir testOutput
 //--------------------------------------------------------------------------------
 // Run tests
 
 open MSTest
-Target "RunTests" <| fun () ->
+Target "RunTests" <| fun _ ->
     let testAssemblies = !! "test/**/bin/release/*.Tests.dll"
 
     mkdir testOutput
 
     MSTest
-    <| fun p -> { p with ResultsDir = testOutput }
-    <| testAssemblies
+        (fun p -> { p with ResultsDir = testOutput })
+        testAssemblies
 
-"CleanTests" ==> "RunTests"
 
 
 //--------------------------------------------------------------------------------
@@ -189,14 +186,14 @@ open Path
 //--------------------------------------------------------------------------------
 // Clean nuget directory
 
-Target "CleanNuget" <| fun () ->
+Target "CleanNuget" <| fun _ ->
     CleanDir nugetDir
 
 //--------------------------------------------------------------------------------
 // Pack nuget for all projects
 // Publish to nuget.org if nugetkey is specified
 
-Target "Nuget" <| fun () ->
+Target "Nuget" <| fun _ ->
 
     for nuspec in !! "src/**/*.nuspec" do
         CleanDir workingDir
@@ -208,24 +205,23 @@ Target "Nuget" <| fun () ->
 
         let pack outputDir =
             NuGetHelper.NuGet
-            <| fun p ->
-                { p with
-                    Description = description project
-                    Authors = authors
-                    Copyright = copyright
-                    Project =  project
-                    Properties = ["Configuration", "Release"]
-                    ReleaseNotes = release.Notes |> String.concat "\n"
-                    Version = release.NugetVersion
-                    Tags = tags |> String.concat " "
-                    OutputPath = outputDir
-                    WorkingDir = workingDir
-                    AccessKey = getBuildParamOrDefault "nugetkey" ""
-                    Publish = hasBuildParam "nugetkey"
-                    
-                    Dependencies = getDependencies packages @ getAkkaDependency project
-                     }    
-            <| nuspec
+                (fun p ->
+                    { p with
+                        Description = description project
+                        Authors = authors
+                        Copyright = copyright
+                        Project =  project
+                        Properties = ["Configuration", "Release"]
+                        ReleaseNotes = release.Notes |> String.concat "\n"
+                        Version = release.NugetVersion
+                        Tags = tags |> String.concat " "
+                        OutputPath = outputDir
+                        WorkingDir = workingDir
+                        AccessKey = getBuildParamOrDefault "nugetkey" ""
+                        Publish = hasBuildParam "nugetkey"
+                        
+                        Dependencies = getDependencies packages @ getAkkaDependency project })
+                nuspec
         // pack nuget (with only dll and xml files)
 
         ensureDirectory libDir
@@ -265,13 +261,12 @@ Target "Nuget" <| fun () ->
 
     DeleteDir workingDir
 
-"CleanNuget" ==> "BuildRelease" ==> "Nuget"
 
 //--------------------------------------------------------------------------------
 // Help 
 //--------------------------------------------------------------------------------
 
-Target "Help" <| fun () ->
+Target "Help" <| fun _ ->
     List.iter printfn [
       "usage:"
       "build [target]"
@@ -285,14 +280,23 @@ Target "Help" <| fun () ->
       " * Nuget nugetkey=<key> publish packages to nuget.org"
 
       " Other Targets"
-      " * Help - Display this help"
-    ]
+      " * Help - Display this help" ]
 
 //--------------------------------------------------------------------------------
 //  Target dependencies
 //--------------------------------------------------------------------------------
 
 Target "All" DoNothing
+
+// build dependencies
+"Clean" ==> "AssemblyInfo" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
+
+// tests dependencies
+"CleanTests" ==> "RunTests"
+
+// nuget dependencies
+"CleanNuget" ==> "BuildRelease" ==> "Nuget"
+
 
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
