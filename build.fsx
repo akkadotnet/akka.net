@@ -1,5 +1,6 @@
 ﻿#I @"packages\fake\tools\"
 #r "FakeLib.dll"
+#r "System.Xml.Linq"
 
 open System
 open System.IO
@@ -95,28 +96,70 @@ Target "RunTests" <| fun () ->
     <| fun p -> { p with ResultsDir = testOutput }
     <| testAssemblies
 
+
+
+module Xml =
+    open System.Xml.Linq
+
+    let load s = XDocument.Load (s:string)
+    let xname = XName.op_Implicit
+    let descendants n (d: XDocument) = d.Descendants (xname n)
+    let (?) (e:XElement) n = 
+        match e.Attribute (xname n) with
+        | null -> ""
+        | a -> a.Value
+
+module Nuget = 
+    open Xml
+
+    let getDependencies packages =
+        if fileExists packages then
+            load packages
+            |> descendants "package"
+            |> Seq.map (fun d -> d?id, d?version)
+            |> Seq.toList
+        else []
+
+    let getAkkaDependency project =
+        match project with
+        | "Akka" -> []
+        | _ -> ["Akka", release.NugetVersion]
+
+open Nuget
+
 Target "Nuget" <| fun () ->
     let nugetDir = binDir @@ "nuget"
     let workingDir = binDir @@ "build"
     let libDir = workingDir @@ @"lib\net45\"
-    mkdir nugetDir
-    mkdir libDir
-    CopyDir @"src\Akka\bin\Release\" libDir allFiles
 
-    NuGetHelper.NuGet
-    <| fun p ->
-        { p with
-            Description = description
-            Authors = authors
-            Copyright = copyright
-            Project = "Akka.net" 
-            Properties = ["Configuration", "Release"]
-            ReleaseNotes = release.Notes |> String.concat "\n"
-            Version = release.NugetVersion
-            OutputPath = nugetDir
-            WorkingDir = workingDir 
-            }    
-    <| @"src\Akka\Akka.nuspec"
+    CleanDir nugetDir
+
+    for nuspec in !! "src/**/*.nuspec" do
+        CleanDir workingDir
+
+        let project = Path.GetFileNameWithoutExtension nuspec 
+        let projectDir = Path.GetDirectoryName nuspec
+        let releaseDir = projectDir @@ @"bin\Release"
+        let packages = projectDir @@ "packages.config"
+
+        ensureDirectory libDir
+        CopyDir releaseDir libDir allFiles
+
+        NuGetHelper.NuGet
+        <| fun p ->
+            { p with
+                Description = description
+                Authors = authors
+                Copyright = copyright
+                Project =  project
+                Properties = ["Configuration", "Release"]
+                ReleaseNotes = release.Notes |> String.concat "\n"
+                Version = release.NugetVersion
+                OutputPath = nugetDir
+                WorkingDir = workingDir
+                Dependencies = getDependencies packages @ getAkkaDependency project
+                 }    
+        <| nuspec
 
 Target "All" DoNothing
 
@@ -128,6 +171,7 @@ Target "Help" <| fun () ->
       "Targets:"
       "* All  - Build all"
       "* Help - Display this help"
+      "* Nuget - Create nugets"
     ]
 
 "Clean" ==> "AssemblyInfo" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"

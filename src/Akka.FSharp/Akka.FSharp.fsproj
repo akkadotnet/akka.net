@@ -80,6 +80,7 @@
     <Compile Include="Properties\AssemblyInfo.fs" />
     <Compile Include="FsApi.fs" />
     <None Include="packages.config" />
+    <None Include="Akka.FSharp.nuspec" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.PowerPack">

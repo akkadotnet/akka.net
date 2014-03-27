@@ -72,6 +72,11 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Api", "Examples\FSha
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PingPong", "Examples\PingPong\PingPong.csproj", "{956F7D26-4505-4A26-86D0-73135BD35A93}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{10C5B1E8-15B5-4EB3-81AE-1FC054FE1305}"
+	ProjectSection(SolutionItems) = preProject
+		build.fsx = build.fsx
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug Mono|Any CPU = Debug Mono|Any CPU

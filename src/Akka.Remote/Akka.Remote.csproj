@@ -101,6 +101,7 @@
     <Compile Include="Transport\Transport.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Akka.Remote.nuspec" />
     <None Include="packages.config" />
     <None Include="protos\google\protobuf\csharp_options.proto" />
     <None Include="protos\google\protobuf\descriptor.proto" />
