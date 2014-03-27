@@ -87,6 +87,7 @@ Target "Build" <| fun () ->
     |> MSBuildRelease "" "Rebuild"
     |> ignore
 
+
 //--------------------------------------------------------------------------------
 // Copy the build output to bin directory
 //--------------------------------------------------------------------------------
@@ -199,7 +200,9 @@ Target "Nuget" <| fun () ->
         let packages = projectDir @@ "packages.config"
 
         ensureDirectory libDir
-        CopyDir releaseDir libDir allFiles
+        !! (releaseDir @@ project + ".dll")
+        ++ (releaseDir @@ project + ".xml")
+        |> CopyFiles libDir
 
         NuGetHelper.NuGet
         <| fun p ->
