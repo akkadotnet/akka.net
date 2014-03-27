@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections;
+using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Akka.Actor;
 using Akka.Configuration;
@@ -43,6 +44,45 @@ namespace Akka.Tests
         }
     }
 
+    public abstract class Message
+    {
+        public abstract object Msg { get; }
+
+        public abstract ActorRef Sender { get; }
+    }
+
+    public class RealMessage : Message
+    {
+        public RealMessage(object msg, ActorRef sender)
+        {
+            _msg = msg;
+            _sender = sender;
+        }
+
+        private object _msg;
+        public override object Msg { get { return _msg; } }
+
+        private ActorRef _sender;
+
+        public override ActorRef Sender
+        {
+            get { return _sender; }
+        }
+    }
+
+    public class NullMessage : Message
+    {
+        public override object Msg
+        {
+            get { throw new IllegalActorStateException("last receive did not dequeue a message"); }
+        }
+
+        public override ActorRef Sender
+        {
+            get { throw new IllegalActorStateException("last receive did not dequeue a message"); }
+        }
+    }
+
 
     public class AkkaSpec
     {
@@ -55,14 +95,14 @@ namespace Akka.Tests
         public virtual void Setup()
         {
             var config = ConfigurationFactory.ParseString(GetConfig());
-            queue = new BlockingCollection<object>();
-            messages = new List<object>();
+            queue = new BlockingCollection<Message>();
+            messages = new List<Message>();
             sys = ActorSystem.Create("test",config);
             testActor = sys.ActorOf(Props.Create(() => new TestActor(queue,messages)),"test");
             echoActor = sys.ActorOf(Props.Create(() => new EchoActor(testActor)), "echo");
         }
-        protected BlockingCollection<object> queue;
-        protected List<object> messages;
+        protected BlockingCollection<Message> queue;
+        protected List<Message> messages;
         protected ActorSystem sys;
         protected ActorRef testActor;
         protected ActorRef echoActor;
@@ -72,9 +112,12 @@ namespace Akka.Tests
 
         public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(1.5);
 
+        protected Message lastMessage = new NullMessage();
+        protected ActorRef lastSender { get { return lastMessage.Sender; } }
+
         protected Terminated expectTerminated(ActorRef @ref)
         {
-            var actual = queue.Take();
+            var actual = receiveOne();
 
             Assert.IsTrue(actual is Terminated);
 
@@ -83,7 +126,7 @@ namespace Akka.Tests
 
         protected object expectMsg(object expected)
         {
-            var actual = queue.Take();
+            var actual = receiveOne();
 
             global::System.Diagnostics.Debug.WriteLine("actual: " + actual);
             Assert.AreEqual(expected, actual);
@@ -92,8 +135,8 @@ namespace Akka.Tests
 
         protected object expectMsg(object expected, TimeSpan timeout)
         {
-            object t;
-            if (queue.TryTake(out t, timeout))
+            var t = receiveOne(timeout);
+            if (t != null)
             {
                 Assert.IsNotNull(t, "exected message {0} but timed out after {1}", expected, timeout);
                 Assert.AreEqual(expected, t);
@@ -104,7 +147,7 @@ namespace Akka.Tests
 
         protected object expectMsg(object expected, Func<object, object, bool> comparer)
         {
-            var actual = queue.Take();
+            var actual = receiveOne();
 
             Assert.IsTrue(comparer(expected, actual));
             return actual;
@@ -113,8 +156,8 @@ namespace Akka.Tests
 
         protected object expectMsg(object expected, Func<object, object, bool> comparer, TimeSpan timeout)
         {
-            object t;
-            if (queue.TryTake(out t, timeout))
+            var t = receiveOne(timeout);
+            if (t != null)
             {
                 Assert.IsNotNull(t, "exected message {0} but timed out after {1}", expected, timeout);
                 Assert.IsTrue(comparer(expected, t));
@@ -131,7 +174,7 @@ namespace Akka.Tests
 
         protected TMessage expectMsgType<TMessage>()
         {
-            var actual = queue.Take();
+            var actual = receiveOne();
 
             global::System.Diagnostics.Debug.WriteLine("actual: " + actual);
             Assert.IsTrue(actual is TMessage, "expected message of type {0} but received {1} instead", typeof(TMessage), actual.GetType());
@@ -140,8 +183,8 @@ namespace Akka.Tests
 
         protected TMessage expectMsgType<TMessage>(TimeSpan timeout)
         {
-            object actual;
-            if (queue.TryTake(out actual, timeout))
+            var actual = receiveOne(timeout);
+            if (actual != null)
             {
                 Assert.IsTrue(actual is TMessage, "expected message of type {0} but received {1} instead", typeof(TMessage), actual.GetType());
             }
@@ -152,8 +195,8 @@ namespace Akka.Tests
 
         protected T expectMsgPF<T>(TimeSpan duration, string hint, Func<object, T> pf)
         {
-            object t;
-            if (queue.TryTake(out t, duration))
+            var t = receiveOne(duration);
+            if (t != null)
             {
                 Assert.IsNotNull(t, "expected {0} but got null message", hint);
                 Assert.IsTrue(pf.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
@@ -169,8 +212,8 @@ namespace Akka.Tests
 
         protected void expectNoMsg(TimeSpan duration)
         {
-            object t;
-            if (queue.TryTake(out t,duration))
+            var t = receiveOne();
+            if (t != null)
             {
                 Assert.Fail("Expected no messages during the duration, instead we received {0}", t);
             }
@@ -255,6 +298,102 @@ namespace Akka.Tests
             return Within(TimeSpan.FromSeconds(0), max, function);
         }
 
+        protected object receiveOne()
+        {
+            return receiveOne(TimeSpan.MaxValue);
+        }
+
+        /// <summary>
+        /// Receive one message from the internal queue of the <see cref="TestActor"/>.
+        /// </summary>
+        /// <param name="duration">The amount of time to wait for a message before timing out and returning null</param>
+        /// <returns>the first available message from the queue, or null in the event of a timeout</returns>
+        protected object receiveOne(TimeSpan duration)
+        {
+            Message t;
+            object result = null;
+
+            //invalid time
+            if (duration.Milliseconds <= 0) return null;
+
+            if (duration == TimeSpan.MaxValue)
+            {
+                t = queue.Take();
+            }
+            else
+            {
+                queue.TryTake(out t, duration);
+            }
+
+            if (t != null)
+            {
+                t.Match()
+                    .With<RealMessage>(r =>
+                    {
+                        result = r.Msg;
+                        lastMessage = r;
+                    })
+                    .With<NullMessage>(n =>
+                    {
+                        result = null;
+                        lastMessage = n;
+                    });
+                lastWasNoMsg = false;
+            }
+
+            return result;
+        }
+
+        protected IList<T> receiveWhile<T>(TimeSpan max, Func<object, T> filter,
+            int msgs = int.MaxValue)
+        {
+            return receiveWhile(max, TimeSpan.MaxValue, filter, msgs);
+        }
+
+        protected IList<T> receiveWhile<T>(TimeSpan max, TimeSpan idle, Func<object, T> filter, int msgs = int.MaxValue)
+        {
+            var stop = DateTime.UtcNow + max;
+            Message msg = new NullMessage();
+
+            Func<IList<T>, int, IEnumerable<T>> accumulatorFunc = null;
+            accumulatorFunc = (acc, count) =>
+            {
+                if (count >= msgs) return acc.Reverse();
+                else
+                {
+                    var returnValue = acc.Reverse();
+                    receiveOne(Min((stop - DateTime.UtcNow), idle));
+                    lastMessage.Match()
+                        .With<RealMessage>(r =>
+                        {
+                            var fr = filter(r.Msg);
+                            if (fr == null) //this value was excluded by our filter and needs to be re-queued
+                            {
+                                queue.Add(lastMessage);
+                                lastMessage = msg;
+                                returnValue = acc.Reverse();
+                            }
+                            else
+                            {
+                                msg = lastMessage;
+                                returnValue = accumulatorFunc(acc.Concat(new T[] { fr }).ToList(), count + 1);
+                            }
+                           
+                        })
+                        .With<NullMessage>(n =>
+                        {
+                            lastMessage = msg;
+                            returnValue = acc.Reverse();
+                        });
+                    return returnValue;
+                }
+            };
+
+            var ret = accumulatorFunc(new List<T>(), 0);
+            lastWasNoMsg = true;
+            return ret.ToList();
+        }
+
         protected static TimeSpan Min(TimeSpan t1, TimeSpan t2)
         {
             if (t1 > t2)
@@ -265,9 +404,9 @@ namespace Akka.Tests
 
         public class TestActor : UntypedActor
         {
-            private BlockingCollection<object> queue;
-            private List<object> messages;
-            public TestActor(BlockingCollection<object> queue,List<object> messages)
+            private BlockingCollection<Message> queue;
+            private List<Message> messages;
+            public TestActor(BlockingCollection<Message> queue,List<Message> messages)
             {
                 this.queue = queue;
                 this.messages = messages;
@@ -275,8 +414,8 @@ namespace Akka.Tests
             protected override void OnReceive(object message)
             {
                 global::System.Diagnostics.Debug.WriteLine("testactor received " + message);
-                messages.Add(message);
-                queue.Add(message);
+                messages.Add(new RealMessage(message, Sender));
+                queue.Add(new RealMessage(message, Sender));
             }
         }
 
@@ -332,7 +471,7 @@ namespace Akka.Tests
             intercept();
             for(int i = 0;i<occurances;i++)
             {
-                var res = queue.Take();
+                var res =  receiveOne();
                 var error = (Error)res;
 
                 Assert.AreEqual(typeof(T), error.Cause.GetType());

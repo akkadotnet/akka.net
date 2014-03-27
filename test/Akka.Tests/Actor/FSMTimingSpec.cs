@@ -193,6 +193,21 @@ namespace Akka.Tests.Actor
         public void FSM_must_receive_and_cancel_a_repeated_timer()
         {
             fsm.Tell(State.TestRepeatedTimer, Self);
+            expectMsg(new FSMBase.Transition<State>(fsm, State.Initial, State.TestRepeatedTimer),
+                FSMSpecHelpers.TransitionStateExpector<State>());
+            var seq = receiveWhile(TimeSpan.FromSeconds(300), o =>
+            {
+                if (o is Tick) return o;
+                return null;
+            });
+
+            Assert.AreEqual(5, seq.Count);
+            Within(TimeSpan.FromMilliseconds(500), () =>
+            {
+                expectMsg(new FSMBase.Transition<State>(fsm, State.TestRepeatedTimer, State.Initial),
+                    FSMSpecHelpers.TransitionStateExpector<State>());
+                return true;
+            });
         }
 
         #region Actors
@@ -361,7 +376,7 @@ namespace Akka.Tests.Actor
                         .With<Tick>(tick =>
                         {
                             var remaining = @event.StateData;
-                            tester.Tell(new Tick());
+                            Tester.Tell(new Tick());
                             if (remaining == 0)
                             {
                                 CancelTimer("tester");

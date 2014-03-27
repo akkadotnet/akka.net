@@ -47,6 +47,15 @@ namespace Akka.Actor
     }
 
     /// <summary>
+    /// IllegalActorStateException is thrown when a core invariant in the Actor implementation has been voilated.
+    /// For instance, if you try to create an Actor that doesn't inherit from <see cref="ActorBase"/>.
+    /// </summary>
+    public class IllegalActorStateException : AkkaException
+    {
+        public IllegalActorStateException(string msg) : base(msg) { }
+    }
+
+    /// <summary>
     ///     Class DeathPactException.
     /// </summary>
     public class DeathPactException : AkkaException
