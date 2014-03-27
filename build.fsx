@@ -20,7 +20,7 @@ let authors = [
 let copyright = "Copyright © Roger Asling 2013-2014"
 let company = "Akka.net"
 let description = "Akka .NET is a port of the popular Java/Scala framework Akka to .NET."
-
+let tags = ["akka";"actors";"actor";"model";"Akka";"concurrency"]
 let configuration = "Release"
 
 let testOutput = "TestResults"
@@ -125,6 +125,14 @@ module Nuget =
         | "Akka" -> []
         | _ -> ["Akka", release.NugetVersion]
 
+
+    let description project =
+        match project with
+        | "Akka.FSharp" -> "FSharp API support for Akka."
+        | "Akka.Remote" -> "Remote actor support for Akka."
+        | "Akka.slf4net" -> "slf4net logging adapter for Akka."
+        | _ -> description
+
 open Nuget
 
 Target "Nuget" <| fun () ->
@@ -148,18 +156,24 @@ Target "Nuget" <| fun () ->
         NuGetHelper.NuGet
         <| fun p ->
             { p with
-                Description = description
+                Description = description project
                 Authors = authors
                 Copyright = copyright
                 Project =  project
                 Properties = ["Configuration", "Release"]
                 ReleaseNotes = release.Notes |> String.concat "\n"
                 Version = release.NugetVersion
+                Tags = tags |> String.concat " "
                 OutputPath = nugetDir
                 WorkingDir = workingDir
+                AccessKey = getBuildParamOrDefault "nugetkey" ""
+                Publish = hasBuildParam "nugetkey"
+
                 Dependencies = getDependencies packages @ getAkkaDependency project
                  }    
         <| nuspec
+
+    DeleteDir workingDir
 
 Target "All" DoNothing
 
@@ -168,17 +182,26 @@ Target "Help" <| fun () ->
       "usage:"
       "build [target]"
       ""
-      "Targets:"
-      "* All  - Build all"
-      "* Help - Display this help"
-      "* Nuget - Create nugets"
+      " Targets for building:"
+      " * Build"
+      " * Nuget Create nugets packages"
+      " * All  (Build all)"
+      ""
+      " Targets for publishing:"
+      " * Nuget nugetkey=<key> publish packages to nuget.org"
+
+      " Other Targets"
+      " * Help - Display this help"
     ]
 
 "Clean" ==> "AssemblyInfo" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
+
+"BuildRelease" ==> "Nuget"
 
 "CleanTests" ==> "RunTests"
 
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
+"Nuget" ==> "All"
 
 RunTargetOrDefault "Help"
