@@ -44,9 +44,9 @@ PM> Install-Package Akka.FSharp -Pre
 ````
 
 #####Contribute
-If you are interested in helping porting the actor part of Akka to .NET please let me know.
+If you are interested in helping porting Akka to .NET please take a look at [Contributing to Akka.NET](https://github.com/akkadotnet/akka.net/wiki/Contributing-to-Akka.NET).
 
-Also, please see [Building Akka .NET](https://github.com/rogeralsing/akka.net/wiki/Building-and-Distributing-Pigeon).
+Also, please see [Building Akka .NET](https://github.com/akkadotnet/akka.net/wiki/Building-and-Distributing-Pigeon).
 
 #####Contact
 Twitter: http://twitter.com/rogeralsing  (@rogeralsing)
