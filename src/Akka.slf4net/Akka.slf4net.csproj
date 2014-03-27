@@ -69,6 +69,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Akka.slf4net.nuspec" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

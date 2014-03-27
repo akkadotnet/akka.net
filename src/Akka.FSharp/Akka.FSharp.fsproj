@@ -77,8 +77,10 @@
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
   <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.fs" />
     <Compile Include="FsApi.fs" />
     <None Include="packages.config" />
+    <None Include="Akka.FSharp.nuspec" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.PowerPack">
