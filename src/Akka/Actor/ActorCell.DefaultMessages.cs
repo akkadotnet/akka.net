@@ -555,10 +555,19 @@ protected def terminate() {
             if (isTerminating)
                 return;
 
+            PreStart();
+
             if (Parent != null)
             {
                 Parent.Tell(new Supervise(Self, false));
             }
+        }
+
+        /// <summary>
+        /// Allow extra pre-start initialization in derived classes
+        /// </summary>
+        protected virtual void PreStart()
+        {
         }
 
         /// <summary>

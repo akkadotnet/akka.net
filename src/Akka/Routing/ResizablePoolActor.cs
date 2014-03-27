@@ -15,5 +15,28 @@ namespace Akka.Routing
         {
             return supervisorStrategy;
         }
+
+        protected ResizablePoolCell ResizerCell
+        {
+            get { return Context.AsInstanceOf<ResizablePoolCell>(); }
+        }
+
+        protected override void OnReceive(object message)
+        {
+            if (message is Resize)
+            {
+                if (ResizerCell != null)
+                {
+                    ResizerCell.Resize(false);
+                }
+            }
+            else
+            {
+                base.OnReceive(message);
+            }
+        }
     }
+    public class Resize : RouterManagementMesssage
+    { }
+
 }
