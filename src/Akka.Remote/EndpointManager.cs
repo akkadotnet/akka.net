@@ -14,7 +14,7 @@ namespace Akka.Remote
         private long endpointId;
         private LoggingAdapter log;
 
-        private IDictionary<Address, AkkaProtocolTransport> transportMapping =
+        private Dictionary<Address, AkkaProtocolTransport> transportMapping =
             new Dictionary<Address, AkkaProtocolTransport>();
 
         public EndpointManager(RemoteSettings settings, LoggingAdapter log)
@@ -100,14 +100,16 @@ val recipientAddress = recipientRef.path.address
         private InternalActorRef CreateEndpoint(Address recipientAddress, AkkaProtocolTransport transport,
             Address localAddressToUse, long? refuseUid)
         {
-            string escapedAddress = Uri.EscapeDataString(recipientAddress.ToString());
-            string name = string.Format("endpointWriter-{0}-{1}", escapedAddress, endpointId++);
-            InternalActorRef actor =
-                Context.ActorOf(
-                    Props.Create(
-                        () => new EndpointActor(localAddressToUse, recipientAddress, transport.Transport, settings)),
-                    name);
-            return actor;
+            throw new NotImplementedException();
+
+            //string escapedAddress = Uri.EscapeDataString(recipientAddress.ToString());
+            //string name = string.Format("endpointWriter-{0}-{1}", escapedAddress, endpointId++);
+            //InternalActorRef actor =
+            //    Context.ActorOf(
+            //        Props.Create(
+            //            () => new EndpointActor(localAddressToUse, recipientAddress, transport.Transport, settings)),
+            //        name);
+            //return actor;
         }
 
         private void CreateEndpoint()
@@ -116,22 +118,24 @@ val recipientAddress = recipientRef.path.address
 
         private ProtocolTransportAddressPair[] Listens()
         {
-            ProtocolTransportAddressPair[] transports = settings.Transports.Select(t =>
-            {
-                Type driverType = Type.GetType(t.TransportClass);
-                if (driverType == null)
-                {
-                    throw new ArgumentException("The type [" + t.TransportClass + "] could not be resolved");
-                }
-                var driver = (Transport.Transport) Activator.CreateInstance(driverType, Context.System, t.Config);
-                Transport.Transport wrappedTransport = driver; //TODO: Akka applies adapters and other yet unknown stuff
-                Address address = driver.Listen();
-                return
-                    new ProtocolTransportAddressPair(
-                        new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(t.Config)),
-                        address);
-            }).ToArray();
-            return transports;
+            throw new NotImplementedException();
+
+            //ProtocolTransportAddressPair[] transports = settings.Transports.Select(t =>
+            //{
+            //    Type driverType = Type.GetType(t.TransportClass);
+            //    if (driverType == null)
+            //    {
+            //        throw new ArgumentException("The type [" + t.TransportClass + "] could not be resolved");
+            //    }
+            //    var driver = (Transport.Transport) Activator.CreateInstance(driverType, Context.System, t.Config);
+            //    Transport.Transport wrappedTransport = driver; //TODO: Akka applies adapters and other yet unknown stuff
+            //    Address address = driver.Listen();
+            //    return
+            //        new ProtocolTransportAddressPair(
+            //            new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(t.Config)),
+            //            address);
+            //}).ToArray();
+            //return transports;
         }
     }
 }

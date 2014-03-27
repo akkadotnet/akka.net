@@ -4,6 +4,40 @@ using Akka.Event;
 namespace Akka.Actor
 {
     /// <summary>
+    /// Classes for passing status back to the sender.
+    /// Used for internal ACKing protocol, but also exposed as a utility class for user-specific ACKing if needed.
+    /// </summary>
+    public abstract class Status
+    {
+        /// <summary>
+        /// Indicates the success of some operation which has been performed
+        /// </summary>
+        public class Success : Status
+        {
+            public readonly object Status;
+
+            public Success(object status)
+            {
+                Status = status;
+            }
+        }
+        
+        /// <summary>
+        /// Indicates the failure of some operation that was requested and includes an
+        /// <see cref="Exception"/> describing the underlying cause of the problem.
+        /// </summary>
+        public class Failure : Status
+        {
+            public readonly Exception Cause;
+
+            public Failure(Exception cause)
+            {
+                Cause = cause;
+            }
+        }
+    }
+
+    /// <summary>
     ///     Interface ILogReceive
     /// </summary>
     public interface ILogReceive

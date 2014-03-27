@@ -4,34 +4,45 @@ using Akka.Event;
 
 namespace Akka.Remote.Transport
 {
-    public class TcpTransport : Transport
-    {
-        private readonly LoggingAdapter log;
-        private readonly TcpServer server;
+    //public class TcpTransport : Transport
+    //{
+    //    private readonly LoggingAdapter log;
+    //    private readonly TcpServer server;
 
-        public TcpTransport(ActorSystem system, Config config) : base(system, config)
-        {
-            string protocol = "akka." + config.GetString("transport-protocol");
-            SchemeIdentifier = protocol;
-            string host = config.GetString("hostname");
-            int port = config.GetInt("port");
-            Address = new Address(protocol, system.Name, host, port);
-            log = Logging.GetLogger(system, this);
-            server = new TcpServer(system, Address);
-        }
+    //    public TcpTransport(ActorSystem system, Config config)
+    //        : base(system, config)
+    //    {
+    //        string protocol = "akka." + config.GetString("transport-protocol");
+    //        SchemeIdentifier = protocol;
+    //        string host = config.GetString("hostname");
+    //        int port = config.GetInt("port");
+    //        Address = new Address(protocol, system.Name, host, port);
+    //        log = Logging.GetLogger(system, this);
+    //        server = new TcpServer(system, Address);
+    //    }
 
-        public Address Address { get; private set; }
+    //    public Address Address { get; private set; }
 
-        public override Address Listen()
-        {
-            server.Start();
-            log.Info("is listening @ {0}", Address);
-            return Address;
-        }
+    //    public override Address Listen()
+    //    {
+    //        server.Start();
+    //        log.Info("is listening @ {0}", Address);
+    //        return Address;
+    //    }
 
-        public override bool IsResponsibleFor(Address remote)
-        {
-            return true;
-        }
-    }
+    //    public override bool IsResponsibleFor(Address remote)
+    //    {
+    //        return true;
+    //    }
+    //}
+
+    //public class TcpAssociationHandle : AssociationHandle
+    //{
+    //    public TcpAssociationHandle(Address localAddress, Address remoteAddress, TcpTransport transport) : base(localAddress, remoteAddress)
+    //    {
+    //        Transport = transport;
+    //    }
+
+    //    public TcpTransport Transport { get; private set; }
+    //}
 }

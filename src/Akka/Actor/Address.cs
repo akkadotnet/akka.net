@@ -6,7 +6,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class Address.
     /// </summary>
-    public class Address
+    public class Address : ICloneable
     {
         /// <summary>
         ///     Pseudo address for all systems
@@ -89,6 +89,16 @@ namespace Akka.Actor
         public override int GetHashCode()
         {
             return ToString().GetHashCode();
+        }
+
+        public object Clone()
+        {
+            return new Address(Protocol, System, Host, Port);
+        }
+
+        public Address Copy(string protocol = null, string system = null, string host = null, int? port = null)
+        {
+            return new Address(protocol ?? Protocol, system ?? System, host ?? Host, port ?? Port);
         }
 
         //TODO: implement real equals checks instead
