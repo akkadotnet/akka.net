@@ -51,8 +51,7 @@ namespace PingPong
 
             foreach(var t in GetThroughputSettings())
             {
-                if (!await Benchmark(t))
-                    break;
+                await Benchmark(t);
             }
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.WriteLine("Done..");
@@ -82,6 +81,12 @@ namespace PingPong
                 //times 2 since the client and the destination both send messages
 
             var numberOfClients = Environment.ProcessorCount;
+            if (numberOfClients == 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Failed to read processor count..");
+                return false;
+            }
             long repeatsPerClient = repeat/numberOfClients;
             ActorSystem system = ActorSystem.Create("PingPong");
 

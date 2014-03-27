@@ -1,6 +1,6 @@
-# Akka .NET
+# Akka.NET
 
-Akka .NET is a port of the popular Java/Scala framework Akka to .NET.
+Akka.NET is a port of the popular Java/Scala framework Akka to .NET.
 
 Early beta, do not use in production!
 
@@ -22,6 +22,7 @@ The project was previously known as "Pigeon" before we got OK from Typesafe to u
 * [Scheduling](https://github.com/akkadotnet/akka.net/wiki/Scheduler)
 * [Performance](https://github.com/akkadotnet/akka.net/wiki/Performance)
 * [The F# API](https://github.com/akkadotnet/akka.net/wiki/FSharp-API)
+* [Finite State Machines](https://github.com/akkadotnet/akka.net/wiki/FSM)
 
 #####Not yet implemented:
 * Akka Cluster support
@@ -44,9 +45,9 @@ PM> Install-Package Akka.FSharp -Pre
 ````
 
 #####Contribute
-If you are interested in helping porting the actor part of Akka to .NET please let me know.
+If you are interested in helping porting Akka to .NET please take a look at [Contributing to Akka.NET](https://github.com/akkadotnet/akka.net/wiki/Contributing-to-Akka.NET).
 
-Also, please see [Building Akka .NET](https://github.com/rogeralsing/akka.net/wiki/Building-and-Distributing-Pigeon).
+Also, please see [Building Akka .NET](https://github.com/akkadotnet/akka.net/wiki/Building-and-Distributing-Pigeon).
 
 #####Contact
 Twitter: http://twitter.com/rogeralsing  (@rogeralsing)
