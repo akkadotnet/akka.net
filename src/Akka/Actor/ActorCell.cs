@@ -247,7 +247,7 @@ namespace Akka.Actor
         }
 
 
-        internal void Post(ActorRef sender, object message)
+        internal virtual void Post(ActorRef sender, object message)
         {
             if (Mailbox == null)
             {
