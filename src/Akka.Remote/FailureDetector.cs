@@ -1,4 +1,6 @@
-﻿namespace Akka.Remote
+﻿using System;
+
+namespace Akka.Remote
 {
     /// <summary>
     /// A failure detector must be a thread-safe, mutable construct that registers heartbeat events of a resource and
@@ -22,5 +24,18 @@
         /// This causes the <see cref="FailureDetector"/> to update its state.
         /// </summary>
         public abstract void HeartBeat();
+
+        #region Static members
+
+        public static readonly Clock DefaultClock = () => DateTime.UtcNow.Ticks/TimeSpan.TicksPerMillisecond;
+
+        #endregion
     }
+
+    /// <summary>
+    /// Abstraction of a clock that returns time in milliseconds. Can only be used to measure the elapsed time
+    /// and is not related to any other notion of system or wall-clock time.
+    /// </summary>
+    public delegate long Clock();
+
 }
