@@ -76,7 +76,9 @@
     <Compile Include="AkkaSpec.cs" />
     <Compile Include="AtomicInteger.cs" />
     <Compile Include="Comparable.cs" />
+    <Compile Include="FSMSpecHelpers.cs" />
     <Compile Include="HoconTests.cs" />
+    <Compile Include="ImplicitSenderSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Supervisor.cs" />
     <Compile Include="TestLatch.cs" />

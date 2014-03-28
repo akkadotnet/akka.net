@@ -208,7 +208,6 @@ namespace Akka.Tests
 
         public class Become
         {
-            public Receive x;
         }
         public class BecomeActor : UntypedActor
         {
@@ -231,12 +230,24 @@ namespace Akka.Tests
             {
                 if (message is Become)
                 {
-                    Context.Become(((Become)message).x);
+                    Context.Become(OnBecome);
                     testActor.Tell("ok");
                 }
                 else
                 {
                     testActor.Tell(42);
+                }
+            }
+
+            protected void OnBecome(object message)
+            {
+                if (message.ToString() == "fail")
+                {
+                    throw new Exception("buh");
+                }
+                else
+                {
+                    testActor.Tell(43);
                 }
             }
         }
@@ -248,20 +259,7 @@ namespace Akka.Tests
 
             a.Tell("hello");
             expectMsg(42);
-            a.Tell(new Become
-            {
-                x = m =>
-                {
-                    if (m.ToString() == "fail")
-                    {
-                        throw new Exception("buh");
-                    }
-                    else
-                    {
-                        testActor.Tell(43);
-                    }
-                }
-            });
+            a.Tell(new Become());
             expectMsg("ok");
             a.Tell("hello");
             expectMsg(43);

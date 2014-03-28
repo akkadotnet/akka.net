@@ -74,12 +74,12 @@
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="AkkaProtocolSettings.cs" />
-    <Compile Include="AkkaProtocolTransport.cs" />
     <Compile Include="AssociationEvent.cs" />
     <Compile Include="Endpoint.cs" />
     <Compile Include="EndpointManager.cs" />
     <Compile Include="EndpointManagerMessages.cs" />
     <Compile Include="EndpointRegistry.cs" />
+    <Compile Include="FailureDetector.cs" />
     <Compile Include="MessageSerializer.cs" />
     <Compile Include="Proto\Containerformats.cs" />
     <Compile Include="Proto\Wireformats.cs" />
@@ -96,9 +96,12 @@
     <Compile Include="Serialization\ProtobufSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteActorRefProvider.cs" />
+    <Compile Include="Transport\AkkaPduCodec.cs" />
+    <Compile Include="Transport\TransportAdapters.cs" />
     <Compile Include="Transport\AkkaProtocolTransport.cs" />
     <Compile Include="Transport\TcpTransport\TcpListener.cs" />
     <Compile Include="Transport\TcpTransport\TcpTransport.cs" />
+    <Compile Include="Transport\TestTransport.cs" />
     <Compile Include="Transport\Transport.cs" />
   </ItemGroup>
   <ItemGroup>

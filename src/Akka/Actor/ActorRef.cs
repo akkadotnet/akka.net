@@ -28,15 +28,30 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, ActorRef sender)
         {
-            unregister();
-            if (sender != NoSender)
+            if (message is SystemMessage) //we have special handling for system messages
             {
-                sender.Tell(new CompleteFuture(() => result.TrySetResult(message)));
+                SendSystemMessage(message.AsInstanceOf<SystemMessage>(), sender);
             }
             else
             {
-                result.TrySetResult(message);
+                unregister();
+                if (sender == NoSender || message is Terminated)
+                {
+                    result.TrySetResult(message);
+                }
+                else
+                {
+                    sender.Tell(new CompleteFuture(() => result.TrySetResult(message)));
+                }
             }
+            
+        }
+
+        protected void SendSystemMessage(SystemMessage message, ActorRef sender)
+        {
+            PatternMatch.Match(message)
+                .With<Terminate>(t => Stop())
+                .With<DeathWatchNotification>(d => Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated)));
         }
     }
 
@@ -118,6 +133,8 @@ namespace Akka.Actor
         public abstract void Stop();
         public abstract void Restart(Exception cause);
         public abstract void Suspend();
+
+        public bool IsTerminated { get; internal set; }
     }
 
     public abstract class MinimalActorRef : InternalActorRef

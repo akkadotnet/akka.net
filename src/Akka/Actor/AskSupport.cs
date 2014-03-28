@@ -38,7 +38,7 @@ namespace Akka.Actor
             return Ask(self, replyTo, message, provider, timeout).ContinueWith(t => (T) t.Result);
         }
 
-        private static ActorRef ResolveReplyTo()
+        internal static ActorRef ResolveReplyTo()
         {
             if (ActorCell.Current != null)
                 return ActorCell.Current.Self;
@@ -46,7 +46,7 @@ namespace Akka.Actor
             return null;
         }
 
-        private static ActorRefProvider ResolveProvider(ICanTell self)
+        internal static ActorRefProvider ResolveProvider(ICanTell self)
         {
             if (ActorCell.Current != null)
                 return ActorCell.Current.System.Provider;

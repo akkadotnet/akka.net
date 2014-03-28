@@ -25,6 +25,16 @@ namespace Akka.Configuration
             this.fallback = fallback;
         }
 
+        /// <summary>
+        /// Lets the caller know if this root node contains any values
+        /// </summary>
+        public bool IsEmpty { get { return node == null || node.IsEmpty; } }
+
+        /// <summary>
+        /// Returns the root node of this configuration section
+        /// </summary>
+        public HoconValue Root { get { return node; } }
+
         private HoconValue GetNode(string path)
         {
             string[] elements = path.Split('.');

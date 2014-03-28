@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Remoting;
 using System.Threading.Tasks;
@@ -47,7 +48,7 @@ namespace Akka.Remote
             //   this.transportMapping = akkaProtocolTransports
             //       .ToDictionary(p => p.ProtocolTransport.Transport.SchemeIdentifier,);
             IEnumerable<IGrouping<string, ProtocolTransportAddressPair>> tmp =
-                akkaProtocolTransports.GroupBy(t => t.ProtocolTransport.Transport.SchemeIdentifier);
+                akkaProtocolTransports.GroupBy(t => t.ProtocolTransport.SchemeIdentifier);
             transportMapping = new Dictionary<string, HashSet<ProtocolTransportAddressPair>>();
             foreach (var g in tmp)
             {
@@ -86,7 +87,7 @@ namespace Akka.Remote
             if (transportMapping.TryGetValue(remote.Protocol, out transports))
             {
                 ProtocolTransportAddressPair[] responsibleTransports =
-                    transports.Where(t => t.ProtocolTransport.Transport.IsResponsibleFor(remote)).ToArray();
+                    transports.Where(t => t.ProtocolTransport.IsResponsibleFor(remote)).ToArray();
                 if (responsibleTransports.Length == 0)
                 {
                     throw new RemoteTransportException(
@@ -110,6 +111,42 @@ namespace Akka.Remote
             throw new RemoteTransportException(
                 "No transport is loaded for protocol: [" + remote.Protocol + "], available protocols: [" +
                 string.Join(",", transportMapping.Keys.Select(t => t.ToString())) + "]", null);
+        }
+    }
+
+    public sealed class RegisterTransportActor
+    {
+        public RegisterTransportActor(Props props, string name)
+        {
+            Props = props;
+            Name = name;
+        }
+
+        public Props Props { get; private set; }
+
+        public string Name { get; private set; }
+    }
+
+    internal class TransportSupervisor : ActorBase
+    {
+        private readonly SupervisorStrategy _strategy = new OneForOneStrategy(-1, TimeSpan.MaxValue, exception => Directive.Restart);
+        protected override SupervisorStrategy SupervisorStrategy()
+        {
+            return _strategy;
+        }
+
+        protected override void OnReceive(object message)
+        {
+            PatternMatch.Match(message)
+                .With<RegisterTransportActor>(r =>
+                {
+                    /*
+                     * TODO: need to add support for RemoteDispatcher here.
+                     * See https://github.com/akka/akka/blob/master/akka-remote/src/main/scala/akka/remote/RemoteSettings.scala#L42 
+                     * and https://github.com/akka/akka/blob/master/akka-remote/src/main/scala/akka/remote/Remoting.scala#L95
+                     */
+                    Sender.Tell(Context.ActorOf(r.Props.WithDeploy(Deploy.Local), r.Name));
+                });
         }
     }
 }

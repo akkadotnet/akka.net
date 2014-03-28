@@ -334,6 +334,7 @@ protected def terminate() {
                 return;
 
             isTerminating = true;
+            Self.IsTerminated = true;
 
             UnwatchWatchedActors(Actor);
             foreach (InternalActorRef child in GetChildren())
@@ -375,7 +376,7 @@ protected def terminate() {
             if (System.Settings.DebugLifecycle)
                 Publish(new Debug(Self.Path.ToString(), ActorType, "stopped"));
             UnwatchWatchedActors(a);
-
+            
             Actor = null;
             Mailbox.Stop();
         }
@@ -555,10 +556,19 @@ protected def terminate() {
             if (isTerminating)
                 return;
 
+            PreStart();
+
             if (Parent != null)
             {
                 Parent.Tell(new Supervise(Self, false));
             }
+        }
+
+        /// <summary>
+        /// Allow extra pre-start initialization in derived classes
+        /// </summary>
+        protected virtual void PreStart()
+        {
         }
 
         /// <summary>

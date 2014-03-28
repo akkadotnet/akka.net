@@ -83,6 +83,9 @@
     <Compile Include="Actor\AskSpec.cs" />
     <Compile Include="Actor\DeadLettersSpec.cs" />
     <Compile Include="Actor\ActorSystemSpec.cs" />
+    <Compile Include="Actor\FSMTimingSpec.cs" />
+    <Compile Include="Actor\FSMTransitionSpec.cs" />
+    <Compile Include="Actor\PatternSpec.cs" />
     <Compile Include="Event\EventBusSpec.cs" />
     <Compile Include="Event\EventStreamSpec.cs" />
     <Compile Include="HoconTests.cs" />

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Akka.Actor;
 using Akka.Configuration;
 
 namespace Akka.Remote
@@ -20,7 +21,14 @@ namespace Akka.Remote
             Transports = (from transportName in TransportNames
                 let transportConfig = TransportConfigFor(transportName)
                 select new TransportSettings(transportConfig)).ToArray();
+            Adapters = ConfigToMap(config.GetConfig("akka.remote.adapters"));
+            BackoffPeriod = config.GetMillisDuration("akka.remote.backoff-internal", TimeSpan.FromSeconds(3));
         }
+
+        /// <summary>
+        /// Used for augmenting outbound messages with the Akka scheme
+        /// </summary>
+        public static readonly string AkkaScheme = "akka";
 
         public Config Config { get; private set; }
 
@@ -38,7 +46,10 @@ namespace Akka.Remote
 
         public IList<string> TransportNames { get; set; }
 
+        public IDictionary<string, string> Adapters { get; set; }
+
         public TransportSettings[] Transports { get; set; }
+        public TimeSpan BackoffPeriod { get; set; }
 
         private Config TransportConfigFor(string transportName)
         {
@@ -56,6 +67,12 @@ namespace Akka.Remote
             public Config Config { get; set; }
 
             public string TransportClass { get; set; }
+        }
+
+        private static IDictionary<string, string> ConfigToMap(Config cfg)
+        {
+            if(cfg.IsEmpty) return new Dictionary<string, string>();
+            return cfg.Root.GetObject().Unwrapped.ToDictionary(k => k.Key, v => v.Value.ToString());
         }
     }
 }
