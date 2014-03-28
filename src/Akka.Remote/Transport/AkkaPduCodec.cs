@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.SqlTypes;
 using Akka.Actor;
 using Google.ProtocolBuffers;
 
@@ -9,7 +10,7 @@ namespace Akka.Remote.Transport
     /// </summary>
     public class PduCodecException : AkkaException
     {
-        public PduCodecException(string msg, Exception cause) : base(msg, cause){}
+        public PduCodecException(string msg, Exception cause = null) : base(msg, cause) { }
     }
 
     /*
@@ -96,7 +97,7 @@ namespace Akka.Remote.Transport
                 .With<Payload>(p => finalBytes = ConstructPayload(p.Bytes))
                 .With<Disassociate>(d => finalBytes = ConstructDisassociate(d.Reason))
                 .With<Heartbeat>(h => finalBytes = ConstructHeartbeat());
-            
+
             return finalBytes;
         }
 
@@ -108,6 +109,8 @@ namespace Akka.Remote.Transport
 
         public abstract ByteString ConstructHeartbeat();
 
+        public abstract Message DecodeMessage(ByteString raw, RemoteActorRefProvider provider, Address localAddress);
+
         public abstract ByteString ConstructMessage(Address localAddress, ActorRef recipient,
             SerializedMessage serializedMessage, ActorRef senderOption = null);
     }
@@ -116,42 +119,140 @@ namespace Akka.Remote.Transport
     {
         public override IAkkaPdu DecodePdu(ByteString raw)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var pdu = AkkaProtocolMessage.ParseFrom(raw);
+                if(pdu.HasPayload) return new Payload(pdu.Payload);
+                else if (pdu.HasInstruction) return DecodeControlPdu(pdu.Instruction);
+                else throw new PduCodecException("Error decoding Akka PDU: Neither message nor control message were contained");
+            }
+            catch (InvalidProtocolBufferException ex)
+            {
+                throw new PduCodecException("Decoding PDU failed", ex);
+            }
         }
 
         public override ByteString ConstructPayload(ByteString payload)
         {
-            throw new NotImplementedException();
+            return AkkaProtocolMessage.CreateBuilder().SetPayload(payload).Build().ToByteString();
         }
 
         public override ByteString ConstructAssociate(HandshakeInfo info)
         {
-            throw new NotImplementedException();
-            //var handshakeInfo = AkkaHandshakeInfo.CreateBuilder().SetOrigin()
+            var handshakeInfo = AkkaHandshakeInfo.CreateBuilder()
+                .SetOrigin(SerializeAddress(info.Origin))
+                .SetUid((ulong)info.Uid);
+
+            return ConstructControlMessagePdu(CommandType.ASSOCIATE, handshakeInfo);
         }
 
         public override ByteString ConstructDisassociate(DisassociateInfo reason)
         {
-            throw new NotImplementedException();
+            switch (reason)
+            {
+                case DisassociateInfo.Quarantined:
+                    return DISASSOCIATE_QUARANTINED;
+                case DisassociateInfo.Shutdown:
+                    return DISASSOCIATE_SHUTTING_DOWN;
+                case DisassociateInfo.Unknown:
+                default:
+                    return DISASSOCIATE;
+            }
         }
 
         public override ByteString ConstructHeartbeat()
         {
-            throw new NotImplementedException();
+            return ConstructControlMessagePdu(CommandType.HEARTBEAT);
+        }
+
+        public override Message DecodeMessage(ByteString raw, RemoteActorRefProvider provider, Address localAddress)
+        {
+            var envelopeContainer = RemoteEnvelope.ParseFrom(raw);
+            if (envelopeContainer != null)
+            {
+                var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
+                var recipientAddress = ActorPath.Parse(envelopeContainer.Recipient.Path).Address;
+                var serializedMessage = envelopeContainer.Message;
+                ActorRef senderOption = null;
+                if (envelopeContainer.HasSender)
+                {
+                    senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
+                }
+                return new Message(recipient, recipientAddress, serializedMessage, senderOption);
+            }
+
+            return null;
         }
 
         public override ByteString ConstructMessage(Address localAddress, ActorRef recipient, SerializedMessage serializedMessage,
             ActorRef senderOption = null)
         {
-            var envelopeBuilder = RemoteEnvelope.CreateBuilder();
-            envelopeBuilder.SetRecipient(SerializeActorRef(recipient.Path.Address, recipient));
-            if(senderOption != null){ envelopeBuilder.SetSender(SerializeActorRef(localAddress, senderOption)); }
-            envelopeBuilder.SetMessage(serializedMessage);
+            var envelopeBuilder = RemoteEnvelope.CreateBuilder().SetRecipient(SerializeActorRef(recipient.Path.Address, recipient));
+            if (senderOption != null) { envelopeBuilder = envelopeBuilder.SetSender(SerializeActorRef(localAddress, senderOption)); }
+            envelopeBuilder = envelopeBuilder.SetMessage(serializedMessage);
 
             return envelopeBuilder.Build().ToByteString();
         }
 
         #region Internal methods
+        private IAkkaPdu DecodeControlPdu(AkkaControlMessage controlPdu)
+        {
+            switch (controlPdu.CommandType)
+            {
+                case CommandType.ASSOCIATE:
+                    if (controlPdu.HasHandshakeInfo)
+                    {
+                        var handshakeInfo = controlPdu.HandshakeInfo;
+                        return new Associate(new HandshakeInfo(DecodeAddress(handshakeInfo.Origin), (int)handshakeInfo.Uid));
+                    }
+                    break;
+                case CommandType.DISASSOCIATE:
+                    return new Disassociate(DisassociateInfo.Unknown);
+                case CommandType.DISASSOCIATE_QUARANTINED:
+                    return new Disassociate(DisassociateInfo.Quarantined);
+                case CommandType.DISASSOCIATE_SHUTTING_DOWN:
+                    return new Disassociate(DisassociateInfo.Shutdown);
+                case CommandType.HEARTBEAT:
+                    return new Heartbeat();
+            }
+
+            throw new PduCodecException(string.Format("Decoding of control PDU failed, invalid format, unexpected {0}", controlPdu));
+        }
+
+
+
+        private ByteString DISASSOCIATE
+        {
+            get { return ConstructControlMessagePdu(CommandType.DISASSOCIATE); }
+        }
+
+        private ByteString DISASSOCIATE_SHUTTING_DOWN
+        {
+            get { return ConstructControlMessagePdu(CommandType.DISASSOCIATE_SHUTTING_DOWN); }
+        }
+
+        private ByteString DISASSOCIATE_QUARANTINED
+        {
+            get { return ConstructControlMessagePdu(CommandType.DISASSOCIATE_QUARANTINED); }
+        }
+
+        private ByteString ConstructControlMessagePdu(CommandType code, AkkaHandshakeInfo.Builder handshakeInfo = null)
+        {
+            var controlMessageBuilder = AkkaControlMessage.CreateBuilder()
+                .SetCommandType(code);
+            if (handshakeInfo != null)
+            {
+                controlMessageBuilder = controlMessageBuilder.SetHandshakeInfo(handshakeInfo);
+            }
+
+            return
+                AkkaProtocolMessage.CreateBuilder().SetInstruction(controlMessageBuilder.Build()).Build().ToByteString();
+        }
+
+        private Address DecodeAddress(AddressData origin)
+        {
+            return new Address(origin.Protocol, origin.System, origin.Hostname, (int)origin.Port);
+        }
 
         private ActorRefData SerializeActorRef(Address defaultAddress, ActorRef actorRef)
         {
@@ -167,7 +268,7 @@ namespace Akka.Remote.Transport
             if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue) throw new ArgumentException(string.Format("Address {0} could not be serialized: host or port missing", address));
             return AddressData.CreateBuilder()
                 .SetHostname(address.Host)
-                .SetPort((uint) address.Port.Value)
+                .SetPort((uint)address.Port.Value)
                 .SetSystem(address.System)
                 .SetProtocol(address.Protocol)
                 .Build();

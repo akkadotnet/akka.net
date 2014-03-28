@@ -194,7 +194,9 @@ namespace Akka.Remote.Transport
             return Task.Run(() =>
             {
                 throw new ArgumentException("No association present");
+#pragma warning disable 162
                 return true;
+#pragma warning restore 162
             });
         }
 
@@ -332,7 +334,9 @@ namespace Akka.Remote.Transport
             Push((x) => Task.Run(() =>
             {
                 throw e;
+#pragma warning disable 162
                 return default(TOut);
+#pragma warning restore 162
             }));
         }
 
