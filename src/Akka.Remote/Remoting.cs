@@ -34,7 +34,8 @@ namespace Akka.Remote
 
 
             Task<object> task = EndpointManager.Ask(new Listen());
-            if (!task.Wait(30000))
+            //TODO: Aaron: Endpointmanager does not reply here //Roger
+            if (!task.Wait(3000))
             {
                 throw new RemoteTransportException("Transport loading timed out", null);
             }
