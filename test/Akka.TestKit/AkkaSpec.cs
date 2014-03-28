@@ -192,6 +192,15 @@ namespace Akka.Tests
             return (TMessage)actual;
         }
 
+        /// <summary>
+        /// Uses an epsilon value to compare between floating point numbers.
+        /// Uses a default epsilon value of 0.001d
+        /// </summary>
+        protected void ShouldBe(double actual, double expected, double epsilon = 0.001d)
+        {
+            Assert.IsTrue(Math.Abs(actual - expected) <= epsilon, "Expected {0} but received {1}", expected, actual);
+        }
+
         protected T expectMsgPF<T>(TimeSpan duration, string hint, Func<object, T> pf)
         {
             object t;
