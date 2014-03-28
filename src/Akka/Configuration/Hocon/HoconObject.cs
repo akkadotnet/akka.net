@@ -31,7 +31,13 @@ namespace Akka.Configuration.Hocon
 
         public IDictionary<string, object> Unwrapped
         {
-            get { return _children.ToDictionary(k => k.Key, v => (object) v.Value.GetObject().Unwrapped); }
+            get { return _children.ToDictionary(k => k.Key, v =>
+            {
+                var obj = v.Value.GetObject();
+                if (obj != null)
+                    return (object)obj.Unwrapped;
+                return null;
+            }); }
         }
 
         public IList<HoconValue> GetArray()
