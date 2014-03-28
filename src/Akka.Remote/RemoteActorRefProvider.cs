@@ -156,6 +156,19 @@ namespace Akka.Remote
             return cell.Self;
         }
 
+        /// <summary>
+        /// INTERNAL API.
+        /// 
+        /// Called in deserialization of incoming remote messages where the correct local address is known.
+        /// </summary>
+        internal InternalActorRef ResolveActorRefWithLocalAddress(string actorPath, Address localAddress)
+        {
+            var path = ActorPath.Parse(actorPath);
+            //the actor's local address was already included in the ActorPath
+            if (HasAddress(path.Address)) return (InternalActorRef)ResolveActorRef(actorPath);
+            else return new RemoteActorRef(Transport, localAddress, new RootActorPath(path.Address) / path.Elements, ActorRef.Nobody, Props.None, Deploy.None);
+        }
+
         public override ActorRef ResolveActorRef(ActorPath actorPath)
         {
             if (HasAddress(actorPath.Address))
