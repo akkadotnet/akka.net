@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data.SqlTypes;
 using Akka.Actor;
 using Google.ProtocolBuffers;
 
@@ -73,7 +72,7 @@ namespace Akka.Remote.Transport
     /// 
     /// A Codec that is able to convert Akka PDUs from and to <see cref="ByteString"/>
     /// </summary>
-    public abstract class AkkaPduCodecBase
+    public abstract class AkkaPduCodec
     {
         /// <summary>
         /// Return an <see cref="IAkkaPdu"/> instance that represents a PDU contained in the raw
@@ -115,7 +114,7 @@ namespace Akka.Remote.Transport
             SerializedMessage serializedMessage, ActorRef senderOption = null);
     }
 
-    public class AkkaPduProtobuffCodec : AkkaPduCodecBase
+    public class AkkaPduProtobuffCodec : AkkaPduCodec
     {
         public override IAkkaPdu DecodePdu(ByteString raw)
         {
