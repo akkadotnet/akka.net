@@ -81,6 +81,7 @@
     <Compile Include="EndpointManagerMessages.cs" />
     <Compile Include="EndpointRegistry.cs" />
     <Compile Include="FailureDetector.cs" />
+    <Compile Include="FailureDetectorRegistry.cs" />
     <Compile Include="MessageSerializer.cs" />
     <Compile Include="PhiAccrualFailureDetector.cs" />
     <Compile Include="Proto\Containerformats.cs" />

@@ -1,4 +1,6 @@
 ﻿using System;
+using Akka.Configuration;
+using Akka.Event;
 
 namespace Akka.Remote
 {
