@@ -82,6 +82,7 @@
     <Compile Include="EndpointRegistry.cs" />
     <Compile Include="FailureDetector.cs" />
     <Compile Include="MessageSerializer.cs" />
+    <Compile Include="PhiAccrualFailureDetector.cs" />
     <Compile Include="Proto\Containerformats.cs" />
     <Compile Include="Proto\Wireformats.cs" />
     <Compile Include="RemoteActorRef.cs" />

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
@@ -60,6 +59,7 @@ namespace Akka.Remote
             _minStdDeviation = minStdDeviation;
             _acceptableHeartbeatPause = acceptableHeartbeatPause;
             _firstHeartbeatEstimate = firstHeartbeatEstimate;
+            state = new State(FirstHeartBeat, null);
         }
 
         /// <summary>
@@ -75,12 +75,12 @@ namespace Akka.Remote
             _minStdDeviation = config.GetMillisDuration("min-std-deviation");
             _acceptableHeartbeatPause = config.GetMillisDuration("acceptable-heartbeat-pause");
             _firstHeartbeatEstimate = config.GetMillisDuration("heartbeat-interval");
+            state = new State(FirstHeartBeat, null);
         }
 
         protected PhiAccrualFailureDetector(Clock clock)
         {
             _clock = clock ?? DefaultClock;
-            state = new State(FirstHeartBeat, null);
         }
 
         /// <summary>
@@ -158,12 +158,12 @@ namespace Akka.Remote
             return Phi(timestamp) < _threshold;
         }
 
-        private double CurrentPhi
+        internal double CurrentPhi
         {
             get { return Phi(_clock()); }
         }
 
-        private double Phi(long timestamp)
+        internal double Phi(long timestamp)
         {
             var oldState = state;
             var oldTimestamp = oldState.TimeStamp;
@@ -189,7 +189,7 @@ namespace Akka.Remote
         ///  Error is 0.00014 at +- 3.16
         /// The calculated value is equivalent to -log10(1 - CDF(y))
         /// </summary>
-        private double Phi(long timeDiff, double mean, double stdDeviation)
+        internal double Phi(long timeDiff, double mean, double stdDeviation)
         {
             var y = (timeDiff - mean)/stdDeviation;
             var e = Math.Exp(-y*(1.5976 + 0.070566*y*y));
@@ -206,7 +206,7 @@ namespace Akka.Remote
 
         private long AcceptableHeartbeatPauseMillis
         {
-            get { return _acceptableHeartbeatPause.Milliseconds;s }
+            get { return _acceptableHeartbeatPause.Milliseconds; }
         }
 
         private double EnsureValidStdDeviation(double stdDeviation)
