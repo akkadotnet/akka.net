@@ -273,7 +273,7 @@ namespace Akka.Remote.Transport
         }
     }
 
-    public abstract class ActorTransportAdapterManager : ActorBase
+    internal abstract class ActorTransportAdapterManager : ActorBase
     {
         /// <summary>
         /// Lightweight Stash implementation

@@ -144,6 +144,7 @@
     <Compile Include="Tools\ConcurrentSet.cs" />
     <Compile Include="Tools\ExpressionExtensions.cs" />
     <Compile Include="Tools\Pattern.cs" />
+    <Compile Include="Tools\ThreadLocalRandom.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Actor\ActorBase.SupervisorStrategy.cs" />

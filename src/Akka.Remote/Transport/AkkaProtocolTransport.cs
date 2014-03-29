@@ -55,6 +55,29 @@ namespace Akka.Remote.Transport
             get { return _schemeAugmenter; }
         }
 
+        private string _managerName;
+        protected string ManagerName
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_managerName))
+                    _managerName = string.Format("akkaprotocolmanager.{0}.{1}", WrappedTransport.SchemeIdentifier,
+                        UniqueId.GetAndIncrement());
+                return _managerName;
+            }
+        }
+
+        private Props _managerProps;
+        protected Props ManagerProps
+        {
+            get {
+                return _managerProps ??
+                       (_managerProps =
+                           Props.Create(() => new AkkaProtocolManager(WrappedTransport, Settings))
+                               .WithDeploy(Deploy.Local));
+            }
+        }
+
         public override Task<bool> ManagementCommand(object message)
         {
             return WrappedTransport.ManagementCommand(message);
@@ -63,6 +86,89 @@ namespace Akka.Remote.Transport
         #region Static properties
 
         public static AtomicCounter UniqueId = new AtomicCounter(0);
+
+        #endregion
+    }
+
+    internal class AkkaProtocolManager : ActorTransportAdapterManager
+    {
+        public AkkaProtocolManager(Transport wrappedTransport, AkkaProtocolSettings settings)
+        {
+            _wrappedTransport = wrappedTransport;
+            _settings = settings;
+        }
+
+        private Transport _wrappedTransport;
+
+        private AkkaProtocolSettings _settings;
+
+        /// <summary>
+        /// The <see cref="AkkaProtocolTransport"/> does not handle recovery of associations, this task is implemented
+        /// in the remoting itself. Hence the strategy <see cref="Directive.Stop"/>.
+        /// </summary>
+        private readonly SupervisorStrategy _supervisor = new OneForOneStrategy(exception => Directive.Stop);
+        protected override SupervisorStrategy SupervisorStrategy()
+        {
+            return _supervisor;
+        }
+
+        #region ActorBase / ActorTransportAdapterManager overrides
+
+        protected override void Ready(object message)
+        {
+            message.Match()
+                .With<InboundAssociation>(ia => //need to create an Inbound ProtocolStateActor
+                {
+                    var handle = ia.Association;
+                    var stateActorLocalAddress = localAddress;
+                    var stateActorAssociationListener = associationListener;
+                    var stateActorSettings = _settings;
+                    var failureDetector = CreateTransportFailureDetector();
+                    Context.ActorOf(ProtocolStateActor.InboundProps(
+                        new HandshakeInfo(stateActorLocalAddress, Context.System.AddressUid()), 
+                        handle,
+                        stateActorAssociationListener,
+                        stateActorSettings,
+                        new AkkaPduProtobuffCodec(),
+                        failureDetector), ActorNameFor(handle.RemoteAddress));
+                })
+                .With<AssociateUnderlying>(au => CreateOutboundStateActor(au.RemoteAddress, au.StatusPromise, null)) //need to create an Outbond ProtocolStateActor
+                .With<AssociateUnderlyingRefuseUid>(au => CreateOutboundStateActor(au.RemoteAddress, au.StatusCompletionSource, au.RefuseUid));
+        }
+
+        #endregion
+
+        #region Actor creation methods
+
+        private string ActorNameFor(Address remoteAddress)
+        {
+            return string.Format("akkaProtocol-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress), nextId());
+        }
+
+        private void CreateOutboundStateActor(Address remoteAddress,
+            TaskCompletionSource<AssociationHandle> statusPromise, int? refuseUid)
+        {
+            var stateActorLocalAddress = localAddress;
+            var stateActorSettings = _settings;
+            var stateActorWrappedTransport = _wrappedTransport;
+            var failureDetector = CreateTransportFailureDetector();
+
+            //TODO: eventually this needs to be configured with the RemoteDispatcher via https://github.com/akka/akka/blob/f1edf789798dc02dfa37d3301d7712736c964ab1/akka-remote/src/main/scala/akka/remote/transport/AkkaProtocolTransport.scala#L156
+            Context.ActorOf(ProtocolStateActor.OutboundProps(
+                new HandshakeInfo(stateActorLocalAddress, Context.System.AddressUid()),
+                remoteAddress,
+                statusPromise,
+                stateActorWrappedTransport,
+                stateActorSettings,
+                new AkkaPduProtobuffCodec(), failureDetector, refuseUid),
+                ActorNameFor(remoteAddress));
+        }
+
+        private FailureDetector CreateTransportFailureDetector()
+        {
+            return FailureDetectorLoader.LoadFailureDetector(Context, _settings.TransportFailureDetectorImplementationClass,
+                _settings.TransportFailureDetectorConfig);
+        }
 
         #endregion
     }

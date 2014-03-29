@@ -2,13 +2,30 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Remoting;
+using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Remote.Transport;
 
 namespace Akka.Remote
 {
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal static class AddressUrlEncoder
+    {
+        /// <summary>
+        /// URL-encodes an actor <see cref="Address"/>. Used when generating the names
+        /// of some system remote actors.
+        /// </summary>
+        public static string Encode(Address address)
+        {
+            return HttpUtility.UrlEncode(address.ToString(), Encoding.UTF8);
+        }
+    }
+
     public class Remoting : RemoteTransport
     {
         public static readonly string EndpointManagerName = "endpointManager";
