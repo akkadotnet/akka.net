@@ -114,6 +114,11 @@ namespace Akka.Remote
             return null;
         }
 
+        public bool HasWriteableEndpointFor(Address address)
+        {
+            return WritableEndpointWithPolicyFor(address) != null;
+        }
+
         /// <summary>
         /// Marking an endpoint as failed means that we will not try to connect to the remote system within
         /// the gated period but it is ok for the remote system to try to connect with us (inbound-only.)

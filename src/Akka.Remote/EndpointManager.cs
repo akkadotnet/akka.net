@@ -1,13 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Remote.Transport;
 
 namespace Akka.Remote
 {
-    public class EndpointManager : UntypedActor
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal class EndpointManager : UntypedActor
     {
 
         #region Policy definitions
@@ -63,19 +68,203 @@ namespace Akka.Remote
 
         #endregion
 
-        private readonly EndpointRegistry endpoints = new EndpointRegistry();
-        private readonly RemoteSettings settings;
-        private long endpointId;
-        private LoggingAdapter log;
+        #region RemotingCommands and operations
 
-        private Dictionary<Address, AkkaProtocolTransport> transportMapping =
-            new Dictionary<Address, AkkaProtocolTransport>();
+        /// <summary>
+        /// Messages sent between <see cref="Remoting"/> and <see cref="EndpointManager"/>
+        /// </summary>
+        public abstract class RemotingCommand : NoSerializationVerificationNeeded { }
+
+        public sealed class Listen : RemotingCommand
+        {
+            public Listen(TaskCompletionSource<IList<ProtocolTransportAddressPair>> addressesPromise)
+            {
+                AddressesPromise = addressesPromise;
+            }
+
+            public TaskCompletionSource<IList<ProtocolTransportAddressPair>> AddressesPromise { get; private set; }
+        }
+
+        public sealed class StartupFinished : RemotingCommand { }
+
+        public sealed class ShutdownAndFlush : RemotingCommand { }
+
+        public sealed class Send : RemotingCommand
+        {
+            public Send(object message, RemoteActorRef recipient, ActorRef senderOption = null)
+            {
+                Recipient = recipient;
+                SenderOption = senderOption;
+                Message = message;
+            }
+
+            public object Message { get; private set; }
+
+            /// <summary>
+            /// Can be null!
+            /// </summary>
+            public ActorRef SenderOption { get; private set; }
+
+            public RemoteActorRef Recipient { get; private set; }
+
+            public override string ToString()
+            {
+                return string.Format("Remote message {0} -> {1}", SenderOption, Recipient);
+            }
+        }
+
+        public sealed class Quarantine : RemotingCommand
+        {
+            public Quarantine(Address remoteAddress, int? uid)
+            {
+                Uid = uid;
+                RemoteAddress = remoteAddress;
+            }
+
+            public Address RemoteAddress { get; private set; }
+
+            public int? Uid { get; private set; }
+        }
+
+        public sealed class ManagementCommand : RemotingCommand
+        {
+            public ManagementCommand(object cmd)
+            {
+                Cmd = cmd;
+            }
+
+            public object Cmd { get; private set; }
+        }
+
+        public sealed class ManagementCommandAck
+        {
+            public ManagementCommandAck(bool status)
+            {
+                Status = status;
+            }
+
+            public bool Status { get; private set; }
+        }
+
+        #endregion
+
+        #region Messages internal to EndpointManager
+
+        public sealed class Prune : NoSerializationVerificationNeeded { }
+
+        public sealed class ListensResult : NoSerializationVerificationNeeded
+        {
+            public ListensResult(TaskCompletionSource<IList<ProtocolTransportAddressPair>> addressesPromise, IList<Tuple<AkkaProtocolTransport, Address, TaskCompletionSource<IAssociationEventListener>>> results)
+            {
+                Results = results;
+                AddressesPromise = addressesPromise;
+            }
+
+            public TaskCompletionSource<IList<ProtocolTransportAddressPair>> AddressesPromise { get; private set; }
+
+            public IList<Tuple<AkkaProtocolTransport, Address, TaskCompletionSource<IAssociationEventListener>>> Results
+            { get; private set; }
+        }
+
+        public sealed class ListensFailure : NoSerializationVerificationNeeded
+        {
+            public ListensFailure(TaskCompletionSource<IList<ProtocolTransportAddressPair>> addressesPromise, Exception cause)
+            {
+                Cause = cause;
+                AddressesPromise = addressesPromise;
+            }
+
+            public TaskCompletionSource<IList<ProtocolTransportAddressPair>> AddressesPromise { get; private set; }
+
+            public Exception Cause { get; private set; }
+        }
+
+        /// <summary>
+        /// Helper class to store address pairs
+        /// </summary>
+        public sealed class Link
+        {
+            public Link(Address localAddress, Address remoteAddress)
+            {
+                RemoteAddress = remoteAddress;
+                LocalAddress = localAddress;
+            }
+
+            public Address LocalAddress { get; private set; }
+
+            public Address RemoteAddress { get; private set; }
+        }
+
+        #endregion
 
         public EndpointManager(RemoteSettings settings, LoggingAdapter log)
         {
             this.settings = settings;
             this.log = log;
+            eventPublisher = new EventPublisher(Context.System, log, Logging.LogLevelFor(settings.RemoteLifecycleEventsLogLevel));
         }
+
+        /// <summary>
+        /// Mapping between addresses and endpoint actors. If passive connections are turned off, incoming connections
+        /// will not be part of this map!
+        /// </summary>
+        private readonly EndpointRegistry endpoints = new EndpointRegistry();
+        private readonly RemoteSettings settings;
+        private long endpointId;
+        private LoggingAdapter log;
+        private EventPublisher eventPublisher;
+
+        /// <summary>
+        /// Mapping between transports and the local addresses they listen to
+        /// </summary>
+        private Dictionary<Address, AkkaProtocolTransport> transportMapping =
+            new Dictionary<Address, AkkaProtocolTransport>();
+
+        private bool RetryGateEnabled
+        {
+            get { return settings.RetryGateClosedFor > TimeSpan.Zero; }
+        }
+
+        private TimeSpan PruneInterval
+        {
+            get
+            {
+                //PruneInterval = 2x the RetryGateClosedFor value, if available
+                if (RetryGateEnabled) return settings.RetryGateClosedFor.Add(settings.RetryGateClosedFor);
+                else return TimeSpan.Zero;
+            }
+        }
+
+        private CancellationTokenSource _pruneCancellationTokenSource;
+        private Task _pruneTimeCancellableImpl;
+
+        /// <summary>
+        /// Cancellable task for terminating <see cref="Prune"/> operations.
+        /// </summary>
+        private Task PruneTimerCancelleable
+        {
+            get
+            {
+                if (RetryGateEnabled && _pruneTimeCancellableImpl == null)
+                {
+                    _pruneCancellationTokenSource = new CancellationTokenSource();
+                    return (_pruneTimeCancellableImpl = Context.System.Scheduler.Schedule(PruneInterval, PruneInterval, Self, new Prune(),
+                        _pruneCancellationTokenSource.Token));
+                }
+                return null;
+            }
+        }
+
+        private Dictionary<ActorRef, AkkaProtocolHandle> pendingReadHandoffs = new Dictionary<ActorRef, AkkaProtocolHandle>();
+        private Dictionary<ActorRef, List<InboundAssociation>> stashedInbound = new Dictionary<ActorRef, List<InboundAssociation>>();
+
+        protected override SupervisorStrategy SupervisorStrategy()
+        {
+            //TODO: need to implement the real EndointManager supervision strategy here once some of the EndpointException subclasses have been implemented
+            return base.SupervisorStrategy();
+        }
+
+        
 
         protected override void OnReceive(object message)
         {
@@ -151,8 +340,27 @@ val recipientAddress = recipientRef.path.address
                 .Default(Unhandled);
         }
 
-        private InternalActorRef CreateEndpoint(Address recipientAddress, AkkaProtocolTransport transport,
-            Address localAddressToUse, long? refuseUid)
+        private void CreateAndRegistrEndpoint(AkkaProtocolHandle handle, int? refuseId)
+        {
+            var writing = settings.UsePassiveConnections && !endpoints.HasWriteableEndpointFor(handle.RemoteAddress);
+            eventPublisher.NotifyListeners(new AssociatedEvent(handle.LocalAddress, handle.RemoteAddress, true));
+            var endpoint = CreateEndpoint(
+                handle.RemoteAddress,
+                handle.LocalAddress,
+                transportMapping[handle.LocalAddress],
+                settings,
+                handle,
+                writing,
+                refuseId);
+            endpoints.RegisterReadOnlyEndpoint(handle.RemoteAddress, endpoint);
+        }
+
+        private InternalActorRef CreateEndpoint(Address recipientAddress, Address localAddressToUse,
+            AkkaProtocolTransport transport, 
+            RemoteSettings endpointSettings,
+            AkkaProtocolHandle handleOption,
+            bool writing,
+            int? refuseUid)
         {
             throw new NotImplementedException();
 
