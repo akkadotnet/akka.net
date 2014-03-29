@@ -4,6 +4,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Tools;
 
 namespace Akka.Remote
 {
@@ -92,7 +93,7 @@ namespace Akka.Remote
             get
             {
                 //bootstrap with 2 entries with rather high standard deviation
-                var mean = _firstHeartbeatEstimate.Milliseconds;
+                var mean = (long)_firstHeartbeatEstimate.TotalMilliseconds;
                 var stdDeviation = mean / 4;
                 return HeartbeatHistory.Apply(_maxSampleSize) + (mean - stdDeviation) + (mean + stdDeviation);
             }
@@ -114,7 +115,13 @@ namespace Akka.Remote
             public long? TimeStamp { get; private set; }
         }
 
-        private volatile State state;
+        private AtomicReference<State> _state;
+
+        private State state
+        {
+            get { return _state; }
+            set { _state = value; }
+        }
 
         public override bool IsAvailable
         {
@@ -148,7 +155,8 @@ namespace Akka.Remote
             }
 
             var newState = new State(newHistory, timestamp);
-            state = newState;
+            //if we won the race then update else try again
+            if(!_state.CompareAndSet(oldState, newState)) HeartBeat();
         }
 
         #region Internal methods
@@ -201,12 +209,12 @@ namespace Akka.Remote
 
         private long MinStdDeviationMillis
         {
-            get { return _minStdDeviation.Milliseconds; }
+            get { return (long)_minStdDeviation.TotalMilliseconds; }
         }
 
         private long AcceptableHeartbeatPauseMillis
         {
-            get { return _acceptableHeartbeatPause.Milliseconds; }
+            get { return (long)_acceptableHeartbeatPause.TotalMilliseconds; }
         }
 
         private double EnsureValidStdDeviation(double stdDeviation)

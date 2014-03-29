@@ -76,11 +76,13 @@
     </Compile>
     <Compile Include="AkkaProtocolSettings.cs" />
     <Compile Include="AssociationEvent.cs" />
+    <Compile Include="DefaultFailureDetectorRegistry.cs" />
     <Compile Include="Endpoint.cs" />
     <Compile Include="EndpointManager.cs" />
     <Compile Include="EndpointManagerMessages.cs" />
     <Compile Include="EndpointRegistry.cs" />
     <Compile Include="FailureDetector.cs" />
+    <Compile Include="FailureDetectorRegistry.cs" />
     <Compile Include="MessageSerializer.cs" />
     <Compile Include="PhiAccrualFailureDetector.cs" />
     <Compile Include="Proto\Containerformats.cs" />

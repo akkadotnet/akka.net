@@ -9,25 +9,43 @@ namespace Akka.Remote.Tests
     [TestClass]
     public class AccrualFailureDetectorSpec : AkkaSpec
     {
+        public static IEnumerable<Tuple<T, T>> Slide<T>(IEnumerable<T> values)
+        {
+            using (var iterator = values.GetEnumerator())
+            {
+                while (iterator.MoveNext())
+                {
+                    var first = iterator.Current;
+                    var second = iterator.MoveNext() ? iterator.Current : default(T);
+                    yield return Tuple.Create(first, second);
+                }
+            }
+        }
+
         [TestMethod]
         public void AccrualFailureDetector_must_use_good_enough_cumulative_distribution_function()
         {
-            var fd = CreateFailureDetector();
-            ShouldBe(cdf(fd.Phi(0, 0, 10)), 0.5d);
-            ShouldBe(cdf(fd.Phi(6L, 0, 10)), 0.7257d);
-            ShouldBe(cdf(fd.Phi(15L, 0, 10)), 0.9332d);
-            ShouldBe(cdf(fd.Phi(20L, 0, 10)), 0.97725d);
-            ShouldBe(cdf(fd.Phi(25L, 0, 10)), 0.99379d);
-            ShouldBe(cdf(fd.Phi(35L, 0, 10)), 0.99977d);
-            ShouldBe(cdf(fd.Phi(40L, 0, 10)), 0.99997d, 0.0001D);
+            var fd = FailureDetectorSpecHelpers.CreateFailureDetector();
+            ShouldBe(FailureDetectorSpecHelpers.cdf(fd.Phi(0, 0, 10)), 0.5d);
+            ShouldBe(FailureDetectorSpecHelpers.cdf(fd.Phi(6L, 0, 10)), 0.7257d);
+            ShouldBe(FailureDetectorSpecHelpers.cdf(fd.Phi(15L, 0, 10)), 0.9332d);
+            ShouldBe(FailureDetectorSpecHelpers.cdf(fd.Phi(20L, 0, 10)), 0.97725d);
+            ShouldBe(FailureDetectorSpecHelpers.cdf(fd.Phi(25L, 0, 10)), 0.99379d);
+            ShouldBe(FailureDetectorSpecHelpers.cdf(fd.Phi(35L, 0, 10)), 0.99977d);
+            ShouldBe(FailureDetectorSpecHelpers.cdf(fd.Phi(40L, 0, 10)), 0.99997d, 0.0001D);
 
-            ShouldBe(cdf(fd.Phi(22, 20.0, 3)), 0.7475d);
+            foreach (var pair in Slide(Enumerable.Range(0, 40)))
+            {
+                Assert.IsTrue(fd.Phi(pair.Item1, 0, 10) < fd.Phi(pair.Item2, 0, 10));
+            }
+
+            ShouldBe(FailureDetectorSpecHelpers.cdf(fd.Phi(22, 20.0, 3)), 0.7475d);
         }
 
         [TestMethod]
         public void AccrualFailureDetector_must_handle_outliers_without_losing_precision_or_hitting_exception()
         {
-            var fd = CreateFailureDetector();
+            var fd = FailureDetectorSpecHelpers.CreateFailureDetector();
             ShouldBe(fd.Phi(10L, 0, 1), 38.0D, 1.0D);
             ShouldBe(fd.Phi(-25L, 0, 1), 0.0d, 0.0d);
         }
@@ -35,7 +53,7 @@ namespace Akka.Remote.Tests
         [TestMethod]
         public void AccrualFailureDetector_must_return_realistic_phi_values()
         {
-            var fd = CreateFailureDetector();
+            var fd = FailureDetectorSpecHelpers.CreateFailureDetector();
             var test = new Dictionary<int, double>() { { 0, 0.0 }, { 500, 0.1 }, { 1000, 0.3 }, { 1200, 1.6 }, { 1400, 4.7 }, { 1600, 10.8 }, { 1700, 15.3 } };
             foreach (var kv in test)
             {
@@ -49,7 +67,7 @@ namespace Akka.Remote.Tests
         [TestMethod]
         public void AccrualFailureDetector_must_return_phi_value_of_zero_on_startup_for_each_address_when_no_heartbeats()
         {
-            var fd = CreateFailureDetector();
+            var fd = FailureDetectorSpecHelpers.CreateFailureDetector();
             Assert.AreEqual(fd.CurrentPhi, 0.0);
             Assert.AreEqual(fd.CurrentPhi, 0.0);
         }
@@ -58,8 +76,8 @@ namespace Akka.Remote.Tests
         public void AccrualFailureDetector_must_return_phi_based_on_guess_when_only_one_heartbeat()
         {
             var timeInterval = new List<long>() { 0, 1000, 1000, 1000, 1000 };
-            var fd = CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.Zero,
-                TimeSpan.FromSeconds(1), FakeTimeGenerator(timeInterval));
+            var fd = FailureDetectorSpecHelpers.CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.Zero,
+                TimeSpan.FromSeconds(1), FailureDetectorSpecHelpers.FakeTimeGenerator(timeInterval));
 
             fd.HeartBeat();
             ShouldBe(fd.CurrentPhi, 0.3D, 0.2D);
@@ -71,8 +89,8 @@ namespace Akka.Remote.Tests
         public void AccrualFailureDetector_must_return_phi_value_using_first_interval_after_second_heartbeat()
         {
             var timeInterval = new List<long>() { 0, 100, 100, 100, 100 };
-            var fd = CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.Zero,
-                TimeSpan.FromSeconds(1), FakeTimeGenerator(timeInterval));
+            var fd = FailureDetectorSpecHelpers.CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.Zero,
+                TimeSpan.FromSeconds(1), FailureDetectorSpecHelpers.FakeTimeGenerator(timeInterval));
 
             fd.HeartBeat();
             Assert.IsTrue(fd.CurrentPhi > 0.0d);
@@ -84,8 +102,8 @@ namespace Akka.Remote.Tests
         public void AccrualFailureDetector_must_mark_node_as_monitored_after_a_series_of_successful_heartbeats()
         {
             var timeInterval = new List<long>() { 0, 1000, 100, 100 };
-            var fd = CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.Zero,
-                TimeSpan.FromSeconds(1), FakeTimeGenerator(timeInterval));
+            var fd = FailureDetectorSpecHelpers.CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.Zero,
+                TimeSpan.FromSeconds(1), FailureDetectorSpecHelpers.FakeTimeGenerator(timeInterval));
 
             Assert.IsFalse(fd.IsMonitoring);
             fd.HeartBeat();
@@ -99,8 +117,8 @@ namespace Akka.Remote.Tests
         public void AccrualFailureDetector_must_mark_node_as_dead_if_heartbeats_are_missed()
         {
             var timeInterval = new List<long>() { 0, 1000, 100, 100, 7000 };
-            var fd = CreateFailureDetector(3.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.Zero,
-                TimeSpan.FromSeconds(1), FakeTimeGenerator(timeInterval));
+            var fd = FailureDetectorSpecHelpers.CreateFailureDetector(3.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.Zero,
+                TimeSpan.FromSeconds(1), FailureDetectorSpecHelpers.FakeTimeGenerator(timeInterval));
 
             fd.HeartBeat(); //0
             fd.HeartBeat(); //1000
@@ -116,8 +134,8 @@ namespace Akka.Remote.Tests
             //1000 regular intervals, 5 minute pause, then a short pause again that should trigger unreachable again
             var regularIntervals = new List<long>() { 0L }.Concat(Enumerable.Repeat(1000L, 999)).ToList();
             var timeIntervals = regularIntervals.Concat(new[] { (5 * 60 * 1000L), 100L, 900L, 100L, 7000L, 100L, 900L, 100L, 900L }).ToList();
-            var fd = CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(3),
-                TimeSpan.FromSeconds(1), FakeTimeGenerator(timeIntervals));
+            var fd = FailureDetectorSpecHelpers.CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(3),
+                TimeSpan.FromSeconds(1), FailureDetectorSpecHelpers.FakeTimeGenerator(timeIntervals));
             for (var i = 0; i < 1000; i++) fd.HeartBeat();
             Assert.IsFalse(fd.IsAvailable); //after the long pause
             fd.HeartBeat();
@@ -134,8 +152,8 @@ namespace Akka.Remote.Tests
         public void AccrualFailureDetector_must_accept_some_configured_missing_heartbeats()
         {
             var timeIntervals = new List<long>() { 0L, 1000L, 1000L, 1000L, 4000L, 1000L, 1000L };
-            var fd = CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(3),
-                TimeSpan.FromSeconds(1), FakeTimeGenerator(timeIntervals));
+            var fd = FailureDetectorSpecHelpers.CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(3), //3 seconds acceptableLostDuration
+                TimeSpan.FromSeconds(1), FailureDetectorSpecHelpers.FakeTimeGenerator(timeIntervals));
 
             fd.HeartBeat();
             fd.HeartBeat();
@@ -151,8 +169,8 @@ namespace Akka.Remote.Tests
         public void AccrualFailureDetector_must_fail_after_configured_acceptable_missing_heartbeats()
         {
             var timeIntervals = new List<long>() { 0, 1000, 1000, 1000, 1000, 1000, 500, 500, 5000 };
-            var fd = CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(3),
-                TimeSpan.FromSeconds(1), FakeTimeGenerator(timeIntervals));
+            var fd = FailureDetectorSpecHelpers.CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(3),
+                TimeSpan.FromSeconds(1), FailureDetectorSpecHelpers.FakeTimeGenerator(timeIntervals));
 
             fd.HeartBeat();
             fd.HeartBeat();
@@ -169,8 +187,8 @@ namespace Akka.Remote.Tests
         public void AccrualFailureDetector_must_use_maxSampleSize_heartbeats()
         {
             var timeIntervals = new List<long>() { 0, 100, 100, 100, 100, 600, 500, 500, 500, 500, 500 };
-            var fd = CreateFailureDetector(8.0d, 3, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(3),
-                TimeSpan.FromSeconds(1), FakeTimeGenerator(timeIntervals));
+            var fd = FailureDetectorSpecHelpers.CreateFailureDetector(8.0d, 3, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(3),
+                TimeSpan.FromSeconds(1), FailureDetectorSpecHelpers.FakeTimeGenerator(timeIntervals));
 
             // 100 ms interval
             fd.HeartBeat(); //0
@@ -193,7 +211,7 @@ namespace Akka.Remote.Tests
             var samples = new[] { 100L, 200L, 125L, 340L, 130L };
             var stats = samples.Aggregate(HeartbeatHistory.Apply(20), (current, stat) => current + stat);
             ShouldBe(stats.Mean, 179.0D, 0.00001);
-            ShouldBe(stats.Variance,7584.0D,0.00001);
+            ShouldBe(stats.Variance, 7584.0D, 0.00001);
         }
 
         [TestMethod]
@@ -218,17 +236,21 @@ namespace Akka.Remote.Tests
             ShouldBe(history5.Mean, 103.333333D, 0.00001D);
             ShouldBe(history5.Variance, 688.88888889D, 0.00001D);
         }
+    }
 
-        #region Helper methods
-
-        public Clock FakeTimeGenerator(IList<long> timeIntervals)
+    /// <summary>
+    /// Static helper class used for assisting with tests related to <see cref="FailureDetector"/>s.
+    /// </summary>
+    public static class FailureDetectorSpecHelpers
+    {
+        public static Clock FakeTimeGenerator(IList<long> timeIntervals)
         {
             var times = timeIntervals.Skip(1)
                 .Aggregate(new List<long>() { timeIntervals.Head() },
                     (list, l) => list.Concat(new List<long>()
-                     {
-                         list.Last() + l
-                     }).ToList());
+                    {
+                        list.Last() + l
+                    }).ToList());
 
             return () =>
             {
@@ -241,23 +263,32 @@ namespace Akka.Remote.Tests
         /// <summary>
         /// Uses the default values for creating a new failure detector
         /// </summary>
-        private PhiAccrualFailureDetector CreateFailureDetector()
+        public static PhiAccrualFailureDetector CreateFailureDetector(Clock clock = null)
         {
             return CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.Zero,
-                TimeSpan.FromSeconds(1), FailureDetector.DefaultClock);
+                TimeSpan.FromSeconds(1), clock ?? FailureDetector.DefaultClock);
         }
 
-        private PhiAccrualFailureDetector CreateFailureDetector(double threshold, int maxSampleSize,
+        public static PhiAccrualFailureDetector CreateFailureDetector(double threshold, int maxSampleSize,
             TimeSpan minStdDeviation, TimeSpan acceptableLostDuration, TimeSpan firstHeartbeatEstimate, Clock clock)
         {
             return new PhiAccrualFailureDetector(threshold, maxSampleSize, minStdDeviation, acceptableLostDuration, firstHeartbeatEstimate, clock);
         }
 
-        private double cdf(double phi)
+        public static DefaultFailureDetectorRegistry<string> CreateFailureDetectorRegistry(double threshold, int maxSampleSize,
+            TimeSpan minStdDeviation, TimeSpan acceptableLostDuration, TimeSpan firstHeartbeatEstimate, Clock clock)
+        {
+            return new DefaultFailureDetectorRegistry<string>(() => CreateFailureDetector(threshold, maxSampleSize, minStdDeviation, acceptableLostDuration, firstHeartbeatEstimate, clock));
+        }
+
+        public static DefaultFailureDetectorRegistry<string> CreateFailureDetectorRegistry(Clock clock = null)
+        {
+            return new DefaultFailureDetectorRegistry<string>(() => CreateFailureDetector(clock));
+        }
+
+        public static double cdf(double phi)
         {
             return 1.0d - Math.Pow(10, -phi);
         }
-
-        #endregion
     }
 }
