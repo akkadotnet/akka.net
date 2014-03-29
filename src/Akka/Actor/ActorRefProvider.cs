@@ -182,6 +182,30 @@ namespace Akka.Actor
         }
 
         public Deployer Deployer { get; protected set; }
+
+        public static ActorCell CreateRouterCell(ActorSystem system, InternalActorRef supervisor, ActorPath path, Props props, Mailbox mailbox,Deploy deploy)
+        {
+            //TODO: we need to select what kind of actorcell we should create here
+            //TODO: Aaron / Roman, check if this is ok
+            //RouterActorCell for groups
+            //ResizablePoolCell for resizable pools
+
+            var routerProps = Props.Empty.WithDeploy(deploy);
+
+            var routeeProps = props.WithRouter(RouterConfig.NoRouter);
+
+            if (routerProps.RouterConfig is Pool)
+            {
+                var p = routerProps.RouterConfig.AsInstanceOf<Pool>();
+                if (p.Resizer != null)
+                {
+                    return new ResizablePoolCell(system, supervisor, routerProps, routeeProps, path, mailbox, p);
+                }
+                //should we use a routeractorcell for non resizable pools?
+                return new RoutedActorCell(system, supervisor, routerProps, routeeProps, path, mailbox);
+            }
+            return new RoutedActorCell(system, supervisor, routerProps, routeeProps, path, mailbox);
+        }
     }
 
     /// <summary>
@@ -260,43 +284,16 @@ namespace Akka.Actor
                 {
                     deploy = deploy.WithRouterConfig(props.RouterConfig);
                 }
-
-                var routerProps =
-                    Props.Create<RouterActor>()
-                        .WithDeploy(deploy);
-
-                var routeeProps = props.WithRouter(RouterConfig.NoRouter);
                 
-                //TODO: we need to select what kind of actorcell we should create here
-                //TODO: Aaron / Roman, check if this is ok
-                //RouterActorCell for groups
-                //ResizablePoolCell for resizable pools
-
-                if (routerProps.RouterConfig is Pool)
-                {
-                    var p = routerProps.RouterConfig.AsInstanceOf<Pool>();
-                    if (p.Resizer != null)
-                    {
-                        cell = new ResizablePoolCell(system, supervisor, routerProps, routeeProps, path, mailbox,p);   
-                    }
-                    else
-                    {
-                        //should we use a routeractorcell for non resizable pools?
-                        cell = new RoutedActorCell(system, supervisor, routerProps, routeeProps, path, mailbox);   
-                    }
-                }
-                else
-                {
-                    cell = new RoutedActorCell(system, supervisor, routerProps, routeeProps, path, mailbox);    
-                }
-
-                
-
+                //TODO: make this work for remote actor ref provider
+                cell = CreateRouterCell(system, supervisor, path, props, mailbox,deploy);
             }
             cell.NewActor();
             //   parentContext.Watch(cell.Self);
             return cell.Self;
         }
+
+        
 
 
         /// <summary>

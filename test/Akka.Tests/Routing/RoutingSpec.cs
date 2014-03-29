@@ -59,7 +59,7 @@ namespace Akka.Tests.Routing
         }
 
         [TestMethod]
-        public void EvictTerminatedRoutees()
+        public void Router_in_general_must_evict_terminated_routees()
         {
             var router = sys.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>()),"router");
             router.Tell("",testActor);
