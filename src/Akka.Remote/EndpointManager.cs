@@ -9,6 +9,60 @@ namespace Akka.Remote
 {
     public class EndpointManager : UntypedActor
     {
+
+        #region Policy definitions
+
+        public abstract class EndpointPolicy
+        {
+            /// <summary>
+            /// Indicates that the policy does not contain an active endpoint, but it is a tombstone of a previous failure
+            /// </summary>
+            public readonly bool IsTombstone;
+
+            protected EndpointPolicy(bool isTombstone)
+            {
+                IsTombstone = isTombstone;
+            }
+        }
+
+        public class Pass : EndpointPolicy
+        {
+            public Pass(ActorRef endpoint, int? uid) : base(false)
+            {
+                Uid = uid;
+                Endpoint = endpoint;
+            }
+
+            public ActorRef Endpoint { get; private set; }
+
+            public int? Uid { get; private set; }
+        }
+
+        public class Gated : EndpointPolicy
+        {
+            public Gated(Deadline deadline) : base(true)
+            {
+                TimeOfRelease = deadline;
+            }
+
+            public Deadline TimeOfRelease { get; private set; }
+        }
+
+        public class Quarantined : EndpointPolicy
+        {
+            public Quarantined(long uid, Deadline deadline) : base(true)
+            {
+                Uid = uid;
+                Deadline = deadline;
+            }
+
+            public long Uid { get; private set; }
+
+            public Deadline Deadline { get; private set; }
+        }
+
+        #endregion
+
         private readonly EndpointRegistry endpoints = new EndpointRegistry();
         private readonly RemoteSettings settings;
         private long endpointId;
