@@ -266,8 +266,31 @@ namespace Akka.Actor
                         .WithDeploy(deploy);
 
                 var routeeProps = props.WithRouter(RouterConfig.NoRouter);
+                
+                //TODO: we need to select what kind of actorcell we should create here
+                //TODO: Aaron / Roman, check if this is ok
+                //RouterActorCell for groups
+                //ResizablePoolCell for resizable pools
 
-                cell = new RoutedActorCell(system, supervisor, routerProps, routeeProps, path, mailbox);
+                if (routerProps.RouterConfig is Pool)
+                {
+                    var p = routerProps.RouterConfig.AsInstanceOf<Pool>();
+                    if (p.Resizer != null)
+                    {
+                        cell = new ResizablePoolCell(system, supervisor, routerProps, routeeProps, path, mailbox,p);   
+                    }
+                    else
+                    {
+                        //should we use a routeractorcell for non resizable pools?
+                        cell = new RoutedActorCell(system, supervisor, routerProps, routeeProps, path, mailbox);   
+                    }
+                }
+                else
+                {
+                    cell = new RoutedActorCell(system, supervisor, routerProps, routeeProps, path, mailbox);    
+                }
+
+                
 
             }
             cell.NewActor();

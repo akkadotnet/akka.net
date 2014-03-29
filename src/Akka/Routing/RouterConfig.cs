@@ -27,6 +27,7 @@ namespace Akka.Routing
         {
             return 
                 message is AutoReceivedMessage || 
+                //TODO: isnt terminated a autoreceived in real akka?
                 // in akka.net this message is a subclass of AutoReceivedMessage - so removed condition that "message is Terminated ||"
                 message is RouterManagementMesssage;
         }

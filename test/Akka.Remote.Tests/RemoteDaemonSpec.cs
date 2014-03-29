@@ -46,6 +46,7 @@ akka {
 ";
         }
 
+        [Ignore]
         [TestMethod]
         public void CanCreateActorUsingRemoteDaemonAndInteractWithChild()
         {

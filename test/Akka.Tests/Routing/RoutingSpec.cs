@@ -1,6 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
+using Akka.TestKit;
 using Akka.Tests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -75,6 +78,47 @@ namespace Akka.Tests.Routing
             expectMsgType<ActorRef>().ShouldBe(c1);
             sys.Stop(c1);
             expectTerminated(router).ExistenceConfirmed.ShouldBe(true);
+        }
+
+        public class TestResizer : Resizer
+        {
+            private readonly TestLatch _latch;
+            public TestResizer(TestLatch latch)
+            {
+                _latch = latch;
+            }
+            public override bool IsTimeForResize(long messageCounter)
+            {
+                return messageCounter == 0;
+            }
+
+            public override int Resize(System.Collections.Generic.IEnumerable<Routee> currentRoutees)
+            {
+                _latch.CountDown();
+                return 2;
+            }
+        }
+
+        [TestMethod]
+        public void Router_in_general_must_not_terminate_when_resizer_is_used()
+        {
+            var latch = new TestLatch(sys,1);
+            var resizer = new TestResizer(latch);
+            var router =
+                sys.ActorOf(new RoundRobinPool( 0, resizer,SupervisorStrategy.DefaultStrategy,"").Props(Props.Create<TestActor>()));
+
+            watch(router);
+            
+            latch.Open();
+            //Await.ready(latch, remainingOrDefault); //TODO: what is remainingOrDefault
+            
+            router.Tell(new GetRoutees(),testActor);
+            var routees = expectMsgType<Routees>().Members.ToList();
+
+            routees.Count().ShouldBe(2);
+            routees.ForEach(r => r.Send(new PoisonPill(),testActor));
+            // expect no Terminated
+            expectNoMsg(TimeSpan.FromSeconds(2));
         }
     }
 }
