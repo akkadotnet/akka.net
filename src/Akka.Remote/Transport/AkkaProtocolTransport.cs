@@ -103,22 +103,21 @@ namespace Akka.Remote.Transport
             HandshakeInfo handshakeInfo, ActorRef stateActor, AkkaPduCodec codec)
             : base(originalLocalAddress, originalRemoteAddress, wrappedHandle, RemoteSettings.AkkaScheme)
         {
-            _handshakeInfo = handshakeInfo;
-            _stateActor = stateActor;
-            _readHandlerSource = readHandlerCompletionSource;
+            HandshakeInfo = handshakeInfo;
+            StateActor = stateActor;
+            ReadHandlerSource = readHandlerCompletionSource;
+            Codec = codec;
         }
 
-        private TaskCompletionSource<IHandleEventListener> _readHandlerSource;
+        public readonly HandshakeInfo HandshakeInfo;
 
-        private HandshakeInfo _handshakeInfo;
+        public readonly ActorRef StateActor;
 
-        private ActorRef _stateActor;
-
-        private AkkaPduCodec _codec;
+        public readonly AkkaPduCodec Codec;
 
         public override bool Write(ByteString payload)
         {
-            return WrappedHandle.Write(_codec.ConstructPayload(payload));
+            return WrappedHandle.Write(Codec.ConstructPayload(payload));
         }
 
         public override void Disassociate()
@@ -128,7 +127,7 @@ namespace Akka.Remote.Transport
 
         public void Disassociate(DisassociateInfo info)
         {
-            _stateActor.Tell(new DisassociateUnderlying(info));
+            StateActor.Tell(new DisassociateUnderlying(info));
         }
     }
 
@@ -301,18 +300,6 @@ namespace Akka.Remote.Transport
 
         private void InitializeFSM()
         {
-            _initialData.Match()
-                .With<OutboundUnassociated>(d =>
-                {
-                    d.Transport.Associate(d.RemoteAddress).PipeTo(Self);
-                    StartWith(AssociationState.Closed, d);
-                })
-                .With<InboundUnassociated>(d =>
-                {
-                    d.WrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(Self));
-                    StartWith(AssociationState.WaitHandshake, d);
-                });
-
             When(AssociationState.Closed, fsmEvent =>
             {
                 State<AssociationState, ProtocolStateData> nextState = null;
@@ -508,7 +495,7 @@ namespace Akka.Remote.Transport
                 return nextState;
             });
 
-            OnTermination(@event => @event.TerminatedState.Match()
+            OnTermination(@event => @event.StateData.Match()
                 .With<OutboundUnassociated>(ou => ou.StatusCompletionSource.TrySetException(@event.Reason is Failure
                     ? new AkkaProtocolException(@event.Reason.ToString())
                     : new AkkaProtocolException("Transport disassociated before handshake finished")))
@@ -539,10 +526,10 @@ namespace Akka.Remote.Transport
                 .With<AssociatedWaitHandler>(awh =>
                 {
                     Disassociated disassociateNotification = null;
-                    if (@event.Reason is Failure && ((Failure) @event.Reason).Cause is DisassociateInfo)
+                    if (@event.Reason is Failure && ((Failure)@event.Reason).Cause is DisassociateInfo)
                     {
                         disassociateNotification =
-                            new Disassociated(((Failure) @event.Reason).Cause.AsInstanceOf<DisassociateInfo>());
+                            new Disassociated(((Failure)@event.Reason).Cause.AsInstanceOf<DisassociateInfo>());
                     }
                     else
                     {
@@ -554,10 +541,10 @@ namespace Akka.Remote.Transport
                 .With<ListenerReady>(lr =>
                 {
                     Disassociated disassociateNotification = null;
-                    if (@event.Reason is Failure && ((Failure) @event.Reason).Cause is DisassociateInfo)
+                    if (@event.Reason is Failure && ((Failure)@event.Reason).Cause is DisassociateInfo)
                     {
                         disassociateNotification =
-                            new Disassociated(((Failure) @event.Reason).Cause.AsInstanceOf<DisassociateInfo>());
+                            new Disassociated(((Failure)@event.Reason).Cause.AsInstanceOf<DisassociateInfo>());
                     }
                     else
                     {
@@ -566,7 +553,20 @@ namespace Akka.Remote.Transport
                     lr.Listener.Notify(disassociateNotification);
                     lr.WrappedHandle.Disassociate();
                 })
-                .With<InboundUnassociated>(iu => iu.WrappedHandle.Disassociate()));
+                .With<InboundUnassociated>(iu =>
+                    iu.WrappedHandle.Disassociate()));
+
+            _initialData.Match()
+                .With<OutboundUnassociated>(d =>
+                {
+                    d.Transport.Associate(d.RemoteAddress).PipeTo(Self);
+                    StartWith(AssociationState.Closed, d);
+                })
+                .With<InboundUnassociated>(d =>
+                {
+                    d.WrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(Self));
+                    StartWith(AssociationState.WaitHandshake, d);
+                });
 
         }
 
