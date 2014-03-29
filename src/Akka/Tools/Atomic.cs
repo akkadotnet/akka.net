@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using Akka.Actor;
 
 namespace Akka.Tools
@@ -47,6 +48,22 @@ namespace Akka.Tools
                 atomicValue = value;
                 Interlocked.MemoryBarrier();
             }
+        }
+
+        /// <summary>
+        /// If <see cref="Value"/> equals <see cref="expected"/>, then set the Value to
+        /// <see cref="newValue"/>.
+        /// 
+        /// Returns true if <see cref="newValue"/> was set, false otherise.
+        /// </summary>
+        public bool CompareAndSet(T expected, T newValue)
+        {
+            if (Value.Equals(expected))
+            {
+                Value = newValue;
+                return true;
+            }
+            return false;
         }
 
         #region Conversion operators
