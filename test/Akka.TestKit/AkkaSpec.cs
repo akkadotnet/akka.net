@@ -218,6 +218,13 @@ namespace Akka.Tests
             return default(T);
         }
 
+        protected T expectMsgPF<T>(string hint, Func<object, T> pf)
+        {
+            object t = queue.Take();
+            Assert.IsTrue(pf.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
+            return pf.Invoke(t);
+        }
+
         protected void expectNoMsg(TimeSpan duration)
         {
             object t;
@@ -367,8 +374,8 @@ namespace Akka.Tests
 
                 var debug1 = true;
                 break;
-            } 
-            
+            }
+
             lastWasNoMsg = true;
             return acc;
         }

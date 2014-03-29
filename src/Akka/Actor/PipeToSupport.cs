@@ -20,7 +20,7 @@ namespace Akka.Actor
                 if(tresult.IsCanceled  || tresult.IsFaulted)
                     recipient.Tell(new Status.Failure(tresult.Exception), sender);
                 else if (tresult.IsCompleted)
-                    recipient.Tell(new Status.Success(tresult.Result), sender);
+                    recipient.Tell(tresult.Result, sender);
             }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
         }
     }
