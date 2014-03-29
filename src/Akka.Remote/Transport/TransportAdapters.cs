@@ -237,14 +237,14 @@ namespace Akka.Remote.Transport
 
         protected new ActorSystem System;
 
-        protected string managerName;
-        protected Props managerProps;
+        protected abstract string ManagerName { get; }
+        protected abstract Props ManagerProps { get; }
 
         protected volatile ActorRef manager;
 
         private Task<ActorRef> RegisterManager()
         {
-            return System.ActorSelection("/system/transports").Ask<ActorRef>(new RegisterTransportActor(managerProps, managerName));
+            return System.ActorSelection("/system/transports").Ask<ActorRef>(new RegisterTransportActor(ManagerProps, ManagerName));
         }
 
         protected override Task<IAssociationEventListener> InterceptListen(Address listenAddress, Task<IAssociationEventListener> listenerTask)
@@ -264,10 +264,7 @@ namespace Akka.Remote.Transport
 
         public override Task<bool> Shutdown()
         {
-            /*
-             * TODO: Add graceful stop support and associated remote settings
-             */
-            var stopTask = manager.Ask(new PoisonPill());
+            var stopTask = manager.GracefulStop(((RemoteActorRefProvider) System.Provider).RemoteSettings.FlushWait);
             var transportStopTask = WrappedTransport.Shutdown();
             return Task.WhenAll(stopTask, transportStopTask).ContinueWith(x => x.IsCompleted, TaskContinuationOptions.ExecuteSynchronously);
         }

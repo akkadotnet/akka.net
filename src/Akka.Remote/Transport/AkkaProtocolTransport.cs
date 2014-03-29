@@ -56,7 +56,7 @@ namespace Akka.Remote.Transport
         }
 
         private string _managerName;
-        protected string ManagerName
+        protected override string ManagerName
         {
             get
             {
@@ -68,7 +68,7 @@ namespace Akka.Remote.Transport
         }
 
         private Props _managerProps;
-        protected Props ManagerProps
+        protected override Props ManagerProps
         {
             get {
                 return _managerProps ??
@@ -81,6 +81,17 @@ namespace Akka.Remote.Transport
         public override Task<bool> ManagementCommand(object message)
         {
             return WrappedTransport.ManagementCommand(message);
+        }
+
+        public Task<AkkaProtocolHandle> Associate(Address remoteAddress, int? refuseUid)
+        {
+            // Prepare a Task and pass its completion source to the manager
+            var statusPromise = new TaskCompletionSource<AssociationHandle>();
+
+            manager.Tell(new AssociateUnderlyingRefuseUid(remoteAddress, statusPromise, refuseUid));
+
+            return statusPromise.Task.ContinueWith(result => result.Result.AsInstanceOf<AkkaProtocolHandle>(),
+                TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously);
         }
 
         #region Static properties
@@ -124,6 +135,7 @@ namespace Akka.Remote.Transport
                     var stateActorAssociationListener = associationListener;
                     var stateActorSettings = _settings;
                     var failureDetector = CreateTransportFailureDetector();
+                    //TODO: eventually this needs to be configured with the RemoteDispatcher via https://github.com/akka/akka/blob/f1edf789798dc02dfa37d3301d7712736c964ab1/akka-remote/src/main/scala/akka/remote/transport/AkkaProtocolTransport.scala#L156
                     Context.ActorOf(ProtocolStateActor.InboundProps(
                         new HandshakeInfo(stateActorLocalAddress, Context.System.AddressUid()), 
                         handle,
