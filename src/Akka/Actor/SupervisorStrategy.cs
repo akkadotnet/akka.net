@@ -186,7 +186,7 @@ namespace Akka.Actor
         public static SupervisorStrategy DefaultStrategy
         {
             //TODO: should be -1 retries, inf timeout, fix bug that prevents test to pass
-            get { return new OneForOneStrategy(10, TimeSpan.FromSeconds(10), DefaultDecider); }
+            get { return new OneForOneStrategy(DefaultDecider); }
         }
 
         #endregion
@@ -214,6 +214,12 @@ namespace Akka.Actor
             WithinTimeRange = withinTimeRange;
             Decider = decider;
         }
+
+        //TODO: should be -1 retries, inf timeout, fix bug that prevents test to pass
+        /// <summary>
+        /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
+        /// </summary>
+        public OneForOneStrategy(Func<Exception, Directive> decider) : this(10, TimeSpan.FromSeconds(10), decider) { }
 
         /// <summary>
         ///     The number of times a child actor is allowed to be restarted, negative value means no limit,

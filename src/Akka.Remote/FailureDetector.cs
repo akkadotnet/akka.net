@@ -29,7 +29,7 @@ namespace Akka.Remote
 
         #region Static members
 
-        public static readonly Clock DefaultClock = () => DateTime.UtcNow.Ticks/TimeSpan.TicksPerMillisecond;
+        public static readonly Clock DefaultClock = () => Environment.TickCount / TimeSpan.TicksPerMillisecond;
 
         #endregion
     }

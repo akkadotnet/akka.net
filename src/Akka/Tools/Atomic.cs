@@ -118,5 +118,15 @@ namespace Akka.Tools
                 return Interlocked.Increment(ref _seed);
             }
         }
+
+        /// <summary>
+        /// Returns the current value while simultaneously incrementing the counter
+        /// </summary>
+        public int GetAndIncrement()
+        {
+            var rValue = Current;
+            var nextValue = Next;
+            return rValue;
+        }
     }
 }
