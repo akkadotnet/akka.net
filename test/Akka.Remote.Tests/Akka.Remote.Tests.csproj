@@ -79,6 +79,7 @@
   </Choose>
   <ItemGroup>
     <Compile Include="AccrualFailureDetectorSpec.cs" />
+    <Compile Include="AckedDeliverySpec.cs" />
     <Compile Include="EndpointRegistrySpec.cs" />
     <Compile Include="FailureDetectorRegistrySpec.cs" />
     <Compile Include="RemoteDaemonSpec.cs" />
