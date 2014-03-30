@@ -178,7 +178,7 @@ namespace Akka.Remote.Tests
             var b3 = b2.Buffer(msg2);
             Assert.IsTrue(b3.NonAcked.SequenceEqual(new[] { msg0, msg1, msg2 }));
 
-            var b4 = b3.Acknowledge(new Ack(new SeqNo(1), new HashSet<SeqNo>() {new SeqNo(0)}));
+            var b4 = b3.Acknowledge(new Ack(new SeqNo(1), new [] {new SeqNo(0)}));
             Assert.IsTrue(b4.NonAcked.SequenceEqual(new []{ msg2 }));
             Assert.IsTrue(b4.Nacked.SequenceEqual(new[] { msg0 }));
 
@@ -186,7 +186,7 @@ namespace Akka.Remote.Tests
             Assert.IsTrue(b5.NonAcked.SequenceEqual(new[] { msg2, msg3, msg4 }));
             Assert.IsTrue(b5.Nacked.SequenceEqual(new[] { msg0 }));
 
-            var b6 = b5.Acknowledge(new Ack(new SeqNo(4), new HashSet<SeqNo>() {new SeqNo(2), new SeqNo(3)}));
+            var b6 = b5.Acknowledge(new Ack(new SeqNo(4), new []{new SeqNo(2), new SeqNo(3)}));
             Assert.IsTrue(b6.NonAcked.Count == 0);
             Assert.IsTrue(b6.Nacked.SequenceEqual(new[] { msg2, msg3 }));
 
@@ -203,7 +203,87 @@ namespace Akka.Remote.Tests
             var msg2 = Msg(2);
 
             var b1 = b0.Buffer(msg1).Buffer(msg2);
-            intercept<ResendUnfulfillableException>(() => b1.Acknowledge(new Ack(new SeqNo(2), new HashSet<SeqNo>(){ new SeqNo(0) })));
+            intercept<ResendUnfulfillableException>(() => b1.Acknowledge(new Ack(new SeqNo(2), new []{ new SeqNo(0) })));
+        }
+
+        [TestMethod]
+        public void ReceiveBuffer_must_enqueue_message_in_buffer_if_needed_return_the_list_of_deliverable_messages_and_acks()
+        {
+            var b0 = new AckedReceiveBuffer<Sequenced>();
+            var msg0 = Msg(0);
+            var msg1 = Msg(1);
+            var msg2 = Msg(2);
+            var msg3 = Msg(3);
+            var msg4 = Msg(4);
+            var msg5 = Msg(5);
+
+            var d1 = b0.Receive(msg1).ExtractDeliverable;
+            Assert.IsTrue(d1.Deliverables.Count == 0);
+            Assert.AreEqual(new SeqNo(1), d1.Ack.CumulativeAck);
+            Assert.IsTrue(d1.Ack.Nacks.SequenceEqual(new[]{ new SeqNo(0) }));
+            var b1 = d1.Buffer;
+
+            var d2 = b1.Receive(msg0).ExtractDeliverable;
+            Assert.IsTrue(d2.Deliverables.SequenceEqual(new[] { msg0, msg1 }));
+            Assert.AreEqual(new SeqNo(1), d2.Ack.CumulativeAck);
+            var b3 = d2.Buffer;
+
+            var d3 = b3.Receive(msg4).ExtractDeliverable;
+            Assert.IsTrue(d3.Deliverables.Count == 0);
+            Assert.AreEqual(new SeqNo(4), d3.Ack.CumulativeAck);
+            Assert.IsTrue(d3.Ack.Nacks.SequenceEqual(new[] { new SeqNo(2), new SeqNo(3) }));
+            var b4 = d3.Buffer;
+
+            var d4 = b4.Receive(msg2).ExtractDeliverable;
+            Assert.IsTrue(d4.Deliverables.SequenceEqual(new[] { msg2 }));
+            Assert.AreEqual(new SeqNo(4), d4.Ack.CumulativeAck);
+            Assert.IsTrue(d4.Ack.Nacks.SequenceEqual(new[] { new SeqNo(3) }));
+            var b5 = d4.Buffer;
+
+            var d5 = b5.Receive(msg5).ExtractDeliverable;
+            Assert.IsTrue(d5.Deliverables.Count == 0);
+            Assert.AreEqual(new SeqNo(5), d5.Ack.CumulativeAck);
+            Assert.IsTrue(d5.Ack.Nacks.SequenceEqual(new[] { new SeqNo(3) }));
+            var b6 = d5.Buffer;
+
+            var d6 = b6.Receive(msg3).ExtractDeliverable;
+            Assert.IsTrue(d6.Deliverables.SequenceEqual(new[] { msg3, msg4, msg5 }));
+            Assert.AreEqual(new SeqNo(5), d6.Ack.CumulativeAck);
+        }
+
+        [TestMethod]
+        public void ReceiveBuffer_must_handle_duplicate_arrivals_correctly()
+        {
+            var buf = new AckedReceiveBuffer<Sequenced>();
+            var msg0 = Msg(0);
+            var msg1 = Msg(1);
+            var msg2 = Msg(2);
+
+            var buf2 = buf.Receive(msg0).Receive(msg1).Receive(msg2).ExtractDeliverable.Buffer;
+
+            var buf3 = buf2.Receive(msg0).Receive(msg1).Receive(msg2);
+
+            var d = buf3.ExtractDeliverable;
+            Assert.IsTrue(d.Deliverables.Count == 0);
+            Assert.AreEqual(new SeqNo(2), d.Ack.CumulativeAck);
+        }
+
+        [TestMethod]
+        public void ReceiveBuffer_must_be_able_to_correctly_merge_with_another_receive_buffer()
+        {
+            var buf1 = new AckedReceiveBuffer<Sequenced>();
+            var buf2 = new AckedReceiveBuffer<Sequenced>();
+            var msg0 = Msg(0);
+            var msg1a = Msg(1);
+            var msg1b = Msg(1);
+            var msg2 = Msg(2);
+            var msg3 = Msg(3);
+
+            var buf = buf1.Receive(msg1a).Receive(msg2).MergeFrom(buf2.Receive(msg1b).Receive(msg3));
+
+            var d = buf.Receive(msg0).ExtractDeliverable;
+            Assert.IsTrue(d.Deliverables.SequenceEqual(new []{ msg0, msg1b, msg2, msg3 }));
+            Assert.AreEqual(new SeqNo(3), d.Ack.CumulativeAck);
         }
     }
 }
