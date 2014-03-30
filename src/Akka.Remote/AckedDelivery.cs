@@ -130,7 +130,7 @@ namespace Akka.Remote
             }
         }
 
-        public class SeqNoComparer : IComparer<SeqNo>
+        public class SeqNoComparer : IComparer<SeqNo>, IEqualityComparer<SeqNo>
         {
             public int Compare(SeqNo x, SeqNo y)
             {
@@ -139,6 +139,16 @@ namespace Akka.Remote
                 else if (x.RawValue > y.RawValue) sgn = 1;
                 if (((x.RawValue - y.RawValue) * sgn) < 0L) return -sgn;
                 else return sgn;
+            }
+
+            public bool Equals(SeqNo x, SeqNo y)
+            {
+                return x == y;
+            }
+
+            public int GetHashCode(SeqNo obj)
+            {
+                return obj.GetHashCode();
             }
         }
 
@@ -180,9 +190,9 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="cumulativeAck">Represents the highest sequence number received</param>
         /// <param name="nacks">Set of sequence numbers between the last delivered one and <see cref="cumulativeAck"/> that has not been received.</param>
-        public Ack(SeqNo cumulativeAck, HashSet<SeqNo> nacks)
+        public Ack(SeqNo cumulativeAck, IEnumerable<SeqNo> nacks)
         {
-            Nacks = nacks;
+            Nacks = new SortedSet<SeqNo>(nacks, SeqNo.Comparer);
             CumulativeAck = cumulativeAck;
         }
 
@@ -190,11 +200,11 @@ namespace Akka.Remote
         /// Class representing an acknowledgement with select negative acknowledgements.
         /// </summary>
         /// <param name="cumulativeAck">Represents the highest sequence number received</param>
-        public Ack(SeqNo cumulativeAck) : this(cumulativeAck, new HashSet<SeqNo>()) { }
+        public Ack(SeqNo cumulativeAck) : this(cumulativeAck, new List<SeqNo>()) { }
 
         public SeqNo CumulativeAck { get; private set; }
 
-        public HashSet<SeqNo> Nacks { get; private set; }
+        public SortedSet<SeqNo> Nacks { get; private set; }
 
         public override string ToString()
         {
@@ -222,7 +232,7 @@ namespace Akka.Remote
 
     /// <summary>
     /// Implements an immutable resend buffer that buffers messages until they have been acknowledged. Properly removes messages
-    /// when an <see cref="Ack"/> is received. This buffer works together with <see cref="AckedRecieveBuffer{T}"/> on the receiving end.
+    /// when an <see cref="Ack"/> is received. This buffer works together with <see cref="AckedReceiveBuffer{T}"/> on the receiving end.
     /// </summary>
     /// <typeparam name="T">The type of message being stored - has to implement <see cref="IHasSequenceNumber"/></typeparam>
     sealed class AckedSendBuffer<T> where T : IHasSequenceNumber
@@ -235,7 +245,7 @@ namespace Akka.Remote
             Capacity = capacity;
         }
 
-        public AckedSendBuffer(int capacity) : this(capacity, new SeqNo(0)) { }
+        public AckedSendBuffer(int capacity) : this(capacity, new SeqNo(-1)) { }
 
         public int Capacity { get; private set; }
 
@@ -290,6 +300,25 @@ namespace Akka.Remote
     }
 
     /// <summary>
+    /// Helper class that makes it easier to work with <see cref="AckedReceiveBuffer{T}" deliverables/>
+    /// </summary>
+    sealed class AckReceiveDeliverable<T> where T:IHasSequenceNumber
+    {
+        public AckReceiveDeliverable(AckedReceiveBuffer<T> buffer, List<T> deliverables, Ack ack)
+        {
+            Ack = ack;
+            Deliverables = deliverables;
+            Buffer = buffer;
+        }
+
+        public AckedReceiveBuffer<T> Buffer { get; private set; }
+
+        public List<T> Deliverables { get; private set; }
+
+        public Ack Ack { get; private set; }
+    }
+
+    /// <summary>
     /// Implements an immutable receive buffer that buffers incoming messages until they can be safely delivered. This
     /// buffer works together with an <see cref="AckedSendBuffer{T}"/> on the sender() side.
     /// </summary>
@@ -340,42 +369,46 @@ namespace Akka.Remote
         /// Extract all messages that could be safely delivered, an updated ack to be sent to the sender(), and
         /// an updated buffer that has the messages removed that can be delivered.
         /// </summary>
-        /// <returns>Triplet of the updated buffr, messages that can be delivered, and the udpated acknowledgement.</returns>
-        public Tuple<AckedReceiveBuffer<T>, List<T>, Ack> ExtractDeliverable()
+        /// <returns>Triplet of the updated buffer, messages that can be delivered, and the udpated acknowledgement.</returns>
+        public AckReceiveDeliverable<T> ExtractDeliverable
         {
-            var deliver = new List<T>();
-            var ack = new Ack(CumulativeAck);
-            var updatedLastDelivered = LastDelivered;
-            var prev = LastDelivered;
-
-            foreach (var bufferedMessage in Buf)
+            get
             {
-                if (bufferedMessage.Seq.IsSuccessor(updatedLastDelivered))
+                var deliver = new List<T>();
+                var ack = new Ack(CumulativeAck);
+                var updatedLastDelivered = LastDelivered;
+                var prev = LastDelivered;
+
+                foreach (var bufferedMessage in Buf)
                 {
-                    deliver.Add(bufferedMessage);
-                    updatedLastDelivered = updatedLastDelivered.Inc();
-                }
-                else if (!bufferedMessage.Seq.IsSuccessor(prev))
-                {
-                    var nacks = new HashSet<SeqNo>();
-                    unchecked //in Java, there are no overflow / underflow exceptions so the value rolls over. We have to explicitly squelch those errors in .NET
+                    if (bufferedMessage.Seq.IsSuccessor(updatedLastDelivered))
                     {
-                        var diff = Math.Abs(bufferedMessage.Seq.RawValue - prev.RawValue - 1);
-
-                        // Collect all missing sequence numbers (gaps)
-                        while (diff > 0)
-                        {
-                            nacks.Add(prev.RawValue + diff);
-                            diff--;
-                        }
+                        deliver.Add(bufferedMessage);
+                        updatedLastDelivered = updatedLastDelivered.Inc();
                     }
-                    ack = new Ack(CumulativeAck, new HashSet<SeqNo>(ack.Nacks.Concat(nacks)));
-                }
-                prev = bufferedMessage.Seq;
-            }
+                    else if (!bufferedMessage.Seq.IsSuccessor(prev))
+                    {
+                        var nacks = new HashSet<SeqNo>();
+                        unchecked //in Java, there are no overflow / underflow exceptions so the value rolls over. We have to explicitly squelch those errors in .NET
+                        {
+                            var diff = Math.Abs(bufferedMessage.Seq.RawValue - prev.RawValue - 1);
 
-            Buf.ExceptWith(deliver);
-            return Tuple.Create(Copy(lastDelviered: updatedLastDelivered, buffer: Buf), deliver, ack);
+                            // Collect all missing sequence numbers (gaps)
+                            while (diff > 0)
+                            {
+                                nacks.Add(prev.RawValue + diff);
+                                diff--;
+                            }
+                        }
+                        ack = new Ack(CumulativeAck, ack.Nacks.Concat(nacks));
+                    }
+                    prev = bufferedMessage.Seq;
+                }
+
+                Buf.ExceptWith(deliver);
+                return new AckReceiveDeliverable<T>(Copy(lastDelviered: updatedLastDelivered, buffer: Buf), deliver, ack);
+            }
+            
         }
 
         /// <summary>
