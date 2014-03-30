@@ -222,7 +222,7 @@ namespace Akka.Remote
 
     /// <summary>
     /// Implements an immutable resend buffer that buffers messages until they have been acknowledged. Properly removes messages
-    /// when an <see cref="Ack"/> is received. This buffer works together with <see cref="AckedRecieveBuffer{T}"/> on the receiving end.
+    /// when an <see cref="Ack"/> is received. This buffer works together with <see cref="AckedReceiveBuffer{T}"/> on the receiving end.
     /// </summary>
     /// <typeparam name="T">The type of message being stored - has to implement <see cref="IHasSequenceNumber"/></typeparam>
     sealed class AckedSendBuffer<T> where T : IHasSequenceNumber
@@ -235,7 +235,7 @@ namespace Akka.Remote
             Capacity = capacity;
         }
 
-        public AckedSendBuffer(int capacity) : this(capacity, new SeqNo(0)) { }
+        public AckedSendBuffer(int capacity) : this(capacity, new SeqNo(-1)) { }
 
         public int Capacity { get; private set; }
 
