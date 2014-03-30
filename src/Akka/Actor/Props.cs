@@ -24,7 +24,7 @@ namespace Akka.Actor
         /// <summary>
         ///     A Props instance whose creator will create an actor that doesn't respond to any message
         /// </summary>
-        private static readonly Props empty = new Props();
+        private static readonly Props empty = Props.Create<EmptyActor>();
 
         /// <summary>
         ///     The none
@@ -268,6 +268,22 @@ namespace Akka.Actor
                 SupervisorStrategy = SupervisorStrategy,
             };
         }
+
+        #region INTERNAL API
+
+        /// <summary>
+        /// EmptyActor is used by <see cref="Props.None"/> in order to create actors that
+        /// don't respond to any messages.
+        /// </summary>
+        internal class EmptyActor : UntypedActor
+        {
+            protected override void OnReceive(object message)
+            {
+
+            }
+        }
+
+        #endregion
     }
 
     /// <summary>

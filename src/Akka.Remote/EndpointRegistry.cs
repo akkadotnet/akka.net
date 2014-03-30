@@ -17,7 +17,7 @@ namespace Akka.Remote
 
         private readonly Dictionary<ActorRef, Address> readonlyToAddress = new Dictionary<ActorRef, Address>();
         private readonly Dictionary<ActorRef, Address> writableToAddress = new Dictionary<ActorRef, Address>();
-        public ActorRef RegisterWritableEndpoint(Address address, int? uid, ActorRef endpoint)
+        public ActorRef RegisterWritableEndpoint(Address address, ActorRef endpoint, int? uid = null)
         {
             EndpointManager.EndpointPolicy existing;
             if (addressToWritable.TryGetValue(address, out existing))
