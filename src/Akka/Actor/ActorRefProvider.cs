@@ -183,15 +183,11 @@ namespace Akka.Actor
 
         public Deployer Deployer { get; protected set; }
 
-        public static ActorCell CreateRouterCell(ActorSystem system, InternalActorRef supervisor, ActorPath path, Props props, Mailbox mailbox,Deploy deploy)
+        //TODO: real akka does this in the RoutedActorRef
+        //Keep this here for now?
+        public static ActorCell NewRouterCell(ActorSystem system, InternalActorRef supervisor, ActorPath path, Props props, Mailbox mailbox,Deploy deploy)
         {
-            //TODO: we need to select what kind of actorcell we should create here
-            //TODO: Aaron / Roman, check if this is ok
-            //RouterActorCell for groups
-            //ResizablePoolCell for resizable pools
-
             var routerProps = Props.Empty.WithDeploy(deploy);
-
             var routeeProps = props.WithRouter(RouterConfig.NoRouter);
 
             if (routerProps.RouterConfig is Pool)
@@ -199,11 +195,11 @@ namespace Akka.Actor
                 var p = routerProps.RouterConfig.AsInstanceOf<Pool>();
                 if (p.Resizer != null)
                 {
+                    //if there is a resizer, use ResizablePoolCell
                     return new ResizablePoolCell(system, supervisor, routerProps, routeeProps, path, mailbox, p);
-                }
-                //should we use a routeractorcell for non resizable pools?
-                return new RoutedActorCell(system, supervisor, routerProps, routeeProps, path, mailbox);
+                }               
             }
+            //Use RoutedActorCell for all other routers
             return new RoutedActorCell(system, supervisor, routerProps, routeeProps, path, mailbox);
         }
     }
@@ -286,7 +282,7 @@ namespace Akka.Actor
                 }
                 
                 //TODO: make this work for remote actor ref provider
-                cell = CreateRouterCell(system, supervisor, path, props, mailbox,deploy);
+                cell = NewRouterCell(system, supervisor, path, props, mailbox,deploy);
             }
             cell.NewActor();
             //   parentContext.Watch(cell.Self);

@@ -10,7 +10,7 @@ namespace Akka.Remote
     /// <summary>
     /// Implements a 64-bit sequence number with proper overflow ordering
     /// </summary>
-    internal sealed class SeqNo : IComparable<SeqNo>
+    internal sealed class SeqNo : IComparable<SeqNo>, IEquatable<SeqNo>
     {
         public SeqNo(long rawValue)
         {
@@ -61,14 +61,21 @@ namespace Akka.Remote
             return s1.CompareTo(s2) <= 0;
         }
 
-        public static bool operator ==(SeqNo s1, SeqNo s2)
+        public bool Equals(SeqNo other)
         {
-            return s1 != null && s1.Equals(s2);
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return RawValue == other.RawValue;
         }
 
-        public static bool operator !=(SeqNo s1, SeqNo s2)
+        public static bool operator ==(SeqNo left, SeqNo right)
         {
-            return s1 != null && s1.CompareTo(s2) == 0;
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(SeqNo left, SeqNo right)
+        {
+            return !Equals(left, right);
         }
 
         public static bool operator >(SeqNo s1, SeqNo s2)
@@ -93,9 +100,9 @@ namespace Akka.Remote
 
         public override bool Equals(object obj)
         {
-            var seq = obj as SeqNo;
-            if (obj == null) return false;
-            return CompareTo(seq) == 0;
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is SeqNo && Equals((SeqNo) obj);
         }
 
         public override int GetHashCode()

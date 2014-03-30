@@ -120,5 +120,60 @@ namespace Akka.Tests.Routing
             // expect no Terminated
             expectNoMsg(TimeSpan.FromSeconds(2));
         }
+
+
+        public class TestRun
+        {
+            public TestRun(int id, string[] names, int actors)
+            {
+                Id = id;
+                Names = names;
+                Actors = actors;
+            }
+
+            public int Actors { get; set; }
+
+            public string[] Names { get; set; }
+
+            public int Id { get; set; }
+        }
+
+        public class TestRunActor : UntypedActor
+        {
+
+            protected override void OnReceive(object message)
+            {
+                message.Match()
+                    .With<TestRun>(m =>
+                    {
+            //            val routerProps = Props[TestActor].withRouter(
+            //  ScatterGatherFirstCompletedRouter(
+            //    routees = names map { context.actorOf(Props(new TestActor), _) },
+            //    within = 5 seconds))
+
+            //1 to actors foreach { i ⇒ context.actorOf(routerProps, id + i).tell(CurrentRoutees, testActor) }
+                    })
+                    .Default(Unhandled);
+            }
+        }
+
+        [TestMethod]
+        public void Router_in_general_must_be_able_to_send_their_routees()
+        {
+            
+        }
+
+        [TestMethod]
+        public void Router_in_general_mulst_use_configured_nr_of_instances_when_FromConfig()
+        {
+            //TODO: make FromConfig copy values from config
+            var router = sys.ActorOf(Props.Create<TestActor>().WithRouter(new FromConfig()), "router1");
+
+            router.Tell(new GetRoutees());
+            expectMsgType<Routees>().Members.Count().ShouldBe(3);
+            watch(router);
+            sys.Stop(router);
+            expectTerminated(router);
+        }
     }
 }
