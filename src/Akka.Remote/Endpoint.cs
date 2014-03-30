@@ -463,6 +463,12 @@ namespace Akka.Remote
         {
             handleOrActive = null; //Wipe out the possibly injected handle
             Inbound = false;
+            PreStart();
+        }
+
+        protected override void PreStart()
+        {
+            base.PreStart();
         }
 
         #endregion
