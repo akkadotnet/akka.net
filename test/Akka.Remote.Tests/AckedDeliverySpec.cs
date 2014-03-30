@@ -1,7 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Akka.Event;
 using Akka.Tests;
+using Akka.Tools;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Akka.Remote.Tests
@@ -285,5 +288,112 @@ namespace Akka.Remote.Tests
             Assert.IsTrue(d.Deliverables.SequenceEqual(new []{ msg0, msg1b, msg2, msg3 }));
             Assert.AreEqual(new SeqNo(3), d.Ack.CumulativeAck);
         }
+
+        #region Receive + Send Buffer Tests
+
+        public bool Happened(double p) { return ThreadLocalRandom.Current.NextDouble() < p; }
+
+        public int Geom(Double p, int limit = 5, int acc = 0)
+        {
+            while (true)
+            {
+                if (acc == limit) return acc;
+                if (Happened(p)) return acc;
+                acc = acc + 1;
+            }
+        }
+
+        [TestMethod]
+        public void SendBuffer_and_ReceiveBuffer_must_correctly_cooperate_with_each_other()
+        {
+            var msgCount = 1000;
+            var deliveryProbability = 0.5D;
+            var referenceList = Enumerable.Range(0, msgCount).Select(x => Msg(x)).ToList();
+
+            var toSend = referenceList;
+            var received = new List<Sequenced>();
+            var sndBuf = new AckedSendBuffer<Sequenced>(10);
+            var rcvBuf = new AckedReceiveBuffer<Sequenced>();
+            var log = new List<string>();
+            var lastAck = new Ack(new SeqNo(-1));
+
+            Action<string> dbLog = log.Add;
+            Action<int, double> senderSteps = (steps, p) =>
+            {
+                var resends = new List<Sequenced>(sndBuf.Nacked.Concat(sndBuf.NonAcked).Take(steps));
+
+                var sends = new List<Sequenced>();
+                if (steps - resends.Count > 0)
+                {
+                    var tmp = toSend.Take(steps - resends.Count).ToList();
+                    toSend = toSend.Drop(steps - resends.Count).ToList();
+                    sends = tmp;
+                }
+
+                foreach (var msg in resends.Concat(sends))
+                {
+                    if (sends.Contains(msg)) sndBuf = sndBuf.Buffer(msg);
+                    if (Happened(p))
+                    {
+                        var del = rcvBuf.Receive(msg).ExtractDeliverable;
+                        rcvBuf = del.Buffer;
+                        dbLog(string.Format("{0} -- {1} --> {2}", sndBuf, msg, rcvBuf));
+                        lastAck = del.Ack;
+                        received.AddRange(del.Deliverables);
+                        dbLog(string.Format("R: {0}", string.Join(",", received.Select(x => x.ToString()))));
+                    }
+                    else
+                    {
+                        dbLog(string.Format("{0} -- {1} --X {2}", sndBuf, msg, rcvBuf));
+                    }
+                }
+            };
+
+            Action<double> receiverStep = (p) =>
+            {
+                if (Happened(p))
+                {
+                    sndBuf = sndBuf.Acknowledge(lastAck);
+                    dbLog(string.Format("{0} <-- {1} -- {2}", sndBuf, lastAck, rcvBuf));
+                }
+                else
+                {
+                    dbLog(string.Format("{0} X-- {1} -- {2}", sndBuf, lastAck, rcvBuf));
+                }
+            };
+
+            //Dropping phase
+            System.Diagnostics.Debug.WriteLine("Starting unreliable delivery for {0} messages, with delivery probaboly P = {1}", msgCount, deliveryProbability);
+            var nextSteps = msgCount*2;
+            while (nextSteps > 0)
+            {
+                var s = Geom(0.3, limit: 5);
+                senderSteps(s, deliveryProbability);
+                receiverStep(deliveryProbability);
+                nextSteps--;
+            }
+            System.Diagnostics.Debug.WriteLine("Successfully delivered {0} messages from {1}", received.Count, msgCount);
+            System.Diagnostics.Debug.WriteLine("Entering reliable phase");
+
+            //Finalizing pahase
+            for (var i = 1; i <= msgCount; i++)
+            {
+                senderSteps(1, 1.0);
+                receiverStep(1.0);
+            }
+
+            if (!received.SequenceEqual(referenceList))
+            {
+                System.Diagnostics.Debug.WriteLine(string.Join(Environment.NewLine, log));
+                System.Diagnostics.Debug.WriteLine("Received: ");
+                System.Diagnostics.Debug.WriteLine(string.Join(Environment.NewLine, received.Select(x => x.ToString())));
+                Assert.Fail("Not all messages were received");
+            }
+
+            System.Diagnostics.Debug.WriteLine("All messages have been successfully delivered");
+        }
+
+        #endregion
+
     }
 }
