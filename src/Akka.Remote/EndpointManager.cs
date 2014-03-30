@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Remote.Transport;
+using System.Diagnostics;
 
 namespace Akka.Remote
 {
@@ -268,44 +269,44 @@ namespace Akka.Remote
 
         protected override void OnReceive(object message)
         {
-            message
-                .Match()
-                .With<Listen>(m =>
-                {
-                    ProtocolTransportAddressPair[] res = Listens();
-                    transportMapping = res.ToDictionary(k => k.Address, v => v.ProtocolTransport);
-                    Sender.Tell(res);
-                })
-                .With<Send>(m =>
-                {
-                    Address recipientAddress = m.Recipient.Path.Address;
-                    Address localAddress = m.Recipient.LocalAddressToUse;
+            //message
+            //    .Match()
+            //    .With<Listen>(m =>
+            //    {
+            //        ProtocolTransportAddressPair[] res = Listens();
+            //        transportMapping = res.ToDictionary(k => k.Address, v => v.ProtocolTransport);
+            //        Sender.Tell(res);
+            //    })
+            //    .With<Send>(m =>
+            //    {
+            //        Address recipientAddress = m.Recipient.Path.Address;
+            //        Address localAddress = m.Recipient.LocalAddressToUse;
 
-                    Func<long?, ActorRef> createAndRegisterWritingEndpoint = refuseUid =>
-                    {
-                        AkkaProtocolTransport transport = null;
-                        transportMapping.TryGetValue(localAddress, out transport);
-                        RemoteActorRef recipientRef = m.Recipient;
-                        Address localAddressToUse = recipientRef.LocalAddressToUse;
-                        InternalActorRef endpoint = CreateEndpoint(recipientAddress, transport, localAddressToUse,
-                            refuseUid);
-                        endpoints.RegisterWritableEndpoint(recipientAddress, endpoint);
-                        return endpoint;
-                    };
+            //        Func<long?, ActorRef> createAndRegisterWritingEndpoint = refuseUid =>
+            //        {
+            //            AkkaProtocolTransport transport = null;
+            //            transportMapping.TryGetValue(localAddress, out transport);
+            //            RemoteActorRef recipientRef = m.Recipient;
+            //            Address localAddressToUse = recipientRef.LocalAddressToUse;
+            //            InternalActorRef endpoint = CreateEndpoint(recipientAddress, transport, localAddressToUse,
+            //                refuseUid);
+            //            endpoints.RegisterWritableEndpoint(recipientAddress, endpoint);
+            //            return endpoint;
+            //        };
 
-                    endpoints
-                        .WritableEndpointWithPolicyFor(recipientAddress)
-                        .Match()
-                        .With<Pass>(p => p.Endpoint.Tell(message))
-                        .With<Gated>(p =>
-                        {
-                            if (p.TimeOfRelease.IsOverdue)
-                                createAndRegisterWritingEndpoint(null).Tell(message);
-                            else
-                                Context.System.DeadLetters.Tell(message);
-                        })
-                        .With<Quarantined>(p => createAndRegisterWritingEndpoint(p.Uid).Tell(message))
-                        .Default(p => createAndRegisterWritingEndpoint(null).Tell(message));
+            //        endpoints
+            //            .WritableEndpointWithPolicyFor(recipientAddress)
+            //            .Match()
+            //            .With<Pass>(p => p.Endpoint.Tell(message))
+            //            .With<Gated>(p =>
+            //            {
+            //                if (p.TimeOfRelease.IsOverdue)
+            //                    createAndRegisterWritingEndpoint(null).Tell(message);
+            //                else
+            //                    Context.System.DeadLetters.Tell(message);
+            //            })
+            //            .With<Quarantined>(p => createAndRegisterWritingEndpoint(p.Uid).Tell(message))
+            //            .Default(p => createAndRegisterWritingEndpoint(null).Tell(message));
 
                     /*
 val recipientAddress = recipientRef.path.address
@@ -336,8 +337,8 @@ val recipientAddress = recipientRef.path.address
           createAndRegisterWritingEndpoint(refuseUid = None) ! s
 
                      */
-                })
-                .Default(Unhandled);
+                //})
+                //.Default(Unhandled);
         }
 
         private void CreateAndRegistrEndpoint(AkkaProtocolHandle handle, int? refuseId)
@@ -363,15 +364,13 @@ val recipientAddress = recipientRef.path.address
             int? refuseUid)
         {
             throw new NotImplementedException();
+            System.Diagnostics.Debug.Assert(transportMapping.ContainsKey(localAddressToUse));
+            System.Diagnostics.Debug.Assert(writing || !refuseUid.HasValue);
 
-            //string escapedAddress = Uri.EscapeDataString(recipientAddress.ToString());
-            //string name = string.Format("endpointWriter-{0}-{1}", escapedAddress, endpointId++);
-            //InternalActorRef actor =
-            //    Context.ActorOf(
-            //        Props.Create(
-            //            () => new EndpointActor(localAddressToUse, recipientAddress, transport.Transport, settings)),
-            //        name);
-            //return actor;
+            if (writing)
+            {
+                
+            }
         }
 
         private void CreateEndpoint()

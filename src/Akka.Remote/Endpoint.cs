@@ -5,6 +5,16 @@ using Akka.Event;
 namespace Akka.Remote
 {
     /// <summary>
+    /// INTERNAL API
+    /// </summary>
+// ReSharper disable once InconsistentNaming
+    internal interface InboundMessageDispatcher
+    {
+        void Dispatch(InternalActorRef recipient, Address recipientAddress, SerializedMessage message,
+            ActorRef senderOption = null);
+    }
+
+    /// <summary>
     /// Abstract base class for <see cref="EndpointWriter"/> and <see cref="EndpointReader"/> classes
     /// </summary>
     internal abstract class EndpointActor : UntypedActor, IActorLogging
