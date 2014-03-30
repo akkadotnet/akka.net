@@ -6,9 +6,15 @@ using Akka.Dispatch.SysMsg;
 namespace Akka.Remote
 {
     /// <summary>
+    /// Marker interface for Actors that are deployed in a remote scope
+    /// </summary>
+// ReSharper disable once InconsistentNaming
+    internal interface RemoteRef : ActorRefScope { }
+
+    /// <summary>
     /// Class RemoteActorRef.
     /// </summary>
-    public class RemoteActorRef : InternalActorRef
+    public class RemoteActorRef : InternalActorRef, RemoteRef
     {
         /// <summary>
         /// The deploy
@@ -115,6 +121,11 @@ namespace Akka.Remote
         public override void Suspend()
         {
             SendSystemMessage(new Suspend());
+        }
+
+        public override bool IsLocal
+        {
+            get { return false; }
         }
 
         /// <summary>

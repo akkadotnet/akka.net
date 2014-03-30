@@ -7,6 +7,24 @@ using Akka.Dispatch.SysMsg;
 
 namespace Akka.Actor
 {
+    
+    /// <summary>
+    /// All ActorRefs have a scope which describes where they live. Since it is often
+    /// necessary to distinguish between local and non-local references, this is the only
+    /// method provided on the scope.
+    /// </summary>
+// ReSharper disable once InconsistentNaming
+    internal interface ActorRefScope
+    {
+        bool IsLocal { get; }
+    }
+
+    /// <summary>
+    /// Marker interface for Actors that are deployed within local scope
+    /// </summary>
+// ReSharper disable once InconsistentNaming
+    internal interface LocalRef : ActorRefScope { }
+
     public class FutureActorRef : MinimalActorRef
     {
         private readonly TaskCompletionSource<object> result;
@@ -124,7 +142,7 @@ namespace Akka.Actor
     }
 
 
-    public abstract class InternalActorRef : ActorRef
+    public abstract class InternalActorRef : ActorRef, ActorRefScope
     {
         public abstract InternalActorRef Parent { get; }
         public abstract ActorRefProvider Provider { get; }
@@ -135,9 +153,10 @@ namespace Akka.Actor
         public abstract void Suspend();
 
         public bool IsTerminated { get; internal set; }
+        public abstract bool IsLocal { get; }
     }
 
-    public abstract class MinimalActorRef : InternalActorRef
+    public abstract class MinimalActorRef : InternalActorRef, LocalRef
     {
         public override InternalActorRef Parent
         {
@@ -169,6 +188,11 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, ActorRef sender)
         {
+        }
+
+        public override bool IsLocal
+        {
+            get { return true; }
         }
     }
 

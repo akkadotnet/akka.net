@@ -121,12 +121,24 @@ namespace Akka.Actor
                 }
             }
         }
+
+        /// <summary>
+        /// INTERNAL API
+        /// 
+        /// Convenience method used by remoting when receiving <see cref="ActorSelectionMessage"/> from a remote
+        /// actor.
+        /// </summary>
+        internal static void DeliverSelection(InternalActorRef anchor, ActorRef sender, ActorSelectionMessage sel)
+        {
+            var actorSelection = new ActorSelection(anchor, sel.Elements);
+            actorSelection.Tell(sel.Message, sender);
+        }
     }
 
     /// <summary>
     ///     Class ActorSelectionMessage.
     /// </summary>
-    public class ActorSelectionMessage : AutoReceivedMessage
+    public class ActorSelectionMessage : AutoReceivedMessage, PossiblyHarmful
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorSelectionMessage" /> class.
