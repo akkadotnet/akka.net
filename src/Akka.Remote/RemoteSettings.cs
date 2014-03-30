@@ -24,6 +24,8 @@ namespace Akka.Remote
                 select new TransportSettings(transportConfig)).ToArray();
             Adapters = ConfigToMap(config.GetConfig("akka.remote.adapters"));
             BackoffPeriod = config.GetMillisDuration("akka.remote.backoff-internal", TimeSpan.FromSeconds(3));
+            RetryGateClosedFor = config.GetMillisDuration("akka.remote.retry-gate-closed-for", TimeSpan.Zero);
+            UsePassiveConnections = config.GetBoolean("akka.remote.use-passive-connections");
         }
 
         /// <summary>
@@ -53,6 +55,8 @@ namespace Akka.Remote
 
         public TransportSettings[] Transports { get; set; }
         public TimeSpan BackoffPeriod { get; set; }
+        public TimeSpan RetryGateClosedFor { get; set; }
+        public bool UsePassiveConnections { get; set; }
 
         private Config TransportConfigFor(string transportName)
         {
