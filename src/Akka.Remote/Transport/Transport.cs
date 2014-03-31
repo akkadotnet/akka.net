@@ -239,5 +239,26 @@ namespace Akka.Remote.Transport
         /// The transport that provides the handle MUST guarantee that <see cref="Disassociate"/> could be called arbitrarily many times.
         /// </summary>
         public abstract void Disassociate();
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((AssociationHandle) obj);
+        }
+
+        protected bool Equals(AssociationHandle other)
+        {
+            return Equals(LocalAddress, other.LocalAddress) && Equals(RemoteAddress, other.RemoteAddress);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((LocalAddress != null ? LocalAddress.GetHashCode() : 0) * 397) ^ (RemoteAddress != null ? RemoteAddress.GetHashCode() : 0);
+            }
+        }
     }
 }

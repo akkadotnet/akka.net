@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Akka.Configuration;
@@ -9,18 +10,6 @@ using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Actor
 {
-    /// <summary>
-    ///     Class ActorSystemExtension.
-    /// </summary>
-    public abstract class ActorSystemExtension
-    {
-        /// <summary>
-        ///     Starts the specified system.
-        /// </summary>
-        /// <param name="system">The system.</param>
-        public abstract void Start(ActorSystem system);
-    }
-
     // C#
     /// <summary>
     ///     An actor system is a hierarchical group of actors which share common
@@ -43,9 +32,9 @@ namespace Akka.Actor
     public class ActorSystem : IActorRefFactory, IDisposable
     {
         /// <summary>
-        ///     The extensions
+        ///     The extensionsBase
         /// </summary>
-        private readonly List<ActorSystemExtension> extensions = new List<ActorSystemExtension>();
+        private readonly ConcurrentDictionary<IExtensionId, object> _extensions = new ConcurrentDictionary<IExtensionId, object>();
 
         /// <summary>
         ///     The log
@@ -62,8 +51,8 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">The name.</param>
         /// <param name="config">The configuration.</param>
-        /// <param name="extensions">The extensions.</param>
-        public ActorSystem(string name, Config config = null, params ActorSystemExtension[] extensions)
+        /// <param name="extensionsBase">The extensionsBase.</param>
+        public ActorSystem(string name, Config config = null, params IExtensionId[] extensionsBase)
         {
             if (!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
                 throw new ArgumentException(
@@ -78,7 +67,7 @@ namespace Akka.Actor
             ConfigureMailboxes();
             ConfigureDispatchers();
             ConfigureProvider();
-            ConfigureExtensions(extensions);
+            ConfigureExtensions(extensionsBase);
             Start();
         }
 
@@ -228,11 +217,11 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">Name of the ActorSystem</param>
         /// <param name="config">Configuration of the ActorSystem</param>
-        /// <param name="extensions">Extensions of the ActorSystem</param>
+        /// <param name="extensionIds">Extensions of the ActorSystem</param>
         /// <returns>ActorSystem.</returns>
-        public static ActorSystem Create(string name, Config config, params ActorSystemExtension[] extensions)
+        public static ActorSystem Create(string name, Config config, params ExtensionIdProvider<IExtension>[] extensionIds)
         {
-            return new ActorSystem(name, config, extensions);
+            return new ActorSystem(name, config, extensionIds);
         }
 
 
@@ -240,11 +229,11 @@ namespace Akka.Actor
         ///     Creates the specified name.
         /// </summary>
         /// <param name="name">The name.</param>
-        /// <param name="extensions">The extensions.</param>
+        /// <param name="extensionsBase">The extensionsBase.</param>
         /// <returns>ActorSystem.</returns>
-        public static ActorSystem Create(string name, params ActorSystemExtension[] extensions)
+        public static ActorSystem Create(string name, params ExtensionIdProvider<IExtension>[] extensionsBase)
         {
-            return new ActorSystem(name, null, extensions);
+            return new ActorSystem(name, null, extensionsBase);
         }
 
         /// <summary>
@@ -266,16 +255,41 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Configures the extensions.
+        ///     Configures the extensionsBase.
         /// </summary>
-        /// <param name="extensions">The extensions.</param>
-        private void ConfigureExtensions(IEnumerable<ActorSystemExtension> extensions)
+        /// <param name="extensionIdProviders">The extensionsBase.</param>
+        private void ConfigureExtensions(IEnumerable<IExtensionId> extensionIdProviders)
         {
-            if (extensions != null)
+            foreach (var extensionId in extensionIdProviders)
             {
-                this.extensions.AddRange(extensions);
-                this.extensions.ForEach(e => e.Start(this));
+                var extension = extensionId.CreateExtension(this);
+                _extensions.TryAdd(extensionId, extension);
             }
+        }
+
+        /// <summary>
+        /// Registers a new extensionBase to the ActorSystem
+        /// </summary>
+        /// <param name="extensionBase">The extensionBase to register</param>
+        internal object RegisterExtension(IExtensionId extensionBase)
+        {
+            if (extensionBase == null) return null;
+            if (!_extensions.ContainsKey(extensionBase))
+            {
+                _extensions.TryAdd(extensionBase, extensionBase.CreateExtension(this));
+            }
+
+            return extensionBase.Get(this);
+        }
+
+        /// <summary>
+        /// Returns an extension registered to this ActorSystem
+        /// </summary>
+        internal object GetExtension(IExtensionId extensionId)
+        {
+            object extension;
+            _extensions.TryGetValue(extensionId, out extension);
+            return extension;
         }
 
         /// <summary>
@@ -396,7 +410,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// Used for seeding unique <see cref="Address"/> values upon Actor restarts; particularly important for remote Actors
-        /// TODO: technically this feature belongs inside ActorSystem extensions, but we don't have an implementation for that yet
+        /// TODO: technically this feature belongs inside ActorSystem extensionsBase, but we don't have an implementation for that yet
         /// TODO: see https://github.com/akka/akka/blob/f1edf789798dc02dfa37d3301d7712736c964ab1/akka-remote/src/main/scala/akka/remote/AddressUidExtension.scala
         /// </summary>
         internal int AddressUid()

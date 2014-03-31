@@ -94,7 +94,6 @@
     <Compile Include="RemoteDeployer.cs" />
     <Compile Include="RemoteSettings.cs" />
     <Compile Include="RemoteTransport.cs" />
-    <Compile Include="RemoteTransportException.cs" />
     <Compile Include="Remoting.cs" />
     <Compile Include="RemotingLifecycleEvent.cs" />
     <Compile Include="Serialization\DaemonMsgCreateSerializer.cs" />

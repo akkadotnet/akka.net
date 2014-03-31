@@ -8,6 +8,7 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.Remote.Transport;
 using System.Diagnostics;
+using Akka.Tools;
 
 namespace Akka.Remote
 {
@@ -260,7 +261,7 @@ namespace Akka.Remote
         /// </summary>
         private readonly EndpointRegistry endpoints = new EndpointRegistry();
         private readonly RemoteSettings settings;
-        private long endpointId;
+        private AtomicCounterLong endpointId = new AtomicCounterLong(0L);
         private LoggingAdapter log;
         private EventPublisher eventPublisher;
 
@@ -309,6 +310,8 @@ namespace Akka.Remote
 
         private Dictionary<ActorRef, AkkaProtocolHandle> pendingReadHandoffs = new Dictionary<ActorRef, AkkaProtocolHandle>();
         private Dictionary<ActorRef, List<InboundAssociation>> stashedInbound = new Dictionary<ActorRef, List<InboundAssociation>>();
+
+        #region ActorBase overrides
 
         protected override SupervisorStrategy SupervisorStrategy()
         {
@@ -361,83 +364,92 @@ namespace Akka.Remote
             });
         }
 
-        
-
         protected override void OnReceive(object message)
         {
-            //message
-            //    .Match()
-            //    .With<Listen>(m =>
-            //    {
-            //        ProtocolTransportAddressPair[] res = Listens();
-            //        transportMapping = res.ToDictionary(k => k.Address, v => v.ProtocolTransport);
-            //        Sender.Tell(res);
-            //    })
-            //    .With<Send>(m =>
-            //    {
-            //        Address recipientAddress = m.Recipient.Path.Address;
-            //        Address localAddress = m.Recipient.LocalAddressToUse;
-
-            //        Func<long?, ActorRef> createAndRegisterWritingEndpoint = refuseUid =>
-            //        {
-            //            AkkaProtocolTransport transport = null;
-            //            transportMapping.TryGetValue(localAddress, out transport);
-            //            RemoteActorRef recipientRef = m.Recipient;
-            //            Address localAddressToUse = recipientRef.LocalAddressToUse;
-            //            InternalActorRef endpoint = CreateEndpoint(recipientAddress, transport, localAddressToUse,
-            //                refuseUid);
-            //            endpoints.RegisterWritableEndpoint(recipientAddress, endpoint);
-            //            return endpoint;
-            //        };
-
-            //        endpoints
-            //            .WritableEndpointWithPolicyFor(recipientAddress)
-            //            .Match()
-            //            .With<Pass>(p => p.Endpoint.Tell(message))
-            //            .With<Gated>(p =>
-            //            {
-            //                if (p.TimeOfRelease.IsOverdue)
-            //                    createAndRegisterWritingEndpoint(null).Tell(message);
-            //                else
-            //                    Context.System.DeadLetters.Tell(message);
-            //            })
-            //            .With<Quarantined>(p => createAndRegisterWritingEndpoint(p.Uid).Tell(message))
-            //            .Default(p => createAndRegisterWritingEndpoint(null).Tell(message));
-
-                    /*
-val recipientAddress = recipientRef.path.address
-
-      def createAndRegisterWritingEndpoint(refuseUid: Option[Int]): ActorRef =
-        endpoints.registerWritableEndpoint(
-          recipientAddress,
-          createEndpoint(
-            recipientAddress,
-            recipientRef.localAddressToUse,
-            transportMapping(recipientRef.localAddressToUse),
-            settings,
-            handleOption = None,
-            writing = true,
-            refuseUid))
-
-      endpoints.writableEndpointWithPolicyFor(recipientAddress) match {
-        case Some(Pass(endpoint)) ⇒
-          endpoint ! s
-        case Some(Gated(timeOfRelease)) ⇒
-          if (timeOfRelease.isOverdue()) createAndRegisterWritingEndpoint(refuseUid = None) ! s
-          else extendedSystem.deadLetters ! s
-        case Some(Quarantined(uid, _)) ⇒
-          // timeOfRelease is only used for garbage collection reasons, therefore it is ignored here. We still have
-          // the Quarantined tombstone and we know what UID we don't want to accept, so use it.
-          createAndRegisterWritingEndpoint(refuseUid = Some(uid)) ! s
-        case None ⇒
-          createAndRegisterWritingEndpoint(refuseUid = None) ! s
-
-                     */
-                //})
-                //.Default(Unhandled);
+            
         }
 
-        private void CreateAndRegistrEndpoint(AkkaProtocolHandle handle, int? refuseId)
+        protected void Accepting(object message)
+        {
+            
+        }
+
+        protected void Flushing(object message)
+        {
+            
+        }
+
+        #endregion
+
+        #region Internal methods
+
+        private Task<IList<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>>>
+            Listens()
+        {
+            throw new NotImplementedException();
+
+            /*
+             * Constructs chains of adapters on top of each driven given in configuration. The result structure looks like the following:
+             * 
+             *      AkkaProtocolTransport <-- Adapter <-- ... <-- Adapter <-- Driver
+             * 
+             * The transports variable contains only the heads of each chains (the AkkaProtocolTransport instances)
+             */
+            var transports = new List<AkkaProtocolTransport>();
+            foreach (var transportSettings in settings.Transports)
+            {
+                var args = new object[] {Context.System, transportSettings.Config};
+
+                //Loads the driver -- the bottom element of the chain
+                //The chain at this point:
+                //  Driver
+                Transport.Transport driver;
+                try
+                {
+                    var driverType = Type.GetType(transportSettings.TransportClass);
+// ReSharper disable once AssignNullToNotNullAttribute
+                    driver = (Transport.Transport)Activator.CreateInstance(driverType, args);
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException(string.Format("Cannot instantiate transport [{0}]. " +
+                                                              "Make sure it extends [Akka.Remote.Transport.Transport and has constructor with " +
+                                                              "[Akka.Actor.ActorSystem] and [Akka.Configuration.Config] parameters", transportSettings.TransportClass), ex);
+                }
+
+                //Iteratively decorates the bottom level driver with a list of adapters
+                //The chain at this point:
+                // Adapter <-- .. <-- Adapter <-- Driver
+                //var wrappedTransport = transportSettings.Adapters.Select(x =>
+                //{
+
+                //});
+            }
+        }
+
+        private void AcceptPendingReader(ActorRef takingOverFrom)
+        {
+            if (pendingReadHandoffs.ContainsKey(takingOverFrom))
+            {
+                var handle = pendingReadHandoffs[takingOverFrom];
+                pendingReadHandoffs.Remove(takingOverFrom);
+                eventPublisher.NotifyListeners(new AssociatedEvent(handle.LocalAddress, handle.RemoteAddress, inbound:true));
+                var endpoint = CreateEndpoint(handle.RemoteAddress, handle.LocalAddress,
+                    transportMapping[handle.LocalAddress], settings, false, handle, refuseUid: null);
+                endpoints.RegisterReadOnlyEndpoint(handle.RemoteAddress, endpoint);
+            }
+        }
+
+        private void RemovePendingReader(ActorRef takingOverFrom, AkkaProtocolHandle withHandle)
+        {
+            if (pendingReadHandoffs.ContainsKey(takingOverFrom) &&
+                pendingReadHandoffs[takingOverFrom].Equals(withHandle))
+            {
+                pendingReadHandoffs.Remove(takingOverFrom);
+            }
+        }
+
+        private void CreateAndRegisterEndpoint(AkkaProtocolHandle handle, int? refuseId)
         {
             var writing = settings.UsePassiveConnections && !endpoints.HasWriteableEndpointFor(handle.RemoteAddress);
             eventPublisher.NotifyListeners(new AssociatedEvent(handle.LocalAddress, handle.RemoteAddress, true));
@@ -446,53 +458,54 @@ val recipientAddress = recipientRef.path.address
                 handle.LocalAddress,
                 transportMapping[handle.LocalAddress],
                 settings,
-                handle,
                 writing,
+                handle,
                 refuseId);
-            endpoints.RegisterReadOnlyEndpoint(handle.RemoteAddress, endpoint);
-        }
-
-        private InternalActorRef CreateEndpoint(Address recipientAddress, Address localAddressToUse,
-            AkkaProtocolTransport transport, 
-            RemoteSettings endpointSettings,
-            AkkaProtocolHandle handleOption,
-            bool writing,
-            int? refuseUid)
-        {
-            throw new NotImplementedException();
-            System.Diagnostics.Debug.Assert(transportMapping.ContainsKey(localAddressToUse));
-            System.Diagnostics.Debug.Assert(writing || !refuseUid.HasValue);
 
             if (writing)
             {
-                
+                endpoints.RegisterWritableEndpoint(handle.RemoteAddress, endpoint, (int) handle.HandshakeInfo.Uid);
+            }
+            else
+            {
+                endpoints.RegisterReadOnlyEndpoint(handle.RemoteAddress, endpoint);
+                endpoints.RemovePolicy(handle.RemoteAddress);
             }
         }
 
-        private void CreateEndpoint()
+        private InternalActorRef CreateEndpoint(Address remoteAddress, Address localAddress, AkkaProtocolTransport transport,
+            RemoteSettings endpointSettings, bool writing, AkkaProtocolHandle handleOption = null, int? refuseUid = null)
         {
+            System.Diagnostics.Debug.Assert(transportMapping.ContainsKey(localAddress));
+            System.Diagnostics.Debug.Assert(writing || refuseUid == null);
+
+            InternalActorRef endpointActor;
+
+            if (writing)
+            {
+                endpointActor =
+                    Context.ActorOf(
+                        ReliableDeliverySupervisor.ReliableDeliverySupervisorProps(handleOption, localAddress,
+                            remoteAddress, refuseUid, transport, endpointSettings, new AkkaPduProtobuffCodec(),
+                            _receiveBuffers).WithDeploy(Deploy.Local),
+                        string.Format("reliableEndpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress),
+                            endpointId.Next));
+            }
+            else
+            {
+                endpointActor =
+                    Context.ActorOf(
+                        EndpointWriter.EndpointWriterProps(handleOption, localAddress, remoteAddress, refuseUid,
+                            transport, endpointSettings, new AkkaPduProtobuffCodec(), _receiveBuffers,
+                            reliableDeliverySupervisor: null).WithDeploy(Deploy.Local),
+                        string.Format("endpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress), endpointId.Next));
+            }
+
+            Context.Watch(endpointActor);
+            return endpointActor;
         }
 
-        private ProtocolTransportAddressPair[] Listens()
-        {
-            throw new NotImplementedException();
+        #endregion
 
-            //ProtocolTransportAddressPair[] transports = settings.Transports.Select(t =>
-            //{
-            //    Type driverType = Type.GetType(t.TransportClass);
-            //    if (driverType == null)
-            //    {
-            //        throw new ArgumentException("The type [" + t.TransportClass + "] could not be resolved");
-            //    }
-            //    var driver = (Transport.Transport) Activator.CreateInstance(driverType, Context.System, t.Config);
-            //    Transport.Transport wrappedTransport = driver; //TODO: Akka applies adapters and other yet unknown stuff
-            //    Address address = driver.Listen();
-            //    return
-            //        new ProtocolTransportAddressPair(
-            //            new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(t.Config)),
-            //            address);
-            //}).ToArray();
-            //return transports;
-        }
     }
 }

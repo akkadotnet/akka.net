@@ -86,6 +86,7 @@ namespace Akka.Actor
 
     public abstract class ActorRef : ICanTell
     {
+
         public static readonly Nobody Nobody = new Nobody();
         public static readonly ReservedActorRef Reserved = new ReservedActorRef();
         public static readonly ActorRef NoSender = new NoSender();

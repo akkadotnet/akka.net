@@ -28,7 +28,7 @@ namespace Akka.Remote
 
     internal class Remoting : RemoteTransport
     {
-        public static readonly string EndpointManagerName = "endpointManager";
+        
         private readonly LoggingAdapter log;
         private IDictionary<string, HashSet<ProtocolTransportAddressPair>> transportMapping;
 
@@ -102,7 +102,11 @@ namespace Akka.Remote
             return LocalAddressForRemote(transportMapping, remote);
         }
 
-        private Address LocalAddressForRemote(
+        #region Static methods and properties
+
+        public const string EndpointManagerName = "endpointManager";
+
+        internal static Address LocalAddressForRemote(
             IDictionary<string, HashSet<ProtocolTransportAddressPair>> transportMapping, Address remote)
         {
             HashSet<ProtocolTransportAddressPair> transports;
@@ -135,6 +139,8 @@ namespace Akka.Remote
                 "No transport is loaded for protocol: [" + remote.Protocol + "], available protocols: [" +
                 string.Join(",", transportMapping.Keys.Select(t => t.ToString())) + "]", null);
         }
+
+        #endregion
     }
 
     public sealed class RegisterTransportActor

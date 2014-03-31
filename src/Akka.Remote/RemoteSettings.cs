@@ -78,10 +78,13 @@ namespace Akka.Remote
             public TransportSettings(Config config)
             {
                 TransportClass = config.GetString("transport-class");
+                Adapters = config.GetStringList("applied-adapters").Reverse().ToList();
                 Config = config;
             }
 
             public Config Config { get; set; }
+
+            public IList<string> Adapters { get; set; }
 
             public string TransportClass { get; set; }
         }

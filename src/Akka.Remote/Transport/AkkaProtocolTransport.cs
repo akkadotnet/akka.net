@@ -212,6 +212,26 @@ namespace Akka.Remote.Transport
         public Address Origin { get; private set; }
 
         public long Uid { get; private set; }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is HandshakeInfo && Equals((HandshakeInfo) obj);
+        }
+
+        private bool Equals(HandshakeInfo other)
+        {
+            return Equals(Origin, other.Origin) && Uid == other.Uid;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Origin != null ? Origin.GetHashCode() : 0) * 397) ^ Uid.GetHashCode();
+            }
+        }
     }
 
     internal class AkkaProtocolHandle : AbstractTransportAdapterHandle
@@ -246,6 +266,30 @@ namespace Akka.Remote.Transport
         public void Disassociate(DisassociateInfo info)
         {
             StateActor.Tell(new DisassociateUnderlying(info));
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((AkkaProtocolHandle) obj);
+        }
+
+        protected bool Equals(AkkaProtocolHandle other)
+        {
+            return base.Equals(other) && Equals(HandshakeInfo, other.HandshakeInfo) && Equals(StateActor, other.StateActor);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ (HandshakeInfo != null ? HandshakeInfo.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (StateActor != null ? StateActor.GetHashCode() : 0);
+                return hashCode;
+            }
         }
     }
 
