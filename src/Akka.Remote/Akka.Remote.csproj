@@ -82,7 +82,6 @@
     <Compile Include="DefaultFailureDetectorRegistry.cs" />
     <Compile Include="Endpoint.cs" />
     <Compile Include="EndpointManager.cs" />
-    <Compile Include="EndpointManagerMessages.cs" />
     <Compile Include="EndpointRegistry.cs" />
     <Compile Include="FailureDetector.cs" />
     <Compile Include="FailureDetectorRegistry.cs" />

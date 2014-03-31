@@ -2,8 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Threading;
-using System.Web.UI.WebControls;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -246,6 +246,7 @@ namespace Akka.Remote
         private AkkaPduCodec codec;
         private AkkaProtocolHandle currentHandle;
         private ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers;
+        private EndpointRegistry _endpoints = new EndpointRegistry();
 
         public ReliableDeliverySupervisor(AkkaProtocolHandle handleOrActive, Address localAddress, Address remoteAddress, 
             int? refuseUid, AkkaProtocolTransport transport, RemoteSettings settings, AkkaPduCodec codec, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers)
@@ -261,17 +262,11 @@ namespace Akka.Remote
             this.receiveBuffers = receiveBuffers;
             Reset();
             _writer = CreateWriter();
+            Uid = handleOrActive != null ? (int?) handleOrActive.HandshakeInfo.Uid : null;
+            UidConfirmed = Uid.HasValue;
         }
 
-        public int? Uid
-        {
-            get
-            {
-                if (handleOrActive != null)
-                    return (int)handleOrActive.HandshakeInfo.Uid;
-                return null;
-            }
-        }
+        public int? Uid { get; set; }
 
         /// <summary>
         /// Processing of <see cref="Ack"/>s has to be delayed until the UID is discovered after a reconnect. Dependig whether the
@@ -282,10 +277,7 @@ namespace Akka.Remote
         /// If we already have an inbound handle then UID is initially confirmed.
         /// (This actor is never restarted.)
         /// </summary>
-        public bool UidConfirmed
-        {
-            get { return Uid.HasValue; }
-        }
+        public bool UidConfirmed { get; set; }
 
         public Deadline BailoutAt
         {
@@ -339,7 +331,7 @@ namespace Akka.Remote
             _pendingAcks = new List<Ack>();
         }
 
-        #region ActorBase methods
+        #region ActorBase methods and Behaviors
 
         protected override void PostStop()
         {
@@ -358,70 +350,141 @@ namespace Akka.Remote
 
         protected override void OnReceive(object message)
         {
-            throw new NotImplementedException();
+            message.Match()
+                .With<EndpointWriter.FlushAndStop>(flush =>
+                {
+                    //Trying to serve untilour last breath
+                    ResendAll();
+                    _writer.Tell(new EndpointWriter.FlushAndStop());
+                    Context.Become(FlushWait);
+                })
+                .With<EndpointManager.Send>(HandleSend)
+                .With<Ack>(ack =>
+                {
+                    if (!UidConfirmed) _pendingAcks.Add(ack);
+                    else
+                    {
+                        try
+                        {
+                            _resendBuffer = _resendBuffer.Acknowledge(ack);
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new InvalidAssociationException(
+                                string.Format(
+                                    "Error encounted while processing system message acknowledgement {0} {1}",
+                                    _resendBuffer, ack), ex);
+                        }
+
+                        if (_lastCumulativeAck < ack.CumulativeAck)
+                        {
+                            _lastCumulativeAck = ack.CumulativeAck;
+                            // Cumulative ack is progressing, we might not need to resend non-acked messages yet.
+                            // If this progression stops, the timer will eventually kick in, since scheduleAutoResend
+                            // does not cancel existing timers (see the "else" case).
+                            RescheduleAutoResend();
+                        }
+                        else
+                        {
+                            ScheduleAutoResend();
+                        }
+
+                        ResendNacked();
+                    }
+                })
+                .With<AttemptSysMsgRedelivery>(sysmsg =>
+                {
+                    if (UidConfirmed) ResendAll();
+                })
+                .With<Terminated>(terminated =>
+                {
+                    currentHandle = null;
+                    Context.Parent.Tell(new EndpointWriter.StoppedReading(Self));
+                    if (_resendBuffer.NonAcked.Count > 0 || _resendBuffer.Nacked.Count > 0)
+                        Context.System.Scheduler.ScheduleOnce(settings.SysResendTimeout, Self,
+                            new AttemptSysMsgRedelivery());
+                    Context.Become(Idle);
+                })
+                .With<GotUid>(g =>
+                {
+                    Context.Parent.Tell(g);
+                    //New system that has the same address as the old - need to start from fresh state
+                    UidConfirmed = true;
+                    if(Uid.HasValue && Uid.Value != g.Uid) Reset();
+                    else UnstashAcks();
+                    Uid = refuseUid;
+                })
+                .With<EndpointWriter.StopReading>(stopped =>
+                {
+                    _writer.Tell(stopped, Sender); //forward the request
+                });
         }
 
         protected void Gated(object message)
         {
-            
+            message.Match()
+                .With<Terminated>(
+                    terminated => Context.System.Scheduler.ScheduleOnce(settings.RetryGateClosedFor, Self, new Ungate()))
+                .With<Ungate>(ungate =>
+                {
+                    if (_resendBuffer.NonAcked.Count > 0 || _resendBuffer.Nacked.Count > 0)
+                    {
+                        // If we talk to a system we have not talked to before (or has given up talking to in the past) stop
+                        // system delivery attempts after the specified time. This act will drop the pending system messages and gate the
+                        // remote address at the EndpointManager level stopping this actor. In case the remote system becomes reachable
+                        // again it will be immediately quarantined due to out-of-sync system message buffer and becomes quarantined.
+                        // In other words, this action is safe.
+                        if (!UidConfirmed && BailoutAt.IsOverdue)
+                        {
+                            throw new InvalidAssociation(localAddress, remoteAddress,
+                                new TimeoutException("Delivery of system messages timed out and theywere dropped"));
+                        }
+
+                        _writer = CreateWriter();
+                        //Resending will be triggered by the incoming GotUid message after the connection finished
+                        Context.Become(OnReceive);
+                    }
+                    else
+                    {
+                        Context.Become(Idle);
+                    }
+                })
+                .With<EndpointManager.Send>(send =>
+                {
+                    if (send.Message is SystemMessage)
+                    {
+                        TryBuffer(send.Copy(NextSeq()));
+                    }
+                    else
+                    {
+                        Context.System.DeadLetters.Tell(send);
+                    }
+                })
+                .With<EndpointWriter.FlushAndStop>(flush => Context.Stop(Self))
+                .With<EndpointWriter.StopReading>(w => Sender.Tell(new EndpointWriter.StoppedReading(w.Writer)));
         }
 
         protected void Idle(object message)
         {
-            
-        }
-
-        protected void FlushWait(object message)
-        {
             message.Match()
-                .With<Terminated>(terminated =>
+                .With<EndpointManager.Send>(send =>
                 {
-                    //Clear buffer to prevent sending system messages to dead letters -- at this point we are shutting down and
-                    //don't know if they were properly delivered or not
-                    _resendBuffer = new AckedSendBuffer<EndpointManager.Send>(0);
-                    Context.Stop(Self);
-                });
+                    _writer = CreateWriter();
+                    //Resending will be triggered by the incoming GotUid message after the connection finished
+                    HandleSend(send);
+                    Context.Become(OnReceive);
+                })
+                .With<AttemptSysMsgRedelivery>(sys =>
+                {
+                    _writer = CreateWriter();
+                    //Resending will be triggered by the incoming GotUid message after the connection finished
+                    Context.Become(OnReceive);
+                })
+                .With<EndpointWriter.FlushAndStop>(stop => Context.Stop(Self))
+                .With<EndpointWriter.StopReading>(stop => Sender.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
         }
 
-        private void HandleSend(EndpointManager.Send send)
-        {
-            if (send.Message is SystemMessage)
-            {
-                var sequencedSend = send.Copy(NextSeq());
-                TryBuffer(sequencedSend);
-                //If we have not confirmed the remote UID we cannot transfer the system message at this point, so just buffer it.
-                // GotUid will kick ResendAll causing the messages to be properly written.
-                if(UidConfirmed) _writer.Tell(sequencedSend);
-            }
-            else
-            {
-                _writer.Tell(send);
-            }
-        }
-
-        private void ResendNacked()
-        {
-            _resendBuffer.Nacked.ForEach(nacked => _writer.Tell(nacked));
-        }
-
-        private void ResendAll()
-        {
-            ResendNacked();
-            _resendBuffer.NonAcked.ForEach(nonacked => _writer.Tell(nonacked));
-            RescheduleAutoResend();
-        }
-
-        private void TryBuffer(EndpointManager.Send s)
-        {
-            try
-            {
-                _resendBuffer = _resendBuffer.Buffer(s);
-            }
-            catch (Exception ex)
-            {
-                throw new HopelessAssociation(localAddress, remoteAddress, Uid, ex);
-            }
-        }
+       
 
         #endregion
 
@@ -452,6 +515,58 @@ namespace Akka.Remote
         }
 
         #endregion
+
+        protected void FlushWait(object message)
+        {
+            message.Match()
+                .With<Terminated>(terminated =>
+                {
+                    //Clear buffer to prevent sending system messages to dead letters -- at this point we are shutting down and
+                    //don't know if they were properly delivered or not
+                    _resendBuffer = new AckedSendBuffer<EndpointManager.Send>(0);
+                    Context.Stop(Self);
+                });
+        }
+
+        private void HandleSend(EndpointManager.Send send)
+        {
+            if (send.Message is SystemMessage)
+            {
+                var sequencedSend = send.Copy(NextSeq());
+                TryBuffer(sequencedSend);
+                //If we have not confirmed the remote UID we cannot transfer the system message at this point, so just buffer it.
+                // GotUid will kick ResendAll causing the messages to be properly written.
+                if (UidConfirmed) _writer.Tell(sequencedSend);
+            }
+            else
+            {
+                _writer.Tell(send);
+            }
+        }
+
+        private void ResendNacked()
+        {
+            _resendBuffer.Nacked.ForEach(nacked => _writer.Tell(nacked));
+        }
+
+        private void ResendAll()
+        {
+            ResendNacked();
+            _resendBuffer.NonAcked.ForEach(nonacked => _writer.Tell(nonacked));
+            RescheduleAutoResend();
+        }
+
+        private void TryBuffer(EndpointManager.Send s)
+        {
+            try
+            {
+                _resendBuffer = _resendBuffer.Buffer(s);
+            }
+            catch (Exception ex)
+            {
+                throw new HopelessAssociation(localAddress, remoteAddress, Uid, ex);
+            }
+        }
 
         #region Writer create
 
