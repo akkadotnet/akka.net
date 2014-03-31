@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Akka.Actor;
 using Google.ProtocolBuffers;
 
@@ -74,6 +75,22 @@ namespace Akka.Remote.Transport
 
     /// <summary>
     /// INTERNAL API
+    /// </summary>
+    internal sealed class AckAndMessage
+    {
+        public AckAndMessage(Ack ackOption, Message messageOption)
+        {
+            MessageOption = messageOption;
+            AckOption = ackOption;
+        }
+
+        public Ack AckOption { get; private set; }
+
+        public Message MessageOption { get; private set; }
+    }
+
+    /// <summary>
+    /// INTERNAL API
     /// 
     /// A Codec that is able to convert Akka PDUs from and to <see cref="ByteString"/>
     /// </summary>
@@ -113,10 +130,12 @@ namespace Akka.Remote.Transport
 
         public abstract ByteString ConstructHeartbeat();
 
-        public abstract Message DecodeMessage(ByteString raw, RemoteActorRefProvider provider, Address localAddress);
+        public abstract AckAndMessage DecodeMessage(ByteString raw, RemoteActorRefProvider provider, Address localAddress);
 
         public abstract ByteString ConstructMessage(Address localAddress, ActorRef recipient,
-            SerializedMessage serializedMessage, ActorRef senderOption = null);
+            SerializedMessage serializedMessage, ActorRef senderOption = null, SeqNo seqOption = null, Ack ackOption = null);
+
+        public abstract ByteString ConstructPureAck(Ack ack);
     }
 
     internal class AkkaPduProtobuffCodec : AkkaPduCodec
@@ -169,8 +188,18 @@ namespace Akka.Remote.Transport
             return ConstructControlMessagePdu(CommandType.HEARTBEAT);
         }
 
-        public override Message DecodeMessage(ByteString raw, RemoteActorRefProvider provider, Address localAddress)
+        public override AckAndMessage DecodeMessage(ByteString raw, RemoteActorRefProvider provider, Address localAddress)
         {
+            var ackAndEnvelope = AckAndEnvelopeContainer.ParseFrom(raw);
+
+            Ack ackOption = null;
+
+            if (ackAndEnvelope.HasAck)
+            {
+                ackOption = new Ack(new SeqNo((long)ackAndEnvelope.Ack.CumulativeAck), ackAndEnvelope.Ack.NacksList.Select(x => new SeqNo((long)x)));
+            }
+
+            Message messageOption = null;
             var envelopeContainer = RemoteEnvelope.ParseFrom(raw);
             if (envelopeContainer != null)
             {
@@ -182,20 +211,37 @@ namespace Akka.Remote.Transport
                 {
                     senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
                 }
-                return new Message(recipient, recipientAddress, serializedMessage, senderOption);
+                messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption);
             }
 
-            return null;
+            return new AckAndMessage(ackOption, messageOption);
+        }
+
+        private AcknowledgementInfo.Builder AckBuilder(Ack ack)
+        {
+            var ackBuilder = AcknowledgementInfo.CreateBuilder();
+            ackBuilder = ackBuilder.SetCumulativeAck((ulong) ack.CumulativeAck.RawValue);
+
+            return ack.Nacks.Aggregate(ackBuilder, (current, nack) => current.AddNacks((ulong) nack.RawValue));
         }
 
         public override ByteString ConstructMessage(Address localAddress, ActorRef recipient, SerializedMessage serializedMessage,
-            ActorRef senderOption = null)
+            ActorRef senderOption = null, SeqNo seqOption = null, Ack ackOption = null)
         {
+            var ackAndEnvelopeBuilder = AckAndEnvelopeContainer.CreateBuilder();
             var envelopeBuilder = RemoteEnvelope.CreateBuilder().SetRecipient(SerializeActorRef(recipient.Path.Address, recipient));
             if (senderOption != null) { envelopeBuilder = envelopeBuilder.SetSender(SerializeActorRef(localAddress, senderOption)); }
+            if (seqOption != null) { envelopeBuilder = envelopeBuilder.SetSeq((ulong)seqOption.RawValue); }
+            if (ackOption != null) { ackAndEnvelopeBuilder = ackAndEnvelopeBuilder.SetAck(AckBuilder(ackOption)); }
             envelopeBuilder = envelopeBuilder.SetMessage(serializedMessage);
+            ackAndEnvelopeBuilder = ackAndEnvelopeBuilder.SetEnvelope(envelopeBuilder);
 
-            return envelopeBuilder.Build().ToByteString();
+            return ackAndEnvelopeBuilder.Build().ToByteString();
+        }
+
+        public override ByteString ConstructPureAck(Ack ack)
+        {
+            return AckAndEnvelopeContainer.CreateBuilder().SetAck(AckBuilder(ack)).Build().ToByteString();
         }
 
         #region Internal methods
