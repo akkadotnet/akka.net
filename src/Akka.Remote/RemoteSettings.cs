@@ -29,6 +29,7 @@ namespace Akka.Remote
             SysMsgBufferSize = config.GetInt("akka.remote.system-message-buffer-size");
             SysResendTimeout = config.GetMillisDuration("akka.remote.resend-interval");
             InitialSysMsgDeliveryTimeout = config.GetMillisDuration("akka.remote.initial-system-message-delivery-timeout");
+            SysMsgAckTimeout = config.GetMillisDuration("akka.remote.system-message-ack-piggyback-timeout");
         }
 
         /// <summary>
@@ -63,6 +64,7 @@ namespace Akka.Remote
         public int SysMsgBufferSize { get; set; }
         public TimeSpan SysResendTimeout { get; set; }
         public TimeSpan InitialSysMsgDeliveryTimeout { get; set; }
+        public TimeSpan SysMsgAckTimeout { get; set; }
 
         private Config TransportConfigFor(string transportName)
         {

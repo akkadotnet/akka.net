@@ -8,6 +8,8 @@ using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Transport;
+using Akka.Serialization;
+using Akka.Tools;
 
 namespace Akka.Remote
 {
@@ -649,13 +651,13 @@ namespace Akka.Remote
         protected readonly Address LocalAddress;
         protected Address RemoteAddress;
         protected RemoteSettings Settings;
-        protected Transport.Transport Transport;
+        protected AkkaProtocolTransport Transport;
 
         private readonly EventPublisher _eventPublisher;
 
         protected bool Inbound { get; set; }
 
-        protected EndpointActor(Address localAddress, Address remoteAddress, Transport.Transport transport,
+        protected EndpointActor(Address localAddress, Address remoteAddress, AkkaProtocolTransport transport,
             RemoteSettings settings)
         {
             _eventPublisher = new EventPublisher(Context.System, Log, Logging.LogLevelFor(settings.RemoteLifecycleEventsLogLevel));
@@ -709,9 +711,11 @@ namespace Akka.Remote
             this.reliableDeliverySupervisor = reliableDeliverySupervisor;
             system = Context.System;
             provider = (RemoteActorRefProvider) Context.System.Provider;
-            msgDispatcher = new DefaultMessageDispatcher(system, provider, Log);
+            _msgDispatcher = new DefaultMessageDispatcher(system, provider, Log);
             this.receiveBuffers = receiveBuffers;
             Inbound = handleOrActive != null;
+            _ackDeadline = NextAckDeadline();
+            _handle = handleOrActive;
         }
 
         private AkkaProtocolHandle handleOrActive;
@@ -724,9 +728,31 @@ namespace Akka.Remote
         private DisassociateInfo stopReason = DisassociateInfo.Unknown;
 
         private ActorRef reader;
-        private InboundMessageDispatcher msgDispatcher;
+        private AtomicCounter _readerId = new AtomicCounter(0);
+        private InboundMessageDispatcher _msgDispatcher;
+
+        private Ack _lastAck = null;
+        private Deadline _ackDeadline;
+        private AkkaProtocolHandle _handle;
+        
 
         #region FSM definitions
+
+        private void InitFSM()
+        {
+            When(State.Initializing, @event =>
+            {
+                State<State, bool> nextState = null;
+                @event.FsmEvent.Match()
+                    .With<EndpointManager.Send>(send =>
+                    {
+
+                    });
+
+                return nextState;
+            });
+        }
+
         #endregion
 
         #region ActorBase methods
@@ -750,12 +776,30 @@ namespace Akka.Remote
 
         protected override void PreStart()
         {
-            base.PreStart();
+            SetTimer(AckIdleTimerName, new AckIdleCheckTimer(), new TimeSpan(Settings.SysMsgAckTimeout.Ticks / 2), true);
+
+            var startWithState = State.Initializing;
+            if (_handle == null)
+            {
+                Transport.Associate(RemoteAddress, refuseUid).PipeTo(Self);
+                startWithState = State.Initializing;
+            }
+            else
+            {
+                reader = StartReadEndpoint(_handle);
+                startWithState = State.Writing;
+            }
+            StartWith(startWithState, true);
         }
 
         #endregion
 
         #region Internal methods
+
+        private Deadline NextAckDeadline()
+        {
+            return Deadline.Now + Settings.SysMsgAckTimeout;
+        }
 
         private void PublishAndThrow(Exception reason, LogLevel level)
         {
@@ -769,6 +813,42 @@ namespace Akka.Remote
         {
             Log.Error(reason, "Transient association error (association remains live)");
             return Stay();
+        }
+
+        private ActorRef StartReadEndpoint(AkkaProtocolHandle handle)
+        {
+            var newReader =
+                Context.ActorOf(
+                    EndpointReader.ReaderProps(LocalAddress, RemoteAddress, Transport, Settings, codec, _msgDispatcher,
+                        Inbound, (int)handle.HandshakeInfo.Uid, receiveBuffers, reliableDeliverySupervisor)
+                        .WithDeploy(Deploy.Local),
+                    string.Format("endpointReader-{0}-{1}", AddressUrlEncoder.Encode(RemoteAddress), _readerId.Next));
+            Context.Watch(newReader);
+            handle.ReadHandlerSource.SetResult(new ActorHandleEventListener(newReader));
+            return newReader;
+        }
+
+        private SerializedMessage SerializeMessage(object msg)
+        {
+            if (_handle == null)
+            {
+                throw new EndpointException("Internal error: No handle was presentduring serialization of outbound message.");
+            }
+
+            Akka.Serialization.Serialization.CurrentTransportInformation = new Information(){ Address = _handle.LocalAddress, System = system};
+            return MessageSerializer.Serialize(system, msg);
+        }
+
+        private void TrySendPureAck()
+        {
+            if (_handle != null && _lastAck != null)
+            {
+                if (_handle.Write(codec.ConstructPureAck(_lastAck)))
+                {
+                    _ackDeadline = NextAckDeadline();
+                    _lastAck = null;
+                }
+            }
         }
 
         #endregion
@@ -872,7 +952,10 @@ namespace Akka.Remote
 
     internal class EndpointReader : EndpointActor
     {
-        public EndpointReader(Address localAddress, Address remoteAddress, Transport.Transport transport, RemoteSettings settings) :
+        public EndpointReader(Address localAddress, Address remoteAddress, Transport.Transport transport, 
+            RemoteSettings settings, AkkaPduCodec codec, InboundMessageDispatcher msgDispatch, bool inbound, 
+            int uid, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers, 
+            ActorRef reliableDelvierySupervisor = null) :
             base(localAddress, remoteAddress, transport, settings)
         {
         }
@@ -892,54 +975,23 @@ namespace Akka.Remote
 
 
         #endregion
+
+        #region Static members
+
+        public static Props ReaderProps(Address localAddress, Address remoteAddress, Transport.Transport transport,
+            RemoteSettings settings, AkkaPduCodec codec, InboundMessageDispatcher dispatcher, bool inbound, int uid,
+            ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
+            ActorRef reliableDeliverySupervisor = null)
+        {
+            return
+                Props.Create(
+                    () =>
+                        new EndpointReader(localAddress, remoteAddress, transport, settings, codec, dispatcher, inbound,
+                            uid, receiveBuffers, reliableDeliverySupervisor));
+        }
+
+        #endregion
     }
-
-    //protected override void OnReceive(object message)
-    //{
-    //    message
-    //        .Match()
-    //        .With<Send>(Send);
-    //}
-
-
-    //private void Send(Send send)
-    //{
-    //    //TODO: should this be here?
-    //    Akka.Serialization.Serialization.CurrentTransportInformation = new Information
-    //    {
-    //        System = Context.System,
-    //        Address = localAddress,
-    //    };
-
-    //    string publicPath;
-    //    if (send.Sender is NoSender)
-    //    {
-    //        publicPath = "";
-    //    }
-    //    else if (send.Sender is LocalActorRef)
-    //    {
-    //        publicPath = send.Sender.Path.ToStringWithAddress(localAddress);
-    //    }
-    //    else
-    //    {
-    //        publicPath = send.Sender.Path.ToString();
-    //    }
-
-    //    SerializedMessage serializedMessage = MessageSerializer.Serialize(Context.System, send.Message);
-
-    //    RemoteEnvelope remoteEnvelope = new RemoteEnvelope.Builder()
-    //        .SetSender(new ActorRefData.Builder()
-    //            .SetPath(publicPath))
-    //        .SetRecipient(new ActorRefData.Builder()
-    //            .SetPath(send.Recipient.Path.ToStringWithAddress()))
-    //        .SetMessage(serializedMessage)
-    //        .SetSeq(1)
-    //        .Build();
-
-    //    remoteEnvelope.WriteDelimitedTo(stream);
-    //    stream.Flush();
-    //}
-
 
 
 }
