@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Runtime.InteropServices;
 using System.Runtime.Remoting.Messaging;
 using System.Runtime.Serialization;
 using System.Threading;
@@ -11,6 +13,7 @@ using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Serialization;
 using Akka.Tools;
+using Google.ProtocolBuffers;
 
 namespace Akka.Remote
 {
@@ -193,7 +196,8 @@ namespace Akka.Remote
     /// </summary>
     internal sealed class EndpointDisassociatedException : EndpointException
     {
-        public EndpointDisassociatedException(string msg) : base(msg)
+        public EndpointDisassociatedException(string msg)
+            : base(msg)
         {
         }
     }
@@ -203,7 +207,8 @@ namespace Akka.Remote
     /// </summary>
     internal sealed class EndpointAssociationException : EndpointException
     {
-        public EndpointAssociationException(string msg) : base(msg)
+        public EndpointAssociationException(string msg)
+            : base(msg)
         {
         }
     }
@@ -213,7 +218,8 @@ namespace Akka.Remote
     /// </summary>
     internal sealed class OversizedPayloadException : EndpointException
     {
-        public OversizedPayloadException(string msg) : base(msg)
+        public OversizedPayloadException(string msg)
+            : base(msg)
         {
         }
     }
@@ -251,7 +257,7 @@ namespace Akka.Remote
         private ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers;
         private EndpointRegistry _endpoints = new EndpointRegistry();
 
-        public ReliableDeliverySupervisor(AkkaProtocolHandle handleOrActive, Address localAddress, Address remoteAddress, 
+        public ReliableDeliverySupervisor(AkkaProtocolHandle handleOrActive, Address localAddress, Address remoteAddress,
             int? refuseUid, AkkaProtocolTransport transport, RemoteSettings settings, AkkaPduCodec codec, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers)
         {
             this.handleOrActive = handleOrActive;
@@ -265,7 +271,7 @@ namespace Akka.Remote
             this.receiveBuffers = receiveBuffers;
             Reset();
             _writer = CreateWriter();
-            Uid = handleOrActive != null ? (int?) handleOrActive.HandshakeInfo.Uid : null;
+            Uid = handleOrActive != null ? (int?)handleOrActive.HandshakeInfo.Uid : null;
             UidConfirmed = Uid.HasValue;
         }
 
@@ -336,11 +342,32 @@ namespace Akka.Remote
 
         #region ActorBase methods and Behaviors
 
+        protected override SupervisorStrategy SupervisorStrategy()
+        {
+            return new OneForOneStrategy(ex =>
+            {
+                var directive = Directive.Stop;
+                ex.Match()
+                    .With<IAssociationProblem>(problem => directive = Directive.Escalate)
+                    .Default(e =>
+                    {
+                        Log.Warn("Association with remote system {0} has failed; address is now gated for {1} ms. Reason is: [{2}]", remoteAddress, settings.RetryGateClosedFor.TotalMilliseconds, ex.Message);
+                        UidConfirmed = false;
+                        Context.Become(Gated);
+                        currentHandle = null;
+                        Context.Parent.Tell(new EndpointWriter.StoppedReading(Self));
+                        directive = Directive.Stop;
+                    });
+
+                return directive;
+            });
+        }
+
         protected override void PostStop()
         {
             foreach (var msg in _resendBuffer.Nacked.Concat(_resendBuffer.NonAcked))
             {
-                Context.System.DeadLetters.Tell(msg.Copy(opt:null));
+                Context.System.DeadLetters.Tell(msg.Copy(opt: null));
             }
             EndpointManager.ResendState value;
             receiveBuffers.TryRemove(new EndpointManager.Link(localAddress, remoteAddress), out value);
@@ -413,7 +440,7 @@ namespace Akka.Remote
                     Context.Parent.Tell(g);
                     //New system that has the same address as the old - need to start from fresh state
                     UidConfirmed = true;
-                    if(Uid.HasValue && Uid.Value != g.Uid) Reset();
+                    if (Uid.HasValue && Uid.Value != g.Uid) Reset();
                     else UnstashAcks();
                     Uid = refuseUid;
                 })
@@ -487,7 +514,7 @@ namespace Akka.Remote
                 .With<EndpointWriter.StopReading>(stop => Sender.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
         }
 
-       
+
 
         #endregion
 
@@ -647,7 +674,7 @@ namespace Akka.Remote
     /// 
     /// Abstract base class for Endpoint writers that require a <see cref="FSM{TS,TD}"/> implementation.
     /// </summary>
-    internal abstract class EndpointActor<TS,TD> : FSM<TS,TD>
+    internal abstract class EndpointActor<TS, TD> : FSM<TS, TD>
     {
         protected readonly Address LocalAddress;
         protected Address RemoteAddress;
@@ -701,9 +728,9 @@ namespace Akka.Remote
     /// </summary>
     internal class EndpointWriter : EndpointActor<EndpointWriter.State, bool>, WithUnboundedStash
     {
-        public EndpointWriter(AkkaProtocolHandle handleOrActive, Address localAddress, Address remoteAddress, 
-            int? refuseUid, AkkaProtocolTransport transport, RemoteSettings settings, 
-            AkkaPduCodec codec,  ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers, ActorRef reliableDeliverySupervisor = null) : 
+        public EndpointWriter(AkkaProtocolHandle handleOrActive, Address localAddress, Address remoteAddress,
+            int? refuseUid, AkkaProtocolTransport transport, RemoteSettings settings,
+            AkkaPduCodec codec, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers, ActorRef reliableDeliverySupervisor = null) :
             base(localAddress, remoteAddress, transport, settings)
         {
             this.handleOrActive = handleOrActive;
@@ -711,7 +738,7 @@ namespace Akka.Remote
             this.codec = codec;
             this.reliableDeliverySupervisor = reliableDeliverySupervisor;
             system = Context.System;
-            provider = (RemoteActorRefProvider) Context.System.Provider;
+            provider = (RemoteActorRefProvider)Context.System.Provider;
             _msgDispatcher = new DefaultMessageDispatcher(system, provider, Log);
             this.receiveBuffers = receiveBuffers;
             Inbound = handleOrActive != null;
@@ -738,7 +765,7 @@ namespace Akka.Remote
         private AkkaProtocolHandle _handle;
 
         public IStash CurrentStash { get; set; }
-        
+
 
         #region FSM definitions
 
@@ -939,7 +966,7 @@ namespace Akka.Remote
                 }
             });
 
-            OnTermination(@event => @event.Match().With<StopEvent<State,bool>>(stop =>
+            OnTermination(@event => @event.Match().With<StopEvent<State, bool>>(stop =>
             {
                 CancelTimer(AckIdleTimerName);
                 //It is important to call UnstashAll for the stash to work properly and maintain messages during restart.
@@ -1032,7 +1059,7 @@ namespace Akka.Remote
                 throw new EndpointException("Internal error: No handle was presentduring serialization of outbound message.");
             }
 
-            Akka.Serialization.Serialization.CurrentTransportInformation = new Information(){ Address = _handle.LocalAddress, System = system};
+            Akka.Serialization.Serialization.CurrentTransportInformation = new Information() { Address = _handle.LocalAddress, System = system };
             return MessageSerializer.Serialize(system, msg);
         }
 
@@ -1156,32 +1183,189 @@ namespace Akka.Remote
 
         #endregion
 
-       
+
     }
 
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     internal class EndpointReader : EndpointActor
     {
-        public EndpointReader(Address localAddress, Address remoteAddress, Transport.Transport transport, 
-            RemoteSettings settings, AkkaPduCodec codec, InboundMessageDispatcher msgDispatch, bool inbound, 
-            int uid, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers, 
+        public EndpointReader(Address localAddress, Address remoteAddress, Transport.Transport transport,
+            RemoteSettings settings, AkkaPduCodec codec, InboundMessageDispatcher msgDispatch, bool inbound,
+            int uid, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
             ActorRef reliableDelvierySupervisor = null) :
             base(localAddress, remoteAddress, transport, settings)
         {
+            _receiveBuffers = receiveBuffers;
+            _msgDispatch = msgDispatch;
+            Inbound = inbound;
+            _uid = uid;
+            _reliableDeliverySupervisor = reliableDelvierySupervisor;
+            _codec = codec;
+            _provider = (RemoteActorRefProvider)Context.System.Provider;
+        }
+
+        private AkkaPduCodec _codec;
+        private ActorRef _reliableDeliverySupervisor;
+        private ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
+        private int _uid;
+        private InboundMessageDispatcher _msgDispatch;
+
+        private RemoteActorRefProvider _provider;
+        private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new AckedReceiveBuffer<Message>();
+
+        #region ActorBase overrides
+
+        protected override void PreStart()
+        {
+            EndpointManager.ResendState resendState;
+            if (_receiveBuffers.TryGetValue(new EndpointManager.Link(LocalAddress, RemoteAddress), out resendState))
+            {
+                _ackedReceiveBuffer = resendState.Buffer;
+                DeliverAndAck();
+            }
+        }
+
+        protected override void PostStop()
+        {
+            SaveState();
         }
 
         protected override void OnReceive(object message)
         {
-
+            message.Match()
+                .With<Disassociated>(disassociated => HandleDisassociated(disassociated.Info))
+                .With<InboundPayload>(payload =>
+                {
+                    var ackAndMessage = TryDecodeMessageAndAck(payload.Payload);
+                    if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
+                        _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
+                    if (ackAndMessage.MessageOption != null)
+                    {
+                        if (ackAndMessage.MessageOption.ReliableDeliveryEnabled)
+                        {
+                            _ackedReceiveBuffer = _ackedReceiveBuffer.Receive(ackAndMessage.MessageOption);
+                            DeliverAndAck();
+                        }
+                        else
+                        {
+                            _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
+                                ackAndMessage.MessageOption.RecipientAddress,
+                                ackAndMessage.MessageOption.SerializedMessage,
+                                ackAndMessage.MessageOption.SenderOptional);
+                        }
+                    }
+                })
+                .With<EndpointWriter.StopReading>(stop =>
+                {
+                    SaveState();
+                    Context.Become(NotReading);
+                    Sender.Tell(new EndpointWriter.StoppedReading(stop.Writer));
+                });
         }
 
         protected void NotReading(object message)
         {
-
+            message.Match()
+                .With<Disassociated>(disassociated => HandleDisassociated(disassociated.Info))
+                .With<EndpointWriter.StopReading>(stop => Sender.Tell(new EndpointWriter.StoppedReading(stop.Writer)))
+                .With<InboundPayload>(payload =>
+                {
+                    var ackAndMessage = TryDecodeMessageAndAck(payload.Payload);
+                    if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
+                        _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
+                });
         }
+
+        #endregion
+
+
 
         #region Lifecycle event handlers
 
+        private void SaveState()
+        {
+            var key = new EndpointManager.Link(LocalAddress, RemoteAddress);
+            EndpointManager.ResendState previousValue;
+            _receiveBuffers.TryGetValue(key, out previousValue);
+            UpdateSavedState(key, previousValue);
+        }
 
+        private EndpointManager.ResendState Merge(EndpointManager.ResendState current,
+            EndpointManager.ResendState oldState)
+        {
+            if(current.Uid == oldState.Uid) return new EndpointManager.ResendState(_uid,oldState.Buffer.MergeFrom(current.Buffer));
+            return current;
+        }
+
+        private void UpdateSavedState(EndpointManager.Link key, EndpointManager.ResendState expectedState)
+        {
+            if (expectedState == null)
+            {
+                if (_receiveBuffers.ContainsKey(key))
+                {
+                    var updatedValue = new EndpointManager.ResendState(_uid, _ackedReceiveBuffer);
+                    _receiveBuffers.AddOrUpdate(key, updatedValue, (link, state) => updatedValue);
+                    UpdateSavedState(key, updatedValue);
+                }
+            }
+            else
+            {
+                var canReplace = _receiveBuffers.ContainsKey(key) && _receiveBuffers[key].Equals(expectedState);
+                if (canReplace)
+                {
+                    _receiveBuffers[key] = Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer),
+                        expectedState);
+                }
+                else
+                {
+                    EndpointManager.ResendState previousValue;
+                    _receiveBuffers.TryGetValue(key, out previousValue);
+                    UpdateSavedState(key, previousValue);
+                }
+            }
+        }
+
+        private void HandleDisassociated(DisassociateInfo info)
+        {
+            switch (info)
+            {
+                case DisassociateInfo.Quarantined:
+                    throw new InvalidAssociation(LocalAddress, RemoteAddress, new InvalidAssociationException("The remote system has quarantined this system. No further associations " +
+                                                                                                              "to the remote system are possible until this system is restarted."));
+                    break;
+                case DisassociateInfo.Shutdown:
+                    throw new ShutDownAssociation(LocalAddress, RemoteAddress, new InvalidAssociationException("The remote system terminated the association because it is shutting down."));
+                    break;
+                case DisassociateInfo.Unknown:
+                default:
+                    Context.Stop(Self);
+                    break;
+            }
+        }
+
+        private void DeliverAndAck()
+        {
+            var deliverable = _ackedReceiveBuffer.ExtractDeliverable;
+            _ackedReceiveBuffer = deliverable.Buffer;
+
+            // Notify writer that some messages can be acked
+            Context.Parent.Tell(new EndpointWriter.OutboundAck(deliverable.Ack));
+            deliverable.Deliverables.ForEach(msg => _msgDispatch.Dispatch(msg.Recipient, msg.RecipientAddress, msg.SerializedMessage, msg.SenderOptional));
+        }
+
+        private AckAndMessage TryDecodeMessageAndAck(ByteString pdu)
+        {
+            try
+            {
+                return _codec.DecodeMessage(pdu, _provider, LocalAddress);
+            }
+            catch (Exception ex)
+            {
+                throw new EndpointException("Error while decoding incoming Akka PDU", ex);
+            }
+        }
 
         #endregion
 
