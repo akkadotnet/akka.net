@@ -50,7 +50,7 @@ namespace Akka.Remote
                     EndpointManagerName);
 
 
-            Task<object> task = EndpointManager.Ask(new Listen());
+            Task<object> task = EndpointManager.Ask(new EndpointManager.Listen(new TaskCompletionSource<IList<ProtocolTransportAddressPair>>()));
             //TODO: Aaron: Endpointmanager does not reply here //Roger
             if (!task.Wait(3000))
             {
@@ -84,7 +84,7 @@ namespace Akka.Remote
             if (sender == null)
                 sender = ActorRef.NoSender;
 
-            EndpointManager.Tell(new Send(message, sender, recipient), sender);
+            EndpointManager.Tell(new EndpointManager.Send(message, recipient, sender), sender);
         }
 
         public override Task<bool> ManagementCommand(object cmd)

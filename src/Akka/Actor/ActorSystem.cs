@@ -405,5 +405,8 @@ namespace Akka.Actor
         }
 
         #endregion
+
+        #region Equality methods
+        #endregion
     }
 }
