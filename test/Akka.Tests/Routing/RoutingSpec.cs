@@ -169,7 +169,7 @@ namespace Akka.Tests.Routing
             //TODO: make FromConfig copy values from config
             var router = sys.ActorOf(Props.Create<TestActor>().WithRouter(new FromConfig()), "router1");
 
-            router.Tell(new GetRoutees());
+            router.Tell(new GetRoutees(), testActor);
             expectMsgType<Routees>().Members.Count().ShouldBe(3);
             watch(router);
             sys.Stop(router);
