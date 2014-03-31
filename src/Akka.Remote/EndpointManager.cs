@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -269,6 +270,8 @@ namespace Akka.Remote
         private Dictionary<Address, AkkaProtocolTransport> transportMapping =
             new Dictionary<Address, AkkaProtocolTransport>();
 
+        private ConcurrentDictionary<Link, ResendState> _receiveBuffers = new ConcurrentDictionary<Link, ResendState>();
+
         private bool RetryGateEnabled
         {
             get { return settings.RetryGateClosedFor > TimeSpan.Zero; }
@@ -309,8 +312,53 @@ namespace Akka.Remote
 
         protected override SupervisorStrategy SupervisorStrategy()
         {
-            //TODO: need to implement the real EndointManager supervision strategy here once some of the EndpointException subclasses have been implemented
-            return base.SupervisorStrategy();
+            return new OneForOneStrategy(ex =>
+            {
+                var directive = Directive.Stop;
+
+                ex.Match()
+                    .With<InvalidAssociation>(ia =>
+                    {
+                        log.Warn("Tried to associate with unreachable remote address [{0}]. " +
+                                 "Address is now gated for {1} ms, all messages to this address will be delivered to dead letters. Reason: [{2}]", 
+                                 ia.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds, ia.Message);
+                        endpoints.MarkAsFailed(Sender, Deadline.Now + settings.RetryGateClosedFor);
+                        directive = Directive.Stop;
+                    })
+                    .With<ShutDownAssociation>(shutdown =>
+                    {
+                        log.Debug("Remote system with address [{0}] has shut down. " +
+                                  "Address is not gated for {1}ms, all messages to this address will be delivered to dead letters.", 
+                                  shutdown.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds);
+                        endpoints.MarkAsFailed(Sender, Deadline.Now + settings.RetryGateClosedFor);
+                        directive = Directive.Stop;
+                    })
+                    .With<HopelessAssociation>(hopeless =>
+                    {
+                        if (settings.QuarantineDuration.HasValue && hopeless.Uid.HasValue)
+                        {
+                            endpoints.MarkAsQuarantined(hopeless.RemoteAddress, hopeless.Uid.Value,
+                                Deadline.Now + settings.QuarantineDuration.Value);
+                            eventPublisher.NotifyListeners(new QuarantinedEvent(hopeless.RemoteAddress,
+                                hopeless.Uid.Value));
+                        }
+                        else
+                        {
+                            log.Warn("Association to [{0}] with unknown UID is irrecoverably failed. " +
+                                     "Address cannot be quarantined without knowing the UID, gating instead for {1} ms.",
+                                hopeless.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds);
+                            endpoints.MarkAsFailed(Sender, Deadline.Now + settings.RetryGateClosedFor);
+                        }
+                        directive = Directive.Stop;
+                    })
+                    .Default(msg =>
+                    {
+                        if (msg is EndpointDisassociatedException || msg is EndpointAssociationException) { } //no logging
+                        else { log.Error(ex, ex.Message); }
+                    });
+
+                return directive;
+            });
         }
 
         
