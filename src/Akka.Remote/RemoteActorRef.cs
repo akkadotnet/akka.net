@@ -38,7 +38,7 @@ namespace Akka.Remote
         /// <param name="parent">The parent.</param>
         /// <param name="props">The props.</param>
         /// <param name="deploy">The deploy.</param>
-        public RemoteActorRef(RemoteTransport remote, Address localAddressToUse, ActorPath path, InternalActorRef parent,
+        internal RemoteActorRef(RemoteTransport remote, Address localAddressToUse, ActorPath path, InternalActorRef parent,
             Props props, Deploy deploy)
         {
             Remote = remote;
@@ -54,11 +54,12 @@ namespace Akka.Remote
         /// </summary>
         /// <value>The local address to use.</value>
         public Address LocalAddressToUse { get; private set; }
+
         /// <summary>
         /// Gets the remote.
         /// </summary>
         /// <value>The remote.</value>
-        public RemoteTransport Remote { get; private set; }
+        internal RemoteTransport Remote { get; private set; }
 
         /// <summary>
         /// Gets the parent.

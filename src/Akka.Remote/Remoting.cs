@@ -26,7 +26,7 @@ namespace Akka.Remote
         }
     }
 
-    public class Remoting : RemoteTransport
+    internal class Remoting : RemoteTransport
     {
         public static readonly string EndpointManagerName = "endpointManager";
         private readonly LoggingAdapter log;
@@ -73,6 +73,11 @@ namespace Akka.Remote
                 var set = new HashSet<ProtocolTransportAddressPair>(g);
                 transportMapping.Add(g.Key, set);
             }
+        }
+
+        public override Task Shutdown()
+        {
+            throw new NotImplementedException();
         }
 
         public override void Send(object message, ActorRef sender, RemoteActorRef recipient)
