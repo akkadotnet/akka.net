@@ -14,7 +14,7 @@ namespace Akka.Remote.Transport
         Transport Create(Transport wrappedTransport, ActorSystem system);
     }
 
-    public class TransportAdapters
+    internal class TransportAdapters
     {
         public TransportAdapters(ActorSystem system)
         {
@@ -61,7 +61,7 @@ namespace Akka.Remote.Transport
         }
     }
 
-    public class SchemeAugmenter
+    internal class SchemeAugmenter
     {
         public SchemeAugmenter(string addedSchemeIdentifier)
         {
@@ -96,7 +96,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// An adapter that wraps a transport and provides interception capabilities
     /// </summary>
-    public abstract class AbstractTransportAdapter : Transport
+    internal abstract class AbstractTransportAdapter : Transport
     {
         protected AbstractTransportAdapter(Transport wrappedTransport)
         {
@@ -153,7 +153,7 @@ namespace Akka.Remote.Transport
         }
     }
 
-    public abstract class AbstractTransportAdapterHandle : AssociationHandle
+    internal abstract class AbstractTransportAdapterHandle : AssociationHandle
     {
         protected AbstractTransportAdapterHandle(Address originalLocalAddress, Address originalRemoteAddress, AssociationHandle wrappedHandle, string addedSchemeIdentifier) : base(originalLocalAddress, originalRemoteAddress)
         {
@@ -177,12 +177,12 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Marker interface for all transport operations
     /// </summary>
-    public abstract class TransportOperation
+    internal abstract class TransportOperation
     {
         public static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(5);
     }
 
-    public sealed class ListenerRegistered : TransportOperation
+    internal sealed class ListenerRegistered : TransportOperation
     {
         public ListenerRegistered(IAssociationEventListener listener)
         {
@@ -192,7 +192,7 @@ namespace Akka.Remote.Transport
         public IAssociationEventListener Listener { get; private set; }
     }
 
-    public sealed class AssociateUnderlying : TransportOperation
+    internal sealed class AssociateUnderlying : TransportOperation
     {
         public AssociateUnderlying(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusPromise)
         {
@@ -205,7 +205,7 @@ namespace Akka.Remote.Transport
         public TaskCompletionSource<AssociationHandle> StatusPromise { get; private set; }
     }
 
-    public sealed class ListenUnderlying : TransportOperation
+    internal sealed class ListenUnderlying : TransportOperation
     {
         public ListenUnderlying(Address listenAddress, Task<IAssociationEventListener> upstreamListener)
         {
@@ -218,7 +218,7 @@ namespace Akka.Remote.Transport
         public Task<IAssociationEventListener> UpstreamListener { get; private set; }
     }
 
-    public sealed class DisassociateUnderlying : TransportOperation
+    internal sealed class DisassociateUnderlying : TransportOperation
     {
         public DisassociateUnderlying(DisassociateInfo info = DisassociateInfo.Unknown)
         {
@@ -228,7 +228,7 @@ namespace Akka.Remote.Transport
         public DisassociateInfo Info { get; private set; }
     }
 
-    public abstract class ActorTransportAdapter : AbstractTransportAdapter
+    internal abstract class ActorTransportAdapter : AbstractTransportAdapter
     {
         protected ActorTransportAdapter(Transport wrappedTransport, ActorSystem system) : base(wrappedTransport)
         {

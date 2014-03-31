@@ -7,7 +7,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    public class PduCodecException : AkkaException
+    internal class PduCodecException : AkkaException
     {
         public PduCodecException(string msg, Exception cause = null) : base(msg, cause) { }
     }
@@ -15,9 +15,9 @@ namespace Akka.Remote.Transport
     /*
      * Interface used to represent Akka PDUs (Protocol Data Unit)
      */
-    public interface IAkkaPdu { }
+    internal interface IAkkaPdu { }
 
-    public sealed class Associate : IAkkaPdu
+    internal sealed class Associate : IAkkaPdu
     {
         public Associate(HandshakeInfo info)
         {
@@ -27,7 +27,7 @@ namespace Akka.Remote.Transport
         public HandshakeInfo Info { get; private set; }
     }
 
-    public sealed class Disassociate : IAkkaPdu
+    internal sealed class Disassociate : IAkkaPdu
     {
         public Disassociate(DisassociateInfo reason)
         {
@@ -36,9 +36,9 @@ namespace Akka.Remote.Transport
 
         public DisassociateInfo Reason { get; private set; }
     }
-    public sealed class Heartbeat : IAkkaPdu { }
+    internal sealed class Heartbeat : IAkkaPdu { }
 
-    public sealed class Payload : IAkkaPdu
+    internal sealed class Payload : IAkkaPdu
     {
         public Payload(ByteString bytes)
         {
@@ -48,10 +48,11 @@ namespace Akka.Remote.Transport
         public ByteString Bytes { get; private set; }
     }
 
-    public sealed class Message : IAkkaPdu
+    internal sealed class Message : IAkkaPdu, IHasSequenceNumber
     {
-        public Message(InternalActorRef recipient, Address recipientAddress, SerializedMessage serializedMessage, ActorRef senderOptional = null)
+        public Message(InternalActorRef recipient, Address recipientAddress, SerializedMessage serializedMessage, ActorRef senderOptional = null, SeqNo seq = null)
         {
+            Seq = seq;
             SenderOptional = senderOptional;
             SerializedMessage = serializedMessage;
             RecipientAddress = recipientAddress;
@@ -65,6 +66,10 @@ namespace Akka.Remote.Transport
         public SerializedMessage SerializedMessage { get; private set; }
 
         public ActorRef SenderOptional { get; private set; }
+
+        public bool ReliableDeliveryEnabled { get { return Seq != null; } }
+
+        public SeqNo Seq { get; private set; }
     }
 
     /// <summary>
@@ -72,7 +77,7 @@ namespace Akka.Remote.Transport
     /// 
     /// A Codec that is able to convert Akka PDUs from and to <see cref="ByteString"/>
     /// </summary>
-    public abstract class AkkaPduCodec
+    internal abstract class AkkaPduCodec
     {
         /// <summary>
         /// Return an <see cref="IAkkaPdu"/> instance that represents a PDU contained in the raw
@@ -114,7 +119,7 @@ namespace Akka.Remote.Transport
             SerializedMessage serializedMessage, ActorRef senderOption = null);
     }
 
-    public class AkkaPduProtobuffCodec : AkkaPduCodec
+    internal class AkkaPduProtobuffCodec : AkkaPduCodec
     {
         public override IAkkaPdu DecodePdu(ByteString raw)
         {
