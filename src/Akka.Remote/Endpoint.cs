@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Remoting.Messaging;
+using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
@@ -200,9 +201,9 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class EndpointAssociatedException : EndpointException
+    internal sealed class EndpointAssociationException : EndpointException
     {
-        public EndpointAssociatedException(string msg) : base(msg)
+        public EndpointAssociationException(string msg) : base(msg)
         {
         }
     }
@@ -600,13 +601,13 @@ namespace Akka.Remote
         private readonly LoggingAdapter _log = Logging.GetLogger(Context);
         public LoggingAdapter Log { get { return _log; } }
 
-        private readonly EventPublisher _eventPublisher;
+        protected readonly EventPublisher EventPublisher;
         protected bool Inbound { get; set; }
 
         protected EndpointActor(Address localAddress, Address remoteAddress, Transport.Transport transport,
             RemoteSettings settings)
         {
-            _eventPublisher = new EventPublisher(Context.System, Log, Logging.LogLevelFor(settings.RemoteLifecycleEventsLogLevel));
+            EventPublisher = new EventPublisher(Context.System, Log, Logging.LogLevelFor(settings.RemoteLifecycleEventsLogLevel));
             this.LocalAddress = localAddress;
             this.RemoteAddress = remoteAddress;
             this.Transport = transport;
@@ -629,7 +630,7 @@ namespace Akka.Remote
         {
             try
             {
-                _eventPublisher.NotifyListeners(ev);
+                EventPublisher.NotifyListeners(ev);
             }
             catch (Exception ex)
             {
@@ -653,14 +654,14 @@ namespace Akka.Remote
         protected RemoteSettings Settings;
         protected AkkaProtocolTransport Transport;
 
-        private readonly EventPublisher _eventPublisher;
+        protected readonly EventPublisher EventPublisher;
 
         protected bool Inbound { get; set; }
 
         protected EndpointActor(Address localAddress, Address remoteAddress, AkkaProtocolTransport transport,
             RemoteSettings settings)
         {
-            _eventPublisher = new EventPublisher(Context.System, Log, Logging.LogLevelFor(settings.RemoteLifecycleEventsLogLevel));
+            EventPublisher = new EventPublisher(Context.System, Log, Logging.LogLevelFor(settings.RemoteLifecycleEventsLogLevel));
             LocalAddress = localAddress;
             RemoteAddress = remoteAddress;
             Transport = transport;
@@ -683,7 +684,7 @@ namespace Akka.Remote
         {
             try
             {
-                _eventPublisher.NotifyListeners(ev);
+                EventPublisher.NotifyListeners(ev);
             }
             catch (Exception ex)
             {
@@ -698,7 +699,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class EndpointWriter : EndpointActor<EndpointWriter.State, bool>
+    internal class EndpointWriter : EndpointActor<EndpointWriter.State, bool>, WithUnboundedStash
     {
         public EndpointWriter(AkkaProtocolHandle handleOrActive, Address localAddress, Address remoteAddress, 
             int? refuseUid, AkkaProtocolTransport transport, RemoteSettings settings, 
@@ -714,8 +715,9 @@ namespace Akka.Remote
             _msgDispatcher = new DefaultMessageDispatcher(system, provider, Log);
             this.receiveBuffers = receiveBuffers;
             Inbound = handleOrActive != null;
-            _ackDeadline = NextAckDeadline();
+            _ackDeadline = NewAckDeadline();
             _handle = handleOrActive;
+            CurrentStash = Context.GetStash();
         }
 
         private AkkaProtocolHandle handleOrActive;
@@ -734,6 +736,8 @@ namespace Akka.Remote
         private Ack _lastAck = null;
         private Deadline _ackDeadline;
         private AkkaProtocolHandle _handle;
+
+        public IStash CurrentStash { get; set; }
         
 
         #region FSM definitions
@@ -746,11 +750,204 @@ namespace Akka.Remote
                 @event.FsmEvent.Match()
                     .With<EndpointManager.Send>(send =>
                     {
-
+                        CurrentStash.Stash();
+                        nextState = Stay();
+                    })
+                    .With<Status.Failure>(failure => failure.Cause.Match()
+                        .With<InvalidAssociationException>(ia => PublishAndThrow(new InvalidAssociation(LocalAddress, RemoteAddress, ia), LogLevel.WarningLevel))
+                        .Default(e => PublishAndThrow(new EndpointAssociationException(string.Format("Association failed with {0}", RemoteAddress)), LogLevel.DebugLevel)))
+                    .With<Handle>(inboundHandle =>
+                    {
+                        Context.Parent.Tell(new ReliableDeliverySupervisor.GotUid((int)inboundHandle.ProtocolHandle.HandshakeInfo.Uid));
+                        _handle = inboundHandle.ProtocolHandle;
+                        reader = StartReadEndpoint(_handle);
+                        nextState = GoTo(State.Writing);
                     });
 
                 return nextState;
             });
+
+            When(State.Buffering, @event =>
+            {
+                State<State, bool> nextState = null;
+
+                @event.FsmEvent.Match()
+                    .With<EndpointManager.Send>(send =>
+                    {
+                        CurrentStash.Stash();
+                        nextState = Stay();
+                    })
+                    .With<BackoffTimer>(timer => nextState = GoTo(State.Writing))
+                    .With<FlushAndStop>(flush =>
+                    {
+                        CurrentStash.Stash(); //Flushing is postponed after the pending writes
+                        nextState = Stay();
+                    });
+
+                return nextState;
+            });
+
+            When(State.Writing, @event =>
+            {
+                State<State, bool> nextState = null;
+                @event.FsmEvent.Match()
+                    .With<EndpointManager.Send>(send =>
+                    {
+                        try
+                        {
+                            if (_handle == null)
+                                throw new EndpointException(
+                                    "Internal error: Endpoint is in state Writing, but no association handle is present.");
+                            if (provider.RemoteSettings.LogSend)
+                            {
+                                var msgLog = string.Format("RemoteMessage: {0} to [{1}]<+[{2}] from [{3}]", send.Message,
+                                    send.Recipient, send.Recipient.Path, send.SenderOption ?? system.DeadLetters);
+                                Log.Debug(msgLog);
+                            }
+
+                            var pdu = codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
+                                SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
+
+                            _ackDeadline = NewAckDeadline();
+                            _lastAck = null;
+
+                            if (_handle.Write(pdu))
+                            {
+                                nextState = Stay();
+                            }
+                            else
+                            {
+                                if (send.Seq == null) CurrentStash.Stash();
+                                nextState = GoTo(State.Buffering);
+                            }
+                        }
+                        catch (SerializationException ex)
+                        {
+                            nextState = LogAndStay(ex);
+                        }
+                        catch (EndpointException ex)
+                        {
+                            PublishAndThrow(ex, LogLevel.ErrorLevel);
+                        }
+                        catch (Exception ex)
+                        {
+                            PublishAndThrow(new EndpointException("Failed to write message to the transport", ex),
+                                LogLevel.ErrorLevel);
+                        }
+                    })
+                    .With<FlushAndStop>(flush => //We are in writing state, so stash is empty, safe to stop here
+                    {
+                        //Try to send a last Ack message
+                        TrySendPureAck();
+                        stopReason = DisassociateInfo.Shutdown;
+                        nextState = Stop();
+                    })
+                    .With<AckIdleCheckTimer>(ack =>
+                    {
+                        if (_ackDeadline.IsOverdue)
+                        {
+                            TrySendPureAck();
+                            nextState = Stay();
+                        }
+                    });
+
+                return nextState;
+            });
+
+            When(State.Handoff, @event =>
+            {
+                State<State, bool> nextState = null;
+                @event.FsmEvent.Match()
+                    .With<Terminated>(terminated =>
+                    {
+                        reader = StartReadEndpoint(_handle);
+                        CurrentStash.UnstashAll();
+                        nextState = GoTo(State.Writing);
+                    })
+                    .Default(msg =>
+                    {
+                        CurrentStash.Stash();
+                        nextState = Stay();
+                    });
+
+                return nextState;
+            });
+
+            WhenUnhandled(@event =>
+            {
+                State<State, bool> nextState = null;
+
+                @event.FsmEvent.Match()
+                    .With<Terminated>(terminated =>
+                    {
+                        if (reader == null || terminated.ActorRef.Equals(reader))
+                        {
+                            PublishAndThrow(new EndpointDisassociatedException("Disassociated"), LogLevel.DebugLevel);
+                        }
+                    })
+                    .With<StopReading>(stop =>
+                    {
+                        if (reader != null)
+                        {
+                            reader.Tell(stop, Sender);
+                        }
+                        else
+                        {
+                            CurrentStash.Stash();
+                        }
+
+                        nextState = Stay();
+                    })
+                    .With<TakeOver>(takeover =>
+                    {
+                        // Shutdown old reader
+                        _handle.Disassociate();
+                        _handle = takeover.ProtocolHandle;
+                        Sender.Tell(new TookOver(Self, _handle));
+                        nextState = GoTo(State.Handoff);
+                    })
+                    .With<FlushAndStop>(flush =>
+                    {
+                        stopReason = DisassociateInfo.Shutdown;
+                        nextState = Stop();
+                    })
+                    .With<OutboundAck>(ack =>
+                    {
+                        _lastAck = ack.Ack;
+                        nextState = Stay();
+                    })
+                    .With<AckIdleCheckTimer>(timer => nextState = Stay()); //Ignore
+
+                return nextState;
+            });
+
+            OnTransition((initialState, nextState) =>
+            {
+                if (initialState == State.Initializing && nextState == State.Writing)
+                {
+                    CurrentStash.UnstashAll();
+                    EventPublisher.NotifyListeners(new AssociatedEvent(LocalAddress, RemoteAddress, Inbound));
+                }
+                else if (initialState == State.Writing && nextState == State.Buffering)
+                {
+                    SetTimer("backoff-timer", new BackoffTimer(), Settings.BackoffPeriod, false);
+                }
+                else if (initialState == State.Buffering && nextState == State.Writing)
+                {
+                    CurrentStash.UnstashAll();
+                    CancelTimer("backoff-timer");
+                }
+            });
+
+            OnTermination(@event => @event.Match().With<StopEvent<State,bool>>(stop =>
+            {
+                CancelTimer(AckIdleTimerName);
+                //It is important to call UnstashAll for the stash to work properly and maintain messages during restart.
+                //As the FSM trait does not call base.PostSto, this call is needed
+                CurrentStash.UnstashAll();
+                _handle.Disassociate(stopReason);
+                EventPublisher.NotifyListeners(new DisassociatedEvent(LocalAddress, RemoteAddress, Inbound));
+            }));
         }
 
         #endregion
@@ -796,7 +993,7 @@ namespace Akka.Remote
 
         #region Internal methods
 
-        private Deadline NextAckDeadline()
+        private Deadline NewAckDeadline()
         {
             return Deadline.Now + Settings.SysMsgAckTimeout;
         }
@@ -845,7 +1042,7 @@ namespace Akka.Remote
             {
                 if (_handle.Write(codec.ConstructPureAck(_lastAck)))
                 {
-                    _ackDeadline = NextAckDeadline();
+                    _ackDeadline = NewAckDeadline();
                     _lastAck = null;
                 }
             }
@@ -934,6 +1131,16 @@ namespace Akka.Remote
             public ActorRef Writer { get; private set; }
         }
 
+        public sealed class OutboundAck
+        {
+            public OutboundAck(Ack ack)
+            {
+                Ack = ack;
+            }
+
+            public Ack Ack { get; private set; }
+        }
+
         /// <summary>
         /// Internal state descriptors used to power this FSM
         /// </summary>
@@ -948,6 +1155,8 @@ namespace Akka.Remote
         private const string AckIdleTimerName = "AckIdleTimer";
 
         #endregion
+
+       
     }
 
     internal class EndpointReader : EndpointActor

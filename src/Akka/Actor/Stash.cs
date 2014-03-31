@@ -88,7 +88,7 @@ namespace Akka.Actor
     /// <summary>
     /// An UntypedActor with Unbounded Stash capabilites
     /// </summary>
-    public abstract class UntypedActorWithUnboundedStash : UntypedActor, WithUnrestrictedStash {
+    public abstract class UntypedActorWithUnboundedStash : UntypedActor, WithUnboundedStash {
 
         private IStash _stash = new UnboundedStashImpl(Context);
         public IStash CurrentStash { get; set; }
@@ -170,7 +170,7 @@ namespace Akka.Actor
     /// with unrestricted storage capacity
     /// </summary>
 // ReSharper disable once InconsistentNaming
-    public interface WithUnrestrictedStash
+    public interface WithUnboundedStash
     {
         IStash CurrentStash { get; set; }
     }
@@ -206,7 +206,7 @@ namespace Akka.Actor
                 return new BoundedStashImpl(context);
             }
 
-            if (actor is WithUnrestrictedStash)
+            if (actor is WithUnboundedStash)
             {
                 return new UnboundedStashImpl(context);
             }
@@ -385,7 +385,7 @@ namespace Akka.Actor
     /// INTERNAL API.
     /// 
     /// Support interface for implementing a stash for an actor instance. A default stash per actor (= user stash)
-    /// is maintained by <see cref="IUnrestrictedStash"/> by extending this interface. Actors that explicitly need other stashes
+    /// is maintained by <see cref="WithUnboundedStash"/> by extending this interface. Actors that explicitly need other stashes
     /// can create new stashes via <see cref="StashFactory"/>.
     /// </summary>
     internal interface IStashSupport
