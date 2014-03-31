@@ -90,13 +90,14 @@ namespace Akka.Remote
 
         public sealed class ShutdownAndFlush : RemotingCommand { }
 
-        public sealed class Send : RemotingCommand
+        public sealed class Send : RemotingCommand, IHasSequenceNumber
         {
-            public Send(object message, RemoteActorRef recipient, ActorRef senderOption = null)
+            public Send(object message, RemoteActorRef recipient, ActorRef senderOption = null, SeqNo seqOpt = null)
             {
                 Recipient = recipient;
                 SenderOption = senderOption;
                 Message = message;
+                _seq = seqOpt;
             }
 
             public object Message { get; private set; }
@@ -111,6 +112,24 @@ namespace Akka.Remote
             public override string ToString()
             {
                 return string.Format("Remote message {0} -> {1}", SenderOption, Recipient);
+            }
+
+            private readonly SeqNo _seq;
+
+            public SeqNo Seq
+            {
+                get
+                {
+                    //this MUST throw an exception to indicate that we attempted to put a nonsequenced message in one of the
+                    //acknowledged delivery buffers
+                    var magic = _seq.GetHashCode();
+                    return _seq;
+                }
+            }
+
+            public Send Copy(SeqNo opt)
+            {
+                return new Send(Message, Recipient, SenderOption, opt);
             }
         }
 
@@ -194,6 +213,35 @@ namespace Akka.Remote
             public Address LocalAddress { get; private set; }
 
             public Address RemoteAddress { get; private set; }
+
+            /// <summary>
+            /// Overrode this to make sure that the <see cref="ReliableDeliverySupervisor"/> can correctly store
+            /// <see cref="AckedReceiveBuffer{T}"/> data for each <see cref="Link"/> individually, since the HashCode
+            /// is what Dictionary types use internally for equality checking by default.
+            /// </summary>
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hash = 17;
+                    hash = hash*23 + (LocalAddress == null ? 0 : LocalAddress.GetHashCode());
+                    hash = hash*23 + (RemoteAddress == null ? 0 : RemoteAddress.GetHashCode());
+                    return hash;
+                }
+            }
+        }
+
+        public sealed class ResendState
+        {
+            public ResendState(int uid, AckedReceiveBuffer<Message> buffer)
+            {
+                Buffer = buffer;
+                Uid = uid;
+            }
+
+            public int Uid { get; private set; }
+
+            public AckedReceiveBuffer<Message> Buffer { get; private set; }
         }
 
         #endregion

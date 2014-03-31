@@ -26,6 +26,9 @@ namespace Akka.Remote
             BackoffPeriod = config.GetMillisDuration("akka.remote.backoff-internal", TimeSpan.FromSeconds(3));
             RetryGateClosedFor = config.GetMillisDuration("akka.remote.retry-gate-closed-for", TimeSpan.Zero);
             UsePassiveConnections = config.GetBoolean("akka.remote.use-passive-connections");
+            SysMsgBufferSize = config.GetInt("akka.remote.system-message-buffer-size");
+            SysResendTimeout = config.GetMillisDuration("akka.remote.resend-interval");
+            InitialSysMsgDeliveryTimeout = config.GetMillisDuration("akka.remote.initial-system-message-delivery-timeout");
         }
 
         /// <summary>
@@ -57,6 +60,9 @@ namespace Akka.Remote
         public TimeSpan BackoffPeriod { get; set; }
         public TimeSpan RetryGateClosedFor { get; set; }
         public bool UsePassiveConnections { get; set; }
+        public int SysMsgBufferSize { get; set; }
+        public TimeSpan SysResendTimeout { get; set; }
+        public TimeSpan InitialSysMsgDeliveryTimeout { get; set; }
 
         private Config TransportConfigFor(string transportName)
         {
