@@ -187,6 +187,18 @@ namespace Akka.Configuration.Hocon
             return TimeSpan.FromSeconds(double.Parse(res));
         }
 
+        public long? GetByteSize()
+        {
+            var res = GetString();
+            if (res.EndsWith("b"))
+            {
+                var v = res.Substring(0, res.Length - 1);
+                return long.Parse(v);
+            }
+
+            return long.Parse(res);
+        }
+
         public override string ToString()
         {
             return ToString(0);

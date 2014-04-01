@@ -69,6 +69,13 @@ namespace Akka.Configuration
             return value.GetBoolean();
         }
 
+        public long? GetByteSize(string path)
+        {
+            HoconValue value = GetNode(path);
+            if (value == null) return null;
+            return value.GetByteSize();
+        }
+
         public int GetInt(string path, int @default = 0)
         {
             HoconValue value = GetNode(path);
