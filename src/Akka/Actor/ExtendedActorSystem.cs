@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Reflection;
+using Akka.Event;
 
 namespace Akka.Actor
 {
@@ -61,9 +63,40 @@ namespace Akka.Actor
     /// </summary>
     public static class ExtendedActorSystem
     {
+        /// <summary>
+        /// Loads the extension and casts it to the expected type if it's already registered
+        /// </summary>
         public static T WithExtension<T>(this ActorSystem system) where T : IExtension
         {
             return (T)system.GetExtension<T>();
+        }
+
+        /// <summary>
+        /// Registers a type and returns it if one doesn't yet exist
+        /// </summary>
+        public static T WithExtension<T>(this ActorSystem system, Type extensionId) where T : IExtension
+        {
+            if (system.HasExtension<T>())
+                return (T)system.GetExtension<T>();
+            else
+            {
+                return (T)system.RegisterExtension((IExtensionId)Activator.CreateInstance(extensionId));
+            }
+        }
+
+        /// <summary>
+        /// Registers a type and returns it if one doesn't yet exist
+        /// </summary>
+        public static T WithExtension<T,TI>(this ActorSystem system) where T : IExtension
+                                                                     where TI: IExtensionId
+        {
+            if (system.HasExtension<T>())
+                return (T)system.GetExtension<T>();
+            else
+            {
+                return (T)system.RegisterExtension((IExtensionId)Activator.CreateInstance(typeof(TI)));
+            }
+            
         }
     }
 

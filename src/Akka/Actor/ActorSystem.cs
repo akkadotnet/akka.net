@@ -317,6 +317,15 @@ namespace Akka.Actor
             return extension;
         }
 
+        public bool HasExtension(Type t)
+        {
+            if (typeof (IExtension).IsAssignableFrom(t))
+            {
+                return _extensions.ContainsKey(t);
+            }
+            return false;
+        }
+
         public bool HasExtension<T>() where T : IExtension
         {
             return _extensions.ContainsKey(typeof (T));

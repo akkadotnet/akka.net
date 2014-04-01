@@ -48,7 +48,34 @@ namespace Akka.Tests.Actor
             Assert.AreEqual(sys, testExtension.System);
         }
 
+        [TestMethod]
+        public void AnActorSystem_Must_Support_Dynamically_Regsitered_Extensions()
+        {
+            Assert.IsFalse(sys.HasExtension<OtherTestExtensionImpl>());
+            var otherTestExtension = sys.WithExtension<OtherTestExtensionImpl>(typeof(OtherTestExtension));
+            Assert.IsTrue(sys.HasExtension<OtherTestExtensionImpl>());
+            Assert.AreEqual(sys, otherTestExtension.System);
+        }
+
         #endregion
+    }
+
+    public class OtherTestExtension : ExtensionIdProvider<OtherTestExtensionImpl>
+    {
+        public override OtherTestExtensionImpl CreateExtension(ActorSystem system)
+        {
+            return new OtherTestExtensionImpl(system);
+        }
+    }
+
+    public class OtherTestExtensionImpl : IExtension
+    {
+        public OtherTestExtensionImpl(ActorSystem system)
+        {
+            System = system;
+        }
+
+        public ActorSystem System { get; private set; }
     }
 
     public class TestExtension : ExtensionIdProvider<TestExtensionImpl>
