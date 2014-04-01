@@ -66,6 +66,17 @@ namespace Akka.Remote
             return new Deadline(deadline.When.Add(duration));
         }
 
+        /// <summary>
+        /// Adds a given <see cref="Nullable{TimeSpan}"/> to the due time of this <see cref="Deadline"/>
+        /// </summary>
+        public static Deadline operator +(Deadline deadline, TimeSpan? duration)
+        {
+            if (duration.HasValue)
+                return new Deadline(deadline.When.Add(duration.Value));
+            else
+                return deadline;
+        }
+
         #endregion
 
     }

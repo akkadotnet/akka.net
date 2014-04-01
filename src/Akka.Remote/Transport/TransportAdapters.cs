@@ -14,7 +14,29 @@ namespace Akka.Remote.Transport
         Transport Create(Transport wrappedTransport, ActorSystem system);
     }
 
-    internal class TransportAdapters 
+    internal class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
+    {
+        public override TransportAdapters CreateExtension(ActorSystem system)
+        {
+            return new TransportAdapters(system);
+        }
+
+        #region Static methods
+
+        public static TransportAdapters For(ActorSystem system)
+        {
+            return system.WithExtension<TransportAdapters, TransportAdaptersExtension>();
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Extension that allows us to look up transport adapters based upon the settings provided inside <see cref="RemoteSettings"/>
+    /// </summary>
+    internal class TransportAdapters : IExtension
     {
         public TransportAdapters(ActorSystem system)
         {
