@@ -44,7 +44,7 @@ namespace Akka.Tests.Actor
         public void AnActorSystem_Must_Support_Extensions()
         {
             Assert.IsTrue(sys.HasExtension<TestExtensionImpl>());
-            var testExtension = sys.WithExtension<TestExtensionImpl>().AsInstanceOf<TestExtensionImpl>();
+            var testExtension = sys.WithExtension<TestExtensionImpl>();
             Assert.AreEqual(sys, testExtension.System);
         }
 

@@ -289,7 +289,7 @@ namespace Akka.Actor
         /// Registers a new extensionBase to the ActorSystem
         /// </summary>
         /// <param name="extensionBase">The extensionBase to register</param>
-        internal object RegisterExtension(IExtensionId extensionBase)
+        public object RegisterExtension(IExtensionId extensionBase)
         {
             if (extensionBase == null) return null;
             if (!_extensions.ContainsKey(extensionBase.ExtensionType))
@@ -303,21 +303,21 @@ namespace Akka.Actor
         /// <summary>
         /// Returns an extension registered to this ActorSystem
         /// </summary>
-        internal object GetExtension(IExtensionId extensionId)
+        public object GetExtension(IExtensionId extensionId)
         {
             object extension;
             _extensions.TryGetValue(extensionId.ExtensionType, out extension);
             return extension;
         }
 
-        internal object GetExtension<T>()where T:IExtension
+        public object GetExtension<T>()where T:IExtension
         {
             object extension;
             _extensions.TryGetValue(typeof(T), out extension);
             return extension;
         }
 
-        internal bool HasExtension<T>() where T : IExtension
+        public bool HasExtension<T>() where T : IExtension
         {
             return _extensions.ContainsKey(typeof (T));
         }

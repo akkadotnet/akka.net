@@ -61,9 +61,9 @@ namespace Akka.Actor
     /// </summary>
     public static class ExtendedActorSystem
     {
-        public static IExtension WithExtension<T>(this ActorSystem system) where T : IExtension
+        public static T WithExtension<T>(this ActorSystem system) where T : IExtension
         {
-            return (IExtension)system.GetExtension<T>();
+            return (T)system.GetExtension<T>();
         }
     }
 
