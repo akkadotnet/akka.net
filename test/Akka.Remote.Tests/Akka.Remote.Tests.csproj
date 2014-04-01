@@ -82,6 +82,7 @@
     <Compile Include="AckedDeliverySpec.cs" />
     <Compile Include="EndpointRegistrySpec.cs" />
     <Compile Include="FailureDetectorRegistrySpec.cs" />
+    <Compile Include="RemoteConfigSpec.cs" />
     <Compile Include="RemoteDaemonSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Transport\AkkaProtocolSpec.cs" />

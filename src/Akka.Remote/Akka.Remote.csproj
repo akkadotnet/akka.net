@@ -105,13 +105,14 @@
     <Compile Include="Transport\AkkaPduCodec.cs" />
     <Compile Include="Transport\TransportAdapters.cs" />
     <Compile Include="Transport\AkkaProtocolTransport.cs" />
-    <Compile Include="Transport\TcpTransport\TcpListener.cs" />
-    <Compile Include="Transport\TcpTransport\TcpTransport.cs" />
+    <Compile Include="Transport\Tcp\TcpListener.cs" />
+    <Compile Include="Transport\Tcp\TcpTransport.cs" />
     <Compile Include="Transport\TestTransport.cs" />
     <Compile Include="Transport\Transport.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Akka.Remote.nuspec" />
+    <EmbeddedResource Include="Config\Akka.Remote.conf" />
     <None Include="packages.config" />
     <None Include="protos\google\protobuf\csharp_options.proto" />
     <None Include="protos\google\protobuf\descriptor.proto" />
