@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Remote.Transport;
-using System.Diagnostics;
+using Akka.Tools;
 
 namespace Akka.Remote
 {
@@ -34,7 +34,8 @@ namespace Akka.Remote
 
         public class Pass : EndpointPolicy
         {
-            public Pass(ActorRef endpoint, int? uid) : base(false)
+            public Pass(ActorRef endpoint, int? uid)
+                : base(false)
             {
                 Uid = uid;
                 Endpoint = endpoint;
@@ -47,7 +48,8 @@ namespace Akka.Remote
 
         public class Gated : EndpointPolicy
         {
-            public Gated(Deadline deadline) : base(true)
+            public Gated(Deadline deadline)
+                : base(true)
             {
                 TimeOfRelease = deadline;
             }
@@ -57,7 +59,8 @@ namespace Akka.Remote
 
         public class Quarantined : EndpointPolicy
         {
-            public Quarantined(long uid, Deadline deadline) : base(true)
+            public Quarantined(long uid, Deadline deadline)
+                : base(true)
             {
                 Uid = uid;
                 Deadline = deadline;
@@ -175,7 +178,7 @@ namespace Akka.Remote
 
         public sealed class ListensResult : NoSerializationVerificationNeeded
         {
-            public ListensResult(TaskCompletionSource<IList<ProtocolTransportAddressPair>> addressesPromise, IList<Tuple<AkkaProtocolTransport, Address, TaskCompletionSource<IAssociationEventListener>>> results)
+            public ListensResult(TaskCompletionSource<IList<ProtocolTransportAddressPair>> addressesPromise, List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>> results)
             {
                 Results = results;
                 AddressesPromise = addressesPromise;
@@ -183,7 +186,7 @@ namespace Akka.Remote
 
             public TaskCompletionSource<IList<ProtocolTransportAddressPair>> AddressesPromise { get; private set; }
 
-            public IList<Tuple<AkkaProtocolTransport, Address, TaskCompletionSource<IAssociationEventListener>>> Results
+            public IList<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>> Results
             { get; private set; }
         }
 
@@ -225,8 +228,8 @@ namespace Akka.Remote
                 unchecked
                 {
                     var hash = 17;
-                    hash = hash*23 + (LocalAddress == null ? 0 : LocalAddress.GetHashCode());
-                    hash = hash*23 + (RemoteAddress == null ? 0 : RemoteAddress.GetHashCode());
+                    hash = hash * 23 + (LocalAddress == null ? 0 : LocalAddress.GetHashCode());
+                    hash = hash * 23 + (RemoteAddress == null ? 0 : RemoteAddress.GetHashCode());
                     return hash;
                 }
             }
@@ -260,7 +263,7 @@ namespace Akka.Remote
         /// </summary>
         private readonly EndpointRegistry endpoints = new EndpointRegistry();
         private readonly RemoteSettings settings;
-        private long endpointId;
+        private AtomicCounterLong endpointId = new AtomicCounterLong(0L);
         private LoggingAdapter log;
         private EventPublisher eventPublisher;
 
@@ -310,6 +313,8 @@ namespace Akka.Remote
         private Dictionary<ActorRef, AkkaProtocolHandle> pendingReadHandoffs = new Dictionary<ActorRef, AkkaProtocolHandle>();
         private Dictionary<ActorRef, List<InboundAssociation>> stashedInbound = new Dictionary<ActorRef, List<InboundAssociation>>();
 
+        #region ActorBase overrides
+
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return new OneForOneStrategy(ex =>
@@ -320,7 +325,7 @@ namespace Akka.Remote
                     .With<InvalidAssociation>(ia =>
                     {
                         log.Warn("Tried to associate with unreachable remote address [{0}]. " +
-                                 "Address is now gated for {1} ms, all messages to this address will be delivered to dead letters. Reason: [{2}]", 
+                                 "Address is now gated for {1} ms, all messages to this address will be delivered to dead letters. Reason: [{2}]",
                                  ia.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds, ia.Message);
                         endpoints.MarkAsFailed(Sender, Deadline.Now + settings.RetryGateClosedFor);
                         directive = Directive.Stop;
@@ -328,7 +333,7 @@ namespace Akka.Remote
                     .With<ShutDownAssociation>(shutdown =>
                     {
                         log.Debug("Remote system with address [{0}] has shut down. " +
-                                  "Address is not gated for {1}ms, all messages to this address will be delivered to dead letters.", 
+                                  "Address is not gated for {1}ms, all messages to this address will be delivered to dead letters.",
                                   shutdown.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds);
                         endpoints.MarkAsFailed(Sender, Deadline.Now + settings.RetryGateClosedFor);
                         directive = Directive.Stop;
@@ -361,83 +366,319 @@ namespace Akka.Remote
             });
         }
 
-        
-
         protected override void OnReceive(object message)
         {
-            //message
-            //    .Match()
-            //    .With<Listen>(m =>
-            //    {
-            //        ProtocolTransportAddressPair[] res = Listens();
-            //        transportMapping = res.ToDictionary(k => k.Address, v => v.ProtocolTransport);
-            //        Sender.Tell(res);
-            //    })
-            //    .With<Send>(m =>
-            //    {
-            //        Address recipientAddress = m.Recipient.Path.Address;
-            //        Address localAddress = m.Recipient.LocalAddressToUse;
+            message.Match()
+                .With<Listen>(listen => Listens().ContinueWith<NoSerializationVerificationNeeded>(listens =>
+                {
+                    if (listens.IsFaulted)
+                    {
+                        return new ListensFailure(listen.AddressesPromise, listens.Exception);
+                    }
+                    else
+                    {
+                        return new ListensResult(listen.AddressesPromise, listens.Result);
+                    }
+                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent)
+                    .PipeTo(Self))
+                .With<ListensResult>(listens =>
+                {
+                    transportMapping = (from mapping in listens.Results
+                                        group mapping by mapping.Item1.Address
+                                            into g
+                                            select new { address = g.Key, transports = g.ToList() }).Select(x =>
+                        {
+                            if (x.transports.Count > 1)
+                            {
+                                throw new RemoteTransportException(
+                                    string.Format("There are more than one transports listening on local address {0}",
+                                        x.address));
+                            }
+                            return new KeyValuePair<Address, AkkaProtocolTransport>(x.address,
+                                x.transports.Head().Item1.ProtocolTransport);
+                        }).ToDictionary(x => x.Key, v => v.Value);
 
-            //        Func<long?, ActorRef> createAndRegisterWritingEndpoint = refuseUid =>
-            //        {
-            //            AkkaProtocolTransport transport = null;
-            //            transportMapping.TryGetValue(localAddress, out transport);
-            //            RemoteActorRef recipientRef = m.Recipient;
-            //            Address localAddressToUse = recipientRef.LocalAddressToUse;
-            //            InternalActorRef endpoint = CreateEndpoint(recipientAddress, transport, localAddressToUse,
-            //                refuseUid);
-            //            endpoints.RegisterWritableEndpoint(recipientAddress, endpoint);
-            //            return endpoint;
-            //        };
+                    //Register a listener to each transport and collect mapping to addresses
+                    var transportsAndAddresses = listens.Results.Select(x =>
+                    {
+                        x.Item2.SetResult(new ActorAssociationEventListener(Self));
+                        return x.Item1;
+                    }).ToList();
 
-            //        endpoints
-            //            .WritableEndpointWithPolicyFor(recipientAddress)
-            //            .Match()
-            //            .With<Pass>(p => p.Endpoint.Tell(message))
-            //            .With<Gated>(p =>
-            //            {
-            //                if (p.TimeOfRelease.IsOverdue)
-            //                    createAndRegisterWritingEndpoint(null).Tell(message);
-            //                else
-            //                    Context.System.DeadLetters.Tell(message);
-            //            })
-            //            .With<Quarantined>(p => createAndRegisterWritingEndpoint(p.Uid).Tell(message))
-            //            .Default(p => createAndRegisterWritingEndpoint(null).Tell(message));
-
-                    /*
-val recipientAddress = recipientRef.path.address
-
-      def createAndRegisterWritingEndpoint(refuseUid: Option[Int]): ActorRef =
-        endpoints.registerWritableEndpoint(
-          recipientAddress,
-          createEndpoint(
-            recipientAddress,
-            recipientRef.localAddressToUse,
-            transportMapping(recipientRef.localAddressToUse),
-            settings,
-            handleOption = None,
-            writing = true,
-            refuseUid))
-
-      endpoints.writableEndpointWithPolicyFor(recipientAddress) match {
-        case Some(Pass(endpoint)) ⇒
-          endpoint ! s
-        case Some(Gated(timeOfRelease)) ⇒
-          if (timeOfRelease.isOverdue()) createAndRegisterWritingEndpoint(refuseUid = None) ! s
-          else extendedSystem.deadLetters ! s
-        case Some(Quarantined(uid, _)) ⇒
-          // timeOfRelease is only used for garbage collection reasons, therefore it is ignored here. We still have
-          // the Quarantined tombstone and we know what UID we don't want to accept, so use it.
-          createAndRegisterWritingEndpoint(refuseUid = Some(uid)) ! s
-        case None ⇒
-          createAndRegisterWritingEndpoint(refuseUid = None) ! s
-
-                     */
-                //})
-                //.Default(Unhandled);
+                    listens.AddressesPromise.SetResult(transportsAndAddresses);
+                })
+                .With<ListensFailure>(failure => failure.AddressesPromise.SetException(failure.Cause))
+                .With<InboundAssociation>(ia => Context.System.Scheduler.ScheduleOnce(TimeSpan.FromMilliseconds(10), Self, ia))
+                .With<ManagementCommand>(mc => Sender.Tell(new ManagementCommandAck(status:false)))
+                .With<StartupFinished>(sf => Context.Become(Accepting))
+                .With<ShutdownAndFlush>(sf =>
+                {
+                    Sender.Tell(true);
+                    Context.Stop(Self);
+                });
         }
 
-        private void CreateAndRegistrEndpoint(AkkaProtocolHandle handle, int? refuseId)
+        protected void Accepting(object message)
+        {
+            message.Match()
+                .With<ManagementCommand>(mc =>
+                {
+                    var allStatuses = transportMapping.Values.Select(x => x.ManagementCommand(mc));
+                    Task.WhenAll(allStatuses)
+                        .ContinueWith(x => new ManagementCommandAck(x.Result.All(y => y)),
+                            TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent)
+                        .PipeTo(Self);
+                })
+                .With<Quarantine>(quarantine =>
+                {
+                    //Stop writers
+                    endpoints.WritableEndpointWithPolicyFor(quarantine.RemoteAddress).Match()
+                        .With<Pass>(pass =>
+                        {
+                            Context.Stop((InternalActorRef) pass.Endpoint);
+                            if (!pass.Uid.HasValue)
+                            {
+                                log.Warn("Association to [{0}] with unknown UID is reported as quarantined, but " +
+                                         "address cannot be quarantined without knowing the UID, gated instead for {0} ms",
+                                    quarantine.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds);
+                                endpoints.MarkAsFailed(pass.Endpoint, Deadline.Now + settings.RetryGateClosedFor);
+                            }
+                        });
+
+                    //Stop inbound read-only association
+                    var read = endpoints.ReadOnlyEndpointFor(quarantine.RemoteAddress);
+                    if (read != null)
+                    {
+                        Context.Stop((InternalActorRef)read);
+                    }
+
+                    if (quarantine.Uid.HasValue)
+                    {
+                        endpoints.MarkAsQuarantined(quarantine.RemoteAddress, quarantine.Uid.Value, Deadline.Now + settings.QuarantineDuration);
+                        eventPublisher.NotifyListeners(new QuarantinedEvent(quarantine.RemoteAddress, quarantine.Uid.Value));
+                    }
+                })
+                .With<Send>(send =>
+                {
+                    var recipientAddress = send.Recipient.Path.Address;
+                    Func<int?, ActorRef> createAndRegisterWritingEndpoint = refuseUid => endpoints.RegisterWritableEndpoint(recipientAddress,
+                        CreateEndpoint(recipientAddress, send.Recipient.LocalAddressToUse,
+                            transportMapping[send.Recipient.LocalAddressToUse], settings, writing: true,
+                            handleOption: null, refuseUid: refuseUid), null);
+
+                    endpoints.HasWriteableEndpointFor(recipientAddress).Match()
+                        .With<Pass>(pass => pass.Endpoint.Tell(send))
+                        .With<Gated>(gated =>
+                        {
+                            if(gated.TimeOfRelease.IsOverdue) createAndRegisterWritingEndpoint(null).Tell(send);
+                            else Context.System.DeadLetters.Tell(send);
+                        })
+                        .With<Quarantined>(quarantined =>
+                        {
+                            // timeOfRelease is only used for garbage collection reasons, therefore it is ignored here. We still have
+                            // the Quarantined tombstone and we know what UID we don't want to accept, so use it.
+                            createAndRegisterWritingEndpoint((int)quarantined.Uid).Tell(send);
+                        })
+                        .Default(msg => createAndRegisterWritingEndpoint(null).Tell(send));
+                })
+                .With<InboundAssociation>(ia =>
+                {
+                    var readonlyEndpoint = endpoints.ReadOnlyEndpointFor(ia.Association.RemoteAddress);
+                    var handle =  ia.Association.AsInstanceOf<AkkaProtocolHandle>();
+                    if (readonlyEndpoint != null)
+                    {
+                        if(pendingReadHandoffs.ContainsKey(readonlyEndpoint)) pendingReadHandoffs[readonlyEndpoint].Disassociate();
+                        pendingReadHandoffs.AddOrSet(readonlyEndpoint, handle);
+                        readonlyEndpoint.Tell(new EndpointWriter.TakeOver(handle));
+                    }
+                    else
+                    {
+                        if (endpoints.IsQuarantined(handle.RemoteAddress, (int) handle.HandshakeInfo.Uid))
+                            handle.Disassociate(DisassociateInfo.Quarantined);
+                        else
+                        {
+                            endpoints.WritableEndpointWithPolicyFor(handle.RemoteAddress).Match()
+                                .With<Pass>(pass =>
+                                {
+                                    if (!pass.Uid.HasValue)
+                                    {
+                                        if(stashedInbound.ContainsKey(pass.Endpoint)) stashedInbound[pass.Endpoint].Add(ia);
+                                        else stashedInbound.AddOrSet(pass.Endpoint, new List<InboundAssociation>(){ ia });
+                                    }
+                                    else
+                                    {
+                                        if (handle.HandshakeInfo.Uid == pass.Uid)
+                                        {
+                                            if (pendingReadHandoffs.ContainsKey(pass.Endpoint))
+                                                pendingReadHandoffs[pass.Endpoint].Disassociate();
+                                            pendingReadHandoffs.AddOrSet(pass.Endpoint, handle);
+                                            pass.Endpoint.Tell(new EndpointWriter.StoppedReading(pass.Endpoint));
+                                        }
+                                        else
+                                        {
+                                            Context.Stop((InternalActorRef)pass.Endpoint);
+                                            endpoints.UnregisterEndpoint(pass.Endpoint);
+                                            pendingReadHandoffs.Remove(pass.Endpoint);
+                                            CreateAndRegisterEndpoint(handle, pass.Uid);
+                                        }
+                                    }
+                                })
+                                .Default(state => CreateAndRegisterEndpoint(handle, null));
+                        }
+                    }
+                })
+                .With<EndpointWriter.StoppedReading>(endpoint => AcceptPendingReader(endpoint.Writer))
+                .With<Terminated>(terminated =>
+                {
+                    AcceptPendingReader(terminated.ActorRef);
+                    endpoints.UnregisterEndpoint(terminated.ActorRef);
+                    stashedInbound.Remove(terminated.ActorRef);
+                })
+                .With<EndpointWriter.TookOver>(tookover => RemovePendingReader(tookover.Writer, tookover.ProtocolHandle))
+                .With<ReliableDeliverySupervisor.GotUid>(gotuid =>
+                {
+                    endpoints.RegisterWritableEndpointUid(Sender, gotuid.Uid);
+                    if (stashedInbound.ContainsKey(Sender))
+                    {
+                        foreach (var msg in stashedInbound[Sender])
+                        {
+                            Sender.Tell(msg);
+                        }
+                    }
+                    stashedInbound.Remove(Sender);
+                })
+                .With<Prune>(prune => endpoints.Prune())
+                .With<ShutdownAndFlush>(shutdown =>
+                {
+                    //Shutdown all endpoints and signal to Sender when ready (and whether all endpoints were shutdown gracefully)
+
+                    // The construction of the Task for shutdownStatus has to happen after the flushStatus future has been finished
+                    // so that endpoints are shut down before transports.
+                    var shutdownStatus = Task.WhenAll(endpoints.AllEndpoints.Select(
+                            x => x.GracefulStop(settings.FlushWait, new EndpointWriter.FlushAndStop()))).ContinueWith(
+                                result =>
+                                {
+                                    if (result.IsFaulted)
+                                    {
+                                        if(result.Exception != null)
+                                            result.Exception.Handle(e => true);
+                                        return false;
+                                    }
+                                    return result.Result.All(x => x);
+                                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+
+                    var flushStatus = Task.WhenAll(transportMapping.Values.Select(x => x.Shutdown())).ContinueWith(
+                                result =>
+                                {
+                                    if (result.IsFaulted)
+                                    {
+                                        if (result.Exception != null)
+                                            result.Exception.Handle(e => true);
+                                        return false;
+                                    }
+                                    return result.Result.All(x => x);
+                                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+
+                    Task.WhenAll(shutdownStatus, flushStatus)
+                        .ContinueWith(x => x.Result.All(y => y),
+                            TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent)
+                        .PipeTo(Sender);
+
+                    foreach (var handoff in pendingReadHandoffs.Values)
+                    {
+                       handoff.Disassociate(DisassociateInfo.Shutdown);
+                    }
+                    
+                    //Ignore all other writes
+                    Context.Become(Flushing);
+                });
+        }
+
+        protected void Flushing(object message)
+        {
+            message.Match()
+                .With<Send>(send => Context.System.DeadLetters.Tell(send))
+                .With<InboundAssociation>(
+                    ia => ia.Association.AsInstanceOf<AkkaProtocolHandle>().Disassociate(DisassociateInfo.Shutdown))
+                .With<Terminated>(terminated => { });
+        }
+
+        #endregion
+
+        #region Internal methods
+
+        private Task<List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>>>
+            Listens()
+        {
+            /*
+             * Constructs chains of adapters on top of each driven given in configuration. The result structure looks like the following:
+             * 
+             *      AkkaProtocolTransport <-- Adapter <-- ... <-- Adapter <-- Driver
+             * 
+             * The transports variable contains only the heads of each chains (the AkkaProtocolTransport instances)
+             */
+            var transports = new List<AkkaProtocolTransport>();
+            foreach (var transportSettings in settings.Transports)
+            {
+                var args = new object[] { Context.System, transportSettings.Config };
+
+                //Loads the driver -- the bottom element of the chain
+                //The chain at this point:
+                //  Driver
+                Transport.Transport driver;
+                try
+                {
+                    var driverType = Type.GetType(transportSettings.TransportClass);
+                    // ReSharper disable once AssignNullToNotNullAttribute
+                    driver = (Transport.Transport)Activator.CreateInstance(driverType, args);
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException(string.Format("Cannot instantiate transport [{0}]. " +
+                                                              "Make sure it extends [Akka.Remote.Transport.Transport and has constructor with " +
+                                                              "[Akka.Actor.ActorSystem] and [Akka.Configuration.Config] parameters", transportSettings.TransportClass), ex);
+                }
+
+                //Iteratively decorates the bottom level driver with a list of adapters
+                //The chain at this point:
+                //  Adapter <-- .. <-- Adapter <-- Driver
+                var wrappedTransport = transportSettings.Adapters.Select(x => TransportAdaptersExtension.For(Context.System).GetAdapterProvider(x)).Aggregate(driver,
+                    (transport, provider) => provider.Create(transport, Context.System));
+
+                //Apply AkkaProtocolTransport wrapper to the end of the chain
+                //The chain at this point:
+                // AkkaProtocolTransport <-- Adapter <-- .. <-- Adapter <-- Driver
+                transports.Add(new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(transportSettings.Config), new AkkaPduProtobuffCodec()));
+            }
+
+            // Collect all transports, listen addresses, and listener promises in one Task
+            var tasks = transports.Select(x => x.Listen().ContinueWith(result => Tuple.Create(new ProtocolTransportAddressPair(x, result.Result.Item1), result.Result.Item2), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent));
+            return Task.WhenAll(tasks).ContinueWith(transportResults => transportResults.Result.ToList(), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+        }
+
+        private void AcceptPendingReader(ActorRef takingOverFrom)
+        {
+            if (pendingReadHandoffs.ContainsKey(takingOverFrom))
+            {
+                var handle = pendingReadHandoffs[takingOverFrom];
+                pendingReadHandoffs.Remove(takingOverFrom);
+                eventPublisher.NotifyListeners(new AssociatedEvent(handle.LocalAddress, handle.RemoteAddress, inbound: true));
+                var endpoint = CreateEndpoint(handle.RemoteAddress, handle.LocalAddress,
+                    transportMapping[handle.LocalAddress], settings, false, handle, refuseUid: null);
+                endpoints.RegisterReadOnlyEndpoint(handle.RemoteAddress, endpoint);
+            }
+        }
+
+        private void RemovePendingReader(ActorRef takingOverFrom, AkkaProtocolHandle withHandle)
+        {
+            if (pendingReadHandoffs.ContainsKey(takingOverFrom) &&
+                pendingReadHandoffs[takingOverFrom].Equals(withHandle))
+            {
+                pendingReadHandoffs.Remove(takingOverFrom);
+            }
+        }
+
+        private void CreateAndRegisterEndpoint(AkkaProtocolHandle handle, int? refuseId)
         {
             var writing = settings.UsePassiveConnections && !endpoints.HasWriteableEndpointFor(handle.RemoteAddress);
             eventPublisher.NotifyListeners(new AssociatedEvent(handle.LocalAddress, handle.RemoteAddress, true));
@@ -446,53 +687,54 @@ val recipientAddress = recipientRef.path.address
                 handle.LocalAddress,
                 transportMapping[handle.LocalAddress],
                 settings,
-                handle,
                 writing,
+                handle,
                 refuseId);
-            endpoints.RegisterReadOnlyEndpoint(handle.RemoteAddress, endpoint);
-        }
-
-        private InternalActorRef CreateEndpoint(Address recipientAddress, Address localAddressToUse,
-            AkkaProtocolTransport transport, 
-            RemoteSettings endpointSettings,
-            AkkaProtocolHandle handleOption,
-            bool writing,
-            int? refuseUid)
-        {
-            throw new NotImplementedException();
-            System.Diagnostics.Debug.Assert(transportMapping.ContainsKey(localAddressToUse));
-            System.Diagnostics.Debug.Assert(writing || !refuseUid.HasValue);
 
             if (writing)
             {
-                
+                endpoints.RegisterWritableEndpoint(handle.RemoteAddress, endpoint, (int)handle.HandshakeInfo.Uid);
+            }
+            else
+            {
+                endpoints.RegisterReadOnlyEndpoint(handle.RemoteAddress, endpoint);
+                endpoints.RemovePolicy(handle.RemoteAddress);
             }
         }
 
-        private void CreateEndpoint()
+        private InternalActorRef CreateEndpoint(Address remoteAddress, Address localAddress, AkkaProtocolTransport transport,
+            RemoteSettings endpointSettings, bool writing, AkkaProtocolHandle handleOption = null, int? refuseUid = null)
         {
+            System.Diagnostics.Debug.Assert(transportMapping.ContainsKey(localAddress));
+            System.Diagnostics.Debug.Assert(writing || refuseUid == null);
+
+            InternalActorRef endpointActor;
+
+            if (writing)
+            {
+                endpointActor =
+                    Context.ActorOf(
+                        ReliableDeliverySupervisor.ReliableDeliverySupervisorProps(handleOption, localAddress,
+                            remoteAddress, refuseUid, transport, endpointSettings, new AkkaPduProtobuffCodec(),
+                            _receiveBuffers).WithDeploy(Deploy.Local),
+                        string.Format("reliableEndpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress),
+                            endpointId.Next));
+            }
+            else
+            {
+                endpointActor =
+                    Context.ActorOf(
+                        EndpointWriter.EndpointWriterProps(handleOption, localAddress, remoteAddress, refuseUid,
+                            transport, endpointSettings, new AkkaPduProtobuffCodec(), _receiveBuffers,
+                            reliableDeliverySupervisor: null).WithDeploy(Deploy.Local),
+                        string.Format("endpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress), endpointId.Next));
+            }
+
+            Context.Watch(endpointActor);
+            return endpointActor;
         }
 
-        private ProtocolTransportAddressPair[] Listens()
-        {
-            throw new NotImplementedException();
+        #endregion
 
-            //ProtocolTransportAddressPair[] transports = settings.Transports.Select(t =>
-            //{
-            //    Type driverType = Type.GetType(t.TransportClass);
-            //    if (driverType == null)
-            //    {
-            //        throw new ArgumentException("The type [" + t.TransportClass + "] could not be resolved");
-            //    }
-            //    var driver = (Transport.Transport) Activator.CreateInstance(driverType, Context.System, t.Config);
-            //    Transport.Transport wrappedTransport = driver; //TODO: Akka applies adapters and other yet unknown stuff
-            //    Address address = driver.Listen();
-            //    return
-            //        new ProtocolTransportAddressPair(
-            //            new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(t.Config)),
-            //            address);
-            //}).ToArray();
-            //return transports;
-        }
     }
 }

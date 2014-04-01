@@ -14,7 +14,29 @@ namespace Akka.Remote.Transport
         Transport Create(Transport wrappedTransport, ActorSystem system);
     }
 
-    internal class TransportAdapters
+    internal class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
+    {
+        public override TransportAdapters CreateExtension(ActorSystem system)
+        {
+            return new TransportAdapters(system);
+        }
+
+        #region Static methods
+
+        public static TransportAdapters For(ActorSystem system)
+        {
+            return system.WithExtension<TransportAdapters, TransportAdaptersExtension>();
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Extension that allows us to look up transport adapters based upon the settings provided inside <see cref="RemoteSettings"/>
+    /// </summary>
+    internal class TransportAdapters : IExtension
     {
         public TransportAdapters(ActorSystem system)
         {
@@ -172,6 +194,30 @@ namespace Akka.Remote.Transport
         public AssociationHandle WrappedHandle { get; private set; }
 
         protected SchemeAugmenter SchemeAugmenter { get; private set; }
+
+        protected bool Equals(AbstractTransportAdapterHandle other)
+        {
+            return Equals(OriginalLocalAddress, other.OriginalLocalAddress) && Equals(OriginalRemoteAddress, other.OriginalRemoteAddress) && Equals(WrappedHandle, other.WrappedHandle);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((AbstractTransportAdapterHandle) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode() + (OriginalLocalAddress != null ? OriginalLocalAddress.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (OriginalRemoteAddress != null ? OriginalRemoteAddress.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (WrappedHandle != null ? WrappedHandle.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
     }
 
     /// <summary>

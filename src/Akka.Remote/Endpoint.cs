@@ -1111,15 +1111,15 @@ namespace Akka.Remote
 
         public sealed class TookOver : NoSerializationVerificationNeeded
         {
-            public TookOver(ActorRef writer, AkkaProtocolHandle protoclHandle)
+            public TookOver(ActorRef writer, AkkaProtocolHandle protocolHandle)
             {
-                ProtoclHandle = protoclHandle;
+                ProtocolHandle = protocolHandle;
                 Writer = writer;
             }
 
             public ActorRef Writer { get; private set; }
 
-            public AkkaProtocolHandle ProtoclHandle { get; private set; }
+            public AkkaProtocolHandle ProtocolHandle { get; private set; }
         }
 
         public sealed class BackoffTimer { }
