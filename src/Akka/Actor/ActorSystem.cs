@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -51,8 +53,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">The name.</param>
         /// <param name="config">The configuration.</param>
-        /// <param name="extensionsBase">The extensionsBase.</param>
-        public ActorSystem(string name, Config config = null, params IExtensionId[] extensionsBase)
+        public ActorSystem(string name, Config config = null)
         {
             if (!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
                 throw new ArgumentException(
@@ -67,7 +68,7 @@ namespace Akka.Actor
             ConfigureMailboxes();
             ConfigureDispatchers();
             ConfigureProvider();
-            ConfigureExtensions(extensionsBase);
+            LoadExtensions();
             Start();
         }
 
@@ -217,23 +218,10 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">Name of the ActorSystem</param>
         /// <param name="config">Configuration of the ActorSystem</param>
-        /// <param name="extensionIds">Extensions of the ActorSystem</param>
         /// <returns>ActorSystem.</returns>
-        public static ActorSystem Create(string name, Config config, params ExtensionIdProvider<IExtension>[] extensionIds)
+        public static ActorSystem Create(string name, Config config)
         {
-            return new ActorSystem(name, config, extensionIds);
-        }
-
-
-        /// <summary>
-        ///     Creates the specified name.
-        /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="extensionsBase">The extensionsBase.</param>
-        /// <returns>ActorSystem.</returns>
-        public static ActorSystem Create(string name, params ExtensionIdProvider<IExtension>[] extensionsBase)
-        {
-            return new ActorSystem(name, null, extensionsBase);
+            return new ActorSystem(name, config);
         }
 
         /// <summary>
@@ -255,6 +243,36 @@ namespace Akka.Actor
         }
 
         /// <summary>
+        /// Load all of the extensions registered in the <see cref="ActorSystem.Settings"/>
+        /// </summary>
+        private void LoadExtensions()
+        {
+            var extensions = new List<IExtensionId>();
+            foreach (var extensionFqn in Settings.Config.GetStringList("akka.extensions"))
+            {
+                var extensionType = Type.GetType(extensionFqn);
+                if (extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.IsAbstract || !extensionType.IsClass)
+                {
+                    log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
+                    continue;
+                }
+
+                try
+                {
+                    var extension = (IExtensionId) Activator.CreateInstance(extensionType);
+                    extensions.Add(extension);
+                }
+                catch (Exception ex)
+                {
+                    log.Error(ex, "While trying to load extension [{0}], skipping...", extensionFqn);
+                }
+                
+            }
+
+            ConfigureExtensions(extensions);
+        }
+
+        /// <summary>
         ///     Configures the extensionsBase.
         /// </summary>
         /// <param name="extensionIdProviders">The extensionsBase.</param>
@@ -262,8 +280,7 @@ namespace Akka.Actor
         {
             foreach (var extensionId in extensionIdProviders)
             {
-                var extension = extensionId.CreateExtension(this);
-                _extensions.TryAdd(extensionId, extension);
+                RegisterExtension(extensionId);
             }
         }
 
