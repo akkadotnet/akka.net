@@ -1,4 +1,6 @@
-﻿namespace Akka.Actor
+﻿using System;
+
+namespace Akka.Actor
 {
     /// <summary>
     /// Marker interface used to identify an object as ActorSystem extension
@@ -25,6 +27,11 @@
         /// Internal use only.
         /// </summary>
         object CreateExtension(ActorSystem system);
+
+        /// <summary>
+        /// Returns the underlying type for this extension
+        /// </summary>
+        Type ExtensionType { get; }
     }
 
     /// <summary>
@@ -50,6 +57,17 @@
     }
 
     /// <summary>
+    /// Static helper class used for resolving extensions
+    /// </summary>
+    public static class ExtendedActorSystem
+    {
+        public static IExtension WithExtension<T>(this ActorSystem system) where T : IExtension
+        {
+            return (IExtension)system.GetExtension<T>();
+        }
+    }
+
+    /// <summary>
     ///     Class ExtensionBase.
     /// </summary>
     public abstract class ExtensionIdProvider<T> : IExtensionId<T> where T:IExtension
@@ -67,6 +85,11 @@
         object IExtensionId.CreateExtension(ActorSystem system)
         {
             return CreateExtension(system);
+        }
+
+        public Type ExtensionType
+        {
+            get { return typeof (T); }
         }
 
         object IExtensionId.Apply(ActorSystem system)

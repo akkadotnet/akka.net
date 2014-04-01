@@ -36,7 +36,7 @@ namespace Akka.Actor
         /// <summary>
         ///     The extensionsBase
         /// </summary>
-        private readonly ConcurrentDictionary<IExtensionId, object> _extensions = new ConcurrentDictionary<IExtensionId, object>();
+        private readonly ConcurrentDictionary<Type, object> _extensions = new ConcurrentDictionary<Type, object>();
 
         /// <summary>
         ///     The log
@@ -68,6 +68,7 @@ namespace Akka.Actor
             ConfigureMailboxes();
             ConfigureDispatchers();
             ConfigureProvider();
+            ConfigureLoggers();
             LoadExtensions();
             Start();
         }
@@ -291,9 +292,9 @@ namespace Akka.Actor
         internal object RegisterExtension(IExtensionId extensionBase)
         {
             if (extensionBase == null) return null;
-            if (!_extensions.ContainsKey(extensionBase))
+            if (!_extensions.ContainsKey(extensionBase.ExtensionType))
             {
-                _extensions.TryAdd(extensionBase, extensionBase.CreateExtension(this));
+                _extensions.TryAdd(extensionBase.ExtensionType, extensionBase.CreateExtension(this));
             }
 
             return extensionBase.Get(this);
@@ -305,8 +306,20 @@ namespace Akka.Actor
         internal object GetExtension(IExtensionId extensionId)
         {
             object extension;
-            _extensions.TryGetValue(extensionId, out extension);
+            _extensions.TryGetValue(extensionId.ExtensionType, out extension);
             return extension;
+        }
+
+        internal object GetExtension<T>()where T:IExtension
+        {
+            object extension;
+            _extensions.TryGetValue(typeof(T), out extension);
+            return extension;
+        }
+
+        internal bool HasExtension<T>() where T : IExtension
+        {
+            return _extensions.ContainsKey(typeof (T));
         }
 
         /// <summary>
@@ -362,15 +375,22 @@ namespace Akka.Actor
         {
             if (Settings.LogDeadLetters > 0)
                 logDeadLetterListener = SystemActorOf<DeadLetterListener>("deadLetterListener");
-
-            EventStream.StartDefaultLoggers(this);
-
-            log = new BusLogging(EventStream, "ActorSystem(" + Name + ")", GetType());
+            
 
             if (Settings.LogConfigOnStart)
             {
                 log.Warn(Settings.ToString());
             }
+        }
+
+        /// <summary>
+        /// Extensions depends on loggers being configured before Start() is called
+        /// </summary>
+        private void ConfigureLoggers()
+        {
+            EventStream.StartDefaultLoggers(this);
+
+            log = new BusLogging(EventStream, "ActorSystem(" + Name + ")", GetType());
         }
 
         /// <summary>
