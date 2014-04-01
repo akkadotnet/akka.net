@@ -452,20 +452,6 @@ namespace Akka.Actor
             }
         }
 
-        #region Internal methods
-
-        /// <summary>
-        /// Used for seeding unique <see cref="Address"/> values upon Actor restarts; particularly important for remote Actors
-        /// TODO: technically this feature belongs inside ActorSystem extensionsBase, but we don't have an implementation for that yet
-        /// TODO: see https://github.com/akka/akka/blob/f1edf789798dc02dfa37d3301d7712736c964ab1/akka-remote/src/main/scala/akka/remote/AddressUidExtension.scala
-        /// </summary>
-        internal int AddressUid()
-        {
-            return ThreadLocalRandom.Current.Next();
-        }
-
-        #endregion
-
         #region Equality methods
         #endregion
     }

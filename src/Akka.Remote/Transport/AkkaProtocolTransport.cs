@@ -137,7 +137,7 @@ namespace Akka.Remote.Transport
                     var failureDetector = CreateTransportFailureDetector();
                     //TODO: eventually this needs to be configured with the RemoteDispatcher via https://github.com/akka/akka/blob/f1edf789798dc02dfa37d3301d7712736c964ab1/akka-remote/src/main/scala/akka/remote/transport/AkkaProtocolTransport.scala#L156
                     Context.ActorOf(ProtocolStateActor.InboundProps(
-                        new HandshakeInfo(stateActorLocalAddress, Context.System.AddressUid()), 
+                        new HandshakeInfo(stateActorLocalAddress, AddressUidExtension.Uid(Context.System)), 
                         handle,
                         stateActorAssociationListener,
                         stateActorSettings,
@@ -167,7 +167,7 @@ namespace Akka.Remote.Transport
 
             //TODO: eventually this needs to be configured with the RemoteDispatcher via https://github.com/akka/akka/blob/f1edf789798dc02dfa37d3301d7712736c964ab1/akka-remote/src/main/scala/akka/remote/transport/AkkaProtocolTransport.scala#L156
             Context.ActorOf(ProtocolStateActor.OutboundProps(
-                new HandshakeInfo(stateActorLocalAddress, Context.System.AddressUid()),
+                new HandshakeInfo(stateActorLocalAddress, AddressUidExtension.Uid(Context.System)),
                 remoteAddress,
                 statusPromise,
                 stateActorWrappedTransport,
