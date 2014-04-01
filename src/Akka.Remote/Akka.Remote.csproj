@@ -58,6 +58,13 @@
     <Reference Include="Google.ProtocolBuffers.Serialization">
       <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
     </Reference>
+    <Reference Include="Helios">
+      <HintPath>..\..\packages\Helios.0.2.2.0\lib\net45\Helios.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Newtonsoft.Json.6.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
@@ -103,10 +110,11 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteActorRefProvider.cs" />
     <Compile Include="Transport\AkkaPduCodec.cs" />
+    <Compile Include="Transport\IPHelper.cs" />
     <Compile Include="Transport\TransportAdapters.cs" />
     <Compile Include="Transport\AkkaProtocolTransport.cs" />
-    <Compile Include="Transport\Tcp\TcpListener.cs" />
-    <Compile Include="Transport\Tcp\TcpTransport.cs" />
+    <Compile Include="Transport\Helios\TcpListener.cs" />
+    <Compile Include="Transport\Helios\TcpTransport.cs" />
     <Compile Include="Transport\TestTransport.cs" />
     <Compile Include="Transport\Transport.cs" />
   </ItemGroup>
