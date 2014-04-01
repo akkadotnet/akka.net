@@ -31,6 +31,8 @@ namespace Akka.Remote
             InitialSysMsgDeliveryTimeout = config.GetMillisDuration("akka.remote.initial-system-message-delivery-timeout");
             SysMsgAckTimeout = config.GetMillisDuration("akka.remote.system-message-ack-piggyback-timeout");
             QuarantineDuration = config.GetMillisDuration("akka.remote.prune-quarantine-marker-after");
+            StartupTimeout = config.GetMillisDuration("akka.remote.startup-timeout");
+            CommandAckTimeout = config.GetMillisDuration("akka.remote.command-ack-timeout");
         }
 
         /// <summary>
@@ -67,6 +69,8 @@ namespace Akka.Remote
         public TimeSpan InitialSysMsgDeliveryTimeout { get; set; }
         public TimeSpan SysMsgAckTimeout { get; set; }
         public TimeSpan? QuarantineDuration { get; set; }
+        public TimeSpan StartupTimeout { get; set; }
+        public TimeSpan CommandAckTimeout { get; set; }
 
         private Config TransportConfigFor(string transportName)
         {

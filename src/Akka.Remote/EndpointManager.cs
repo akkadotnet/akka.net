@@ -582,7 +582,7 @@ namespace Akka.Remote
                     Task.WhenAll(shutdownStatus, flushStatus)
                         .ContinueWith(x => x.Result.All(y => y),
                             TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent)
-                        .PipeTo(Self);
+                        .PipeTo(Sender);
 
                     foreach (var handoff in pendingReadHandoffs.Values)
                     {

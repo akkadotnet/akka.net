@@ -80,6 +80,14 @@ namespace Akka.Remote
         /// <param name="remote">The remote address</param>
         /// <returns>the local address to be used for the given remote address</returns>
         public abstract Address LocalAddressForRemote(Address remote);
+
+        /// <summary>
+        /// Marks a remote system as out of sync and prevents reconnects until the quarantine timeout elapses.
+        /// </summary>
+        /// <param name="address">Address of the remote system to be quarantined</param>
+        /// <param name="uid">UID of the remote system; if the uid is not defined it will not be a strong quarantine but the current
+        /// endpoint writer will be stopped (dropping system messages) and the address will be gated.</param>
+        public abstract void Quarantine(Address address, int? uid);
     }
 
     /// <summary>
