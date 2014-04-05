@@ -163,6 +163,7 @@ namespace Akka.Tests.Routing
             
         }
 
+        [Ignore]
         [TestMethod]
         public void Router_in_general_mulst_use_configured_nr_of_instances_when_FromConfig()
         {
