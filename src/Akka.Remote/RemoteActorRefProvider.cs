@@ -24,7 +24,7 @@ namespace Akka.Remote
         }
 
         public RemoteDaemon RemoteDaemon { get; private set; }
-        public Remoting Transport { get; private set; }
+        internal Remoting Transport { get; private set; }
 
         internal RemoteSettings RemoteSettings { get; private set; }
 

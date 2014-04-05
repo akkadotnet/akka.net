@@ -64,7 +64,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Marker interface for events that the registered listener for a <see cref="AssociationHandle"/> might receive.
     /// </summary>
-    public interface IHandleEvent { }
+    public interface IHandleEvent : NoSerializationVerificationNeeded { }
 
     /// <summary>
     /// Message sent to the listener registered to an association (via the TaskCompletionSource returned by <see cref="AssociationHandle.ReadHandlerSource"/>)
@@ -239,5 +239,26 @@ namespace Akka.Remote.Transport
         /// The transport that provides the handle MUST guarantee that <see cref="Disassociate"/> could be called arbitrarily many times.
         /// </summary>
         public abstract void Disassociate();
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((AssociationHandle) obj);
+        }
+
+        protected bool Equals(AssociationHandle other)
+        {
+            return Equals(LocalAddress, other.LocalAddress) && Equals(RemoteAddress, other.RemoteAddress);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((LocalAddress != null ? LocalAddress.GetHashCode() : 0) * 397) ^ (RemoteAddress != null ? RemoteAddress.GetHashCode() : 0);
+            }
+        }
     }
 }

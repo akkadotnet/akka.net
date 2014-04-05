@@ -8,7 +8,7 @@ using Google.ProtocolBuffers;
 
 namespace Akka.Remote.Transport
 {
-    public class ProtocolTransportAddressPair
+    internal class ProtocolTransportAddressPair
     {
         public ProtocolTransportAddressPair(AkkaProtocolTransport protocolTransport, Address address)
         {
@@ -35,7 +35,7 @@ namespace Akka.Remote.Transport
     /// 
     /// This transport is loaded automatically by <see cref="Remoting"/> and will wrap all dynamically loaded transports.
     /// </summary>
-    public class AkkaProtocolTransport : ActorTransportAdapter
+    internal class AkkaProtocolTransport : ActorTransportAdapter
     {
         public AkkaProtocolTransport(Transport wrappedTransport, ActorSystem system, AkkaProtocolSettings settings, AkkaPduCodec codec)
             : base(wrappedTransport, system)
@@ -137,7 +137,7 @@ namespace Akka.Remote.Transport
                     var failureDetector = CreateTransportFailureDetector();
                     //TODO: eventually this needs to be configured with the RemoteDispatcher via https://github.com/akka/akka/blob/f1edf789798dc02dfa37d3301d7712736c964ab1/akka-remote/src/main/scala/akka/remote/transport/AkkaProtocolTransport.scala#L156
                     Context.ActorOf(ProtocolStateActor.InboundProps(
-                        new HandshakeInfo(stateActorLocalAddress, Context.System.AddressUid()), 
+                        new HandshakeInfo(stateActorLocalAddress, AddressUidExtension.Uid(Context.System)), 
                         handle,
                         stateActorAssociationListener,
                         stateActorSettings,
@@ -167,7 +167,7 @@ namespace Akka.Remote.Transport
 
             //TODO: eventually this needs to be configured with the RemoteDispatcher via https://github.com/akka/akka/blob/f1edf789798dc02dfa37d3301d7712736c964ab1/akka-remote/src/main/scala/akka/remote/transport/AkkaProtocolTransport.scala#L156
             Context.ActorOf(ProtocolStateActor.OutboundProps(
-                new HandshakeInfo(stateActorLocalAddress, Context.System.AddressUid()),
+                new HandshakeInfo(stateActorLocalAddress, AddressUidExtension.Uid(Context.System)),
                 remoteAddress,
                 statusPromise,
                 stateActorWrappedTransport,
@@ -185,7 +185,7 @@ namespace Akka.Remote.Transport
         #endregion
     }
 
-    public class AssociateUnderlyingRefuseUid : NoSerializationVerificationNeeded
+    internal class AssociateUnderlyingRefuseUid : NoSerializationVerificationNeeded
     {
         public AssociateUnderlyingRefuseUid(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusCompletionSource, int? refuseUid = null)
         {
@@ -201,7 +201,7 @@ namespace Akka.Remote.Transport
         public int? RefuseUid { get; private set; }
     }
 
-    public sealed class HandshakeInfo
+    internal sealed class HandshakeInfo
     {
         public HandshakeInfo(Address origin, long uid)
         {
@@ -212,9 +212,29 @@ namespace Akka.Remote.Transport
         public Address Origin { get; private set; }
 
         public long Uid { get; private set; }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is HandshakeInfo && Equals((HandshakeInfo) obj);
+        }
+
+        private bool Equals(HandshakeInfo other)
+        {
+            return Equals(Origin, other.Origin) && Uid == other.Uid;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Origin != null ? Origin.GetHashCode() : 0) * 397) ^ Uid.GetHashCode();
+            }
+        }
     }
 
-    public class AkkaProtocolHandle : AbstractTransportAdapterHandle
+    internal class AkkaProtocolHandle : AbstractTransportAdapterHandle
     {
         public AkkaProtocolHandle(Address originalLocalAddress, Address originalRemoteAddress,
             TaskCompletionSource<IHandleEventListener> readHandlerCompletionSource, AssociationHandle wrappedHandle,
@@ -247,18 +267,42 @@ namespace Akka.Remote.Transport
         {
             StateActor.Tell(new DisassociateUnderlying(info));
         }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((AkkaProtocolHandle) obj);
+        }
+
+        protected bool Equals(AkkaProtocolHandle other)
+        {
+            return base.Equals(other) && Equals(HandshakeInfo, other.HandshakeInfo) && Equals(StateActor, other.StateActor);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ (HandshakeInfo != null ? HandshakeInfo.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (StateActor != null ? StateActor.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
     }
 
-    public enum AssociationState
+    internal enum AssociationState
     {
         Closed = 0,
         WaitHandshake = 1,
         Open = 2
     }
 
-    public class HeartbeatTimer : NoSerializationVerificationNeeded { }
+    internal class HeartbeatTimer : NoSerializationVerificationNeeded { }
 
-    public sealed class HandleMsg : NoSerializationVerificationNeeded
+    internal sealed class HandleMsg : NoSerializationVerificationNeeded
     {
         public HandleMsg(AssociationHandle handle)
         {
@@ -268,7 +312,7 @@ namespace Akka.Remote.Transport
         public AssociationHandle Handle { get; private set; }
     }
 
-    public sealed class HandleListenerRegistered : NoSerializationVerificationNeeded
+    internal sealed class HandleListenerRegistered : NoSerializationVerificationNeeded
     {
         public HandleListenerRegistered(IHandleEventListener listener)
         {
@@ -278,13 +322,13 @@ namespace Akka.Remote.Transport
         public IHandleEventListener Listener { get; private set; }
     }
 
-    public abstract class ProtocolStateData { }
-    public abstract class InitialProtocolStateData : ProtocolStateData { }
+    internal abstract class ProtocolStateData { }
+    internal abstract class InitialProtocolStateData : ProtocolStateData { }
 
     /// <summary>
     /// Neither the underlying nor the provided transport is associated
     /// </summary>
-    public sealed class OutboundUnassociated : InitialProtocolStateData
+    internal sealed class OutboundUnassociated : InitialProtocolStateData
     {
         public OutboundUnassociated(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusCompletionSource, Transport transport)
         {
@@ -303,7 +347,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// The underlying transport is associated, but the handshake of the Akka protocol is not yet finished
     /// </summary>
-    public sealed class OutboundUnderlyingAssociated : ProtocolStateData
+    internal sealed class OutboundUnderlyingAssociated : ProtocolStateData
     {
         public OutboundUnderlyingAssociated(TaskCompletionSource<AssociationHandle> statusCompletionSource, AssociationHandle wrappedHandle)
         {
@@ -319,7 +363,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// The underlying transport is associated, but the handshake of the akka protocol is not yet finished
     /// </summary>
-    public sealed class InboundUnassociated : InitialProtocolStateData
+    internal sealed class InboundUnassociated : InitialProtocolStateData
     {
         public InboundUnassociated(IAssociationEventListener associationEventListener, AssociationHandle wrappedHandle)
         {
@@ -335,7 +379,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// The underlying transport is associated, but the handler for the handle has not been provided yet
     /// </summary>
-    public sealed class AssociatedWaitHandler : ProtocolStateData
+    internal sealed class AssociatedWaitHandler : ProtocolStateData
     {
         public AssociatedWaitHandler(Task<IHandleEventListener> handlerListener, AssociationHandle wrappedHandle, Queue<ByteString> queue)
         {
@@ -354,7 +398,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// System ready!
     /// </summary>
-    public sealed class ListenerReady : ProtocolStateData
+    internal sealed class ListenerReady : ProtocolStateData
     {
         public ListenerReady(IHandleEventListener listener, AssociationHandle wrappedHandle)
         {
@@ -367,10 +411,10 @@ namespace Akka.Remote.Transport
         public AssociationHandle WrappedHandle { get; private set; }
     }
 
-    public class TimeoutReason { }
-    public class ForbiddenUidReason { }
+    internal class TimeoutReason { }
+    internal class ForbiddenUidReason { }
 
-    public class ProtocolStateActor : FSM<AssociationState, ProtocolStateData>
+    internal class ProtocolStateActor : FSM<AssociationState, ProtocolStateData>
     {
         private InitialProtocolStateData _initialData;
         private HandshakeInfo _localHandshakeInfo;

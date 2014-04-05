@@ -26,6 +26,13 @@ namespace Akka.Remote
             BackoffPeriod = config.GetMillisDuration("akka.remote.backoff-internal", TimeSpan.FromSeconds(3));
             RetryGateClosedFor = config.GetMillisDuration("akka.remote.retry-gate-closed-for", TimeSpan.Zero);
             UsePassiveConnections = config.GetBoolean("akka.remote.use-passive-connections");
+            SysMsgBufferSize = config.GetInt("akka.remote.system-message-buffer-size");
+            SysResendTimeout = config.GetMillisDuration("akka.remote.resend-interval");
+            InitialSysMsgDeliveryTimeout = config.GetMillisDuration("akka.remote.initial-system-message-delivery-timeout");
+            SysMsgAckTimeout = config.GetMillisDuration("akka.remote.system-message-ack-piggyback-timeout");
+            QuarantineDuration = config.GetMillisDuration("akka.remote.prune-quarantine-marker-after");
+            StartupTimeout = config.GetMillisDuration("akka.remote.startup-timeout");
+            CommandAckTimeout = config.GetMillisDuration("akka.remote.command-ack-timeout");
         }
 
         /// <summary>
@@ -57,6 +64,13 @@ namespace Akka.Remote
         public TimeSpan BackoffPeriod { get; set; }
         public TimeSpan RetryGateClosedFor { get; set; }
         public bool UsePassiveConnections { get; set; }
+        public int SysMsgBufferSize { get; set; }
+        public TimeSpan SysResendTimeout { get; set; }
+        public TimeSpan InitialSysMsgDeliveryTimeout { get; set; }
+        public TimeSpan SysMsgAckTimeout { get; set; }
+        public TimeSpan? QuarantineDuration { get; set; }
+        public TimeSpan StartupTimeout { get; set; }
+        public TimeSpan CommandAckTimeout { get; set; }
 
         private Config TransportConfigFor(string transportName)
         {
@@ -68,10 +82,13 @@ namespace Akka.Remote
             public TransportSettings(Config config)
             {
                 TransportClass = config.GetString("transport-class");
+                Adapters = config.GetStringList("applied-adapters").Reverse().ToList();
                 Config = config;
             }
 
             public Config Config { get; set; }
+
+            public IList<string> Adapters { get; set; }
 
             public string TransportClass { get; set; }
         }

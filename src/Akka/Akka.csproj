@@ -82,12 +82,14 @@
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Actor\ChildrenContainer.cs" />
     <Compile Include="Actor\Deployer.cs" />
+    <Compile Include="Actor\ExtendedActorSystem.cs" />
     <Compile Include="Actor\FSM.cs" />
     <Compile Include="Actor\GracefulStopSupport.cs" />
     <Compile Include="Actor\NoSerializationVerificationNeeded.cs" />
     <Compile Include="Actor\PipeToSupport.cs" />
     <Compile Include="Actor\Scheduler.cs" />
     <Compile Include="Actor\Settings.cs" />
+    <Compile Include="Actor\Stash.cs" />
     <Compile Include="Configuration\ConfigurationFactory.cs" />
     <Compile Include="Configuration\Config.cs" />
     <Compile Include="Configuration\Hocon\HoconArray.cs" />
@@ -113,6 +115,7 @@
     <Compile Include="Actor\MessageHandler.cs" />
     <Compile Include="Dispatch\Mailboxes.cs" />
     <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
+    <Compile Include="Event\AddressTerminatedTopic.cs" />
     <Compile Include="Event\DeadLetter.cs" />
     <Compile Include="Event\DeadLetterListener.cs" />
     <Compile Include="Event\EventBus.cs" />
