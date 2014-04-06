@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
@@ -173,6 +174,61 @@ namespace Akka.Tests.Routing
             watch(router);
             sys.Stop(router);
             expectTerminated(router);
+        }
+
+        /*
+"use configured nr-of-instances when router is specified" in {
+      val router = system.actorOf(Props[TestActor].withRouter(RoundRobinRouter(nrOfInstances = 2)), "router2")
+      router ! CurrentRoutees
+      expectMsgType[RouterRoutees].routees.size should be(3)
+      system.stop(router)
+    }
+      */
+
+        [TestMethod]
+        public void Router_in_general_mulst_use_configured_nr_of_instances_when_router_is_specified()
+        {
+            var router = sys.ActorOf(Props.Create<TestActor>().WithRouter(new RoundRobinPool(3)), "router1");
+            router.Tell(new GetRoutees(), testActor);
+            expectMsgType<Routees>().Members.Count().ShouldBe(3);
+            watch(router);
+            sys.Stop(router);
+            expectTerminated(router);
+        }
+
+/*
+     "use specified resizer when resizer not configured" in {
+      val latch = TestLatch(1)
+      val resizer = new Resizer {
+        def isTimeForResize(messageCounter: Long): Boolean = messageCounter == 0
+        def resize(currentRoutees: immutable.IndexedSeq[Routee]): Int = {
+          latch.countDown()
+          3
+        }
+      }
+      val router = system.actorOf(Props[TestActor].withRouter(RoundRobinRouter(resizer = Some(resizer))), "router3")
+      Await.ready(latch, remaining)
+      router ! CurrentRoutees
+      expectMsgType[RouterRoutees].routees.size should be(3)
+      system.stop(router)
+    }
+ */
+
+
+        [TestMethod]
+        public void Router_in_general_mulst_use_specified_resizer_when_resizer_not_configured()
+        {
+            var latch = new TestLatch(sys,1);
+            var resizer = new TestResizer(latch);
+            var router =
+                sys.ActorOf(
+                    Props.Create<TestActor>()
+                        .WithRouter(new RoundRobinPool(0, resizer, SupervisorStrategy.DefaultStrategy, "")));
+            latch.Open();
+            router.Tell(new GetRoutees(),testActor);
+            expectMsgType<Routees>().Members.Count().ShouldBe(2);
+            sys.Stop(router);
+
         }
     }
 }
