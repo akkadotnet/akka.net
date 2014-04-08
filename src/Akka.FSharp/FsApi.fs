@@ -2,19 +2,25 @@
 open Akka.Actor
 open System
 
+type IO<'msg> = | Input
+
+[<Interface>]
+type Actor<'msg> =
+    abstract Receive : unit -> IO<'msg>
+    abstract Self : LocalActorRef
+    abstract Sender : unit -> ActorRef
+    abstract Unhandled: 'msg -> unit
+
 [<AbstractClass>]
 type Actor()=
     inherit Akka.Actor.UntypedActor()
 
-type IO<'msg> = | Input
 
-[<AbstractClass>]
-type Actor<'msg>()=
-    inherit Actor()
 
-    member this.Receive() = IO<'msg>.Input
 
-let (<!) (actorRef:ActorRef) (msg: obj) =
+
+
+let inline (<!) (actorRef: #ActorRef) (msg: obj) =
     actorRef.Tell msg
     ignore()
 
@@ -129,19 +135,28 @@ type ActorBuilder() =
         | Return _ -> g
 
 
-/// <summary>
-/// Builds an actor message handler using an actor expression syntax.
-/// </summary>
-let actor = ActorBuilder()
 
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Linq.QuotationEvaluation
 
 type FunActor<'m,'v>(actor: Actor<'m> -> Cont<'m,'v>) as self =
-    inherit Actor<'m>()
-    let mutable state = actor self
+    inherit ActorBase()
+
+    let mutable state = 
+        let self' = self.Self
+        actor { new Actor<'m> with
+                                member this.Receive() = Input
+                                member this.Self = self'
+                                member this.Sender() = self.Sender()
+                                member this.Unhandled msg = self.Unhandled msg } 
 
     new (actor: Expr<Actor<'m> -> Cont<'m,'v>>) = FunActor(actor.Compile() ())
+
+    member x.Sender() =
+        base.Sender
+
+    member x.Unhandled(msg:'m) =
+        base.Unhandled msg
 
     override x.OnReceive(msg) =
         let message = msg :?> 'm
@@ -149,7 +164,10 @@ type FunActor<'m,'v>(actor: Actor<'m> -> Cont<'m,'v>) as self =
         | Func f -> state <- f message
         | Return v -> x.PostStop()
 
-    
+/// <summary>
+/// Builds an actor message handler using an actor expression syntax.
+/// </summary>
+let actor = ActorBuilder()
 
 module Linq =
     open System.Linq.Expressions
