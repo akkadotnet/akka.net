@@ -2,10 +2,17 @@
 open Akka.Actor
 open System
 
-
 [<AbstractClass>]
 type Actor()=
     inherit Akka.Actor.UntypedActor()
+
+type IO<'msg> = | Input
+
+[<AbstractClass>]
+type Actor<'msg>()=
+    inherit Actor()
+
+    member this.Receive() = IO<'msg>.Input
 
 let (<!) (actorRef:ActorRef) (msg: obj) =
     actorRef.Tell msg
@@ -20,7 +27,7 @@ let (<?) (tell:ICanTell) (msg: obj) =
 /// Gives access to the next message throu let! binding in
 /// actor computation expression.
 /// </summary>
-type IO<'msg> = | Input
+
 
 type Cont<'m,'v> =
     | Func of ('m -> Cont<'m,'v>)
@@ -130,11 +137,12 @@ let actor = ActorBuilder()
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Linq.QuotationEvaluation
 
-type FunActor<'m,'v>(actor: IO<'m> -> Cont<'m,'v>) =
-    inherit ActorBase()
-    let mutable state = actor Input
+type FunActor<'m,'v>(actor: Actor<'m> -> Cont<'m,'v>) as self =
+    inherit Actor<'m>()
+    let mutable state = actor self
 
-    new (actor: Expr<IO<'m> -> Cont<'m,'v>>) = FunActor(actor.Compile() ())
+    new (actor: Expr<Actor<'m> -> Cont<'m,'v>>) = FunActor(actor.Compile() ())
+
     override x.OnReceive(msg) =
         let message = msg :?> 'm
         match state with
@@ -215,7 +223,7 @@ module System =
 /// <param name="system">The system used to spawn the actor</param>
 /// <param name="name">The actor instance nane</param>
 /// <param name="f">the actor's message handling function.</param>
-let spawne (system:ActorSystem) name (f: Expr<IO<'m> -> Cont<'m,'v>>)  =
+let spawne (system:ActorSystem) name (f: Expr<Actor<'m> -> Cont<'m,'v>>)  =
    let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f))
    system.ActorOf(Props.Create(e), name)
 
@@ -226,6 +234,6 @@ let spawne (system:ActorSystem) name (f: Expr<IO<'m> -> Cont<'m,'v>>)  =
 /// <param name="system">The system used to spawn the actor</param>
 /// <param name="name">The actor instance nane</param>
 /// <param name="f">the actor's message handling function.</param>
-let spawn (system:ActorSystem) name (f: IO<'m> -> Cont<'m,'v>)  =
+let spawn (system:ActorSystem) name (f: Actor<'m> -> Cont<'m,'v>)  =
    let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f))
    system.ActorOf(Props.Create(e), name)
