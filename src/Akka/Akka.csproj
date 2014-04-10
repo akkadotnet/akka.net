@@ -141,6 +141,7 @@
     <Compile Include="Routing\RouterConfig.cs" />
     <Compile Include="Routing\RouterMsg.cs" />
     <Compile Include="Routing\RouterPoolActor.cs" />
+    <Compile Include="Routing\ScatterGatherFirstCompleted.cs" />
     <Compile Include="Serialization\Serialization.cs" />
     <Compile Include="Serialization\Serializer.cs" />
     <Compile Include="Tools\Atomic.cs" />
