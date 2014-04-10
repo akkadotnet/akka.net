@@ -7,6 +7,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Tools;
+using Helios.Exceptions;
 using Helios.Net;
 using Helios.Net.Bootstrap;
 using Helios.Ops;
@@ -237,12 +238,70 @@ namespace Akka.Remote.Transport.Helios
             }
         }
 
+        protected IConnection NewServer(INode listenAddress)
+        {
+            if(InternalTransport == TransportType.Tcp)
+                return new TcpServerHandler(this, AssociationListenerPromise.Task, ServerFactory.NewReactor(listenAddress).ConnectionAdapter);
+            else
+                throw new NotImplementedException("Haven't implemented UDP transport at this time");
+        }
+
+        protected IConnection NewClient(Address remoteAddress)
+        {
+            if (InternalTransport == TransportType.Tcp)
+                return new TcpClientHandler(this, remoteAddress, ClientFactory.NewConnection(AddressToNode(LocalAddress), AddressToNode(remoteAddress)));
+            else
+                throw new NotImplementedException("Haven't implemented UDP transport at this time");
+        }
+
         public override Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen()
         {
-            var bindingAddress = NodeBuilder.BuildNode().Host(Settings.Hostname).WithPort(Settings.Port);
+            var listenAddress = NodeBuilder.BuildNode().Host(Settings.Hostname).WithPort(Settings.Port);
+            var newServerChannel = NewServer(listenAddress);
+            newServerChannel.Open();
 
-            var newChannel = ServerFactory.NewConnection(bindingAddress, Node.Empty());
+            //Block reads until a handler actor is registered
+            //TODO
+            ConnectionGroup.TryAdd(newServerChannel);
+            ServerChannel = newServerChannel;
+
+            var addr = NodeToAddress(newServerChannel.Local, SchemeIdentifier, System.Name, Settings.Hostname);
+            if(addr == null) throw new HeliosNodeException("Unknown local address type {0}", newServerChannel.Local);
+            LocalAddress = addr;
+            AssociationListenerPromise.Task.ContinueWith(result => ServerChannel.BeginReceive(),
+                TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously &
+                TaskContinuationOptions.NotOnCanceled & TaskContinuationOptions.NotOnFaulted);
+
+            return Task.Run(() => Tuple.Create(addr, AssociationListenerPromise));
         }
+
+        public override Task<AssociationHandle> Associate(Address remoteAddress)
+        {
+            if (!ServerChannel.IsOpen())
+                return Task.Run<AssociationHandle>(() =>
+                {
+                    throw new HeliosConnectionException(ExceptionType.NotOpen, "Transport is not open");
+                    return (AssociationHandle) null;
+                });
+
+            return AssociateInternal(remoteAddress);
+        }
+
+        public override Task<bool> Shutdown()
+        {
+            return Task.Run(() =>
+            {
+                foreach (var channel in ConnectionGroup)
+                {
+                    channel.StopReceive();
+                    channel.Dispose();
+                }
+                return true;
+            });
+
+        }
+
+        protected abstract Task<AssociationHandle> AssociateInternal(Address remoteAddress);
 
         #region Static Members
 
@@ -261,5 +320,65 @@ namespace Akka.Remote.Transport.Helios
         }
 
         #endregion
+    }
+
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Used for accepting inbound connections
+    /// </summary>
+    abstract class ServerHandler : CommonHandlers
+    {
+        private Task<IAssociationEventListener> _associationListenerTask;
+
+        protected ServerHandler(HeliosTransport wrappedTransport, Task<IAssociationEventListener> associationListenerTask, IConnection underlyingConnection) : base(underlyingConnection)
+        {
+            WrappedTransport = wrappedTransport;
+            _associationListenerTask = associationListenerTask;
+        }
+
+        protected void InitInbound(IConnection connection, INode remoteSocketAddress, NetworkData msg)
+        {
+            connection.StopReceive();
+            _associationListenerTask.ContinueWith(r =>
+            {
+                var listener = r.Result;
+                var remoteAddress = HeliosTransport.NodeToAddress(remoteSocketAddress, WrappedTransport.SchemeIdentifier,
+                    WrappedTransport.System.Name);
+
+                if(remoteAddress == null) throw new HeliosNodeException("Unknown inbound remote address type {0}", remoteSocketAddress);
+                AssociationHandle handle;
+                Init(connection, remoteSocketAddress, remoteAddress, msg, out handle);
+                listener.Notify(new InboundAssociation(handle));
+
+            }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.NotOnCanceled & TaskContinuationOptions.NotOnFaulted);
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Used for creating outbound connections
+    /// </summary>
+    abstract class ClientHandler : CommonHandlers
+    {
+        protected readonly TaskCompletionSource<AssociationHandle> StatusPromise = new TaskCompletionSource<AssociationHandle>();
+        public Task<AssociationHandle> StatusFuture { get { return StatusPromise.Task; } }
+
+        protected Address RemoteAddress;
+
+        protected ClientHandler(HeliosTransport heliosWrappedTransport, Address remoteAddress, IConnection underlyingConnection) : base(underlyingConnection)
+        {
+            WrappedTransport = heliosWrappedTransport;
+            RemoteAddress = remoteAddress;
+        }
+
+        protected void InitOutbound(IConnection channel, INode remoteSocketAddress, NetworkData msg)
+        {
+            AssociationHandle handle;
+            Init(channel, remoteSocketAddress, RemoteAddress, msg, out handle);
+            StatusPromise.SetResult(handle);
+        }
     }
 }
