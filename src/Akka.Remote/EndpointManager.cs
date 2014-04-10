@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Tools;
@@ -250,9 +251,10 @@ namespace Akka.Remote
 
         #endregion
 
-        public EndpointManager(RemoteSettings settings, LoggingAdapter log)
+        public EndpointManager(Config config, LoggingAdapter log)
         {
-            this.settings = settings;
+            conf = config;
+            settings = new RemoteSettings(conf);
             this.log = log;
             eventPublisher = new EventPublisher(Context.System, log, Logging.LogLevelFor(settings.RemoteLifecycleEventsLogLevel));
         }
@@ -263,6 +265,7 @@ namespace Akka.Remote
         /// </summary>
         private readonly EndpointRegistry endpoints = new EndpointRegistry();
         private readonly RemoteSettings settings;
+        private readonly Config conf;
         private AtomicCounterLong endpointId = new AtomicCounterLong(0L);
         private LoggingAdapter log;
         private EventPublisher eventPublisher;
@@ -648,7 +651,7 @@ namespace Akka.Remote
                 //Apply AkkaProtocolTransport wrapper to the end of the chain
                 //The chain at this point:
                 // AkkaProtocolTransport <-- Adapter <-- .. <-- Adapter <-- Driver
-                transports.Add(new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(transportSettings.Config), new AkkaPduProtobuffCodec()));
+                transports.Add(new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(conf), new AkkaPduProtobuffCodec()));
             }
 
             // Collect all transports, listen addresses, and listener promises in one Task

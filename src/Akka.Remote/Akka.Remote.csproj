@@ -87,6 +87,7 @@
     <Compile Include="AddressUidExtension.cs" />
     <Compile Include="AkkaProtocolSettings.cs" />
     <Compile Include="AssociationEvent.cs" />
+    <Compile Include="Configuration\RemoteConfigFactory.cs" />
     <Compile Include="Deadline.cs" />
     <Compile Include="DefaultFailureDetectorRegistry.cs" />
     <Compile Include="Endpoint.cs" />
@@ -121,7 +122,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Akka.Remote.nuspec" />
-    <EmbeddedResource Include="Config\Akka.Remote.conf" />
+    <EmbeddedResource Include="Configuration\Remote.conf" />
     <None Include="packages.config" />
     <None Include="protos\google\protobuf\csharp_options.proto" />
     <None Include="protos\google\protobuf\descriptor.proto" />

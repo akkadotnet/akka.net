@@ -23,6 +23,9 @@ namespace Akka.Remote.Tests
             var remoteSettings = ((RemoteActorRefProvider) sys.Provider).RemoteSettings;
 
             Assert.IsFalse(remoteSettings.LogReceive);
+            Assert.IsFalse(remoteSettings.LogSend);
+            Assert.IsFalse(remoteSettings.UntrustedMode);
+            Assert.AreEqual(0, remoteSettings.TrustedSelectionPaths.Count);
         }
     }
 }

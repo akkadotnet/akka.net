@@ -16,6 +16,7 @@ namespace Akka.Remote
             UntrustedMode = config.GetBoolean("akka.remote.untrusted-mode");
             TrustedSelectionPaths = new HashSet<string>(config.GetStringList("akka.remote.trusted-selection-paths"));
             RemoteLifecycleEventsLogLevel = config.GetString("akka.remote.log-remote-lifecycle-events") ?? "DEBUG";
+            if (RemoteLifecycleEventsLogLevel.Equals("on")) RemoteLifecycleEventsLogLevel = "DEBUG";
             FlushWait = config.GetMillisDuration("akka.remote.flush-wait-on-shutdown");
             ShutdownTimeout = config.GetMillisDuration("akka.remote.shutdown-timeout");
             TransportNames = config.GetStringList("akka.remote.enabled-transports");

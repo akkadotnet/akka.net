@@ -53,7 +53,7 @@ namespace Akka.Configuration
         /// </summary>
         /// <param name="resourceName">Name of the resource.</param>
         /// <returns>Config.</returns>
-        private static Config FromResource(string resourceName)
+        internal static Config FromResource(string resourceName)
         {
             Assembly assembly = Assembly.GetExecutingAssembly();
 

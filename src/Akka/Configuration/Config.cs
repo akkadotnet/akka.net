@@ -175,6 +175,7 @@ namespace Akka.Configuration
         public IList<string> GetStringList(string path)
         {
             HoconValue value = GetNode(path);
+            if (value == null) return new string[0];
             return value.GetStringList();
         }
 

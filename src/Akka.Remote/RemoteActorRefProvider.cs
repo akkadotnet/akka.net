@@ -4,23 +4,28 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Routing;
 using Akka.Serialization;
 
 namespace Akka.Remote
 {
-    public class RemoteActorRefProvider : ActorRefProvider
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    class RemoteActorRefProvider : ActorRefProvider
     {
         private readonly LoggingAdapter log;
 
-        private Config config;
+        public Config Config { get; private set; }
 
         public RemoteActorRefProvider(ActorSystem system)
             : base(system)
         {
-            config = system.Settings.Config.GetConfig("akka.remote");
-            log = Logging.GetLogger(system, this);
+            Config = system.Settings.Config.WithFallback(RemoteConfigFactory.Default());
+            RemoteSettings = new RemoteSettings(Config);
+            log = Logging.GetLogger(System, this);
         }
 
         public RemoteDaemon RemoteDaemon { get; private set; }
@@ -44,7 +49,7 @@ namespace Akka.Remote
 
             RemoteDaemon = new RemoteDaemon(System, RootPath/"remote", null);
             Transport = new Remoting(System, this);
-            RemoteSettings = new RemoteSettings(System.Settings.Config);
+           
             Transport.Start();
             //      RemoteHost.StartHost(System, port);
         }

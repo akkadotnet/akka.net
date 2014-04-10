@@ -65,7 +65,7 @@ namespace Akka.Remote
             {
                 _endpointManager =
                 System.SystemActorOf(
-                    Props.Create(() => new EndpointManager(Provider.RemoteSettings, log)).WithDeploy(Deploy.Local),
+                    Props.Create(() => new EndpointManager(Provider.Config, log)).WithDeploy(Deploy.Local),
                     EndpointManagerName);
 
                 try

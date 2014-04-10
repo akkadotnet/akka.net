@@ -180,8 +180,20 @@ namespace Akka.Configuration.Hocon
             string res = GetString();
             if (res.EndsWith("s"))
             {
-                string v = res.Substring(0, res.Length - 1);
+                var v = res.Substring(0, res.Length - 1);
                 return TimeSpan.FromSeconds(double.Parse(v));
+            }
+
+            if (res.EndsWith("m"))
+            {
+                var v = res.Substring(0, res.Length - 1);
+                return TimeSpan.FromMinutes(double.Parse(v));
+            }
+
+            if (res.EndsWith("d"))
+            {
+                var v = res.Substring(0, res.Length - 1);
+                return TimeSpan.FromDays(double.Parse(v));
             }
 
             return TimeSpan.FromSeconds(double.Parse(res));

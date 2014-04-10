@@ -222,7 +222,7 @@ namespace Akka.Actor
         /// <returns>ActorSystem.</returns>
         public static ActorSystem Create(string name, Config config)
         {
-            return new ActorSystem(name, config);
+            return new ActorSystem(name, config.WithFallback(ConfigurationFactory.Default()));
         }
 
         /// <summary>
