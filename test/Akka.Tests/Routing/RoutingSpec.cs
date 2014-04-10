@@ -161,11 +161,18 @@ namespace Akka.Tests.Routing
         [TestMethod]
         public void Router_in_general_must_be_able_to_send_their_routees()
         {
-            
+            var router = sys.ActorOf(new BroadcastPool(5).Props(Props.Create<Echo>()));
+            router.Tell("hello",testActor);
+            expectMsgType<ActorRef>();
+            expectMsgType<ActorRef>();
+            expectMsgType<ActorRef>();
+            expectMsgType<ActorRef>();
+            expectMsgType<ActorRef>();
+            expectNoMsg(TimeSpan.FromSeconds(1));
         }
 
         [TestMethod]
-        public void Router_in_general_mulst_use_configured_nr_of_instances_when_FromConfig()
+        public void Router_in_general_must_use_configured_nr_of_instances_when_FromConfig()
         {
             var router = sys.ActorOf(Props.Create<TestActor>().WithRouter(new FromConfig()), "router1");
 
