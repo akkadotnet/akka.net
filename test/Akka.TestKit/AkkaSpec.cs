@@ -101,6 +101,13 @@ namespace Akka.Tests
             testActor = sys.ActorOf(Props.Create(() => new TestActor(queue, messages)), "test");
             echoActor = sys.ActorOf(Props.Create(() => new EchoActor(testActor)), "echo");
         }
+
+        [TestCleanup]
+        public virtual void CleanUp()
+        {
+            
+        }
+
         protected BlockingCollection<object> queue;
         protected List<object> messages;
         protected ActorSystem sys;

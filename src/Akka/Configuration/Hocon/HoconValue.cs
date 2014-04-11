@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Akka.Configuration.Hocon
 {
-    public class HoconValue
+    public class HoconValue : IMightBeAHoconObject
     {
         private readonly List<IHoconElement> values = new List<IHoconElement>();
 
@@ -48,8 +48,12 @@ namespace Akka.Configuration.Hocon
         public HoconObject GetObject()
         {
             //TODO: merge objects?
-            var o = values.FirstOrDefault() as HoconObject;
-            return o;
+            var raw = values.FirstOrDefault();
+            var o = raw as HoconObject;
+            var sub = raw as IMightBeAHoconObject;
+            if (o != null) return o;
+            if (sub != null && sub.IsObject()) return sub.GetObject();
+            return null;
         }
 
         public HoconValue GetChildObject(string key)

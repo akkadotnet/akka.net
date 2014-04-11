@@ -36,6 +36,11 @@ namespace Akka.Actor
             Mailbox = NoMailboxGiven;
         }
 
+        public Deploy(string path, Scope scope) : this(scope)
+        {
+            Path = path;
+        }
+
         public Deploy(Scope scope)
             : this()
         {

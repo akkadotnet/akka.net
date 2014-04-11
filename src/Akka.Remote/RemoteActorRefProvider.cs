@@ -212,6 +212,23 @@ namespace Akka.Remote
                 Deploy.None);
         }
 
+        public override Address GetExternalAddressFor(Address address)
+        {
+            if (HasAddress(address)) { return _local.RootPath.Address; }
+            if (!string.IsNullOrEmpty(address.Host) && address.Port.HasValue)
+            {
+                try
+                {
+                    return Transport.LocalAddressForRemote(address);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            return null;
+        }
+
         public void UseActorOnNode(RemoteActorRef actor, Props props, Deploy deploy, InternalActorRef supervisor)
         {
             Akka.Serialization.Serialization.CurrentTransportInformation = new Information

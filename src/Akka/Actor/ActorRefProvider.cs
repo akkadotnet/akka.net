@@ -160,6 +160,8 @@ namespace Akka.Actor
         /// <returns>ActorRef.</returns>
         public abstract ActorRef ResolveActorRef(ActorPath actorPath);
 
+        public abstract Address GetExternalAddressFor(Address address);
+
         /// <summary>
         ///     Afters the send system message.
         /// </summary>
@@ -317,6 +319,11 @@ namespace Akka.Actor
                 return currentContext.Self;
             }
             throw new NotSupportedException("The provided actor path is not valid in the LocalActorRefProvider");
+        }
+
+        public override Address GetExternalAddressFor(Address address)
+        {
+            return address.Equals(RootPath.Address) ? address : null;
         }
     }
 }
