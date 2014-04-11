@@ -58,9 +58,9 @@
     <Reference Include="Google.ProtocolBuffers.Serialization">
       <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
     </Reference>
-    <Reference Include="Helios, Version=0.3.5.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Helios, Version=0.3.6.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Helios.0.3.5.0\lib\net45\Helios.dll</HintPath>
+      <HintPath>..\..\packages\Helios.0.3.6.0\lib\net45\Helios.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

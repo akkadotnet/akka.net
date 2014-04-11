@@ -29,8 +29,8 @@ akka {
     }
     remote {
         #this is the new upcoming remoting support, which enables multiple transports
-        tcp-transport {
-            transport-class = ""Akka.Remote.Transport.TcpTransport, Akka.Remote""
+        helios.tcp {
+            transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
 		    applied-adapters = []
 		    transport-protocol = tcp
 		    port = 8091

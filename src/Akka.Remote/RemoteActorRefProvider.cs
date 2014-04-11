@@ -23,10 +23,13 @@ namespace Akka.Remote
         public RemoteActorRefProvider(ActorSystem system)
             : base(system)
         {
+            _local = new LocalActorRefProvider(system);
             Config = system.Settings.Config.WithFallback(RemoteConfigFactory.Default());
             RemoteSettings = new RemoteSettings(Config);
             log = Logging.GetLogger(System, this);
         }
+
+        private LocalActorRefProvider _local;
 
         public RemoteDaemon RemoteDaemon { get; private set; }
         internal Remoting Transport { get; private set; }
@@ -225,5 +228,68 @@ namespace Akka.Remote
             ActorRef remoteNode = ResolveActorRef(new RootActorPath(actor.Path.Address)/"remote");
             remoteNode.Tell(new DaemonMsgCreate(props, deploy, actor.Path.ToSerializationFormat(), supervisor));
         }
+
+
+        #region Internals
+
+        class Internals : NoSerializationVerificationNeeded
+        {
+            public Internals(RemoteTransport transport, Akka.Serialization.Serialization serialization, InternalActorRef remoteDaemon)
+            {
+                Transport = transport;
+                Serialization = serialization;
+                RemoteDaemon = remoteDaemon;
+            }
+
+            public RemoteTransport Transport { get; private set; }
+
+            public Akka.Serialization.Serialization Serialization { get; private set; }
+
+            public InternalActorRef RemoteDaemon { get; private set; }
+        }
+
+        #endregion
+
+        #region RemotingTerminator
+
+        enum TerminatorState
+        {
+            Uninitialized,
+            Idle,
+            WaitDaemonShutdown,
+            WaitTransportShutdown,
+            Finished
+        }
+
+        private class RemotingTerminator : FSM<TerminatorState, Internals>
+        {
+            private readonly ActorRef _systemGuardian;
+
+            public RemotingTerminator(ActorRef systemGuardian)
+            {
+                _systemGuardian = systemGuardian;
+                InitFSM();
+            }
+
+            private void InitFSM()
+            {
+
+                When(TerminatorState.Uninitialized, @event =>
+                {
+                    var internals = @event.StateData;
+                    if (internals != null)
+                    {
+                        //TODO: add a termination hook to the system guardian
+                        return GoTo(TerminatorState.Idle).Using(internals);
+                    }
+                    return null;
+                });
+
+                StartWith(TerminatorState.Uninitialized, null);
+            }
+        }
+
+        #endregion
+
     }
 }

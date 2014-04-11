@@ -32,6 +32,21 @@ namespace Akka.Actor
     }
 
     /// <summary>
+    /// System Guardian - responsible for all system-wide actors
+    /// </summary>
+    class SystemGuardianActor : UntypedActor
+    {
+        /// <summary>
+        /// Processor for messages that are sent to the root system guardian
+        /// </summary>
+        /// <param name="message"></param>
+        protected override void OnReceive(object message)
+        {
+            //TODO need to add termination hook support
+        }
+    }
+
+    /// <summary>
     ///     Class DeadLetterActorRef.
     /// </summary>
     public class DeadLetterActorRef : ActorRef

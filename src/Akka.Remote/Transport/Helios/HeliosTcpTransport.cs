@@ -99,7 +99,7 @@ namespace Akka.Remote.Transport.Helios
 
         protected void InitInbound(IConnection connection, INode remoteSocketAddress, NetworkData msg)
         {
-            connection.StopReceive();
+            //connection.StopReceive();
             _associationListenerTask.ContinueWith(r =>
             {
                 var listener = r.Result;

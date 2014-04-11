@@ -74,7 +74,7 @@ namespace Akka.Remote.Transport.Helios
             TcpKeepAlive = Config.GetBoolean("tcp-keepalive");
             TcpReuseAddr = Config.GetBoolean("tcp-reuse-addr");
             var configHost = Config.GetString("hostname");
-            Hostname = string.IsNullOrEmpty(configHost) ? SystemAddressHelper.ConnectedIp.ToString() : configHost;
+            Hostname = string.IsNullOrEmpty(configHost) ? IPAddress.Any.ToString() : configHost;
             ServerSocketWorkerPoolSize = ComputeWps(Config.GetConfig("server-socket-worker-pool"));
             ClientSocketWorkerPoolSize = ComputeWps(Config.GetConfig("client-socket-worker-pool"));
             Port = Config.GetInt("port");
