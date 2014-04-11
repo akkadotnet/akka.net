@@ -56,6 +56,14 @@ namespace Akka.Actor
     }
 
     /// <summary>
+    /// IllegalActorNameException is thrown when an Actor with an invalid name is deployed our bound.
+    /// </summary>
+    public class IllegalActorNameException : AkkaException
+    {
+        public IllegalActorNameException(string msg) : base(msg) { }
+    }
+
+    /// <summary>
     ///     Class DeathPactException.
     /// </summary>
     public class DeathPactException : AkkaException
