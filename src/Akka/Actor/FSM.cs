@@ -168,7 +168,7 @@ namespace Akka.Actor
             {
                 if (!_ref.IsCancellationRequested)
                 {
-                    _ref.Cancel();
+                    _ref.Cancel(false);
                 }
             }
         }
