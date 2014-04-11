@@ -24,7 +24,7 @@ namespace Akka.Remote
                 let transportConfig = TransportConfigFor(transportName)
                 select new TransportSettings(transportConfig)).ToArray();
             Adapters = ConfigToMap(config.GetConfig("akka.remote.adapters"));
-            BackoffPeriod = config.GetMillisDuration("akka.remote.backoff-internal", TimeSpan.FromSeconds(3));
+            BackoffPeriod = config.GetMillisDuration("akka.remote.backoff-interval");
             RetryGateClosedFor = config.GetMillisDuration("akka.remote.retry-gate-closed-for", TimeSpan.Zero);
             UsePassiveConnections = config.GetBoolean("akka.remote.use-passive-connections");
             SysMsgBufferSize = config.GetInt("akka.remote.system-message-buffer-size");
