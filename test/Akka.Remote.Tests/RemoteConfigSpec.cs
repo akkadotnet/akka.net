@@ -12,7 +12,7 @@ namespace Akka.Remote.Tests
         {
             return @"
                 akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                akka.remote.tcp-transport.port = 0
+                akka.remote.helios.tcp.port = 0
             ";
         }
         #endregion

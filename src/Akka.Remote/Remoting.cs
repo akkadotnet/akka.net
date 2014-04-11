@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Remoting;
-using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
@@ -52,7 +50,7 @@ namespace Akka.Remote
         {
             log = Logging.GetLogger(system, "remoting");
             _eventPublisher = new EventPublisher(system, log, Logging.LogLevelFor(provider.RemoteSettings.RemoteLifecycleEventsLogLevel));
-            _transportSupervisor = system.ActorOf(Props.Create<TransportSupervisor>(), "transports");
+            _transportSupervisor = system.SystemActorOf(Props.Create<TransportSupervisor>(), "transports");
         }
 
         #region RemoteTransport overrides

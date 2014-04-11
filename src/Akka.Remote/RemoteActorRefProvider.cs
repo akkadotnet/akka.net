@@ -30,9 +30,20 @@ namespace Akka.Remote
         }
 
         private LocalActorRefProvider _local;
+        private Internals _internals;
 
-        public RemoteDaemon RemoteDaemon { get; private set; }
-        internal Remoting Transport { get; private set; }
+        private Internals RemoteInternals
+        {
+            get {
+                return _internals ??
+                       (_internals =
+                           new Internals(new Remoting(System, this), System.Serialization,
+                               new RemoteDaemon(System, RootPath/"remote", SystemGuardian)));
+            }
+        }
+
+        public InternalActorRef RemoteDaemon { get { return RemoteInternals.RemoteDaemon; } }
+        internal RemoteTransport Transport { get { return RemoteInternals.Transport; } }
 
         internal RemoteSettings RemoteSettings { get; private set; }
 
@@ -49,9 +60,6 @@ namespace Akka.Remote
             System.Serialization.AddSerializationMap(typeof (DaemonMsgCreate), daemonMsgCreateSerializer);
             System.Serialization.AddSerializer(messageContainerSerializer);
             System.Serialization.AddSerializationMap(typeof (ActorSelectionMessage), messageContainerSerializer);
-
-            RemoteDaemon = new RemoteDaemon(System, RootPath/"remote", null);
-            Transport = new Remoting(System, this);
            
             Transport.Start();
             //      RemoteHost.StartHost(System, port);
@@ -145,23 +153,10 @@ namespace Akka.Remote
             return remoteRef;
         }
 
-        private static InternalActorRef LocalActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
+        private InternalActorRef LocalActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
             ActorPath path, Mailbox mailbox)
         {
-            ActorCell cell = null;
-            if (props.RouterConfig is NoRouter || props.RouterConfig == null) //TODO: should not need nullcheck here
-            {
-                cell = new ActorCell(system, supervisor, props, path, mailbox);
-            }
-            else
-            {
-                var routeeProps = props.WithRouter(RouterConfig.NoRouter);
-                cell = new RoutedActorCell(system, supervisor, props, routeeProps, path, mailbox);
-            }
-
-            cell.NewActor();
-            //   parentContext.Watch(cell.Self);
-            return cell.Self;
+            return _local.ActorOf(system, props, supervisor, path);
         }
 
         /// <summary>

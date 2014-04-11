@@ -178,6 +178,11 @@ namespace Akka.Configuration.Hocon
         public TimeSpan GetMillisDuration()
         {
             string res = GetString();
+            if (res.EndsWith("ms"))
+            {
+                var v = res.Substring(0, res.Length - 2);
+                return TimeSpan.FromMilliseconds(double.Parse(v));
+            }
             if (res.EndsWith("s"))
             {
                 var v = res.Substring(0, res.Length - 1);

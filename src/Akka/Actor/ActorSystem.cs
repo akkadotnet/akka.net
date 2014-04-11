@@ -427,7 +427,7 @@ namespace Akka.Actor
         /// <param name="props">The props.</param>
         /// <param name="name">The name.</param>
         /// <returns>InternalActorRef.</returns>
-        public InternalActorRef SystemActorOf(Props props, string name = null)
+        internal InternalActorRef SystemActorOf(Props props, string name = null)
         {
             return Provider.SystemGuardian.Cell.ActorOf(props, name);
         }
@@ -438,7 +438,7 @@ namespace Akka.Actor
         /// <typeparam name="TActor">The type of the t actor.</typeparam>
         /// <param name="name">The name.</param>
         /// <returns>InternalActorRef.</returns>
-        public InternalActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase
+        internal InternalActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase
         {
             return Provider.SystemGuardian.Cell.ActorOf<TActor>(name);
         }

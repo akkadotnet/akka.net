@@ -372,7 +372,7 @@ namespace Akka.Remote
         protected override void OnReceive(object message)
         {
             message.Match()
-                .With<Listen>(listen => Listens().ContinueWith<NoSerializationVerificationNeeded>(listens =>
+                .With<Listen>(listen => Listens.ContinueWith<NoSerializationVerificationNeeded>(listens =>
                 {
                     if (listens.IsFaulted)
                     {
@@ -611,52 +611,62 @@ namespace Akka.Remote
         #region Internal methods
 
         private Task<List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>>>
-            Listens()
+            _listens;
+        private Task<List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>>>
+            Listens
         {
-            /*
-             * Constructs chains of adapters on top of each driven given in configuration. The result structure looks like the following:
-             * 
-             *      AkkaProtocolTransport <-- Adapter <-- ... <-- Adapter <-- Driver
-             * 
-             * The transports variable contains only the heads of each chains (the AkkaProtocolTransport instances)
-             */
-            var transports = new List<AkkaProtocolTransport>();
-            foreach (var transportSettings in settings.Transports)
+            get
             {
-                var args = new object[] { Context.System, transportSettings.Config };
-
-                //Loads the driver -- the bottom element of the chain
-                //The chain at this point:
-                //  Driver
-                Transport.Transport driver;
-                try
+                if (_listens == null)
                 {
-                    var driverType = Type.GetType(transportSettings.TransportClass);
-                    // ReSharper disable once AssignNullToNotNullAttribute
-                    driver = (Transport.Transport)Activator.CreateInstance(driverType, args);
-                }
-                catch (Exception ex)
-                {
-                    throw new ArgumentException(string.Format("Cannot instantiate transport [{0}]. " +
-                                                              "Make sure it extends [Akka.Remote.Transport.Transport and has constructor with " +
-                                                              "[Akka.Actor.ActorSystem] and [Akka.Configuration.Config] parameters", transportSettings.TransportClass), ex);
-                }
+                    /*
+                 * Constructs chains of adapters on top of each driven given in configuration. The result structure looks like the following:
+                 * 
+                 *      AkkaProtocolTransport <-- Adapter <-- ... <-- Adapter <-- Driver
+                 * 
+                 * The transports variable contains only the heads of each chains (the AkkaProtocolTransport instances)
+                 */
+                    var transports = new List<AkkaProtocolTransport>();
+                    foreach (var transportSettings in settings.Transports)
+                    {
+                        var args = new object[] { Context.System, transportSettings.Config };
 
-                //Iteratively decorates the bottom level driver with a list of adapters
-                //The chain at this point:
-                //  Adapter <-- .. <-- Adapter <-- Driver
-                var wrappedTransport = transportSettings.Adapters.Select(x => TransportAdaptersExtension.For(Context.System).GetAdapterProvider(x)).Aggregate(driver,
-                    (transport, provider) => provider.Create(transport, Context.System));
+                        //Loads the driver -- the bottom element of the chain
+                        //The chain at this point:
+                        //  Driver
+                        Transport.Transport driver;
+                        try
+                        {
+                            var driverType = Type.GetType(transportSettings.TransportClass);
+                            // ReSharper disable once AssignNullToNotNullAttribute
+                            driver = (Transport.Transport)Activator.CreateInstance(driverType, args);
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new ArgumentException(string.Format("Cannot instantiate transport [{0}]. " +
+                                                                      "Make sure it extends [Akka.Remote.Transport.Transport and has constructor with " +
+                                                                      "[Akka.Actor.ActorSystem] and [Akka.Configuration.Config] parameters", transportSettings.TransportClass), ex);
+                        }
 
-                //Apply AkkaProtocolTransport wrapper to the end of the chain
-                //The chain at this point:
-                // AkkaProtocolTransport <-- Adapter <-- .. <-- Adapter <-- Driver
-                transports.Add(new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(conf), new AkkaPduProtobuffCodec()));
+                        //Iteratively decorates the bottom level driver with a list of adapters
+                        //The chain at this point:
+                        //  Adapter <-- .. <-- Adapter <-- Driver
+                        var wrappedTransport = transportSettings.Adapters.Select(x => TransportAdaptersExtension.For(Context.System).GetAdapterProvider(x)).Aggregate(driver,
+                            (transport, provider) => provider.Create(transport, Context.System));
+
+                        //Apply AkkaProtocolTransport wrapper to the end of the chain
+                        //The chain at this point:
+                        // AkkaProtocolTransport <-- Adapter <-- .. <-- Adapter <-- Driver
+                        transports.Add(new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(conf), new AkkaPduProtobuffCodec()));
+                    }
+
+                    // Collect all transports, listen addresses, and listener promises in one Task
+                    var tasks = transports.Select(x => x.Listen().ContinueWith(
+                        result => Tuple.Create(new ProtocolTransportAddressPair(x, result.Result.Item1), result.Result.Item2), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent));
+                    _listens = Task.WhenAll(tasks).ContinueWith(transportResults => transportResults.Result.ToList(), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+                }
+                return _listens;
             }
-
-            // Collect all transports, listen addresses, and listener promises in one Task
-            var tasks = transports.Select(x => x.Listen().ContinueWith(result => Tuple.Create(new ProtocolTransportAddressPair(x, result.Result.Item1), result.Result.Item2), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent));
-            return Task.WhenAll(tasks).ContinueWith(transportResults => transportResults.Result.ToList(), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
         }
 
         private void AcceptPendingReader(ActorRef takingOverFrom)

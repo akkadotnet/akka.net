@@ -2,9 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Runtime.InteropServices;
-using System.Runtime.Remoting.Messaging;
 using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor;
@@ -35,7 +32,7 @@ namespace Akka.Remote
         private ActorSystem system;
         private RemoteActorRefProvider provider;
         private LoggingAdapter log;
-        private RemoteDaemon remoteDaemon;
+        private InternalActorRef remoteDaemon;
         private RemoteSettings settings;
 
         public DefaultMessageDispatcher(ActorSystem system, RemoteActorRefProvider provider, LoggingAdapter log)
@@ -745,6 +742,7 @@ namespace Akka.Remote
             _ackDeadline = NewAckDeadline();
             _handle = handleOrActive;
             CurrentStash = Context.GetStash();
+            InitFSM();
         }
 
         private AkkaProtocolHandle handleOrActive;

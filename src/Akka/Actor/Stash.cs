@@ -170,7 +170,7 @@ namespace Akka.Actor
     /// with unrestricted storage capacity
     /// </summary>
 // ReSharper disable once InconsistentNaming
-    public interface WithUnboundedStash
+    public interface WithUnboundedStash : IActorStash
     {
         IStash CurrentStash { get; set; }
     }
@@ -180,12 +180,12 @@ namespace Akka.Actor
     /// with restricted storage capacity
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public interface WithBoundedStash { }
+    public interface WithBoundedStash : IActorStash { }
 
     /// <summary>
     /// Marker interface for adding stash support
     /// </summary>
-    public interface IActorStash : IStash { }
+    public interface IActorStash { }
 
     /// <summary>
     /// Static factor used for creating Stash instances

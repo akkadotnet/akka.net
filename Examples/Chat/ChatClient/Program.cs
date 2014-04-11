@@ -93,7 +93,7 @@ akka {
         IHandle<NickRequest>,
         IHandle<NickResponse>,
         IHandle<SayRequest>,
-        IHandle<SayResponse>
+        IHandle<SayResponse>, ILogReceive
     {
         LoggingAdapter log = Logging.GetLogger(Context);
 
