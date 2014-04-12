@@ -9,275 +9,275 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Akka.Remote.Tests
 {
-//    [TestClass]
-//    public class RemotingSpec : AkkaSpec
-//    {
-//        #region Setup / Config
+    [TestClass]
+    public class RemotingSpec : AkkaSpec
+    {
+        #region Setup / Config
 
-//        protected override string GetConfig()
-//        {
-//            return @"
-//            common-helios-settings {
-//              port = 0
-//              hostname = ""localhost""
-//            }
-//
-//            akka {
-//              actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
-//
-//              remote {
-//                transport = ""Akka.Remote.Remoting,Akka.Remote""
-//
-//                retry-gate-closed-for = 1 s
-//                log-remote-lifecycle-events = on
-//
-//                enabled-transports = [
-//                  ""akka.remote.test"",
-//                  ""akka.remote.helios.tcp"",
-//                  ""akka.remote.helios.udp""
-//                ]
-//
-//                helios.tcp = ${common-helios-settings}
-//                helios.udp = ${common-helios-settings}
-//
-//                test {
-//                  transport-class = ""Akka.Remote.Transport.TestTransport,Akka.Remote""
-//                  applied-adapters = []
-//                  registry-key = aX33k0jWKg
-//                  local-address = ""test://RemotingSpec@localhost:12345""
-//                  maximum-payload-bytes = 32000 bytes
-//                  scheme-identifier = test
-//                }
-//              }
-//
-//              actor.deployment {
-//                /blub.remote = ""akka.test://remote-sys@localhost:12346""
-//                /looker1/child.remote = ""akka.test://remote-sys@localhost:12346""
-//                /looker1/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
-//                /looker2/child.remote = ""akka.test://remote-sys@localhost:12346""
-//                /looker2/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
-//              }
-//            }";
-//        }
+        protected override string GetConfig()
+        {
+            return @"
+            common-helios-settings {
+              port = 0
+              hostname = ""localhost""
+            }
 
-//        private ActorSystem remoteSystem;
-//        private ICanTell remote;
-//        private ICanTell here;
+            akka {
+              actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
 
-//        [TestInitialize]
-//        public override void Setup()
-//        {
-//            base.Setup();
-//            var conf = ConfigurationFactory.ParseString(@"
-//                akka.remote.test{
-//                    local-address = ""test://remote-sys@localhost:12346""
-//                    maximum-payload-bytes = 48000 bytes
-//                }
-//            ").WithFallback(sys.Settings.Config);
+              remote {
+                transport = ""Akka.Remote.Remoting,Akka.Remote""
 
-//            remoteSystem = ActorSystem.Create("remote-sys", conf);
-//            Deploy(sys, new Deploy(@"/gonk", new RemoteScope(Addr(remoteSystem,"tcp"))));
-//            Deploy(sys, new Deploy(@"/zagzag", new RemoteScope(Addr(remoteSystem, "udp"))));
+                retry-gate-closed-for = 1 s
+                log-remote-lifecycle-events = on
 
-//            remote = remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
-//            here = sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
-//        }
+                enabled-transports = [
+                  ""akka.remote.test"",
+                  ""akka.remote.helios.tcp"",
+#""akka.remote.helios.udp""
+                ]
 
-//        [TestCleanup]
-//        public override void CleanUp()
-//        {
-//            remoteSystem.Shutdown();
-//            AssociationRegistry.Clear();
-//        }
+                helios.tcp = ${common-helios-settings}
+                helios.udp = ${common-helios-settings}
 
-//        #endregion
+                test {
+                  transport-class = ""Akka.Remote.Transport.TestTransport,Akka.Remote""
+                  applied-adapters = []
+                  registry-key = aX33k0jWKg
+                  local-address = ""test://RemotingSpec@localhost:12345""
+                  maximum-payload-bytes = 32000 bytes
+                  scheme-identifier = test
+                }
+              }
 
-//        #region Tests
+              actor.deployment {
+                /blub.remote = ""akka.test://remote-sys@localhost:12346""
+                /looker1/child.remote = ""akka.test://remote-sys@localhost:12346""
+                /looker1/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
+                /looker2/child.remote = ""akka.test://remote-sys@localhost:12346""
+                /looker2/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
+              }
+            }";
+        }
 
-//        [TestMethod]
-//        public void Remoting_must_support_remote_lookups()
-//        {
-//            here.Tell("ping", testActor);
-//            expectMsg(Tuple.Create("pong", testActor));
-//        }
+        private ActorSystem remoteSystem;
+        private ICanTell remote;
+        private ICanTell here;
 
-//        #endregion
+        [TestInitialize]
+        public override void Setup()
+        {
+            base.Setup();
+            var conf = ConfigurationFactory.ParseString(@"
+                akka.remote.test{
+                    local-address = ""test://remote-sys@localhost:12346""
+                    maximum-payload-bytes = 48000 bytes
+                }
+            ").WithFallback(ConfigurationFactory.ParseString(GetConfig()));
 
-//        #region Internal Methods
+            remoteSystem = ActorSystem.Create("remote-sys", conf);
+            Deploy(sys, new Deploy(@"/gonk", new RemoteScope(Addr(remoteSystem, "tcp"))));
+            Deploy(sys, new Deploy(@"/zagzag", new RemoteScope(Addr(remoteSystem, "udp"))));
 
-//        private int MaxPayloadBytes
-//        {
-//            get
-//            {
-//                var byteSize = sys.Settings.Config.GetByteSize("akka.remote.test.maximum-payload-bytes");
-//                if (byteSize != null)
-//                    return (int)byteSize.Value;
-//                return 0;
-//            }
-//        }
+            remote = remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
+            here = sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
+        }
 
-//        private class Bouncer : UntypedActor
-//        {
-//            protected override void OnReceive(object message)
-//            {
-//                message.Match()
-//                    .With<int>(i => Sender.Tell(ByteStringOfSize(i)))
-//                    .Default(x => Sender.Tell(x));
-//            }
-//        }
+        [TestCleanup]
+        public override void CleanUp()
+        {
+            remoteSystem.Shutdown();
+            AssociationRegistry.Clear();
+        }
 
-//        private class Forwarder : UntypedActor
-//        {
-//            private readonly ActorRef _testActor;
+        #endregion
 
-//            public Forwarder(ActorRef testActor)
-//            {
-//            }
+        #region Tests
 
-//            protected override void OnReceive(object message)
-//            {
-//                   _testActor.Tell(message);
-//            }
-//        }
+        [TestMethod]
+        public void Remoting_must_support_remote_lookups()
+        {
+            here.Tell("ping", testActor);
+            expectMsg(Tuple.Create("pong", testActor));
+        }
 
-//        private static ByteString ByteStringOfSize(int size)
-//        {
-//            return ByteString.CopyFrom(new byte[size]);
-//        }
+        #endregion
 
-//        private void VerifySend(object msg, Action afterSend)
-//        {
-//            var bigBounceId = string.Format("bigBounce-{0}", ThreadLocalRandom.Current.Next());
-//            var bigBounceOther = remoteSystem.ActorOf(Props.Create<Bouncer>().WithDeploy(Actor.Deploy.Local),
-//                bigBounceId);
+        #region Internal Methods
 
-//            var bigBounceHere =
-//                sys.ActorSelection(string.Format("akka.test://remote-sys@localhost:12346/user/{0}", bigBounceId));
-//            var eventForwarder = sys.ActorOf(Props.Create(() => new Forwarder(testActor)).WithDeploy(Actor.Deploy.Local));
-//            sys.EventStream.Subscribe(eventForwarder, typeof (AssociationErrorEvent));
-//            sys.EventStream.Subscribe(eventForwarder, typeof (DisassociatedEvent));
-//            try
-//            {
-//                bigBounceHere.Tell(msg, testActor);
-//                afterSend();
-//                expectNoMsg(TimeSpan.FromMilliseconds(500));
-//            }
-//            finally
-//            {
-//                sys.EventStream.Unsubscribe(eventForwarder, typeof (AssociationErrorEvent));
-//                sys.EventStream.Unsubscribe(eventForwarder, typeof (DisassociatedEvent));
-//                eventForwarder.Tell(new PoisonPill());
-//                bigBounceOther.Tell(new PoisonPill());
-//            }
-//        }
+        private int MaxPayloadBytes
+        {
+            get
+            {
+                var byteSize = sys.Settings.Config.GetByteSize("akka.remote.test.maximum-payload-bytes");
+                if (byteSize != null)
+                    return (int)byteSize.Value;
+                return 0;
+            }
+        }
 
-//        private void AtStartup()
-//        {
-//            //TODO need to implement test filters first
-//        }
+        private class Bouncer : UntypedActor
+        {
+            protected override void OnReceive(object message)
+            {
+                message.Match()
+                    .With<int>(i => Sender.Tell(ByteStringOfSize(i)))
+                    .Default(x => Sender.Tell(x));
+            }
+        }
 
-        
+        private class Forwarder : UntypedActor
+        {
+            private readonly ActorRef _testActor;
 
-//        private Address Addr(ActorSystem system, string proto)
-//        {
-//            return system.Provider.GetExternalAddressFor(new Address(string.Format("akka.{0}", proto), "", "", 0));
-//        }
+            public Forwarder(ActorRef testActor)
+            {
+            }
 
-//        private int Port(ActorSystem system, string proto)
-//        {
-//            return Addr(system, proto).Port.Value;
-//        }
+            protected override void OnReceive(object message)
+            {
+                _testActor.Tell(message);
+            }
+        }
 
-//        private void Deploy(ActorSystem system, Deploy d)
-//        {
-//            system.Provider.AsInstanceOf<RemoteActorRefProvider>().Deployer.SetDeploy(d);
-//        }
+        private static ByteString ByteStringOfSize(int size)
+        {
+            return ByteString.CopyFrom(new byte[size]);
+        }
 
-//        #endregion
+        private void VerifySend(object msg, Action afterSend)
+        {
+            var bigBounceId = string.Format("bigBounce-{0}", ThreadLocalRandom.Current.Next());
+            var bigBounceOther = remoteSystem.ActorOf(Props.Create<Bouncer>().WithDeploy(Actor.Deploy.Local),
+                bigBounceId);
 
-//        #region Messages and Internal Actors
+            var bigBounceHere =
+                sys.ActorSelection(string.Format("akka.test://remote-sys@localhost:12346/user/{0}", bigBounceId));
+            var eventForwarder = sys.ActorOf(Props.Create(() => new Forwarder(testActor)).WithDeploy(Actor.Deploy.Local));
+            sys.EventStream.Subscribe(eventForwarder, typeof(AssociationErrorEvent));
+            sys.EventStream.Subscribe(eventForwarder, typeof(DisassociatedEvent));
+            try
+            {
+                bigBounceHere.Tell(msg, testActor);
+                afterSend();
+                expectNoMsg(TimeSpan.FromMilliseconds(500));
+            }
+            finally
+            {
+                sys.EventStream.Unsubscribe(eventForwarder, typeof(AssociationErrorEvent));
+                sys.EventStream.Unsubscribe(eventForwarder, typeof(DisassociatedEvent));
+                eventForwarder.Tell(new PoisonPill());
+                bigBounceOther.Tell(new PoisonPill());
+            }
+        }
 
-//        public sealed class ActorSelReq
-//        {
-//            public ActorSelReq(string s)
-//            {
-//                S = s;
-//            }
+        private void AtStartup()
+        {
+            //TODO need to implement test filters first
+        }
 
-//            public string S { get; private set; }
-//        }
 
-//        class Echo1 : UntypedActor
-//        {
-//            private ActorRef target = Context.System.DeadLetters;
-//            protected override void OnReceive(object message)
-//            {
-//                message.Match()
-//                    .With<Tuple<Props, string>>(props => Sender.Tell(Context.ActorOf<Echo1>(props.Item2)))
-//                    .With<Exception>(ex => { throw ex; })
-//                    .With<ActorSelReq>(sel => Sender.Tell(Context.ActorSelection(sel.S)))
-//                    .Default(x =>
-//                    {
-//                        target = Sender;
-//                        Sender.Tell(x);
-//                    });
-//            }
 
-//            protected override void PreStart() { }
-//            protected override void PreRestart(Exception reason, object message)
-//            {
-//                target.Tell("preRestart");
-//            }
+        private Address Addr(ActorSystem system, string proto)
+        {
+            return system.Provider.GetExternalAddressFor(new Address(string.Format("akka.{0}", proto), "", "", 0));
+        }
 
-//            protected override void PostRestart(Exception reason) { }
-//            protected override void PostStop()
-//            {
-//                target.Tell("postStop");
-//            }
+        private int Port(ActorSystem system, string proto)
+        {
+            return Addr(system, proto).Port.Value;
+        }
 
-//        }
+        private void Deploy(ActorSystem system, Deploy d)
+        {
+            system.Provider.AsInstanceOf<RemoteActorRefProvider>().Deployer.SetDeploy(d);
+        }
 
-//        class Echo2 : UntypedActor
-//        {
-//            protected override void OnReceive(object message)
-//            {
-//                message.Match()
-//                    .With<string>(str =>
-//                    {
-//                        if (str.Equals("ping")) Sender.Tell(Tuple.Create("pong", Sender));
-//                    })
-//                    .With<Tuple<string, ActorRef>>(actorTuple =>
-//                    {
-//                        if (actorTuple.Item1.Equals("ping"))
-//                        {
-//                            Sender.Tell(Tuple.Create("pong", actorTuple.Item2));
-//                        }
-//                        if (actorTuple.Item1.Equals("pong"))
-//                        {
-//                            actorTuple.Item2.Tell(Tuple.Create("pong", Sender.Path.ToSerializationFormat()));
-//                        }
-//                    });
-//            }
-//        }
+        #endregion
 
-//        class Proxy : UntypedActor
-//        {
-//            private ActorRef _one;
-//            private ActorRef _another;
+        #region Messages and Internal Actors
 
-//            public Proxy(ActorRef one, ActorRef another)
-//            {
-//                _one = one;
-//                _another = another;
-//            }
+        public sealed class ActorSelReq
+        {
+            public ActorSelReq(string s)
+            {
+                S = s;
+            }
 
-//            protected override void OnReceive(object message)
-//            {
-//                if (Sender.Path.Equals(_one.Path)) _another.Tell(message);
-//                if (Sender.Path.Equals(_another.Path)) _one.Tell(message);
-//            }
-//        }
+            public string S { get; private set; }
+        }
 
-//        #endregion
-//    }
+        class Echo1 : UntypedActor
+        {
+            private ActorRef target = Context.System.DeadLetters;
+            protected override void OnReceive(object message)
+            {
+                message.Match()
+                    .With<Tuple<Props, string>>(props => Sender.Tell(Context.ActorOf<Echo1>(props.Item2)))
+                    .With<Exception>(ex => { throw ex; })
+                    .With<ActorSelReq>(sel => Sender.Tell(Context.ActorSelection(sel.S)))
+                    .Default(x =>
+                    {
+                        target = Sender;
+                        Sender.Tell(x);
+                    });
+            }
+
+            protected override void PreStart() { }
+            protected override void PreRestart(Exception reason, object message)
+            {
+                target.Tell("preRestart");
+            }
+
+            protected override void PostRestart(Exception reason) { }
+            protected override void PostStop()
+            {
+                target.Tell("postStop");
+            }
+
+        }
+
+        class Echo2 : UntypedActor
+        {
+            protected override void OnReceive(object message)
+            {
+                message.Match()
+                    .With<string>(str =>
+                    {
+                        if (str.Equals("ping")) Sender.Tell(Tuple.Create("pong", Sender));
+                    })
+                    .With<Tuple<string, ActorRef>>(actorTuple =>
+                    {
+                        if (actorTuple.Item1.Equals("ping"))
+                        {
+                            Sender.Tell(Tuple.Create("pong", actorTuple.Item2));
+                        }
+                        if (actorTuple.Item1.Equals("pong"))
+                        {
+                            actorTuple.Item2.Tell(Tuple.Create("pong", Sender.Path.ToSerializationFormat()));
+                        }
+                    });
+            }
+        }
+
+        class Proxy : UntypedActor
+        {
+            private ActorRef _one;
+            private ActorRef _another;
+
+            public Proxy(ActorRef one, ActorRef another)
+            {
+                _one = one;
+                _another = another;
+            }
+
+            protected override void OnReceive(object message)
+            {
+                if (Sender.Path.Equals(_one.Path)) _another.Tell(message);
+                if (Sender.Path.Equals(_another.Path)) _one.Tell(message);
+            }
+        }
+
+        #endregion
+    }
 }

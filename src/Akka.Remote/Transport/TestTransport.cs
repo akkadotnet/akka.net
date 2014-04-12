@@ -32,6 +32,11 @@ namespace Akka.Remote.Transport
             }
         }
 
+        public TestTransport(ActorSystem system, Config conf)
+            : this(
+                Address.Parse(conf.GetString("local-address")), AssociationRegistry.Get(conf.GetString("registry-key")),
+                conf.GetString("scheme-identifier")) { }
+
         public TestTransport(Address localAddress, AssociationRegistry registry, string schemeIdentifier = "test")
         {
             LocalAddress = localAddress;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -219,7 +220,7 @@ namespace Akka.Actor
 
         public void SetDeploy(Deploy deploy)
         {
-            Action<string[], Deploy> add = (path, d) =>
+            Action<IList<string>, Deploy> add = (path, d) =>
             {
                 bool set;
                 do
@@ -235,11 +236,11 @@ namespace Akka.Actor
                             throw new IllegalActorNameException(string.Format("Actor name in deployment [{0}] must conform to {1}", d.Path, ActorPath.ElementRegex));
                         }
                     }
-                    set = _deployments.CompareAndSet(w, w.Insert(path.GetEnumerator().AsInstanceOf<IEnumerator<string>>(), d));
+                    set = _deployments.CompareAndSet(w, w.Insert(path.GetEnumerator(), d));
                 } while(!set);
             };
 
-            add(deploy.Path.Split('/').Drop(1).ToArray(), deploy);
+            add(deploy.Path.Split('/').Drop(1).ToList(), deploy);
         }
 
         protected virtual Deploy ParseConfig(string key)

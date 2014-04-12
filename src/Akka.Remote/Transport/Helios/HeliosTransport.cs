@@ -281,7 +281,9 @@ namespace Akka.Remote.Transport.Helios
                 return Task.Run<AssociationHandle>(() =>
                 {
                     throw new HeliosConnectionException(ExceptionType.NotOpen, "Transport is not open");
+#pragma warning disable 162 //this is needed to make the compiler happy
                     return (AssociationHandle) null;
+#pragma warning restore 162
                 });
 
             return AssociateInternal(remoteAddress);
