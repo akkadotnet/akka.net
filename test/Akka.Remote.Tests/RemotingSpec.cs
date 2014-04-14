@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
@@ -60,6 +62,52 @@ namespace Akka.Remote.Tests
             }";
         }
 
+        protected string GetOtherRemoteSysConfig()
+        {
+            return @"
+            common-helios-settings {
+              port = 0
+              hostname = ""localhost""
+            }
+
+            akka {
+              actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+
+              remote {
+                transport = ""Akka.Remote.Remoting,Akka.Remote""
+
+                retry-gate-closed-for = 1 s
+                log-remote-lifecycle-events = on
+
+                enabled-transports = [
+                  ""akka.remote.test"",
+                  ""akka.remote.helios.tcp"",
+#""akka.remote.helios.udp""
+                ]
+
+                helios.tcp = ${common-helios-settings}
+                helios.udp = ${common-helios-settings}
+
+                test {
+                  transport-class = ""Akka.Remote.Transport.TestTransport,Akka.Remote""
+                  applied-adapters = []
+                  registry-key = aX33k0jWKg
+                  local-address = ""test://remote-sys@localhost:12346""
+                    maximum-payload-bytes = 48000 bytes
+                  scheme-identifier = test
+                }
+              }
+
+              actor.deployment {
+                /blub.remote = ""akka.test://remote-sys@localhost:12346""
+                /looker1/child.remote = ""akka.test://remote-sys@localhost:12346""
+                /looker1/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
+                /looker2/child.remote = ""akka.test://remote-sys@localhost:12346""
+                /looker2/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
+              }
+            }";
+        }
+
         private ActorSystem remoteSystem;
         private ICanTell remote;
         private ICanTell here;
@@ -68,18 +116,14 @@ namespace Akka.Remote.Tests
         public override void Setup()
         {
             base.Setup();
-            var conf = ConfigurationFactory.ParseString(@"
-                akka.remote.test{
-                    local-address = ""test://remote-sys@localhost:12346""
-                    maximum-payload-bytes = 48000 bytes
-                }
-            ").WithFallback(ConfigurationFactory.ParseString(GetConfig()));
+            var conf = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
 
             remoteSystem = ActorSystem.Create("remote-sys", conf);
             Deploy(sys, new Deploy(@"/gonk", new RemoteScope(Addr(remoteSystem, "tcp"))));
             Deploy(sys, new Deploy(@"/zagzag", new RemoteScope(Addr(remoteSystem, "udp"))));
 
             remote = remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
+            Task.Delay(TimeSpan.FromMilliseconds(50)); //There's a race condition here where the remote actor lookup begins before the remote actor system is able to complete its remote association
             here = sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
         }
 
@@ -94,6 +138,7 @@ namespace Akka.Remote.Tests
 
         #region Tests
 
+        //[Timeout(1500)]
         [TestMethod]
         public void Remoting_must_support_remote_lookups()
         {

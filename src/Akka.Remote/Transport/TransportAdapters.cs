@@ -159,13 +159,13 @@ namespace Akka.Remote.Transport
                 return
                     new Tuple<Address, TaskCompletionSource<IAssociationEventListener>>(
                         SchemeAugmenter.AugmentScheme(listenAddress), upstreamListenerPromise);
-            }, TaskContinuationOptions.ExecuteSynchronously).Unwrap();
+            }, TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent).Unwrap();
         }
 
         public override Task<AssociationHandle> Associate(Address remoteAddress)
         {
             var statusPromise = new TaskCompletionSource<AssociationHandle>();
-            InterceptAssociate(remoteAddress, statusPromise);
+            InterceptAssociate(SchemeAugmenter.RemoveScheme(remoteAddress), statusPromise);
             return statusPromise.Task;
         }
 

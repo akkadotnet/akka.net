@@ -138,8 +138,8 @@ namespace Akka.Actor
             var uri = new Uri(address);
 
              var protocol = uri.Scheme;
-            if (!protocol.ToLowerInvariant().StartsWith("akka"))
-                protocol = string.Format("akka.{0}", protocol);
+            //if (!protocol.ToLowerInvariant().StartsWith("akka"))
+            //    protocol = string.Format("akka.{0}", protocol);
 
             if (string.IsNullOrEmpty(uri.UserInfo))
             {

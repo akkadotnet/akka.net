@@ -7,8 +7,8 @@ namespace Akka.Configuration
 {
     public class Config
     {
-        private readonly Config fallback;
-        private readonly HoconValue node;
+        private readonly Config _fallback;
+        private readonly HoconValue _node;
 
         public Config()
         {
@@ -16,33 +16,33 @@ namespace Akka.Configuration
 
         public Config(HoconValue node)
         {
-            this.node = node;
+            this._node = node;
         }
 
         public Config(Config source, Config fallback)
         {
-            node = source.node;
-            this.fallback = fallback;
+            _node = source._node;
+            this._fallback = fallback;
         }
 
         /// <summary>
         /// Lets the caller know if this root node contains any values
         /// </summary>
-        public bool IsEmpty { get { return node == null || node.IsEmpty; } }
+        public bool IsEmpty { get { return _node == null || _node.IsEmpty; } }
 
         /// <summary>
         /// Returns the root node of this configuration section
         /// </summary>
-        public HoconValue Root { get { return node; } }
+        public HoconValue Root { get { return _node; } }
 
         private HoconValue GetNode(string path)
         {
             string[] elements = path.Split('.');
-            HoconValue currentNode = node;
+            HoconValue currentNode = _node;
             if (currentNode == null)
             {
-                if (fallback != null)
-                    return fallback.GetNode(path);
+                if (_fallback != null)
+                    return _fallback.GetNode(path);
 
                 return null;
             }
@@ -51,8 +51,8 @@ namespace Akka.Configuration
                 currentNode = currentNode.GetChildObject(key);
                 if (currentNode == null)
                 {
-                    if (fallback != null)
-                        return fallback.GetNode(path);
+                    if (_fallback != null)
+                        return _fallback.GetNode(path);
 
                     return null;
                 }
@@ -182,9 +182,9 @@ namespace Akka.Configuration
         public Config GetConfig(string path)
         {
             HoconValue value = GetNode(path);
-            if (fallback != null)
+            if (_fallback != null)
             {
-                Config f = fallback.GetConfig(path);
+                Config f = _fallback.GetConfig(path);
                 return new Config(new Config(value), f);
             }
 
@@ -211,13 +211,14 @@ namespace Akka.Configuration
 
         public override string ToString()
         {
-            return node.ToString();
+            return _node.ToString();
         }
 
         public Config WithFallback(Config fallback)
         {
             return new Config(this, fallback);
         }
+
 
         public bool HasPath(string path)
         {
