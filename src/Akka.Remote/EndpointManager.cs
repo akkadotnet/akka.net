@@ -125,9 +125,6 @@ namespace Akka.Remote
             {
                 get
                 {
-                    //this MUST throw an exception to indicate that we attempted to put a nonsequenced message in one of the
-                    //acknowledged delivery buffers
-                    var magic = _seq.GetHashCode();
                     return _seq;
                 }
             }
