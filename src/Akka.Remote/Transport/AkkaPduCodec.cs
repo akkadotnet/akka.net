@@ -201,7 +201,7 @@ namespace Akka.Remote.Transport
 
             Message messageOption = null;
 
-            if (ackAndEnvelope.HasAck)
+            if (ackAndEnvelope.HasEnvelope)
             {
                 var envelopeContainer = ackAndEnvelope.Envelope;
                 if (envelopeContainer != null)

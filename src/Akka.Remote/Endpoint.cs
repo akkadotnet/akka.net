@@ -74,9 +74,9 @@ namespace Akka.Remote
                     {
                         var actorPath = "/" + string.Join("/", sel.Elements.Select(x => x.ToString()));
                         if (settings.UntrustedMode
-                            && !settings.TrustedSelectionPaths.Contains(actorPath)
+                            && (!settings.TrustedSelectionPaths.Contains(actorPath)
                             || sel.Message is PossiblyHarmful
-                            || l != provider.Guardian)
+                            || l != provider.Guardian))
                         {
                             log.Debug(
                                 "operating in UntrustedMode, dropping inbound actor selection to [{0}], allow it" +

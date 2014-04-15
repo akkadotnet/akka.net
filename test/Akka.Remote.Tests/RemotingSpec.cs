@@ -123,7 +123,6 @@ namespace Akka.Remote.Tests
             Deploy(sys, new Deploy(@"/zagzag", new RemoteScope(Addr(remoteSystem, "udp"))));
 
             remote = remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
-            Task.Delay(TimeSpan.FromMilliseconds(50)); //There's a race condition here where the remote actor lookup begins before the remote actor system is able to complete its remote association
             here = sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
         }
 
