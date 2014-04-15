@@ -200,19 +200,24 @@ namespace Akka.Remote.Transport
             }
 
             Message messageOption = null;
-            var envelopeContainer = RemoteEnvelope.ParseFrom(raw);
-            if (envelopeContainer != null)
+
+            if (ackAndEnvelope.HasAck)
             {
-                var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
-                var recipientAddress = ActorPath.Parse(envelopeContainer.Recipient.Path).Address;
-                var serializedMessage = envelopeContainer.Message;
-                ActorRef senderOption = null;
-                if (envelopeContainer.HasSender)
+                var envelopeContainer = ackAndEnvelope.Envelope;
+                if (envelopeContainer != null)
                 {
-                    senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
+                    var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
+                    var recipientAddress = ActorPath.Parse(envelopeContainer.Recipient.Path).Address;
+                    var serializedMessage = envelopeContainer.Message;
+                    ActorRef senderOption = null;
+                    if (envelopeContainer.HasSender)
+                    {
+                        senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
+                    }
+                    messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption);
                 }
-                messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption);
             }
+            
 
             return new AckAndMessage(ackOption, messageOption);
         }
