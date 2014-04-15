@@ -478,7 +478,7 @@ namespace Akka.Remote.Transport
                         {
                             var wrappedHandle = h;
                             var statusPromise = ou.StatusCompletionSource;
-                            wrappedHandle.ReadHandlerSource.TrySetResult(new ActorHandleEventListener(Self));
+                            wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(Self));
                             if (SendAssociate(wrappedHandle, _localHandshakeInfo))
                             {
                                 _failureDetector.HeartBeat();

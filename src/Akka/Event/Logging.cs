@@ -914,7 +914,7 @@ namespace Akka.Event
                 case "ERROR":
                     return LogLevel.ErrorLevel;
                 default:
-                    throw new ArgumentException("Unknown LogLevel", "logLevel");
+                    throw new ArgumentException("Unknown LogLevel", logLevel);
             }
         }
     }

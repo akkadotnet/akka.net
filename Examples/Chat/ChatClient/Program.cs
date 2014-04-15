@@ -20,11 +20,18 @@ namespace ChatClient
         {
             var config = ConfigurationFactory.ParseString(@"
 akka {  
+    log-config-on-start = on
+    stdout-loglevel = INFO
+    loglevel = ERROR
     actor {
         provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-        debug {
-            lifecycle = on
-            receive = on
+        
+        debug {  
+          receive = on 
+          autoreceive = on
+          lifecycle = on
+          event-stream = on
+          unhandled = on
         }
     }
     remote {
@@ -36,6 +43,7 @@ akka {
 		    port = 8091
 		    hostname = ""127.0.0.1""
         }
+        log-remote-lifecycle-events = INFO
     }
 }
 ");

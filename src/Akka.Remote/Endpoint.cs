@@ -67,7 +67,6 @@ namespace Akka.Remote
             }
             else if (recipient is LocalRef && recipient.IsLocal) //TODO: update this to include support for RepointableActorRefs if they get implemented
             {
-                var l = recipient.AsInstanceOf<LocalActorRef>();
                 if (settings.LogReceive) log.Debug("received local message [{0}]", msgLog);
                 payload.Match()
                     .With<ActorSelectionMessage>(sel =>
@@ -76,7 +75,7 @@ namespace Akka.Remote
                         if (settings.UntrustedMode
                             && (!settings.TrustedSelectionPaths.Contains(actorPath)
                             || sel.Message is PossiblyHarmful
-                            || l != provider.Guardian))
+                            || recipient != provider.Guardian))
                         {
                             log.Debug(
                                 "operating in UntrustedMode, dropping inbound actor selection to [{0}], allow it" +
@@ -86,7 +85,7 @@ namespace Akka.Remote
                         else
                         {
                             //run the receive logic for ActorSelectionMessage here to make sure it is not stuck on busy user actor
-                            ActorSelection.DeliverSelection(l, sender, sel);
+                            ActorSelection.DeliverSelection(recipient, sender, sel);
                         }
                     })
                     .With<PossiblyHarmful>(msg =>
@@ -96,8 +95,8 @@ namespace Akka.Remote
                             log.Debug("operating in UntrustedMode, dropping inbound PossiblyHarmful message of type {0}", msg.GetType());
                         }
                     })
-                    .With<SystemMessage>(msg => { l.Tell(msg); })
-                    .Default(msg => { l.Tell(msg, sender); });
+                    .With<SystemMessage>(msg => { recipient.Tell(msg); })
+                    .Default(msg => { recipient.Tell(msg, sender); });
             }
             else if (recipient is RemoteRef && !recipient.IsLocal && !settings.UntrustedMode)
             {

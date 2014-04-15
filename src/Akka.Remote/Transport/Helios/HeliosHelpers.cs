@@ -17,7 +17,7 @@ namespace Akka.Remote.Transport.Helios
     /// </summary>
     internal abstract class HeliosHelpers : IConnection
     {
-        protected readonly IConnection UnderlyingConnection;
+        protected IConnection UnderlyingConnection;
 
         protected HeliosHelpers(IConnection underlyingConnection)
         {
@@ -30,6 +30,17 @@ namespace Akka.Remote.Transport.Helios
             OnDisconnection += OnDisconnect;
             Receive += OnMessage;
             OnError += OnException;
+        }
+
+        /// <summary>
+        /// Binds the events for any incoming TCP activity
+        /// </summary>
+        protected void BindEvents(IConnection underlyingConnection)
+        {
+            underlyingConnection.OnConnection += OnConnect;
+            underlyingConnection.OnDisconnection += OnDisconnect;
+            underlyingConnection.Receive += OnMessage;
+            underlyingConnection.OnError += OnException;
         }
 
         protected abstract void OnConnect(INode remoteAddress, IConnection responseChannel);

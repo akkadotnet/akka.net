@@ -41,6 +41,7 @@ akka {
 		    port = 8081
 		    hostname = localhost
         }
+        log-remote-lifecycle-events = INFO
     }
 }
 ");
