@@ -273,7 +273,7 @@ namespace Akka.Remote
         /// <summary>
         /// Mapping between transports and the local addresses they listen to
         /// </summary>
-        private Dictionary<Address, AkkaProtocolTransport> transportMapping =
+        private Dictionary<Address, AkkaProtocolTransport> _transportMapping =
             new Dictionary<Address, AkkaProtocolTransport>();
 
         private ConcurrentDictionary<Link, ResendState> _receiveBuffers = new ConcurrentDictionary<Link, ResendState>();
@@ -386,7 +386,7 @@ namespace Akka.Remote
                     .PipeTo(Self))
                 .With<ListensResult>(listens =>
                 {
-                    transportMapping = (from mapping in listens.Results
+                    _transportMapping = (from mapping in listens.Results
                                         group mapping by mapping.Item1.Address
                                             into g
                                             select new { address = g.Key, transports = g.ToList() }).Select(x =>
@@ -426,7 +426,7 @@ namespace Akka.Remote
             message.Match()
                 .With<ManagementCommand>(mc =>
                 {
-                    var allStatuses = transportMapping.Values.Select(x => x.ManagementCommand(mc));
+                    var allStatuses = _transportMapping.Values.Select(x => x.ManagementCommand(mc));
                     Task.WhenAll(allStatuses)
                         .ContinueWith(x => new ManagementCommandAck(x.Result.All(y => y)),
                             TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent)
@@ -466,11 +466,15 @@ namespace Akka.Remote
                     var recipientAddress = send.Recipient.Path.Address;
                     Func<int?, ActorRef> createAndRegisterWritingEndpoint = refuseUid => endpoints.RegisterWritableEndpoint(recipientAddress,
                         CreateEndpoint(recipientAddress, send.Recipient.LocalAddressToUse,
-                            transportMapping[send.Recipient.LocalAddressToUse], settings, writing: true,
+                            _transportMapping[send.Recipient.LocalAddressToUse], settings, writing: true,
                             handleOption: null, refuseUid: refuseUid), null);
 
-                    endpoints.HasWriteableEndpointFor(recipientAddress).Match()
-                        .With<Pass>(pass => pass.Endpoint.Tell(send))
+                    endpoints.WritableEndpointWithPolicyFor(recipientAddress).Match()
+                        .With<Pass>(
+                            pass =>
+                            {
+                                pass.Endpoint.Tell(send);
+                            })
                         .With<Gated>(gated =>
                         {
                             if(gated.TimeOfRelease.IsOverdue) createAndRegisterWritingEndpoint(null).Tell(send);
@@ -570,7 +574,7 @@ namespace Akka.Remote
                                     return result.Result.All(x => x);
                                 }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
 
-                    var flushStatus = Task.WhenAll(transportMapping.Values.Select(x => x.Shutdown())).ContinueWith(
+                    var flushStatus = Task.WhenAll(_transportMapping.Values.Select(x => x.Shutdown())).ContinueWith(
                                 result =>
                                 {
                                     if (result.IsFaulted)
@@ -677,7 +681,7 @@ namespace Akka.Remote
                 pendingReadHandoffs.Remove(takingOverFrom);
                 eventPublisher.NotifyListeners(new AssociatedEvent(handle.LocalAddress, handle.RemoteAddress, inbound: true));
                 var endpoint = CreateEndpoint(handle.RemoteAddress, handle.LocalAddress,
-                    transportMapping[handle.LocalAddress], settings, false, handle, refuseUid: null);
+                    _transportMapping[handle.LocalAddress], settings, false, handle, refuseUid: null);
                 endpoints.RegisterReadOnlyEndpoint(handle.RemoteAddress, endpoint);
             }
         }
@@ -698,7 +702,7 @@ namespace Akka.Remote
             var endpoint = CreateEndpoint(
                 handle.RemoteAddress,
                 handle.LocalAddress,
-                transportMapping[handle.LocalAddress],
+                _transportMapping[handle.LocalAddress],
                 settings,
                 writing,
                 handle,
@@ -718,7 +722,7 @@ namespace Akka.Remote
         private InternalActorRef CreateEndpoint(Address remoteAddress, Address localAddress, AkkaProtocolTransport transport,
             RemoteSettings endpointSettings, bool writing, AkkaProtocolHandle handleOption = null, int? refuseUid = null)
         {
-            System.Diagnostics.Debug.Assert(transportMapping.ContainsKey(localAddress));
+            System.Diagnostics.Debug.Assert(_transportMapping.ContainsKey(localAddress));
             System.Diagnostics.Debug.Assert(writing || refuseUid == null);
 
             InternalActorRef endpointActor;

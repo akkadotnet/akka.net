@@ -47,12 +47,26 @@ namespace Akka.Remote
 
         internal RemoteSettings RemoteSettings { get; private set; }
 
+        /* these are only available after Init() is called */
+
+        public override ActorPath RootPath
+        {
+            get { return _local.RootPath; }
+        }
+
+        public override ActorCell RootCell { get { return _local.RootCell; } }
+        public override LocalActorRef Guardian { get { return _local.Guardian; } }
+        public override LocalActorRef SystemGuardian { get { return _local.SystemGuardian; } }
+        public override VirtualPathContainer TempContainer{ get { return _local.TempContainer; } }
+        public override ActorPath TempNode { get { return _local.TempNode; } }
+        public override ActorRef DeadLetters { get { return _local.DeadLetters; } }
+
         public override void Init()
         {
             //TODO: this should not be here
             Address = new Address("akka", System.Name); //TODO: this should not work this way...
             Deployer = new RemoteDeployer(System.Settings);
-            base.Init();
+            _local.Init();
 
             var daemonMsgCreateSerializer = new DaemonMsgCreateSerializer(System);
             var messageContainerSerializer = new MessageContainerSerializer(System);
@@ -66,9 +80,9 @@ namespace Akka.Remote
         }
 
         public override InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
-            ActorPath path)
+            ActorPath path, bool systemService = false)
         {
-            Mailbox mailbox = System.Mailboxes.FromConfig(props.Mailbox);
+            if (systemService) return LocalActorOf(system, props, supervisor, path, true);
 
             Deploy configDeploy = System.Provider.Deployer.Lookup(path);
             var deploy = configDeploy ?? props.Deploy ?? Deploy.None;
@@ -106,14 +120,22 @@ namespace Akka.Remote
 
             if (props.Deploy != null && props.Deploy.Scope is RemoteScope)
             {
-                return RemoteActorOf(system, props, supervisor, path, mailbox);
+                var addr = props.Deploy.Scope.AsInstanceOf<RemoteScope>().Address;
+
+                //Even if this actor is in RemoteScope, it might still be a local address
+                if (HasAddress(addr))
+                {
+                    return LocalActorOf(system, props, supervisor, path, false);
+                }
+
+                return RemoteActorOf(system, props, supervisor, path);
             }
-            return LocalActorOf(system, props, supervisor, path, mailbox);
+            return LocalActorOf(system, props, supervisor, path);
         }
 
         private bool HasAddress(Address address)
         {
-            return address == Address || Transport.Addresses.Any(a => a.Equals(address));
+            return address.Equals(Address) || address.Equals(_local.RootPath.Address) || Transport.Addresses.Any(a => a.Equals(address));
         }
 
         public override ActorRef RootGuardianAt(Address address)
@@ -132,20 +154,15 @@ namespace Akka.Remote
         }
 
         private InternalActorRef RemoteActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
-            ActorPath path, Mailbox mailbox)
+            ActorPath path)
         {
             var scope = (RemoteScope) props.Deploy.Scope;
-            Deploy d = props.Deploy;
-            Address addr = scope.Address;
+            var d = props.Deploy;
+            var addr = scope.Address;
 
-            if (HasAddress(addr))
-            {
-                return LocalActorOf(System, props, supervisor, path, mailbox);
-            }
+            var localAddress = Transport.LocalAddressForRemote(addr);
 
-            Address localAddress = Transport.LocalAddressForRemote(addr);
-
-            ActorPath rpath = (new RootActorPath(addr)/"remote"/localAddress.Protocol/localAddress.HostPort()/
+            var rpath = (new RootActorPath(addr)/"remote"/localAddress.Protocol/localAddress.HostPort()/
                                path.Elements.Drop(1).ToArray()).
                 WithUid(path.Uid);
             var remoteRef = new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, d);
@@ -154,9 +171,9 @@ namespace Akka.Remote
         }
 
         private InternalActorRef LocalActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
-            ActorPath path, Mailbox mailbox)
+            ActorPath path, bool systemService = false)
         {
-            return _local.ActorOf(system, props, supervisor, path);
+            return _local.ActorOf(system, props, supervisor, path, systemService);
         }
 
         /// <summary>

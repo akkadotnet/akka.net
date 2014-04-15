@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -998,12 +999,15 @@ namespace Akka.Remote
 
         protected override void PreStart()
         {
-            SetTimer(AckIdleTimerName, new AckIdleCheckTimer(), new TimeSpan(Settings.SysMsgAckTimeout.Ticks / 2), true);
-
             var startWithState = State.Initializing;
             if (_handle == null)
             {
-                Transport.Associate(RemoteAddress, refuseUid).PipeTo(Self);
+                Transport.Associate(RemoteAddress, refuseUid).ContinueWith(x =>
+                {
+                    return new Handle(x.Result);
+                }, 
+                    TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
+                    .PipeTo(Self);
                 startWithState = State.Initializing;
             }
             else
@@ -1012,6 +1016,7 @@ namespace Akka.Remote
                 startWithState = State.Writing;
             }
             StartWith(startWithState, true);
+            SetTimer(AckIdleTimerName, new AckIdleCheckTimer(), new TimeSpan(Settings.SysMsgAckTimeout.Ticks / 2), true);
         }
 
         #endregion

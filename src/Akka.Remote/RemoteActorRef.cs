@@ -19,15 +19,15 @@ namespace Akka.Remote
         /// <summary>
         /// The deploy
         /// </summary>
-        private readonly Deploy deploy;
+        private readonly Deploy _deploy;
         /// <summary>
         /// The parent
         /// </summary>
-        private readonly InternalActorRef parent;
+        private readonly InternalActorRef _parent;
         /// <summary>
         /// The props
         /// </summary>
-        private readonly Props props;
+        private readonly Props _props;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RemoteActorRef"/> class.
@@ -44,9 +44,9 @@ namespace Akka.Remote
             Remote = remote;
             LocalAddressToUse = localAddressToUse;
             Path = path;
-            this.parent = parent;
-            this.props = props;
-            this.deploy = deploy;
+            _parent = parent;
+            _props = props;
+            _deploy = deploy;
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace Akka.Remote
         /// <value>The parent.</value>
         public override InternalActorRef Parent
         {
-            get { return parent; }
+            get { return _parent; }
         }
 
         /// <summary>
@@ -154,8 +154,8 @@ namespace Akka.Remote
         /// </summary>
         public void Start()
         {
-            if (props != null && deploy != null)
-                Remote.Provider.UseActorOnNode(this, props, deploy, parent);
+            if (_props != null && _deploy != null)
+                Remote.Provider.UseActorOnNode(this, _props, _deploy, _parent);
         }
     }
 }
