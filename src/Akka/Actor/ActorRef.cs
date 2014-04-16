@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Dispatch.SysMsg;
+using System.Threading;
 
 namespace Akka.Actor
 {
@@ -27,15 +28,15 @@ namespace Akka.Actor
 
     public class FutureActorRef : MinimalActorRef
     {
-        private readonly TaskCompletionSource<object> result;
-        private readonly Action unregister;
-        private ActorRef sender;
+        private readonly TaskCompletionSource<object> _result;
+        private readonly Action _unregister;
+        private ActorRef _sender;
 
         public FutureActorRef(TaskCompletionSource<object> result, ActorRef sender, Action unregister, ActorPath path)
         {
-            this.result = result;
-            this.sender = sender;
-            this.unregister = unregister;
+            _result = result;
+            _sender = sender ?? ActorRef.NoSender;
+            _unregister = unregister;
             Path = path;
         }
 
@@ -44,6 +45,10 @@ namespace Akka.Actor
             get { throw new NotImplementedException(); }
         }
 
+        
+        private const int INITIATED = 0;
+        private const int COMPLETED = 1;
+        private int status = INITIATED;
         protected override void TellInternal(object message, ActorRef sender)
         {
             if (message is SystemMessage) //we have special handling for system messages
@@ -52,17 +57,19 @@ namespace Akka.Actor
             }
             else
             {
-                unregister();
-                if (sender == NoSender || message is Terminated)
+                if (Interlocked.Exchange(ref status,COMPLETED) == INITIATED)
                 {
-                    result.TrySetResult(message);
+                    _unregister();
+                    if (_sender == NoSender || message is Terminated)
+                    {
+                        _result.TrySetResult(message);
+                    }
+                    else
+                    {
+                        _sender.Tell(new CompleteFuture(() => _result.TrySetResult(message)));
+                    }
                 }
-                else
-                {
-                    sender.Tell(new CompleteFuture(() => result.TrySetResult(message)));
-                }
-            }
-            
+            }            
         }
 
         protected void SendSystemMessage(SystemMessage message, ActorRef sender)

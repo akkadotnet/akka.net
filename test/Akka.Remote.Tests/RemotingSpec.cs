@@ -148,7 +148,7 @@ namespace Akka.Remote.Tests
         [TestMethod]
         public async Task Remoting_must_support_Ask()
         {
-            var msg = await here.Ask<Tuple<string,ActorRef>>("ping", TimeSpan.FromSeconds(1.5));
+            var msg = await here.Ask<Tuple<string,ActorRef>>("ping", TimeSpan.FromSeconds(1500));
             Assert.AreEqual("pong", msg.Item1);
             Assert.IsInstanceOfType(msg.Item2, typeof(FutureActorRef));
         }
@@ -156,6 +156,7 @@ namespace Akka.Remote.Tests
         [TestMethod]
         public void Remoting_must_create_and_supervise_children_on_remote_Node()
         {
+            //TODO: is this a remote deploy bug? we are missing /user prefix?a
             var r = sys.ActorOf<Echo1>("blub");
             Assert.AreEqual("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/blub", r.Path.ToString());
         }

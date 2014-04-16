@@ -185,27 +185,27 @@ namespace Akka.Configuration.Hocon
             if (res.EndsWith("ms"))
             {
                 var v = res.Substring(0, res.Length - 2);
-                return TimeSpan.FromMilliseconds(double.Parse(v));
+                return TimeSpan.FromMilliseconds(double.Parse(v,NumberFormatInfo.InvariantInfo));
             }
             if (res.EndsWith("s"))
             {
                 var v = res.Substring(0, res.Length - 1);
-                return TimeSpan.FromSeconds(double.Parse(v));
+                return TimeSpan.FromSeconds(double.Parse(v, NumberFormatInfo.InvariantInfo));
             }
 
             if (res.EndsWith("m"))
             {
                 var v = res.Substring(0, res.Length - 1);
-                return TimeSpan.FromMinutes(double.Parse(v));
+                return TimeSpan.FromMinutes(double.Parse(v, NumberFormatInfo.InvariantInfo));
             }
 
             if (res.EndsWith("d"))
             {
                 var v = res.Substring(0, res.Length - 1);
-                return TimeSpan.FromDays(double.Parse(v));
+                return TimeSpan.FromDays(double.Parse(v, NumberFormatInfo.InvariantInfo));
             }
 
-            return TimeSpan.FromSeconds(double.Parse(res));
+            return TimeSpan.FromSeconds(double.Parse(res, NumberFormatInfo.InvariantInfo));
         }
 
         public long? GetByteSize()
