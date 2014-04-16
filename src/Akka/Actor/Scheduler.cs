@@ -125,8 +125,13 @@ namespace Akka.Actor
         /// <returns>Task.</returns>
         private async Task InternalScheduleOnce(TimeSpan initialDelay, Action action, CancellationToken token)
         {
-            await Task.Delay(initialDelay, token);
-            action();
+            try
+            {
+                await Task.Delay(initialDelay, token);
+            }
+            catch (OperationCanceledException) { }
+            if(!token.IsCancellationRequested)
+                action();
         }
 
         /// <summary>
@@ -144,7 +149,11 @@ namespace Akka.Actor
             while (!token.IsCancellationRequested)
             {
                 action();
-                await Task.Delay(interval, token);
+                try
+                {
+                    await Task.Delay(interval, token);
+                }
+                catch (OperationCanceledException) {}
             }
         }
 

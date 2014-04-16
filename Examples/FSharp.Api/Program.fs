@@ -24,10 +24,10 @@ let system =
 
 let actor = 
     spawn system "MyActor"
-    <| fun recv ->
+    <| fun mailbox ->
         let rec again name =
             actor {
-                let! message = recv
+                let! message = mailbox.Receive()
                 match message with
                 | Greet(n) when n = name ->
                     printfn "Hello again, %s" name
@@ -40,7 +40,7 @@ let actor =
                     return! again name }
         and loop() =
             actor {
-                let! message = recv
+                let! message = mailbox.Receive()
                 match message with
                 | Greet(name) -> 
                     printfn "Hello %s" name

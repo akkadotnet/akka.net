@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 
 namespace Akka.Actor
@@ -6,7 +7,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class Address.
     /// </summary>
-    public class Address
+    public class Address : ICloneable
     {
         /// <summary>
         ///     Pseudo address for all systems
@@ -91,6 +92,16 @@ namespace Akka.Actor
             return ToString().GetHashCode();
         }
 
+        public object Clone()
+        {
+            return new Address(Protocol, System, Host, Port);
+        }
+
+        public Address Copy(string protocol = null, string system = null, string host = null, int? port = null)
+        {
+            return new Address(protocol ?? Protocol, system ?? System, host ?? Host, port ?? Port);
+        }
+
         //TODO: implement real equals checks instead
         /// <summary>
         ///     Determines whether the specified <see cref="object" /> is equal to this instance.
@@ -113,5 +124,37 @@ namespace Akka.Actor
         {
             return ToString().Substring(Protocol.Length + 3);
         }
+
+        #region Static Methods
+
+        /// <summary>
+        /// Parses a new <see cref="Address"/> from a given string
+        /// </summary>
+        /// <param name="address">The address to parse</param>
+        /// <returns>A populated <see cref="Address"/> object with host and port included, if available</returns>
+        /// <exception cref="UriFormatException">Thrown if the address is not able to be parsed</exception>
+        public static Address Parse(string address)
+        {
+            var uri = new Uri(address);
+
+             var protocol = uri.Scheme;
+            //if (!protocol.ToLowerInvariant().StartsWith("akka"))
+            //    protocol = string.Format("akka.{0}", protocol);
+
+            if (string.IsNullOrEmpty(uri.UserInfo))
+            {
+                string systemName = uri.Host;
+                return new Address(protocol, systemName, null, null);
+            }
+            else
+            {
+                string systemName = uri.UserInfo;
+                string host = uri.Host;
+                int port = uri.Port;
+                return new Address(protocol, systemName, host, port);
+            }
+        }
+
+        #endregion
     }
 }

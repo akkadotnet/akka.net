@@ -7,28 +7,22 @@ namespace Akka.Routing
     {
         private readonly Router router;
         private readonly RoutedActorCell cell;
-        public RoutedActorRef( ActorPath path, RoutedActorCell context) : base(path, context)
+
+        public RoutedActorRef(ActorPath path, RoutedActorCell context) : base(path, context)
         {
             this.cell = context;
         }
 
         protected override void TellInternal(object message, ActorRef sender)
         {
-            if (message is SystemMessage)
+            if (message is SystemMessage || message is AutoReceivedMessage || message is RouterManagementMesssage)
             {
-                Cell.Post(sender,message);
+                Cell.Post(sender, message);
             }
             else
             {
-                if (message is AutoReceivedMessage)
-                {
-                    cell.Post(sender, message);
-                }
-                else
-                {
-                    cell.Router.Route(message, sender);
-                }
-            }            
+                cell.Router.Route(message, sender);
+            }
         }
     }
 }

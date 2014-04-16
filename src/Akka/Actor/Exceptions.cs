@@ -10,7 +10,7 @@ namespace Akka.Actor
         /// <summary>
         ///     Initializes a new instance of the <see cref="AkkaException" /> class.
         /// </summary>
-        public AkkaException()
+        protected AkkaException()
         {
         }
 
@@ -18,8 +18,9 @@ namespace Akka.Actor
         ///     Initializes a new instance of the <see cref="T:System.Exception" /> class with a specified error message.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public AkkaException(string message)
-            : base(message)
+        /// <param name="cause">An inner exception responsible for this error.</param>
+        protected AkkaException(string message, Exception cause = null)
+            : base(message, cause)
         {
         }
     }
@@ -43,6 +44,23 @@ namespace Akka.Actor
         public ActorKilledException(string message) : base(message)
         {
         }
+    }
+
+    /// <summary>
+    /// IllegalActorStateException is thrown when a core invariant in the Actor implementation has been voilated.
+    /// For instance, if you try to create an Actor that doesn't inherit from <see cref="ActorBase"/>.
+    /// </summary>
+    public class IllegalActorStateException : AkkaException
+    {
+        public IllegalActorStateException(string msg) : base(msg) { }
+    }
+
+    /// <summary>
+    /// IllegalActorNameException is thrown when an Actor with an invalid name is deployed our bound.
+    /// </summary>
+    public class IllegalActorNameException : AkkaException
+    {
+        public IllegalActorNameException(string msg) : base(msg) { }
     }
 
     /// <summary>

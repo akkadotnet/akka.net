@@ -1,25 +1,17 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.Tools;
 using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Actor
 {
-    /// <summary>
-    ///     Class ActorSystemExtension.
-    /// </summary>
-    public abstract class ActorSystemExtension
-    {
-        /// <summary>
-        ///     Starts the specified system.
-        /// </summary>
-        /// <param name="system">The system.</param>
-        public abstract void Start(ActorSystem system);
-    }
-
     // C#
     /// <summary>
     ///     An actor system is a hierarchical group of actors which share common
@@ -42,9 +34,9 @@ namespace Akka.Actor
     public class ActorSystem : IActorRefFactory, IDisposable
     {
         /// <summary>
-        ///     The extensions
+        ///     The extensionsBase
         /// </summary>
-        private readonly List<ActorSystemExtension> extensions = new List<ActorSystemExtension>();
+        private readonly ConcurrentDictionary<Type, object> _extensions = new ConcurrentDictionary<Type, object>();
 
         /// <summary>
         ///     The log
@@ -61,8 +53,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">The name.</param>
         /// <param name="config">The configuration.</param>
-        /// <param name="extensions">The extensions.</param>
-        public ActorSystem(string name, Config config = null, params ActorSystemExtension[] extensions)
+        public ActorSystem(string name, Config config = null)
         {
             if (!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
                 throw new ArgumentException(
@@ -77,7 +68,8 @@ namespace Akka.Actor
             ConfigureMailboxes();
             ConfigureDispatchers();
             ConfigureProvider();
-            ConfigureExtensions(extensions);
+            ConfigureLoggers();
+            LoadExtensions();
             Start();
         }
 
@@ -227,23 +219,10 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">Name of the ActorSystem</param>
         /// <param name="config">Configuration of the ActorSystem</param>
-        /// <param name="extensions">Extensions of the ActorSystem</param>
         /// <returns>ActorSystem.</returns>
-        public static ActorSystem Create(string name, Config config, params ActorSystemExtension[] extensions)
+        public static ActorSystem Create(string name, Config config)
         {
-            return new ActorSystem(name, config, extensions);
-        }
-
-
-        /// <summary>
-        ///     Creates the specified name.
-        /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="extensions">The extensions.</param>
-        /// <returns>ActorSystem.</returns>
-        public static ActorSystem Create(string name, params ActorSystemExtension[] extensions)
-        {
-            return new ActorSystem(name, null, extensions);
+            return new ActorSystem(name, config.WithFallback(ConfigurationFactory.Default()));
         }
 
         /// <summary>
@@ -265,16 +244,91 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Configures the extensions.
+        /// Load all of the extensions registered in the <see cref="ActorSystem.Settings"/>
         /// </summary>
-        /// <param name="extensions">The extensions.</param>
-        private void ConfigureExtensions(IEnumerable<ActorSystemExtension> extensions)
+        private void LoadExtensions()
         {
-            if (extensions != null)
+            var extensions = new List<IExtensionId>();
+            foreach (var extensionFqn in Settings.Config.GetStringList("akka.extensions"))
             {
-                this.extensions.AddRange(extensions);
-                this.extensions.ForEach(e => e.Start(this));
+                var extensionType = Type.GetType(extensionFqn);
+                if (extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.IsAbstract || !extensionType.IsClass)
+                {
+                    log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
+                    continue;
+                }
+
+                try
+                {
+                    var extension = (IExtensionId) Activator.CreateInstance(extensionType);
+                    extensions.Add(extension);
+                }
+                catch (Exception ex)
+                {
+                    log.Error(ex, "While trying to load extension [{0}], skipping...", extensionFqn);
+                }
+                
             }
+
+            ConfigureExtensions(extensions);
+        }
+
+        /// <summary>
+        ///     Configures the extensionsBase.
+        /// </summary>
+        /// <param name="extensionIdProviders">The extensionsBase.</param>
+        private void ConfigureExtensions(IEnumerable<IExtensionId> extensionIdProviders)
+        {
+            foreach (var extensionId in extensionIdProviders)
+            {
+                RegisterExtension(extensionId);
+            }
+        }
+
+        /// <summary>
+        /// Registers a new extensionBase to the ActorSystem
+        /// </summary>
+        /// <param name="extensionBase">The extensionBase to register</param>
+        public object RegisterExtension(IExtensionId extensionBase)
+        {
+            if (extensionBase == null) return null;
+            if (!_extensions.ContainsKey(extensionBase.ExtensionType))
+            {
+                _extensions.TryAdd(extensionBase.ExtensionType, extensionBase.CreateExtension(this));
+            }
+
+            return extensionBase.Get(this);
+        }
+
+        /// <summary>
+        /// Returns an extension registered to this ActorSystem
+        /// </summary>
+        public object GetExtension(IExtensionId extensionId)
+        {
+            object extension;
+            _extensions.TryGetValue(extensionId.ExtensionType, out extension);
+            return extension;
+        }
+
+        public object GetExtension<T>()where T:IExtension
+        {
+            object extension;
+            _extensions.TryGetValue(typeof(T), out extension);
+            return extension;
+        }
+
+        public bool HasExtension(Type t)
+        {
+            if (typeof (IExtension).IsAssignableFrom(t))
+            {
+                return _extensions.ContainsKey(t);
+            }
+            return false;
+        }
+
+        public bool HasExtension<T>() where T : IExtension
+        {
+            return _extensions.ContainsKey(typeof (T));
         }
 
         /// <summary>
@@ -330,15 +384,22 @@ namespace Akka.Actor
         {
             if (Settings.LogDeadLetters > 0)
                 logDeadLetterListener = SystemActorOf<DeadLetterListener>("deadLetterListener");
-
-            EventStream.StartDefaultLoggers(this);
-
-            log = new BusLogging(EventStream, "ActorSystem(" + Name + ")", GetType());
+            
 
             if (Settings.LogConfigOnStart)
             {
                 log.Warn(Settings.ToString());
             }
+        }
+
+        /// <summary>
+        /// Extensions depends on loggers being configured before Start() is called
+        /// </summary>
+        private void ConfigureLoggers()
+        {
+            EventStream.StartDefaultLoggers(this);
+
+            log = new BusLogging(EventStream, "ActorSystem(" + Name + ")", GetType());
         }
 
         /// <summary>
@@ -366,7 +427,7 @@ namespace Akka.Actor
         /// <param name="props">The props.</param>
         /// <param name="name">The name.</param>
         /// <returns>InternalActorRef.</returns>
-        public InternalActorRef SystemActorOf(Props props, string name = null)
+        internal InternalActorRef SystemActorOf(Props props, string name = null)
         {
             return Provider.SystemGuardian.Cell.ActorOf(props, name);
         }
@@ -377,7 +438,7 @@ namespace Akka.Actor
         /// <typeparam name="TActor">The type of the t actor.</typeparam>
         /// <param name="name">The name.</param>
         /// <returns>InternalActorRef.</returns>
-        public InternalActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase
+        internal InternalActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase
         {
             return Provider.SystemGuardian.Cell.ActorOf<TActor>(name);
         }
@@ -390,5 +451,8 @@ namespace Akka.Actor
                 l.Stop();
             }
         }
+
+        #region Equality methods
+        #endregion
     }
 }

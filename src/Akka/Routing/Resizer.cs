@@ -50,13 +50,13 @@ namespace Akka.Routing
         /// <summary>
         /// The fewest number of routees the router should ever have.
         /// </summary>
-        private int lowerBound = 1;
+        private readonly int lowerBound = 1;
 
         /// <summary>
         /// The most number of routees the router should ever have. 
         /// Must be greater than or equal to `lowerBound`.
         /// </summary>
-        private int upperBound = 10;
+        private readonly int upperBound = 10;
 
         /// <summary>
         /// * Threshold to evaluate if routee is considered to be busy (under pressure).
@@ -70,14 +70,14 @@ namespace Akka.Routing
         ///           default UnboundedMailbox is O(N) operation.</li>
         /// </ul>
         /// </summary>
-        private int pressureThreshold = 1;
+        private readonly int pressureThreshold = 1;
 
         /// <summary>
         /// Percentage to increase capacity whenever all routees are busy.
         /// For example, 0.2 would increase 20% (rounded up), i.e. if current
         /// capacity is 6 it will request an increase of 2 more routees.
         /// </summary>
-        private double rampupRate = 0.2;
+        private readonly double rampupRate = 0.2;
 
         /// <summary>
         /// Minimum fraction of busy routees before backing off.
@@ -88,7 +88,7 @@ namespace Akka.Routing
         ///
         /// Use 0.0 or negative to avoid removal of routees.
         /// </summary>
-        private double backoffThreshold = 0.3;
+        private readonly double backoffThreshold = 0.3;
 
         /// <summary>
         /// Fraction of routees to be removed when the resizer reaches the
@@ -96,13 +96,13 @@ namespace Akka.Routing
         /// For example, 0.1 would decrease 10% (rounded up), i.e. if current
         /// capacity is 9 it will request an decrease of 1 routee.
         /// </summary>
-        private double backoffRate = 0.1;
+        private readonly double backoffRate = 0.1;
 
         /// <summary>
         /// Number of messages between resize operation.
         /// Use 1 to resize before each message.
         /// </summary>
-        private int messagesPerResize = 10;
+        private readonly int messagesPerResize = 10;
 
         public DefaultResizer(int lower, int upper)
         {
@@ -130,21 +130,21 @@ namespace Akka.Routing
         private void Validate()
         {
             if (lowerBound < 0)
-                throw new ArgumentException(string.Format("lowerBound must be >= 0, was: [%s]", lowerBound));
+                throw new ArgumentException(string.Format("lowerBound must be >= 0, was: {0}", lowerBound));
 
             if (upperBound < 0)
-                throw new ArgumentException(string.Format("upperBound must be >= 0, was: [%s]", upperBound));
+                throw new ArgumentException(string.Format("upperBound must be >= 0, was: {0}", upperBound));
             if (upperBound < lowerBound)
-                throw new ArgumentException(string.Format("upperBound must be >= lowerBound, was: [%s] < [%s]",
+                throw new ArgumentException(string.Format("upperBound must be >= lowerBound, was: {0} < {1}",
                     upperBound, lowerBound));
             if (rampupRate < 0.0)
-                throw new ArgumentException(string.Format("rampupRate must be >= 0.0, was [%s]", rampupRate));
+                throw new ArgumentException(string.Format("rampupRate must be >= 0.0, was {0}", rampupRate));
             if (backoffThreshold > 1.0)
-                throw new ArgumentException(string.Format("backoffThreshold must be <= 1.0, was [%s]", backoffThreshold));
+                throw new ArgumentException(string.Format("backoffThreshold must be <= 1.0, was {0}", backoffThreshold));
             if (backoffRate < 0.0)
-                throw new ArgumentException(string.Format("backoffRate must be >= 0.0, was [%s]", backoffRate));
+                throw new ArgumentException(string.Format("backoffRate must be >= 0.0, was {0}", backoffRate));
             if (messagesPerResize <= 0)
-                throw new ArgumentException(string.Format("messagesPerResize must be > 0, was [%s]", messagesPerResize));
+                throw new ArgumentException(string.Format("messagesPerResize must be > 0, was {0}", messagesPerResize));
         }
 
         public static DefaultResizer FromConfig(Config resizerConfig)

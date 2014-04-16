@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Akka.Actor
 {
-    public class LocalActorRef : ActorRefWithCell
+    public class LocalActorRef : ActorRefWithCell, LocalRef
     {
         public LocalActorRef(ActorPath path, ActorCell context)
         {
@@ -35,6 +35,11 @@ namespace Akka.Actor
         public override void Suspend()
         {
             Cell.Suspend();
+        }
+
+        public override bool IsLocal
+        {
+            get { return true; }
         }
 
         public override void Resume(Exception causedByFailure = null)

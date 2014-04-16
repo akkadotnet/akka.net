@@ -51,6 +51,10 @@ Projects = {
                 :package => "Google.ProtocolBuffers",
                 :version => "2.4.1.521"
            },
+           :helios => {
+                :package => "Helios",
+                :version => "1.0.0"
+           }
        },
    },
    :akka_slf4net => {

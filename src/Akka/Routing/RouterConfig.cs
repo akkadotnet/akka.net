@@ -23,6 +23,14 @@ namespace Akka.Routing
 
         public abstract IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell);
 
+        public static bool IsManagementMessage(object message)
+        {
+            return 
+                message is AutoReceivedMessage || 
+                //TODO: isnt terminated a autoreceived in real akka?
+                // in akka.net this message is a subclass of AutoReceivedMessage - so removed condition that "message is Terminated ||"
+                message is RouterManagementMesssage;
+        }
     }
 
     public class NoRouter : RouterConfig
@@ -170,5 +178,27 @@ namespace Akka.Routing
         }
 
         #endregion
+    }
+
+    public class FromConfig : RouterConfig
+    {
+        public FromConfig() : base()
+        {
+            
+        }
+        public override Router CreateRouter(ActorSystem system)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override RouterActor CreateRouterActor()
+        {
+            throw new NotSupportedException();
+        }
+
+        public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

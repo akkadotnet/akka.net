@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30110.0
+VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatMessages", "Examples\Chat\ChatMessages\ChatMessages.csproj", "{819221CB-82B7-43D3-A4DE-E00AF17F2FDF}"
 EndProject
@@ -71,6 +71,11 @@ EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Api", "Examples\FSharp.Api\FSharp.Api.fsproj", "{19993C0B-8F9D-4FE4-B047-45965EA66BA2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PingPong", "Examples\PingPong\PingPong.csproj", "{956F7D26-4505-4A26-86D0-73135BD35A93}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{10C5B1E8-15B5-4EB3-81AE-1FC054FE1305}"
+	ProjectSection(SolutionItems) = preProject
+		build.fsx = build.fsx
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

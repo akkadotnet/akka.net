@@ -24,50 +24,50 @@ namespace Akka.Actor
         ///     Gets the root path.
         /// </summary>
         /// <value>The root path.</value>
-        public ActorPath RootPath { get; private set; }
+        public virtual ActorPath RootPath { get; private set; }
 
         /// <summary>
         ///     Gets the temporary node.
         /// </summary>
         /// <value>The temporary node.</value>
-        public ActorPath TempNode { get; private set; }
+        public virtual ActorPath TempNode { get; private set; }
 
 
         /// <summary>
         ///     Gets the temporary container.
         /// </summary>
         /// <value>The temporary container.</value>
-        public VirtualPathContainer TempContainer { get; private set; }
+        public virtual VirtualPathContainer TempContainer { get; private set; }
 
         /// <summary>
         ///     Gets or sets the system.
         /// </summary>
         /// <value>The system.</value>
-        public ActorSystem System { get; protected set; }
+        public virtual ActorSystem System { get; protected set; }
 
         /// <summary>
         ///     Gets or sets the root cell.
         /// </summary>
         /// <value>The root cell.</value>
-        public ActorCell RootCell { get; protected set; }
+        public virtual ActorCell RootCell { get; protected set; }
 
         /// <summary>
         ///     Gets or sets the dead letters.
         /// </summary>
         /// <value>The dead letters.</value>
-        public ActorRef DeadLetters { get; protected set; }
+        public virtual ActorRef DeadLetters { get; protected set; }
 
         /// <summary>
         ///     Gets or sets the guardian.
         /// </summary>
         /// <value>The guardian.</value>
-        public LocalActorRef Guardian { get; protected set; }
+        public virtual LocalActorRef Guardian { get; protected set; }
 
         /// <summary>
         ///     Gets or sets the system guardian.
         /// </summary>
         /// <value>The system guardian.</value>
-        public LocalActorRef SystemGuardian { get; protected set; }
+        public virtual LocalActorRef SystemGuardian { get; protected set; }
 
         /// <summary>
         ///     Gets or sets the address.
@@ -135,9 +135,10 @@ namespace Akka.Actor
         /// <param name="props">The props.</param>
         /// <param name="supervisor">The supervisor.</param>
         /// <param name="path">The path.</param>
+        /// <param name="systemService">Is this a child actor under the system guardian?</param>
         /// <returns>InternalActorRef.</returns>
         public abstract InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
-            ActorPath path);
+            ActorPath path, bool systemService = false);
 
         /// <summary>
         ///     Resolves the actor reference.
@@ -159,6 +160,8 @@ namespace Akka.Actor
         /// <param name="actorPath">The actor path.</param>
         /// <returns>ActorRef.</returns>
         public abstract ActorRef ResolveActorRef(ActorPath actorPath);
+
+        public abstract Address GetExternalAddressFor(Address address);
 
         /// <summary>
         ///     Afters the send system message.
@@ -182,6 +185,26 @@ namespace Akka.Actor
         }
 
         public Deployer Deployer { get; protected set; }
+
+        //TODO: real akka does this in the RoutedActorRef
+        //Keep this here for now?
+        public static ActorCell NewRouterCell(ActorSystem system, InternalActorRef supervisor, ActorPath path, Props props, Mailbox mailbox,Deploy deploy)
+        {
+            var routerProps = Props.Empty.WithDeploy(deploy);
+            var routeeProps = props.WithRouter(RouterConfig.NoRouter);
+
+            if (routerProps.RouterConfig is Pool)
+            {
+                var p = routerProps.RouterConfig.AsInstanceOf<Pool>();
+                if (p.Resizer != null)
+                {
+                    //if there is a resizer, use ResizablePoolCell
+                    return new ResizablePoolCell(system, supervisor, routerProps, routeeProps, path, mailbox, p);
+                }               
+            }
+            //Use RoutedActorCell for all other routers
+            return new RoutedActorCell(system, supervisor, routerProps, routeeProps, path, mailbox);
+        }
     }
 
     /// <summary>
@@ -212,9 +235,10 @@ namespace Akka.Actor
         /// <param name="props">The props.</param>
         /// <param name="supervisor">The supervisor.</param>
         /// <param name="path">The path.</param>
+        /// <param name="systemService">Is this a child actor under the system guardian?</param>
         /// <returns>InternalActorRef.</returns>
         public override InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
-            ActorPath path)
+            ActorPath path, bool systemService = false)
         {
             ActorCell cell = null;
             Mailbox mailbox = System.Mailboxes.FromConfig(props.Mailbox);
@@ -260,20 +284,16 @@ namespace Akka.Actor
                 {
                     deploy = deploy.WithRouterConfig(props.RouterConfig);
                 }
-
-                var routerProps =
-                    Props.Create<RouterActor>()
-                        .WithDeploy(deploy);
-
-                var routeeProps = props.WithRouter(RouterConfig.NoRouter);
-
-                cell = new RoutedActorCell(system, supervisor, routerProps, routeeProps, path, mailbox);
-
+                
+                //TODO: make this work for remote actor ref provider
+                cell = NewRouterCell(system, supervisor, path, props, mailbox,deploy);
             }
             cell.NewActor();
             //   parentContext.Watch(cell.Self);
             return cell.Self;
         }
+
+        
 
 
         /// <summary>
@@ -301,6 +321,11 @@ namespace Akka.Actor
                 return currentContext.Self;
             }
             throw new NotSupportedException("The provided actor path is not valid in the LocalActorRefProvider");
+        }
+
+        public override Address GetExternalAddressFor(Address address)
+        {
+            return address.Equals(RootPath.Address) ? address : null;
         }
     }
 }

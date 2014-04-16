@@ -30,6 +30,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Akka.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release Mono|AnyCPU'">
     <OutputPath>bin\Release Mono\</OutputPath>
@@ -81,10 +82,14 @@
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Actor\ChildrenContainer.cs" />
     <Compile Include="Actor\Deployer.cs" />
+    <Compile Include="Actor\ExtendedActorSystem.cs" />
     <Compile Include="Actor\FSM.cs" />
+    <Compile Include="Actor\GracefulStopSupport.cs" />
     <Compile Include="Actor\NoSerializationVerificationNeeded.cs" />
+    <Compile Include="Actor\PipeToSupport.cs" />
     <Compile Include="Actor\Scheduler.cs" />
     <Compile Include="Actor\Settings.cs" />
+    <Compile Include="Actor\Stash.cs" />
     <Compile Include="Configuration\ConfigurationFactory.cs" />
     <Compile Include="Configuration\Config.cs" />
     <Compile Include="Configuration\Hocon\HoconArray.cs" />
@@ -110,6 +115,8 @@
     <Compile Include="Actor\MessageHandler.cs" />
     <Compile Include="Dispatch\Mailboxes.cs" />
     <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
+    <Compile Include="Dispatch\ThreadPoolBuilder.cs" />
+    <Compile Include="Event\AddressTerminatedTopic.cs" />
     <Compile Include="Event\DeadLetter.cs" />
     <Compile Include="Event\DeadLetterListener.cs" />
     <Compile Include="Event\EventBus.cs" />
@@ -135,12 +142,15 @@
     <Compile Include="Routing\RouterConfig.cs" />
     <Compile Include="Routing\RouterMsg.cs" />
     <Compile Include="Routing\RouterPoolActor.cs" />
+    <Compile Include="Routing\ScatterGatherFirstCompleted.cs" />
     <Compile Include="Serialization\Serialization.cs" />
     <Compile Include="Serialization\Serializer.cs" />
-    <Compile Include="Tools\AtomicCounter.cs" />
+    <Compile Include="Tools\Atomic.cs" />
     <Compile Include="Tools\ConcurrentSet.cs" />
     <Compile Include="Tools\ExpressionExtensions.cs" />
     <Compile Include="Tools\Pattern.cs" />
+    <Compile Include="Tools\ThreadLocalRandom.cs" />
+    <Compile Include="Tools\WildcardTree.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Actor\ActorBase.SupervisorStrategy.cs" />
@@ -149,6 +159,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Configuration\Pigeon.conf" />
+    <None Include="Akka.nuspec" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

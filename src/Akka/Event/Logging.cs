@@ -901,6 +901,8 @@ namespace Akka.Event
         /// <exception cref="System.ArgumentException">Unknown LogLevel;logLevel</exception>
         public static LogLevel LogLevelFor(string logLevel)
         {
+            
+            
             switch (logLevel)
             {
                 case "DEBUG":
@@ -912,7 +914,7 @@ namespace Akka.Event
                 case "ERROR":
                     return LogLevel.ErrorLevel;
                 default:
-                    throw new ArgumentException("Unknown LogLevel", "logLevel");
+                    throw new ArgumentException("Unknown LogLevel", logLevel);
             }
         }
     }

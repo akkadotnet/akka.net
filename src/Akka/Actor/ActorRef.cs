@@ -4,20 +4,39 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Dispatch.SysMsg;
+using System.Threading;
 
 namespace Akka.Actor
 {
+    
+    /// <summary>
+    /// All ActorRefs have a scope which describes where they live. Since it is often
+    /// necessary to distinguish between local and non-local references, this is the only
+    /// method provided on the scope.
+    /// </summary>
+// ReSharper disable once InconsistentNaming
+    internal interface ActorRefScope
+    {
+        bool IsLocal { get; }
+    }
+
+    /// <summary>
+    /// Marker interface for Actors that are deployed within local scope
+    /// </summary>
+// ReSharper disable once InconsistentNaming
+    internal interface LocalRef : ActorRefScope { }
+
     public class FutureActorRef : MinimalActorRef
     {
-        private readonly TaskCompletionSource<object> result;
-        private readonly Action unregister;
-        private ActorRef sender;
+        private readonly TaskCompletionSource<object> _result;
+        private readonly Action _unregister;
+        private ActorRef _sender;
 
         public FutureActorRef(TaskCompletionSource<object> result, ActorRef sender, Action unregister, ActorPath path)
         {
-            this.result = result;
-            this.sender = sender;
-            this.unregister = unregister;
+            _result = result;
+            _sender = sender ?? ActorRef.NoSender;
+            _unregister = unregister;
             Path = path;
         }
 
@@ -26,17 +45,38 @@ namespace Akka.Actor
             get { throw new NotImplementedException(); }
         }
 
+        
+        private const int INITIATED = 0;
+        private const int COMPLETED = 1;
+        private int status = INITIATED;
         protected override void TellInternal(object message, ActorRef sender)
         {
-            unregister();
-            if (sender != NoSender)
+            if (message is SystemMessage) //we have special handling for system messages
             {
-                sender.Tell(new CompleteFuture(() => result.TrySetResult(message)));
+                SendSystemMessage(message.AsInstanceOf<SystemMessage>(), sender);
             }
             else
             {
-                result.TrySetResult(message);
-            }
+                if (Interlocked.Exchange(ref status,COMPLETED) == INITIATED)
+                {
+                    _unregister();
+                    if (_sender == NoSender || message is Terminated)
+                    {
+                        _result.TrySetResult(message);
+                    }
+                    else
+                    {
+                        _sender.Tell(new CompleteFuture(() => _result.TrySetResult(message)));
+                    }
+                }
+            }            
+        }
+
+        protected void SendSystemMessage(SystemMessage message, ActorRef sender)
+        {
+            PatternMatch.Match(message)
+                .With<Terminate>(t => Stop())
+                .With<DeathWatchNotification>(d => Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated)));
         }
     }
 
@@ -53,6 +93,7 @@ namespace Akka.Actor
 
     public abstract class ActorRef : ICanTell
     {
+
         public static readonly Nobody Nobody = new Nobody();
         public static readonly ReservedActorRef Reserved = new ReservedActorRef();
         public static readonly ActorRef NoSender = new NoSender();
@@ -109,7 +150,7 @@ namespace Akka.Actor
     }
 
 
-    public abstract class InternalActorRef : ActorRef
+    public abstract class InternalActorRef : ActorRef, ActorRefScope
     {
         public abstract InternalActorRef Parent { get; }
         public abstract ActorRefProvider Provider { get; }
@@ -118,9 +159,12 @@ namespace Akka.Actor
         public abstract void Stop();
         public abstract void Restart(Exception cause);
         public abstract void Suspend();
+
+        public bool IsTerminated { get; internal set; }
+        public abstract bool IsLocal { get; }
     }
 
-    public abstract class MinimalActorRef : InternalActorRef
+    public abstract class MinimalActorRef : InternalActorRef, LocalRef
     {
         public override InternalActorRef Parent
         {
@@ -152,6 +196,11 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, ActorRef sender)
         {
+        }
+
+        public override bool IsLocal
+        {
+            get { return true; }
         }
     }
 

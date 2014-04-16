@@ -25,7 +25,9 @@ namespace Akka.Configuration.Hocon
             if (pattern.Length + index > text.Length)
                 return false;
 
-            if (text.Substring(index, pattern.Length) == pattern)
+            //Aaron: added this to make it easier to set a breakpoint to debug config issues
+            var selected = text.Substring(index, pattern.Length);
+            if (selected == pattern)
                 return true;
 
             return false;
