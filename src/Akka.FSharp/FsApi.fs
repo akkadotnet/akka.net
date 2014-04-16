@@ -2,12 +2,25 @@
 open Akka.Actor
 open System
 
+type IO<'msg> = | Input
+
+[<Interface>]
+type Actor<'msg> =
+    abstract Receive : unit -> IO<'msg>
+    abstract Self : LocalActorRef
+    abstract Sender : unit -> ActorRef
+    abstract Unhandled: 'msg -> unit
 
 [<AbstractClass>]
 type Actor()=
     inherit Akka.Actor.UntypedActor()
 
-let (<!) (actorRef:ActorRef) (msg: obj) =
+
+
+
+
+
+let inline (<!) (actorRef: #ActorRef) (msg: obj) =
     actorRef.Tell msg
     ignore()
 
@@ -20,7 +33,7 @@ let (<?) (tell:ICanTell) (msg: obj) =
 /// Gives access to the next message throu let! binding in
 /// actor computation expression.
 /// </summary>
-type IO<'msg> = | Input
+
 
 type Cont<'m,'v> =
     | Func of ('m -> Cont<'m,'v>)
@@ -122,26 +135,39 @@ type ActorBuilder() =
         | Return _ -> g
 
 
-/// <summary>
-/// Builds an actor message handler using an actor expression syntax.
-/// </summary>
-let actor = ActorBuilder()
 
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Linq.QuotationEvaluation
 
-type FunActor<'m,'v>(actor: IO<'m> -> Cont<'m,'v>) =
+type FunActor<'m,'v>(actor: Actor<'m> -> Cont<'m,'v>) as self =
     inherit ActorBase()
-    let mutable state = actor Input
 
-    new (actor: Expr<IO<'m> -> Cont<'m,'v>>) = FunActor(actor.Compile() ())
+    let mutable state = 
+        let self' = self.Self
+        actor { new Actor<'m> with
+                                member this.Receive() = Input
+                                member this.Self = self'
+                                member this.Sender() = self.Sender()
+                                member this.Unhandled msg = self.Unhandled msg } 
+
+    new (actor: Expr<Actor<'m> -> Cont<'m,'v>>) = FunActor(actor.Compile() ())
+
+    member x.Sender() =
+        base.Sender
+
+    member x.Unhandled(msg:'m) =
+        base.Unhandled msg
+
     override x.OnReceive(msg) =
         let message = msg :?> 'm
         match state with
         | Func f -> state <- f message
         | Return v -> x.PostStop()
 
-    
+/// <summary>
+/// Builds an actor message handler using an actor expression syntax.
+/// </summary>
+let actor = ActorBuilder()
 
 module Linq =
     open System.Linq.Expressions
@@ -215,7 +241,7 @@ module System =
 /// <param name="system">The system used to spawn the actor</param>
 /// <param name="name">The actor instance nane</param>
 /// <param name="f">the actor's message handling function.</param>
-let spawne (system:ActorSystem) name (f: Expr<IO<'m> -> Cont<'m,'v>>)  =
+let spawne (system:ActorSystem) name (f: Expr<Actor<'m> -> Cont<'m,'v>>)  =
    let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f))
    system.ActorOf(Props.Create(e), name)
 
@@ -226,6 +252,6 @@ let spawne (system:ActorSystem) name (f: Expr<IO<'m> -> Cont<'m,'v>>)  =
 /// <param name="system">The system used to spawn the actor</param>
 /// <param name="name">The actor instance nane</param>
 /// <param name="f">the actor's message handling function.</param>
-let spawn (system:ActorSystem) name (f: IO<'m> -> Cont<'m,'v>)  =
+let spawn (system:ActorSystem) name (f: Actor<'m> -> Cont<'m,'v>)  =
    let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f))
    system.ActorOf(Props.Create(e), name)

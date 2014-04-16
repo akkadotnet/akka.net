@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using Akka.Actor;
+using System;
+using System.Threading.Tasks;
 
 namespace Akka.Routing
 {
@@ -21,6 +23,11 @@ namespace Akka.Routing
         public virtual void Send(object message, ActorRef sender)
         {
         }
+
+        public virtual Task Ask(object message, TimeSpan? timeout)
+        {
+            return null;
+        }
     }
 
     public class ActorRefRoutee : Routee
@@ -36,6 +43,11 @@ namespace Akka.Routing
         {
             Actor.Tell(message, sender);
         }
+
+        public override Task Ask(object message, TimeSpan? timeout)
+        {
+            return Actor.Ask(message, timeout);
+        }
     }
 
     public class ActorSelectionRoutee : Routee
@@ -50,6 +62,11 @@ namespace Akka.Routing
         public override void Send(object message, ActorRef sender)
         {
             actor.Tell(message, sender);
+        }
+
+        public override Task Ask(object message, TimeSpan? timeout)
+        {
+            return actor.Ask(message, timeout);
         }
     }
 

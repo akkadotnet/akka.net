@@ -113,21 +113,21 @@ namespace Akka.Actor
 
         public Deploy WithMailbox(string path)
         {
-            var copy = this.Copy();
+            var copy = Copy();
             copy.Mailbox = path;
             return copy;
         }
 
         public Deploy WithDispatcher(string path)
         {
-            var copy = this.Copy();
+            var copy = Copy();
             copy.Dispatcher = path;
             return copy;
         }
 
         public Deploy WithRouterConfig(RouterConfig routerConfig)
         {
-            var copy = this.Copy();
+            var copy = Copy();
             copy.RouterConfig = routerConfig;
             return copy;
         }
@@ -136,12 +136,12 @@ namespace Akka.Actor
     public class Scope
     {
         public static readonly LocalScope Local = new LocalScope();
-        private Scope fallback;
+        private Scope _fallback;
 
         public Scope WithFallback(Scope other)
         {
             Scope copy = Copy();
-            copy.fallback = other;
+            copy._fallback = other;
             return copy;
         }
 
@@ -149,7 +149,7 @@ namespace Akka.Actor
         {
             return new Scope
             {
-                fallback = fallback,
+                _fallback = _fallback,
             };
         }
     }
@@ -176,16 +176,16 @@ namespace Akka.Actor
 
     public class Deployer
     {
-        private readonly Config deployment;
-        private readonly Config @default;
-        private Settings settings;
+        private readonly Config _deployment;
+        private readonly Config _default;
+        private readonly Settings _settings;
         private readonly AtomicReference<WildcardTree<Deploy>> _deployments = new AtomicReference<WildcardTree<Deploy>>(new WildcardTree<Deploy>());
 
         public Deployer(Settings settings)
         {
-            this.settings = settings;
-            deployment = settings.Config.GetConfig("akka.actor.deployment");
-            @default = deployment.GetConfig("default");
+            _settings = settings;
+            _deployment = settings.Config.GetConfig("akka.actor.deployment");
+            _default = _deployment.GetConfig("default");
             Init();
         }
 
@@ -246,9 +246,9 @@ namespace Akka.Actor
 
         protected virtual Deploy ParseConfig(string key)
         {
-            Config config = deployment.GetConfig(key).WithFallback(@default);
+            Config config = _deployment.GetConfig(key).WithFallback(_default);
             var routerType = config.GetString("router");
-            var router = CreateRouterConfig(routerType, key, config, deployment);
+            var router = CreateRouterConfig(routerType, key, config, _deployment);
             var dispatcher = config.GetString("dispatcher");
             var mailbox = config.GetString("mailbox");
             var scope = ParseScope(config);
@@ -267,7 +267,7 @@ namespace Akka.Actor
                 return RouterConfig.NoRouter;
 
             var path = string.Format("akka.actor.router.type-mapping.{0}", routerTypeAlias);
-            var routerTypeName = settings.Config.GetString(path);
+            var routerTypeName = _settings.Config.GetString(path);
             var routerType = Type.GetType(routerTypeName);
             Debug.Assert(routerType != null, "routerType != null");
             var routerConfig = (RouterConfig)Activator.CreateInstance(routerType, config);
