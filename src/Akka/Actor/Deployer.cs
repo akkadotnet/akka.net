@@ -191,7 +191,7 @@ namespace Akka.Actor
 
         private void Init()
         {
-            var rootObj = deployment.Root.GetObject();
+            var rootObj = _deployment.Root.GetObject();
             if (rootObj == null) return;
             var unwrapped = rootObj.Unwrapped.Where(d => !d.Key.Equals("default")).ToArray();
             foreach (var d in unwrapped.Select(x => ParseConfig(x.Key)))
@@ -252,7 +252,7 @@ namespace Akka.Actor
             var dispatcher = config.GetString("dispatcher");
             var mailbox = config.GetString("mailbox");
             var scope = ParseScope(config);
-            var deploy = new Deploy(key, deployment, router, scope, dispatcher, mailbox);
+            var deploy = new Deploy(key, config, router, scope, dispatcher, mailbox);
             return deploy;
         }
 
