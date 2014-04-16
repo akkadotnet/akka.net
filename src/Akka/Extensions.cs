@@ -17,7 +17,7 @@ namespace Akka
 
         public static IEnumerable<T> Drop<T>(this IEnumerable<T> self, int count)
         {
-            return self.Skip(count);
+            return self.Skip(count).ToList();
         }
 
         public static T Head<T>(this IEnumerable<T> self)

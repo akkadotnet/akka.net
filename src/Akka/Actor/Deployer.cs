@@ -14,8 +14,8 @@ namespace Akka.Actor
     {
         public static readonly Deploy Local = new Deploy(Scope.Local);
 
-        public static readonly string NoDispatcherGiven = null;
-        public static readonly string NoMailboxGiven = null;
+        public static readonly string NoDispatcherGiven = string.Empty;
+        public static readonly string NoMailboxGiven = string.Empty;
         public static readonly Scope NoScopeGiven = null;
         public static readonly Deploy None = null;
         /*
@@ -193,7 +193,8 @@ namespace Akka.Actor
         {
             var rootObj = deployment.Root.GetObject();
             if (rootObj == null) return;
-            foreach (var d in rootObj.Unwrapped.Where(d => !d.Key.Equals("default") && d.Value is HoconValue).Select(x => ParseConfig(x.Key)))
+            var unwrapped = rootObj.Unwrapped.Where(d => !d.Key.Equals("default")).ToArray();
+            foreach (var d in unwrapped.Select(x => ParseConfig(x.Key)))
             {
                 SetDeploy(d);
             }
