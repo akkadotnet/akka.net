@@ -17,7 +17,7 @@ namespace Akka
 
         public static IEnumerable<T> Drop<T>(this IEnumerable<T> self, int count)
         {
-            return self.Skip(count);
+            return self.Skip(count).ToList();
         }
 
         public static T Head<T>(this IEnumerable<T> self)
@@ -40,6 +40,25 @@ namespace Akka
                 hash[key] = value;
             else
                 hash.Add(key,value);
+        }
+
+        public static TValue GetOrElse<TKey, TValue>(this IDictionary<TKey, TValue> hash, TKey key, TValue elseValue)
+        {
+            if (hash.ContainsKey(key)) return hash[key];
+            return elseValue;
+        }
+
+        public static T GetOrElse<T>(this T obj, T elseValue)
+        {
+            if (obj.Equals(default(T)))
+                return elseValue;
+            return obj;
+        }
+
+        public static IDictionary<TKey, TValue> AddAndReturn<TKey, TValue>(this IDictionary<TKey, TValue> hash, TKey key, TValue value)
+        {
+            hash.AddOrSet(key, value);
+            return hash;
         }
     }
 }

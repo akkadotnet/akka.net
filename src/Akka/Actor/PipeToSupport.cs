@@ -21,7 +21,7 @@ namespace Akka.Actor
                     recipient.Tell(new Status.Failure(tresult.Exception), sender);
                 else if (tresult.IsCompleted)
                     recipient.Tell(tresult.Result, sender);
-            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+            }, TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent);
         }
     }
 }

@@ -2,7 +2,7 @@
 
 namespace Akka.Configuration.Hocon
 {
-    public class HoconSubstitution : IHoconElement
+    public class HoconSubstitution : IHoconElement, IMightBeAHoconObject
     {
         public HoconSubstitution(string path)
         {
@@ -32,5 +32,24 @@ namespace Akka.Configuration.Hocon
         {
             return ResolvedValue.GetArray();
         }
+
+        public bool IsObject()
+        {
+            return ResolvedValue != null && ResolvedValue.IsObject();
+        }
+
+        public HoconObject GetObject()
+        {
+            return ResolvedValue.GetObject();
+        }
+
+        #region Implicit operators
+
+        public static implicit operator HoconObject(HoconSubstitution substitution)
+        {
+            return substitution.GetObject();
+        }
+
+        #endregion
     }
 }

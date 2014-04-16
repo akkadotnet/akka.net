@@ -209,7 +209,7 @@ namespace Akka.Remote
         public void NotifyListeners(RemotingLifecycleEvent message)
         {
             System.EventStream.Publish(message);
-            if (message.LogLevel() <= LogLevel) Log.Log(message.LogLevel(), message.ToString());
+            if (message.LogLevel() >= LogLevel) Log.Log(message.LogLevel(), message.ToString());
         }
     }
 }

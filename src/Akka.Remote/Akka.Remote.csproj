@@ -58,6 +58,14 @@
     <Reference Include="Google.ProtocolBuffers.Serialization">
       <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
     </Reference>
+    <Reference Include="Helios, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Helios.1.0.0.0\lib\net45\Helios.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Newtonsoft.Json.6.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
@@ -79,6 +87,7 @@
     <Compile Include="AddressUidExtension.cs" />
     <Compile Include="AkkaProtocolSettings.cs" />
     <Compile Include="AssociationEvent.cs" />
+    <Compile Include="Configuration\RemoteConfigFactory.cs" />
     <Compile Include="Deadline.cs" />
     <Compile Include="DefaultFailureDetectorRegistry.cs" />
     <Compile Include="Endpoint.cs" />
@@ -103,15 +112,17 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteActorRefProvider.cs" />
     <Compile Include="Transport\AkkaPduCodec.cs" />
+    <Compile Include="Transport\Helios\HeliosHelpers.cs" />
+    <Compile Include="Transport\Helios\HeliosTcpTransport.cs" />
     <Compile Include="Transport\TransportAdapters.cs" />
     <Compile Include="Transport\AkkaProtocolTransport.cs" />
-    <Compile Include="Transport\TcpTransport\TcpListener.cs" />
-    <Compile Include="Transport\TcpTransport\TcpTransport.cs" />
+    <Compile Include="Transport\Helios\HeliosTransport.cs" />
     <Compile Include="Transport\TestTransport.cs" />
     <Compile Include="Transport\Transport.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Akka.Remote.nuspec" />
+    <EmbeddedResource Include="Configuration\Remote.conf" />
     <None Include="packages.config" />
     <None Include="protos\google\protobuf\csharp_options.proto" />
     <None Include="protos\google\protobuf\descriptor.proto" />

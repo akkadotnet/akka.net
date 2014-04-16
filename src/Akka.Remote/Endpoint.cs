@@ -2,11 +2,9 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Runtime.InteropServices;
-using System.Runtime.Remoting.Messaging;
 using System.Runtime.Serialization;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -35,7 +33,7 @@ namespace Akka.Remote
         private ActorSystem system;
         private RemoteActorRefProvider provider;
         private LoggingAdapter log;
-        private RemoteDaemon remoteDaemon;
+        private InternalActorRef remoteDaemon;
         private RemoteSettings settings;
 
         public DefaultMessageDispatcher(ActorSystem system, RemoteActorRefProvider provider, LoggingAdapter log)
@@ -69,16 +67,15 @@ namespace Akka.Remote
             }
             else if (recipient is LocalRef && recipient.IsLocal) //TODO: update this to include support for RepointableActorRefs if they get implemented
             {
-                var l = recipient.AsInstanceOf<LocalActorRef>();
                 if (settings.LogReceive) log.Debug("received local message [{0}]", msgLog);
                 payload.Match()
                     .With<ActorSelectionMessage>(sel =>
                     {
                         var actorPath = "/" + string.Join("/", sel.Elements.Select(x => x.ToString()));
                         if (settings.UntrustedMode
-                            && !settings.TrustedSelectionPaths.Contains(actorPath)
+                            && (!settings.TrustedSelectionPaths.Contains(actorPath)
                             || sel.Message is PossiblyHarmful
-                            || l != provider.Guardian)
+                            || recipient != provider.Guardian))
                         {
                             log.Debug(
                                 "operating in UntrustedMode, dropping inbound actor selection to [{0}], allow it" +
@@ -88,7 +85,7 @@ namespace Akka.Remote
                         else
                         {
                             //run the receive logic for ActorSelectionMessage here to make sure it is not stuck on busy user actor
-                            ActorSelection.DeliverSelection(l, sender, sel);
+                            ActorSelection.DeliverSelection(recipient, sender, sel);
                         }
                     })
                     .With<PossiblyHarmful>(msg =>
@@ -98,8 +95,8 @@ namespace Akka.Remote
                             log.Debug("operating in UntrustedMode, dropping inbound PossiblyHarmful message of type {0}", msg.GetType());
                         }
                     })
-                    .With<SystemMessage>(msg => { l.Tell(msg); })
-                    .Default(msg => { l.Tell(msg, sender); });
+                    .With<SystemMessage>(msg => { recipient.Tell(msg); })
+                    .Default(msg => { recipient.Tell(msg, sender); });
             }
             else if (recipient is RemoteRef && !recipient.IsLocal && !settings.UntrustedMode)
             {
@@ -745,6 +742,7 @@ namespace Akka.Remote
             _ackDeadline = NewAckDeadline();
             _handle = handleOrActive;
             CurrentStash = Context.GetStash();
+            InitFSM();
         }
 
         private AkkaProtocolHandle handleOrActive;
@@ -1000,12 +998,15 @@ namespace Akka.Remote
 
         protected override void PreStart()
         {
-            SetTimer(AckIdleTimerName, new AckIdleCheckTimer(), new TimeSpan(Settings.SysMsgAckTimeout.Ticks / 2), true);
-
             var startWithState = State.Initializing;
             if (_handle == null)
             {
-                Transport.Associate(RemoteAddress, refuseUid).PipeTo(Self);
+                Transport.Associate(RemoteAddress, refuseUid).ContinueWith(x =>
+                {
+                    return new Handle(x.Result);
+                }, 
+                    TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
+                    .PipeTo(Self);
                 startWithState = State.Initializing;
             }
             else
@@ -1014,6 +1015,7 @@ namespace Akka.Remote
                 startWithState = State.Writing;
             }
             StartWith(startWithState, true);
+            SetTimer(AckIdleTimerName, new AckIdleCheckTimer(), new TimeSpan(Settings.SysMsgAckTimeout.Ticks / 2), true);
         }
 
         #endregion

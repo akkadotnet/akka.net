@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Remoting;
-using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
@@ -52,7 +50,7 @@ namespace Akka.Remote
         {
             log = Logging.GetLogger(system, "remoting");
             _eventPublisher = new EventPublisher(system, log, Logging.LogLevelFor(provider.RemoteSettings.RemoteLifecycleEventsLogLevel));
-            _transportSupervisor = system.ActorOf(Props.Create<TransportSupervisor>(), "transports");
+            _transportSupervisor = system.SystemActorOf(Props.Create<TransportSupervisor>(), "transports");
         }
 
         #region RemoteTransport overrides
@@ -65,7 +63,7 @@ namespace Akka.Remote
             {
                 _endpointManager =
                 System.SystemActorOf(
-                    Props.Create(() => new EndpointManager(Provider.RemoteSettings, log)).WithDeploy(Deploy.Local),
+                    Props.Create(() => new EndpointManager(Provider.Config, log)).WithDeploy(Deploy.Local),
                     EndpointManagerName);
 
                 try
@@ -264,7 +262,7 @@ namespace Akka.Remote
 
     internal class TransportSupervisor : ActorBase
     {
-        private readonly SupervisorStrategy _strategy = new OneForOneStrategy(-1, TimeSpan.MaxValue, exception => Directive.Restart);
+        private readonly SupervisorStrategy _strategy = new OneForOneStrategy(3, TimeSpan.FromMinutes(1), exception => Directive.Restart);
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return _strategy;

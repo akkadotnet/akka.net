@@ -20,22 +20,30 @@ namespace ChatClient
         {
             var config = ConfigurationFactory.ParseString(@"
 akka {  
+    log-config-on-start = on
+    stdout-loglevel = INFO
+    loglevel = ERROR
     actor {
         provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-        debug {
-            lifecycle = on
-            receive = on
+        
+        debug {  
+          receive = on 
+          autoreceive = on
+          lifecycle = on
+          event-stream = on
+          unhandled = on
         }
     }
     remote {
         #this is the new upcoming remoting support, which enables multiple transports
-        tcp-transport {
-            transport-class = ""Akka.Remote.Transport.TcpTransport, Akka.Remote""
+        helios.tcp {
+            transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
 		    applied-adapters = []
 		    transport-protocol = tcp
 		    port = 8091
 		    hostname = ""127.0.0.1""
         }
+        log-remote-lifecycle-events = INFO
     }
 }
 ");
@@ -93,7 +101,7 @@ akka {
         IHandle<NickRequest>,
         IHandle<NickResponse>,
         IHandle<SayRequest>,
-        IHandle<SayResponse>
+        IHandle<SayResponse>, ILogReceive
     {
         LoggingAdapter log = Logging.GetLogger(Context);
 

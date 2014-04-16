@@ -1,9 +1,12 @@
 ﻿using System;
-using System.Data;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Akka.Configuration;
+using Akka.Configuration.Hocon;
 using Akka.Routing;
+using Akka.Tools;
 
 namespace Akka.Actor
 {
@@ -11,8 +14,8 @@ namespace Akka.Actor
     {
         public static readonly Deploy Local = new Deploy(Scope.Local);
 
-        public static readonly string NoDispatcherGiven = null;
-        public static readonly string NoMailboxGiven = null;
+        public static readonly string NoDispatcherGiven = string.Empty;
+        public static readonly string NoMailboxGiven = string.Empty;
         public static readonly Scope NoScopeGiven = null;
         public static readonly Deploy None = null;
         /*
@@ -32,6 +35,11 @@ namespace Akka.Actor
             Scope = NoScopeGiven;
             Dispatcher = NoDispatcherGiven;
             Mailbox = NoMailboxGiven;
+        }
+
+        public Deploy(string path, Scope scope) : this(scope)
+        {
+            Path = path;
         }
 
         public Deploy(Scope scope)
@@ -60,7 +68,7 @@ namespace Akka.Actor
             Dispatcher = dispatcher;
         }
 
-        public Deploy(string path, Config config, RouterConfig routerConfig, Scope scope, string dispatcher,string mailbox)
+        public Deploy(string path, Config config, RouterConfig routerConfig, Scope scope, string dispatcher, string mailbox)
         {
             Path = path;
             Config = config;
@@ -171,12 +179,25 @@ namespace Akka.Actor
         private readonly Config _deployment;
         private readonly Config _default;
         private readonly Settings _settings;
+        private readonly AtomicReference<WildcardTree<Deploy>> _deployments = new AtomicReference<WildcardTree<Deploy>>(new WildcardTree<Deploy>());
 
         public Deployer(Settings settings)
         {
             _settings = settings;
             _deployment = settings.Config.GetConfig("akka.actor.deployment");
             _default = _deployment.GetConfig("default");
+            Init();
+        }
+
+        private void Init()
+        {
+            var rootObj = _deployment.Root.GetObject();
+            if (rootObj == null) return;
+            var unwrapped = rootObj.Unwrapped.Where(d => !d.Key.Equals("default")).ToArray();
+            foreach (var d in unwrapped.Select(x => ParseConfig(x.Key)))
+            {
+                SetDeploy(d);
+            }
         }
 
         public Deploy Lookup(ActorPath path)
@@ -185,12 +206,45 @@ namespace Akka.Actor
                 return Deploy.None;
 
             var elements = path.Elements.Drop(1);
-            var key = "/" + elements.Join("/");            
-            var deploy = ParseConfig(key);
-            return deploy;
+            return Lookup(elements);
         }
 
-        protected  virtual Deploy ParseConfig(string key)
+        public Deploy Lookup(IEnumerable<string> path)
+        {
+            return Lookup(path.GetEnumerator());
+        }
+
+        public Deploy Lookup(IEnumerator<string> path)
+        {
+            return _deployments.Value.Find(path).Data;
+        }
+
+        public void SetDeploy(Deploy deploy)
+        {
+            Action<IList<string>, Deploy> add = (path, d) =>
+            {
+                bool set;
+                do
+                {
+                    var w = _deployments.Value;
+                    foreach (var t in path)
+                    {
+                        var curPath = t;
+                        if (string.IsNullOrEmpty(curPath))
+                            throw new IllegalActorNameException(string.Format("Actor name in deployment [{0}] must not be empty", d.Path));
+                        if (!ActorPath.ElementRegex.IsMatch(t))
+                        {
+                            throw new IllegalActorNameException(string.Format("Actor name in deployment [{0}] must conform to {1}", d.Path, ActorPath.ElementRegex));
+                        }
+                    }
+                    set = _deployments.CompareAndSet(w, w.Insert(path.GetEnumerator(), d));
+                } while(!set);
+            };
+
+            add(deploy.Path.Split('/').Drop(1).ToList(), deploy);
+        }
+
+        protected virtual Deploy ParseConfig(string key)
         {
             Config config = _deployment.GetConfig(key).WithFallback(_default);
             var routerType = config.GetString("router");
@@ -198,7 +252,7 @@ namespace Akka.Actor
             var dispatcher = config.GetString("dispatcher");
             var mailbox = config.GetString("mailbox");
             var scope = ParseScope(config);
-            var deploy = new Deploy(key, _deployment, router, scope ,dispatcher,mailbox);
+            var deploy = new Deploy(key, config, router, scope, dispatcher, mailbox);
             return deploy;
         }
 

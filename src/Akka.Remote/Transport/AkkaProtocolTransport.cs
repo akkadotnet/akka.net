@@ -88,7 +88,7 @@ namespace Akka.Remote.Transport
             // Prepare a Task and pass its completion source to the manager
             var statusPromise = new TaskCompletionSource<AssociationHandle>();
 
-            manager.Tell(new AssociateUnderlyingRefuseUid(remoteAddress, statusPromise, refuseUid));
+            manager.Tell(new AssociateUnderlyingRefuseUid(SchemeAugmenter.RemoveScheme(remoteAddress), statusPromise, refuseUid));
 
             return statusPromise.Task.ContinueWith(result => result.Result.AsInstanceOf<AkkaProtocolHandle>(),
                 TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously);
@@ -478,7 +478,7 @@ namespace Akka.Remote.Transport
                         {
                             var wrappedHandle = h;
                             var statusPromise = ou.StatusCompletionSource;
-                            wrappedHandle.ReadHandlerSource.TrySetResult(new ActorHandleEventListener(Self));
+                            wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(Self));
                             if (SendAssociate(wrappedHandle, _localHandshakeInfo))
                             {
                                 _failureDetector.HeartBeat();

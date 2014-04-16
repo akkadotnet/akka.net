@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Akka.Configuration.Hocon
 {
-    public class HoconValue
+    public class HoconValue : IMightBeAHoconObject
     {
         private readonly List<IHoconElement> values = new List<IHoconElement>();
 
@@ -48,8 +48,12 @@ namespace Akka.Configuration.Hocon
         public HoconObject GetObject()
         {
             //TODO: merge objects?
-            var o = values.FirstOrDefault() as HoconObject;
-            return o;
+            var raw = values.FirstOrDefault();
+            var o = raw as HoconObject;
+            var sub = raw as IMightBeAHoconObject;
+            if (o != null) return o;
+            if (sub != null && sub.IsObject()) return sub.GetObject();
+            return null;
         }
 
         public HoconValue GetChildObject(string key)
@@ -178,13 +182,42 @@ namespace Akka.Configuration.Hocon
         public TimeSpan GetMillisDuration()
         {
             string res = GetString();
+            if (res.EndsWith("ms"))
+            {
+                var v = res.Substring(0, res.Length - 2);
+                return TimeSpan.FromMilliseconds(double.Parse(v));
+            }
             if (res.EndsWith("s"))
             {
-                string v = res.Substring(0, res.Length - 1);
+                var v = res.Substring(0, res.Length - 1);
                 return TimeSpan.FromSeconds(double.Parse(v));
             }
 
+            if (res.EndsWith("m"))
+            {
+                var v = res.Substring(0, res.Length - 1);
+                return TimeSpan.FromMinutes(double.Parse(v));
+            }
+
+            if (res.EndsWith("d"))
+            {
+                var v = res.Substring(0, res.Length - 1);
+                return TimeSpan.FromDays(double.Parse(v));
+            }
+
             return TimeSpan.FromSeconds(double.Parse(res));
+        }
+
+        public long? GetByteSize()
+        {
+            var res = GetString();
+            if (res.EndsWith("b"))
+            {
+                var v = res.Substring(0, res.Length - 1);
+                return long.Parse(v);
+            }
+
+            return long.Parse(res);
         }
 
         public override string ToString()

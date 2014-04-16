@@ -16,6 +16,7 @@ namespace Akka.Remote
             UntrustedMode = config.GetBoolean("akka.remote.untrusted-mode");
             TrustedSelectionPaths = new HashSet<string>(config.GetStringList("akka.remote.trusted-selection-paths"));
             RemoteLifecycleEventsLogLevel = config.GetString("akka.remote.log-remote-lifecycle-events") ?? "DEBUG";
+            if (RemoteLifecycleEventsLogLevel.Equals("on")) RemoteLifecycleEventsLogLevel = "DEBUG";
             FlushWait = config.GetMillisDuration("akka.remote.flush-wait-on-shutdown");
             ShutdownTimeout = config.GetMillisDuration("akka.remote.shutdown-timeout");
             TransportNames = config.GetStringList("akka.remote.enabled-transports");
@@ -23,7 +24,7 @@ namespace Akka.Remote
                 let transportConfig = TransportConfigFor(transportName)
                 select new TransportSettings(transportConfig)).ToArray();
             Adapters = ConfigToMap(config.GetConfig("akka.remote.adapters"));
-            BackoffPeriod = config.GetMillisDuration("akka.remote.backoff-internal", TimeSpan.FromSeconds(3));
+            BackoffPeriod = config.GetMillisDuration("akka.remote.backoff-interval");
             RetryGateClosedFor = config.GetMillisDuration("akka.remote.retry-gate-closed-for", TimeSpan.Zero);
             UsePassiveConnections = config.GetBoolean("akka.remote.use-passive-connections");
             SysMsgBufferSize = config.GetInt("akka.remote.system-message-buffer-size");

@@ -43,8 +43,8 @@ akka {
         }
     }
     remote {
-        tcp-transport {
-            transport-class = ""Akka.Remote.Transport.TcpTransport, Akka.Remote""
+        helios.tcp {
+            transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
 		    applied-adapters = []
 		    transport-protocol = tcp
 		    port = 8090

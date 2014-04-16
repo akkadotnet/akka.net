@@ -200,19 +200,24 @@ namespace Akka.Remote.Transport
             }
 
             Message messageOption = null;
-            var envelopeContainer = RemoteEnvelope.ParseFrom(raw);
-            if (envelopeContainer != null)
+
+            if (ackAndEnvelope.HasEnvelope)
             {
-                var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
-                var recipientAddress = ActorPath.Parse(envelopeContainer.Recipient.Path).Address;
-                var serializedMessage = envelopeContainer.Message;
-                ActorRef senderOption = null;
-                if (envelopeContainer.HasSender)
+                var envelopeContainer = ackAndEnvelope.Envelope;
+                if (envelopeContainer != null)
                 {
-                    senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
+                    var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
+                    var recipientAddress = ActorPath.Parse(envelopeContainer.Recipient.Path).Address;
+                    var serializedMessage = envelopeContainer.Message;
+                    ActorRef senderOption = null;
+                    if (envelopeContainer.HasSender)
+                    {
+                        senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
+                    }
+                    messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption);
                 }
-                messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption);
             }
+            
 
             return new AckAndMessage(ackOption, messageOption);
         }
@@ -230,7 +235,7 @@ namespace Akka.Remote.Transport
         {
             var ackAndEnvelopeBuilder = AckAndEnvelopeContainer.CreateBuilder();
             var envelopeBuilder = RemoteEnvelope.CreateBuilder().SetRecipient(SerializeActorRef(recipient.Path.Address, recipient));
-            if (senderOption != null) { envelopeBuilder = envelopeBuilder.SetSender(SerializeActorRef(localAddress, senderOption)); }
+            if (senderOption != null && senderOption.Path != null) { envelopeBuilder = envelopeBuilder.SetSender(SerializeActorRef(localAddress, senderOption)); }
             if (seqOption != null) { envelopeBuilder = envelopeBuilder.SetSeq((ulong)seqOption.RawValue); }
             if (ackOption != null) { ackAndEnvelopeBuilder = ackAndEnvelopeBuilder.SetAck(AckBuilder(ackOption)); }
             envelopeBuilder = envelopeBuilder.SetMessage(serializedMessage);
@@ -307,7 +312,7 @@ namespace Akka.Remote.Transport
         private ActorRefData SerializeActorRef(Address defaultAddress, ActorRef actorRef)
         {
             return ActorRefData.CreateBuilder()
-                .SetPath(!string.IsNullOrEmpty(actorRef.Path.Address.Host)
+                .SetPath((!string.IsNullOrEmpty(actorRef.Path.Address.Host))
                     ? actorRef.Path.ToSerializationFormat()
                     : actorRef.Path.ToStringWithAddress(defaultAddress))
                 .Build();
