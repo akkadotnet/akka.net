@@ -269,24 +269,17 @@ namespace Akka.Remote.Transport.Helios
             if(addr == null) throw new HeliosNodeException("Unknown local address type {0}", newServerChannel.Local);
             LocalAddress = addr;
             AssociationListenerPromise.Task.ContinueWith(result => ServerChannel.BeginReceive(),
-                TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously &
-                TaskContinuationOptions.NotOnCanceled & TaskContinuationOptions.NotOnFaulted);
+                TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
 
             return Task.Run(() => Tuple.Create(addr, AssociationListenerPromise));
         }
 
-        public override Task<AssociationHandle> Associate(Address remoteAddress)
+        public override async Task<AssociationHandle> Associate(Address remoteAddress)
         {
             if (!ServerChannel.IsOpen())
-                return Task.Run<AssociationHandle>(() =>
-                {
-                    throw new HeliosConnectionException(ExceptionType.NotOpen, "Transport is not open");
-#pragma warning disable 162 //this is needed to make the compiler happy
-                    return (AssociationHandle) null;
-#pragma warning restore 162
-                });
+               throw new HeliosConnectionException(ExceptionType.NotOpen, "Transport is not open");
 
-            return AssociateInternal(remoteAddress);
+            return await AssociateInternal(remoteAddress);
         }
 
         public override Task<bool> Shutdown()

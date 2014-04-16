@@ -24,11 +24,9 @@ namespace Akka.Remote.Transport.Helios
             UnderlyingConnection = underlyingConnection;
             UnderlyingConnection.OnConnection += OnConnect;
             UnderlyingConnection.OnDisconnection += OnDisconnect;
-            UnderlyingConnection.Receive += OnMessage;
             UnderlyingConnection.OnError += OnException;
             OnConnection += OnConnect;
             OnDisconnection += OnDisconnect;
-            Receive += OnMessage;
             OnError += OnException;
         }
 
@@ -39,8 +37,8 @@ namespace Akka.Remote.Transport.Helios
         {
             underlyingConnection.OnConnection += OnConnect;
             underlyingConnection.OnDisconnection += OnDisconnect;
-            underlyingConnection.Receive += OnMessage;
             underlyingConnection.OnError += OnException;
+            underlyingConnection.BeginReceive(OnMessage);
         }
 
         protected abstract void OnConnect(INode remoteAddress, IConnection responseChannel);

@@ -464,7 +464,7 @@ namespace Akka.Remote
                     Func<int?, ActorRef> createAndRegisterWritingEndpoint = refuseUid => endpoints.RegisterWritableEndpoint(recipientAddress,
                         CreateEndpoint(recipientAddress, send.Recipient.LocalAddressToUse,
                             _transportMapping[send.Recipient.LocalAddressToUse], settings, writing: true,
-                            handleOption: null, refuseUid: refuseUid), null);
+                            handleOption: null, refuseUid: refuseUid), refuseUid);
 
                     endpoints.WritableEndpointWithPolicyFor(recipientAddress).Match()
                         .With<Pass>(
@@ -485,71 +485,19 @@ namespace Akka.Remote
                         })
                         .Default(msg => createAndRegisterWritingEndpoint(null).Tell(send));
                 })
-                .With<InboundAssociation>(ia =>
-                {
-                    var readonlyEndpoint = endpoints.ReadOnlyEndpointFor(ia.Association.RemoteAddress);
-                    var handle =  ia.Association.AsInstanceOf<AkkaProtocolHandle>();
-                    if (readonlyEndpoint != null)
-                    {
-                        if(pendingReadHandoffs.ContainsKey(readonlyEndpoint)) pendingReadHandoffs[readonlyEndpoint].Disassociate();
-                        pendingReadHandoffs.AddOrSet(readonlyEndpoint, handle);
-                        readonlyEndpoint.Tell(new EndpointWriter.TakeOver(handle));
-                    }
-                    else
-                    {
-                        if (endpoints.IsQuarantined(handle.RemoteAddress, (int) handle.HandshakeInfo.Uid))
-                            handle.Disassociate(DisassociateInfo.Quarantined);
-                        else
-                        {
-                            endpoints.WritableEndpointWithPolicyFor(handle.RemoteAddress).Match()
-                                .With<Pass>(pass =>
-                                {
-                                    if (!pass.Uid.HasValue)
-                                    {
-                                        if(stashedInbound.ContainsKey(pass.Endpoint)) stashedInbound[pass.Endpoint].Add(ia);
-                                        else stashedInbound.AddOrSet(pass.Endpoint, new List<InboundAssociation>(){ ia });
-                                    }
-                                    else
-                                    {
-                                        if (handle.HandshakeInfo.Uid == pass.Uid)
-                                        {
-                                            if (pendingReadHandoffs.ContainsKey(pass.Endpoint))
-                                                pendingReadHandoffs[pass.Endpoint].Disassociate();
-                                            pendingReadHandoffs.AddOrSet(pass.Endpoint, handle);
-                                            pass.Endpoint.Tell(new EndpointWriter.StoppedReading(pass.Endpoint));
-                                        }
-                                        else
-                                        {
-                                            Context.Stop((InternalActorRef)pass.Endpoint);
-                                            endpoints.UnregisterEndpoint(pass.Endpoint);
-                                            pendingReadHandoffs.Remove(pass.Endpoint);
-                                            CreateAndRegisterEndpoint(handle, pass.Uid);
-                                        }
-                                    }
-                                })
-                                .Default(state => CreateAndRegisterEndpoint(handle, null));
-                        }
-                    }
-                })
+                .With<InboundAssociation>(HandleInboundAssociation)
                 .With<EndpointWriter.StoppedReading>(endpoint => AcceptPendingReader(endpoint.Writer))
                 .With<Terminated>(terminated =>
                 {
                     AcceptPendingReader(terminated.ActorRef);
                     endpoints.UnregisterEndpoint(terminated.ActorRef);
-                    stashedInbound.Remove(terminated.ActorRef);
+                    HandleStashedInbound(terminated.ActorRef);
                 })
                 .With<EndpointWriter.TookOver>(tookover => RemovePendingReader(tookover.Writer, tookover.ProtocolHandle))
                 .With<ReliableDeliverySupervisor.GotUid>(gotuid =>
                 {
                     endpoints.RegisterWritableEndpointUid(Sender, gotuid.Uid);
-                    if (stashedInbound.ContainsKey(Sender))
-                    {
-                        foreach (var msg in stashedInbound[Sender])
-                        {
-                            Sender.Tell(msg);
-                        }
-                    }
-                    stashedInbound.Remove(Sender);
+                    HandleStashedInbound(Sender);
                 })
                 .With<Prune>(prune => endpoints.Prune())
                 .With<ShutdownAndFlush>(shutdown =>
@@ -610,6 +558,64 @@ namespace Akka.Remote
         #endregion
 
         #region Internal methods
+
+        private void HandleInboundAssociation(InboundAssociation ia)
+        {
+            var readonlyEndpoint = endpoints.ReadOnlyEndpointFor(ia.Association.RemoteAddress);
+            var handle = ia.Association.AsInstanceOf<AkkaProtocolHandle>();
+            if (readonlyEndpoint != null)
+            {
+                if (pendingReadHandoffs.ContainsKey(readonlyEndpoint)) pendingReadHandoffs[readonlyEndpoint].Disassociate();
+                pendingReadHandoffs.AddOrSet(readonlyEndpoint, handle);
+                readonlyEndpoint.Tell(new EndpointWriter.TakeOver(handle));
+            }
+            else
+            {
+                if (endpoints.IsQuarantined(handle.RemoteAddress, (int)handle.HandshakeInfo.Uid))
+                    handle.Disassociate(DisassociateInfo.Quarantined);
+                else
+                {
+                    endpoints.WritableEndpointWithPolicyFor(handle.RemoteAddress).Match()
+                        .With<Pass>(pass =>
+                        {
+                            if (!pass.Uid.HasValue)
+                            {
+                                if (stashedInbound.ContainsKey(pass.Endpoint)) stashedInbound[pass.Endpoint].Add(ia);
+                                else stashedInbound.AddOrSet(pass.Endpoint, new List<InboundAssociation>() { ia });
+                            }
+                            else
+                            {
+                                if (handle.HandshakeInfo.Uid == pass.Uid)
+                                {
+                                    if (pendingReadHandoffs.ContainsKey(pass.Endpoint))
+                                        pendingReadHandoffs[pass.Endpoint].Disassociate();
+                                    pendingReadHandoffs.AddOrSet(pass.Endpoint, handle);
+                                    pass.Endpoint.Tell(new EndpointWriter.StoppedReading(pass.Endpoint));
+                                }
+                                else
+                                {
+                                    Context.Stop((InternalActorRef)pass.Endpoint);
+                                    endpoints.UnregisterEndpoint(pass.Endpoint);
+                                    pendingReadHandoffs.Remove(pass.Endpoint);
+                                    CreateAndRegisterEndpoint(handle, pass.Uid);
+                                }
+                            }
+                        })
+                        .Default(state =>
+                        {
+                            CreateAndRegisterEndpoint(handle, null);
+                        });
+                }
+            }
+        }
+
+        private void HandleStashedInbound(ActorRef endpoint)
+        {
+            var stashed = stashedInbound.GetOrElse(endpoint, new List<InboundAssociation>());
+            stashedInbound.Remove(endpoint);
+            foreach(var ia in stashed)
+                HandleInboundAssociation(ia);
+        }
 
         private Task<List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>>>
             _listens;

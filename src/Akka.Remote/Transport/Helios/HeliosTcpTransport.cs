@@ -51,8 +51,8 @@ namespace Akka.Remote.Transport.Helios
 
         protected override void RegisterListener(IConnection channel, IHandleEventListener listener, NetworkData msg, INode remoteAddress)
         {
-            BindEvents(channel);
             ChannelLocalActor.Set(channel, listener);
+            BindEvents(channel);
         }
 
         protected override AssociationHandle CreateHandle(IConnection channel, Address localAddress, Address remoteAddress)
@@ -100,8 +100,6 @@ namespace Akka.Remote.Transport.Helios
 
         protected void InitInbound(IConnection connection, INode remoteSocketAddress, NetworkData msg)
         {
-            BindEvents(connection);
-            //connection.StopReceive();
             _associationListenerTask.ContinueWith(r =>
             {
                 var listener = r.Result;

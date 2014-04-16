@@ -141,7 +141,8 @@ namespace Akka.Remote.Tests
         public void Remoting_must_support_remote_lookups()
         {
             here.Tell("ping", testActor);
-            expectMsg(Tuple.Create("pong", testActor), TimeSpan.FromSeconds(1.5));
+            expectMsg(Tuple.Create("pong", testActor));
+           // expectMsg(Tuple.Create("pong", testActor), TimeSpan.FromSeconds(1.5));
         }
 
         [TestMethod]
