@@ -148,7 +148,10 @@ namespace Akka.Remote.Tests
         [TestMethod]
         public async Task Remoting_must_support_Ask()
         {
-            var msg = await here.Ask<Tuple<string,ActorRef>>("ping", TimeSpan.FromSeconds(1500));
+            //TODO: using smaller numbers for the cancellation here causes a bug.
+            //the remoting layer uses some "initialdelay task.delay" for 4 seconds.
+            //so the token is cancelled before the delay completed.. 
+            var msg = await here.Ask<Tuple<string,ActorRef>>("ping", TimeSpan.FromSeconds(10));
             Assert.AreEqual("pong", msg.Item1);
             Assert.IsInstanceOfType(msg.Item2, typeof(FutureActorRef));
         }
