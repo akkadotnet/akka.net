@@ -151,7 +151,7 @@ namespace Akka.Remote.Tests
             //TODO: using smaller numbers for the cancellation here causes a bug.
             //the remoting layer uses some "initialdelay task.delay" for 4 seconds.
             //so the token is cancelled before the delay completed.. 
-            var msg = await here.Ask<Tuple<string,ActorRef>>("ping", TimeSpan.FromSeconds(10));
+            var msg = await here.Ask<Tuple<string,ActorRef>>("ping", TimeSpan.FromSeconds(1.5));
             Assert.AreEqual("pong", msg.Item1);
             Assert.IsInstanceOfType(msg.Item2, typeof(FutureActorRef));
         }
