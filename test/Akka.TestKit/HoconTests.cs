@@ -369,6 +369,62 @@ a.b.e.f=3
             var hocon = @"a=""""""hello""""""";
             Assert.AreEqual("hello", ConfigurationFactory.ParseString(hocon).GetString("a"));
         }
+
+        [TestMethod]
+        public void CanUseFallback()
+        {
+            var hocon1 = @"
+foo {
+   bar {
+      a=123
+   }
+}";
+            var hocon2 = @"
+foo {
+   bar {
+      a=1
+      b=2
+      c=3
+   }
+}";
+
+            var config1 = ConfigurationFactory.ParseString(hocon1);
+            var config2 = ConfigurationFactory.ParseString(hocon2);
+
+            var config = config1.WithFallback(config2);
+
+            Assert.AreEqual(123, config.GetInt("foo.bar.a"));
+            Assert.AreEqual(2, config.GetInt("foo.bar.b"));
+            Assert.AreEqual(3, config.GetInt("foo.bar.c"));
+        }
+
+        [TestMethod]
+        public void CanUseFallbackInSubConfig()
+        {
+            var hocon1 = @"
+foo {
+   bar {
+      a=123
+   }
+}";
+            var hocon2 = @"
+foo {
+   bar {
+      a=1
+      b=2
+      c=3
+   }
+}";
+
+            var config1 = ConfigurationFactory.ParseString(hocon1);
+            var config2 = ConfigurationFactory.ParseString(hocon2);
+
+            var config = config1.WithFallback(config2).GetConfig("foo.bar");
+
+            Assert.AreEqual(123, config.GetInt("a"));
+            Assert.AreEqual(2, config.GetInt("b"));
+            Assert.AreEqual(3, config.GetInt("c"));
+        }
     }
 }
 

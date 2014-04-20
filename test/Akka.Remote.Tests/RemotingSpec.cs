@@ -116,7 +116,11 @@ namespace Akka.Remote.Tests
         public override void Setup()
         {
             base.Setup();
-            var conf = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
+            var c1 = ConfigurationFactory.ParseString(GetConfig());
+            var c2 = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
+
+
+            var conf = c2.WithFallback(c1);  //ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
 
             remoteSystem = ActorSystem.Create("remote-sys", conf);
             Deploy(sys, new Deploy(@"/gonk", new RemoteScope(Addr(remoteSystem, "tcp"))));
