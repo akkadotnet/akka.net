@@ -116,7 +116,11 @@ namespace Akka.Remote.Tests
         public override void Setup()
         {
             base.Setup();
-            var conf = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
+            var c1 = ConfigurationFactory.ParseString(GetConfig());
+            var c2 = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
+
+
+            var conf = c2.WithFallback(c1);  //ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
 
             remoteSystem = ActorSystem.Create("remote-sys", conf);
             Deploy(sys, new Deploy(@"/gonk", new RemoteScope(Addr(remoteSystem, "tcp"))));
@@ -150,7 +154,7 @@ namespace Akka.Remote.Tests
             //TODO: using smaller numbers for the cancellation here causes a bug.
             //the remoting layer uses some "initialdelay task.delay" for 4 seconds.
             //so the token is cancelled before the delay completed.. 
-            var msg = await here.Ask<Tuple<string,ActorRef>>("ping", TimeSpan.FromSeconds(10));
+            var msg = await here.Ask<Tuple<string,ActorRef>>("ping", TimeSpan.FromSeconds(1.5));
             Assert.AreEqual("pong", msg.Item1);
             Assert.IsInstanceOfType(msg.Item2, typeof(FutureActorRef));
         }
