@@ -110,14 +110,14 @@ namespace Akka.Remote
                 {
                     log.Error(
                         "Dropping message [{0}] for non-local recipient [{1}] arriving at [{2}] inbound addresses [{3}]",
-                        payloadClass, recipient, string.Join(",", provider.Transport.Addresses));
+                        payloadClass, recipient, recipientAddress, string.Join(",", provider.Transport.Addresses));
                 }
             }
             else
             {
                 log.Error(
                         "Dropping message [{0}] for non-local recipient [{1}] arriving at [{2}] inbound addresses [{3}]",
-                        payloadClass, recipient, string.Join(",", provider.Transport.Addresses));
+                        payloadClass, recipient, recipientAddress, string.Join(",", provider.Transport.Addresses));
             }
         }
     }
