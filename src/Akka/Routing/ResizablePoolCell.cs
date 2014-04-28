@@ -31,9 +31,9 @@ namespace Akka.Routing
         /// <summary>
         /// must always use ResizeInProgressState static class to compare or assign values
         /// </summary>
-        private volatile int resizeInProgress;
-        private long resizeCounter;
-        private Pool pool;
+        private int _resizeInProgress;
+        private long _resizeCounter;
+        private Pool _pool;
 
         public ResizablePoolCell(ActorSystem system, InternalActorRef supervisor, Props routerProps,
             Props routeeProps, ActorPath path, Mailbox mailbox, Pool pool)
@@ -43,15 +43,15 @@ namespace Akka.Routing
                 throw new ArgumentException("RouterConfig must be a Pool with defined resizer");
 
             resizer = pool.Resizer;
-            this.pool = pool;
-            this.resizeCounter = 0;
-            this.resizeInProgress = ResizeInProgressState.False;
+            this._pool = pool;
+            this._resizeCounter = 0;
+            this._resizeInProgress = ResizeInProgressState.False;
         }
 
         protected override void PreStart()
         {
             // initial resize, before message send
-            if (resizer.IsTimeForResize(Interlocked.Increment(ref resizeCounter) - 1))
+            if (resizer.IsTimeForResize(Interlocked.Increment(ref _resizeCounter) - 1))
             {
                 Resize(true);
             }
@@ -61,8 +61,8 @@ namespace Akka.Routing
         internal override void Post(ActorRef sender, object message)
         {
             if (!(RouterConfig.IsManagementMessage(message)) &&
-                resizer.IsTimeForResize(Interlocked.Increment(ref resizeCounter) - 1) &&
-                Interlocked.Exchange(ref resizeInProgress, ResizeInProgressState.True) == ResizeInProgressState.False)
+                resizer.IsTimeForResize(Interlocked.Increment(ref _resizeCounter) - 1) &&
+                Interlocked.Exchange(ref _resizeInProgress, ResizeInProgressState.True) == ResizeInProgressState.False)
             {
                 base.Post(Self, new Resize());
                 
@@ -72,7 +72,7 @@ namespace Akka.Routing
 
         internal void Resize(bool initial)
         {
-            if (resizeInProgress == ResizeInProgressState.True || initial)
+            if (_resizeInProgress == ResizeInProgressState.True || initial)
                 try
                 {
                     var requestedCapacity = resizer.Resize(Router.Routees);
@@ -81,7 +81,7 @@ namespace Akka.Routing
                         var newRoutees = new List<Routee>();
                         for (var i = 0; i < requestedCapacity; i++)
                         {
-                            newRoutees.Add(pool.NewRoutee(RouteeProps, this));
+                            newRoutees.Add(_pool.NewRoutee(RouteeProps, this));
                         }
                         AddRoutees(newRoutees.ToArray());
                     }
@@ -98,7 +98,7 @@ namespace Akka.Routing
                 }
                 finally
                 {
-                    resizeInProgress = ResizeInProgressState.False;
+                    _resizeInProgress = ResizeInProgressState.False;
                 }
         }
     }

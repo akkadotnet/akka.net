@@ -61,6 +61,7 @@ namespace Akka.Dispatch
         /// <summary>
         ///     The has unscheduled messages
         /// </summary>
+// ReSharper disable once InconsistentNaming
         protected volatile bool hasUnscheduledMessages;
 
         internal bool HasUnscheduledMessages
@@ -74,7 +75,8 @@ namespace Akka.Dispatch
         /// <summary>
         ///     The status
         /// </summary>
-        protected volatile int status;
+// ReSharper disable once InconsistentNaming
+        protected int status;
 
         internal int Status
         {
@@ -152,23 +154,23 @@ namespace Akka.Dispatch
         /// <summary>
         ///     The system messages
         /// </summary>
-        private readonly ConcurrentQueue<Envelope> systemMessages = new ConcurrentQueue<Envelope>();
+        private readonly ConcurrentQueue<Envelope> _systemMessages = new ConcurrentQueue<Envelope>();
 
         /// <summary>
         ///     The user messages
         /// </summary>
-        private readonly ConcurrentQueue<Envelope> userMessages = new ConcurrentQueue<Envelope>();
+        private readonly ConcurrentQueue<Envelope> _userMessages = new ConcurrentQueue<Envelope>();
 
         /// <summary>
         ///     The dead line timer
         /// </summary>
-        private Stopwatch deadLineTimer;
+        private Stopwatch _deadLineTimer;
 
 
         /// <summary>
         ///     The is closed
         /// </summary>
-        private volatile bool isClosed;
+        private volatile bool _isClosed;
 
 
         /// <summary>
@@ -176,7 +178,7 @@ namespace Akka.Dispatch
         /// </summary>
         private void Run()
         {
-            if (isClosed)
+            if (_isClosed)
             {
                 return;
             }
@@ -186,13 +188,13 @@ namespace Akka.Dispatch
                 //if ThroughputDeadlineTime is enabled, start a stopwatch
                 if (dispatcher.ThroughputDeadlineTime.HasValue)
                 {
-                    if (deadLineTimer != null)
+                    if (_deadLineTimer != null)
                     {
-                        deadLineTimer.Restart();
+                        _deadLineTimer.Restart();
                     }
                     else
                     {
-                        deadLineTimer = Stopwatch.StartNew();
+                        _deadLineTimer = Stopwatch.StartNew();
                     }
                 }
 
@@ -201,7 +203,7 @@ namespace Akka.Dispatch
                 Envelope envelope;
 
                 //start with system messages, they have the highest priority
-                while (systemMessages.TryDequeue(out envelope))
+                while (_systemMessages.TryDequeue(out envelope))
                 {
                     ActorCell.SystemInvoke(envelope);
                 }
@@ -210,27 +212,27 @@ namespace Akka.Dispatch
                 int left = dispatcher.Throughput;
 
                 //try dequeue a user message
-                while (userMessages.TryDequeue(out envelope))
+                while (_userMessages.TryDequeue(out envelope))
                 {
                     //run the receive handler
                     ActorCell.Invoke(envelope);
 
                     //check if any system message have arrived while processing user messages
-                    if (systemMessages.TryDequeue(out envelope))
+                    if (_systemMessages.TryDequeue(out envelope))
                     {
                         //handle system message
                         ActorCell.SystemInvoke(envelope);
                         break;
                     }
                     left--;
-                    if (isClosed)
+                    if (_isClosed)
                         return;
 
                     //if deadline time have expired, stop and break
                     if (dispatcher.ThroughputDeadlineTime.HasValue &&
-                        deadLineTimer.ElapsedTicks > dispatcher.ThroughputDeadlineTime.Value)
+                        _deadLineTimer.ElapsedTicks > dispatcher.ThroughputDeadlineTime.Value)
                     {
-                        deadLineTimer.Stop();
+                        _deadLineTimer.Stop();
                         break;
                     }
 
@@ -242,7 +244,7 @@ namespace Akka.Dispatch
                 }
 
                 //there are still messages that needs to be processed
-                if (userMessages.Count > 0)
+                if (_userMessages.Count > 0)
                 {
                     hasUnscheduledMessages = true;
                 }
@@ -277,17 +279,17 @@ namespace Akka.Dispatch
         /// <param name="envelope">The envelope.</param>
         public override void Post(Envelope envelope)
         {
-            if (isClosed)
+            if (_isClosed)
                 return;
 
             hasUnscheduledMessages = true;
             if (envelope.Message is SystemMessage)
             {
-                systemMessages.Enqueue(envelope);
+                _systemMessages.Enqueue(envelope);
             }
             else
             {
-                userMessages.Enqueue(envelope);
+                _userMessages.Enqueue(envelope);
             }
 
             Schedule();
@@ -298,7 +300,7 @@ namespace Akka.Dispatch
         /// </summary>
         public override void Stop()
         {
-            isClosed = true;
+            _isClosed = true;
         }
 
         /// <summary>
@@ -306,13 +308,13 @@ namespace Akka.Dispatch
         /// </summary>
         public override void Dispose()
         {
-            isClosed = true;
+            _isClosed = true;
         }
 
 
         protected override int GetNumberOfMessages()
         {
-            return userMessages.Count;
+            return _userMessages.Count;
         }
     }
 
