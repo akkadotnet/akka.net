@@ -234,6 +234,7 @@ task :akka_remote_symbol_src_nuget_output => [:create_output_folders] do |out|
     src = File.join(Folders[:src], Projects[:akka_remote][:dir])
     dest = Folders[:akka_remote_symbol_nuspec][:src]
     FileUtils.cp_r Dir.glob(src + '/*.cs'), dest
+    FileUtils.cp_r File.join(src, "Configuration"), dest
     FileUtils.cp_r File.join(src, "Proto"), dest
     FileUtils.cp_r File.join(src, "Properties"), dest
     FileUtils.cp_r File.join(src, "Serialization"), dest

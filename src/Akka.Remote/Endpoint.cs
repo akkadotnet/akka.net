@@ -1336,10 +1336,8 @@ namespace Akka.Remote
                 case DisassociateInfo.Quarantined:
                     throw new InvalidAssociation(LocalAddress, RemoteAddress, new InvalidAssociationException("The remote system has quarantined this system. No further associations " +
                                                                                                               "to the remote system are possible until this system is restarted."));
-                    break;
                 case DisassociateInfo.Shutdown:
                     throw new ShutDownAssociation(LocalAddress, RemoteAddress, new InvalidAssociationException("The remote system terminated the association because it is shutting down."));
-                    break;
                 case DisassociateInfo.Unknown:
                 default:
                     Context.Stop(Self);
