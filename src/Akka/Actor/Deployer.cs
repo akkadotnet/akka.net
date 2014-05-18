@@ -240,8 +240,8 @@ namespace Akka.Actor
                     set = _deployments.CompareAndSet(w, w.Insert(path.GetEnumerator(), d));
                 } while(!set);
             };
-
-            add(deploy.Path.Split('/').Drop(1).ToList(), deploy);
+            var elements = deploy.Path.Split('/').Drop(1).ToList();
+            add(elements, deploy);
         }
 
         protected virtual Deploy ParseConfig(string key)
