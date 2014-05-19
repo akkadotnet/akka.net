@@ -33,6 +33,10 @@ akka {
     }
 
     remote {
+		log-received-messages = on
+		log-sent-messages = on
+        #log-remote-lifecycle-events = on
+
         #this is the new upcoming remoting support, which enables multiple transports
        helios.tcp {
             transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
@@ -43,6 +47,7 @@ akka {
         }
         log-remote-lifecycle-events = INFO
     }
+
 }
 ");
             using (var system = ActorSystem.Create("MyServer", config)) 
