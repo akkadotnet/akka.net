@@ -162,7 +162,6 @@ namespace Akka.Remote.Tests
         [TestMethod]
         public void Remoting_must_create_and_supervise_children_on_remote_Node()
         {
-            //TODO: is this a remote deploy bug? we are missing /user prefix?a
             var r = sys.ActorOf<Echo1>("blub");
             Assert.AreEqual("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/blub", r.Path.ToString());
         }

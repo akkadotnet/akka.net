@@ -163,7 +163,7 @@ namespace Akka.Remote
             var localAddress = Transport.LocalAddressForRemote(addr);
 
             var rpath = (new RootActorPath(addr)/"remote"/localAddress.Protocol/localAddress.HostPort()/
-                               path.Elements.Drop(1).ToArray()).
+                               path.Elements.ToArray()).
                 WithUid(path.Uid);
             var remoteRef = new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, d);
             remoteRef.Start();
