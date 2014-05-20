@@ -203,8 +203,8 @@ namespace Akka.Remote.Transport.Helios
                     .SetOption("tcpNoDelay", Settings.TcpNoDelay)
                     .SetOption("connectTimeout", Settings.ConnectTimeout)
                     .SetOption("backlog", Settings.Backlog)
-                    .SetEncoder(new LengthFieldPrepender(4,false))
-                    .SetDecoder(new LengthFieldFrameBasedDecoder(Settings.MaxFrameSize,0,4,0,0,true))
+                    .SetEncoder(new LengthFieldPrepender(4, false))
+                    .SetDecoder(new LengthFieldFrameBasedDecoder(Settings.MaxFrameSize, 0, 4, 0, 0, true))
                     .Build());
             }
         }
