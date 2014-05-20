@@ -6,6 +6,7 @@ using Google.ProtocolBuffers;
 using Helios.Exceptions;
 using Helios.Net;
 using Helios.Ops;
+using Helios.Serialization;
 using Helios.Topology;
 
 namespace Akka.Remote.Transport.Helios
@@ -136,7 +137,14 @@ namespace Akka.Remote.Transport.Helios
             return UnderlyingConnection.SendAsync(payload);
         }
 
+        public void InvokeReceiveIfNotNull(NetworkData data)
+        {
+            UnderlyingConnection.InvokeReceiveIfNotNull(data);
+        }
+
         public IEventLoop EventLoop { get { return UnderlyingConnection.EventLoop; } }
+        public IMessageEncoder Encoder { get { return UnderlyingConnection.Encoder; } }
+        public IMessageDecoder Decoder { get { return UnderlyingConnection.Decoder; } }
         public DateTimeOffset Created { get { return UnderlyingConnection.Created; } }
         public INode RemoteHost { get { return UnderlyingConnection.RemoteHost; } }
         public INode Local { get { return UnderlyingConnection.Local; } }
