@@ -34,14 +34,14 @@ If you want to include Akka.NET in your project, you can [install it directly fr
 To install Akka.NET Distributed Actor Framework, run the following command in the Package Manager Console
 
 ````
-PM> Install-Package Akka -Pre
-PM> Install-Package Akka.Remote -Pre
+PM> Install-Package Akka
+PM> Install-Package Akka.Remote
 ````
 
 And if you need F# support:
 
 ````
-PM> Install-Package Akka.FSharp -Pre
+PM> Install-Package Akka.FSharp
 ````
 
 #####Contribute
