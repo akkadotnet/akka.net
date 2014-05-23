@@ -76,7 +76,9 @@ namespace Akka.Remote.Transport.Helios
             TcpKeepAlive = Config.GetBoolean("tcp-keepalive");
             TcpReuseAddr = Config.GetBoolean("tcp-reuse-addr");
             var configHost = Config.GetString("hostname");
+            var publicConfigHost = Config.GetString("public-hostname");
             Hostname = string.IsNullOrEmpty(configHost) ? IPAddress.Any.ToString() : configHost;
+            PublicHostname = string.IsNullOrEmpty(publicConfigHost) ? configHost : publicConfigHost;
             ServerSocketWorkerPoolSize = ComputeWps(Config.GetConfig("server-socket-worker-pool"));
             ClientSocketWorkerPoolSize = ComputeWps(Config.GetConfig("client-socket-worker-pool"));
             Port = Config.GetInt("port");
@@ -108,7 +110,16 @@ namespace Akka.Remote.Transport.Helios
 
         public bool TcpReuseAddr { get; private set; }
 
+        /// <summary>
+        /// The hostname that this server binds to
+        /// </summary>
         public string Hostname { get; private set; }
+
+        /// <summary>
+        /// If different from <see cref="Hostname"/>, this is the public "address" that is bound to the <see cref="ActorSystem"/>,
+        /// whereas <see cref="Hostname"/> becomes the physical address that the low-level socket connects to.
+        /// </summary>
+        public string PublicHostname { get; private set; }
 
         public int ServerSocketWorkerPoolSize { get; private set; }
 
@@ -263,6 +274,7 @@ namespace Akka.Remote.Transport.Helios
         public override Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen()
         {
             var listenAddress = NodeBuilder.BuildNode().Host(Settings.Hostname).WithPort(Settings.Port);
+            var publicAddress = NodeBuilder.BuildNode().Host(Settings.PublicHostname).WithPort(Settings.Port);
             var newServerChannel = NewServer(listenAddress);
             newServerChannel.Open();
 
@@ -271,7 +283,7 @@ namespace Akka.Remote.Transport.Helios
             ConnectionGroup.TryAdd(newServerChannel);
             ServerChannel = newServerChannel;
 
-            var addr = NodeToAddress(newServerChannel.Local, SchemeIdentifier, System.Name, Settings.Hostname);
+            var addr = NodeToAddress(publicAddress, SchemeIdentifier, System.Name, Settings.PublicHostname);
             if(addr == null) throw new HeliosNodeException("Unknown local address type {0}", newServerChannel.Local);
             LocalAddress = addr;
             AssociationListenerPromise.Task.ContinueWith(result => ServerChannel.BeginReceive(),

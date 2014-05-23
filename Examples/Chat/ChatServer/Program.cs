@@ -43,7 +43,8 @@ akka {
 		    applied-adapters = []
 		    transport-protocol = tcp
 		    port = 8081
-		    hostname = localhost
+		    hostname = 0.0.0.0 #listens on ALL ips for this machine
+            public-hostname = localhost #but only accepts connections on localhost (usually 127.0.0.1)
         }
         log-remote-lifecycle-events = INFO
     }
