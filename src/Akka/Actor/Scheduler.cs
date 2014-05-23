@@ -153,6 +153,7 @@ namespace Akka.Actor
                 {
                     await Task.Delay(interval, token);
                 }
+                catch (TaskCanceledException) { }
                 catch (OperationCanceledException) {}
             }
         }
