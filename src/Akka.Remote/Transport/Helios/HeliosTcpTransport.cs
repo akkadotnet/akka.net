@@ -175,7 +175,8 @@ namespace Akka.Remote.Transport.Helios
 
         public override void Disassociate()
         {
-            _channel.Close();
+            if(!_channel.WasDisposed)
+                _channel.Close();
         }
     }
 
