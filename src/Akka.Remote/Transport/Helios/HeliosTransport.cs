@@ -7,6 +7,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Tools;
+using Helios.Buffers;
 using Helios.Exceptions;
 using Helios.Net;
 using Helios.Net.Bootstrap;
@@ -204,7 +205,7 @@ namespace Akka.Remote.Transport.Helios
                     .SetOption("connectTimeout", Settings.ConnectTimeout)
                     .SetOption("backlog", Settings.Backlog)
                     .SetEncoder(new LengthFieldPrepender(4, false))
-                    .SetDecoder(new LengthFieldFrameBasedDecoder(Settings.MaxFrameSize, 0, 4, 0, 0, true))
+                    .SetDecoder(new LengthFieldFrameBasedDecoder(Settings.MaxFrameSize, 0, 4, 0, 4, true))
                     .Build());
             }
         }
@@ -234,7 +235,7 @@ namespace Akka.Remote.Transport.Helios
                     .SetOption("connectTimeout", Settings.ConnectTimeout)
                     .SetOption("backlog", Settings.Backlog)
                     .SetEncoder(new LengthFieldPrepender(4, false))
-                    .SetDecoder(new LengthFieldFrameBasedDecoder(Settings.MaxFrameSize, 0, 4, 0, 0, true))
+                    .SetDecoder(new LengthFieldFrameBasedDecoder(Settings.MaxFrameSize, 0, 4, 0, 4, true))
                     .BufferSize(Settings.ReceiveBufferSize.HasValue
                         ? (int) Settings.ReceiveBufferSize.Value
                         : NetworkConstants.DEFAULT_BUFFER_SIZE)

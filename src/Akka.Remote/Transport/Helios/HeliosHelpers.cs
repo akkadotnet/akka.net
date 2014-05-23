@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Google.ProtocolBuffers;
+using Helios.Buffers;
 using Helios.Exceptions;
 using Helios.Net;
 using Helios.Ops;
@@ -132,19 +133,15 @@ namespace Akka.Remote.Transport.Helios
             UnderlyingConnection.Send(payload);
         }
 
-        public Task SendAsync(NetworkData payload)
+        public void Send(byte[] buffer, int index, int length, INode destination)
         {
-            return UnderlyingConnection.SendAsync(payload);
-        }
-
-        public void InvokeReceiveIfNotNull(NetworkData data)
-        {
-            UnderlyingConnection.InvokeReceiveIfNotNull(data);
+            UnderlyingConnection.Send(buffer, index, length, destination);
         }
 
         public IEventLoop EventLoop { get { return UnderlyingConnection.EventLoop; } }
         public IMessageEncoder Encoder { get { return UnderlyingConnection.Encoder; } }
         public IMessageDecoder Decoder { get { return UnderlyingConnection.Decoder; } }
+        public IByteBufAllocator Allocator { get { return UnderlyingConnection.Allocator; } }
         public DateTimeOffset Created { get { return UnderlyingConnection.Created; } }
         public INode RemoteHost { get { return UnderlyingConnection.RemoteHost; } }
         public INode Local { get { return UnderlyingConnection.Local; } }
