@@ -31,11 +31,11 @@ akka {
         }
 
         deployment {
-            /local {
+            /localactor {
                 router = round-robin-pool
                 nr-of-instances = 5
             }
-            /remote {
+            /remoteactor {
                 router = round-robin-pool
                 nr-of-instances = 5
                 remote = ""akka.tcp://system2@localhost:8080""
@@ -56,10 +56,10 @@ akka {
             using (var system = ActorSystem.Create("system1", config))
             {
                 //create a local group router (see config)
-                var local = system.ActorOf(Props.Create(() =>  new SomeActor("hello",123)),  "local");
+                var local = system.ActorOf(Props.Create(() =>  new SomeActor("hello",123)),  "localactor");
 
                 //create a remote deployed actor
-                var remote = system.ActorOf(Props.Create(() => new SomeActor(null, 123)), "remote");
+                var remote = system.ActorOf(Props.Create(() => new SomeActor(null, 123)), "remoteactor");
 
                 //these messages should reach the workers via the routed local ref
                 local.Tell("Local message 1");
