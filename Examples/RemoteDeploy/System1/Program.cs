@@ -10,6 +10,14 @@ using System.Threading.Tasks;
 
 namespace System1
 {
+    public class ReplyActor : UntypedActor
+    {
+
+        protected override void OnReceive(object message)
+        {
+            Console.WriteLine("Message from {0} - {1}",Sender.Path, message);
+        }
+    }
     class Program
     {
         static void Main(string[] args)
@@ -55,6 +63,7 @@ akka {
 ");
             using (var system = ActorSystem.Create("system1", config))
             {
+                var reply = system.ActorOf<ReplyActor>("reply");
                 //create a local group router (see config)
                 var local = system.ActorOf(Props.Create(() =>  new SomeActor("hello",123)),  "localactor");
 
@@ -62,18 +71,18 @@ akka {
                 var remote = system.ActorOf(Props.Create(() => new SomeActor(null, 123)), "remoteactor");
 
                 //these messages should reach the workers via the routed local ref
-                local.Tell("Local message 1");
-                local.Tell("Local message 2");
-                local.Tell("Local message 3");
-                local.Tell("Local message 4");
-                local.Tell("Local message 5");
+                local.Tell("Local message 1",reply);
+                local.Tell("Local message 2", reply);
+                local.Tell("Local message 3", reply);
+                local.Tell("Local message 4", reply);
+                local.Tell("Local message 5", reply);
 
                 //this should reach the remote deployed ref
-                remote.Tell("Remote message 1");
-                remote.Tell("Remote message 2");
-                remote.Tell("Remote message 3");
-                remote.Tell("Remote message 4");
-                remote.Tell("Remote message 5");
+                remote.Tell("Remote message 1", reply);
+                remote.Tell("Remote message 2", reply);
+                remote.Tell("Remote message 3", reply);
+                remote.Tell("Remote message 4", reply);
+                remote.Tell("Remote message 5", reply);
                 Console.ReadLine();
                 for (int i = 0; i < 10000; i++)
                 {
