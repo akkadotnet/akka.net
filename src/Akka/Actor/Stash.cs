@@ -11,7 +11,11 @@ namespace Akka.Actor
     {
 
         private IStash _stash = new BoundedStashImpl(Context);
-        public IStash CurrentStash { get; set; }
+
+        /// <summary>
+        /// The stash implementation available for this actor
+        /// </summary>
+        public IStash CurrentStash { get { return _stash; } set { _stash = value; } }
 
         /// <summary>
         /// Stashes the current message
@@ -91,7 +95,10 @@ namespace Akka.Actor
     public abstract class UntypedActorWithUnboundedStash : UntypedActor, WithUnboundedStash {
 
         private IStash _stash = new UnboundedStashImpl(Context);
-        public IStash CurrentStash { get; set; }
+        /// <summary>
+        /// The stash implementation available for this actor
+        /// </summary>
+        public IStash CurrentStash { get { return _stash; } set { _stash = value; } }
 
         /// <summary>
         /// Stashes the current message
