@@ -277,6 +277,7 @@ namespace Akka.Remote.Transport.Helios
             var publicAddress = NodeBuilder.BuildNode().Host(Settings.PublicHostname).WithPort(Settings.Port);
             var newServerChannel = NewServer(listenAddress);
             newServerChannel.Open();
+            publicAddress.Port = newServerChannel.Local.Port; //use the port assigned by the transport
 
             //Block reads until a handler actor is registered
             //TODO
