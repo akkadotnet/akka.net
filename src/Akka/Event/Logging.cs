@@ -420,6 +420,20 @@ namespace Akka.Event
         {
             return Event.LogLevel.ErrorLevel;
         }
+
+        /// <summary>
+        /// Modifies the <see cref="LogEvent"/> printable error stream to also include
+        /// the details of the <see cref="Cause"/> object itself.
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            var errorStr = string.Format("[{0}][{1}][Thread {2}][{3}] {4}", LogLevel().ToString().Replace("Level", "").ToUpperInvariant(), Timestamp, Thread.ManagedThreadId.ToString().PadLeft(4,'0'), LogSource, Message);
+            errorStr += Environment.NewLine + string.Format("Cause: {0}", Cause != null ? Cause.Message : "Unknown");
+            if (Cause != null)
+                errorStr += Environment.NewLine + string.Format("StackTrace: {0}", Cause.StackTrace);
+            return errorStr;
+        }
     }
 
     /// <summary>
@@ -461,7 +475,7 @@ namespace Akka.Event
 
     /// <summary>
     ///     Class InitializeLogger.
-    /// </summary>
+    /// </summary> 
     public class InitializeLogger : NoSerializationVerificationNeeded
     {
         /// <summary>
