@@ -125,7 +125,15 @@ namespace Akka.Remote
                 //Even if this actor is in RemoteScope, it might still be a local address
                 if (HasAddress(addr))
                 {
-                    return LocalActorOf(system, props, supervisor, path, false);
+                    //if (path.Elements.First() == "remote")
+                    //{
+                    //    //this is a remote deployed actor
+                        
+                    //}
+                    //else
+                    //{
+                        return LocalActorOf(system, props, supervisor, path, false);
+                   // }
                 }
 
                 return RemoteActorOf(system, props, supervisor, path);

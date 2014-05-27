@@ -265,10 +265,15 @@ namespace Akka.Actor
             }
 
 
-            if (props.Deploy != null && props.Deploy.Scope is RemoteScope)
-            {
-                throw new NotSupportedException("LocalActorRefProvider can not deploy remote");
-            }
+            //TODO: how should this be dealt with?
+            //akka simply passes the "deploy" var from remote daemon to ActorOf
+            //so it atleast seems like they ignore if remote scope is provided here.
+            //leaving this for now since it does work
+
+            //if (props.Deploy != null && props.Deploy.Scope is RemoteScope)
+            //{
+            //    throw new NotSupportedException("LocalActorRefProvider can not deploy remote");
+            //}
 
             if (props.RouterConfig is NoRouter || props.RouterConfig == null)
             {
