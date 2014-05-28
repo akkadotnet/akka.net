@@ -366,6 +366,19 @@ namespace Akka.Remote
             });
         }
 
+        protected override void PreStart()
+        {
+            if(PruneTimerCancelleable != null)
+                log.Debug("Starting prune timer for endpoint manager...");
+            base.PreStart();
+        }
+
+        protected override void PostStop()
+        {
+            if(PruneTimerCancelleable != null)
+                _pruneCancellationTokenSource.Cancel();
+        }
+
         protected override void OnReceive(object message)
         {
             message.Match()

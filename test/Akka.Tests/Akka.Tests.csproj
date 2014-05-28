@@ -94,6 +94,7 @@
     <Compile Include="Routing\ListenerSpec.cs" />
     <Compile Include="Routing\RoutingSpec.cs" />
     <Compile Include="Serialization\SerializationSpec.cs" />
+    <Compile Include="Tools\PatternSpec.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Akka\Akka.csproj">
