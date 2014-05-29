@@ -104,7 +104,7 @@ namespace Akka.Remote
             var supervisor = (InternalActorRef) message.Supervisor;
             Props props = message.Props;
             ActorPath childPath = ActorPath.Parse(message.Path);
-            IEnumerable<string> subPath = childPath.Elements.Drop(1);
+            IEnumerable<string> subPath = childPath.Elements;
             ActorPath path = Path/subPath;
             var localProps = props;//.WithDeploy(new Deploy(Scope.Local));
             InternalActorRef actor = System.Provider.ActorOf(System, localProps, supervisor, path);
