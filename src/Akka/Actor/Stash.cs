@@ -287,7 +287,7 @@ namespace Akka.Actor
             Self = Context.Self;
             TheStash = new LinkedList<Envelope>();
             ActorCell = context.AsInstanceOf<ActorCell>();
-            Capacity = 100;
+            Capacity = capacity;
         }
 
 

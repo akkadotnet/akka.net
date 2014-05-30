@@ -593,7 +593,10 @@ namespace Akka.Remote.Transport
             {
                 State<AssociationState, ProtocolStateData> nextState = null;
                 @event.FsmEvent.Match()
-                    .With<Disassociated>(d => nextState = Stop(new Failure(d.Info)))
+                    .With<Disassociated>(d =>
+                    {
+                        nextState = Stop(new Failure(d.Info));
+                    })
                     .With<InboundPayload>(ip =>
                     {
                         var pdu = DecodePdu(ip.Payload);
@@ -625,7 +628,10 @@ namespace Akka.Remote.Transport
                                         string.Format("Unhandled message in state Open(InboundPayload) with type {0}",
                                             msg));
                                 }))
-                            .Default(d => nextState = Stay());
+                            .Default(d =>
+                            {
+                                nextState = Stay();
+                            });
                     })
                     .With<HeartbeatTimer>(hrt => @event.StateData.Match()
                         .With<AssociatedWaitHandler>(awh => nextState = HandleTimers(awh.WrappedHandle))

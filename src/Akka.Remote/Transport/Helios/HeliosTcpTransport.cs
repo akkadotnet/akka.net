@@ -62,7 +62,11 @@ namespace Akka.Remote.Transport.Helios
 
         protected override void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
         {
-            ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Unknown));
+            if(cause != null && cause.Type == ExceptionType.Closed)
+                ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Shutdown));
+            else
+                ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Unknown));
+            ChannelLocalActor.Remove(closedChannel);
         }
 
         protected override void OnMessage(NetworkData data, IConnection responseChannel)
@@ -81,7 +85,7 @@ namespace Akka.Remote.Transport.Helios
 
         public override void Dispose()
         {
-            ChannelLocalActor.Remove(this);
+           
             ChannelLocalActor.Remove(UnderlyingConnection);
             base.Dispose();
         }
@@ -145,6 +149,11 @@ namespace Akka.Remote.Transport.Helios
         protected override void OnConnect(INode remoteAddress, IConnection responseChannel)
         {
             InitOutbound(responseChannel, remoteAddress, NetworkData.Create(Node.Empty(), new byte[0], 0));
+        }
+
+        protected override void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
+        {
+            base.OnDisconnect(cause, closedChannel);
         }
     }
 
