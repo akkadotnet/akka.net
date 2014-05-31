@@ -27,5 +27,11 @@ namespace Akka.Tests
             Interlocked.Increment(ref value);
             return value;
         }
+
+        public int GetAndAdd(int amount)
+        {
+            Interlocked.Add(ref value, amount);
+            return value;
+        }
     }
 }
