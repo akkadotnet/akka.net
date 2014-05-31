@@ -237,5 +237,22 @@ namespace Akka.Tests.Routing
             sys.Stop(router);
 
         }
+
+        [TestMethod]
+        public void Scatter_gather_router_must_be_started_when_constructed()
+        {
+             /*val routedActor = system.actorOf(Props[TestActor].withRouter(
+        ScatterGatherFirstCompletedRouter(routees = List(newActor(0)), within = 1 seconds)))
+      routedActor.isTerminated should be(false)*/
+
+            var routedActor = sys.ActorOf(Props.Create<TestActor>().WithRouter(new ScatterGatherFirstCompletedPool(1)));
+            routedActor.IsTerminated.ShouldBe(false);
+        }
+
+        [TestMethod]
+        public void Scatter_gather_router_must_deliver_a_broadcast_message_using_tell()
+        {
+
+        }
     }
 }
