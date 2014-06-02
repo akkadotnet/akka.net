@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Google.ProtocolBuffers;
 using Helios.Exceptions;
 using Helios.Net;
@@ -62,10 +63,15 @@ namespace Akka.Remote.Transport.Helios
 
         protected override void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
         {
-            if(cause != null && cause.Type == ExceptionType.Closed)
+            if(cause != null)
+                ChannelLocalActor.Notify(closedChannel, new UnderlyingTransportError(cause, "Undlerying transport closed."));
+            if (cause != null && cause.Type == ExceptionType.Closed)
                 ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Shutdown));
             else
+            {
                 ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Unknown));
+            }
+                
             ChannelLocalActor.Remove(closedChannel);
         }
 
@@ -79,8 +85,7 @@ namespace Akka.Remote.Transport.Helios
 
         protected override void OnException(Exception ex, IConnection erroredChannel)
         {
-            ChannelLocalActor.Notify(erroredChannel, new Disassociated(DisassociateInfo.Unknown));
-            erroredChannel.Close();
+            ChannelLocalActor.Notify(erroredChannel, new UnderlyingTransportError(ex, "Non-fatal network error occurred inside underlying transport"));
         }
 
         public override void Dispose()
