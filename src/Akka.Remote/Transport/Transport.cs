@@ -95,6 +95,21 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
+    /// The underlying transport reported a non-fatal error
+    /// </summary>
+    public sealed class UnderlyingTransportError : IHandleEvent
+    {
+        internal readonly Exception Cause;
+        internal readonly string Message;
+
+        public UnderlyingTransportError(Exception cause, string message)
+        {
+            Cause = cause;
+            Message = message;
+        }
+    }
+
+    /// <summary>
     /// Supertype of possible disassociation reasons
     /// </summary>
     public enum DisassociateInfo

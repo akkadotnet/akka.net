@@ -510,6 +510,11 @@ namespace Akka.Remote.Transport
                 State<AssociationState, ProtocolStateData> nextState = null;
 
                 @event.FsmEvent.Match()
+                    .With<UnderlyingTransportError>(e =>
+                    {
+                        PublishError(e);
+                        nextState = Stay();
+                    })
                     .With<Disassociated>(d =>
                     {
                         nextState = Stop(new Failure(d.Info));
@@ -593,6 +598,11 @@ namespace Akka.Remote.Transport
             {
                 State<AssociationState, ProtocolStateData> nextState = null;
                 @event.FsmEvent.Match()
+                    .With<UnderlyingTransportError>(e =>
+                    {
+                        PublishError(e);
+                        nextState = Stay();
+                    })
                     .With<Disassociated>(d =>
                     {
                         nextState = Stop(new Failure(d.Info));
@@ -862,6 +872,14 @@ namespace Akka.Remote.Transport
             {
                 throw new AkkaProtocolException("Error writing HEARTBEAT to transport", ex);
             }
+        }
+
+        /// <summary>
+        /// Publishes a transport error to the message stream
+        /// </summary>
+        private void PublishError(UnderlyingTransportError transportError)
+        {
+            _log.Error(transportError.Cause, transportError.Message);
         }
 
         #endregion
