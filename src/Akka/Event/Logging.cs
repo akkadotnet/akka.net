@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,7 +28,7 @@ namespace Akka.Event
         /// <exception cref="System.Exception">StandardOutLogged does not provide</exception>
         public override ActorRefProvider Provider
         {
-            get { throw new Exception("StandardOutLogged does not provide"); }
+            get { throw new Exception("StandardOutLogger does not provide"); }
         }
 
         /// <summary>
@@ -41,6 +42,30 @@ namespace Akka.Event
             if (message == null)
                 throw new ArgumentNullException("message");
             Console.WriteLine(message);
+        }
+    }
+
+    /// <summary>
+    /// TraceLogger - writes to System.Trace; useful for systems that use trace listeners.
+    /// 
+    /// To activate the TraceLogger, add loggers = [""Akka.Event.TraceLogger, Akka""] to your config
+    /// </summary>
+    public class TraceLogger : UntypedActor
+    {
+        protected override void OnReceive(object message)
+        {
+            PatternMatch.Match(message)
+                 .With<InitializeLogger>(m => Sender.Tell(new LoggerInitialized()))
+                 .With<Error>(m =>
+                      Trace.TraceError(m.ToString()))
+                  .With<Warning>(m => Trace.TraceWarning(m.ToString()))
+                 .With<DeadLetter>(m => Trace.TraceWarning(string.Format("Deadletter - unable to send message {0} from {1} to {2}", m.Message, m.Sender, m.Sender), typeof(DeadLetter).ToString()))
+                 .With<UnhandledMessage>(m => Trace.TraceWarning(string.Format("Unhandled message!"), typeof(UnhandledMessage).ToString()))
+                 .Default(m =>
+                 {
+                     if(m != null)
+                        Trace.TraceInformation(m.ToString());
+                 });
         }
     }
 
