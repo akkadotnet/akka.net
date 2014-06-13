@@ -113,6 +113,10 @@ namespace Akka.Actor
                     else if (element is SelectChildName)
                         Deliver(message, sender, pathIndex + 1,
                             withCell.GetSingleChild(element.AsInstanceOf<SelectChildName>().Name));
+                    else if (element is SelectChildPattern)
+                    {
+                        //TODO: implement pattern match
+                    }
                 }
                 else
                 {
