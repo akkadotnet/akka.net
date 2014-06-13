@@ -9,7 +9,7 @@ namespace Akka.Actor
         ActorRef Sender { get; }
         ActorSystem System { get; }
         InternalActorRef Parent { get; }
-        void Become(Receive receive);
+        void Become(Receive receive, bool discardOld = true);
         void Unbecome();
         InternalActorRef Child(string name);
         IEnumerable<InternalActorRef> GetChildren();
