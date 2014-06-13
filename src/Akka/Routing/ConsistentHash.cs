@@ -13,8 +13,13 @@ namespace Akka.Routing
 
     public class ConsistentHashableEnvelope : ConsistentHashable
     {
-        public object Message { get; set; }
-        public object HashKey { get; set; }
+        public ConsistentHashableEnvelope(object message,object hashKey)
+        {
+            this.Message = message;
+            this.HashKey = hashKey;
+        }
+        public object Message { get;private set; }
+        public object HashKey { get;private set; }
 
         public object ConsistentHashKey
         {
