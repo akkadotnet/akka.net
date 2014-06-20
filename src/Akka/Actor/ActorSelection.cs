@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
@@ -87,6 +89,17 @@ namespace Akka.Actor
                 sender = ActorCell.Current.Self;
 
             Deliver(message, sender, 0, Anchor);
+        }
+
+        public Task<ActorRef> ResolveOne(TimeSpan timeout)
+        {
+            return InnerResolveOne(timeout);
+        }
+
+        private async Task<ActorRef> InnerResolveOne(TimeSpan timeout)
+        {
+            var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout);
+            return identity.Subject;
         }
 
         /// <summary>
