@@ -38,12 +38,19 @@ namespace Akka.Tests.Actor
         }
 
         [TestMethod()]
-        public void CanResolveOne()
+        public async Task CanResolveOne()
         {
             var selection = sys.ActorSelection("user/test");
-            var one = selection.ResolveOne(TimeSpan.FromSeconds(1));
-            one.Wait();
+            var one = await selection.ResolveOne(TimeSpan.FromSeconds(1));            
             Assert.IsNotNull(one);
+        }
+
+        [TestMethod()]
+        [ExpectedException(typeof(ActorNotFoundException))]
+        public async Task CanNotResolveOneWhenNoMatch()
+        {
+            var selection = sys.ActorSelection("user/nonexisting");
+            var one = await selection.ResolveOne(TimeSpan.FromSeconds(1));            
         }
 
         #region Tests for verifying that ActorSelections made within an ActorContext can be resolved

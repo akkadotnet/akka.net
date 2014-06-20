@@ -98,9 +98,15 @@ namespace Akka.Actor
 
         private async Task<ActorRef> InnerResolveOne(TimeSpan timeout)
         {
-            //TODO: throw actor not found?
-            var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout);
-            return identity.Subject;
+            try
+            {
+                var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout);
+                return identity.Subject;
+            }
+            catch
+            {
+                throw new ActorNotFoundException();
+            }
         }
 
         /// <summary>

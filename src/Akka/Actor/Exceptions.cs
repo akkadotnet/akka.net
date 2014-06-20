@@ -89,4 +89,12 @@ namespace Akka.Actor
             this.optionalMessage = optionalMessage;
         }
     }
+
+
+    /// <summary>
+    /// Class ActorNotFoundException.
+    /// </summary>
+    public class ActorNotFoundException : AkkaException
+    {
+    }
 }
