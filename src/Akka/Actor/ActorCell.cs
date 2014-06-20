@@ -7,6 +7,7 @@ using System.Threading;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Serialization;
+using Akka.Tools;
 
 namespace Akka.Actor
 {
@@ -121,15 +122,19 @@ namespace Akka.Actor
             return children.Values.ToArray();
         }
 
-        public void Become(Receive receive)
+        public void Become(Receive receive, bool discardOld = true)
         {
+            if(discardOld && behaviorStack.Count > 1) //We should never pop off the initial receiver
+                behaviorStack.Pop();
             behaviorStack.Push(receive);
             ReceiveMessage = receive;
         }
 
         public void Unbecome()
         {
-            ReceiveMessage = behaviorStack.Pop();
+            if(behaviorStack.Count>1)   //We should never pop off the initial receiver
+                behaviorStack.Pop();
+            ReceiveMessage = behaviorStack.Peek();
         }
 
         /// <summary>
