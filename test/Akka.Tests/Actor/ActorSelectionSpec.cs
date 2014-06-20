@@ -37,6 +37,15 @@ namespace Akka.Tests.Actor
             Assert.AreEqual("hello", task.Result);
         }
 
+        [TestMethod()]
+        public void CanResolveOne()
+        {
+            var selection = sys.ActorSelection("user/test");
+            var one = selection.ResolveOne(TimeSpan.FromSeconds(1));
+            one.Wait();
+            Assert.IsNotNull(one);
+        }
+
         #region Tests for verifying that ActorSelections made within an ActorContext can be resolved
 
         /// <summary>
