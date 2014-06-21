@@ -510,6 +510,11 @@ namespace Akka.Remote.Transport
                 State<AssociationState, ProtocolStateData> nextState = null;
 
                 @event.FsmEvent.Match()
+                    .With<UnderlyingTransportError>(e =>
+                    {
+                        PublishError(e);
+                        nextState = Stay();
+                    })
                     .With<Disassociated>(d =>
                     {
                         nextState = Stop(new Failure(d.Info));
@@ -593,7 +598,15 @@ namespace Akka.Remote.Transport
             {
                 State<AssociationState, ProtocolStateData> nextState = null;
                 @event.FsmEvent.Match()
-                    .With<Disassociated>(d => nextState = Stop(new Failure(d.Info)))
+                    .With<UnderlyingTransportError>(e =>
+                    {
+                        PublishError(e);
+                        nextState = Stay();
+                    })
+                    .With<Disassociated>(d =>
+                    {
+                        nextState = Stop(new Failure(d.Info));
+                    })
                     .With<InboundPayload>(ip =>
                     {
                         var pdu = DecodePdu(ip.Payload);
@@ -625,7 +638,10 @@ namespace Akka.Remote.Transport
                                         string.Format("Unhandled message in state Open(InboundPayload) with type {0}",
                                             msg));
                                 }))
-                            .Default(d => nextState = Stay());
+                            .Default(d =>
+                            {
+                                nextState = Stay();
+                            });
                     })
                     .With<HeartbeatTimer>(hrt => @event.StateData.Match()
                         .With<AssociatedWaitHandler>(awh => nextState = HandleTimers(awh.WrappedHandle))
@@ -856,6 +872,14 @@ namespace Akka.Remote.Transport
             {
                 throw new AkkaProtocolException("Error writing HEARTBEAT to transport", ex);
             }
+        }
+
+        /// <summary>
+        /// Publishes a transport error to the message stream
+        /// </summary>
+        private void PublishError(UnderlyingTransportError transportError)
+        {
+            _log.Error(transportError.Cause, transportError.Message);
         }
 
         #endregion

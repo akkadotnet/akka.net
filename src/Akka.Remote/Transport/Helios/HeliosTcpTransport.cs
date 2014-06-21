@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Google.ProtocolBuffers;
 using Helios.Exceptions;
 using Helios.Net;
@@ -62,7 +63,16 @@ namespace Akka.Remote.Transport.Helios
 
         protected override void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
         {
-            ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Unknown));
+            if(cause != null)
+                ChannelLocalActor.Notify(closedChannel, new UnderlyingTransportError(cause, "Undlerying transport closed."));
+            if (cause != null && cause.Type == ExceptionType.Closed)
+                ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Shutdown));
+            else
+            {
+                ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Unknown));
+            }
+                
+            ChannelLocalActor.Remove(closedChannel);
         }
 
         protected override void OnMessage(NetworkData data, IConnection responseChannel)
@@ -75,13 +85,12 @@ namespace Akka.Remote.Transport.Helios
 
         protected override void OnException(Exception ex, IConnection erroredChannel)
         {
-            ChannelLocalActor.Notify(erroredChannel, new Disassociated(DisassociateInfo.Unknown));
-            erroredChannel.Close();
+            ChannelLocalActor.Notify(erroredChannel, new UnderlyingTransportError(ex, "Non-fatal network error occurred inside underlying transport"));
         }
 
         public override void Dispose()
         {
-            ChannelLocalActor.Remove(this);
+           
             ChannelLocalActor.Remove(UnderlyingConnection);
             base.Dispose();
         }
@@ -145,6 +154,11 @@ namespace Akka.Remote.Transport.Helios
         protected override void OnConnect(INode remoteAddress, IConnection responseChannel)
         {
             InitOutbound(responseChannel, remoteAddress, NetworkData.Create(Node.Empty(), new byte[0], 0));
+        }
+
+        protected override void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
+        {
+            base.OnDisconnect(cause, closedChannel);
         }
     }
 

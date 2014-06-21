@@ -152,16 +152,24 @@ namespace Akka.Actor
 
 
         /// <summary>
-        ///     Becomes the specified receive function.
+        /// Changes the Actor's behavior to become the new <see cref="Receive"/> handler.
+        /// This method acts upon the behavior stack as follows:
+        /// <para>if <paramref name="discardOld"/>==<c>true</c> it will replace the current behavior (i.e. the top element)</para>
+        /// <para>if <paramref name="discardOld"/>==<c>false</c> it will keep the current behavior and push the given one atop</para>
+        /// The default of replacing the current behavior on the stack has been chosen to avoid memory
+        /// leaks in case client code is written without consulting this documentation first (i.e.
+        /// always pushing new behaviors and never issuing an <see cref="Unbecome"/>)
         /// </summary>
-        /// <param name="receive">The receive.</param>
-        protected void Become(Receive receive)
+        /// <param name="receive">The receive delegate.</param>
+        /// <param name="discardOld">If <c>true</c> it will replace the current behavior; 
+        /// otherwise it will keep the current behavior and it can be reverted using <see cref="Unbecome"/></param>
+        protected void Become(Receive receive, bool discardOld = true)
         {
-            Context.Become(receive);
+            Context.Become(receive, discardOld);
         }
 
         /// <summary>
-        ///     Unbecomes the current receive function.
+        /// Reverts the Actor behavior to the previous one on the behavior stack.
         /// </summary>
         protected void Unbecome()
         {

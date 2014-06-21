@@ -75,6 +75,7 @@ namespace Akka.Actor
                 }
                 catch (Exception cause)
                 {
+                    Mailbox.Suspend();
                     Parent.Tell(new Failed(Self, cause));
                 }
 
@@ -221,6 +222,7 @@ namespace Akka.Actor
         /// <param name="obj">The object.</param>
         private void FaultResume(Resume obj)
         {
+            Mailbox.Resume();
         }
 
         /// <summary>
@@ -249,6 +251,7 @@ namespace Akka.Actor
         /// </summary>
         private void SuspendNonRecursive()
         {
+            Mailbox.Suspend();
         }
 
         /// <summary>
@@ -540,6 +543,7 @@ protected def terminate() {
                 behaviorStack.Clear(); //clear earlier behaviors
 
                 ActorBase created = Props.NewActor();
+                Mailbox.Resume();
                 //ActorBase will register itself as the actor of this context
 
                 if (System.Settings.DebugLifecycle)
