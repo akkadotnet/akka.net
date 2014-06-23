@@ -112,6 +112,20 @@ namespace Akka.Dispatch
             }
         }
 
+        protected volatile bool _isSuspended;
+
+        public void Suspend()
+        {
+            _isSuspended = true;
+        }
+
+        public void Resume()
+        {
+            _isSuspended = false;
+            Schedule();
+        }
+
+        protected abstract void Schedule();
     }
 
     ///// <summary>
@@ -212,7 +226,7 @@ namespace Akka.Dispatch
                 int left = dispatcher.Throughput;
 
                 //try dequeue a user message
-                while (_userMessages.TryDequeue(out envelope))
+                while (!_isSuspended && _userMessages.TryDequeue(out envelope))
                 {
                     //run the receive handler
                     ActorCell.Invoke(envelope);
@@ -244,7 +258,7 @@ namespace Akka.Dispatch
                 }
 
                 //there are still messages that needs to be processed
-                if (_userMessages.Count > 0)
+                if (_systemMessages.Count > 0 || (!_isSuspended && _userMessages.Count > 0))
                 {
                     hasUnscheduledMessages = true;
                 }
@@ -264,7 +278,7 @@ namespace Akka.Dispatch
         /// <summary>
         ///     Schedules this instance.
         /// </summary>
-        private void Schedule()
+        protected override void Schedule()
         {
             //only schedule if we idle
             if (Interlocked.Exchange(ref status, MailboxStatus.Busy) == MailboxStatus.Idle)

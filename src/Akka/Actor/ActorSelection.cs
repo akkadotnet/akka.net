@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
@@ -89,6 +91,24 @@ namespace Akka.Actor
             Deliver(message, sender, 0, Anchor);
         }
 
+        public Task<ActorRef> ResolveOne(TimeSpan timeout)
+        {
+            return InnerResolveOne(timeout);
+        }
+
+        private async Task<ActorRef> InnerResolveOne(TimeSpan timeout)
+        {
+            try
+            {
+                var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout);
+                return identity.Subject;
+            }
+            catch
+            {
+                throw new ActorNotFoundException();
+            }
+        }
+
         /// <summary>
         ///     Delivers the specified message.
         /// </summary>
@@ -113,6 +133,10 @@ namespace Akka.Actor
                     else if (element is SelectChildName)
                         Deliver(message, sender, pathIndex + 1,
                             withCell.GetSingleChild(element.AsInstanceOf<SelectChildName>().Name));
+                    else if (element is SelectChildPattern)
+                    {
+                        //TODO: implement pattern match
+                    }
                 }
                 else
                 {

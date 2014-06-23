@@ -101,13 +101,13 @@ namespace Akka.Remote
         /// <param name="message">The message.</param>
         private void HandleDaemonMsgCreate(DaemonMsgCreate message)
         {
-            //TODO: find out what format "Path" should have
             var supervisor = (InternalActorRef) message.Supervisor;
             Props props = message.Props;
             ActorPath childPath = ActorPath.Parse(message.Path);
-            IEnumerable<string> subPath = childPath.Elements.Drop(1);
+            IEnumerable<string> subPath = childPath.Elements;
             ActorPath path = Path/subPath;
-            InternalActorRef actor = System.Provider.ActorOf(System, props, supervisor, path);
+            var localProps = props;//.WithDeploy(new Deploy(Scope.Local));
+            InternalActorRef actor = System.Provider.ActorOf(System, localProps, supervisor, path);
             string childName = subPath.Join("/");
             AddChild(childName, actor);
             actor.Tell(new Watch(actor, this));

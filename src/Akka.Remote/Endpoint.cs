@@ -964,13 +964,16 @@ namespace Akka.Remote
                 }
             });
 
-            OnTermination(@event => @event.Match().With<StopEvent<State, bool>>(stop =>
+            OnTermination(@event => 
+              
+                @event.Match().With<StopEvent<State, bool>>(stop =>
             {
                 CancelTimer(AckIdleTimerName);
                 //It is important to call UnstashAll for the stash to work properly and maintain messages during restart.
-                //As the FSM trait does not call base.PostSto, this call is needed
+                //As the FSM trait does not call base.PostStop, this call is needed
                 CurrentStash.UnstashAll();
-                _handle.Disassociate(stopReason);
+                if(_handle != null) //if something went wrong during the association process, the handle might be null
+                    _handle.Disassociate(stopReason);
                 EventPublisher.NotifyListeners(new DisassociatedEvent(LocalAddress, RemoteAddress, Inbound));
             }));
         }

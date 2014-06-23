@@ -22,10 +22,12 @@ namespace Akka.Remote
             EndpointManager.EndpointPolicy existing;
             if (addressToWritable.TryGetValue(address, out existing))
             {
-                throw new ArgumentException("Attempting to overwrite existing endpoint " + existing + " with " + endpoint);
+                var gated = existing as EndpointManager.Gated;
+                if(gated != null && !gated.TimeOfRelease.IsOverdue) //don't throw if the prune timer didn't get a chance to run first
+                    throw new ArgumentException("Attempting to overwrite existing endpoint " + existing + " with " + endpoint);
             }
-            addressToWritable.Add(address, new EndpointManager.Pass(endpoint, uid));
-            writableToAddress.Add(endpoint, address);
+            addressToWritable.AddOrSet(address, new EndpointManager.Pass(endpoint, uid));
+            writableToAddress.AddOrSet(endpoint, address);
             return endpoint;
         }
 

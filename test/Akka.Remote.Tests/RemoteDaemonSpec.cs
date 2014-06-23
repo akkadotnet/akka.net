@@ -46,7 +46,6 @@ akka {
 ";
         }
 
-        [Ignore]
         [TestMethod]
         public void CanCreateActorUsingRemoteDaemonAndInteractWithChild()
         {
@@ -56,8 +55,10 @@ akka {
             var provider = (RemoteActorRefProvider)sys.Provider;
             var daemon = provider.RemoteDaemon;
 
+            var path = (sys.Guardian.Path + "/foo").ToString();
+
             //ask to create an actor MyRemoteActor, this actor has a child "child"
-            daemon.Tell(new DaemonMsgCreate(Props.Create(() => new MyRemoteActor()), null, "user/foo", supervisor));
+            daemon.Tell(new DaemonMsgCreate(Props.Create(() => new MyRemoteActor()), null,path, supervisor));
             //try to resolve the child actor "child"
             var child = provider.ResolveActorRef(provider.RootPath / "remote/user/foo/child".Split('/'));
             //pass a message to the child

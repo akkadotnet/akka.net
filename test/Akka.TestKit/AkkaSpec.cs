@@ -144,8 +144,11 @@ namespace Akka.Tests
             object t;
             if (queue.TryTake(out t, timeout))
             {
-                Assert.IsNotNull(t, "exected message {0} but timed out after {1}", expected, timeout);
                 Assert.AreEqual(expected, t);
+            }
+            else
+            {
+                Assert.Fail("exected message {0} but timed out after {1}", expected, timeout);
             }
 
             return t;
@@ -165,8 +168,11 @@ namespace Akka.Tests
             object t;
             if (queue.TryTake(out t, timeout))
             {
-                Assert.IsNotNull(t, "exected message {0} but timed out after {1}", expected, timeout);
                 Assert.IsTrue(comparer(expected, t));
+            }
+            else
+            {
+                Assert.Fail("exected message {0} but timed out after {1}", expected, timeout);
             }
 
             return t;
@@ -194,9 +200,12 @@ namespace Akka.Tests
             {
                 Assert.IsTrue(actual is TMessage, "expected message of type {0} but received {1} instead", typeof(TMessage), actual.GetType());
             }
+            else
+            {
+                Assert.Fail("expected message of type {0} but timed out after {1}", typeof(TMessage), timeout);
+            }
 
-            global::System.Diagnostics.Debug.WriteLine("actual: " + actual);
-            return (TMessage)actual;
+            return default(TMessage);
         }
 
         /// <summary>
