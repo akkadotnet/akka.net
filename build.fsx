@@ -100,7 +100,8 @@ Target "CopyOutput" <| fun _ ->
     [ "Akka"
       "Akka.Remote"
       "Akka.FSharp"
-      "Akka.slf4net" ]
+      "Akka.slf4net"
+      "Akka.NLog" ]
     |> List.iter copyOutput
 
 Target "BuildRelease" DoNothing
@@ -148,6 +149,7 @@ module Nuget =
         | "Akka.FSharp" -> "FSharp API support for Akka."
         | "Akka.Remote" -> "Remote actor support for Akka."
         | "Akka.slf4net" -> "slf4net logging adapter for Akka."
+        | "Akka.NLog" -> "NLog logging adapter for Akka."
         | _ -> description
 
 open Nuget
