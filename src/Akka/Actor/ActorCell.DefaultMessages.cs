@@ -65,19 +65,24 @@ namespace Akka.Actor
         /// <param name="envelope">The envelope.</param>
         public void Invoke(Envelope envelope)
         {
-            CurrentMessage = envelope.Message;
+            var message = envelope.Message;
+            CurrentMessage = message;
             Sender = envelope.Sender;
             //set the current context
 
-                try
-                {
+            try
+            {
+                var autoReceivedMessage = message as AutoReceivedMessage;
+                if(autoReceivedMessage!=null)
                     AutoReceiveMessage(envelope);
-                }
-                catch (Exception cause)
-                {
-                    Mailbox.Suspend();
-                    Parent.Tell(new Failed(Self, cause));
-                }
+                else
+                    ReceiveMessage(message);
+            }
+            catch(Exception cause)
+            {
+                Mailbox.Suspend();
+                Parent.Tell(new Failed(Self, cause));
+            }
 
         }
 
@@ -104,42 +109,32 @@ namespace Akka.Actor
         /// <param name="envelope">The envelope.</param>
         public void AutoReceiveMessage(Envelope envelope)
         {
-            object message = envelope.Message;
+            var message = envelope.Message;
 
-            if (message is AutoReceivedMessage)
+            var actor = Actor;
+            var actorType = actor != null ? actor.GetType() : null;
+
+            if(System.Settings.DebugAutoReceive)
+                Publish(new Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));
+
+            envelope.Message
+                .Match()
+                .With<Terminated>(ReceivedTerminated)
+                .With<Kill>(Kill)
+                .With<PoisonPill>(HandlePoisonPill)
+                .With<ActorSelectionMessage>(ReceiveSelection)
+                .With<Identify>(HandleIdentity);
+        }
+
+        internal void ReceiveMessage(object message)
+        {
+            var wasHandled = Actor.AroundReceive(behaviorStack.Peek(), message);
+
+            if(System.Settings.AddLoggingReceive && Actor is ILogReceive)
             {
-                Type actorType = null;
-                if (Actor != null)
-                    actorType = Actor.GetType();
-
-                if (System.Settings.DebugAutoReceive)
-                    Publish(new Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));
-
-                envelope.Message
-                    .Match()
-                    .With<Terminated>(ReceivedTerminated)
-                    .With<Kill>(Kill)
-                    .With<PoisonPill>(HandlePoisonPill)
-                    .With<ActorSelectionMessage>(ReceiveSelection)
-                    .With<Identify>(HandleIdentity);
-            }
-            else
-            {
-                if (System.Settings.AddLoggingReceive && Actor is ILogReceive)
-                {
-                    //TODO: akka alters the receive handler for logging, but the effect is the same. keep it this way?
-                    Func<object, bool> UnhandledLookup = Actor.GetUnhandled();
-
-                    ReceiveMessage(message);
-                    bool unhandled = UnhandledLookup(message);
-
-                    Publish(new Debug(Self.Path.ToString(), Actor.GetType(),
-                        "received " + (unhandled ? "unhandled" : "handled") + " message " + message));
-                }
-                else
-                {
-                    ReceiveMessage(message);
-                }
+                //TODO: akka alters the receive handler for logging, but the effect is the same. keep it this way?
+                Publish(new Debug(Self.Path.ToString(), Actor.GetType(),
+                    "received " + (wasHandled ? "handled" : "unhandled") + " message " + message));
             }
         }
 
@@ -271,17 +266,27 @@ namespace Akka.Actor
             //  }
             //}
             //if (childrenRefs.getByRef(actor).isDefined) handleChildTerminated(actor)
-            if (!isTerminating)
+            var actor = m.Actor;
+            if(WatchingContains(actor))
             {
-                //TODO: what params should be used for the bools?
+                watchees.Remove(actor);
+                if (!isTerminating)
+                {
+                    //TODO: what params should be used for the bools?
 
-                Self.Tell(new Terminated(m.Actor,true,false), m.Actor);
-                TerminatedQueueFor(m.Actor);
+                    Self.Tell(new Terminated(actor,true,false), actor);
+                    TerminatedQueueFor(actor);
+                }
             }
-            if (children.ContainsKey(m.Actor.Path.Name))
+            if (children.ContainsKey(actor.Path.Name))
             {
-                HandleChildTerminated(m.Actor);
+                HandleChildTerminated(actor);
             }
+        }
+
+        private bool WatchingContains(ActorRef actor)
+        {
+            return watchees.Contains(actor);
         }
 
         private void TerminatedQueueFor(ActorRef actorRef)

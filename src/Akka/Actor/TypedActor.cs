@@ -24,16 +24,16 @@ namespace Akka.Actor
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected override sealed void OnReceive(object message)
+        protected override sealed bool Receive(object message)
         {
             MethodInfo method = GetType().GetMethod("Handle", new[] {message.GetType()});
             if (method == null)
             {
-                Unhandled(message);
-                return;
+                return false;
             }
 
             method.Invoke(this, new[] {message});
+            return true;
         }
     }
 }

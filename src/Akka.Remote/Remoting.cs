@@ -260,7 +260,7 @@ namespace Akka.Remote
         public string Name { get; private set; }
     }
 
-    internal class TransportSupervisor : ActorBase
+    internal class TransportSupervisor : UntypedActor
     {
         private readonly SupervisorStrategy _strategy = new OneForOneStrategy(3, TimeSpan.FromMinutes(1), exception => Directive.Restart);
         protected override SupervisorStrategy SupervisorStrategy()

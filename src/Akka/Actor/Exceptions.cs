@@ -64,10 +64,23 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    ///     Class DeathPactException.
+    /// A DeathPactException is thrown by an Actor that receives a Terminated(someActor) message
+    /// that it doesn't handle itself, effectively crashing the Actor and escalating to the supervisor.
     /// </summary>
     public class DeathPactException : AkkaException
     {
+        private readonly ActorRef _deadActor;
+
+        public DeathPactException(ActorRef deadActor)
+            : base("Monitored actor [" + deadActor + "] terminated")
+        {
+            _deadActor = deadActor;
+        }
+
+        public ActorRef DeadActor
+        {
+            get { return _deadActor; }
+        }
     }
 
     /// <summary>

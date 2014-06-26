@@ -1,8 +1,8 @@
 ﻿namespace Akka.Actor
 {
     /// <summary>
-    ///     Delegate Receive
+    ///     Delegate UntypedReceive
     /// </summary>
     /// <param name="message">The message.</param>
-    public delegate void Receive(object message);
+    public delegate void UntypedReceive(object message);
 }
