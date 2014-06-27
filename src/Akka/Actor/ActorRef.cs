@@ -90,13 +90,23 @@ namespace Akka.Actor
         public string Path { get; private set; }
     }
 
+    internal static class ActorRefSender
+    {
+        public static readonly ActorRef NoSender = new NoSender();
+
+        public static ActorRef GetSelfOrNoSender()
+        {
+            var actorCell = ActorCell.Current;
+            return actorCell != null ? actorCell.Self : NoSender;
+        }
+    }
 
     public abstract class ActorRef : ICanTell
     {
 
         public static readonly Nobody Nobody = new Nobody();
         public static readonly ReservedActorRef Reserved = new ReservedActorRef();
-        public static readonly ActorRef NoSender = new NoSender();
+        public static readonly ActorRef NoSender = ActorRefSender.NoSender;
 
         public virtual ActorPath Path { get; protected set; }
 
@@ -125,6 +135,7 @@ namespace Akka.Actor
 
             Tell(message, sender);
         }
+
 
         protected abstract void TellInternal(object message, ActorRef sender);
 
