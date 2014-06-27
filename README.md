@@ -50,6 +50,6 @@ If you are interested in helping porting Akka to .NET please take a look at [Con
 Also, please see [Building Akka .NET](https://github.com/akkadotnet/akka.net/wiki/Building-and-Distributing-Pigeon).
 
 #####Contact
-Twitter: http://twitter.com/rogeralsing  (@rogeralsing)
+Twitter: http://twitter.com/akkadotnet  (@AkkaDotNet)
 
-Mail: rogeralsing@gmail.com
+Mail: akkadotnet@gmail.com
