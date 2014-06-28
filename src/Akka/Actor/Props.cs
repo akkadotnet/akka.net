@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Akka.Dispatch;
 using Akka.Reflection;
 using Akka.Routing;
 using Akka.Util;
@@ -41,7 +42,7 @@ namespace Akka.Actor
             Deploy =
                 new Deploy()
                 .WithMailbox("akka.actor.default-mailbox")
-                .WithDispatcher("akka.actor.default-dispatcher");
+                .WithDispatcher(Dispatchers.DefaultDispatcherId);
         }
 
         /// <summary>

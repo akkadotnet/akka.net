@@ -144,22 +144,26 @@ namespace Akka.Dispatch
     public class Dispatchers
     {
         /// <summary>
-        ///     The default dispatcher identifier
+        ///     The default dispatcher identifier, also the full key of the configuration of the default dispatcher.
         /// </summary>
-        public static string DefaultDispatcherId;
+        public readonly static string DefaultDispatcherId = "akka.actor.default-dispatcher";
 
-        /// <summary>
-        ///     The system
-        /// </summary>
-        private readonly ActorSystem system;
+        private readonly ActorSystem _system;
 
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="Dispatchers" /> class.
-        /// </summary>
+        private readonly MessageDispatcher _defaultGlobalDispatcher;
+
+        /// <summary>Initializes a new instance of the <see cref="Dispatchers" /> class.</summary>
         /// <param name="system">The system.</param>
         public Dispatchers(ActorSystem system)
         {
-            this.system = system;
+            _system = system;
+            _defaultGlobalDispatcher = FromConfig(DefaultDispatcherId);
+        }
+
+        /// <summary>Gets the one and only default dispatcher.</summary>
+        public MessageDispatcher DefaultGlobalDispatcher
+        {
+            get { return _defaultGlobalDispatcher; }
         }
 
         /// <summary>
@@ -188,7 +192,7 @@ namespace Akka.Dispatch
                 return disp;
             }
 
-            Config config = system.Settings.Config.GetConfig(path);
+            Config config = _system.Settings.Config.GetConfig(path);
             string type = config.GetString("type");
             int throughput = config.GetInt("throughput");
             //shutdown-timeout
