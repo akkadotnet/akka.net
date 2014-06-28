@@ -20,6 +20,9 @@ namespace Akka.Remote
         /// The deploy
         /// </summary>
         private readonly Deploy _deploy;
+
+        private readonly ActorPath _path;
+
         /// <summary>
         /// The parent
         /// </summary>
@@ -43,7 +46,7 @@ namespace Akka.Remote
         {
             Remote = remote;
             LocalAddressToUse = localAddressToUse;
-            Path = path;
+            _path = path;
             _parent = parent;
             _props = props;
             _deploy = deploy;
@@ -127,6 +130,11 @@ namespace Akka.Remote
         public override bool IsLocal
         {
             get { return false; }
+        }
+
+        public override ActorPath Path
+        {
+            get { return _path; }
         }
 
         /// <summary>

@@ -133,7 +133,7 @@ namespace Akka.Remote
             {
                 string joined = string.Join("/", parts, 0, i);
                 InternalActorRef child;
-                if (children.TryGetValue(joined, out child))
+                if (TryGetChild(joined, out child))
                 {
                     //longest match found
                     IEnumerable<string> rest = parts.Skip(i);

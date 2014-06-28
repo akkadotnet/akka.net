@@ -79,6 +79,11 @@ namespace Akka.Actor
             this.provider = provider;
         }
 
+        public override ActorPath Path
+        {
+            get { return path; }
+        }
+
         /// <summary>
         ///     Specials the handle.
         /// </summary>

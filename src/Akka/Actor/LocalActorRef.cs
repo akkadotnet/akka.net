@@ -6,9 +6,11 @@ namespace Akka.Actor
 {
     public class LocalActorRef : ActorRefWithCell, LocalRef
     {
+        private readonly ActorPath _path;
+
         public LocalActorRef(ActorPath path, ActorCell context)
         {
-            Path = path;
+            _path = path;
             Cell = context;
         }
 
@@ -40,6 +42,11 @@ namespace Akka.Actor
         public override bool IsLocal
         {
             get { return true; }
+        }
+
+        public override ActorPath Path
+        {
+            get { return _path; }
         }
 
         public override void Resume(Exception causedByFailure = null)

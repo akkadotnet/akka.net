@@ -13,12 +13,13 @@ namespace Akka.Event
     /// </summary>
     public class StandardOutLogger : MinimalActorRef
     {
+        private RootActorPath _path = new RootActorPath(Address.AllSystems, "/StandardOutLogger");
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="StandardOutLogger" /> class.
         /// </summary>
         public StandardOutLogger()
         {
-            Path = new RootActorPath(Address.AllSystems, "/StandardOutLogger");
         }
 
         /// <summary>
@@ -29,6 +30,11 @@ namespace Akka.Event
         public override ActorRefProvider Provider
         {
             get { throw new Exception("StandardOutLogger does not provide"); }
+        }
+
+        public override ActorPath Path
+        {
+            get { return _path; }
         }
 
         /// <summary>

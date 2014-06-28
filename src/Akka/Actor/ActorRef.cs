@@ -30,6 +30,7 @@ namespace Akka.Actor
     {
         private readonly TaskCompletionSource<object> _result;
         private readonly Action _unregister;
+        private readonly ActorPath _path;
         private ActorRef _sender;
 
         public FutureActorRef(TaskCompletionSource<object> result, ActorRef sender, Action unregister, ActorPath path)
@@ -37,7 +38,12 @@ namespace Akka.Actor
             _result = result;
             _sender = sender ?? ActorRef.NoSender;
             _unregister = unregister;
-            Path = path;
+            _path = path;
+        }
+
+        public override ActorPath Path
+        {
+            get { return _path; }
         }
 
         public override ActorRefProvider Provider
@@ -92,27 +98,25 @@ namespace Akka.Actor
 
     internal static class ActorRefSender
     {
-        public static readonly ActorRef NoSender = new NoSender();
-
         public static ActorRef GetSelfOrNoSender()
         {
             var actorCell = ActorCell.Current;
-            return actorCell != null ? actorCell.Self : NoSender;
+            return actorCell != null ? (ActorRef)actorCell.Self : ActorRef.NoSender;
         }
     }
 
     public abstract class ActorRef : ICanTell
     {
 
-        public static readonly Nobody Nobody = new Nobody();
-        public static readonly ReservedActorRef Reserved = new ReservedActorRef();
-        public static readonly ActorRef NoSender = ActorRefSender.NoSender;
+        public static readonly Nobody Nobody = Nobody.Instance;
+        public static readonly ReservedActorRef Reserved = ReservedActorRef.Instance;
+        public static readonly ActorRef NoSender = Actor.NoSender.Instance; //In Akka this is just null
 
-        public virtual ActorPath Path { get; protected set; }
+        public abstract ActorPath Path { get; }
 
         public void Tell(object message, ActorRef sender)
         {
-            if (sender == null)
+            if(sender == null)
             {
                 throw new ArgumentNullException("sender");
             }
@@ -124,7 +128,7 @@ namespace Akka.Actor
         {
             ActorRef sender = null;
 
-            if (ActorCell.Current != null)
+            if(ActorCell.Current != null)
             {
                 sender = ActorCell.Current.Self;
             }
@@ -146,7 +150,7 @@ namespace Akka.Actor
 
         public static implicit operator ActorRefSurrogate(ActorRef @ref)
         {
-            if (@ref != null)
+            if(@ref != null)
             {
                 return new ActorRefSurrogate(Serialization.Serialization.SerializedActorPath(@ref));
             }
@@ -184,7 +188,7 @@ namespace Akka.Actor
 
         public override ActorRef GetChild(IEnumerable<string> name)
         {
-            if (name.All(string.IsNullOrEmpty))
+            if(name.All(string.IsNullOrEmpty))
                 return this;
             return Nobody;
         }
@@ -215,16 +219,29 @@ namespace Akka.Actor
         }
     }
 
+    /// <summary> This is an internal look-up failure token, not useful for anything else.</summary>
     public sealed class Nobody : MinimalActorRef
     {
+        public static Nobody Instance = new Nobody();
+        private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/Nobody");
+
+        private Nobody() { }
+
+        public override ActorPath Path { get { return _path; } }
+
         public override ActorRefProvider Provider
         {
             get { throw new NotSupportedException("Nobody does not provide"); }
         }
+
     }
 
-    public sealed class ReservedActorRef : MinimalActorRef
+    public sealed class ReservedActorRef : MinimalActorRef      //TODO: This isn't really an ActorRef. When ActorCell uses a better ChildrensCollection we can remove this
     {
+        public static ReservedActorRef Instance = new ReservedActorRef();
+        public override ActorPath Path { get { throw new NotSupportedException(); } }
+        private ReservedActorRef() { }
+
         public override ActorRefProvider Provider
         {
             get { throw new NotSupportedException("Reserved does not provide"); }
@@ -242,10 +259,12 @@ namespace Akka.Actor
 
     public sealed class NoSender : ActorRef
     {
-        public NoSender()
-        {
-            Path = null;
-        }
+        public static readonly NoSender Instance = new NoSender();
+        private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/NoSender");
+
+        private NoSender() { }
+
+        public override ActorPath Path { get { return _path; } }
 
         protected override void TellInternal(object message, ActorRef sender)
         {
@@ -254,37 +273,42 @@ namespace Akka.Actor
 
     public class VirtualPathContainer : MinimalActorRef
     {
-        private readonly InternalActorRef parent;
-        private readonly ActorRefProvider provider;
+        private readonly InternalActorRef _parent;
+        private readonly ActorRefProvider _provider;
+        private readonly ActorPath _path;
 
-        protected ConcurrentDictionary<string, InternalActorRef> children =
-            new ConcurrentDictionary<string, InternalActorRef>();
+        private readonly ConcurrentDictionary<string, InternalActorRef> _children = new ConcurrentDictionary<string, InternalActorRef>();
 
         public VirtualPathContainer(ActorRefProvider provider, ActorPath path, InternalActorRef parent)
         {
-            Path = path;
-            this.parent = parent;
-            this.provider = provider;
+            _parent = parent;
+            _provider = provider;
+            _path = path;
         }
 
         public override ActorRefProvider Provider
         {
-            get { return provider; }
+            get { return _provider; }
         }
 
         public override InternalActorRef Parent
         {
-            get { return parent; }
+            get { return _parent; }
         }
 
-        private InternalActorRef GetChild(string name)
+        public override ActorPath Path
         {
-            return children[name];
+            get { return _path; }
+        }
+
+        protected bool TryGetChild(string name, out InternalActorRef child)
+        {
+            return _children.TryGetValue(name, out child);
         }
 
         public void AddChild(string name, InternalActorRef actor)
         {
-            children.AddOrUpdate(name, actor, (k, v) =>
+            _children.AddOrUpdate(name, actor, (k, v) =>
             {
                 //TODO:  log.debug("{} replacing child {} ({} -> {})", path, name, old, ref)
                 return v;
@@ -294,7 +318,7 @@ namespace Akka.Actor
         public void RemoveChild(string name)
         {
             InternalActorRef tmp;
-            if (!children.TryRemove(name, out tmp))
+            if(!_children.TryRemove(name, out tmp))
             {
                 //TODO: log.warning("{} trying to remove non-child {}", path, name)
             }
@@ -319,21 +343,21 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
         public override ActorRef GetChild(IEnumerable<string> name)
         {
             //TODO: I have no clue what the scala version does
-            if (!name.Any())
+            if(!name.Any())
                 return this;
 
             string n = name.First();
-            if (string.IsNullOrEmpty(n))
+            if(string.IsNullOrEmpty(n))
                 return this;
-            InternalActorRef c = children[n];
-            if (c == null)
+            InternalActorRef c = _children[n];
+            if(c == null)
                 return Nobody;
             return c.GetChild(name.Skip(1));
         }
 
         public void ForeachActorRef(Action<ActorRef> action)
         {
-            foreach (InternalActorRef child in children.Values)
+            foreach(InternalActorRef child in _children.Values)
             {
                 action(child);
             }
