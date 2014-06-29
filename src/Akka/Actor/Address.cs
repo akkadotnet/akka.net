@@ -7,7 +7,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class Address.
     /// </summary>
-    public class Address : ICloneable
+    public class Address : ICloneable, IEquatable<Address>
     {
         /// <summary>
         ///     Pseudo address for all systems
@@ -17,7 +17,7 @@ namespace Akka.Actor
         /// <summary>
         ///     To string
         /// </summary>
-        private Lazy<string> toString;
+        private readonly Lazy<string> _toString;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Address" /> class.
@@ -32,7 +32,7 @@ namespace Akka.Actor
             System = system;
             Host = host;
             Port = port;
-            CreateLazyToString();
+            _toString = CreateLazyToString();
         }
 
         /// <summary>
@@ -59,15 +59,16 @@ namespace Akka.Actor
         /// <value>The protocol.</value>
         public string Protocol { get; private set; }
 
-        private void CreateLazyToString()
+
+        private Lazy<string> CreateLazyToString()
         {
-            toString = new Lazy<string>(() =>
+            return new Lazy<string>(() =>
             {
                 var sb = new StringBuilder();
                 sb.AppendFormat("{0}://{1}", Protocol, System);
-                if (!string.IsNullOrWhiteSpace(Host))
+                if(!string.IsNullOrWhiteSpace(Host))
                     sb.AppendFormat("@{0}", Host);
-                if (Port.HasValue)
+                if(Port.HasValue)
                     sb.AppendFormat(":{0}", Port.Value);
 
                 return sb.ToString();
@@ -80,16 +81,34 @@ namespace Akka.Actor
         /// <returns>A <see cref="string" /> that represents this instance.</returns>
         public override string ToString()
         {
-            return toString.Value;
+            return _toString.Value;
         }
 
-        /// <summary>
-        ///     Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
+        public bool Equals(Address other)
+        {
+            if(ReferenceEquals(null, other)) return false;
+            if(ReferenceEquals(this, other)) return true;
+            return string.Equals(Host, other.Host) && Port == other.Port && string.Equals(System, other.System) && string.Equals(Protocol, other.Protocol);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if(ReferenceEquals(null, obj)) return false;
+            if(ReferenceEquals(this, obj)) return true;
+            if(obj.GetType() != this.GetType()) return false;
+            return Equals((Address) obj);
+        }
+
         public override int GetHashCode()
         {
-            return ToString().GetHashCode();
+            unchecked
+            {
+                var hashCode = (Host != null ? Host.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ Port.GetHashCode();
+                hashCode = (hashCode*397) ^ (System != null ? System.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (Protocol != null ? Protocol.GetHashCode() : 0);
+                return hashCode;
+            }
         }
 
         public object Clone()
@@ -102,18 +121,15 @@ namespace Akka.Actor
             return new Address(protocol ?? Protocol, system ?? System, host ?? Host, port ?? Port);
         }
 
-        //TODO: implement real equals checks instead
-        /// <summary>
-        ///     Determines whether the specified <see cref="object" /> is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The object to compare with the current object.</param>
-        /// <returns><c>true</c> if the specified <see cref="object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
-        public override bool Equals(object obj)
-        {
-            if (obj == null)
-                return false;
 
-            return ToString() == obj.ToString();
+        public static bool operator ==(Address left, Address right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(Address left, Address right)
+        {
+            return !Equals(left, right);
         }
 
         /// <summary>
@@ -137,11 +153,11 @@ namespace Akka.Actor
         {
             var uri = new Uri(address);
 
-             var protocol = uri.Scheme;
+            var protocol = uri.Scheme;
             //if (!protocol.ToLowerInvariant().StartsWith("akka"))
             //    protocol = string.Format("akka.{0}", protocol);
 
-            if (string.IsNullOrEmpty(uri.UserInfo))
+            if(string.IsNullOrEmpty(uri.UserInfo))
             {
                 string systemName = uri.Host;
                 return new Address(protocol, systemName, null, null);
