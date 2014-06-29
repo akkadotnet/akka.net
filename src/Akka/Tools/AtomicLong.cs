@@ -5,33 +5,38 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Akka
+namespace Akka.Tools
 {
-    public class AtomicInteger
+    public class AtomicLong
     {
-        public AtomicInteger(int seed = -1)
+        public AtomicLong(long seed = -1)
         {
             value = seed;
         }
 
-        private int value = -1;
-        public int Value
+        private long value = -1;
+        public long Value
         {
             get
             {
                 return value;
             }
         }
-        public int GetAndIncrement()
+        public long GetAndIncrement()
         {
             Interlocked.Increment(ref value);
             return value;
         }
 
-        public int GetAndAdd(int amount)
+        public long GetAndAdd(int amount)
         {
             Interlocked.Add(ref value, amount);
             return value;
+        }
+
+        public void Set(long newValue)
+        {
+            Interlocked.Exchange(ref this.value, newValue);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Akka.Tools;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,6 +19,7 @@ namespace Akka.Pattern
 
         public void Enter()
         {
+            Set(0);
         }
     }
 
@@ -25,6 +27,7 @@ namespace Akka.Pattern
     {
         public void Enter()
         {
+            this.Value = true;
         }
     }
 
@@ -32,6 +35,8 @@ namespace Akka.Pattern
     {
         public void Enter()
         {
+            Set(DateTime.Now.Ticks);
+            //TODO: schedule once , attempt reset
         }
     }
 

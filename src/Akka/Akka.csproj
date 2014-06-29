@@ -123,9 +123,8 @@
     <Compile Include="Event\EventStream.cs" />
     <Compile Include="Event\Logging.cs" />
     <Compile Include="Extensions.cs" />
-    <Compile Include="Pattern\AtomicBoolean.cs" />
-    <Compile Include="Pattern\AtomicInteger.cs" />
-    <Compile Include="Pattern\AtomicLong.cs" />
+    <Compile Include="Tools\AtomicInteger.cs" />
+    <Compile Include="Tools\AtomicLong.cs" />
     <Compile Include="Pattern\CircuitBreaker.cs" />
     <Compile Include="Pattern\IllegalStateException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
