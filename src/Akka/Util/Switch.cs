@@ -1,5 +1,4 @@
 ﻿using System;
-using Akka.Tools;
 
 namespace Akka.Util
 {
@@ -8,12 +7,12 @@ namespace Akka.Util
     /// </summary>
     public class Switch
     {
-        private readonly AtomicBoolean _switch;
+        private readonly Tools.AtomicBoolean _switch;
         private readonly object _lock = new object();
 
         public Switch(bool startAsOn = false)
         {
-            _switch = new AtomicBoolean(startAsOn);
+            _switch = new Tools.AtomicBoolean(startAsOn);
         }
 
         protected bool TranscendFrom(bool from, Action action)
