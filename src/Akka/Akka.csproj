@@ -151,11 +151,13 @@
     <Compile Include="Serialization\Serialization.cs" />
     <Compile Include="Serialization\Serializer.cs" />
     <Compile Include="Tools\Atomic.cs" />
+    <Compile Include="Tools\AtomicBoolean.cs" />
     <Compile Include="Tools\ConcurrentSet.cs" />
     <Compile Include="Tools\ExpressionExtensions.cs" />
     <Compile Include="Tools\Pattern.cs" />
     <Compile Include="Tools\ThreadLocalRandom.cs" />
     <Compile Include="Tools\WildcardTree.cs" />
+    <Compile Include="Util\Switch.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Actor\ActorBase.SupervisorStrategy.cs" />

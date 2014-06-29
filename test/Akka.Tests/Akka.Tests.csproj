@@ -96,6 +96,7 @@
     <Compile Include="Routing\RoutingSpec.cs" />
     <Compile Include="Serialization\SerializationSpec.cs" />
     <Compile Include="Tools\PatternSpec.cs" />
+    <Compile Include="Util\SwitchTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Akka\Akka.csproj">
