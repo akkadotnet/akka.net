@@ -81,6 +81,8 @@
     <Compile Include="Actor\BroadcastActorRef.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Actor\ChildrenContainer.cs" />
+    <Compile Include="Actor\RootGuardianActorRef.cs" />
+    <Compile Include="Actor\RootGuardianSupervisor.cs" />
     <Compile Include="Actor\Deployer.cs" />
     <Compile Include="Actor\ExtendedActorSystem.cs" />
     <Compile Include="Actor\FSM.cs" />

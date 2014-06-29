@@ -88,6 +88,7 @@
     <Compile Include="Actor\FSMTimingSpec.cs" />
     <Compile Include="Actor\FSMTransitionSpec.cs" />
     <Compile Include="Actor\PatternSpec.cs" />
+    <Compile Include="Actor\RootGuardianActorRef_Tests.cs" />
     <Compile Include="Event\EventBusSpec.cs" />
     <Compile Include="Event\EventStreamSpec.cs" />
     <Compile Include="HoconTests.cs" />
