@@ -169,10 +169,11 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="elements">The elements.</param>
-        public ActorSelectionMessage(object message, SelectionPathElement[] elements)
+        public ActorSelectionMessage(object message, SelectionPathElement[] elements, bool wildCardFanOut=false)
         {
             Message = message;
             Elements = elements;
+            WildCardFanOut = wildCardFanOut;
         }
 
         /// <summary>
@@ -186,6 +187,8 @@ namespace Akka.Actor
         /// </summary>
         /// <value>The elements.</value>
         public SelectionPathElement[] Elements { get; private set; }
+
+        public bool WildCardFanOut { get; private set; }
     }
 
     /// <summary>
