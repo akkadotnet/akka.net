@@ -741,7 +741,7 @@ namespace Akka.Remote
             Inbound = handleOrActive != null;
             _ackDeadline = NewAckDeadline();
             _handle = handleOrActive;
-            CurrentStash = Context.GetStash();
+            CurrentStash = Context.CreateStash(this);
             InitFSM();
         }
 

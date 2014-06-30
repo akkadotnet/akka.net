@@ -1,210 +1,109 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
+using Akka.Event;
 using Akka.Routing;
+using Akka.Tools;
+using Akka.Util;
 
 namespace Akka.Actor
 {
-    /// <summary>
-    ///     Class ActorRefProvider.
-    /// </summary>
-    public abstract class ActorRefProvider
+    public interface ActorRefProvider
     {
         /// <summary>
-        ///     Initializes a new instance of the <see cref="ActorRefProvider" /> class.
+        /// Reference to the supervisor of guardian and systemGuardian; this is
+        /// exposed so that the ActorSystemImpl can use it as lookupRoot, i.e.
+        /// for anchoring absolute actor look-ups.
         /// </summary>
-        /// <param name="system">The system.</param>
-        protected ActorRefProvider(ActorSystem system)
-        {
-            System = system;
-        }
+        InternalActorRef RootGuardian { get; }
+
+        /// <summary>Reference to the supervisor of guardian and systemGuardian at the specified address;
+        /// this is exposed so that the ActorRefFactory can use it as lookupRoot, i.e.
+        /// for anchoring absolute actor selections.
+        /// </summary>
+        ActorRef RootGuardianAt(Address address);
+
+        /// <summary> Gets the supervisor used for all top-level user actors.</summary>
+        LocalActorRef Guardian { get; }
+
+        /// <summary>Gets the supervisor used for all top-level system actors.</summary>
+        LocalActorRef SystemGuardian { get; }
+
+        /// <summary>Gets the dead letters.</summary>
+        ActorRef DeadLetters { get; }
 
         /// <summary>
-        ///     Gets the root path.
+        /// Gets the root path for all actors within this actor system, not including any remote address information.
         /// </summary>
-        /// <value>The root path.</value>
-        public virtual ActorPath RootPath { get; private set; }
+        ActorPath RootPath { get; }
 
-        /// <summary>
-        ///     Gets the temporary node.
-        /// </summary>
-        /// <value>The temporary node.</value>
-        public virtual ActorPath TempNode { get; private set; }
+        /// <summary>Gets the settings.</summary>
+        Settings Settings { get; }
 
 
         /// <summary>
-        ///     Gets the temporary container.
+        /// Initialization of an ActorRefProvider happens in two steps: first
+        /// construction of the object with settings, eventStream, etc.
+        /// and then—when the ActorSystem is constructed—the second phase during
+        /// which actors may be created (e.g. the guardians).
         /// </summary>
-        /// <value>The temporary container.</value>
-        public virtual VirtualPathContainer TempContainer { get; private set; }
+        void Init(ActorSystem system);
 
-        /// <summary>
-        ///     Gets or sets the system.
-        /// </summary>
-        /// <value>The system.</value>
-        public virtual ActorSystem System { get; protected set; }
+        /// <summary>Gets the deployer.</summary>
+        Deployer Deployer { get; }
 
-        /// <summary>
-        ///     Gets or sets the root cell.
-        /// </summary>
-        /// <value>The root cell.</value>
-        public virtual ActorCell RootCell { get; protected set; }
+        /// <summary>Generates and returns a unique actor path below "/temp".</summary>
+        ActorPath TempPath();
 
-        /// <summary>
-        ///     Gets or sets the dead letters.
-        /// </summary>
-        /// <value>The dead letters.</value>
-        public virtual ActorRef DeadLetters { get; protected set; }
+        /// <summary>Returns the actor reference representing the "/temp" path.</summary>
+        InternalActorRef TempContainer { get; }
 
-        /// <summary>
-        ///     Gets or sets the guardian.
-        /// </summary>
-        /// <value>The guardian.</value>
-        public virtual LocalActorRef Guardian { get; protected set; }
-
-        /// <summary>
-        ///     Gets or sets the system guardian.
-        /// </summary>
-        /// <value>The system guardian.</value>
-        public virtual LocalActorRef SystemGuardian { get; protected set; }
-
-        /// <summary>
-        ///     Gets or sets the address.
-        /// </summary>
-        /// <value>The address.</value>
-        public virtual Address Address { get; set; }
-
-        /// <summary>
-        ///     Initializes this instance.
-        /// </summary>
-        public virtual void Init()
-        {
-            RootPath = new RootActorPath(Address);
-            TempNode = RootPath / "temp";
-
-            RootCell = new ActorCell(System, "", new ConcurrentQueueMailbox());
-            DeadLetters = new DeadLetterActorRef(this, RootPath / "deadLetters", System.EventStream);
-            Guardian = (LocalActorRef)RootCell.ActorOf<GuardianActor>("user");
-            SystemGuardian = (LocalActorRef)RootCell.ActorOf<GuardianActor>("system");
-            TempContainer = new VirtualPathContainer(this, TempNode, null);
-        }
-
-        /// <summary>
-        ///     Registers the temporary actor.
-        /// </summary>
+        /// <summary>Registers an actorRef at a path returned by <see cref="TempPath"/>; do NOT pass in any other path.</summary>
         /// <param name="actorRef">The actor reference.</param>
-        /// <param name="path">The path.</param>
-        public void RegisterTempActor(InternalActorRef actorRef, ActorPath path)
-        {
-            TempContainer.AddChild(path.Name, actorRef);
-        }
+        /// <param name="path">A path returned by <see cref="TempPath"/>. Do NOT pass in any other path!</param>
+        void RegisterTempActor(InternalActorRef actorRef, ActorPath path);
+
+        /// <summary>Unregister a temporary actor (i.e. obtained from <see cref="TempPath"/>); do NOT pass in any other path.</summary>
+        /// <param name="path">A path returned by <see cref="TempPath"/>. Do NOT pass in any other path!</param>
+        void UnregisterTempActor(ActorPath path);
+
 
         /// <summary>
-        ///     Unregisters the temporary actor.
+        /// Actor factory with create-only semantics: will create an actor as
+        /// described by <paramref name="props"/> with the given <paramref name="supervisor"/> and <paramref name="path"/> (may be different
+        /// in case of remote supervision). If <paramref name="systemService"/> is true, deployment is
+        /// bypassed (local-only). If a value for<paramref name="deploy"/> is passed in, it should be
+        /// regarded as taking precedence over the nominally applicable settings,
+        /// but it should be overridable from external configuration; the lookup of
+        /// the latter can be suppressed by setting "lookupDeploy" to "false".
         /// </summary>
-        /// <param name="path">The path.</param>
-        public void UnregisterTempActor(ActorPath path)
-        {
-            TempContainer.RemoveChild(path.Name);
-        }
+        InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async);
+
+        /// <summary>Get the actor reference for a specified path. If no such actor exists, it will be (equivalent to) a dead letter reference.</summary>
+        ActorRef ResolveActorRef(string path);
+
+        /// <summary>Get the actor reference for a specified path. If no such actor exists, it will be (equivalent to) a dead letter reference.</summary>
+        ActorRef ResolveActorRef(ActorPath actorPath);
 
         /// <summary>
-        ///     Temporaries the path.
+        /// This Future is completed upon termination of this <see cref="ActorRefProvider"/>, which
+        /// is usually initiated by stopping the guardian via <see cref="ActorSystem.Stop"/>.
         /// </summary>
-        /// <returns>ActorPath.</returns>
-        public ActorPath TempPath()
-        {
-            return TempNode / Guid.NewGuid().ToString();
-        }
+        Task TerminationTask { get; }
 
         /// <summary>
-        ///     Roots the guardian at.
+        /// Obtain the address which is to be used within sender references when
+        /// sending to the given other address or none if the other address cannot be
+        /// reached from this system (i.e. no means of communication known; no
+        /// attempt is made to verify actual reachability).
         /// </summary>
-        /// <param name="address">The address.</param>
-        /// <returns>ActorRef.</returns>
-        public virtual ActorRef RootGuardianAt(Address address)
-        {
-            return RootCell.Self;
-        }
+        Address GetExternalAddressFor(Address address);
 
-        /// <summary>
-        ///     Actors the of.
-        /// </summary>
-        /// <param name="system">The system.</param>
-        /// <param name="props">The props.</param>
-        /// <param name="supervisor">The supervisor.</param>
-        /// <param name="path">The path.</param>
-        /// <param name="systemService">Is this a child actor under the system guardian?</param>
-        /// <returns>InternalActorRef.</returns>
-        public abstract InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
-            ActorPath path, bool systemService = false);
-
-        /// <summary>
-        ///     Resolves the actor reference.
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns>ActorRef.</returns>
-        public ActorRef ResolveActorRef(string path)
-        {
-            if (path == "")
-                return ActorRef.NoSender;
-
-            ActorPath actorPath = ActorPath.Parse(path);
-            return ResolveActorRef(actorPath);
-        }
-
-        /// <summary>
-        ///     Resolves the actor reference.
-        /// </summary>
-        /// <param name="actorPath">The actor path.</param>
-        /// <returns>ActorRef.</returns>
-        public abstract ActorRef ResolveActorRef(ActorPath actorPath);
-
-        public abstract Address GetExternalAddressFor(Address address);
-
-        /// <summary>
-        ///     Afters the send system message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        public void AfterSendSystemMessage(SystemMessage message)
-        {
-            message.Match()
-                .With<Watch>(m => { })
-                .With<Unwatch>(m => { });
-
-            //    message match {
-            //  // Sending to local remoteWatcher relies strong delivery guarantees of local send, i.e.
-            //  // default dispatcher must not be changed to an implementation that defeats that
-            //  case rew: RemoteWatcher.Rewatch ⇒
-            //    remoteWatcher ! RemoteWatcher.RewatchRemote(rew.watchee, rew.watcher)
-            //  case Watch(watchee, watcher)   ⇒ remoteWatcher ! RemoteWatcher.WatchRemote(watchee, watcher)
-            //  case Unwatch(watchee, watcher) ⇒ remoteWatcher ! RemoteWatcher.UnwatchRemote(watchee, watcher)
-            //  case _                         ⇒
-            //}
-        }
-
-        public Deployer Deployer { get; protected set; }
-
-        //TODO: real akka does this in the RoutedActorRef
-        //Keep this here for now?
-        public static ActorCell NewRouterCell(ActorSystem system, InternalActorRef supervisor, ActorPath path, Props props, Mailbox mailbox,Deploy deploy)
-        {
-            var routerProps = Props.Empty.WithDeploy(deploy);
-            var routeeProps = props.WithRouter(RouterConfig.NoRouter);
-
-            if (routerProps.RouterConfig is Pool)
-            {
-                var p = routerProps.RouterConfig.AsInstanceOf<Pool>();
-                if (p.Resizer != null)
-                {
-                    //if there is a resizer, use ResizablePoolCell
-                    return new ResizablePoolCell(system, supervisor, routerProps, routeeProps, path, mailbox, p);
-                }               
-            }
-            //Use RoutedActorCell for all other routers
-            return new RoutedActorCell(system, supervisor, routerProps, routeeProps, path, mailbox);
-        }
+        /// <summary>Gets the external address of the default transport. </summary>
+        Address DefaultAddress { get; }
     }
 
     /// <summary>
@@ -212,53 +111,258 @@ namespace Akka.Actor
     /// </summary>
     public sealed class LocalActorRefProvider : ActorRefProvider
     {
-        public override void Init()
+        private readonly Settings _settings;
+        private readonly EventStream _eventStream;
+        private readonly Deployer _deployer;
+        private readonly InternalActorRef _deadLetters;
+        private readonly RootActorPath _rootPath;
+        private readonly LoggingAdapter _log;
+        private readonly AtomicCounterLong _tempNumber;
+        private readonly ActorPath _tempNode;
+        private ActorSystem _system;
+        private readonly Dictionary<string, InternalActorRef> _extraNames = new Dictionary<string, InternalActorRef>();
+        private readonly TaskCompletionSource<Status> _terminationPromise = new TaskCompletionSource<Status>();
+        private SupervisorStrategy _systemGuardianStrategy;
+        private VirtualPathContainer _tempContainer;
+        private RootGuardianActorRef _rootGuardian;
+        private LocalActorRef _userGuardian;    //This is called guardian in Akka
+        private Func<Mailbox> _defaultMailbox;  //TODO: switch to MailboxType
+        private LocalActorRef _systemGuardian;
+
+        public LocalActorRefProvider(string systemName, Settings settings, EventStream eventStream)
+            : this(systemName, settings, eventStream, null, null)
         {
-            Deployer = new Deployer(System.Settings);
-            base.Init();
+            //Intentionally left blank
+        }
+
+        public LocalActorRefProvider(string systemName, Settings settings, EventStream eventStream, Deployer deployer, Func<ActorPath, InternalActorRef> deadLettersFactory)
+        {
+            _settings = settings;
+            _eventStream = eventStream;
+            _deployer = deployer ?? new Deployer(settings);
+            _rootPath = new RootActorPath(new Address("akka", systemName));
+            _log = Logging.GetLogger(eventStream, "LocalActorRefProvider(" + _rootPath.Address + ")");
+            if(deadLettersFactory == null)
+                deadLettersFactory = p => new DeadLetterActorRef(this, p, _eventStream);
+            _deadLetters = deadLettersFactory(_rootPath / "deadLetters");
+            _tempNumber = new AtomicCounterLong(1);
+            _tempNode = _rootPath / "temp";
+
+            //TODO: _guardianSupervisorStrategyConfigurator = dynamicAccess.createInstanceFor[SupervisorStrategyConfigurator](settings.SupervisorStrategyClass, EmptyImmutableSeq).get
+            _systemGuardianStrategy = SupervisorStrategy.DefaultStrategy;
+
+        }
+
+        public ActorRef DeadLetters { get { return _deadLetters; } }
+
+        public Deployer Deployer { get { return _deployer; } }
+
+        public InternalActorRef RootGuardian { get { return _rootGuardian; } }
+
+        public ActorPath RootPath { get { return _rootPath; } }
+
+        public Settings Settings { get { return _settings; } }
+
+        public LocalActorRef SystemGuardian { get { return _systemGuardian; } }
+
+        public InternalActorRef TempContainer { get { return _tempContainer; } }
+
+        public Task TerminationTask { get { return _terminationPromise.Task; } }
+
+        public LocalActorRef Guardian { get { return _userGuardian; } }
+
+        private MessageDispatcher DefaultDispatcher { get { return _system.Dispatchers.DefaultGlobalDispatcher; } }
+
+        private SupervisorStrategy UserGuardianSupervisorStrategy { get { return SupervisorStrategy.DefaultStrategy; } }    //TODO: Implement Akka's _guardianSupervisorStrategyConfigurator.create()
+
+        public ActorPath TempPath()
+        {
+            return _tempNode / GetNextTempName();
+        }
+
+        private string GetNextTempName()
+        {
+            return _tempNumber.GetAndIncrement().Base64Encode();
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="LocalActorRefProvider" /> class.
+        /// Higher-level providers (or extensions) might want to register new synthetic
+        /// top-level paths for doing special stuff. This is the way to do just that.
+        /// Just be careful to complete all this before <see cref="ActorSystem.Start"/> finishes,
+        /// or before you start your own auto-spawned actors.
         /// </summary>
-        /// <param name="system">The system.</param>
-        public LocalActorRefProvider(ActorSystem system)
-            : base(system)
+        public void RegisterExtraName(string name, InternalActorRef actor)
         {
-            Address = new Address("akka", System.Name); //TODO: this should not work this way...
+            _extraNames.Add(name, actor);
+        }
+
+
+
+        private RootGuardianActorRef CreateRootGuardian(ActorSystem system)
+        {
+            var supervisor = new RootGuardianSupervisor(_rootPath, this, _terminationPromise, _log);
+            var rootGuardianStrategy = new OneForOneStrategy(ex =>
+            {
+                _log.Error(ex, "Guardian failed. Shutting down system");
+                return Directive.Stop;
+            });
+            var props = Props.Create<GuardianActor>(rootGuardianStrategy);
+            var rootGuardian = new RootGuardianActorRef(system, props, DefaultDispatcher, _defaultMailbox, supervisor, _rootPath, _deadLetters, _extraNames);
+            return rootGuardian;
+        }
+
+        public ActorRef RootGuardianAt(Address address)
+        {
+            return address == _rootPath.Address ? _rootGuardian : _deadLetters;
+        }
+
+        private LocalActorRef CreateUserGuardian(LocalActorRef rootGuardian, string name)   //Corresponds to Akka's: override lazy val guardian: LocalActorRef
+        {
+            return CreateRootGuardianChild(rootGuardian, name, () =>
+            {
+                var props = Props.Create<GuardianActor>(UserGuardianSupervisorStrategy);
+
+                var userGuardian = new LocalActorRef(_system, props, DefaultDispatcher, _defaultMailbox, rootGuardian, RootPath/name);
+                return userGuardian;
+            });         
+        }
+
+        private LocalActorRef CreateSystemGuardian(LocalActorRef rootGuardian, string name, LocalActorRef userGuardian)     //Corresponds to Akka's: override lazy val guardian: systemGuardian
+        {
+            //TODO: When SystemGuardianActor has been implemented switch to this:
+            //return CreateRootGuardianChild(rootGuardian, name, () =>
+            //{
+            //    var props = Props.Create(() => new SystemGuardianActor(userGuardian), _systemGuardianStrategy);
+
+            //    var systemGuardian = new LocalActorRef(_system, props, DefaultDispatcher, _defaultMailbox, rootGuardian, RootPath / name);
+            //    return systemGuardian;
+            //});   
+            return (LocalActorRef)rootGuardian.Cell.ActorOf<GuardianActor>(name);           
+        }
+
+        private LocalActorRef CreateRootGuardianChild(LocalActorRef rootGuardian, string name, Func<LocalActorRef> childCreator)
+        {
+            var cell = rootGuardian.Cell;
+            cell.ReserveChild(name);
+            var child = childCreator();
+            cell.InitChild(child);
+            child.Start();
+            return child;
+        }
+
+        public void RegisterTempActor(InternalActorRef actorRef, ActorPath path)
+        {
+            if(path.Parent != _tempNode)
+                throw new Exception("Cannot RegisterTempActor() with anything not obtained from tempPath()");
+            _tempContainer.AddChild(path.Name, actorRef);
+        }
+
+        public void UnregisterTempActor(ActorPath path)
+        {
+            if(path.Parent != _tempNode)
+                throw new Exception("Cannot UnregisterTempActor() with anything not obtained from tempPath()");
+            _tempContainer.RemoveChild(path.Name);
+        }
+
+        public void Init(ActorSystem system)
+        {
+            _system = system;
+            //The following are the lazy val statements in Akka
+            var defaultDispatcher = system.Dispatchers.DefaultGlobalDispatcher;
+            _defaultMailbox = () => new ConcurrentQueueMailbox(); //TODO:system.Mailboxes.FromConfig(Mailboxes.DefaultMailboxId)
+            _rootGuardian = CreateRootGuardian(system);
+            _tempContainer = new VirtualPathContainer(system.Provider, _tempNode, _rootGuardian, _log);
+            _rootGuardian.SetTempContainer(_tempContainer);
+            _userGuardian = CreateUserGuardian(_rootGuardian, "user");
+            _systemGuardian = CreateSystemGuardian(_rootGuardian, "system", _userGuardian);
+            //End of lazy val
+
+            _rootGuardian.Start();
+            // chain death watchers so that killing guardian stops the application
+            _systemGuardian.Tell(new Watch(_userGuardian, _systemGuardian));    //Should be SendSystemMessage
+            _rootGuardian.Tell(new Watch(_systemGuardian, _rootGuardian));      //Should be SendSystemMessage
+            _eventStream.StartDefaultLoggers(_system);
+        }
+
+        public ActorRef ResolveActorRef(string path)
+        {
+            ActorPath actorPath;
+            if(ActorPath.TryParse(path, out actorPath) && actorPath.Address == _rootPath.Address)
+                return ResolveActorRef(_rootGuardian, actorPath.Elements);
+            _log.Debug("Resolve of unknown path [{0}] failed. Invalid format.", path);
+            return _deadLetters;
         }
 
         /// <summary>
-        ///     Actors the of.
+        ///     Resolves the actor reference.
         /// </summary>
-        /// <param name="system">The system.</param>
-        /// <param name="props">The props.</param>
-        /// <param name="supervisor">The supervisor.</param>
-        /// <param name="path">The path.</param>
-        /// <param name="systemService">Is this a child actor under the system guardian?</param>
-        /// <returns>InternalActorRef.</returns>
-        public override InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
-            ActorPath path, bool systemService = false)
+        /// <param name="path">The actor path.</param>
+        /// <returns>ActorRef.</returns>
+        /// <exception cref="System.NotSupportedException">The provided actor path is not valid in the LocalActorRefProvider</exception>
+        public ActorRef ResolveActorRef(ActorPath path)
         {
-            ActorCell cell = null;
-            Mailbox mailbox = System.Mailboxes.FromConfig(props.Mailbox);
+            if(path.Root == _rootPath)
+                return ResolveActorRef(_rootGuardian, path.Elements);
+            _log.Debug("Resolve of foreign ActorPath [{0}] failed", path);
+            return _deadLetters;
 
-            Deploy configDeploy = System.Provider.Deployer.Lookup(path);
-            var deploy = configDeploy ?? props.Deploy ?? Deploy.None;
-            if (deploy.Mailbox != null)
+            //Used to be this, but the code above is what Akka has
+            //if(_rootPath.Address==actorPath.Address)
+            //{
+            //    if(actorPath.Elements.Head() == "temp")
+            //    {
+            //        //skip ""/"temp", 
+            //        string[] parts = actorPath.Elements.Drop(1).ToArray();
+            //        return _tempContainer.GetChild(parts);
+            //    }
+            //    //standard
+            //    ActorCell currentContext = _rootGuardian.Cell;
+            //    foreach(string part in actorPath.Elements)
+            //    {
+            //        currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
+            //    }
+            //    return currentContext.Self;
+            //}
+            //throw new NotSupportedException("The provided actor path is not valid in the LocalActorRefProvider");
+        }
+
+        private ActorRef ResolveActorRef(InternalActorRef actorRef, IReadOnlyCollection<string> pathElements)
+        {
+            if(pathElements.Count == 0)
+            {
+                _log.Debug("Resolve of empty path sequence fails (per definition)");
+                return _deadLetters;
+            }
+            var child = actorRef.GetChild(pathElements);
+            if(child.IsNobody())
+            {
+                _log.Debug("Resolve of path sequence [/{0}] failed", ActorPath.FormatPathElements(pathElements));
+                return new EmptyLocalActorRef(_system.Provider, actorRef.Path / pathElements, _eventStream);
+            }
+            return child;
+        }
+
+
+        public InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
+        {
+            //TODO: This does not match Akka's ActorOf at all
+
+            Deploy configDeploy = _system.Provider.Deployer.Lookup(path);
+            deploy = configDeploy ?? props.Deploy ?? Deploy.None;
+            if(deploy.Mailbox != null)
                 props = props.WithMailbox(deploy.Mailbox);
-            if (deploy.Dispatcher != null)
+            if(deploy.Dispatcher != null)
                 props = props.WithDispatcher(deploy.Dispatcher);
-            if (deploy.Scope is RemoteScope)
+            if(deploy.Scope is RemoteScope)
             {
 
             }
 
-            if (string.IsNullOrEmpty(props.Mailbox))
+            if(string.IsNullOrEmpty(props.Mailbox))
             {
                 //   throw new NotSupportedException("Mailbox can not be configured as null or empty");
             }
-            if (string.IsNullOrEmpty(props.Dispatcher))
+            if(string.IsNullOrEmpty(props.Dispatcher))
             {
                 //TODO: fix this..
                 //    throw new NotSupportedException("Dispatcher can not be configured as null or empty");
@@ -275,62 +379,51 @@ namespace Akka.Actor
             //    throw new NotSupportedException("LocalActorRefProvider can not deploy remote");
             //}
 
-            if (props.RouterConfig is NoRouter || props.RouterConfig == null)
+            if(props.RouterConfig is NoRouter || props.RouterConfig == null)
             {
 
                 props = props.WithDeploy(deploy);
-                cell = new ActorCell(system, supervisor, props, path, mailbox);
+                var dispatcher = system.Dispatchers.FromConfig(props.Dispatcher);
+                var mailbox = _system.Mailboxes.FromConfig(props.Mailbox);
+                    //TODO: Should be: system.mailboxes.getMailboxType(props2, dispatcher.configurator.config)
 
+                if (async)
+                {
+                    var reActorRef=new RepointableActorRef(system, props, dispatcher, () => mailbox, supervisor, path);
+                    reActorRef.Initialize(async:true);
+                    return reActorRef;
+                }
+                return new LocalActorRef(system, props, dispatcher, () => mailbox, supervisor, path);
             }
             else
             {
                 //if no Router config value was specified, override with procedural input
-                if (deploy.RouterConfig is NoRouter) 
+                if(deploy.RouterConfig is NoRouter)
                 {
                     deploy = deploy.WithRouterConfig(props.RouterConfig);
                 }
-                
-                //TODO: make this work for remote actor ref provider
-                cell = NewRouterCell(system, supervisor, path, props, mailbox,deploy);
+                var routerDispatcher = system.Dispatchers.FromConfig(props.RouterConfig.RouterDispatcher);
+                var routerMailbox = _system.Mailboxes.FromConfig(props.Mailbox);
+                    //TODO: Should be val routerMailbox = system.mailboxes.getMailboxType(routerProps, routerDispatcher.configurator.config)
+
+                // routers use context.actorOf() to create the routees, which does not allow us to pass
+                // these through, but obtain them here for early verification
+                var routerProps = Props.Empty.WithDeploy(deploy);
+                var routeeProps = props.WithRouter(RouterConfig.NoRouter);
+
+                var routedActorRef = new RoutedActorRef(system, routerProps, routerDispatcher, () => routerMailbox, routeeProps,supervisor, path);
+                routedActorRef.Initialize(async);
+                return routedActorRef;
             }
-            cell.NewActor();
-            //   parentContext.Watch(cell.Self);
-            return cell.Self;
         }
 
-        
-
-
-        /// <summary>
-        ///     Resolves the actor reference.
-        /// </summary>
-        /// <param name="actorPath">The actor path.</param>
-        /// <returns>ActorRef.</returns>
-        /// <exception cref="System.NotSupportedException">The provided actor path is not valid in the LocalActorRefProvider</exception>
-        public override ActorRef ResolveActorRef(ActorPath actorPath)
+        public Address GetExternalAddressFor(Address address)
         {
-            if (Address.Equals(actorPath.Address))
-            {
-                if (actorPath.Elements.Head() == "temp")
-                {
-                    //skip ""/"temp", 
-                    string[] parts = actorPath.Elements.Drop(1).ToArray();
-                    return TempContainer.GetChild(parts);
-                }
-                //standard
-                ActorCell currentContext = RootCell;
-                foreach (string part in actorPath.Elements)
-                {
-                    currentContext = ((LocalActorRef)currentContext.Child(part)).Cell;
-                }
-                return currentContext.Self;
-            }
-            throw new NotSupportedException("The provided actor path is not valid in the LocalActorRefProvider");
+            return address == _rootPath.Address ? address : null;
         }
 
-        public override Address GetExternalAddressFor(Address address)
-        {
-            return address.Equals(RootPath.Address) ? address : null;
-        }
+        public Address DefaultAddress { get { return _rootPath.Address; } }
+
+        public LoggingAdapter Log { get { return _log; } }
     }
 }

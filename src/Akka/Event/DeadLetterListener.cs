@@ -65,7 +65,7 @@ namespace Akka.Event
             }
             if (done)
             {
-                Self.Stop();
+                ((InternalActorRef)Self).Stop();
             }
         }
     }

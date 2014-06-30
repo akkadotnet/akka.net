@@ -52,7 +52,7 @@ namespace Akka.Dispatch
             {
                 if (respondTo != ActorRef.NoSender)
                 {
-                    Self.Stop();
+                    ((InternalActorRef)Self).Stop();
                     respondTo.Tell(new CompleteFuture(() => result.SetResult(message)));
                     Become(EmptyReceive);
                 }
@@ -60,7 +60,7 @@ namespace Akka.Dispatch
                 {
                     //if there is no listening actor asking,
                     //just eval the result directly
-                    Self.Stop();
+                    ((InternalActorRef)Self).Stop();
                     Become(EmptyReceive);
 
                     result.SetResult(message);

@@ -17,6 +17,7 @@ namespace Akka.Dispatch
         //TODO: Maybe the value of Debug should be controlled by a conditional compilation symbol (like DEBUG)
         public const bool Debug = false;
         
+        private volatile ActorCell _actorCell;
         protected MessageDispatcher dispatcher;
 
         ///// <summary>
@@ -31,7 +32,12 @@ namespace Akka.Dispatch
         ///// <value>The invoke.</value>
         //public Action<Envelope> Invoke { get; set; }
 
-        public ActorCell ActorCell { get; set; }
+        protected ActorCell ActorCell { get { return _actorCell; } }
+
+        public void SetActor(ActorCell actorCell)
+        {
+            _actorCell = actorCell;
+        }
 
         /// <summary>
         ///     Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
@@ -72,11 +78,18 @@ namespace Akka.Dispatch
             }
         }
 
+
+        public void Start()
+        {
+            status = MailboxStatus.Idle;
+            Schedule();
+        }
+
         /// <summary>
         ///     The status
         /// </summary>
 // ReSharper disable once InconsistentNaming
-        protected int status;
+        protected int status = MailboxStatus.Busy;  //HACK: Initially set the mailbox as busy in order for it not to scheduled until we want it to
 
         internal int Status
         {
@@ -126,6 +139,8 @@ namespace Akka.Dispatch
         }
 
         protected abstract void Schedule();
+
+
     }
 
     ///// <summary>

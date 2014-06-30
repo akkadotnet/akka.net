@@ -39,8 +39,12 @@ namespace Akka.Actor
         public Props()
         {
             Arguments = new object[] {};
-            Deploy =
-                new Deploy()
+            Deploy = CreateDefaultDeploy();
+        }
+
+        private static Deploy CreateDefaultDeploy()
+        {
+            return new Deploy()
                 .WithMailbox("akka.actor.default-mailbox")
                 .WithDispatcher(Dispatchers.DefaultDispatcherId);
         }
@@ -51,11 +55,12 @@ namespace Akka.Actor
         /// <param name="type">The type.</param>
         /// <param name="args">The arguments.</param>
         protected Props(Type type, object[] args)
-            : this()
         {
             Type = type;
             TypeName = type.AssemblyQualifiedName;
             Arguments = args;
+            Deploy = CreateDefaultDeploy();
+
         }
 
         /// <summary>
@@ -63,11 +68,27 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="type">The type.</param>
         protected Props(Type type)
-            : this()
         {
             Type = type;
             TypeName = type.AssemblyQualifiedName;
             Arguments = new object[] {};
+            Deploy = CreateDefaultDeploy();
+        }
+
+        public Props(Type type, SupervisorStrategy supervisorStrategy, IEnumerable<object> args)
+        {
+            Type = type;
+            Arguments = args.ToArray();
+            Deploy = CreateDefaultDeploy();
+            SupervisorStrategy = supervisorStrategy;
+        }
+
+        public Props(Type type, SupervisorStrategy supervisorStrategy, params object[] args)
+        {
+            Type = type;
+            Arguments = args;
+            Deploy = CreateDefaultDeploy();
+            SupervisorStrategy = supervisorStrategy;
         }
 
         public Props(Deploy deploy, Type type, IEnumerable<object> args)
@@ -148,9 +169,10 @@ namespace Akka.Actor
         /// </summary>
         /// <typeparam name="TActor">The type of the t actor.</typeparam>
         /// <param name="factory">The factory.</param>
+        /// <param name="supervisorStrategy">Optional: Supervisor strategy</param>
         /// <returns>Props.</returns>
         /// <exception cref="System.ArgumentException">The create function must be a 'new T (args)' expression</exception>
-        public static Props Create<TActor>(Expression<Func<TActor>> factory) where TActor : ActorBase
+        public static Props Create<TActor>(Expression<Func<TActor>> factory, SupervisorStrategy supervisorStrategy=null) where TActor : ActorBase
         {
             if (factory.Body is UnaryExpression)
                 return new DynamicProps<TActor>(factory.Compile());
@@ -161,7 +183,7 @@ namespace Akka.Actor
 
             object[] args = newExpression.GetArguments().ToArray();
 
-            return new Props(typeof (TActor), args);
+            return new Props(typeof (TActor),supervisorStrategy, args);
         }
 
         /// <summary>
@@ -173,6 +195,19 @@ namespace Akka.Actor
         {
             return new Props(typeof (TActor));
         }
+
+
+        /// <summary>
+        ///     Creates this instance.
+        /// </summary>
+        /// <typeparam name="TActor">The type of the t actor.</typeparam>
+        /// <returns>Props.</returns>
+        public static Props Create<TActor>(SupervisorStrategy supervisorStrategy) where TActor : ActorBase
+        {
+            return new Props(typeof(TActor), supervisorStrategy);
+        }
+
+
 
         /// <summary>
         ///     Creates the specified type.

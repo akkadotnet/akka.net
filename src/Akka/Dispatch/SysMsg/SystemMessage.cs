@@ -285,15 +285,15 @@ namespace Akka.Dispatch.SysMsg
     }
 
     /// <summary>
-    ///     Class StopChild.
+    ///     INTERNAL
     /// </summary>
-    public sealed class StopChild : SystemMessage
+    public sealed class StopChild   //StopChild is NOT a SystemMessage
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="StopChild" /> class.
         /// </summary>
         /// <param name="child">The child.</param>
-        public StopChild(LocalActorRef child)
+        public StopChild(ActorRef child)
         {
             Child = child;
         }
@@ -302,7 +302,7 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the child.
         /// </summary>
         /// <value>The child.</value>
-        public LocalActorRef Child { get; private set; }
+        public ActorRef Child { get; private set; }
     }
 
     /// <summary>
@@ -333,4 +333,20 @@ namespace Akka.Dispatch.SysMsg
     public sealed class Terminate : SystemMessage
     {
     }
+
+    public sealed class Create : SystemMessage
+    {
+        private readonly ActorInitializationException _failure;
+
+        public Create(ActorInitializationException failure=null)
+        {
+            _failure = failure;
+        }
+
+        public ActorInitializationException Failure
+        {
+            get { return _failure; }
+        }
+    }
+
 }

@@ -33,19 +33,20 @@ namespace Akka.Routing
         /// </summary>
         private int _resizeInProgress;
         private long _resizeCounter;
+        private readonly Props _routerProps;
         private Pool _pool;
 
-        public ResizablePoolCell(ActorSystem system, InternalActorRef supervisor, Props routerProps,
-            Props routeeProps, ActorPath path, Mailbox mailbox, Pool pool)
-            : base(system, supervisor, routerProps, routeeProps, path, mailbox)
+        public ResizablePoolCell(ActorSystem system, InternalActorRef self, Props routerProps, MessageDispatcher dispatcher, Props routeeProps, InternalActorRef supervisor, Pool pool)
+            : base(system,self, routerProps,dispatcher, routeeProps, supervisor)
         {
             if (pool.Resizer == null)
                 throw new ArgumentException("RouterConfig must be a Pool with defined resizer");
 
             resizer = pool.Resizer;
-            this._pool = pool;
-            this._resizeCounter = 0;
-            this._resizeInProgress = ResizeInProgressState.False;
+            _routerProps = routerProps;
+            _pool = pool;
+            _resizeCounter = 0;
+            _resizeInProgress = ResizeInProgressState.False;
         }
 
         protected override void PreStart()
@@ -58,9 +59,9 @@ namespace Akka.Routing
             base.PreStart();
         }
 
-        internal override void Post(ActorRef sender, object message)
+        public override void Post(ActorRef sender, object message)
         {
-            if (!(RouterConfig.IsManagementMessage(message)) &&
+            if(!(_routerProps.RouterConfig.IsManagementMessage(message)) &&
                 resizer.IsTimeForResize(Interlocked.Increment(ref _resizeCounter) - 1) &&
                 Interlocked.Exchange(ref _resizeInProgress, ResizeInProgressState.True) == ResizeInProgressState.False)
             {

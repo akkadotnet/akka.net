@@ -251,16 +251,27 @@ namespace Akka.Routing
                         var actorRef = actorRefRoutee.Actor as ActorRefWithCell;
                         if (actorRef != null)
                         {
-                            if (actorRef.Cell != null)
+                            var underlying = actorRef.Underlying;
+                            var cell = underlying as ActorCell;
+                            if(cell != null)
                             {
                                 return
                                     pressureThreshold == 1
-                                        ? actorRef.Cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
-                                          actorRef.Cell.Mailbox.HasUnscheduledMessages
+                                        ? cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
+                                          cell.Mailbox.HasUnscheduledMessages
                                         : (pressureThreshold < 1
-                                            ? actorRef.Cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
-                                              actorRef.Cell.CurrentMessage != null
-                                            : actorRef.Cell.Mailbox.NumberOfMessages > pressureThreshold);
+                                            ? cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
+                                              cell.CurrentMessage != null
+                                            : cell.Mailbox.NumberOfMessages > pressureThreshold);
+                            }
+                            else
+                            {
+                                return
+                                    pressureThreshold == 1
+                                        ? underlying.HasMessages
+                                        : (pressureThreshold < 1
+                                            ? true // unstarted cells are always busy, for example
+                                            : underlying.NumberOfMessages >= pressureThreshold);
                             }
                         }
                     }

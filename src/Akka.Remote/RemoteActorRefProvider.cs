@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
@@ -16,29 +18,33 @@ namespace Akka.Remote
     /// </summary>
     class RemoteActorRefProvider : ActorRefProvider
     {
-        private readonly LoggingAdapter log;
+        private readonly LoggingAdapter _log;
 
         public Config Config { get; private set; }
 
-        public RemoteActorRefProvider(ActorSystem system)
-            : base(system)
+        public RemoteActorRefProvider(string systemName, Settings settings, EventStream eventStream)
         {
-            _local = new LocalActorRefProvider(system);
-            Config = system.Settings.Config.WithFallback(RemoteConfigFactory.Default());
+            var remoteDeployer = new RemoteDeployer(settings);
+            Func<ActorPath, InternalActorRef> deadLettersFactory = null; //TODO:  path => new RemoteDeadLetterActorRef(this, path, eventStream);
+            _local = new LocalActorRefProvider(systemName, settings, eventStream, remoteDeployer, deadLettersFactory);
+            Config = settings.Config.WithFallback(RemoteConfigFactory.Default());
             RemoteSettings = new RemoteSettings(Config);
-            log = Logging.GetLogger(System, this);
+            Deployer = remoteDeployer;
+            _log = _local.Log;
         }
 
-        private LocalActorRefProvider _local;
+        private readonly LocalActorRefProvider _local;
         private Internals _internals;
+        private ActorSystem _system;
 
         private Internals RemoteInternals
         {
-            get {
+            get
+            {
                 return _internals ??
                        (_internals =
-                           new Internals(new Remoting(System, this), System.Serialization,
-                               new RemoteDaemon(System, RootPath/"remote", SystemGuardian)));
+                           new Internals(new Remoting(_system, this), _system.Serialization,
+                               new RemoteDaemon(_system, RootPath / "remote", SystemGuardian, _log)));
             }
         }
 
@@ -49,44 +55,64 @@ namespace Akka.Remote
 
         /* these are only available after Init() is called */
 
-        public override ActorPath RootPath
+        public ActorPath RootPath
         {
             get { return _local.RootPath; }
         }
 
-        public override ActorCell RootCell { get { return _local.RootCell; } }
-        public override LocalActorRef Guardian { get { return _local.Guardian; } }
-        public override LocalActorRef SystemGuardian { get { return _local.SystemGuardian; } }
-        public override VirtualPathContainer TempContainer{ get { return _local.TempContainer; } }
-        public override ActorPath TempNode { get { return _local.TempNode; } }
-        public override ActorRef DeadLetters { get { return _local.DeadLetters; } }
 
-        public override void Init()
+        public InternalActorRef RootGuardian { get { return _local.RootGuardian; } }
+        public LocalActorRef Guardian { get { return _local.Guardian; } }
+        public LocalActorRef SystemGuardian { get { return _local.SystemGuardian; } }
+        public InternalActorRef TempContainer { get { return _local.TempContainer; } }
+        public ActorRef DeadLetters { get { return _local.DeadLetters; } }
+        public Deployer Deployer { get; private set; }
+        public Address DefaultAddress { get; private set; } //TODO: Should be Transport.DefaultAddress
+        public Settings Settings { get { return _local.Settings; } }
+        public Task TerminationTask { get { return _local.TerminationTask; } }
+        private InternalActorRef InternalDeadLetters { get { return (InternalActorRef) _local.DeadLetters; } }
+
+        public ActorPath TempPath()
         {
-            //TODO: this should not be here
-            Address = new Address("akka", System.Name); //TODO: this should not work this way...
-            Deployer = new RemoteDeployer(System.Settings);
-            _local.Init();
+            return _local.TempPath();
+        }
 
-            var daemonMsgCreateSerializer = new DaemonMsgCreateSerializer(System);
-            var messageContainerSerializer = new MessageContainerSerializer(System);
-            System.Serialization.AddSerializer(daemonMsgCreateSerializer);
-            System.Serialization.AddSerializationMap(typeof (DaemonMsgCreate), daemonMsgCreateSerializer);
-            System.Serialization.AddSerializer(messageContainerSerializer);
-            System.Serialization.AddSerializationMap(typeof (ActorSelectionMessage), messageContainerSerializer);
-           
+        public void RegisterTempActor(InternalActorRef actorRef, ActorPath path)
+        {
+            _local.RegisterTempActor(actorRef, path);
+        }
+
+        public void UnregisterTempActor(ActorPath path)
+        {
+            _local.UnregisterTempActor(path);
+        }
+
+        public void Init(ActorSystem system)
+        {
+            _system = system;
+            //TODO: this should not be here
+            DefaultAddress = new Address("akka", system.Name); //TODO: this should not work this way...
+
+            _local.Init(system);
+
+            var daemonMsgCreateSerializer = new DaemonMsgCreateSerializer(system);
+            var messageContainerSerializer = new MessageContainerSerializer(system);
+            system.Serialization.AddSerializer(daemonMsgCreateSerializer);
+            system.Serialization.AddSerializationMap(typeof(DaemonMsgCreate), daemonMsgCreateSerializer);
+            system.Serialization.AddSerializer(messageContainerSerializer);
+            system.Serialization.AddSerializationMap(typeof(ActorSelectionMessage), messageContainerSerializer);
+
             Transport.Start();
             //      RemoteHost.StartHost(System, port);
         }
 
-        public override InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
-            ActorPath path, bool systemService = false)
+        public InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
-            if (systemService) return LocalActorOf(system, props, supervisor, path, true);
+            if(systemService) return LocalActorOf(system, props, supervisor, path, true, deploy, lookupDeploy, async);
 
-            Deploy configDeploy = System.Provider.Deployer.Lookup(path);
-            var deploy = configDeploy ?? props.Deploy ?? Deploy.None;
-            if (deploy.Mailbox != null)
+            Deploy configDeploy = system.Provider.Deployer.Lookup(path);
+            deploy = configDeploy ?? props.Deploy ?? Deploy.None;
+            if(deploy.Mailbox != null)
                 props = props.WithMailbox(deploy.Mailbox);
             if (deploy.Dispatcher != null)
                 props = props.WithDispatcher(deploy.Dispatcher);
@@ -132,25 +158,25 @@ namespace Akka.Remote
                     //}
                     //else
                     //{
-                        return LocalActorOf(system, props, supervisor, path, false);
-                   // }
+                    return LocalActorOf(system, props, supervisor, path, false, null, false, async);     //TODO: replace deploy:null with deployment.headOption
+                    // }
                 }
 
                 return RemoteActorOf(system, props, supervisor, path);
             }
-            return LocalActorOf(system, props, supervisor, path);
+            return LocalActorOf(system, props, supervisor, path, false, null, false, async);        //TODO: replace deploy:null with deployment.headOption
         }
 
         private bool HasAddress(Address address)
         {
-            return address.Equals(Address) || address.Equals(_local.RootPath.Address) || Transport.Addresses.Any(a => a.Equals(address));
+            return address == _local.RootPath.Address || address == RootPath.Address || Transport.Addresses.Any(a => a == address);
         }
 
-        public override ActorRef RootGuardianAt(Address address)
+        public ActorRef RootGuardianAt(Address address)
         {
             if (HasAddress(address))
             {
-                return RootCell.Self;
+                return RootGuardian;
             }
             return new RemoteActorRef(
                 Transport,
@@ -179,27 +205,48 @@ namespace Akka.Remote
         }
 
         private InternalActorRef LocalActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
-            ActorPath path, bool systemService = false)
+            ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
-            return _local.ActorOf(system, props, supervisor, path, systemService);
+            return _local.ActorOf(system, props, supervisor, path, systemService, deploy, lookupDeploy, async);
         }
+
 
         /// <summary>
         /// INTERNAL API.
         /// 
         /// Called in deserialization of incoming remote messages where the correct local address is known.
         /// </summary>
-        internal InternalActorRef ResolveActorRefWithLocalAddress(string actorPath, Address localAddress)
+        internal InternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
-            var path = ActorPath.Parse(actorPath);
-            //the actor's local address was already included in the ActorPath
-            if (HasAddress(path.Address)) return (InternalActorRef)ResolveActorRef(actorPath);
-            else return new RemoteActorRef(Transport, localAddress, new RootActorPath(path.Address) / path.Elements, ActorRef.Nobody, Props.None, Deploy.None);
+            ActorPath actorPath;
+            if(ActorPath.TryParse(path, out actorPath))
+            {
+                //the actor's local address was already included in the ActorPath
+                if(HasAddress(actorPath.Address)) 
+                    return (InternalActorRef)ResolveActorRef(actorPath);
+                return new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address) / actorPath.Elements, ActorRef.Nobody, Props.None, Deploy.None);                
+            }
+            _log.Debug("resolve of unknown path [{0}] failed", path);
+            return InternalDeadLetters;
         }
 
-        public override ActorRef ResolveActorRef(ActorPath actorPath)
+        public ActorRef ResolveActorRef(string path)
         {
-            if (HasAddress(actorPath.Address))
+            if(path == "")
+                return ActorRef.NoSender;
+
+            ActorPath actorPath;
+            if(ActorPath.TryParse(path,out actorPath))
+                return ResolveActorRef(actorPath);
+
+            _log.Debug("resolve of unknown path [{0}] failed", path);
+            return DeadLetters;
+        }
+
+
+        public ActorRef ResolveActorRef(ActorPath actorPath)
+        {
+            if(HasAddress(actorPath.Address))
             {
                 if (actorPath.Elements.Head() == "remote")
                 {
@@ -218,16 +265,12 @@ namespace Akka.Remote
                     return TempContainer.GetChild(parts);
                 }
                 //standard
-                ActorCell currentContext = RootCell;
-                if (actorPath.ToStringWithoutAddress() == "/")
+                var rootGuardian = RootGuardian;
+                if(actorPath.ToStringWithoutAddress() == "/")
                 {
-                    return currentContext.Self;
+                    return rootGuardian;
                 }
-                foreach (string part in actorPath.Elements)
-                {
-                    currentContext = ((LocalActorRef) currentContext.Child(part)).Cell;
-                }
-                return currentContext.Self;
+                return rootGuardian.GetChild(actorPath.Elements);
             }
             return new RemoteActorRef(Transport,
                 Transport.LocalAddressForRemote(actorPath.Address),
@@ -237,7 +280,7 @@ namespace Akka.Remote
                 Deploy.None);
         }
 
-        public override Address GetExternalAddressFor(Address address)
+        public Address GetExternalAddressFor(Address address)
         {
             if (HasAddress(address)) { return _local.RootPath.Address; }
             if (!string.IsNullOrEmpty(address.Host) && address.Port.HasValue)
@@ -258,12 +301,33 @@ namespace Akka.Remote
         {
             Akka.Serialization.Serialization.CurrentTransportInformation = new Information
             {
-                System = System,
+                System = _system,
                 Address = actor.LocalAddressToUse,
             };
-            log.Debug("[{0}] Instantiating Remote Actor [{1}]", RootPath, actor.Path);
-            ActorRef remoteNode = ResolveActorRef(new RootActorPath(actor.Path.Address)/"remote");
+            _log.Debug("[{0}] Instantiating Remote Actor [{1}]", RootPath, actor.Path);
+            ActorRef remoteNode = ResolveActorRef(new RootActorPath(actor.Path.Address) / "remote");
             remoteNode.Tell(new DaemonMsgCreate(props, deploy, actor.Path.ToSerializationFormat(), supervisor));
+        }
+
+        /// <summary>
+        ///     Afters the send system message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public void AfterSendSystemMessage(SystemMessage message)
+        {
+            message.Match()
+                .With<Watch>(m => { })
+                .With<Unwatch>(m => { });
+
+            //    message match {
+            //  // Sending to local remoteWatcher relies strong delivery guarantees of local send, i.e.
+            //  // default dispatcher must not be changed to an implementation that defeats that
+            //  case rew: RemoteWatcher.Rewatch ⇒
+            //    remoteWatcher ! RemoteWatcher.RewatchRemote(rew.watchee, rew.watcher)
+            //  case Watch(watchee, watcher)   ⇒ remoteWatcher ! RemoteWatcher.WatchRemote(watchee, watcher)
+            //  case Unwatch(watchee, watcher) ⇒ remoteWatcher ! RemoteWatcher.UnwatchRemote(watchee, watcher)
+            //  case _                         ⇒
+            //}
         }
 
 

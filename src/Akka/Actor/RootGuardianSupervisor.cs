@@ -6,7 +6,6 @@ using Akka.Util;
 
 namespace Akka.Actor
 {
-
     /// <summary>
     /// Top-level anchor for the supervision hierarchy of this actor system.
     /// Note: This class is called theOneWhoWalksTheBubblesOfSpaceTime in Akka
@@ -24,7 +23,7 @@ namespace Akka.Actor
             _log = log;
             _terminationPromise = terminationPromise;
             _provider = provider;
-            _path = root/"_Root-guardian-supervisor";
+            _path = root / "_Root-guardian-supervisor";   //In akka this is root / "bubble-walker" 
         }
 
         protected override void TellInternal(object message, ActorRef sender)
@@ -61,7 +60,7 @@ namespace Akka.Actor
                 var supervise = systemMessage as Supervise;
                 if(supervise != null)
                 {
-                    // TODO register child in some map to keep track of it and enable shutdown after all dead
+                    // This comment comes from AKKA: TO DO register child in some map to keep track of it and enable shutdown after all dead
                     return;
                 }
                 var deathWatchNotification = systemMessage as DeathWatchNotification;

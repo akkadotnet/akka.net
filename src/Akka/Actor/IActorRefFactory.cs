@@ -21,7 +21,7 @@
 
 
         /// <summary>
-        ///     Construct an [[Akka.Actor.ActorSelection]] from the given path, which is
+        ///     Construct an <see cref="Akka.Actor.ActorSelection"/> from the given path, which is
         ///     parsed for wildcards (these are replaced by regular expressions
         ///     internally). No attempt is made to verify the existence of any part of
         ///     the supplied path, it is recommended to send a message and gather the
@@ -32,7 +32,7 @@
         ActorSelection ActorSelection(ActorPath actorPath);
 
         /// <summary>
-        ///     Construct an [[Akka.Actor.ActorSelection]] from the given path, which is
+        ///     Construct an <see cref="Akka.Actor.ActorSelection"/> from the given path, which is
         ///     parsed for wildcards (these are replaced by regular expressions
         ///     internally). No attempt is made to verify the existence of any part of
         ///     the supplied path, it is recommended to send a message and gather the

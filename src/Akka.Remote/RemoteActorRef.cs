@@ -144,7 +144,7 @@ namespace Akka.Remote
         private void SendSystemMessage(SystemMessage message)
         {
             Remote.Send(message, null, this);
-            Provider.AfterSendSystemMessage(message);
+            Remote.Provider.AfterSendSystemMessage(message);
         }
 
         /// <summary>
@@ -160,7 +160,7 @@ namespace Akka.Remote
         /// <summary>
         /// Starts this instance.
         /// </summary>
-        public void Start()
+        public override void Start()
         {
             if (_props != null && _deploy != null)
                 Remote.Provider.UseActorOnNode(this, _props, _deploy, _parent);

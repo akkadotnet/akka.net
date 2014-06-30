@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Tools;
 using Debug = System.Diagnostics.Debug;
@@ -116,7 +117,7 @@ namespace Akka.Actor
         ///     Gets the guardian.
         /// </summary>
         /// <value>The guardian.</value>
-        public InternalActorRef Guardian
+        public LocalActorRef Guardian
         {
             get { return Provider.Guardian; }
         }
@@ -125,7 +126,7 @@ namespace Akka.Actor
         ///     Gets the system guardian.
         /// </summary>
         /// <value>The system guardian.</value>
-        public InternalActorRef SystemGuardian
+        public LocalActorRef SystemGuardian
         {
             get { return Provider.SystemGuardian; }
         }
@@ -164,7 +165,7 @@ namespace Akka.Actor
         /// <returns>InternalActorRef.</returns>
         public InternalActorRef ActorOf(Props props, string name = null)
         {
-            return Provider.Guardian.Cell.ActorOf(props, name);
+            return Guardian.Cell.ActorOf(props, name);
         }
 
         /// <summary>
@@ -175,11 +176,11 @@ namespace Akka.Actor
         /// <returns>InternalActorRef.</returns>
         public InternalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
         {
-            return Provider.Guardian.Cell.ActorOf<TActor>(name);
+            return Guardian.Cell.ActorOf<TActor>(name);
         }
 
         /// <summary>
-        ///     Construct an [[Akka.Actor.ActorSelection]] from the given path, which is
+        ///     Construct an  <see cref="Akka.Actor.ActorSelection"/> from the given path, which is
         ///     parsed for wildcards (these are replaced by regular expressions
         ///     internally). No attempt is made to verify the existence of any part of
         ///     the supplied path, it is recommended to send a message and gather the
@@ -189,11 +190,11 @@ namespace Akka.Actor
         /// <returns>ActorSelection.</returns>
         public ActorSelection ActorSelection(ActorPath actorPath)
         {
-            return Provider.RootCell.ActorSelection(actorPath);
+            return ActorRefFactoryShared.ActorSelection(actorPath, this);
         }
 
         /// <summary>
-        ///     Construct an [[Akka.Actor.ActorSelection]] from the given path, which is
+        ///     Construct an <see cref="Akka.Actor.ActorSelection"/> from the given path, which is
         ///     parsed for wildcards (these are replaced by regular expressions
         ///     internally). No attempt is made to verify the existence of any part of
         ///     the supplied path, it is recommended to send a message and gather the
@@ -203,7 +204,7 @@ namespace Akka.Actor
         /// <returns>ActorSelection.</returns>
         public ActorSelection ActorSelection(string actorPath)
         {
-            return Provider.RootCell.ActorSelection(actorPath);
+            return ActorRefFactoryShared.ActorSelection(actorPath, this, Provider.RootGuardian);
         }
 
         /// <summary>
@@ -372,9 +373,9 @@ namespace Akka.Actor
         {
             Type providerType = Type.GetType(Settings.ProviderClass);
             Debug.Assert(providerType != null, "providerType != null");
-            var provider = (ActorRefProvider) Activator.CreateInstance(providerType, this);
+            var provider = (ActorRefProvider)Activator.CreateInstance(providerType,Name,Settings,EventStream);
             Provider = provider;
-            Provider.Init();
+            Provider.Init(this);
         }
 
         /// <summary>
@@ -397,8 +398,6 @@ namespace Akka.Actor
         /// </summary>
         private void ConfigureLoggers()
         {
-            EventStream.StartDefaultLoggers(this);
-
             log = new BusLogging(EventStream, "ActorSystem(" + Name + ")", GetType());
         }
 
@@ -418,7 +417,7 @@ namespace Akka.Actor
         /// </summary>
         public void Shutdown()
         {
-            Provider.RootCell.Stop();
+            Provider.Guardian.Stop();
         }
 
         /// <summary>
@@ -443,13 +442,16 @@ namespace Akka.Actor
             return Provider.SystemGuardian.Cell.ActorOf<TActor>(name);
         }
 
-        public void Stop(ActorRef @ref)
+        public void Stop(ActorRef actor)
         {
-            if (@ref is LocalActorRef)
-            {
-                var l = @ref as LocalActorRef;
-                l.Stop();
-            }
+            var path = actor.Path;
+            var parentPath = path.Parent;
+            if(parentPath==Guardian.Path)
+                Guardian.Tell(new StopChild(actor));
+            else if(parentPath == SystemGuardian.Path)
+                SystemGuardian.Tell(new StopChild(actor));
+            else
+                ((InternalActorRef) actor).Stop();            
         }
 
         #region Equality methods

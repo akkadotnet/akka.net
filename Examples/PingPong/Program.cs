@@ -62,7 +62,7 @@ namespace PingPong
             Console.WriteLine("ProcessorCount:         {0}", processorCount);
             Console.WriteLine("ClockSpeed:             {0} MHZ", CpuSpeed());
             Console.WriteLine("Actor Count:            {0}", processorCount * 2);
-            Console.WriteLine("Messages sent/received: {0}  ({0:0E0})", GetTotalMessagesReceived(repeat));
+            Console.WriteLine("Messages sent/received: {0}  ({0:0e0})", GetTotalMessagesReceived(repeat));
             Console.WriteLine();
 
             //Warm up
@@ -140,6 +140,7 @@ namespace PingPong
 
             var elapsedMilliseconds = sw.ElapsedMilliseconds;
             long throughput = elapsedMilliseconds == 0 ? -1 : totalMessagesReceived / elapsedMilliseconds * 1000;
+            var foregroundColor = Console.ForegroundColor;
             if(throughput > bestThroughput)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
@@ -153,6 +154,7 @@ namespace PingPong
             }
             if(printStats)
                 Console.WriteLine("{0,10}, {1,12}, {2,17}, {3,15}", factor, throughput, setupTime.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture), totalWatch.Elapsed.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture));
+            Console.ForegroundColor = foregroundColor;
 
             if(redCount > 3)
                 return false;

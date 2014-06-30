@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Tools;
+using Debug = Akka.Event.Debug;
 
 namespace Akka.Actor
 {
     /// <summary>
     ///     Class ActorCell.
     /// </summary>
+    [DebuggerDisplay("{Self,nq}")]
     public partial class ActorCell
     {
         //terminatedqueue should never be used outside the message loop
@@ -32,8 +35,8 @@ namespace Akka.Actor
         {
             get
             {
-                if (Actor != null)
-                    return Actor.GetType();
+                if (_actor != null)
+                    return _actor.GetType();
                 return GetType();
             }
         }
@@ -42,7 +45,7 @@ namespace Akka.Actor
         ///     Stops the specified child.
         /// </summary>
         /// <param name="child">The child.</param>
-        public void Stop(InternalActorRef child)
+        public void Stop(ActorRef child)
         {
             //TODO: in akka this does some wild magic on childrefs and then just call child.stop();
 
@@ -56,7 +59,7 @@ namespace Akka.Actor
             //    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), string.Format("Child Actor {0} stopped - no longer supervising", child.Path)));
             //}
 
-            child.Stop();
+            ((InternalActorRef)child).Stop();
         }
 
         /// <summary>
@@ -68,7 +71,6 @@ namespace Akka.Actor
             var message = envelope.Message;
             CurrentMessage = message;
             Sender = envelope.Sender;
-            //set the current context
 
             try
             {
@@ -103,15 +105,11 @@ namespace Akka.Actor
   }
          */
 
-        /// <summary>
-        ///     Automatics the receive message.
-        /// </summary>
-        /// <param name="envelope">The envelope.</param>
-        public void AutoReceiveMessage(Envelope envelope)
+        private void AutoReceiveMessage(Envelope envelope)
         {
             var message = envelope.Message;
 
-            var actor = Actor;
+            var actor = _actor;
             var actorType = actor != null ? actor.GetType() : null;
 
             if(System.Settings.DebugAutoReceive)
@@ -128,12 +126,12 @@ namespace Akka.Actor
 
         internal void ReceiveMessage(object message)
         {
-            var wasHandled = Actor.AroundReceive(behaviorStack.Peek(), message);
+            var wasHandled = _actor.AroundReceive(behaviorStack.Peek(), message);
 
-            if(System.Settings.AddLoggingReceive && Actor is ILogReceive)
+            if(System.Settings.AddLoggingReceive && _actor is ILogReceive)
             {
                 //TODO: akka alters the receive handler for logging, but the effect is the same. keep it this way?
-                Publish(new Debug(Self.Path.ToString(), Actor.GetType(),
+                Publish(new Debug(Self.Path.ToString(), _actor.GetType(),
                     "received " + (wasHandled ? "handled" : "unhandled") + " message " + message));
             }
         }
@@ -192,7 +190,7 @@ namespace Akka.Actor
                         .With<CompleteFuture>(HandleCompleteFuture)
                         .With<Failed>(HandleFailed)
                         .With<DeathWatchNotification>(WatchedActorTerminated)
-                        //TODO: add create?
+                        .With<Create>(HandleCreate)
                         //TODO: see """final def init(sendSupervise: Boolean, mailboxType: MailboxType): this.type = {""" in dispatch.scala
                         //case Create(failure) ⇒ create(failure)
                         .With<Watch>(HandleWatch)
@@ -201,7 +199,7 @@ namespace Akka.Actor
                         .With<Suspend>(FaultSuspend)
                         .With<Resume>(FaultResume)
                         .With<Terminate>(Terminate)
-                        .With<Supervise>(HandleSupervise)
+                        .With<Supervise>(s => Supervise(s.Child, s.Async))
                         .Default(m => { throw new NotSupportedException("Unknown message " + m.GetType().Name); });
                 }
                 catch (Exception cause)
@@ -342,9 +340,9 @@ protected def terminate() {
                 return;
 
             isTerminating = true;
-            Self.IsTerminated = true;
+            _self.IsTerminated = true;
 
-            UnwatchWatchedActors(Actor);
+            UnwatchWatchedActors(_actor);
             foreach (InternalActorRef child in GetChildren())
             {
                 child.Stop();
@@ -360,18 +358,18 @@ protected def terminate() {
         /// </summary>
         private void FinishTerminate()
         {
-            if (Actor == null)
+            if (_actor == null)
             {
                 //TODO: this is the root actor, do something....
                 return;
             }
 
-            ActorBase a = Actor;
+            ActorBase a = _actor;
             if (a != null)
             {
                 try
                 {
-                    Actor.AroundPostStop();
+                    _actor.AroundPostStop();
                 }
                 catch (Exception x)
                 {
@@ -385,7 +383,7 @@ protected def terminate() {
                 Publish(new Debug(Self.Path.ToString(), ActorType, "stopped"));
             UnwatchWatchedActors(a);
             
-            Actor = null;
+            _actor = null;
             Mailbox.Stop();
         }
 
@@ -462,24 +460,33 @@ protected def terminate() {
             }
         }
 
-        /// <summary>
-        ///     Handles the supervise.
-        /// </summary>
-        /// <param name="m">The m.</param>
-        private void HandleSupervise(Supervise m)
+
+        private void Supervise(ActorRef child, bool async)
         {
             //TODO: complete this
-            //  if (!isTerminating) {
-            // Supervise is the first thing we get from a new child, so store away the UID for later use in handleFailure()
-
-            //   initChild(child) match {
-            //     case Some(crs) ⇒
-            //       handleSupervise(child, async)
+    //  if (!isTerminating) {
+    //    // Supervise is the first thing we get from a new child, so store away the UID for later use in handleFailure()
+    //    initChild(child) match {
+    //      case Some(crs) ⇒
+    //        handleSupervise(child, async)
+    //        if (system.settings.DebugLifecycle) publish(Debug(self.path.toString, clazz(actor), "now supervising " + child))
+    //      case None ⇒ publish(Error(self.path.toString, clazz(actor), "received Supervise from unregistered child " + child + ", this will not end well"))
+    //    }
+    //  }
+            HandleSupervise(child, async);
             if (System.Settings.DebugLifecycle)
             {
-                Publish(new Debug(Self.Path.ToString(), ActorType, "now supervising " + m.Child.Path));
+                Publish(new Debug(Self.Path.ToString(), ActorType, "now supervising " + child.Path));
             }
             //     case None ⇒ publish(Error(self.path.toString, clazz(actor), "received Supervise from unregistered child " + child + ", this will not end well"))
+        }
+
+        private void HandleSupervise(ActorRef child, bool async)
+        {
+            if(async && child is RepointableActorRef)
+            {
+                ((RepointableActorRef)child).Point();
+            }
         }
 
         /// <summary>
@@ -496,7 +503,7 @@ protected def terminate() {
         /// </summary>
         private void HandlePoisonPill()
         {
-            Self.Stop();
+            _self.Stop();
         }
 
         /// <summary>
@@ -516,6 +523,24 @@ protected def terminate() {
             Self.Tell(new Recreate(cause));
         }
 
+
+        private void HandleCreate(Create obj)   //Called create in Akka (ActorCell.scala)
+        {
+            //TODO: this is missing bits and pieces compared to Akka
+            try
+            {
+                var instance = NewActor();
+                _actor = instance;
+                UseThreadContext(() => instance.AroundPreStart());
+                if(System.Settings.DebugLifecycle)
+                    Publish(new Debug(Self.Path.ToString(),instance.GetType(),"Started ("+instance+")"));
+            }
+            catch
+            {                
+                throw;
+            }
+        }
+
         /// <summary>
         ///     Faults the recreate.
         /// </summary>
@@ -523,7 +548,7 @@ protected def terminate() {
         private void FaultRecreate(Recreate m)
         {
             isTerminating = false;
-            ActorBase failedActor = Actor;
+            ActorBase failedActor = _actor;
 
             object optionalMessage = CurrentMessage;
 
@@ -538,23 +563,20 @@ protected def terminate() {
             {
                 HandleNonFatalOrInterruptedException(() =>
                 {
-                    var ex = new PreRestartException(Self, e, m.Cause, optionalMessage);
+                    var ex = new PreRestartException(_self, e, m.Cause, optionalMessage);
                     Publish(new Error(ex, Self.Path.ToString(), failedActor.GetType(), e.Message));
                 });
             }
 
+            var freshActor = NewActor();
+            _actor = freshActor;
             UseThreadContext(() =>
             {
-                behaviorStack.Clear(); //clear earlier behaviors
-
-                ActorBase created = Props.NewActor();
                 Mailbox.Resume();
-                //ActorBase will register itself as the actor of this context
-
-                if (System.Settings.DebugLifecycle)
-                    Publish(new Debug(Self.Path.ToString(), created.GetType(), "started (" + created + ")"));
-                created.AroundPostRestart(m.Cause, null);
+                freshActor.AroundPostRestart(m.Cause, null);
             });
+            if(System.Settings.DebugLifecycle)
+                Publish(new Debug(Self.Path.ToString(), freshActor.GetType(), "restarted (" + freshActor + ")"));
         }
 
         /// <summary>
@@ -566,11 +588,7 @@ protected def terminate() {
                 return;
 
             PreStart();
-
-            if (Parent != null)
-            {
-                Parent.Tell(new Supervise(Self, false));
-            }
+            Mailbox.Start();
         }
 
         /// <summary>
@@ -632,7 +650,7 @@ protected def terminate() {
         /// <param name="m">The m.</param>
         private void HandleFailed(Failed m)
         {
-            bool handled = Actor.SupervisorStrategyLazy().HandleFailure(this, m.Child, m.Cause);
+            bool handled = _actor.SupervisorStrategyLazy().HandleFailure(this, m.Child, m.Cause);
             if (!handled)
                 throw m.Cause;
         }

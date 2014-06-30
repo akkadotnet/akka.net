@@ -207,7 +207,8 @@ namespace Akka.Remote.Transport
                 if (envelopeContainer != null)
                 {
                     var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
-                    var recipientAddress = ActorPath.Parse(envelopeContainer.Recipient.Path).Address;
+                    Address recipientAddress;
+                    ActorPath.TryParseAddress(envelopeContainer.Recipient.Path, out recipientAddress);
                     var serializedMessage = envelopeContainer.Message;
                     ActorRef senderOption = null;
                     if (envelopeContainer.HasSender)

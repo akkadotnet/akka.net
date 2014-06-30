@@ -1,4 +1,5 @@
-﻿using Akka.Dispatch.SysMsg;
+﻿using System.Threading;
+using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
 namespace Akka.Actor
@@ -20,30 +21,38 @@ namespace Akka.Actor
     /// <summary>
     ///     Class GuardianActor.
     /// </summary>
-    public class GuardianActor : UntypedActor
+    public class GuardianActor : ActorBase
     {
-        /// <summary>
-        ///     Processor for user defined messages.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        protected override void OnReceive(object message)
+        protected override bool Receive(object message)
         {
-            Unhandled(message);
+            if(message is Terminated)
+                Context.Stop(Self);
+            else if(message is StopChild)
+                Context.Stop(((StopChild)message).Child);
+            else
+                Context.System.DeadLetters.Tell(new DeadLetter(message,Sender,Self),Sender);
+            return true;
         }
     }
 
-    /// <summary>
-    /// System Guardian - responsible for all system-wide actors
-    /// </summary>
-    class SystemGuardianActor : UntypedActor
+    public class SystemGuardianActor : ActorBase
     {
+        private readonly ActorRef _userGuardian;
+
+        public SystemGuardianActor(ActorRef userGuardian)
+        {
+            _userGuardian = userGuardian;
+        }
+
         /// <summary>
         /// Processor for messages that are sent to the root system guardian
         /// </summary>
         /// <param name="message"></param>
-        protected override void OnReceive(object message)
+        protected override bool Receive(object message)
         {
             //TODO need to add termination hook support
+            Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Self), Sender);
+            return true;
         }
     }
 

@@ -338,8 +338,9 @@ namespace Akka.Remote.Transport
                 .With<ListenUnderlying>(listen =>
                 {
                     localAddress = listen.ListenAddress;
+                    var capturedSelf = Self;
                     listen.UpstreamListener.ContinueWith(
-                        listenerRegistered => Self.Tell(new ListenerRegistered(listenerRegistered.Result)),
+                        listenerRegistered => capturedSelf.Tell(new ListenerRegistered(listenerRegistered.Result)),
                         TaskContinuationOptions.AttachedToParent);
                 })
                 .With<ListenerRegistered>(listener =>

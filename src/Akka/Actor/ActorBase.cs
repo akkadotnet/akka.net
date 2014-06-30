@@ -1,4 +1,5 @@
 ﻿using System;
+using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
 namespace Akka.Actor
@@ -66,9 +67,6 @@ namespace Akka.Actor
             if (ActorCell.Current == null)
                 throw new Exception("Do not create actors using 'new', always create them using an ActorContext/System");
             Context.Become(Receive);
-            ((ActorCell) Context).Actor = this;
-            Self = Context.Self;
-            ((ActorCell) Context).Start();
         }
 
         /// <summary>
@@ -84,7 +82,7 @@ namespace Akka.Actor
         ///     Gets the self ActorRef
         /// </summary>
         /// <value>Self ActorRef</value>
-        protected LocalActorRef Self { get; private set; }
+        protected ActorRef Self { get { return Context.Self; } }
 
         /// <summary>
         ///     Gets the context.

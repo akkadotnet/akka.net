@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -26,7 +27,7 @@ namespace Akka.Actor
         public static readonly Regex ElementRegex =
             new Regex(@"(?:[-\w:@&=+,.!~*'_;]|%\\p{N}{2})(?:[-\w:@&=+,.!~*'$_;]|%\\p{N}{2})*", RegexOptions.Compiled);
 
-        private readonly List<string> _elements = new List<string>();
+        private readonly IReadOnlyList<string> _elements;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorPath" /> class.
@@ -35,9 +36,7 @@ namespace Akka.Actor
         /// <param name="name">The name.</param>
         public ActorPath(Address address, string name)
         {
-            if(name != "")
-                _elements.Add(name);
-
+            _elements = name != "" ? new[]{name} : new string[0];
             Address = address;
         }
 
@@ -51,8 +50,8 @@ namespace Akka.Actor
         {
             Address = parentPath.Address;
             Uid = uid;
-            _elements.AddRange(parentPath._elements);
-            _elements.Add(name);
+            var elements=new List<string>(parentPath._elements) {name};
+            _elements = elements;
         }
 
         /// <summary>
@@ -65,7 +64,7 @@ namespace Akka.Actor
         ///     Gets the elements.
         /// </summary>
         /// <value>The elements.</value>
-        public IReadOnlyCollection<string> Elements
+        public IReadOnlyList<string> Elements
         {
             get { return _elements; }
         }
@@ -133,34 +132,81 @@ namespace Akka.Actor
             return a;
         }
 
-        /// <summary>
-        ///     Parses the specified path.
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns>ActorPath.</returns>
-        /// <exception cref="System.UriFormatException">Protocol must be 'akka.*'</exception>
-        public static ActorPath Parse(string path)
-        {
-            var uri = new Uri(path);
-            string protocol = uri.Scheme;
-            if (!protocol.ToLowerInvariant().StartsWith("akka"))
-                throw new UriFormatException("Protocol must be 'akka.*'");
 
-            if (string.IsNullOrEmpty(uri.UserInfo))
+        /// <summary>
+        /// Tries to parse the uri, which should be a full uri, i.e containing protocol.
+        /// For example "akka://System/user/my-actor"
+        /// </summary>
+        public static bool TryParse(string path, out ActorPath actorPath)
+        {
+            actorPath = null;
+
+           
+            Address address;
+            Uri uri ;
+            if(!TryParseAddress(path, out address, out uri)) return false;
+            var pathElements = uri.AbsolutePath.Split('/');
+            actorPath = new RootActorPath(address) / pathElements.Skip(1);
+            return true;
+        }
+
+        public static bool TryParseAddress(string path, out Address address)
+        {
+            Uri uri;
+            return TryParseAddress(path, out address, out uri);
+        }
+
+        private static bool TryParseAddress(string path, out Address address, out Uri uri)
+        {
+            //This code corresponds to AddressFromURIString.unapply
+            uri=null;
+            address = null;
+            try
             {
-                string systemName = uri.Host;
-                string[] pathElements = uri.AbsolutePath.Split('/');
-                return new RootActorPath(new Address(protocol, systemName, null, null))/pathElements.Skip(1);
+                uri = new Uri(path);
+            }
+            catch(UriFormatException e)
+            {
+                return false;
+            }
+            var protocol = uri.Scheme; //Typically "akka"
+            if(!protocol.StartsWith("akka", StringComparison.OrdinalIgnoreCase))
+            {
+                // Protocol must start with 'akka.*
+                return false;
+            }
+
+
+            string systemName;
+            string host = null;
+            int? port = null;
+            if(string.IsNullOrEmpty(uri.UserInfo))
+            {
+                //  protocol://SystemName/Path1/Path2
+                if(uri.Port > 0)
+                {
+                    //port may not be specified for these types of paths
+                    return false;
+                }
+                //System name is in the "host" position. According to rfc3986 host is case 
+                //insensitive, but should be produced as lowercase, so if we use uri.Host 
+                //we'll get it in lower case.
+                //So we'll extract it ourselves using the original path.
+                //We skip the protocol and "://"
+                var systemNameLength = uri.Host.Length;
+                systemName = path.Substring(protocol.Length + 3, systemNameLength);
             }
             else
             {
-                string systemName = uri.UserInfo;
-                string host = uri.Host;
-                int port = uri.Port;
-                string[] pathElements = uri.AbsolutePath.Split('/');
-                return new RootActorPath(new Address(protocol, systemName, host, port))/pathElements.Skip(1);
+                //  protocol://SystemName@Host:port/Path1/Path2
+                systemName = uri.UserInfo;
+                host = uri.Host;
+                port = uri.Port;
             }
+            address = new Address(protocol, systemName, host, port);
+            return true;
         }
+
 
         /// <summary>
         ///     Joins this instance.

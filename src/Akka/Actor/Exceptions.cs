@@ -88,12 +88,12 @@ namespace Akka.Actor
     /// </summary>
     public class PreRestartException : AkkaException
     {
-        private LocalActorRef Actor;
+        private ActorRef Actor;
         private Exception e; //TODO: what is this?
         private Exception exception;
         private object optionalMessage;
 
-        public PreRestartException(LocalActorRef actor, Exception restartException, Exception cause,
+        public PreRestartException(ActorRef actor, Exception restartException, Exception cause,
             object optionalMessage)
         {
             Actor = actor;

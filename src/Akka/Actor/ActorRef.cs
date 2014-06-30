@@ -6,10 +6,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Dispatch.SysMsg;
 using System.Threading;
+using Akka.Event;
 
 namespace Akka.Actor
 {
-    
+
     /// <summary>
     /// All ActorRefs have a scope which describes where they live. Since it is often
     /// necessary to distinguish between local and non-local references, this is the only
@@ -22,10 +23,23 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Marker interface for Actors that are deployed within local scope
+    /// Marker interface for Actors that are deployed within local scope, 
+    /// i.e. <see cref="ActorRefScope.IsLocal"/> always returns <c>true</c>.
     /// </summary>
-// ReSharper disable once InconsistentNaming
+    // ReSharper disable once InconsistentNaming
     internal interface LocalRef : ActorRefScope { }
+
+    /// <summary>
+    /// RepointableActorRef (and potentially others) may change their locality at
+    /// runtime, meaning that isLocal might not be stable. RepointableActorRef has
+    /// the feature that it starts out “not fully started” (but you can send to it),
+    /// which is why <see cref="IsSt"/> features here; it is not improbable that cluster
+    /// actor refs will have the same behavior.
+    /// </summary>
+    internal interface RepointableRef : ActorRefScope
+    {
+        bool IsStarted { get; }
+    }
 
     public class FutureActorRef : MinimalActorRef
     {
@@ -117,30 +131,16 @@ namespace Akka.Actor
 
         public void Tell(object message, ActorRef sender)
         {
-            if(sender == null)
-            {
-                throw new ArgumentNullException("sender");
-            }
+            if(sender == null) throw new ArgumentNullException("sender", "A sender must be specified");
 
             TellInternal(message, sender);
         }
 
         public void Tell(object message)
         {
-            ActorRef sender = null;
-
-            if(ActorCell.Current != null)
-            {
-                sender = ActorCell.Current.Self;
-            }
-            else
-            {
-                sender = NoSender;
-            }
-
-            Tell(message, sender);
+            var sender = ActorCell.GetCurrentSelfOrNoSender();
+            TellInternal(message, sender);
         }
-
 
         protected abstract void TellInternal(object message, ActorRef sender);
 
@@ -180,8 +180,8 @@ namespace Akka.Actor
         /// <param name="name">The path elements.</param>
         /// <returns>The <see cref="ActorRef"/>, or if the requested path does not exist, returns <see cref="Nobody"/>.</returns>
         public abstract ActorRef GetChild(IEnumerable<string> name);
-
         public abstract void Resume(Exception causedByFailure = null);
+        public abstract void Start();
         public abstract void Stop();
         public abstract void Restart(Exception cause);
         public abstract void Suspend();
@@ -205,6 +205,10 @@ namespace Akka.Actor
         }
 
         public override void Resume(Exception causedByFailure = null)
+        {
+        }
+
+        public override void Start()
         {
         }
 
@@ -261,7 +265,7 @@ namespace Akka.Actor
 
     public abstract class ActorRefWithCell : InternalActorRef
     {
-        public ActorCell Cell { get; protected set; }
+        public abstract Cell Underlying { get; }
 
         public abstract IEnumerable<ActorRef> Children { get; }
 
@@ -285,14 +289,16 @@ namespace Akka.Actor
     public class VirtualPathContainer : MinimalActorRef
     {
         private readonly InternalActorRef _parent;
+        private readonly LoggingAdapter _log;
         private readonly ActorRefProvider _provider;
         private readonly ActorPath _path;
 
         private readonly ConcurrentDictionary<string, InternalActorRef> _children = new ConcurrentDictionary<string, InternalActorRef>();
 
-        public VirtualPathContainer(ActorRefProvider provider, ActorPath path, InternalActorRef parent)
+        public VirtualPathContainer(ActorRefProvider provider, ActorPath path, InternalActorRef parent, LoggingAdapter log)
         {
             _parent = parent;
+            _log = log;
             _provider = provider;
             _path = path;
         }
@@ -311,6 +317,12 @@ namespace Akka.Actor
         {
             get { return _path; }
         }
+
+        public LoggingAdapter Log
+        {
+            get { return _log; }
+        }
+
 
         protected bool TryGetChild(string name, out InternalActorRef child)
         {
