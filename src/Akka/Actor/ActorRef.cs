@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -169,7 +170,17 @@ namespace Akka.Actor
     {
         public abstract InternalActorRef Parent { get; }
         public abstract ActorRefProvider Provider { get; }
+
+        /// <summary>
+        /// Obtain a child given the paths element to that actor, by possibly traversing the actor tree or 
+        /// looking it up at some provider-specific location. 
+        /// A path element of ".." signifies the parent, a trailing "" element must be disregarded. 
+        /// If the requested path does not exist, returns <see cref="Nobody"/>.
+        /// </summary>
+        /// <param name="name">The path elements.</param>
+        /// <returns>The <see cref="ActorRef"/>, or if the requested path does not exist, returns <see cref="Nobody"/>.</returns>
         public abstract ActorRef GetChild(IEnumerable<string> name);
+
         public abstract void Resume(Exception causedByFailure = null);
         public abstract void Stop();
         public abstract void Restart(Exception cause);
@@ -342,17 +353,20 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
 
         public override ActorRef GetChild(IEnumerable<string> name)
         {
-            //TODO: I have no clue what the scala version does
-            if(!name.Any())
+            //Using enumerator to avoid multiple enumerations of name.
+            var enumerator = name.GetEnumerator();
+            if(!enumerator.MoveNext())
+            {
+                //name was empty
                 return this;
-
-            string n = name.First();
-            if(string.IsNullOrEmpty(n))
+            }
+            var firstName = enumerator.Current;
+            if(string.IsNullOrEmpty(firstName))
                 return this;
-            InternalActorRef c = _children[n];
-            if(c == null)
-                return Nobody;
-            return c.GetChild(name.Skip(1));
+            InternalActorRef child;
+            if(_children.TryGetValue(firstName, out child))
+                return child.GetChild(new Enumerable<string>(enumerator));
+            return Nobody;
         }
 
         public void ForeachActorRef(Action<ActorRef> action)
@@ -360,6 +374,29 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             foreach(InternalActorRef child in _children.Values)
             {
                 action(child);
+            }
+        }
+
+        /// <summary>
+        /// An enumerable that continues where the supplied enumerator is positioned
+        /// </summary>
+        private class Enumerable<T> : IEnumerable<T>
+        {
+            private readonly IEnumerator<T> _enumerator;
+
+            public Enumerable(IEnumerator<T> enumerator)
+            {
+                _enumerator = enumerator;
+            }
+
+            public IEnumerator<T> GetEnumerator()
+            {
+                return _enumerator;
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
             }
         }
     }
