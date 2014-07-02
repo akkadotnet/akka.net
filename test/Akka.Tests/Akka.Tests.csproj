@@ -98,6 +98,7 @@
     <Compile Include="Serialization\SerializationSpec.cs" />
     <Compile Include="Tools\PatternSpec.cs" />
     <Compile Include="Util\SwitchTests.cs" />
+    <Compile Include="Util\TypeExtensionsTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Akka\Akka.csproj">
