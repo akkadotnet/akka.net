@@ -11,7 +11,7 @@ namespace Shared
     {
         public SomeActor(string someArg, long otherArg)
         {
-            Console.WriteLine("Constructuing SomeActor with {0},{1}",someArg,otherArg);
+            Console.WriteLine("Constructing SomeActor with {0},{1}",someArg,otherArg);
         }
         protected override void OnReceive(object message)
         {
