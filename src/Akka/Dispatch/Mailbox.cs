@@ -14,9 +14,9 @@ namespace Akka.Dispatch
     /// </summary>
     public abstract class Mailbox : IDisposable
     {
-        /// <summary>
-        ///     The dispatcher
-        /// </summary>
+        //TODO: Maybe the value of Debug should be controlled by a conditional compilation symbol (like DEBUG)
+        public const bool Debug = false;
+        
         protected MessageDispatcher dispatcher;
 
         ///// <summary>
@@ -219,6 +219,7 @@ namespace Akka.Dispatch
                 //start with system messages, they have the highest priority
                 while (_systemMessages.TryDequeue(out envelope))
                 {
+                    if(Mailbox.Debug) Console.WriteLine(ActorCell.Self + " processing system message " + envelope); // TODO: Add + " with " + ActorCell.GetChildren());
                     ActorCell.SystemInvoke(envelope);
                 }
 
@@ -228,6 +229,8 @@ namespace Akka.Dispatch
                 //try dequeue a user message
                 while (!_isSuspended && _userMessages.TryDequeue(out envelope))
                 {
+                    if (Mailbox.Debug) Console.WriteLine(ActorCell.Self + " processing message " + envelope);
+
                     //run the receive handler
                     ActorCell.Invoke(envelope);
 
@@ -235,6 +238,7 @@ namespace Akka.Dispatch
                     if (_systemMessages.TryDequeue(out envelope))
                     {
                         //handle system message
+                        if(Mailbox.Debug) Console.WriteLine(ActorCell.Self + " processing system message " + envelope); // TODO: Add + " with " + ActorCell.GetChildren());
                         ActorCell.SystemInvoke(envelope);
                         break;
                     }
@@ -299,10 +303,12 @@ namespace Akka.Dispatch
             hasUnscheduledMessages = true;
             if (envelope.Message is SystemMessage)
             {
+                if(Mailbox.Debug) Console.WriteLine(ActorCell.Self + " enqueued system message " + envelope);
                 _systemMessages.Enqueue(envelope);
             }
             else
             {
+                if(Mailbox.Debug) Console.WriteLine(ActorCell.Self + " enqueued message " + envelope);
                 _userMessages.Enqueue(envelope);
             }
 

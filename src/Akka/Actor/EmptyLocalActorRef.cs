@@ -1,4 +1,5 @@
-﻿using Akka.Dispatch;
+﻿using System;
+using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
@@ -55,6 +56,7 @@ namespace Akka.Actor
 
         private void SendSystemMessage(SystemMessage message)
         {
+            if(Mailbox.Debug) Console.WriteLine("EmptyLocalActorRef {0} having enqueued {1}", Path, message);
             SpecialHandle(message, _provider.DeadLetters);
         }
 
