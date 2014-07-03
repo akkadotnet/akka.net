@@ -105,7 +105,7 @@ namespace Akka.Tests.Actor
             //act
             Within(TimeSpan.FromSeconds(2), () =>
             {
-                Within(TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1), () =>
+                Within(TimeSpan.FromMilliseconds(450), TimeSpan.FromSeconds(1), () =>
                 {
                     fsm.Tell(State.TestSingleTimer, Self);
                     expectMsg(new FSMBase.Transition<State>(fsm, State.Initial, State.TestSingleTimer), FSMSpecHelpers.TransitionStateExpector<State>());
@@ -126,7 +126,7 @@ namespace Akka.Tests.Actor
         {
             Within(TimeSpan.FromSeconds(2.5), () =>
             {
-                Within(TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1), () =>
+                Within(TimeSpan.FromMilliseconds(450), TimeSpan.FromSeconds(1), () =>
                 {
                     fsm.Tell(State.TestSingleTimerResubmit, Self);
                     expectMsg(new FSMBase.Transition<State>(fsm, State.Initial, State.TestSingleTimerResubmit), FSMSpecHelpers.TransitionStateExpector<State>());
