@@ -64,7 +64,7 @@ namespace Akka.Routing
         {
             get{ return message =>
             {
-                PatternMatch.Match(message)
+                var match=PatternMatch.Match(message)
                     .With<Listen>(m => Add(m.Listener))
                     .With<Deafen>(d => Remove(d.Listener))
                     .With<WithListeners>(f =>
@@ -74,6 +74,7 @@ namespace Akka.Routing
                             f.ListenerFunction(listener);
                         }
                     });
+                return match.WasHandled;
             };}
         }
 

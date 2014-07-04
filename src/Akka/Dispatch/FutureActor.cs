@@ -41,7 +41,7 @@ namespace Akka.Dispatch
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected override void OnReceive(object message)
+        protected override bool Receive(object message)
         {
             if (message is SetRespondTo)
             {
@@ -54,18 +54,19 @@ namespace Akka.Dispatch
                 {
                     Self.Stop();
                     respondTo.Tell(new CompleteFuture(() => result.SetResult(message)));
-                    Become(_ => { });
+                    Become(EmptyReceive);
                 }
                 else
                 {
                     //if there is no listening actor asking,
                     //just eval the result directly
                     Self.Stop();
-                    Become(_ => { });
+                    Become(EmptyReceive);
 
                     result.SetResult(message);
                 }
             }
+            return true;
         }
     }
 

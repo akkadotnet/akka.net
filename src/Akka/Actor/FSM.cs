@@ -673,9 +673,9 @@ namespace Akka.Actor
         /// Main actor receive method
         /// </summary>
         /// <param name="message"></param>
-        protected override void OnReceive(object message)
+        protected override bool Receive(object message)
         {
-            PatternMatch.Match(message)
+            var match = PatternMatch.Match(message)
                 .With<TimeoutMarker>(marker =>
                 {
                     if (generation == marker.Generation)
@@ -734,6 +734,7 @@ namespace Akka.Actor
                     generation++;
                     ProcessMsg(msg, Sender);
                 });
+            return match.WasHandled;
         }
 
         private void ProcessMsg(object any, object source)

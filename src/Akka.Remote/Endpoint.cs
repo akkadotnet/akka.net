@@ -238,7 +238,7 @@ namespace Akka.Remote
     /// forming any outbound associations.
     /// </remarks>
     /// </summary>
-    internal class ReliableDeliverySupervisor : ActorBase, IActorLogging
+    internal class ReliableDeliverySupervisor : UntypedActor, IActorLogging
     {
         private LoggingAdapter _log = Logging.GetLogger(Context);
         public LoggingAdapter Log { get { return _log; } }

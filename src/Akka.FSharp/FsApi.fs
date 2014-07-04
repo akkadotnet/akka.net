@@ -140,7 +140,7 @@ open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Linq.QuotationEvaluation
 
 type FunActor<'m,'v>(actor: Actor<'m> -> Cont<'m,'v>) as self =
-    inherit ActorBase()
+    inherit UntypedActor()
 
     let mutable state = 
         let self' = self.Self

@@ -11,7 +11,7 @@ using Akka.Tools;
 
 namespace Akka.Actor
 {
-    public partial class ActorCell : IActorContext
+    public partial class ActorCell : IActorContext, IUntypedActorContext
     {
         private const string Base64Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
         [ThreadStatic] private static ActorCell current;
@@ -50,7 +50,6 @@ namespace Akka.Actor
 
         public ActorBase Actor { get; internal set; }
         public object CurrentMessage { get; private set; }
-        internal Receive ReceiveMessage { get; private set; }
         public Mailbox Mailbox { get; protected set; }
         public MessageDispatcher Dispatcher { get; private set; }
 
@@ -64,6 +63,7 @@ namespace Akka.Actor
         public LocalActorRef Self { get; protected set; }
         public InternalActorRef Parent { get; private set; }
         public ActorRef Sender { get; private set; }
+
 
         public virtual InternalActorRef Child(string name)
         {
@@ -122,19 +122,23 @@ namespace Akka.Actor
             return children.Values.ToArray();
         }
 
+
         public void Become(Receive receive, bool discardOld = true)
         {
             if(discardOld && behaviorStack.Count > 1) //We should never pop off the initial receiver
                 behaviorStack.Pop();
             behaviorStack.Push(receive);
-            ReceiveMessage = receive;
         }
 
         public void Unbecome()
         {
             if(behaviorStack.Count>1)   //We should never pop off the initial receiver
                 behaviorStack.Pop();
-            ReceiveMessage = behaviorStack.Peek();
+        }
+
+        void IUntypedActorContext.Become(UntypedReceive receive, bool discardOld)
+        {
+            Become(m => { receive(m); return true; }, discardOld);
         }
 
         /// <summary>

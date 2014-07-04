@@ -11,10 +11,16 @@ namespace Akka
         }
     }
 
-    public class Case
+    public interface IMatchResult
+    {
+        bool WasHandled { get; }
+    }
+
+    public class Case : IMatchResult
     {
         private readonly object _message;
         private bool _handled;
+        public bool WasHandled { get { return _handled; } }
 
         public Case(object message)
         {
@@ -43,13 +49,21 @@ namespace Akka
             return this;
         }
 
-        public void Default(Action<object> action)
+        public IMatchResult Default(Action<object> action)
         {
             if (!_handled)
             {
                 action(_message);
                 _handled = true;
             }
+            return AlwaysHandled.Instance;
+        }
+
+        private class AlwaysHandled : IMatchResult
+        {
+            public static readonly AlwaysHandled Instance = new AlwaysHandled();
+            private AlwaysHandled() { }
+            public bool WasHandled { get { return true; } }
         }
     }
 }

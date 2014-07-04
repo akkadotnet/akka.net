@@ -56,12 +56,7 @@ namespace Akka.Actor
     ///     Class ActorBase.
     /// </summary>
     public abstract partial class ActorBase
-    {
-        /// <summary>
-        ///     The last message is unhandled
-        /// </summary>
-        private bool lastMessageIsUnhandled;
-
+    {    
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorBase" /> class.
         /// </summary>
@@ -70,7 +65,7 @@ namespace Akka.Actor
         {
             if (ActorCell.Current == null)
                 throw new Exception("Do not create actors using 'new', always create them using an ActorContext/System");
-            Context.Become(OnReceive);
+            Context.Become(Receive);
             ((ActorCell) Context).Actor = this;
             Self = Context.Self;
             ((ActorCell) Context).Start();
@@ -112,47 +107,47 @@ namespace Akka.Actor
             }
         }
 
+        internal protected virtual bool AroundReceive(Receive receive, object message)
+        {
+            var wasHandled = receive(message);
+            if(!wasHandled)
+            {
+                Unhandled(message);
+            }
+            return wasHandled;
+        }
 
         /// <summary>
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected abstract void OnReceive(object message);
+        protected abstract bool Receive(object message);
 
         /// <summary>
-        ///     Gets a function that will tell if the last message was unhandled or not.
+        /// EmptyReceive is a Receive-delegate that matches no messages at all, ever.
         /// </summary>
-        /// <returns>Func{System.ObjectSystem.Boolean}.</returns>
-        public Func<object, bool> GetUnhandled()
-        {
-            lastMessageIsUnhandled = false;
-
-            return IsUnhandled;
-        }
+        protected static Receive EmptyReceive { get { return _=> false; } }
 
         /// <summary>
-        ///     Determines whether the specified message is unhandled.
+        /// Is called when a message isn't handled by the current behavior of the actor
+        /// by default it fails with either a <see cref="DeathPactException"/> (in
+        /// case of an unhandled <see cref="Terminated"/> message) or publishes an <see cref="UnhandledMessage"/>
+        /// to the actor's system's <see cref="EventStream"/>
         /// </summary>
-        /// <param name="message">The message.</param>
-        /// <returns><c>true</c> if the specified message is unhandled; otherwise, <c>false</c>.</returns>
-        private bool IsUnhandled(object message)
+        /// <param name="message">The unhandled message.</param>
+        protected virtual void Unhandled(object message)
         {
-            return lastMessageIsUnhandled;
-        }
-
-        /// <summary>
-        ///     Marks the message as unhandled.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        protected void Unhandled(object message)
-        {
-            lastMessageIsUnhandled = true;
+            var terminatedMessage = message as Terminated;
+            if(terminatedMessage != null)
+            {
+                throw new DeathPactException(terminatedMessage.ActorRef);
+            }
             Context.System.EventStream.Publish(new UnhandledMessage(message, Sender, Self));
         }
 
 
         /// <summary>
-        /// Changes the Actor's behavior to become the new <see cref="Receive"/> handler.
+        /// Changes the Actor's behavior to become the new <see cref="Actor.Receive"/> handler.
         /// This method acts upon the behavior stack as follows:
         /// <para>if <paramref name="discardOld"/>==<c>true</c> it will replace the current behavior (i.e. the top element)</para>
         /// <para>if <paramref name="discardOld"/>==<c>false</c> it will keep the current behavior and push the given one atop</para>
