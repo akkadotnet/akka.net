@@ -453,10 +453,11 @@ namespace Akka.Event
         /// <returns></returns>
         public override string ToString()
         {
-            var errorStr = string.Format("[{0}][{1}][Thread {2}][{3}] {4}", LogLevel().ToString().Replace("Level", "").ToUpperInvariant(), Timestamp, Thread.ManagedThreadId.ToString().PadLeft(4,'0'), LogSource, Message);
-            errorStr += Environment.NewLine + string.Format("Cause: {0}", Cause != null ? Cause.Message : "Unknown");
-            if (Cause != null)
-                errorStr += Environment.NewLine + string.Format("StackTrace: {0}", Cause.StackTrace);
+            var cause = Cause;
+            var causeStr = cause == null ? "Unknown" : cause.ToString();
+            var errorStr = string.Format("[{0}][{1}][Thread {2}][{3}] {4}{5}Cause: {6}",
+                LogLevel().ToString().Replace("Level", "").ToUpperInvariant(), Timestamp,
+                Thread.ManagedThreadId.ToString().PadLeft(4, '0'), LogSource, Message, Environment.NewLine, causeStr);
             return errorStr;
         }
     }

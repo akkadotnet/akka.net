@@ -42,6 +42,11 @@ namespace Akka.Tests
         {
             Assert.AreEqual(other, self);
         }
+
+        public static void ShouldOnlyContainInOrder<T>(this IEnumerable<T> actual, params T[] expected)
+        {
+            ShouldBe(actual,(IEnumerable<T>) expected);
+        }
     }
 
     public abstract class Message

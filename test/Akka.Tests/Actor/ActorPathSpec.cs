@@ -95,7 +95,7 @@ namespace Akka.Tests.Actor
         [TestMethod]
         public void HaveCorrectPathElements()
         {
-            (new RootActorPath(new Address("akka.tcp", "mysys")) / "user" / "foo" / "bar").Elements.ShouldBe(new [] {"user","foo","bar" });
+            (new RootActorPath(new Address("akka.tcp", "mysys")) / "user" / "foo" / "bar").Elements.ShouldOnlyContainInOrder(new[] { "user", "foo", "bar" });
         }
     }
 }
