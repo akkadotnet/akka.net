@@ -193,7 +193,7 @@ namespace Akka.Tests.Routing
       */
 
         [TestMethod]
-        public void Router_in_general_mulst_use_configured_nr_of_instances_when_router_is_specified()
+        public void Router_in_general_must_use_configured_nr_of_instances_when_router_is_specified()
         {
             var router = sys.ActorOf(Props.Create<TestActor>().WithRouter(new RoundRobinPool(3)), "router1");
             router.Tell(new GetRoutees(), testActor);
