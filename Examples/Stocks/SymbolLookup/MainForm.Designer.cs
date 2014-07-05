@@ -50,6 +50,7 @@
             this.txtSymbols.Name = "txtSymbols";
             this.txtSymbols.Size = new System.Drawing.Size(210, 20);
             this.txtSymbols.TabIndex = 0;
+            this.txtSymbols.Text = "msft,aapl";
             // 
             // label1
             // 
