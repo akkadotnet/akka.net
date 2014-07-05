@@ -5,7 +5,6 @@ Networking
    :maxdepth: 2
 
    ../common/cluster
-   cluster-usage
    remoting
    serialization
    io

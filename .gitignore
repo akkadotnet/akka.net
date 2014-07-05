@@ -36,3 +36,6 @@ obj/
 _ReSharper*/
 [Tt]est[Rr]esult*
 test/Pigeon.Tests/Actor/bpl02w01.bgv
+/Examples/Chat/ChatMessages/ChatMessages.csproj.GhostDoc.xml
+/libiconv-2.dll
+/libintl3.dll
