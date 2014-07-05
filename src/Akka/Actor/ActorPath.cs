@@ -22,16 +22,11 @@ namespace Akka.Actor
     /// </summary>
     public abstract class ActorPath : IEquatable<ActorPath>
     {
-        /// <summary>
-        ///     The element regex
-        /// </summary>
+        /// <summary>The regex that actor names must conform to</summary>
         public static readonly Regex ElementRegex =
             new Regex(@"(?:[-\w:@&=+,.!~*'_;]|%\\p{N}{2})(?:[-\w:@&=+,.!~*'$_;]|%\\p{N}{2})*", RegexOptions.Compiled);
 
-        /// <summary>
-        ///     The elements
-        /// </summary>
-        private readonly List<string> elements = new List<string>();
+        private readonly List<string> _elements = new List<string>();
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorPath" /> class.
@@ -40,8 +35,8 @@ namespace Akka.Actor
         /// <param name="name">The name.</param>
         public ActorPath(Address address, string name)
         {
-            if (name != "")
-                elements.Add(name);
+            if(name != "")
+                _elements.Add(name);
 
             Address = address;
         }
@@ -56,8 +51,8 @@ namespace Akka.Actor
         {
             Address = parentPath.Address;
             Uid = uid;
-            elements.AddRange(parentPath.elements);
-            elements.Add(name);
+            _elements.AddRange(parentPath._elements);
+            _elements.Add(name);
         }
 
         /// <summary>
@@ -70,9 +65,9 @@ namespace Akka.Actor
         ///     Gets the elements.
         /// </summary>
         /// <value>The elements.</value>
-        public IEnumerable<string> Elements
+        public IReadOnlyCollection<string> Elements
         {
-            get { return elements; }
+            get { return _elements; }
         }
 
         /// <summary>
@@ -81,7 +76,7 @@ namespace Akka.Actor
         /// <value>The name.</value>
         public string Name
         {
-            get { return elements.LastOrDefault(); }
+            get { return _elements.LastOrDefault(); }
         }
 
         /// <summary>
@@ -91,6 +86,9 @@ namespace Akka.Actor
         /// <value>The address.</value>
         public Address Address { get; private set; }
 
+        public abstract ActorPath Root { get; }
+        public abstract ActorPath Parent { get; }
+
         /// <summary>
         ///     Indicates whether the current object is equal to another object of the same type.
         /// </summary>
@@ -98,7 +96,7 @@ namespace Akka.Actor
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
         public bool Equals(ActorPath other)
         {
-            return elements.SequenceEqual(other.elements);
+            return _elements.SequenceEqual(other._elements);
         }
 
         /// <summary>
@@ -170,7 +168,7 @@ namespace Akka.Actor
         /// <returns>System.String.</returns>
         private string Join()
         {
-            string joined = string.Join("/", elements);
+            string joined = string.Join("/", _elements);
             return "/" + joined;
         }
 
@@ -223,6 +221,16 @@ namespace Akka.Actor
             return Equals((ActorPath) obj);
         }
 
+        public static bool operator ==(ActorPath left, ActorPath right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(ActorPath left, ActorPath right)
+        {
+            return !Equals(left, right);
+        }
+
         /// <summary>
         ///     Generate String representation, with the address in the RootActorPath.
         /// </summary>
@@ -251,6 +259,11 @@ namespace Akka.Actor
 
             return string.Format("{0}{1}", address, Join());
         }
+
+        public static string FormatPathElements(IEnumerable<string> pathElements)
+        {
+            return String.Join("/", pathElements);
+        }
     }
 
     /// <summary>
@@ -267,6 +280,8 @@ namespace Akka.Actor
         {
         }
 
+        public override ActorPath Parent { get { return this; } }
+        public override ActorPath Root { get { return this; } }
         /// <summary>
         ///     Withes the uid.
         /// </summary>
@@ -286,15 +301,8 @@ namespace Akka.Actor
     /// </summary>
     public class ChildActorPath : ActorPath
     {
-        /// <summary>
-        ///     The name
-        /// </summary>
-        private readonly string name;
-
-        /// <summary>
-        ///     The parent
-        /// </summary>
-        private readonly ActorPath parent;
+        private readonly string _name;
+        private readonly ActorPath _parent;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ChildActorPath" /> class.
@@ -303,10 +311,25 @@ namespace Akka.Actor
         /// <param name="name">The name.</param>
         /// <param name="uid">The uid.</param>
         public ChildActorPath(ActorPath parentPath, string name, long uid)
-            : base(parentPath, name, 0)
+            : base(parentPath, name, uid)
         {
-            this.name = name;
-            parent = parentPath;
+            _name = name;
+            _parent = parentPath;
+        }
+
+        public override ActorPath Parent { get { return _parent; } }
+
+        public override ActorPath Root
+        {
+            get
+            {
+                var current = _parent;
+                while(current is ChildActorPath)
+                {
+                    current = ((ChildActorPath)current)._parent;
+                }
+                return current.Root;
+            }
         }
 
         /// <summary>
@@ -318,7 +341,7 @@ namespace Akka.Actor
         {
             if (uid == Uid)
                 return this;
-            return new ChildActorPath(parent, name, uid);
+            return new ChildActorPath(_parent, _name, uid);
         }
     }
 }

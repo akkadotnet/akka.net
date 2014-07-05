@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using Akka.Reflection;
 using Akka.Routing;
+using Akka.Util;
 
 namespace Akka.Actor
 {
@@ -251,7 +252,16 @@ namespace Akka.Actor
         /// <returns>ActorBase.</returns>
         public virtual ActorBase NewActor()
         {
-            return (ActorBase) Activator.CreateInstance(Type, Arguments);
+            var type = Type;
+            var arguments = Arguments;
+            try
+            {
+                return (ActorBase)Activator.CreateInstance(type, arguments);
+            }
+            catch(Exception e)
+            {
+                throw new Exception("Error while creating actor instance of type " + type + " with " + arguments.Length + " args: (" + StringFormat.SafeJoin(",", arguments)+")", e);
+            }
         }
 
         /// <summary>

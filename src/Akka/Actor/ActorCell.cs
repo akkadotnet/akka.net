@@ -8,12 +8,12 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Serialization;
 using Akka.Tools;
+using Akka.Util;
 
 namespace Akka.Actor
 {
     public partial class ActorCell : IActorContext, IUntypedActorContext
     {
-        private const string Base64Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
         [ThreadStatic] private static ActorCell current;
 
         protected ConcurrentDictionary<string, InternalActorRef> children =
@@ -210,21 +210,7 @@ namespace Akka.Actor
 
         private string GetActorName(string name, long actorUid)
         {
-            long next = actorUid;
-            if (name == null)
-            {
-                var sb = new StringBuilder("$");
-
-                while (next != 0)
-                {
-                    var index = (int) (next & 63);
-                    char c = Base64Chars[index];
-                    sb.Append(c);
-                    next = next >> 6;
-                }
-                name = sb.ToString();
-            }
-            return name;
+            return name ?? ("$" + actorUid.Base64Encode());
         }
 
         public virtual void NewActor()
