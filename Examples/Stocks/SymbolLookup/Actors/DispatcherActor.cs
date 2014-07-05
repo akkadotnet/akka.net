@@ -16,7 +16,7 @@ namespace SymbolLookup.Actors
         private readonly EventHandler<string> _statusHandler;
         private ActorRef rss = Context.ActorOf(Props.Create(() => new SymbolRssActor(new HttpFeedFactory())), "symbolrss");
         private ActorRef stock = Context.ActorOf(Props.Create(() => new StockQuoteActor(new HttpClient())), "symbolquotes");
-
+        private int _stockActorNumber = 1;
         public DispatcherActor(EventHandler<FullStockData> dataHandler, EventHandler<string> statusHandler)
         {
             _dataHandler = dataHandler;
@@ -25,12 +25,13 @@ namespace SymbolLookup.Actors
 
         public void Handle(string message)
         {
-            var symbols = message.Split(',');
+            var symbols = message.Split(new[] {","}, StringSplitOptions.RemoveEmptyEntries);
             _statusHandler(this, string.Format("Downloading symbol data for symbols {0}", message));
-            foreach (var symbol in symbols)
+            foreach(var symbol in symbols)
             {
-                var stockActor = Context.ActorOf(Props.Create<StockActor>());
-                stockActor.Tell(new DownloadSymbolData() { Symbol = symbol });
+                var stockActor = Context.ActorOf(Props.Create<StockActor>(), "stock-" + _stockActorNumber + "-" + symbol);
+                stockActor.Tell(new DownloadSymbolData() {Symbol = symbol});
+                _stockActorNumber++;
             }
         }
 
