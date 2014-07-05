@@ -102,6 +102,4 @@ namespace Akka.Tests.Util
         }
 
     }
-
-
 }
