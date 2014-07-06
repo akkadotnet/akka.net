@@ -1,4 +1,4 @@
-.. _scala-api:
+. _scala-api:
 
 Scala Documentation
 ===================

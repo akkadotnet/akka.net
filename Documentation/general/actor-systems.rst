@@ -118,7 +118,7 @@ In some cases it is unavoidable to do blocking operations, i.e. to put a thread
 to sleep for an indeterminate time, waiting for an external event to occur.
 Examples are legacy RDBMS drivers or messaging APIs, and the underlying reason
 is typically that (network) I/O occurs under the covers. When facing this, you
-may be tempted to just wrap the blocking call inside a :class:`Future` and work
+may be tempted to just wrap the blocking call inside a :class:`Task` and work
 with that instead, but this strategy is too simple: you are quite likely to
 find bottlenecks or run out of memory or threads when the application runs
 under increased load.
@@ -127,15 +127,15 @@ The non-exhaustive list of adequate solutions to the “blocking problem”
 includes the following suggestions:
 
  - Do the blocking call within an actor (or a set of actors managed by a router
-   [:ref:`Java <routing-java>`, :ref:`Scala <routing-scala>`]), making sure to
+   [:ref:`CSharp <routing-csharp>`, :ref:`FSharp <routing-fsharp>`]), making sure to
    configure a thread pool which is either dedicated for this purpose or
    sufficiently sized.
 
- - Do the blocking call within a :class:`Future`, ensuring an upper bound on
+ - Do the blocking call within a :class:`Task`, ensuring an upper bound on
    the number of such calls at any point in time (submitting an unbounded
    number of tasks of this nature will exhaust your memory or thread limits).
 
- - Do the blocking call within a :class:`Future`, providing a thread pool with
+ - Do the blocking call within a :class:`Task`, providing a thread pool with
    an upper limit on the number of threads which is appropriate for the
    hardware on which the application runs.
 
@@ -155,8 +155,7 @@ on which DBMS is deployed on what hardware.
 
    Configuring thread pools is a task best delegated to Akka, simply configure
    in the ``application.conf`` and instantiate through an :class:`ActorSystem`
-   [:ref:`Java <dispatcher-lookup-java>`, :ref:`Scala
-   <dispatcher-lookup-scala>`]
+   [:ref:`CSharp <dispatcher-lookup-csharp>`, :ref:`FSharp <dispatcher-lookup-fsharp>`]
 
 What you should not concern yourself with
 -----------------------------------------

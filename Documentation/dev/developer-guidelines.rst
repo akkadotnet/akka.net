@@ -5,30 +5,16 @@ Developer Guidelines
 
 .. note::
 
-    First read `The Akka Contributor Guidelines <https://github.com/akka/akka/blob/master/CONTRIBUTING.md>`_ .
+ 
 
 Code Style
 ----------
 
-The Akka code style follows the `Scala Style Guide <http://docs.scala-lang.org/style/>`_ . The only exception is the
-style of block comments:
-
-.. code-block:: scala
-
-  /**
-    * Style mandated by "Scala Style Guide"
-    */
-
-  /**
-   * Style adopted in the Akka codebase
-   */
-
-Akka is using ``Scalariform`` to format the source code as part of the build. So just hack away and then run ``sbt compile`` and it will reformat the code according to Akka standards.
 
 Process
 -------
 
-* Make sure you have signed the Akka CLA, if not, `sign it online <http://www.typesafe.com/contribute/cla>`_.
+* Make sure you have signed the Akka.NET CLA, if not, `sign it online <http://www.typesafe.com/contribute/cla>`_.
 * Pick a ticket, if there is no ticket for your work then create one first.
 * Start working in a feature branch. Name it something like ``wip-<ticket number>-<descriptive name>-<your username>``.
 * When you are done, create a GitHub Pull-Request towards the targeted branch and email the Akka Mailing List that you want it reviewed
@@ -56,24 +42,10 @@ Example::
 Testing
 -------
 
-All code that is checked in **should** have tests. All testing is done with ``ScalaTest`` and ``ScalaCheck``.
-
-* Name tests as **Test.scala** if they do not depend on any external stuff. That keeps surefire happy.
-* Name tests as **Spec.scala** if they have external dependencies.
 
 Actor TestKit
 ^^^^^^^^^^^^^
 
 There is a useful test kit for testing actors: `akka.util.TestKit <@github@/akka-testkit/src/main/scala/akka/testkit/TestKit.scala>`_. It enables assertions concerning replies received and their timing, there is more documentation in the :ref:`akka-testkit` module.
 
-Multi-JVM Testing
-^^^^^^^^^^^^^^^^^
 
-Included in the example is an sbt trait for multi-JVM testing which will fork
-JVMs for multi-node testing. There is support for running applications (objects
-with main methods) and running ScalaTest tests.
-
-NetworkFailureTest
-^^^^^^^^^^^^^^^^^^
-
-You can use the 'NetworkFailureTest' trait to test network failure.

@@ -8,7 +8,7 @@ hierarchies and are the smallest unit when building an application. This
 section looks at one such actor in isolation, explaining the concepts you
 encounter while implementing it. For a more in depth reference with all the
 details please refer to
-:ref:`Actors (Scala) <actors-scala>` and :ref:`Untyped Actors (Java) <untyped-actors-java>`.
+:ref:`Actors (F#) <actors-fsharp>` and :ref:`Untyped Actors (C#) <untyped-actors-csharp>`.
 
 An actor is a container for `State`_, `Behavior`_, a `Mailbox`_, `Children`_
 and a `Supervisor Strategy`_. All of this is encapsulated behind an `Actor
@@ -105,8 +105,8 @@ Children
 Each actor is potentially a supervisor: if it creates children for delegating
 sub-tasks, it will automatically supervise them. The list of children is
 maintained within the actor’s context and the actor has access to it.
-Modifications to the list are done by creating (``context.actorOf(...)``) or
-stopping (``context.stop(child)``) children and these actions are reflected
+Modifications to the list are done by creating (``context.ActorOf(...)``) or
+stopping (``context.Stop(child)``) children and these actions are reflected
 immediately. The actual creation and termination actions happen behind the
 scenes in an asynchronous way, so they do not “block” their supervisor.
 

@@ -67,17 +67,17 @@ Here's how a :class:`CircuitBreaker` would be configured for:
   * a reset timeout of 1 minute
 
 ^^^^^^^
-Scala
+F#
 ^^^^^^^
 
-.. includecode:: code/docs/circuitbreaker/CircuitBreakerDocSpec.scala
+.. includecode:: code/docs/circuitbreaker/CircuitBreakerDocSpec.cs
    :include: imports1,circuit-breaker-initialization
 
 ^^^^^^^
-Java
+C#
 ^^^^^^^
 
-.. includecode:: code/docs/circuitbreaker/DangerousJavaActor.java
+.. includecode:: code/docs/circuitbreaker/DangerousJavaActor.fs
    :include: imports1,circuit-breaker-initialization
 
 ---------------
