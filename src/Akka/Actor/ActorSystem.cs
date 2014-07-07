@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text.RegularExpressions;
-using Akka.Configuration;
+﻿using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
-using Akka.Tools;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Actor
@@ -61,14 +58,14 @@ namespace Akka.Actor
                     "], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')");
 
             Name = name;
-            ConfigureScheduler();
             ConfigureSettings(config);
             ConfigureEventStream();
+            ConfigureLoggers();
+            ConfigureScheduler();
             ConfigureSerialization();
             ConfigureMailboxes();
             ConfigureDispatchers();
             ConfigureProvider();
-            ConfigureLoggers();
             LoadExtensions();
             Start();
         }
@@ -141,7 +138,6 @@ namespace Akka.Actor
         /// </summary>
         /// <value>The mailboxes.</value>
         public Mailboxes Mailboxes { get; private set; }
-
 
         /// <summary>
         ///     Gets the scheduler.
@@ -260,14 +256,13 @@ namespace Akka.Actor
 
                 try
                 {
-                    var extension = (IExtensionId) Activator.CreateInstance(extensionType);
+                    var extension = (IExtensionId)Activator.CreateInstance(extensionType);
                     extensions.Add(extension);
                 }
                 catch (Exception ex)
                 {
                     log.Error(ex, "While trying to load extension [{0}], skipping...", extensionFqn);
                 }
-                
             }
 
             ConfigureExtensions(extensions);
@@ -310,7 +305,7 @@ namespace Akka.Actor
             return extension;
         }
 
-        public object GetExtension<T>()where T:IExtension
+        public object GetExtension<T>() where T : IExtension
         {
             object extension;
             _extensions.TryGetValue(typeof(T), out extension);
@@ -319,7 +314,7 @@ namespace Akka.Actor
 
         public bool HasExtension(Type t)
         {
-            if (typeof (IExtension).IsAssignableFrom(t))
+            if (typeof(IExtension).IsAssignableFrom(t))
             {
                 return _extensions.ContainsKey(t);
             }
@@ -328,7 +323,7 @@ namespace Akka.Actor
 
         public bool HasExtension<T>() where T : IExtension
         {
-            return _extensions.ContainsKey(typeof (T));
+            return _extensions.ContainsKey(typeof(T));
         }
 
         /// <summary>
@@ -372,7 +367,7 @@ namespace Akka.Actor
         {
             Type providerType = Type.GetType(Settings.ProviderClass);
             Debug.Assert(providerType != null, "providerType != null");
-            var provider = (ActorRefProvider) Activator.CreateInstance(providerType, this);
+            var provider = (ActorRefProvider)Activator.CreateInstance(providerType, this);
             Provider = provider;
             Provider.Init();
         }
@@ -384,7 +379,6 @@ namespace Akka.Actor
         {
             if (Settings.LogDeadLetters > 0)
                 logDeadLetterListener = SystemActorOf<DeadLetterListener>("deadLetterListener");
-            
 
             if (Settings.LogConfigOnStart)
             {
@@ -453,6 +447,7 @@ namespace Akka.Actor
         }
 
         #region Equality methods
-        #endregion
+
+        #endregion Equality methods
     }
 }
