@@ -10,15 +10,22 @@ namespace Akka.Tests
 {
     public class TestProbeActorRef : ActorRef
     {
-        private TestProbe owner;
+        private readonly TestProbe _owner;
+        private readonly ActorPath _path=new RootActorPath(Address.AllSystems,"/TestProbe");
+
         public TestProbeActorRef(TestProbe owner)
         {
-            this.owner = owner;
+            _owner = owner;
+        }
+
+        public override ActorPath Path
+        {
+            get { return _path; }
         }
 
         protected override void TellInternal(object message, ActorRef sender)
         {
-            owner.Tell(message, sender);
+            _owner.Tell(message, sender);
         }        
     }
     public class TestProbe

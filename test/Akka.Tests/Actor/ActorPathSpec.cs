@@ -15,25 +15,82 @@ namespace Akka.Tests.Actor
         public void SupportsParsingItsStringRep()
         {
             var path = new RootActorPath(new Address("akka.tcp", "mysys")) / "user";
-            ActorPath.Parse(path.ToString()).ShouldBe(path);
+            ActorPathParse(path.ToString()).ShouldBe(path);
+        }
+
+        private ActorPath ActorPathParse(string path)
+        {
+            ActorPath actorPath;
+            if(ActorPath.TryParse(path, out actorPath))
+                return actorPath;
+            throw new UriFormatException();
+        }
+
+        [TestMethod]
+        public void ActorPath_Parse_HandlesCasing_ForLocal()
+        {
+            const string uriString = "aKKa://sYstEm/pAth1/pAth2";
+            var actorPath = ActorPathParse(uriString);
+
+            // "Although schemes are case insensitive, the canonical form is lowercase and documents that
+            //  specify schemes must do so with lowercase letters.  An implementation should accept 
+            //  uppercase letters as equivalent to lowercase in scheme names (e.g., allow "HTTP"
+            //  as well as "http") for the sake of robustness but should only produce lowercase scheme names 
+            //  for consistency."   rfc3986 
+            Assert.AreEqual(actorPath.Address.Protocol, "akka",ignoreCase:false, message: "protocol should be lowercase");
+            
+            //In Akka, at least the system name is case-sensitive, see http://doc.akka.io/docs/akka/current/additional/faq.html#what-is-the-name-of-a-remote-actor            
+            Assert.AreEqual(actorPath.Address.System, "sYstEm",ignoreCase:false, message: "system");
+
+            var elements = actorPath.Elements.ToList();
+            elements.Count.ShouldBe(2,"number of elements in path");
+            Assert.AreEqual("pAth1", elements[0], ignoreCase: false, message: "first path element");
+            Assert.AreEqual("pAth2", elements[1], ignoreCase: false, message: "second path element");
+            Assert.AreEqual(actorPath.ToString(),"akka://sYstEm/pAth1/pAth2");
+        }
+        [TestMethod]
+        public void ActorPath_Parse_HandlesCasing_ForRemote()
+        {
+            const string uriString = "aKKa://sYstEm@hOst:4711/pAth1/pAth2";
+            var actorPath = ActorPathParse(uriString);
+
+            // "Although schemes are case insensitive, the canonical form is lowercase and documents that
+            //  specify schemes must do so with lowercase letters.  An implementation should accept 
+            //  uppercase letters as equivalent to lowercase in scheme names (e.g., allow "HTTP"
+            //  as well as "http") for the sake of robustness but should only produce lowercase scheme names 
+            //  for consistency."   rfc3986 
+            Assert.AreEqual(actorPath.Address.Protocol, "akka", ignoreCase: false, message: "protocol should be lowercase");
+
+            //In Akka, at least the system name is case-sensitive, see http://doc.akka.io/docs/akka/current/additional/faq.html#what-is-the-name-of-a-remote-actor            
+            Assert.AreEqual(actorPath.Address.System, "sYstEm", ignoreCase: false, message: "system");
+
+            //According to rfc3986 host is case insensitive, but should be produced as lowercase
+            Assert.AreEqual(actorPath.Address.Host, "host", ignoreCase: false, message: "host");
+            actorPath.Address.Port.ShouldBe(4711, "port");
+            var elements = actorPath.Elements.ToList();
+            elements.Count.ShouldBe(2, "number of elements in path");
+            Assert.AreEqual("pAth1", elements[0], ignoreCase: false, message: "first path element");
+            Assert.AreEqual("pAth2", elements[1], ignoreCase: false, message: "second path element");
+            Assert.AreEqual(actorPath.ToString(), "akka://sYstEm@host:4711/pAth1/pAth2");
         }
 
         [TestMethod]
         public void SupportsParsingRemotePaths()
         {
             var remote = "akka://sys@host:1234/some/ref";
-            var parsed = ActorPath.Parse(remote);
+            var parsed = ActorPathParse(remote);
             parsed.ToString().ShouldBe(remote);
         }
 
         [TestMethod]
-        public void ThrowExceptionUponMalformedPath()
+        public void ReturnFalsUponMalformedPath()
         {
-            intercept<UriFormatException>(() => ActorPath.Parse(""));
-            intercept<UriFormatException>(() => ActorPath.Parse("://hallo"));
-            intercept<UriFormatException>(() => ActorPath.Parse("s://dd@:12"));
-            intercept<UriFormatException>(() => ActorPath.Parse("s://dd@h:hd"));
-            intercept<UriFormatException>(() => ActorPath.Parse("a://l:1/b"));
+            ActorPath ignored;
+            ActorPath.TryParse("", out ignored).ShouldBe(false);
+            ActorPath.TryParse("://hallo", out ignored).ShouldBe(false);
+            ActorPath.TryParse("s://dd@:12", out ignored).ShouldBe(false);
+            ActorPath.TryParse("s://dd@h:hd", out ignored).ShouldBe(false);
+            ActorPath.TryParse("a://l:1/b", out ignored).ShouldBe(false);
         }
 
         [TestMethod]
@@ -64,7 +121,8 @@ namespace Akka.Tests.Actor
             var local = new Address("akka.tcp", "mysys");
             var a = new Address("akka.tcp", "mysys", "aaa", 2552);
             var b = new Address("akka.tcp", "mysys", "bb", 2552);
-            var c = new Address("akka.tcp", "mysys", "cccc" , 2552);
+            var c = new Address("akka.tcp", "mysys", "cccc", 2552);
+            var d = new Address("akka.tcp", "mysys", "192.168.107.1", 2552);
             var root = new RootActorPath(local);
             root.ToStringWithAddress(a).ShouldBe("akka.tcp://mysys@aaa:2552/");
             (root / "user").ToStringWithAddress(a).ShouldBe("akka.tcp://mysys@aaa:2552/user");
@@ -77,6 +135,11 @@ namespace Akka.Tests.Actor
             root.ToStringWithAddress(c).ShouldBe("akka.tcp://mysys@cccc:2552/");
             (root / "user").ToStringWithAddress(c).ShouldBe("akka.tcp://mysys@cccc:2552/user");
             (root / "user" / "foo").ToStringWithAddress(c).ShouldBe("akka.tcp://mysys@cccc:2552/user/foo");
+
+
+            root.ToStringWithAddress(d).ShouldBe("akka.tcp://mysys@192.168.107.1:2552/");
+            (root / "user").ToStringWithAddress(d).ShouldBe("akka.tcp://mysys@192.168.107.1:2552/user");
+            (root / "user" / "foo").ToStringWithAddress(d).ShouldBe("akka.tcp://mysys@192.168.107.1:2552/user/foo");
 
             var rootA = new RootActorPath(a);
             rootA.ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@aaa:2552/");

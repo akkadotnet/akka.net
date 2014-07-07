@@ -110,7 +110,7 @@ val path = actorRef.path
             ActorSystem originalSystem = null;
             if (@ref is ActorRefWithCell)
             {
-                originalSystem = @ref.AsInstanceOf<ActorRefWithCell>().Cell.System;
+                originalSystem = @ref.AsInstanceOf<ActorRefWithCell>().Underlying.System;
                 if (CurrentTransportInformation == null)
                 {
                     return @ref.Path.ToSerializationFormat();

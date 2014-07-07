@@ -9,16 +9,23 @@ using Akka.Actor;
 namespace Akka.Event
 {
     /// <summary>
+    /// This is a “marker” class which is inserted as originator class into
+    /// <see cref="LogEvent"/> when the string representation was supplied directly.
+    /// </summary>
+    public class DummyClassForStringSources { }
+
+    /// <summary>
     ///     Class StandardOutLogger.
     /// </summary>
     public class StandardOutLogger : MinimalActorRef
     {
+        private RootActorPath _path = new RootActorPath(Address.AllSystems, "/StandardOutLogger");
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="StandardOutLogger" /> class.
         /// </summary>
         public StandardOutLogger()
         {
-            Path = new RootActorPath(Address.AllSystems, "/StandardOutLogger");
         }
 
         /// <summary>
@@ -29,6 +36,11 @@ namespace Akka.Event
         public override ActorRefProvider Provider
         {
             get { throw new Exception("StandardOutLogger does not provide"); }
+        }
+
+        public override ActorPath Path
+        {
+            get { return _path; }
         }
 
         /// <summary>
@@ -922,15 +934,28 @@ namespace Akka.Event
         /// <returns>LoggingAdapter.</returns>
         public static LoggingAdapter GetLogger(ActorSystem system, object logSourceObj)
         {
-            //TODO: refine this
-            string logSource = logSourceObj.ToString();
-            Type logClass;
-            if (logSourceObj is Type)
-                logClass = (Type) logSourceObj;
-            else
-                logClass = logSourceObj.GetType();
+            return GetLogger(system.EventStream, logSourceObj);
+        }
 
-            return new BusLogging(system.EventStream, logSource, logClass);
+        public static LoggingAdapter GetLogger(LoggingBus loggingBus, object logSourceObj)
+        {
+            //TODO: refine this
+            string logSource;
+            Type logClass;
+            if(logSourceObj is string)
+            {
+                logSource = (string) logSourceObj;
+                logClass = typeof(DummyClassForStringSources);
+            }
+            else
+            {
+                logSource = logSourceObj.ToString();
+                if(logSourceObj is Type)
+                    logClass = (Type) logSourceObj;
+                else
+                    logClass = logSourceObj.GetType();
+            }
+            return new BusLogging(loggingBus, logSource, logClass);
         }
 
         /// <summary>

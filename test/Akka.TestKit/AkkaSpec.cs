@@ -38,9 +38,9 @@ namespace Akka.Tests
             }
         }
 
-        public static void ShouldBe<T>(this T self, T other)
+        public static void ShouldBe<T>(this T self, T other, string message=null)
         {
-            Assert.AreEqual(other, self);
+            Assert.AreEqual(other, self,message);
         }
 
         public static void ShouldOnlyContainInOrder<T>(this IEnumerable<T> actual, params T[] expected)
@@ -135,6 +135,16 @@ namespace Akka.Tests
             return (Terminated)actual;
         }
 
+        protected Terminated expectTerminated(ActorRef @ref, TimeSpan timeout)
+        {
+            var cancellationTokenSource = new CancellationTokenSource((int) timeout.TotalMilliseconds);
+            var actual = queue.Take(cancellationTokenSource.Token);
+
+            Assert.IsTrue(actual is Terminated);
+
+            return (Terminated)actual;
+        }
+
         protected object expectMsg(object expected)
         {
             var actual = queue.Take();
@@ -185,7 +195,7 @@ namespace Akka.Tests
 
         protected void watch(ActorRef @ref)
         {
-            var l = testActor as ActorRefWithCell;
+            var l = testActor as LocalActorRef;
             l.Cell.Watch(@ref);
         }
 

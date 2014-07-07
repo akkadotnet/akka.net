@@ -1,4 +1,6 @@
-﻿using Akka.Event;
+﻿using System.Threading;
+using Akka.Dispatch.SysMsg;
+using Akka.Event;
 
 namespace Akka.Actor
 {
@@ -19,98 +21,71 @@ namespace Akka.Actor
     /// <summary>
     ///     Class GuardianActor.
     /// </summary>
-    public class GuardianActor : UntypedActor
+    public class GuardianActor : ActorBase
     {
-        /// <summary>
-        ///     Processor for user defined messages.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        protected override void OnReceive(object message)
+        protected override bool Receive(object message)
         {
-            Unhandled(message);
+            if(message is Terminated)
+                Context.Stop(Self);
+            else if(message is StopChild)
+                Context.Stop(((StopChild)message).Child);
+            else
+                Context.System.DeadLetters.Tell(new DeadLetter(message,Sender,Self),Sender);
+            return true;
         }
     }
 
-    /// <summary>
-    /// System Guardian - responsible for all system-wide actors
-    /// </summary>
-    class SystemGuardianActor : UntypedActor
+    public class SystemGuardianActor : ActorBase
     {
+        private readonly ActorRef _userGuardian;
+
+        public SystemGuardianActor(ActorRef userGuardian)
+        {
+            _userGuardian = userGuardian;
+        }
+
         /// <summary>
         /// Processor for messages that are sent to the root system guardian
         /// </summary>
         /// <param name="message"></param>
-        protected override void OnReceive(object message)
+        protected override bool Receive(object message)
         {
             //TODO need to add termination hook support
+            Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Self), Sender);
+            return true;
         }
     }
 
     /// <summary>
     ///     Class DeadLetterActorRef.
     /// </summary>
-    public class DeadLetterActorRef : ActorRef
+    public class DeadLetterActorRef : EmptyLocalActorRef
     {
-        /// <summary>
-        ///     The event stream
-        /// </summary>
-        private readonly EventStream eventStream;
+        private readonly EventStream _eventStream;
 
-        /// <summary>
-        ///     The provider
-        /// </summary>
-        private readonly ActorRefProvider provider;
-
-        /// <summary>
-        ///     The path
-        /// </summary>
-        private ActorPath path;
-
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="DeadLetterActorRef" /> class.
-        /// </summary>
-        /// <param name="provider">The provider.</param>
-        /// <param name="path">The path.</param>
-        /// <param name="eventStream">The event stream.</param>
-        public DeadLetterActorRef(ActorRefProvider provider, ActorPath path, EventStream eventStream)
+        public DeadLetterActorRef(ActorRefProvider provider, ActorPath path, EventStream eventStream) : base(provider,path,eventStream)
         {
-            this.eventStream = eventStream;
-            this.path = path;
-            this.provider = provider;
+            _eventStream = eventStream;
         }
 
-        /// <summary>
-        ///     Specials the handle.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="sender">The sender.</param>
-        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        private bool SpecialHandle(object message, ActorRef sender)
+        protected override void HandleDeadLetter(DeadLetter deadLetter)
         {
-            return false;
+            if(!SpecialHandle(deadLetter.Message,deadLetter.Sender))
+                _eventStream.Publish(deadLetter);
         }
 
-        /// <summary>
-        ///     Tells the internal.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="sender">The sender.</param>
-        protected override void TellInternal(object message, ActorRef sender)
+        protected override bool SpecialHandle(object message, ActorRef sender)
         {
-            message
-                .Match()
-                .With<Identify>(m => sender.Tell(new ActorIdentity(m.MessageId, this)))
-                .With<DeadLetter>(m =>
+            var w = message as Watch;
+            if(w != null)
+            {
+                if(w.Watchee != this && w.Watcher != this)
                 {
-                    if (!SpecialHandle(m.Message, m.Sender))
-                        eventStream.Publish(m);
-                })
-                .Default(m =>
-                {
-                    if (!SpecialHandle(message, sender))
-                        eventStream.Publish(new DeadLetter(message, sender == NoSender ? provider.DeadLetters : sender,
-                            this));
-                });
+                    w.Watcher.Tell(new DeathWatchNotification(w.Watchee, existenceConfirmed: false, addressTerminated: false));
+                }
+                return true;
+            }
+            return base.SpecialHandle(message, sender);
         }
     }
 }

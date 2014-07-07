@@ -2,6 +2,7 @@
 using System.Linq;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
+using Akka.Event;
 
 namespace Akka.Remote
 {
@@ -61,8 +62,9 @@ namespace Akka.Remote
         /// <param name="system">The system.</param>
         /// <param name="path">The path.</param>
         /// <param name="parent">The parent.</param>
-        public RemoteDaemon(ActorSystem system, ActorPath path, InternalActorRef parent)
-            : base(system.Provider, path, parent)
+        /// <param name="log"></param>
+        public RemoteDaemon(ActorSystem system, ActorPath path, InternalActorRef parent, LoggingAdapter log)
+            : base(system.Provider, path, parent, log)
         {
             System = system;
         }
@@ -103,14 +105,23 @@ namespace Akka.Remote
         {
             var supervisor = (InternalActorRef) message.Supervisor;
             Props props = message.Props;
-            ActorPath childPath = ActorPath.Parse(message.Path);
-            IEnumerable<string> subPath = childPath.Elements;
-            ActorPath path = Path/subPath;
-            var localProps = props;//.WithDeploy(new Deploy(Scope.Local));
-            InternalActorRef actor = System.Provider.ActorOf(System, localProps, supervisor, path);
-            string childName = subPath.Join("/");
-            AddChild(childName, actor);
-            actor.Tell(new Watch(actor, this));
+            ActorPath childPath;
+            if(ActorPath.TryParse(message.Path, out childPath))
+            {
+                IEnumerable<string> subPath = childPath.Elements;
+                ActorPath path = Path/subPath;
+                var localProps = props; //.WithDeploy(new Deploy(Scope.Local));
+                InternalActorRef actor = System.Provider.ActorOf(System, localProps, supervisor, path, false,
+                    message.Deploy, true, false);
+                string childName = subPath.Join("/");
+                AddChild(childName, actor);
+                actor.Tell(new Watch(actor, this));
+                actor.Start();
+            }
+            else
+            {
+                Log.Debug("remote path does not match path from message [{0}]", message);
+            }
         }
 
         /// <summary>
@@ -133,7 +144,7 @@ namespace Akka.Remote
             {
                 string joined = string.Join("/", parts, 0, i);
                 InternalActorRef child;
-                if (children.TryGetValue(joined, out child))
+                if (TryGetChild(joined, out child))
                 {
                     //longest match found
                     IEnumerable<string> rest = parts.Skip(i);

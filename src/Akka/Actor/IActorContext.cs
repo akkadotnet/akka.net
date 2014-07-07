@@ -4,15 +4,15 @@ namespace Akka.Actor
 {
     public interface IActorContext : IActorRefFactory
     {
-        LocalActorRef Self { get; }
+        ActorRef Self { get; }
         Props Props { get; }
         ActorRef Sender { get; }
         ActorSystem System { get; }
-        InternalActorRef Parent { get; }
+        ActorRef Parent { get; }
         void Become(Receive receive, bool discardOld = true);
         void Unbecome();
-        InternalActorRef Child(string name);
-        IEnumerable<InternalActorRef> GetChildren();
+        ActorRef Child(string name);
+        IEnumerable<ActorRef> GetChildren();
         void Watch(ActorRef subject);
         void Unwatch(ActorRef subject);
 
@@ -32,6 +32,6 @@ namespace Akka.Actor
   def unwatch(subject: ActorRef): ActorRef
          */
 
-        void Stop(InternalActorRef child);
+        void Stop(ActorRef child);
     }
 }

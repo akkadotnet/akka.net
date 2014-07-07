@@ -23,11 +23,10 @@ namespace Akka.Routing
 
         public abstract IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell);
 
-        public static bool IsManagementMessage(object message)
+        public virtual bool IsManagementMessage(object message)
         {
             return 
                 message is AutoReceivedMessage || 
-                //TODO: isnt terminated a autoreceived in real akka?
                 // in akka.net this message is a subclass of AutoReceivedMessage - so removed condition that "message is Terminated ||"
                 message is RouterManagementMesssage;
         }

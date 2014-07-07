@@ -4,6 +4,7 @@ using Akka.Tests;
 using Akka.Actor;
 using Akka.Configuration;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace Akka.Remote.Tests
 {
@@ -20,7 +21,11 @@ namespace Akka.Remote.Tests
 
         public class MyRemoteActor : UntypedActor
         {
-            private ActorRef child = Context.ActorOf<SomeActor>("child");
+            public MyRemoteActor(ManualResetEventSlim childCreatedEvent)
+            {
+                var child = Context.ActorOf<SomeActor>("child");
+                childCreatedEvent.Set();
+            }
             protected override void OnReceive(object message)
             {               
             }
@@ -54,11 +59,17 @@ akka {
             var supervisor = sys.ActorOf<SomeActor>();
             var provider = (RemoteActorRefProvider)sys.Provider;
             var daemon = provider.RemoteDaemon;
+            var childCreatedEvent=new ManualResetEventSlim();
+
 
             var path = (sys.Guardian.Path + "/foo").ToString();
 
             //ask to create an actor MyRemoteActor, this actor has a child "child"
-            daemon.Tell(new DaemonMsgCreate(Props.Create(() => new MyRemoteActor()), null,path, supervisor));
+            daemon.Tell(new DaemonMsgCreate(Props.Create(() => new MyRemoteActor(childCreatedEvent)), null, path, supervisor));
+
+            //Wait for the child to be created (actors are instantiated async)
+            childCreatedEvent.Wait();
+
             //try to resolve the child actor "child"
             var child = provider.ResolveActorRef(provider.RootPath / "remote/user/foo/child".Split('/'));
             //pass a message to the child

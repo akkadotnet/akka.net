@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Akka.Util;
 
 namespace Akka.Actor
 {
@@ -199,26 +200,31 @@ namespace Akka.Actor
     /// </summary>
     public static class StashFactory
     {
-        public static IStash GetStash(this IActorContext context)
+        public static IStash CreateStash<T>(this IActorContext context) where T:ActorBase
         {
-            var actorCell = context.AsInstanceOf<ActorCell>();
-            var actor = actorCell.Actor;
-            if (!(actor is IActorStash))
-            {
-                throw new NotSupportedException(string.Format("Cannot create stash for Actor {0} - needs to implement IActorStash interface", actor));
-            }
+            var actorType = typeof(T);
+            return CreateStash(context, actorType);
+        }
 
-            if (actor is WithBoundedStash)
+        public static IStash CreateStash(this IActorContext context, IActorStash actorInstance)
+        {
+            return CreateStash(context, actorInstance.GetType());
+        }
+
+        public static IStash CreateStash(this IActorContext context, Type actorType)
+        {
+            if(actorType.Implements<WithBoundedStash>())
             {
                 return new BoundedStashImpl(context);
             }
 
-            if (actor is WithUnboundedStash)
+            if(actorType.Implements<WithUnboundedStash>())
             {
                 return new UnboundedStashImpl(context);
             }
 
-            throw new ArgumentException(string.Format("Actor {0} implements unrecognized subclass of IActorStash - cannot instantiate", actor));
+            throw new ArgumentException(string.Format("Actor {0} implements unrecognized subclass of {1} - cannot instantiate",
+                actorType, typeof(IActorStash)));
         }
     }
 

@@ -16,5 +16,10 @@
         /// </summary>
         /// <value>The message.</value>
         public object Message { get; set; }
+
+        public override string ToString()
+        {
+            return "<" + (Message ?? "null") + "> from " + (Sender ?? NoSender.Instance);
+        }
     }
 }

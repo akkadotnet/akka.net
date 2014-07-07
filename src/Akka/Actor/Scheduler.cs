@@ -168,7 +168,7 @@ namespace Akka.Actor
             Action wrapped = action;
             if (ActorCell.Current != null)
             {
-                LocalActorRef self = ActorCell.Current.Self;
+                var self = ActorCell.Current.Self;
                 wrapped = () => self.Tell(new CompleteFuture(action));
             }
             return wrapped;

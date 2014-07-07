@@ -1,9 +1,10 @@
 ﻿using System.Collections.Concurrent;
 using System.Linq;
+using Akka.Dispatch.SysMsg;
 
 namespace Akka.Actor
 {
-    public class BroadcastActorRef : ActorRef
+    public class BroadcastActorRef
     {
         private readonly ConcurrentDictionary<ActorRef, ActorRef> actors =
             new ConcurrentDictionary<ActorRef, ActorRef>();
@@ -25,8 +26,9 @@ namespace Akka.Actor
             actors.TryRemove(actor, out tmp);
         }
 
-        protected override void TellInternal(object message, ActorRef sender)
+        public void Tell(object message, ActorRef sender=null)
         {
+            sender = sender ?? ActorRefSender.GetSelfOrNoSender();
             actors.Values.ToList().ForEach(a => a.Tell(message, sender));
         }
     }

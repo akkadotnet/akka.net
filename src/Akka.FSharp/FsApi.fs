@@ -7,7 +7,7 @@ type IO<'msg> = | Input
 [<Interface>]
 type Actor<'msg> =
     abstract Receive : unit -> IO<'msg>
-    abstract Self : LocalActorRef
+    abstract Self : ActorRef
     abstract Sender : unit -> ActorRef
     abstract Unhandled: 'msg -> unit
 
@@ -143,7 +143,7 @@ type FunActor<'m,'v>(actor: Actor<'m> -> Cont<'m,'v>) as self =
     inherit UntypedActor()
 
     let mutable state = 
-        let self' = self.Self
+        let self' = self.Self :> ActorRef
         actor { new Actor<'m> with
                                 member this.Receive() = Input
                                 member this.Self = self'

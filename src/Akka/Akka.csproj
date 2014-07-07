@@ -72,6 +72,7 @@
     <Compile Include="Actor\ActorPath.cs" />
     <Compile Include="Actor\ActorRef.cs" />
     <Compile Include="Actor\ActorRef.Extensions.cs" />
+    <Compile Include="Actor\ActorRefFactoryShared.cs" />
     <Compile Include="Actor\ActorRefProvider.cs" />
     <Compile Include="Actor\ActorSelection.cs" />
     <Compile Include="Actor\ActorSystem.cs" />
@@ -80,7 +81,13 @@
     <Compile Include="Actor\AutoReceivedMessage.cs" />
     <Compile Include="Actor\BroadcastActorRef.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
+    <Compile Include="Actor\Cell.cs" />
     <Compile Include="Actor\ChildrenContainer.cs" />
+    <Compile Include="Actor\EmptyLocalActorRef.cs" />
+    <Compile Include="Actor\NameAndUid.cs" />
+    <Compile Include="Actor\RepointableActorRef.cs" />
+    <Compile Include="Actor\RootGuardianActorRef.cs" />
+    <Compile Include="Actor\RootGuardianSupervisor.cs" />
     <Compile Include="Actor\Deployer.cs" />
     <Compile Include="Actor\ExtendedActorSystem.cs" />
     <Compile Include="Actor\FSM.cs" />
@@ -161,6 +168,7 @@
     <Compile Include="Util\Base64Encoding.cs" />
     <Compile Include="Util\StringFormat.cs" />
     <Compile Include="Util\Switch.cs" />
+    <Compile Include="Util\TypeExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Actor\ActorBase.SupervisorStrategy.cs" />

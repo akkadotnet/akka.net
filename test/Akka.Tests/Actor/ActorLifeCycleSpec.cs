@@ -292,7 +292,7 @@ namespace Akka.Tests
                     .With<Stop>(m =>
                     {
                         var child = Context.Child(m.Name);
-                        child.Stop();
+                        ((InternalActorRef)child).Stop();
                     })
                     .With<Count>(m => 
                         testActor.Tell(Context.GetChildren().Count()));

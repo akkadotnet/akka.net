@@ -20,6 +20,9 @@ namespace Akka.Remote
         /// The deploy
         /// </summary>
         private readonly Deploy _deploy;
+
+        private readonly ActorPath _path;
+
         /// <summary>
         /// The parent
         /// </summary>
@@ -43,7 +46,7 @@ namespace Akka.Remote
         {
             Remote = remote;
             LocalAddressToUse = localAddressToUse;
-            Path = path;
+            _path = path;
             _parent = parent;
             _props = props;
             _deploy = deploy;
@@ -129,6 +132,11 @@ namespace Akka.Remote
             get { return false; }
         }
 
+        public override ActorPath Path
+        {
+            get { return _path; }
+        }
+
         /// <summary>
         /// Sends the system message.
         /// </summary>
@@ -136,7 +144,7 @@ namespace Akka.Remote
         private void SendSystemMessage(SystemMessage message)
         {
             Remote.Send(message, null, this);
-            Provider.AfterSendSystemMessage(message);
+            Remote.Provider.AfterSendSystemMessage(message);
         }
 
         /// <summary>
@@ -152,7 +160,7 @@ namespace Akka.Remote
         /// <summary>
         /// Starts this instance.
         /// </summary>
-        public void Start()
+        public override void Start()
         {
             if (_props != null && _deploy != null)
                 Remote.Provider.UseActorOnNode(this, _props, _deploy, _parent);
