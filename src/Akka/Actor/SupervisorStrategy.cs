@@ -121,23 +121,7 @@ namespace Akka.Actor
         children foreach (crs ⇒ restartChild(crs.child, cause, suspendFirst = (crs.child != child)))
       else
         for (c ← children) context.stop(c.child)
-    }
-             */
-
-            //if (children.Any())
-            //{
-            //    if (restart)
-            //    {
-
-            //    }
-            //    else
-            //    {
-            //        foreach (var child in children)
-            //        {
-            //            child.Stop();
-            //        }
-            //    }
-            //}
+    }*/
         }
 
         /// <summary>

@@ -135,7 +135,12 @@ namespace Akka.Actor
                             withCell.GetSingleChild(element.AsInstanceOf<SelectChildName>().Name));
                     else if (element is SelectChildPattern)
                     {
-                        //TODO: implement pattern match
+                        var children = withCell.Children;
+
+                        foreach(var matchingChild in children)
+                        {
+                            Deliver(message, sender, pathIndex + 1, matchingChild);
+                        }                        
                     }
                 }
                 else
