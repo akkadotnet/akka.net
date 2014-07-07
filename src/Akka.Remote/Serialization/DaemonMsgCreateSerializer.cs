@@ -154,6 +154,7 @@ namespace Akka.Remote.Serialization
                 var arg = proto.Props.GetArgs(i);
                 if (typeName == "" && ByteString.Empty.Equals(arg))
                 {
+                    //HACK: no typename and empty arg gives null 
                     args[i] = null;
                 }
                 else
