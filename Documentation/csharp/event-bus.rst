@@ -164,7 +164,7 @@ stream for logging: these are the handlers which are configured for example in
 .. code-block:: text
 
   akka {
-    loggers = ["akka.event.Logging$DefaultLogger"]
+    loggers = ["Akka.Event.Logging.DefaultLogger"]
   }
 
 The handlers listed here by fully-qualified class name will be subscribed to
@@ -172,7 +172,7 @@ all log event classes with priority higher than or equal to the configured
 log-level and their subscriptions are kept in sync when changing the log-level
 at runtime::
 
-  system.eventStream.setLogLevel(Logging.DebugLevel());
+  system.EventStream.SetLogLevel(LogLevel.DebugLevel);
 
 This means that log events for a level which will not be logged are
 typically not dispatched at all (unless manual subscriptions to the respective
@@ -191,6 +191,6 @@ Other Uses
 ----------
 
 The event stream is always there and ready to be used, just publish your own
-events (it accepts ``Object``) and subscribe listeners to the corresponding JVM
+events (it accepts ``Object``) and subscribe listeners to the corresponding CLR
 classes.
 
