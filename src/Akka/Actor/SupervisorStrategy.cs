@@ -6,7 +6,7 @@ using Akka.Event;
 namespace Akka.Actor
 {
     /// <summary>
-    ///     Class SupervisorStrategy.
+    ///     Base class for supervision strategies
     /// </summary>
     public abstract class SupervisorStrategy
     {
@@ -15,8 +15,8 @@ namespace Akka.Actor
         /// <summary>
         ///     Handles the specified child.
         /// </summary>
-        /// <param name="child">The child.</param>
-        /// <param name="x">The x.</param>
+        /// <param name="child">The actor that caused the evaluation to occur</param>
+        /// <param name="x">The exception that caused the evaluation to occur.</param>
         /// <returns>Directive.</returns>
         public abstract Directive Handle(ActorRef child, Exception x);
 
@@ -315,7 +315,7 @@ namespace Akka.Actor
         public Func<Exception, Directive> Decider { get; private set; }
 
         /// <summary>
-        ///     Handles the specified child.
+        ///     Determines what to do with the child when the given exception occurs.
         /// </summary>
         /// <param name="child">The child.</param>
         /// <param name="x">The x.</param>
@@ -362,7 +362,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    ///     Class Failures.
+    ///     Collection of failures, used to keep track of how many times a given actor have failed.
     /// </summary>
     public class Failures
     {
@@ -382,25 +382,25 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    ///     Class Failure.
+    ///     Represents a single failure.
     /// </summary>
     public class Failure
     {
         /// <summary>
-        ///     Gets or sets the exception.
+        ///     The exception that caused the failure.
         /// </summary>
         /// <value>The exception.</value>
         public Exception Exception { get; set; }
 
         /// <summary>
-        ///     Gets or sets the timestamp.
+        ///     The timestamp when the failure occurred.
         /// </summary>
         /// <value>The timestamp.</value>
         public DateTime Timestamp { get; set; }
     }
 
     /// <summary>
-    ///     Enum Directive
+    ///     Enum Directive for supervisor actions
     /// </summary>
     public enum Directive
     {
