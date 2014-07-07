@@ -73,11 +73,6 @@ There are 4 different types of message dispatchers:
 
   - Use cases: Default dispatcher, Bulkheading
 
-  - Driven by: ``java.util.concurrent.ExecutorService``
-               specify using "executor" using "fork-join-executor",
-               "thread-pool-executor" or the FQCN of
-               an ``akka.dispatcher.ExecutorServiceConfigurator``
-
 * PinnedDispatcher
 
   - This dispatcher dedicates a unique thread for each actor using it; i.e. each actor will have its own thread pool with only one thread in the pool.
@@ -88,39 +83,24 @@ There are 4 different types of message dispatchers:
 
   - Use cases: Bulkheading
 
-  - Driven by: Any ``akka.dispatch.ThreadPoolExecutorConfigurator``
-               by default a "thread-pool-executor"
+* SynchronizedDispatcher
 
-* CallingThreadDispatcher
-
-  - This dispatcher runs invocations on the current thread only. This dispatcher does not create any new threads,
-    but it can be used from different threads concurrently for the same actor. See :ref:`Java-CallingThreadDispatcher`
-    for details and restrictions.
+  - This dispatcher runs invocations on the current SynchronizationContext only. 
 
   - Sharability: Unlimited
 
-  - Mailboxes: Any, creates one per Actor per Thread (on demand)
+  - Mailboxes: Any, creates one per Actor
 
-  - Use cases: Testing
-
-  - Driven by: The calling thread (duh)
+  - Use cases: UI based Actors
 
 More dispatcher configuration examples
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Configuring a ``PinnedDispatcher``:
 
-.. includecode:: ../scala/code/docs/dispatcher/DispatcherDocSpec.scala#my-pinned-dispatcher-config
+.. includecode:: ../csharp/code/docs/dispatcher/DispatcherDocSpec.cs#my-pinned-dispatcher-config
 
 And then using it:
 
-.. includecode:: ../java/code/docs/dispatcher/DispatcherDocTest.java#defining-pinned-dispatcher
+.. includecode:: ../csharp/code/docs/dispatcher/DispatcherDocSpec.cs#defining-pinned-dispatcher
 
-Note that ``thread-pool-executor`` configuration as per the above ``my-thread-pool-dispatcher`` example is
-NOT applicable. This is because every actor will have its own thread pool when using ``PinnedDispatcher``,
-and that pool will have only one thread.
-
-Note that it's not guaranteed that the *same* thread is used over time, since the core pool timeout
-is used for ``PinnedDispatcher`` to keep resource usage down in case of idle actors. To use the same
-thread all the time you need to add ``thread-pool-executor.allow-core-timeout=off`` to the
-configuration of the ``PinnedDispatcher``.
