@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,9 +27,7 @@ namespace Akka.Remote
                 var address = actorPath.Address;
                 return new RemoteScope(address);
             }
-            //TODO: ConfigurationException is obsolete. What should be use instead? We don't want to 
-            //      reference System.Configuration just to get ConfigurationErrorsException.
-            //      We should creat our own.
+
             throw new ConfigurationException(string.Format("unparseable remote node name [{0}]", "ARG0"));  
         }
     }

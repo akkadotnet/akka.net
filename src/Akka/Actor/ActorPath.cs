@@ -165,7 +165,7 @@ namespace Akka.Actor
             {
                 uri = new Uri(path);
             }
-            catch(UriFormatException e)
+            catch(UriFormatException)
             {
                 return false;
             }

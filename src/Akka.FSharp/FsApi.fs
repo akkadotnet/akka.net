@@ -143,7 +143,7 @@ type FunActor<'m,'v>(actor: Actor<'m> -> Cont<'m,'v>) as self =
     inherit UntypedActor()
 
     let mutable state = 
-        let self' = self.Self :> ActorRef
+        let self' = self.Self 
         actor { new Actor<'m> with
                                 member this.Receive() = Input
                                 member this.Self = self'

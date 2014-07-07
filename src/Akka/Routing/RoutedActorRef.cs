@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Configuration;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;

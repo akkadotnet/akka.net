@@ -197,6 +197,7 @@ namespace Akka.Remote.Tests
 
             public Forwarder(ActorRef testActor)
             {
+                _testActor = testActor;
             }
 
             protected override void OnReceive(object message)

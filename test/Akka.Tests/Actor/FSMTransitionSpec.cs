@@ -177,7 +177,7 @@ namespace Akka.Tests.Actor
                         {
                             Sender.Tell(string.Format("failed: {0}", NextStateData));
                         }
-                        catch (InvalidOperationException ex)
+                        catch (InvalidOperationException)
                         {
                             Sender.Tell("ok");
                         }

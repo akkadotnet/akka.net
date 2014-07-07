@@ -384,7 +384,7 @@ namespace Akka.Tests
         {
             var stop = DateTime.UtcNow + max;
 
-            Func<IList<T>, int, IEnumerable<T>> accumulatorFunc = null;
+      //      Func<IList<T>, int, IEnumerable<T>> accumulatorFunc = null;
             var count = 0;
             var acc = new List<T>();
 
@@ -399,11 +399,11 @@ namespace Akka.Tests
                         acc.Add(fr);
                         count++;
                     }
-                    var debug2 = true;
+               //     var debug2 = true;
                     continue;
                 }
 
-                var debug1 = true;
+           //     var debug1 = true;
                 break;
             }
 

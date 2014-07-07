@@ -182,7 +182,6 @@ namespace Akka.Actor
                         //      crs.child.asInstanceOf[InternalActorRef].getChild(name)
                         //    case _ ⇒ Nobody
                         //  }
-                        break;
                 }
                 index++;
             }

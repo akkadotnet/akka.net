@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Configuration;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -62,7 +61,6 @@ namespace Akka.Remote
             var failureDetectorClass = Type.GetType(fqcn);
             if (failureDetectorClass == null)
             {
-                //TODO: need to add a reference to System.Configuration to use the non-obsolete Exception type?
                 throw new ConfigurationException(string.Format("Could not create custom FailureDetector {0}", fqcn));
             }
             var failureDetector = (FailureDetector) Activator.CreateInstance(failureDetectorClass, config, system.EventStream);
