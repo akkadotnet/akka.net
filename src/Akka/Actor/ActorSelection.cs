@@ -70,7 +70,7 @@ namespace Akka.Actor
         public SelectionPathElement[] Elements { get; set; }
 
         /// <summary>
-        ///     Tells the specified message.
+        ///     Posts a message to this ActorSelection.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
@@ -80,7 +80,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Tells the specified message.
+        ///     Posts a message to this ActorSelection.
         /// </summary>
         /// <param name="message">The message.</param>
         public void Tell(object message)
@@ -183,13 +183,13 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Gets or sets the message.
+        ///     The message that should be delivered to this ActorSelection.
         /// </summary>
         /// <value>The message.</value>
         public object Message { get; private set; }
 
         /// <summary>
-        ///     Gets or sets the elements.
+        ///     The elements, e.g. "foo/bar/baz".
         /// </summary>
         /// <value>The elements.</value>
         public SelectionPathElement[] Elements { get; private set; }
@@ -219,7 +219,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Gets or sets the name.
+        ///     Gets or sets the actor name.
         /// </summary>
         /// <value>The name.</value>
         public string Name { get; set; }
@@ -235,29 +235,6 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    ///     Class Pattern.
-    /// </summary>
-    public class Pattern
-    {
-    }
-
-    /// <summary>
-    ///     Class Helpers.
-    /// </summary>
-    public static class Helpers
-    {
-        /// <summary>
-        ///     Makes the pattern.
-        /// </summary>
-        /// <param name="patternStr">The pattern string.</param>
-        /// <returns>Pattern.</returns>
-        public static Pattern MakePattern(string patternStr)
-        {
-            return new Pattern();
-        }
-    }
-
-    /// <summary>
     ///     Class SelectChildPattern.
     /// </summary>
     public class SelectChildPattern : SelectionPathElement
@@ -268,15 +245,8 @@ namespace Akka.Actor
         /// <param name="patternStr">The pattern string.</param>
         public SelectChildPattern(string patternStr)
         {
-            PatternStr = patternStr;
-            Pattern = Helpers.MakePattern(patternStr);
+            PatternStr = patternStr;        
         }
-
-        /// <summary>
-        ///     Gets or sets the pattern.
-        /// </summary>
-        /// <value>The pattern.</value>
-        public Pattern Pattern { get; private set; }
 
         /// <summary>
         ///     Gets the pattern string.
@@ -290,7 +260,7 @@ namespace Akka.Actor
         /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
         public override string ToString()
         {
-            return Pattern.ToString();
+            return PatternStr.ToString();
         }
     }
 

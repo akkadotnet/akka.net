@@ -87,18 +87,18 @@
         }
 
         /// <summary>
-        /// Gets or sets the value.
+        /// If this instance is a LiteralValue, the Value property holds the string literal.
         /// </summary>
         /// <value>The value.</value>
         public string Value { get; set; }
         /// <summary>
-        /// Gets or sets the type.
+        /// The type of the token.
         /// </summary>
         /// <value>The type.</value>
         public TokenType Type { get; set; }
 
         /// <summary>
-        /// Keys the specified key.
+        /// Creates a Key token.
         /// </summary>
         /// <param name="key">The key.</param>
         /// <returns>Token.</returns>
@@ -112,7 +112,7 @@
         }
 
         /// <summary>
-        /// Substitutions the specified path.
+        /// Creates a Substitution token with a given Path
         /// </summary>
         /// <param name="path">The path.</param>
         /// <returns>Token.</returns>
@@ -126,7 +126,7 @@
         }
 
         /// <summary>
-        /// Literals the value.
+        /// Creates a string Literal token.
         /// </summary>
         /// <param name="value">The value.</param>
         /// <returns>Token.</returns>

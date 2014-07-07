@@ -3,7 +3,7 @@
 namespace Akka.Configuration.Hocon
 {
     /// <summary>
-    /// Class HoconSubstitution.
+    /// HOCON Substitution, e.g. $foo.bar
     /// </summary>
     public class HoconSubstitution : IHoconElement, IMightBeAHoconObject
     {
@@ -17,13 +17,13 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Gets the path.
+        /// The full path to the value which should substitute this instance.
         /// </summary>
         /// <value>The path.</value>
         public string Path { get; private set; }
 
         /// <summary>
-        /// Gets or sets the resolved value.
+        /// The evaluated value from the Path property
         /// </summary>
         /// <value>The resolved value.</value>
         public HoconValue ResolvedValue { get; set; }
@@ -38,7 +38,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Gets the string.
+        /// Returns the value of this instance as a string.
         /// </summary>
         /// <returns>System.String.</returns>
         public string GetString()
@@ -56,7 +56,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Gets the array.
+        /// Returns the value of this instance as an array.
         /// </summary>
         /// <returns>IList&lt;HoconValue&gt;.</returns>
         public IList<HoconValue> GetArray()
@@ -65,7 +65,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether this instance is object.
+        /// Determines whether this instance is an HOCON object.
         /// </summary>
         /// <returns><c>true</c> if this instance is object; otherwise, <c>false</c>.</returns>
         public bool IsObject()
@@ -74,7 +74,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Gets the object.
+        /// Returns the value of this instance as an HOCON object.
         /// </summary>
         /// <returns>HoconObject.</returns>
         public HoconObject GetObject()

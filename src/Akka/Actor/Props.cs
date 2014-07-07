@@ -13,7 +13,7 @@ namespace Akka.Actor
     ///     Props is a configuration object using in creating an [[Actor]]; it is
     ///     immutable, so it is thread-safe and fully shareable.
     ///     Examples on C# API:
-    ///     <code>
+    /// <code>
     ///   private Props props = Props.Empty();
     ///   private Props props = Props.Create(() => new MyActor(arg1, arg2));
     /// 
@@ -57,7 +57,6 @@ namespace Akka.Actor
         protected Props(Type type, object[] args)
         {
             Type = type;
-            TypeName = type.AssemblyQualifiedName;
             Arguments = args;
             Deploy = CreateDefaultDeploy();
 
@@ -70,7 +69,6 @@ namespace Akka.Actor
         protected Props(Type type)
         {
             Type = type;
-            TypeName = type.AssemblyQualifiedName;
             Arguments = new object[] {};
             Deploy = CreateDefaultDeploy();
         }
@@ -97,12 +95,6 @@ namespace Akka.Actor
             Type = type;
             Arguments = args.ToArray();
         }
-
-        /// <summary>
-        ///     Gets or sets the name of the type.
-        /// </summary>
-        /// <value>The name of the type.</value>
-        public string TypeName { get; protected set; }
 
         /// <summary>
         ///     Gets or sets the type.

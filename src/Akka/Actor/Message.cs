@@ -1,7 +1,9 @@
 ﻿namespace Akka.Actor
 {
+    //Note: this is a struct in order to lower GC pressure, it will be removed once the mailbox Run call goes out of scope. //Roger
+
     /// <summary>
-    ///     Struct Envelope
+    ///     Envelope class, represents a message and the sender of the message.    
     /// </summary>
     public struct Envelope
     {
