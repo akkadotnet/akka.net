@@ -12,7 +12,7 @@ using Akka.Util;
 
 namespace Akka.Actor
 {
-    public partial class ActorCell : IActorContext, IUntypedActorContext, Cell
+    public partial class ActorCell : IActorContext, IUntypedActorContext, Cell 
     {
         public const int UndefinedUid = 0;
         private readonly InternalActorRef _self;
@@ -34,7 +34,7 @@ namespace Akka.Actor
             _props = props;
             System = system;
             Parent = parent;
-            Dispatcher =dispatcher;
+            Dispatcher = dispatcher;            
         }
 
         public object CurrentMessage { get; private set; }

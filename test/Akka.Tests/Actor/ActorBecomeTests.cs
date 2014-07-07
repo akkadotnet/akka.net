@@ -12,6 +12,7 @@ namespace Akka.Tests.Actor
         [TestMethod]
         public void When_calling_become_Then_the_new_handler_is_used()
         {
+
             //Given
             var system = ActorSystem.Create("test");
             var actor = system.ActorOf<BecomeActor>("become");

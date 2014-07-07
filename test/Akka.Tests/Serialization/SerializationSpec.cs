@@ -38,25 +38,25 @@ namespace Akka.Tests.Serialization
             Assert.AreSame(testActor, deserialized.ActorRef);
         }
 
-        //[TestMethod]
-        //public void CanSerializeFutureActorRef()
-        //{
-        //    sys.EventStream.Subscribe(testActor,typeof(object));
-        //    var empty = sys.ActorOf<EmptyActor>();
-        //    empty.Ask("hello");
-        //    var f = (FutureActorRef)queue.Take();
+        [TestMethod]
+        public void CanSerializeFutureActorRef()
+        {
+            sys.EventStream.Subscribe(testActor, typeof(object));
+            var empty = sys.ActorOf<EmptyActor>();
+            empty.Ask("hello");
+            var f = (FutureActorRef)queue.Take();
 
 
-        //    var message = new SomeMessage
-        //    {
-        //        ActorRef = f,
-        //    };
+            var message = new SomeMessage
+            {
+                ActorRef = f,
+            };
 
-        //    var serializer = sys.Serialization.FindSerializerFor(message);
-        //    var serialized = serializer.ToBinary(message);
-        //    var deserialized = (SomeMessage)serializer.FromBinary(serialized, typeof(SomeMessage));
+            var serializer = sys.Serialization.FindSerializerFor(message);
+            var serialized = serializer.ToBinary(message);
+            var deserialized = (SomeMessage)serializer.FromBinary(serialized, typeof(SomeMessage));
 
-        //    Assert.AreSame(f, deserialized.ActorRef);
-        //}
+            Assert.AreSame(f, deserialized.ActorRef);
+        }
     }
 }

@@ -10,10 +10,7 @@ namespace Akka.Actor
     /// </summary>
     public abstract class SupervisorStrategy
     {
-        /// <summary>
-        ///     The actor failures
-        /// </summary>
-        protected Dictionary<ActorRef, Failures> actorFailures = new Dictionary<ActorRef, Failures>();
+
 
         /// <summary>
         ///     Handles the specified child.
@@ -90,7 +87,7 @@ namespace Akka.Actor
         /// <param name="child">The child.</param>
         /// <param name="cause">The cause.</param>
         /// <param name="suspendFirst">if set to <c>true</c> [suspend first].</param>
-        private void RestartChild(ActorRef child, Exception cause, bool suspendFirst)
+        protected void RestartChild(ActorRef child, Exception cause, bool suspendFirst)
         {
             var c = child.AsInstanceOf<InternalActorRef>();
             if (suspendFirst)
@@ -105,31 +102,21 @@ namespace Akka.Actor
         /// <param name="restart">if set to <c>true</c> [restart].</param>
         /// <param name="child">The child.</param>
         /// <param name="cause">The cause.</param>
-        private void ProcessFailure(ActorCell actorCell, bool restart, ActorRef child, Exception cause)
-        {
-            if (restart)
-            {
-                RestartChild(child, cause, false);
-            }
-            else
-            {
-                child.AsInstanceOf<InternalActorRef>().Stop();
-            }
+        protected abstract void ProcessFailure(ActorCell actorCell, bool restart, ActorRef child, Exception cause);
             /*
     if (children.nonEmpty) {
       if (restart && children.forall(_.requestRestartPermission(retriesWindow)))
         children foreach (crs ⇒ restartChild(crs.child, cause, suspendFirst = (crs.child != child)))
       else
         for (c ← children) context.stop(c.child)
-    }*/
-        }
+    }*/        
 
         /// <summary>
         ///     Resumes the child.
         /// </summary>
         /// <param name="child">The child.</param>
         /// <param name="exception">The exception.</param>
-        private void ResumeChild(ActorRef child, Exception exception)
+        protected void ResumeChild(ActorRef child, Exception exception)
         {
             child.AsInstanceOf<InternalActorRef>().Resume(exception);
         }
@@ -181,6 +168,11 @@ namespace Akka.Actor
     /// </summary>
     public sealed class OneForOneStrategy : SupervisorStrategy
     {
+        /// <summary>
+        ///     The actor failures
+        /// </summary>
+        private Dictionary<ActorRef, Failures> actorFailures = new Dictionary<ActorRef, Failures>();
+
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
         ///     to all children when one fails, as opposed to [[akka.actor.OneForOneStrategy]] that applies
@@ -259,6 +251,18 @@ namespace Akka.Actor
             Directive whatToDo = Decider(x);
             return whatToDo;
         }
+
+        protected override void ProcessFailure(ActorCell actorCell, bool restart, ActorRef child, Exception cause) 
+        {
+            if (restart)
+            {
+                RestartChild(child, cause, false);
+            }
+            else
+            {
+                child.AsInstanceOf<InternalActorRef>().Stop();
+            }
+        }
     }
 
     /// <summary>
@@ -266,6 +270,7 @@ namespace Akka.Actor
     /// </summary>
     public sealed class AllForOneStrategy : SupervisorStrategy
     {
+        private Failures failures = new Failures();
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
         ///     to all children when one fails, as opposed to [[Akka.Actor.AllForOneStrategy]] that applies
@@ -316,15 +321,7 @@ namespace Akka.Actor
         /// <param name="x">The x.</param>
         /// <returns>Directive.</returns>
         public override Directive Handle(ActorRef child, Exception x)
-        {
-            Failures failures;
-            actorFailures.TryGetValue(child, out failures);
-            //create if missing
-            if (failures == null)
-            {
-                failures = new Failures();
-                actorFailures.Add(child, failures);
-            }
+        {            
             //add entry
             failures.Entries.Add(new Failure
             {
@@ -343,6 +340,24 @@ namespace Akka.Actor
 
             Directive whatToDo = Decider(x);
             return whatToDo;
+        }
+
+        protected override void ProcessFailure(ActorCell actorCell, bool restart, ActorRef child, Exception cause)
+        {
+            if (restart)
+            {
+                foreach (var c in actorCell.GetChildren().ToArray())
+                {
+                    RestartChild(child, cause, false);
+                }
+            }
+            else
+            {
+                foreach (var c in actorCell.GetChildren().ToArray())
+                {
+                    child.AsInstanceOf<InternalActorRef>().Stop();
+                }
+            }
         }
     }
 
