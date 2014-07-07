@@ -167,6 +167,7 @@
     <Compile Include="Tools\WildcardTree.cs" />
     <Compile Include="Util\Base64Encoding.cs" />
     <Compile Include="Util\StringFormat.cs" />
+    <Compile Include="Util\StringLike.cs" />
     <Compile Include="Util\Switch.cs" />
     <Compile Include="Util\TypeExtensions.cs" />
   </ItemGroup>

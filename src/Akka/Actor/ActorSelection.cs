@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.Util;
 
 namespace Akka.Actor
 {
@@ -135,8 +136,8 @@ namespace Akka.Actor
                             withCell.GetSingleChild(element.AsInstanceOf<SelectChildName>().Name));
                     else if (element is SelectChildPattern)
                     {
-                        var children = withCell.Children;
-
+                        var pattern = element as SelectChildPattern;
+                        var children = withCell.Children.Where(c => c.Path.Name.Like(pattern.PatternStr));
                         foreach(var matchingChild in children)
                         {
                             Deliver(message, sender, pathIndex + 1, matchingChild);
