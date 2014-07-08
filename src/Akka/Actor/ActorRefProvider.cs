@@ -7,7 +7,6 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Routing;
 using Akka.Util;
-using Akka.Util;
 
 namespace Akka.Actor
 {
