@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 
 namespace Akka.Routing
 {
@@ -29,16 +30,56 @@ namespace Akka.Routing
 
     public class ConsistentHashingRoutingLogic : RoutingLogic
     {
+        private readonly Lazy<LoggingAdapter> _log;
+        private Dictionary<Type, Func<object, object>> _hashMapping;
+        private ActorSystem _system;
         public override Routee Select(object message, Routee[] routees)
         {
-            if (message is ConsistentHashable)
+            if (message == null)
+                return NoRoutee.NoRoutee;
+
+            if (_hashMapping.ContainsKey(message.GetType()))
+            {
+                var key = _hashMapping[message.GetType()](message);
+                if (key == null)
+                    return NoRoutee.NoRoutee;
+
+                var hash = key.GetHashCode();
+                return routees[hash % routees.Length];
+            }
+            else if (message is ConsistentHashable)
             {
                 var hashable = (ConsistentHashable) message;
                 int hash = hashable.ConsistentHashKey.GetHashCode();
                 return routees[hash%routees.Length];
             }
+            else
+            {
+                _log.Value.Warn("Message [{0}] must be handled by hashMapping, or implement [{1}] or be wrapped in [{2}]", message.GetType().Name, typeof(ConsistentHashable).Name, typeof(ConsistentHashableEnvelope).Name);
+                return NoRoutee.NoRoutee;
+            }
+        }
 
-            throw new NotSupportedException("Only ConsistentHashable messages are supported right now");
+        public ConsistentHashingRoutingLogic(ActorSystem system) : this(system,new Dictionary<Type,Func<object,object>>())
+        {
+        }
+
+        private ConsistentHashingRoutingLogic(ActorSystem system, Dictionary<Type, Func<object, object>> hashMapping)
+        {            
+            _system = system;
+            _log = new Lazy<LoggingAdapter>(() => Logging.GetLogger(_system, this), true);
+            _hashMapping = hashMapping;
+        }
+   
+
+        public ConsistentHashingRoutingLogic WithHashMapping<T>(Func<T,object> mapping)
+        {
+            if (mapping == null)
+                throw new ArgumentNullException("mapping");
+
+            var copy = new Dictionary<Type, Func<object, object>>(_hashMapping);
+            copy.Add(typeof(T), o => mapping((T)o));
+            return new ConsistentHashingRoutingLogic(_system,copy);
         }
     }
 
@@ -70,7 +111,7 @@ namespace Akka.Routing
 
         public override Router CreateRouter(ActorSystem system)
         {
-            return new Router(new ConsistentHashingRoutingLogic());
+            return new Router(new ConsistentHashingRoutingLogic(system));
         }
     }
 
@@ -107,7 +148,7 @@ namespace Akka.Routing
 
         public override Router CreateRouter(ActorSystem system)
         {
-            return new Router(new ConsistentHashingRoutingLogic());
+            return new Router(new ConsistentHashingRoutingLogic(system));
         }
     }
 }
