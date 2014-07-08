@@ -4,6 +4,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Util;
 
 namespace Akka.Routing
 {
@@ -44,13 +45,13 @@ namespace Akka.Routing
                 if (key == null)
                     return NoRoutee.NoRoutee;
 
-                var hash = key.GetHashCode();
+                var hash = Murmur3.Hash(key);
                 return routees[hash % routees.Length];
             }
             else if (message is ConsistentHashable)
             {
                 var hashable = (ConsistentHashable) message;
-                int hash = hashable.ConsistentHashKey.GetHashCode();
+                int hash = Murmur3.Hash(hashable.ConsistentHashKey);
                 return routees[hash%routees.Length];
             }
             else
