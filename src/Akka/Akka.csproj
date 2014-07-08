@@ -111,6 +111,7 @@
     <Compile Include="Configuration\Hocon\HoconTokenizer.cs" />
     <Compile Include="Configuration\Hocon\HoconValue.cs" />
     <Compile Include="Configuration\Hocon\IHoconElement.cs" />
+    <Compile Include="Dispatch\ConcurrentQueueMailbox.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
     <Compile Include="Dispatch\FutureActor.cs" />
@@ -133,6 +134,9 @@
     <Compile Include="Event\EventStream.cs" />
     <Compile Include="Event\Logging.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="Serialization\ByteArraySerializer.cs" />
+    <Compile Include="Serialization\NewtonSoftJsonSerializer.cs" />
+    <Compile Include="Serialization\NullSerializer.cs" />
     <Compile Include="Tools\AtomicInteger.cs" />
     <Compile Include="Tools\AtomicLong.cs" />
     <Compile Include="Pattern\CircuitBreaker.cs" />

@@ -9,14 +9,7 @@ namespace Akka.Dispatch
     /// </summary>
     public class FutureActor : ActorBase
     {
-        /// <summary>
-        ///     The respond to
-        /// </summary>
         private ActorRef respondTo;
-
-        /// <summary>
-        ///     The result
-        /// </summary>
         private TaskCompletionSource<object> result;
 
         /// <summary>
@@ -43,42 +36,23 @@ namespace Akka.Dispatch
         /// <param name="message">The message.</param>
         protected override bool Receive(object message)
         {
-            if (message is SetRespondTo)
+            if (respondTo != ActorRef.NoSender)
             {
-                result = ((SetRespondTo) message).Result;
-                respondTo = Sender;
+                ((InternalActorRef)Self).Stop();
+                respondTo.Tell(new CompleteFuture(() => result.SetResult(message)));
+                Become(EmptyReceive);
             }
             else
             {
-                if (respondTo != ActorRef.NoSender)
-                {
-                    ((InternalActorRef)Self).Stop();
-                    respondTo.Tell(new CompleteFuture(() => result.SetResult(message)));
-                    Become(EmptyReceive);
-                }
-                else
-                {
-                    //if there is no listening actor asking,
-                    //just eval the result directly
-                    ((InternalActorRef)Self).Stop();
-                    Become(EmptyReceive);
+                //if there is no listening actor asking,
+                //just eval the result directly
+                ((InternalActorRef)Self).Stop();
+                Become(EmptyReceive);
 
-                    result.SetResult(message);
-                }
+                result.SetResult(message);
             }
+
             return true;
         }
-    }
-
-    /// <summary>
-    ///     Class SetRespondTo.
-    /// </summary>
-    public class SetRespondTo
-    {
-        /// <summary>
-        ///     Gets or sets the result.
-        /// </summary>
-        /// <value>The result.</value>
-        public TaskCompletionSource<object> Result { get; set; }
     }
 }
