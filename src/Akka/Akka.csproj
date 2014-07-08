@@ -159,6 +159,8 @@
     <Compile Include="Serialization\ByteArraySerializer.cs" />
     <Compile Include="Serialization\NewtonSoftJsonSerializer.cs" />
     <Compile Include="Serialization\NullSerializer.cs" />
+    <Compile Include="Util\AtomicCounter.cs" />
+    <Compile Include="Util\AtomicCounterLong.cs" />
     <Compile Include="Util\AtomicInteger.cs" />
     <Compile Include="Util\AtomicLong.cs" />
     <Compile Include="Pattern\CircuitBreaker.cs" />
@@ -183,7 +185,7 @@
     <Compile Include="Routing\ScatterGatherFirstCompleted.cs" />
     <Compile Include="Serialization\Serialization.cs" />
     <Compile Include="Serialization\Serializer.cs" />
-    <Compile Include="Util\Atomic.cs" />
+    <Compile Include="Util\AtomicReference.cs" />
     <Compile Include="Util\AtomicBoolean.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\Reflection\ExpressionExtensions.cs" />
