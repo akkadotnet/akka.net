@@ -3,54 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Utils;
 
 namespace Akka.Routing
 {
-    /// <summary>
-    /// Class ThreadSafeRandom.
-    /// </summary>
-    public class ThreadSafeRandom
-    {
-        /// <summary>
-        /// The random
-        /// </summary>
-        private static readonly Random random = new Random();
-        /// <summary>
-        /// The local
-        /// </summary>
-        [ThreadStatic] private static Random local;
-
-        /// <summary>
-        /// Nexts the specified maximum value.
-        /// </summary>
-        /// <param name="maxValue">The maximum value.</param>
-        /// <returns>System.Int32.</returns>
-        public int Next(int maxValue)
-        {
-            if (local == null)
-            {
-                int seed;
-                lock (random)
-                {
-                    seed = random.Next();
-                }
-                local = new Random(seed);
-            }
-
-            return local.Next(maxValue);
-        }
-    }
-
     /// <summary>
     /// Class RandomLogic.
     /// </summary>
     public class RandomLogic : RoutingLogic
     {
-        /// <summary>
-        /// The random
-        /// </summary>
-        private readonly ThreadSafeRandom rnd = new ThreadSafeRandom();
-
         /// <summary>
         /// Selects the routee for the given message.
         /// </summary>
@@ -63,7 +24,7 @@ namespace Akka.Routing
             {
                 return Routee.NoRoutee;
             }
-            return routees[rnd.Next(routees.Length - 1)%routees.Length];
+            return routees[ThreadLocalRandom.Current.Next(routees.Length - 1)%routees.Length];
         }
     }
 

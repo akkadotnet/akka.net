@@ -8,7 +8,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.Tools;
+using Akka.Utils;
 using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Actor

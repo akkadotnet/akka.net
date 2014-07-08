@@ -8,7 +8,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.Transport;
-using Akka.Tools;
+using Akka.Utils;
 
 namespace Akka.Remote
 {

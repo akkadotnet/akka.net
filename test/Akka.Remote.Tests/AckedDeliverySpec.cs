@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Akka.Event;
 using Akka.Tests;
-using Akka.Tools;
+using Akka.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Akka.Remote.Tests

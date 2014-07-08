@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Akka.Tools;
+using Akka.Utils;
 
 namespace Akka.Remote
 {

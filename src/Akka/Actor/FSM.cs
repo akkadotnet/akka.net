@@ -6,7 +6,7 @@ using System.Threading;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Routing;
-using Akka.Tools;
+using Akka.Utils;
 
 namespace Akka.Actor
 {

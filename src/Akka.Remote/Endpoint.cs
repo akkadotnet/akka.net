@@ -10,7 +10,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Serialization;
-using Akka.Tools;
+using Akka.Utils;
 using Google.ProtocolBuffers;
 
 namespace Akka.Remote

@@ -5,7 +5,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
-using Akka.Tools;
+using Akka.Utils;
 using Helios.Buffers;
 using Helios.Exceptions;
 using Helios.Net;

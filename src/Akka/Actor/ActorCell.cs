@@ -7,7 +7,7 @@ using System.Threading;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Serialization;
-using Akka.Tools;
+using Akka.Utils;
 using Akka.Util;
 
 namespace Akka.Actor

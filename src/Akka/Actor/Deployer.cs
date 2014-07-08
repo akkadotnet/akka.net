@@ -6,7 +6,7 @@ using System.Linq;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Routing;
-using Akka.Tools;
+using Akka.Utils;
 
 namespace Akka.Actor
 {

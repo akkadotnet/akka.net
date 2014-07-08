@@ -1,5 +1,5 @@
 ﻿using Akka.Actor;
-using Akka.Tools;
+using Akka.Utils;
 
 namespace Akka.Remote
 {
