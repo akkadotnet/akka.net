@@ -56,7 +56,7 @@ namespace Akka.Actor
 
         private void SendSystemMessage(SystemMessage message)
         {
-            if(Mailbox.Debug) Console.WriteLine("EmptyLocalActorRef {0} having enqueued {1}", Path, message);
+            Mailbox.DebugPrint("EmptyLocalActorRef {0} having enqueued {1}", Path, message);
             SpecialHandle(message, _provider.DeadLetters);
         }
 
