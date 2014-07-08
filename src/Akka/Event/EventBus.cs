@@ -6,8 +6,6 @@ using Akka.Actor;
 
 namespace Akka.Event
 {
-
-
     /// <summary>
     /// Class EventBus.
     /// </summary>
@@ -242,14 +240,5 @@ namespace Akka.Event
                 return list;
             }
         }
-    }
-
-    /// <summary>
-    /// Class ActorEventBus.
-    /// </summary>
-    /// <typeparam name="TEvent">The type of the t event.</typeparam>
-    /// <typeparam name="TClassifier">The type of the t classifier.</typeparam>
-    public abstract class ActorEventBus<TEvent, TClassifier> : EventBus<TEvent, TClassifier, ActorRef>
-    {
     }
 }
