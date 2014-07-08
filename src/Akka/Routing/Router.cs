@@ -2,6 +2,7 @@
 using Akka.Actor;
 using System;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace Akka.Routing
 {
@@ -165,17 +166,22 @@ namespace Akka.Routing
 
         public Router AddRoutee(Routee routee)
         {
-            return new Router(logic, routees.Add(routee));
+            return new Router(logic, Include(routee));
         }
 
         public Router AddRoutee(ActorRef routee)
         {
-            return new Router(logic, routees.Add(new ActorRefRoutee(routee)));
+            return new Router(logic, Include(new ActorRefRoutee(routee)));
         }
 
         public Router AddRoutee(ActorSelection routee)
         {
-            return new Router(logic, routees.Add(new ActorSelectionRoutee(routee)));
+            return new Router(logic, Include(new ActorSelectionRoutee(routee)));
+        }
+
+        private Routee[] Include(Routee routee)
+        {
+            return routees.Union(Enumerable.Repeat(routee, 1)).ToArray();
         }
     }
 }

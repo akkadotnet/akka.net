@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Utils;
+using Akka.Util;
 using Google.ProtocolBuffers;
 
 namespace Akka.Remote.Transport

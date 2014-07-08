@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.Utils;
+using Akka.Util;
 using Debug = Akka.Event.Debug;
 
 namespace Akka.Actor

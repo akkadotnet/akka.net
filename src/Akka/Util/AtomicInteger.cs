@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Akka.Utils
+namespace Akka.Util
 {
     public class AtomicInteger
     {

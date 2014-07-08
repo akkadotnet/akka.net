@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Akka.Utils
+namespace Akka.Util
 {
     public class ConcurrentSet<T> : ICollection<T>, IEnumerable<T>, IEnumerable
     {

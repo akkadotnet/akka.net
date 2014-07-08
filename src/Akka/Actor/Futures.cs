@@ -4,11 +4,6 @@ using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
-    public interface ICanTell
-    {
-        void Tell(object mssage, ActorRef sender);
-    }
-
     /// <summary>
     ///     Extension method class designed to create Ask support for
     ///     non-ActorRef objects such as <see cref="ActorSelection" />.

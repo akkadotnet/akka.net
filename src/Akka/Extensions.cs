@@ -10,16 +10,24 @@ namespace Akka
             return (T) self;
         }
 
-        public static T[] Add<T>(this T[] self, T add)
-        {
-            return self.Union(Enumerable.Repeat(add, 1)).ToArray();
-        }
-
+        /// <summary>
+        /// Scala alias for Skip
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="self"></param>
+        /// <param name="count"></param>
+        /// <returns></returns>
         public static IEnumerable<T> Drop<T>(this IEnumerable<T> self, int count)
         {
             return self.Skip(count).ToList();
         }
 
+        /// <summary>
+        /// Scala alias for FirstOrDefault
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="self"></param>
+        /// <returns></returns>
         public static T Head<T>(this IEnumerable<T> self)
         {
             return self.FirstOrDefault();

@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 
-namespace Akka.Utils
+namespace Akka.Util
 {
     /// <summary>
     /// Implementation of the java.concurrent.util.AtomicBoolean type.

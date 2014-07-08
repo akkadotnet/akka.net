@@ -5,7 +5,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.Tests;
-using Akka.Utils;
+using Akka.Util;
 using Google.ProtocolBuffers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

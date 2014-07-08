@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
-namespace Akka.Reflection
+namespace Akka.Util.Reflection
 {
     public static class ExpressionExtensions
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace Akka.Utils
+namespace Akka.Util
 {
     /// <summary>
     /// Create random numbers with Thread-specific seeds.

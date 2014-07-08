@@ -2,7 +2,7 @@
 using System.Threading;
 using Akka.Actor;
 
-namespace Akka.Utils
+namespace Akka.Util
 {
     /// <summary>
     /// Implementation of the java.concurrent.util AtomicReference type.

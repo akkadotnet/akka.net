@@ -7,12 +7,12 @@ namespace Akka.Util
     /// </summary>
     public class Switch
     {
-        private readonly Utils.AtomicBoolean _switch;
+        private readonly Util.AtomicBoolean _switch;
         private readonly object _lock = new object();
 
         public Switch(bool startAsOn = false)
         {
-            _switch = new Utils.AtomicBoolean(startAsOn);
+            _switch = new Util.AtomicBoolean(startAsOn);
         }
 
         protected bool TranscendFrom(bool from, Action action)

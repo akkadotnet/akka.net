@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace Akka.Utils
+namespace Akka.Util
 {
     /// <summary>
     /// A searchable nested dictionary, represents a searchable tree structure underneath
