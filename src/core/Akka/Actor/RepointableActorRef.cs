@@ -303,7 +303,7 @@ namespace Akka.Actor
                     else
                     {
                         _messageQueue.Add(new Envelope { Message = message, Sender = sender });
-                        if(Mailbox.Debug) Console.WriteLine("{0} temp queueing {1} from {2}", Self, message, sender);
+                        Mailbox.DebugPrint("{0} temp queueing {1} from {2}", Self, message, sender);
                     }
                 }
                 finally
@@ -338,8 +338,7 @@ namespace Akka.Actor
                             TryEnqueue(envelope);
                         else
                             _messageQueue.Add(envelope);
-                        if(Mailbox.Debug)
-                            Console.WriteLine("{0} temp queueing system msg {1} from {2}", Self, message, sender);
+                        Mailbox.DebugPrint("{0} temp queueing system msg {1} from {2}", Self, message, sender);
                     }
                     catch(Exception e)
                     {
