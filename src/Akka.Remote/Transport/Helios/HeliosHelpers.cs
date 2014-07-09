@@ -151,6 +151,7 @@ namespace Akka.Remote.Transport.Helios
         public bool WasDisposed { get { return UnderlyingConnection.WasDisposed; } }
         public bool Receiving { get { return UnderlyingConnection.Receiving; } }
         public int Available { get { return UnderlyingConnection.Available; } }
+        public int MessagesInSendQueue { get { return UnderlyingConnection.MessagesInSendQueue; } }
 
         public event ReceivedDataCallback Receive;
         public event ConnectionEstablishedCallback OnConnection;
