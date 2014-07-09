@@ -7,14 +7,30 @@ using Akka.Remote.Transport;
 using Akka.Tests;
 using Akka.Util;
 using Google.ProtocolBuffers;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.Remote.Tests
 {
-    [TestClass]
+    
     public class RemotingSpec : AkkaSpec
     {
         #region Setup / Config
+
+        public RemotingSpec()
+        {
+            var c1 = ConfigurationFactory.ParseString(GetConfig());
+            var c2 = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
+
+
+            var conf = c2.WithFallback(c1);  //ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
+
+            remoteSystem = ActorSystem.Create("remote-sys", conf);
+            Deploy(sys, new Deploy(@"/gonk", new RemoteScope(Addr(remoteSystem, "tcp"))));
+            Deploy(sys, new Deploy(@"/zagzag", new RemoteScope(Addr(remoteSystem, "udp"))));
+
+            remote = remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
+            here = sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
+        }
 
         protected override string GetConfig()
         {
@@ -112,26 +128,10 @@ namespace Akka.Remote.Tests
         private ICanTell remote;
         private ICanTell here;
 
-        [TestInitialize]
-        public override void Setup()
-        {
-            base.Setup();
-            var c1 = ConfigurationFactory.ParseString(GetConfig());
-            var c2 = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
 
 
-            var conf = c2.WithFallback(c1);  //ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
-
-            remoteSystem = ActorSystem.Create("remote-sys", conf);
-            Deploy(sys, new Deploy(@"/gonk", new RemoteScope(Addr(remoteSystem, "tcp"))));
-            Deploy(sys, new Deploy(@"/zagzag", new RemoteScope(Addr(remoteSystem, "udp"))));
-
-            remote = remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
-            here = sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
-        }
-
-        [TestCleanup]
-        public override void CleanUp()
+        
+        public override void Dispose()
         {
             remoteSystem.Shutdown();
             AssociationRegistry.Clear();
@@ -141,29 +141,29 @@ namespace Akka.Remote.Tests
 
         #region Tests
 
-        [TestMethod]
+        [Fact]
         public void Remoting_must_support_remote_lookups()
         {
             here.Tell("ping", testActor);
             expectMsg(Tuple.Create("pong", testActor), TimeSpan.FromSeconds(1.5));
         }
 
-        [TestMethod]
+        [Fact]
         public async Task Remoting_must_support_Ask()
         {
             //TODO: using smaller numbers for the cancellation here causes a bug.
             //the remoting layer uses some "initialdelay task.delay" for 4 seconds.
             //so the token is cancelled before the delay completed.. 
             var msg = await here.Ask<Tuple<string,ActorRef>>("ping", TimeSpan.FromSeconds(1.5));
-            Assert.AreEqual("pong", msg.Item1);
-            Assert.IsInstanceOfType(msg.Item2, typeof(FutureActorRef));
+            Assert.Equal("pong", msg.Item1);
+            Assert.IsType<FutureActorRef>(msg.Item2);
         }
 
-        [TestMethod]
+        [Fact]
         public void Remoting_must_create_and_supervise_children_on_remote_Node()
         {
             var r = sys.ActorOf<Echo1>("blub");
-            Assert.AreEqual("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/blub", r.Path.ToString());
+            Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/blub", r.Path.ToString());
         }
 
         #endregion

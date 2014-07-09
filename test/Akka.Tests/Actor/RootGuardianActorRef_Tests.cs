@@ -4,11 +4,11 @@ using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using Akka.Actor;
 using Akka.Dispatch;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.Tests.Actor
 {
-    [TestClass]
+    
     public class RootGuardianActorRef_Tests : AkkaSpec
     {
         static RootActorPath _rootActorPath = new RootActorPath(new Address("akka", "test"));
@@ -16,25 +16,25 @@ namespace Akka.Tests.Actor
         ReadOnlyDictionary<string, InternalActorRef> _emptyExtraNames = new ReadOnlyDictionary<string, InternalActorRef>(new Dictionary<string, InternalActorRef>());
         SameThreadMessageDispatcher _dispatcher = new SameThreadMessageDispatcher();
 
-        [TestMethod]
+        [Fact]
         public void Path_Should_be_the_same_path_as_specified()
         {
             var props = Props.Create<GuardianActor>(new OneForOneStrategy(e => Directive.Stop));
             var rootGuardianActorRef = new RootGuardianActorRef(sys, props, _dispatcher, () => sys.Mailboxes.FromConfig(""), ActorRef.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
-            Assert.AreEqual(_rootActorPath, rootGuardianActorRef.Path);
+            Assert.Equal(_rootActorPath, rootGuardianActorRef.Path);
         }
 
-        [TestMethod]
+        [Fact]
         public void Parent_Should_be_itself()
         {
             var props = Props.Create<GuardianActor>(new OneForOneStrategy(e => Directive.Stop));
             var rootGuardianActorRef = new RootGuardianActorRef(sys, props, _dispatcher, () => sys.Mailboxes.FromConfig(""), ActorRef.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
             var parent = rootGuardianActorRef.Parent;
-            Assert.AreSame(rootGuardianActorRef, parent);
+            Assert.Same(rootGuardianActorRef, parent);
         }
 
 
-        [TestMethod]
+        [Fact]
         public void Getting_temp_child_Should_return_tempContainer()
         {
             var props = Props.Create<GuardianActor>(new OneForOneStrategy(e => Directive.Stop));
@@ -42,20 +42,20 @@ namespace Akka.Tests.Actor
             var tempContainer = new DummyActorRef(_rootActorPath / "temp");
             rootGuardianActorRef.SetTempContainer(tempContainer);
             var actorRef = rootGuardianActorRef.GetSingleChild("temp");
-            Assert.AreSame(tempContainer, actorRef);
+            Assert.Same(tempContainer, actorRef);
         }
 
-        [TestMethod]
+        [Fact]
         public void Getting_deadLetters_child_Should_return_tempContainer()
         {
             var props = Props.Create<GuardianActor>(new OneForOneStrategy(e => Directive.Stop));
             var rootGuardianActorRef = new RootGuardianActorRef(sys, props, _dispatcher, () => sys.Mailboxes.FromConfig(""), ActorRef.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
             var actorRef = rootGuardianActorRef.GetSingleChild("deadLetters");
-            Assert.AreSame(_deadLetters, actorRef);
+            Assert.Same(_deadLetters, actorRef);
         }
 
 
-        [TestMethod]
+        [Fact]
         public void Getting_a_child_that_exists_in_extraNames_Should_return_the_child()
         {
             var extraNameChild = new DummyActorRef(_rootActorPath / "extra");
@@ -63,17 +63,16 @@ namespace Akka.Tests.Actor
             var props = Props.Create<GuardianActor>(new OneForOneStrategy(e => Directive.Stop));
             var rootGuardianActorRef = new RootGuardianActorRef(sys, props, _dispatcher, () => sys.Mailboxes.FromConfig(""), ActorRef.Nobody, _rootActorPath, _deadLetters, extraNames);
             var actorRef = rootGuardianActorRef.GetSingleChild("extra");
-            Assert.AreSame(extraNameChild, actorRef);
+            Assert.Same(extraNameChild, actorRef);
         }
 
-        [Ignore]
-        [TestMethod]
+        [Fact(Skip = "Ignored")]
         public void Getting_an_unknown_child_that_exists_in_extraNames_Should_return_nobody()
         {
             var props = Props.Create<GuardianActor>(new OneForOneStrategy(e => Directive.Stop));
             var rootGuardianActorRef = new RootGuardianActorRef(sys, props, _dispatcher, () => sys.Mailboxes.FromConfig(""), ActorRef.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
             var actorRef = rootGuardianActorRef.GetSingleChild("unknown-child");
-            Assert.AreSame(ActorRef.Nobody, actorRef);
+            Assert.Same(ActorRef.Nobody, actorRef);
         }
 
 

@@ -1,18 +1,18 @@
 ﻿using System;
 using Akka.Actor;
 using Akka.TestKit;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.Tests.Actor
 {
-    [TestClass]
+    
     public class FSMTransitionSpec : AkkaSpec, ImplicitSender
     {
         public ActorRef Self { get { return testActor; } }
 
         
             
-        [TestMethod]
+        [Fact]
         public void FSMTransitionNotifier_must_notify_listeners()
         {
             //arrange
@@ -33,7 +33,7 @@ namespace Akka.Tests.Actor
             //assert
         }
 
-        [TestMethod]
+        [Fact]
         public void FSMTransitionNotifier_must_not_fail_when_listener_goes_away()
         {
             //arrange
@@ -54,7 +54,7 @@ namespace Akka.Tests.Actor
             //assert
         }
 
-        [TestMethod]
+        [Fact]
         public void FSM_must_make_previous_and_next_state_data_available_in_OnTransition()
         {
             //arrange
@@ -71,7 +71,7 @@ namespace Akka.Tests.Actor
             //assert
         }
 
-        [TestMethod]
+        [Fact]
         public void FSM_must_not_leak_memory_in_nextState()
         {
             //arrange

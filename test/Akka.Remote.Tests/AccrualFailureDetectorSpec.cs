@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Tests;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.Remote.Tests
 {
-    [TestClass]
+    
     public class AccrualFailureDetectorSpec : AkkaSpec
     {
         public static IEnumerable<Tuple<T, T>> Slide<T>(IEnumerable<T> values)
@@ -22,7 +22,7 @@ namespace Akka.Remote.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void AccrualFailureDetector_must_use_good_enough_cumulative_distribution_function()
         {
             var fd = FailureDetectorSpecHelpers.CreateFailureDetector();
@@ -36,13 +36,13 @@ namespace Akka.Remote.Tests
 
             foreach (var pair in Slide(Enumerable.Range(0, 40)))
             {
-                Assert.IsTrue(fd.Phi(pair.Item1, 0, 10) < fd.Phi(pair.Item2, 0, 10));
+                Assert.True(fd.Phi(pair.Item1, 0, 10) < fd.Phi(pair.Item2, 0, 10));
             }
 
             ShouldBe(FailureDetectorSpecHelpers.cdf(fd.Phi(22, 20.0, 3)), 0.7475d);
         }
 
-        [TestMethod]
+        [Fact]
         public void AccrualFailureDetector_must_handle_outliers_without_losing_precision_or_hitting_exception()
         {
             var fd = FailureDetectorSpecHelpers.CreateFailureDetector();
@@ -50,7 +50,7 @@ namespace Akka.Remote.Tests
             ShouldBe(fd.Phi(-25L, 0, 1), 0.0d, 0.0d);
         }
 
-        [TestMethod]
+        [Fact]
         public void AccrualFailureDetector_must_return_realistic_phi_values()
         {
             var fd = FailureDetectorSpecHelpers.CreateFailureDetector();
@@ -61,18 +61,18 @@ namespace Akka.Remote.Tests
             }
 
             //larger stdDeviation reuslts => lower phi
-            Assert.IsTrue(fd.Phi(1100, 1000.0, 500.0) < fd.Phi(1100, 1000.0, 100.0));
+            Assert.True(fd.Phi(1100, 1000.0, 500.0) < fd.Phi(1100, 1000.0, 100.0));
         }
 
-        [TestMethod]
+        [Fact]
         public void AccrualFailureDetector_must_return_phi_value_of_zero_on_startup_for_each_address_when_no_heartbeats()
         {
             var fd = FailureDetectorSpecHelpers.CreateFailureDetector();
-            Assert.AreEqual(fd.CurrentPhi, 0.0);
-            Assert.AreEqual(fd.CurrentPhi, 0.0);
+            Assert.Equal(fd.CurrentPhi, 0.0);
+            Assert.Equal(fd.CurrentPhi, 0.0);
         }
 
-        [TestMethod]
+        [Fact]
         public void AccrualFailureDetector_must_return_phi_based_on_guess_when_only_one_heartbeat()
         {
             var timeInterval = new List<long>() { 0, 1000, 1000, 1000, 1000 };
@@ -82,10 +82,10 @@ namespace Akka.Remote.Tests
             fd.HeartBeat();
             ShouldBe(fd.CurrentPhi, 0.3D, 0.2D);
             ShouldBe(fd.CurrentPhi, 4.5D, 0.3D);
-            Assert.IsTrue(fd.CurrentPhi > 15.0D);
+            Assert.True(fd.CurrentPhi > 15.0D);
         }
 
-        [TestMethod]
+        [Fact]
         public void AccrualFailureDetector_must_return_phi_value_using_first_interval_after_second_heartbeat()
         {
             var timeInterval = new List<long>() { 0, 100, 100, 100, 100 };
@@ -93,27 +93,27 @@ namespace Akka.Remote.Tests
                 TimeSpan.FromSeconds(1), FailureDetectorSpecHelpers.FakeTimeGenerator(timeInterval));
 
             fd.HeartBeat();
-            Assert.IsTrue(fd.CurrentPhi > 0.0d);
+            Assert.True(fd.CurrentPhi > 0.0d);
             fd.HeartBeat();
-            Assert.IsTrue(fd.CurrentPhi > 0.0d);
+            Assert.True(fd.CurrentPhi > 0.0d);
         }
 
-        [TestMethod]
+        [Fact]
         public void AccrualFailureDetector_must_mark_node_as_monitored_after_a_series_of_successful_heartbeats()
         {
             var timeInterval = new List<long>() { 0, 1000, 100, 100 };
             var fd = FailureDetectorSpecHelpers.CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.Zero,
                 TimeSpan.FromSeconds(1), FailureDetectorSpecHelpers.FakeTimeGenerator(timeInterval));
 
-            Assert.IsFalse(fd.IsMonitoring);
+            Assert.False(fd.IsMonitoring);
             fd.HeartBeat();
             fd.HeartBeat();
             fd.HeartBeat();
-            Assert.IsTrue(fd.IsMonitoring);
-            Assert.IsTrue(fd.IsAvailable);
+            Assert.True(fd.IsMonitoring);
+            Assert.True(fd.IsAvailable);
         }
 
-        [TestMethod]
+        [Fact]
         public void AccrualFailureDetector_must_mark_node_as_dead_if_heartbeats_are_missed()
         {
             var timeInterval = new List<long>() { 0, 1000, 100, 100, 7000 };
@@ -123,11 +123,11 @@ namespace Akka.Remote.Tests
             fd.HeartBeat(); //0
             fd.HeartBeat(); //1000
             fd.HeartBeat(); //1100
-            Assert.IsTrue(fd.IsAvailable); //1200
-            Assert.IsFalse(fd.IsAvailable); //8200
+            Assert.True(fd.IsAvailable); //1200
+            Assert.False(fd.IsAvailable); //8200
         }
 
-        [TestMethod]
+        [Fact]
         public void AccrualFailureDetector_must_mark_node_as_available_if_it_starts_heartbeats_again_after_being_marked_dead_due_to_detection_of_failure
             ()
         {
@@ -137,18 +137,18 @@ namespace Akka.Remote.Tests
             var fd = FailureDetectorSpecHelpers.CreateFailureDetector(8.0d, 1000, TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(3),
                 TimeSpan.FromSeconds(1), FailureDetectorSpecHelpers.FakeTimeGenerator(timeIntervals));
             for (var i = 0; i < 1000; i++) fd.HeartBeat();
-            Assert.IsFalse(fd.IsAvailable); //after the long pause
+            Assert.False(fd.IsAvailable); //after the long pause
             fd.HeartBeat();
-            Assert.IsTrue(fd.IsAvailable);
+            Assert.True(fd.IsAvailable);
             fd.HeartBeat();
-            Assert.IsFalse(fd.IsAvailable); //after the 7 seconds pause
+            Assert.False(fd.IsAvailable); //after the 7 seconds pause
             fd.HeartBeat();
-            Assert.IsTrue(fd.IsAvailable);
+            Assert.True(fd.IsAvailable);
             fd.HeartBeat();
-            Assert.IsTrue(fd.IsAvailable);
+            Assert.True(fd.IsAvailable);
         }
 
-        [TestMethod]
+        [Fact]
         public void AccrualFailureDetector_must_accept_some_configured_missing_heartbeats()
         {
             var timeIntervals = new List<long>() { 0L, 1000L, 1000L, 1000L, 4000L, 1000L, 1000L };
@@ -159,13 +159,13 @@ namespace Akka.Remote.Tests
             fd.HeartBeat();
             fd.HeartBeat();
             fd.HeartBeat();
-            Assert.IsTrue(fd.IsAvailable);
+            Assert.True(fd.IsAvailable);
             fd.HeartBeat();
-            Assert.IsTrue(fd.IsAvailable);
+            Assert.True(fd.IsAvailable);
 
         }
 
-        [TestMethod]
+        [Fact]
         public void AccrualFailureDetector_must_fail_after_configured_acceptable_missing_heartbeats()
         {
             var timeIntervals = new List<long>() { 0, 1000, 1000, 1000, 1000, 1000, 500, 500, 5000 };
@@ -178,12 +178,12 @@ namespace Akka.Remote.Tests
             fd.HeartBeat();
             fd.HeartBeat();
             fd.HeartBeat();
-            Assert.IsTrue(fd.IsAvailable);
+            Assert.True(fd.IsAvailable);
             fd.HeartBeat();
-            Assert.IsFalse(fd.IsAvailable);
+            Assert.False(fd.IsAvailable);
         }
 
-        [TestMethod]
+        [Fact]
         public void AccrualFailureDetector_must_use_maxSampleSize_heartbeats()
         {
             var timeIntervals = new List<long>() { 0, 100, 100, 100, 100, 600, 500, 500, 500, 500, 500 };
@@ -205,7 +205,7 @@ namespace Akka.Remote.Tests
             ShouldBe(phi1, phi2);
         }
 
-        [TestMethod]
+        [Fact]
         public void StatisticsForHeartbeats_must_calculate_correct_mean_and_variance()
         {
             var samples = new[] { 100L, 200L, 125L, 340L, 130L };
@@ -214,14 +214,14 @@ namespace Akka.Remote.Tests
             ShouldBe(stats.Variance, 7584.0D, 0.00001);
         }
 
-        [TestMethod]
+        [Fact]
         public void StatisticsForHeartbeats_must_have_zero_variance_for_one_sample()
         {
             var history = HeartbeatHistory.Apply(600) + 1000L;
             ShouldBe(history.Variance, 0.0, 0.00001D);
         }
 
-        [TestMethod]
+        [Fact]
         public void StatisticsForHeartbeats_must_be_capped_by_the_specified_maxSampleSize()
         {
             var history3 = HeartbeatHistory.Apply(3) + 100 + 110 + 90;

@@ -1,11 +1,11 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Xunit;
 
 namespace Akka.Tests.Tools
 {
-    [TestClass]
+    
     public class PatternSpec
     {
-        [TestMethod]
+        [Fact]
         public void PatternMatch_should_not_throw_NullReferenceException()
         {
             object nullObj = null;

@@ -3,14 +3,14 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Tests.Event;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.Tests.Actor
 {
-    [TestClass]
+    
     public class PatternSpec : AkkaSpec
     {
-        [TestMethod]
+        [Fact]
         public void GracefulStop_must_provide_Task_for_stopping_an_actor()
         {
             //arrange
@@ -21,11 +21,11 @@ namespace Akka.Tests.Actor
             result.Wait(TimeSpan.FromSeconds(6));
 
             //assert
-            Assert.IsTrue(result.Result);
+            Assert.True(result.Result);
 
         }
 
-        [TestMethod]
+        [Fact]
         public async Task GracefulStop_must_complete_Task_when_actor_already_terminated()
         {
             //arrange
@@ -35,11 +35,11 @@ namespace Akka.Tests.Actor
             
 
             //assert
-            Assert.IsTrue(await target.GracefulStop(TimeSpan.FromSeconds(5)));
-            Assert.IsTrue(await target.GracefulStop(TimeSpan.FromSeconds(5)));
+            Assert.True(await target.GracefulStop(TimeSpan.FromSeconds(5)));
+            Assert.True(await target.GracefulStop(TimeSpan.FromSeconds(5)));
         }
 
-        [TestMethod]
+        [Fact]
         public void GracefulStop_must_complete_Task_with_TaskCanceledException_when_actor_not_terminated_within_timeout()
         {
             //arrange

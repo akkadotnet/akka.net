@@ -1,11 +1,11 @@
 ﻿using System.Linq;
 using Akka.Actor;
 using Akka.Routing;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.Tests.Actor
 {
-    [TestClass]
+    
     public class DeployerSpec : AkkaSpec
     {
         #region Setup / Teardown
@@ -74,51 +74,51 @@ namespace Akka.Tests.Actor
 
         #region Tests
 
-        [TestMethod]
+        [Fact]
         public void Deployer_must_be_able_to_parse_akka_actor_deployment_with_all_default_values()
         {
             var service = @"/service1";
             var deployment = sys.Provider.Deployer.Lookup(service.Split('/').Drop(1));
 
-            Assert.AreEqual(service, deployment.Path);
-            Assert.IsInstanceOfType(deployment.RouterConfig, typeof(NoRouter));
-            Assert.AreEqual(Deploy.NoScopeGiven, deployment.Scope);
-            Assert.AreEqual(Deploy.NoMailboxGiven, deployment.Mailbox);
-            Assert.AreEqual(Deploy.NoDispatcherGiven, deployment.Dispatcher);
+            Assert.Equal(service, deployment.Path);
+            Assert.IsType<NoRouter>(deployment.RouterConfig);
+            Assert.Equal(Deploy.NoScopeGiven, deployment.Scope);
+            Assert.Equal(Deploy.NoMailboxGiven, deployment.Mailbox);
+            Assert.Equal(Deploy.NoDispatcherGiven, deployment.Dispatcher);
         }
 
-        [TestMethod]
+        [Fact]
         public void Deployer_must_use_Null_for_undefined_service()
         {
             var service = @"/undefined";
             var deployment = sys.Provider.Deployer.Lookup(service.Split('/').Drop(1));
-            Assert.IsNull(deployment);
+            Assert.Null(deployment);
         }
 
-        [TestMethod]
+        [Fact]
         public void Deployer_must_be_able_to_parse_akka_actor_deployment_with_dispatcher_config()
         {
             var service = @"/service3";
             var deployment = sys.Provider.Deployer.Lookup(service.Split('/').Drop(1));
 
-            Assert.AreEqual(service, deployment.Path);
-            Assert.IsInstanceOfType(deployment.RouterConfig, typeof(NoRouter));
-            Assert.AreEqual(Deploy.NoScopeGiven, deployment.Scope);
-            Assert.AreEqual(Deploy.NoMailboxGiven, deployment.Mailbox);
-            Assert.AreEqual("my-dispatcher", deployment.Dispatcher);
+            Assert.Equal(service, deployment.Path);
+            Assert.IsType<NoRouter>(deployment.RouterConfig);
+            Assert.Equal(Deploy.NoScopeGiven, deployment.Scope);
+            Assert.Equal(Deploy.NoMailboxGiven, deployment.Mailbox);
+            Assert.Equal("my-dispatcher", deployment.Dispatcher);
         }
 
-        [TestMethod]
+        [Fact]
         public void Deployer_must_be_able_to_parse_akka_actor_deployment_with_mailbox_config()
         {
             var service = @"/service4";
             var deployment = sys.Provider.Deployer.Lookup(service.Split('/').Drop(1));
 
-            Assert.AreEqual(service, deployment.Path);
-            Assert.IsInstanceOfType(deployment.RouterConfig, typeof(NoRouter));
-            Assert.AreEqual(Deploy.NoScopeGiven, deployment.Scope);
-            Assert.AreEqual("my-mailbox", deployment.Mailbox);
-            Assert.AreEqual(Deploy.NoDispatcherGiven, deployment.Dispatcher);
+            Assert.Equal(service, deployment.Path);
+            Assert.IsType<NoRouter>(deployment.RouterConfig);
+            Assert.Equal(Deploy.NoScopeGiven, deployment.Scope);
+            Assert.Equal("my-mailbox", deployment.Mailbox);
+            Assert.Equal(Deploy.NoDispatcherGiven, deployment.Dispatcher);
         }
 
 

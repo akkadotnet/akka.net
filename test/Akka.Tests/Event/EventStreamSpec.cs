@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Xunit;
 using Akka.Actor;
 using Akka.Event;
 using System;
@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Akka.Tests.Event
 {
-    [TestClass]
+    
     public class EventStreamSpec : AkkaSpec
     {
         
@@ -47,7 +47,7 @@ namespace Akka.Tests.Event
         class CC {}
         class CCATBT : CC, ATT, BTT { }
 
-        [TestMethod]
+        [Fact]
         public void ManageSubscriptions()
         {
             var bus = new EventStream(true);
@@ -60,7 +60,7 @@ namespace Akka.Tests.Event
             expectNoMsg(TimeSpan.FromSeconds(1));
         }
 
-        [TestMethod]
+        [Fact]
         public void NotAllowNullAsSubscriber()
         {
             var bus = new EventStream(true);
@@ -70,7 +70,7 @@ namespace Akka.Tests.Event
             });            
         }
 
-        [TestMethod]
+        [Fact]
         public void NotAllowNullAsUnsubscriber()
         {
             var bus = new EventStream(true);
@@ -84,7 +84,7 @@ namespace Akka.Tests.Event
             });
         }
 
-        [TestMethod]
+        [Fact]
         public void ManageSubChannelsUsingClasses()
         {
             var a = new A();
@@ -112,8 +112,7 @@ namespace Akka.Tests.Event
         }
 
 
-        [Description("manage sub-channels using classes and traits (update on subscribe)" )]
-        [TestMethod]
+        [Fact(DisplayName="manage sub-channels using classes and traits (update on subscribe)" )]
         public void ManageSubChannelsUsingClassesAndInterfacesUpdateOnSubscribe()
         {
             var es = new EventStream(false);
@@ -135,14 +134,14 @@ namespace Akka.Tests.Event
             a3.expectMsg(tm1);
             a3.expectMsg(tm2); 
             a4.expectMsg(tm2);
-            es.Unsubscribe(a1.Ref, typeof(AT)).Then(Assert.IsTrue);
-            es.Unsubscribe(a2.Ref, typeof(BT)).Then(Assert.IsTrue);
-            es.Unsubscribe(a3.Ref, typeof(CC)).Then(Assert.IsTrue);
-            es.Unsubscribe(a4.Ref, typeof(CCATBT)).Then(Assert.IsTrue);
+            es.Unsubscribe(a1.Ref, typeof(AT)).Then(Assert.True);
+            es.Unsubscribe(a2.Ref, typeof(BT)).Then(Assert.True);
+            es.Unsubscribe(a3.Ref, typeof(CC)).Then(Assert.True);
+            es.Unsubscribe(a4.Ref, typeof(CCATBT)).Then(Assert.True);
         }
 
         //"manage sub-channels using classes and traits (update on unsubscribe)"
-        [TestMethod]
+        [Fact]
         public void ManageSubChannelsUsingClassesAndInterfacesUpdateOnUnsubscribe()
         {
             var es = new EventStream(false);
@@ -164,13 +163,13 @@ namespace Akka.Tests.Event
             a2.expectMsg(tm2);
             a3.expectNoMsg(TimeSpan.FromSeconds(1));
             a4.expectMsg(tm2);
-            es.Unsubscribe(a1.Ref, typeof(AT)).Then(Assert.IsTrue);
-            es.Unsubscribe(a2.Ref, typeof(BT)).Then(Assert.IsTrue);
-            es.Unsubscribe(a3.Ref, typeof(CC)).Then(Assert.IsFalse);
-            es.Unsubscribe(a4.Ref, typeof(CCATBT)).Then(Assert.IsTrue);
+            es.Unsubscribe(a1.Ref, typeof(AT)).Then(Assert.True);
+            es.Unsubscribe(a2.Ref, typeof(BT)).Then(Assert.True);
+            es.Unsubscribe(a3.Ref, typeof(CC)).Then(Assert.False);
+            es.Unsubscribe(a4.Ref, typeof(CCATBT)).Then(Assert.True);
         }
 
-        [TestMethod]
+        [Fact]
         public void ManageSubChannelsUsingClassesAndInterfacesUpdateOnUnsubscribeAll()
         {
             var es = new EventStream(false);
@@ -181,21 +180,21 @@ namespace Akka.Tests.Event
             var a3 = TestProbe();
             var a4 = TestProbe();
 
-            es.Subscribe(a1.Ref, typeof(AT)).Then(Assert.IsTrue);
-            es.Subscribe(a2.Ref, typeof(BT)).Then(Assert.IsTrue);
-            es.Subscribe(a3.Ref, typeof(CC)).Then(Assert.IsTrue);
-            es.Subscribe(a4.Ref, typeof(CCATBT)).Then(Assert.IsTrue);
-            es.Unsubscribe(a3.Ref).Then(Assert.IsTrue);
+            es.Subscribe(a1.Ref, typeof(AT)).Then(Assert.True);
+            es.Subscribe(a2.Ref, typeof(BT)).Then(Assert.True);
+            es.Subscribe(a3.Ref, typeof(CC)).Then(Assert.True);
+            es.Subscribe(a4.Ref, typeof(CCATBT)).Then(Assert.True);
+            es.Unsubscribe(a3.Ref).Then(Assert.True);
             es.Publish(tm1);
             es.Publish(tm2);
             a1.expectMsg(tm2);
             a2.expectMsg(tm2);
             a3.expectNoMsg(TimeSpan.FromSeconds(1));
             a4.expectMsg(tm2);
-            es.Unsubscribe(a1.Ref, typeof(AT)).Then(Assert.IsTrue);
-            es.Unsubscribe(a2.Ref, typeof(BT)).Then(Assert.IsTrue);
-            es.Unsubscribe(a3.Ref, typeof(CC)).Then(Assert.IsFalse);
-            es.Unsubscribe(a4.Ref, typeof(CCATBT)).Then(Assert.IsTrue);
+            es.Unsubscribe(a1.Ref, typeof(AT)).Then(Assert.True);
+            es.Unsubscribe(a2.Ref, typeof(BT)).Then(Assert.True);
+            es.Unsubscribe(a3.Ref, typeof(CC)).Then(Assert.False);
+            es.Unsubscribe(a4.Ref, typeof(CCATBT)).Then(Assert.True);
         }
 
         public class SetTarget
@@ -208,7 +207,7 @@ namespace Akka.Tests.Event
         }
 
         //TODO: this test hangs, why?
-        [TestMethod]
+        [Fact]
         public void ManageLogLevels()
         {
           //var bus = new EventStream(false);

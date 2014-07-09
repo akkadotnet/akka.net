@@ -1,5 +1,5 @@
 ﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Akka.Tests;
 using Akka.Actor;
 using Akka.Configuration;
@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace Akka.Remote.Tests
 {
-    [TestClass]
+    
     public class RemoteDaemonSpec : AkkaSpec
     {
         public class SomeActor : UntypedActor
@@ -51,7 +51,7 @@ akka {
 ";
         }
 
-        [TestMethod]
+        [Fact]
         public void CanCreateActorUsingRemoteDaemonAndInteractWithChild()
         {
             var p = new TestProbe();

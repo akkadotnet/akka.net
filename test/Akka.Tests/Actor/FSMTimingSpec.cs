@@ -3,11 +3,11 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.Tests.Actor
 {
-    [TestClass]
+    
     public class FSMTimingSpec : AkkaSpec, ImplicitSender
     {
         public ActorRef Self { get { return testActor; } }
@@ -19,16 +19,14 @@ namespace Akka.Tests.Actor
             get { return _fsm ?? (_fsm = sys.ActorOf(Props.Create(() => new StateMachine(Self)))); }
         }
 
-        [TestInitialize]
-        public override void Setup()
+        public FSMTimingSpec()
         {
-            base.Setup();
             //initializes the Finite State Machine, so it doesn't affect any of the time-sensitive tests below
             fsm.Tell(new FSMBase.SubscribeTransitionCallBack(Self));
             expectMsg(new FSMBase.CurrentState<State>(fsm, State.Initial), FSMSpecHelpers.CurrentStateExpector<State>(), TimeSpan.FromSeconds(1));
         }
 
-        [TestMethod]
+        [Fact]
         public void FSM_must_receive_StateTimeout()
         {
             //arrange
@@ -50,7 +48,7 @@ namespace Akka.Tests.Actor
             //assert
         }
 
-        [TestMethod]
+        [Fact]
         public void FSM_must_cancel_a_StateTimeout()
         {
             //arrange
@@ -70,7 +68,7 @@ namespace Akka.Tests.Actor
             //assert
         }
 
-        [TestMethod]
+        [Fact]
         public void FSM_must_allow_StateTimeout_override()
         {
             //arrange
@@ -97,7 +95,7 @@ namespace Akka.Tests.Actor
             //assert
         }
 
-        [TestMethod]
+        [Fact]
         public void FSM_must_receive_single_shot_timer()
         {
             //arrange
@@ -121,7 +119,7 @@ namespace Akka.Tests.Actor
             //assert
         }
 
-        [TestMethod]
+        [Fact]
         public void FSM_must_resubmit_single_shot_timer()
         {
             Within(TimeSpan.FromSeconds(2.5), () =>
@@ -146,7 +144,7 @@ namespace Akka.Tests.Actor
             });
         }
 
-        [TestMethod]
+        [Fact]
         public void FSM_must_correctly_cancel_a_named_timer()
         {
             fsm.Tell(State.TestCancelTimer, Self);
@@ -168,7 +166,7 @@ namespace Akka.Tests.Actor
                 FSMSpecHelpers.TransitionStateExpector<State>(), TimeSpan.FromSeconds(1));
         }
 
-        [TestMethod]
+        [Fact]
         public void FSM_must_not_get_confused_between_named_and_state_timers()
         {
             fsm.Tell(State.TestCancelStateTimerInNamedTimerMessage, Self);
@@ -193,8 +191,7 @@ namespace Akka.Tests.Actor
         /// <summary>
         /// receiveWhile is currently broken
         /// </summary>
-        [Ignore()]
-        [TestMethod]
+        [Fact(Skip = "receiveWhile is currently broken")]
         public void FSM_must_receive_and_cancel_a_repeated_timer()
         {
             fsm.Tell(State.TestRepeatedTimer, Self);
@@ -206,7 +203,7 @@ namespace Akka.Tests.Actor
                 return null;
             });
 
-            Assert.AreEqual(5, seq.Count);
+            Assert.Equal(5, seq.Count);
             Within(TimeSpan.FromMilliseconds(500), () =>
             {
                 expectMsg(new FSMBase.Transition<State>(fsm, State.TestRepeatedTimer, State.Initial),

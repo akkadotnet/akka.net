@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Xunit;
 using Akka.Actor;
 using Akka.Configuration;
 using System;
@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Akka.Tests
 {
-    [TestClass]
+    
     public class ActorCellSpec : AkkaSpec
     {
         public class SomeUserMessage : Comparable
@@ -19,7 +19,7 @@ namespace Akka.Tests
             public int B { get; set; }
             public Guid C { get; set; }
         }
-       [TestMethod]
+       [Fact]
        public void DoesNotSerializesUserMessagesWhenSerializeAllMessagesIsOff()
        {
             var message = new SomeUserMessage
@@ -32,12 +32,12 @@ namespace Akka.Tests
 
             var result = queue.Take();
 
-            Assert.IsFalse(sys.Settings.SerializeAllMessages);
-            Assert.AreEqual(message, result);
-            Assert.AreSame(message, result);
+            Assert.False(sys.Settings.SerializeAllMessages);
+            Assert.Equal(message, result);
+            Assert.Same(message, result);
         }
 
-       [TestMethod]
+       [Fact]
        public void SerializesUserMessagesWhenSerializeAllMessagesIsOn()
        {
            var config = ConfigurationFactory.ParseString(@"akka.actor.serialize-messages = on");
@@ -54,9 +54,9 @@ namespace Akka.Tests
 
            var result = queue.Take();
 
-           Assert.IsTrue(sys.Settings.SerializeAllMessages);
-           Assert.AreEqual(message, result);
-           Assert.AreNotSame(message, result);
+           Assert.True(sys.Settings.SerializeAllMessages);
+           Assert.Equal(message, result);
+           Assert.NotSame(message, result);
        }
     }
 }

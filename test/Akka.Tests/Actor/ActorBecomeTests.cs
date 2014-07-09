@@ -1,15 +1,15 @@
 ﻿using System;
 using Akka.Actor;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.Tests.Actor
 {
-    [TestClass]
+    
     public class ActorBecomeTests : AkkaSpec
     {
         private static readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(2);
 
-        [TestMethod]
+        [Fact]
         public void When_calling_become_Then_the_new_handler_is_used()
         {
 
@@ -26,7 +26,7 @@ namespace Akka.Tests.Actor
         }
 
 
-        [TestMethod]
+        [Fact]
         public void Given_actor_that_has_called_default_Become_twice_When_calling_unbecome_Then_the_default_handler_is_used_and_not_the_last_handler()
         {
             //Calling Become() does not persist the current handler, it just overwrites it, so when we call Unbecome(),
@@ -52,7 +52,7 @@ namespace Akka.Tests.Actor
         }
 
 
-        [TestMethod]
+        [Fact]
         public void Given_actor_that_has_called_default_Become_without_overwriting_previous_handler_When_calling_unbecome_Then_the_previous_handler_is_used()
         {
             //Calling Become() does not persist the current handler, it just overwrites it, so when we call Unbecome(),

@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Xunit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,10 +8,10 @@ using Akka.Actor;
 
 namespace Akka.Tests.Actor
 {
-    [TestClass]
+    
     public class ActorPathSpec : AkkaSpec 
     {
-        [TestMethod]
+        [Fact]
         public void SupportsParsingItsStringRep()
         {
             var path = new RootActorPath(new Address("akka.tcp", "mysys")) / "user";
@@ -26,7 +26,7 @@ namespace Akka.Tests.Actor
             throw new UriFormatException();
         }
 
-        [TestMethod]
+        [Fact]
         public void ActorPath_Parse_HandlesCasing_ForLocal()
         {
             const string uriString = "aKKa://sYstEm/pAth1/pAth2";
@@ -37,18 +37,18 @@ namespace Akka.Tests.Actor
             //  uppercase letters as equivalent to lowercase in scheme names (e.g., allow "HTTP"
             //  as well as "http") for the sake of robustness but should only produce lowercase scheme names 
             //  for consistency."   rfc3986 
-            Assert.AreEqual(actorPath.Address.Protocol, "akka",ignoreCase:false, message: "protocol should be lowercase");
+            Assert.True(actorPath.Address.Protocol.Equals("akka", StringComparison.Ordinal), "protocol should be lowercase");
             
             //In Akka, at least the system name is case-sensitive, see http://doc.akka.io/docs/akka/current/additional/faq.html#what-is-the-name-of-a-remote-actor            
-            Assert.AreEqual(actorPath.Address.System, "sYstEm",ignoreCase:false, message: "system");
+            Assert.True(actorPath.Address.System.Equals("sYstEm", StringComparison.Ordinal),  "system");
 
             var elements = actorPath.Elements.ToList();
             elements.Count.ShouldBe(2,"number of elements in path");
-            Assert.AreEqual("pAth1", elements[0], ignoreCase: false, message: "first path element");
-            Assert.AreEqual("pAth2", elements[1], ignoreCase: false, message: "second path element");
-            Assert.AreEqual(actorPath.ToString(),"akka://sYstEm/pAth1/pAth2");
+            Assert.True("pAth1".Equals(elements[0], StringComparison.Ordinal), "first path element");
+            Assert.True("pAth2".Equals(elements[1], StringComparison.Ordinal), "second path element");
+            Assert.Equal(actorPath.ToString(),"akka://sYstEm/pAth1/pAth2");
         }
-        [TestMethod]
+        [Fact]
         public void ActorPath_Parse_HandlesCasing_ForRemote()
         {
             const string uriString = "aKKa://sYstEm@hOst:4711/pAth1/pAth2";
@@ -59,22 +59,22 @@ namespace Akka.Tests.Actor
             //  uppercase letters as equivalent to lowercase in scheme names (e.g., allow "HTTP"
             //  as well as "http") for the sake of robustness but should only produce lowercase scheme names 
             //  for consistency."   rfc3986 
-            Assert.AreEqual(actorPath.Address.Protocol, "akka", ignoreCase: false, message: "protocol should be lowercase");
+            Assert.True(actorPath.Address.Protocol.Equals("akka", StringComparison.Ordinal), "protocol should be lowercase");
 
             //In Akka, at least the system name is case-sensitive, see http://doc.akka.io/docs/akka/current/additional/faq.html#what-is-the-name-of-a-remote-actor            
-            Assert.AreEqual(actorPath.Address.System, "sYstEm", ignoreCase: false, message: "system");
+            Assert.True(actorPath.Address.System.Equals("sYstEm", StringComparison.Ordinal), "system");
 
             //According to rfc3986 host is case insensitive, but should be produced as lowercase
-            Assert.AreEqual(actorPath.Address.Host, "host", ignoreCase: false, message: "host");
+            Assert.True(actorPath.Address.Host.Equals("host", StringComparison.Ordinal), "host");
             actorPath.Address.Port.ShouldBe(4711, "port");
             var elements = actorPath.Elements.ToList();
             elements.Count.ShouldBe(2, "number of elements in path");
-            Assert.AreEqual("pAth1", elements[0], ignoreCase: false, message: "first path element");
-            Assert.AreEqual("pAth2", elements[1], ignoreCase: false, message: "second path element");
-            Assert.AreEqual(actorPath.ToString(), "akka://sYstEm@host:4711/pAth1/pAth2");
+            Assert.True("pAth1".Equals(elements[0], StringComparison.Ordinal), "first path element");
+            Assert.True("pAth2".Equals(elements[1], StringComparison.Ordinal), "second path element");
+            Assert.Equal(actorPath.ToString(), "akka://sYstEm@host:4711/pAth1/pAth2");
         }
 
-        [TestMethod]
+        [Fact]
         public void SupportsParsingRemotePaths()
         {
             var remote = "akka://sys@host:1234/some/ref";
@@ -82,7 +82,7 @@ namespace Akka.Tests.Actor
             parsed.ToString().ShouldBe(remote);
         }
 
-        [TestMethod]
+        [Fact]
         public void ReturnFalsUponMalformedPath()
         {
             ActorPath ignored;
@@ -93,7 +93,7 @@ namespace Akka.Tests.Actor
             ActorPath.TryParse("a://l:1/b", out ignored).ShouldBe(false);
         }
 
-        [TestMethod]
+        [Fact]
         public void CreateCorrectToString()
         {
             var a = new Address("akka.tcp", "mysys");
@@ -104,7 +104,7 @@ namespace Akka.Tests.Actor
             (new RootActorPath(a) / "user" / "foo" / "bar").ToString().ShouldBe("akka.tcp://mysys/user/foo/bar");
         }
 
-        [TestMethod]
+        [Fact]
         public void CreateCorrectToStringWithoutAddress()
         {
             var a = new Address("akka.tcp", "mysys");
@@ -115,7 +115,7 @@ namespace Akka.Tests.Actor
             (new RootActorPath(a) / "user" / "foo" / "bar").ToStringWithoutAddress().ShouldBe("/user/foo/bar");
         }
 
-        [TestMethod]
+        [Fact]
         public void CreateCorrectToStringWithAddress()
         {
             var local = new Address("akka.tcp", "mysys");
@@ -155,7 +155,7 @@ namespace Akka.Tests.Actor
     }
          */
 
-        [TestMethod]
+        [Fact]
         public void HaveCorrectPathElements()
         {
             (new RootActorPath(new Address("akka.tcp", "mysys")) / "user" / "foo" / "bar").Elements.ShouldOnlyContainInOrder(new[] { "user", "foo", "bar" });

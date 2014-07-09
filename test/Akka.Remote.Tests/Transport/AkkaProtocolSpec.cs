@@ -6,11 +6,11 @@ using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.Tests;
 using Google.ProtocolBuffers;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.Remote.Tests.Transport
 {
-    [TestClass]
+    
     public class AkkaProtocolSpec : AkkaSpec, ImplicitSender
     {
         #region Setup / Config
@@ -33,6 +33,15 @@ namespace Akka.Remote.Tests.Transport
         private IHandleEvent testPayload;
         private IHandleEvent testDisassociate(DisassociateInfo info) { return new InboundPayload(codec.ConstructDisassociate(info)); }
         private IHandleEvent testAssociate(int uid) { return new InboundPayload(codec.ConstructAssociate(new HandshakeInfo(remoteAkkaAddress, uid))); }
+
+        public AkkaProtocolSpec()
+        {
+            testEnvelope = codec.ConstructMessage(localAkkaAddress, testActor, testMsg);
+            testMsgPdu = codec.ConstructPayload(testEnvelope);
+
+            testHeartbeat = new InboundPayload(codec.ConstructHeartbeat());
+            testPayload = new InboundPayload(testMsgPdu);
+        }
 
         public class Collaborators
         {
@@ -60,19 +69,6 @@ namespace Akka.Remote.Tests.Transport
             var handle = new TestAssociationHandle(localAddress, remoteAddress, transport, true);
             transport.WriteBehavior.PushConstant(true);
             return new Collaborators(registry, transport, handle, new TestFailureDetector());
-        }
-
-        [TestInitialize]
-        public override void Setup()
-        {
-            base.Setup();
-            testEnvelope = codec.ConstructMessage(localAkkaAddress, testActor, testMsg);
-            testMsgPdu = codec.ConstructPayload(testEnvelope);
-
-            testHeartbeat = new InboundPayload(codec.ConstructHeartbeat());
-            testPayload = new InboundPayload(testMsgPdu);
-
-
         }
 
 
@@ -125,7 +121,7 @@ namespace Akka.Remote.Tests.Transport
 
         #region Tests
 
-        [TestMethod]
+        [Fact]
         public async Task ProtocolStateActor_must_register_itself_as_reader_on_injected_handles()
         {
             var collaborators = GetCollaborators();
@@ -136,7 +132,7 @@ namespace Akka.Remote.Tests.Transport
             await AwaitCond(() => collaborators.Handle.ReadHandlerSource.Task.IsCompleted, DefaultTimeout);
         }
 
-        [TestMethod]
+        [Fact]
         public async Task ProtocolStateActor_must_in_inbound_mode_accept_payload_after_Associate_PDU_received()
         {
             var collaborators = GetCollaborators();
@@ -153,14 +149,14 @@ namespace Akka.Remote.Tests.Transport
             {
                 var inbound = o.AsInstanceOf<InboundAssociation>();
                 if (inbound == null) return null;
-                Assert.AreEqual(33, inbound.Association.AsInstanceOf<AkkaProtocolHandle>().HandshakeInfo.Uid);
+                Assert.Equal(33, inbound.Association.AsInstanceOf<AkkaProtocolHandle>().HandshakeInfo.Uid);
                 return inbound.Association.AsInstanceOf<AkkaProtocolHandle>();
             });
-            Assert.IsNotNull(wrappedHandle);
+            Assert.NotNull(wrappedHandle);
 
             wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(testActor));
 
-            Assert.IsTrue(collaborators.FailureDetector.called);
+            Assert.True(collaborators.FailureDetector.called);
 
             // Heartbeat was sent in response to Associate
             await AwaitCond(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
@@ -170,12 +166,12 @@ namespace Akka.Remote.Tests.Transport
             expectMsgPF<InboundPayload>("expected InboundPayload", o =>
             {
                 var inbound = o.AsInstanceOf<InboundPayload>();
-                Assert.AreEqual(testEnvelope, inbound.Payload);
+                Assert.Equal(testEnvelope, inbound.Payload);
                 return null;
             });
         }
 
-        [TestMethod]
+        [Fact]
         public async Task ProtocolStateActor_must_in_inbound_mode_disassociate_when_an_unexpected_message_arrives_instead_of_Associate()
         {
             var collaborators = GetCollaborators();
@@ -198,7 +194,7 @@ namespace Akka.Remote.Tests.Transport
             }, DefaultTimeout);
         }
 
-        [TestMethod]
+        [Fact]
         public async Task ProtocolStateActor_must_in_outbound_mode_delay_readiness_until_handshake_finished()
         {
             var collaborators = GetCollaborators();
@@ -211,12 +207,12 @@ namespace Akka.Remote.Tests.Transport
                     new AkkaProtocolSettings(config), codec, collaborators.FailureDetector));
 
             await AwaitCond(() => LastActivityIsAssociate(collaborators.Registry,42), DefaultTimeout);
-            Assert.IsTrue(collaborators.FailureDetector.called);
+            Assert.True(collaborators.FailureDetector.called);
 
             //keeps sending heartbeats
             await AwaitCond(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
 
-            Assert.IsFalse(statusPromise.Task.IsCompleted);
+            Assert.False(statusPromise.Task.IsCompleted);
 
             //finish the connection by sending back an associate message
             reader.Tell(testAssociate(33), Self);
@@ -225,14 +221,14 @@ namespace Akka.Remote.Tests.Transport
             statusPromise.Task.Result.Match()
                 .With<AkkaProtocolHandle>(h =>
                 {
-                    Assert.AreEqual(remoteAkkaAddress, h.RemoteAddress);
-                    Assert.AreEqual(localAkkaAddress, h.LocalAddress);
-                    Assert.AreEqual(33, h.HandshakeInfo.Uid);
+                    Assert.Equal(remoteAkkaAddress, h.RemoteAddress);
+                    Assert.Equal(localAkkaAddress, h.LocalAddress);
+                    Assert.Equal(33, h.HandshakeInfo.Uid);
                 })
-                .Default(msg => Assert.Fail("Did not receive expected AkkaProtocolHandle from handshake"));
+                .Default(msg => Assert.True(false,"Did not receive expected AkkaProtocolHandle from handshake"));
         }
 
-        [TestMethod]
+        [Fact]
         public async Task ProtocolStateActor_must_handle_explicit_disassociate_messages()
         {
             var collaborators = GetCollaborators();
@@ -252,10 +248,10 @@ namespace Akka.Remote.Tests.Transport
             statusPromise.Task.Result.Match()
                 .With<AkkaProtocolHandle>(h =>
                 {
-                    Assert.AreEqual(remoteAkkaAddress, h.RemoteAddress);
-                    Assert.AreEqual(localAkkaAddress, h.LocalAddress);
+                    Assert.Equal(remoteAkkaAddress, h.RemoteAddress);
+                    Assert.Equal(localAkkaAddress, h.LocalAddress);
                 })
-                .Default(msg => Assert.Fail("Did not receive expected AkkaProtocolHandle from handshake"));
+                .Default(msg => Assert.True(false,"Did not receive expected AkkaProtocolHandle from handshake"));
             var wrappedHandle = statusPromise.Task.Result.AsInstanceOf<AkkaProtocolHandle>();
 
             wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(testActor));
@@ -266,14 +262,14 @@ namespace Akka.Remote.Tests.Transport
             {
                 var disassociated = o.AsInstanceOf<Disassociated>();
 
-                Assert.IsNotNull(disassociated);
-                Assert.AreEqual(DisassociateInfo.Unknown, disassociated.Info);
+                Assert.NotNull(disassociated);
+                Assert.Equal(DisassociateInfo.Unknown, disassociated.Info);
 
                 return disassociated;
             });
         }
 
-        [TestMethod]
+        [Fact]
         public async Task ProtocolStateActor_must_handle_transport_level_disassociations()
         {
             var collaborators = GetCollaborators();
@@ -293,10 +289,10 @@ namespace Akka.Remote.Tests.Transport
             statusPromise.Task.Result.Match()
                 .With<AkkaProtocolHandle>(h =>
                 {
-                    Assert.AreEqual(remoteAkkaAddress, h.RemoteAddress);
-                    Assert.AreEqual(localAkkaAddress, h.LocalAddress);
+                    Assert.Equal(remoteAkkaAddress, h.RemoteAddress);
+                    Assert.Equal(localAkkaAddress, h.LocalAddress);
                 })
-                .Default(msg => Assert.Fail("Did not receive expected AkkaProtocolHandle from handshake"));
+                .Default(msg => Assert.True(false,"Did not receive expected AkkaProtocolHandle from handshake"));
             var wrappedHandle = statusPromise.Task.Result.AsInstanceOf<AkkaProtocolHandle>();
 
             wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(testActor));
@@ -307,14 +303,14 @@ namespace Akka.Remote.Tests.Transport
             {
                 var disassociated = o.AsInstanceOf<Disassociated>();
 
-                Assert.IsNotNull(disassociated);
-                Assert.AreEqual(DisassociateInfo.Unknown, disassociated.Info);
+                Assert.NotNull(disassociated);
+                Assert.Equal(DisassociateInfo.Unknown, disassociated.Info);
 
                 return disassociated;
             });
         }
 
-        [TestMethod]
+        [Fact]
         public async Task ProtocolStateActor_must_disassociate_when_failure_detector_signals_failure()
         {
             var collaborators = GetCollaborators();
@@ -334,10 +330,10 @@ namespace Akka.Remote.Tests.Transport
             statusPromise.Task.Result.Match()
                 .With<AkkaProtocolHandle>(h =>
                 {
-                    Assert.AreEqual(remoteAkkaAddress, h.RemoteAddress);
-                    Assert.AreEqual(localAkkaAddress, h.LocalAddress);
+                    Assert.Equal(remoteAkkaAddress, h.RemoteAddress);
+                    Assert.Equal(localAkkaAddress, h.LocalAddress);
                 })
-                .Default(msg => Assert.Fail("Did not receive expected AkkaProtocolHandle from handshake"));
+                .Default(msg => Assert.True(false,"Did not receive expected AkkaProtocolHandle from handshake"));
             var wrappedHandle = statusPromise.Task.Result.AsInstanceOf<AkkaProtocolHandle>();
 
             wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(testActor));
@@ -351,14 +347,14 @@ namespace Akka.Remote.Tests.Transport
             {
                 var disassociated = o.AsInstanceOf<Disassociated>();
 
-                Assert.IsNotNull(disassociated);
-                Assert.AreEqual(DisassociateInfo.Unknown, disassociated.Info);
+                Assert.NotNull(disassociated);
+                Assert.Equal(DisassociateInfo.Unknown, disassociated.Info);
 
                 return disassociated;
             });
         }
 
-        [TestMethod]
+        [Fact]
         public async Task ProtocolStateActor_must_handle_correctly_when_the_handler_is_registered_only_after_the_association_is_already_closed()
         {
             var collaborators = GetCollaborators();
@@ -378,10 +374,10 @@ namespace Akka.Remote.Tests.Transport
             statusPromise.Task.Result.Match()
                 .With<AkkaProtocolHandle>(h =>
                 {
-                    Assert.AreEqual(remoteAkkaAddress, h.RemoteAddress);
-                    Assert.AreEqual(localAkkaAddress, h.LocalAddress);
+                    Assert.Equal(remoteAkkaAddress, h.RemoteAddress);
+                    Assert.Equal(localAkkaAddress, h.LocalAddress);
                 })
-                .Default(msg => Assert.Fail("Did not receive expected AkkaProtocolHandle from handshake"));
+                .Default(msg => Assert.True(false,"Did not receive expected AkkaProtocolHandle from handshake"));
             var wrappedHandle = statusPromise.Task.Result.AsInstanceOf<AkkaProtocolHandle>();
 
             stateActor.Tell(new Disassociated(DisassociateInfo.Unknown), Self);
@@ -393,8 +389,8 @@ namespace Akka.Remote.Tests.Transport
             {
                 var disassociated = o.AsInstanceOf<Disassociated>();
 
-                Assert.IsNotNull(disassociated);
-                Assert.AreEqual(DisassociateInfo.Unknown, disassociated.Info);
+                Assert.NotNull(disassociated);
+                Assert.Equal(DisassociateInfo.Unknown, disassociated.Info);
 
                 return disassociated;
             });

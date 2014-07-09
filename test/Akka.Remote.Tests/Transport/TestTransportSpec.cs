@@ -3,11 +3,11 @@ using Akka.Actor;
 using Akka.Remote.Transport;
 using Akka.Tests;
 using Google.ProtocolBuffers;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.Remote.Tests.Transport{
 
-    [TestClass]
+    
     public class TestTransportSpec : AkkaSpec, ImplicitSender
     {
         #region Setup / Teardown
@@ -22,7 +22,7 @@ namespace Akka.Remote.Tests.Transport{
 
         #region Tests
 
-        [TestMethod]
+        [Fact]
         public void TestTransport_must_return_an_Address_and_TaskCompletionSource_on_Listen()
         {
             //arrange
@@ -34,16 +34,16 @@ namespace Akka.Remote.Tests.Transport{
             result.Wait(DefaultTimeout);
 
             //assert
-            Assert.AreEqual(addressA, result.Result.Item1);
-            Assert.IsNotNull(result.Result.Item2);
+            Assert.Equal(addressA, result.Result.Item1);
+            Assert.NotNull(result.Result.Item2);
 
             var snapshot = registry.LogSnapshot();
-            Assert.AreEqual(1, snapshot.Count);
-            Assert.IsInstanceOfType(snapshot[0], typeof(ListenAttempt));
-            Assert.AreEqual(addressA, ((ListenAttempt)snapshot[0]).BoundAddress);
+            Assert.Equal(1, snapshot.Count);
+            Assert.IsType<ListenAttempt>(snapshot[0]);
+            Assert.Equal(addressA, ((ListenAttempt)snapshot[0]).BoundAddress);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestTransport_must_associate_successfully_with_another_TestTransport()
         {
             //arrange
@@ -63,7 +63,7 @@ namespace Akka.Remote.Tests.Transport{
             remoteConnectionFuture.Result.Item2.SetResult(new ActorAssociationEventListener(Self));
 
             var ready = registry.TransportsReady(addressA, addressB);
-            Assert.IsTrue(ready);
+            Assert.True(ready);
 
             transportA.Associate(addressB);
             expectMsgPF<AssociationHandle>(DefaultTimeout, "Expect InboundAssociation from A",
@@ -71,11 +71,11 @@ namespace Akka.Remote.Tests.Transport{
 
             //assert
             var associateAttempt = (registry.LogSnapshot().Single(x => x is AssociateAttempt)).AsInstanceOf<AssociateAttempt>();
-            Assert.AreEqual(addressA, associateAttempt.LocalAddress);
-            Assert.AreEqual(addressB, associateAttempt.RemoteAddress);
+            Assert.Equal(addressA, associateAttempt.LocalAddress);
+            Assert.Equal(addressB, associateAttempt.RemoteAddress);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestTransport_fail_to_association_with_nonexisting_Address()
         {
             //arrange
@@ -96,7 +96,7 @@ namespace Akka.Remote.Tests.Transport{
             });
         }
 
-        [TestMethod]
+        [Fact]
         public void TestTransport_should_emulate_sending_PDUs()
         {
             //arrange
@@ -116,7 +116,7 @@ namespace Akka.Remote.Tests.Transport{
             remoteConnectionFuture.Result.Item2.SetResult(new ActorAssociationEventListener(Self));
 
             var ready = registry.TransportsReady(addressA, addressB);
-            Assert.IsTrue(ready);
+            Assert.True(ready);
 
             var associate = transportA.Associate(addressB);
             var handleB = expectMsgPF<AssociationHandle>(DefaultTimeout, "Expect InboundAssociation from A", o =>
@@ -136,7 +136,7 @@ namespace Akka.Remote.Tests.Transport{
             var akkaPDU = ByteString.CopyFromUtf8("AkkaPDU");
 
             var exists = registry.ExistsAssociation(addressA, addressB);
-            Assert.IsTrue(exists);
+            Assert.True(exists);
 
             handleA.Write(akkaPDU);
 
@@ -149,11 +149,11 @@ namespace Akka.Remote.Tests.Transport{
             });
 
             var writeAttempt = (registry.LogSnapshot().Single(x => x is WriteAttempt)).AsInstanceOf<WriteAttempt>();
-            Assert.IsTrue(writeAttempt.Sender.Equals(addressA) && writeAttempt.Recipient.Equals(addressB)
+            Assert.True(writeAttempt.Sender.Equals(addressA) && writeAttempt.Recipient.Equals(addressB)
                 && writeAttempt.Payload.Equals(akkaPDU));
         }
 
-        [TestMethod]
+        [Fact]
         public void TestTransport_should_emulate_disassociation()
         {
             //arrange
@@ -173,7 +173,7 @@ namespace Akka.Remote.Tests.Transport{
             remoteConnectionFuture.Result.Item2.SetResult(new ActorAssociationEventListener(Self));
 
             var ready = registry.TransportsReady(addressA, addressB);
-            Assert.IsTrue(ready);
+            Assert.True(ready);
 
             var associate = transportA.Associate(addressB);
             var handleB = expectMsgPF<AssociationHandle>(DefaultTimeout, "Expect InboundAssociation from A", o =>
@@ -191,20 +191,20 @@ namespace Akka.Remote.Tests.Transport{
             handleA.ReadHandlerSource.SetResult(new ActorHandleEventListener(Self));
 
             var exists = registry.ExistsAssociation(addressA, addressB);
-            Assert.IsTrue(exists);
+            Assert.True(exists);
 
             handleA.Disassociate();
 
             var msg = expectMsgPF(DefaultTimeout, "Expected Disassociated", o => o.AsInstanceOf<Disassociated>());
 
             //assert
-            Assert.IsNotNull(msg);
+            Assert.NotNull(msg);
 
             exists = registry.ExistsAssociation(addressA, addressB);
-            Assert.IsTrue(!exists, "Association should no longer exist");
+            Assert.True(!exists, "Association should no longer exist");
 
             var disassociateAttempt = registry.LogSnapshot().Single(x => x is DisassociateAttempt).AsInstanceOf<DisassociateAttempt>();
-            Assert.IsTrue(disassociateAttempt.Requestor.Equals(addressA) && disassociateAttempt.Remote.Equals(addressB));
+            Assert.True(disassociateAttempt.Requestor.Equals(addressA) && disassociateAttempt.Remote.Equals(addressB));
         }
 
         #endregion

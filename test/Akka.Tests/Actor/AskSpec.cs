@@ -1,11 +1,11 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Xunit;
 using Akka.Actor;
 using System;
 using System.Threading;
 
 namespace Akka.Tests.Actor
 {
-    [TestClass]
+    
     public class AskSpec : AkkaSpec
     {
         public class SomeActor : UntypedActor
@@ -57,33 +57,32 @@ namespace Akka.Tests.Actor
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void CanAskActor()
         {
             var actor = sys.ActorOf<SomeActor>();
             actor.Ask<string>("answer").Result.ShouldBe("answer");
         }
 
-        [TestMethod]
+        [Fact]
         public void CanAskActorWithTimeout()
         {
             var actor = sys.ActorOf<SomeActor>();
             actor.Ask<string>("answer",TimeSpan.FromSeconds(10)).Result.ShouldBe("answer");
         }
 
-        [TestMethod]
-        [ExpectedException(typeof(AggregateException))]
+        [Fact]
         public void CanGetTimeoutWhenAskingActor()
         {
             var actor = sys.ActorOf<SomeActor>();
-            actor.Ask<string>("timeout", TimeSpan.FromSeconds(3)).Wait();
+            Assert.Throws<AggregateException>(() => { actor.Ask<string>("timeout", TimeSpan.FromSeconds(3)).Wait(); });
         }
 
         /// <summary>
         /// Tests to ensure that if we wait on the result of an Ask inside an actor's receive loop
         /// that we don't deadlock
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void CanAskActorInsideReceiveLoop()
         {
             var replyActor = sys.ActorOf<ReplyActor>();
