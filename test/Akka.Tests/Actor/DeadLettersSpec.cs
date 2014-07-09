@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Xunit;
 using Akka.Event;
 using System;
 using System.Collections.Concurrent;
@@ -9,19 +9,19 @@ using System.Threading.Tasks;
 
 namespace Akka.Tests
 {
-    [TestClass]
+    
     public class DeadLettersSpec : AkkaSpec
     {
-        [TestMethod]
+        [Fact]
         public void CanSendMessagesToDeadLetters()
         {
             sys.EventStream.Subscribe(testActor, typeof(DeadLetter));
             sys.DeadLetters.Tell("foobar");
             var message = queue.Take();
-            Assert.IsInstanceOfType(message, typeof(DeadLetter));
+            Assert.IsType<DeadLetter>(message);
             var deadLetter = (DeadLetter)message;
             var payload = (string)deadLetter.Message;
-            Assert.AreEqual("foobar", payload);
+            Assert.Equal("foobar", payload);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Xunit;
 using Akka.Actor;
 using System;
 using System.Collections.Concurrent;
@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Akka.Tests
 {
-    [TestClass]
+    
     public class ActorLifeCycleSpec : AkkaSpec
     {
         public class LifeCycleTestActor : UntypedActor
@@ -100,8 +100,7 @@ namespace Akka.Tests
             }
         }
 
-        [Description("invoke preRestart, preStart, postRestart when using OneForOneStrategy")]
-        [TestMethod()]
+        [Fact(DisplayName = "invoke preRestart, preStart, postRestart when using OneForOneStrategy")]
         public void ActorLifecycleTest1()
         {
             var generationProvider = new AtomicInteger();
@@ -132,8 +131,7 @@ namespace Akka.Tests
             supervisor.Stop();
         }
 
-        [Description("default for preRestart and postRestart is to call postStop and preStart respectively")]
-        [TestMethod()]
+        [Fact(DisplayName="default for preRestart and postRestart is to call postStop and preStart respectively")]
         public void ActorLifecycleTest2()
         {
             var generationProvider = new AtomicInteger();
@@ -164,8 +162,7 @@ namespace Akka.Tests
             supervisor.Stop();
         } 
 
-        [Description("not invoke preRestart and postRestart when never restarted using OneForOneStrategy")]
-        [TestMethod]
+        [Fact(DisplayName="not invoke preRestart and postRestart when never restarted using OneForOneStrategy")]
         public void ActorLifecycleTest3()
         {
             var generationProvider = new AtomicInteger();
@@ -195,8 +192,7 @@ namespace Akka.Tests
             }
         }
 
-        [Description("log failues in postStop")]
-        [TestMethod]
+        [Fact(DisplayName="log failues in postStop")]
         public void LogFailutresInPostStop()
         {
             var a = sys.ActorOf<EmptyActor>();
@@ -252,7 +248,7 @@ namespace Akka.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void ClearBehaviorStackUponRestart()
         {
             var a = sys.ActorOf(Props.Create(() => new BecomeActor(testActor)));
@@ -335,8 +331,7 @@ namespace Akka.Tests
             }
         }
 
-        [Description("If a parent receives a Terminated event for a child actor, the parent should no longer supervise it")]
-        [TestMethod]
+        [Fact(DisplayName="If a parent receives a Terminated event for a child actor, the parent should no longer supervise it")]
         public void ClearChildUponTerminated()
         {
             var names = new[] {"Bob", "Jameson", "Natasha"};

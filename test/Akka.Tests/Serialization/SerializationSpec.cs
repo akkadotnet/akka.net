@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Xunit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +8,7 @@ using Akka.Actor;
 
 namespace Akka.Tests.Serialization
 {
-    [TestClass]
+    
     public class SerializationSpec : AkkaSpec
     {
         public class EmptyActor : UntypedActor
@@ -23,7 +23,7 @@ namespace Akka.Tests.Serialization
             public ActorRef ActorRef { get; set; }
         }
 
-        [TestMethod]
+        [Fact]
         public void CanSerializeActorRef()
         {
             var message = new SomeMessage
@@ -35,10 +35,10 @@ namespace Akka.Tests.Serialization
             var serialized = serializer.ToBinary(message);
             var deserialized = (SomeMessage)serializer.FromBinary(serialized, typeof(SomeMessage));
 
-            Assert.AreSame(testActor, deserialized.ActorRef);
+            Assert.Same(testActor, deserialized.ActorRef);
         }
 
-        [TestMethod]
+        [Fact]
         public void CanSerializeFutureActorRef()
         {
             sys.EventStream.Subscribe(testActor, typeof(object));
@@ -56,7 +56,7 @@ namespace Akka.Tests.Serialization
             var serialized = serializer.ToBinary(message);
             var deserialized = (SomeMessage)serializer.FromBinary(serialized, typeof(SomeMessage));
 
-            Assert.AreSame(f, deserialized.ActorRef);
+            Assert.Same(f, deserialized.ActorRef);
         }
     }
 }

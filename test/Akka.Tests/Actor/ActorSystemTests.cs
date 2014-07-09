@@ -1,11 +1,11 @@
 ﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Akka.Actor;
 using System.Linq;
 
 namespace Akka.Tests
 {
-    [TestClass]
+    
     public class ActorSystemTests
     {
         public class TestActor : UntypedActor
@@ -15,7 +15,7 @@ namespace Akka.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void ActorSystem_ActorOf_adds_a_child_to_Guardian()
         {
             //arrange
@@ -26,10 +26,10 @@ namespace Akka.Tests
 
             //assert
             var children = system.Provider.Guardian.Children;
-            Assert.IsTrue(children.Any(c => c == child));
+            Assert.True(children.Any(c => c == child));
         }        
 
-        [TestMethod]
+        [Fact]
         public void ActorOf_gives_child_unique_name_if_not_specified()
         {
             //arrange
@@ -40,7 +40,7 @@ namespace Akka.Tests
             var child2 = system.ActorOf<TestActor>();
 
             //assert
-            Assert.AreNotEqual(child1.Path, child2.Path);
+            Assert.NotEqual(child1.Path, child2.Path);
         }
     }
 }

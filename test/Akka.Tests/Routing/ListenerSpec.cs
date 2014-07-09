@@ -2,14 +2,14 @@
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.Tests.Routing
 {
-    [TestClass]
+    
     public class ListenerSpec : AkkaSpec
     {
-        [TestMethod]
+        [Fact]
         public void Listener_must_listen_in()
         {
             //arrange
@@ -35,7 +35,7 @@ namespace Akka.Tests.Routing
 
             //assert
             barLatch.Ready(TestLatch.DefaultTimeout);
-            Assert.AreEqual(2, barCount.Value);
+            Assert.Equal(2, barCount.Value);
 
             fooLatch.Ready(TestLatch.DefaultTimeout);
             foreach (var actor in new[] {a1, a2, a3, broadcast})

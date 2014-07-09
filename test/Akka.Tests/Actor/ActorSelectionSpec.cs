@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Xunit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,10 +8,10 @@ using Akka.Actor;
 
 namespace Akka.Tests.Actor
 {
-    [TestClass]
+    
     public class ActorSelectionSpec : AkkaSpec
     {
-        [TestMethod()]
+        [Fact]
         public void CanResolveChildPath()
         {
             var selection = sys.ActorSelection("user/test");
@@ -19,7 +19,7 @@ namespace Akka.Tests.Actor
             expectMsg("hello");
         }
 
-        [TestMethod()]
+        [Fact]
         public void CanResolveUpAndDownPath()
         {
             var selection = sys.ActorSelection("user/test/../../user/test");
@@ -27,30 +27,31 @@ namespace Akka.Tests.Actor
             expectMsg("hello");
         }
 
-        [TestMethod()]
+        [Fact]
         public void CanAskActorSelection()
         {
             var selection = sys.ActorSelection("user/echo");
             var task = selection.Ask("hello");
             expectMsg("hello");
             task.Wait();
-            Assert.AreEqual("hello", task.Result);
+            Assert.Equal("hello", task.Result);
         }
 
-        [TestMethod()]
+        [Fact]
         public async Task CanResolveOne()
         {
             var selection = sys.ActorSelection("user/test");
             var one = await selection.ResolveOne(TimeSpan.FromSeconds(1));            
-            Assert.IsNotNull(one);
+            Assert.NotNull(one);
         }
 
-        [TestMethod()]
-        [ExpectedException(typeof(ActorNotFoundException))]
+        [Fact]
         public async Task CanNotResolveOneWhenNoMatch()
         {
             var selection = sys.ActorSelection("user/nonexisting");
-            var one = await selection.ResolveOne(TimeSpan.FromSeconds(1));            
+
+            //xUnit 2 will have Assert.ThrowsAsync<TException>();
+            AkkaSpecExtensions.ThrowsAsync<ActorNotFoundException>(async () => await selection.ResolveOne(TimeSpan.FromSeconds(1)));  
         }
 
         #region Tests for verifying that ActorSelections made within an ActorContext can be resolved
@@ -67,7 +68,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        [TestMethod()]
+        [Fact]
         public void CanResolveAbsoluteActorPathInActorContext()
         {
             var contextActor = sys.ActorOf<ActorContextSelectionActor>();
@@ -75,7 +76,7 @@ namespace Akka.Tests.Actor
             expectMsg("hello");
         }
 
-        [TestMethod()]
+        [Fact]
         public void CanResolveRelativeActorPathInActorContext()
         {
             var contextActor = sys.ActorOf<ActorContextSelectionActor>();

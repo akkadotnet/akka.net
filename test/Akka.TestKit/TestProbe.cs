@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Xunit;
 using Akka.Actor;
 using System;
 using System.Collections.Concurrent;
@@ -41,7 +41,7 @@ namespace Akka.Tests
         public void expectMsg(object expected)
         {
             var res = queue.Take();
-            Assert.AreEqual(expected, res);
+            Assert.Equal(expected, res);
         }
 
         public void Tell(object message, ActorRef sender)
@@ -54,7 +54,7 @@ namespace Akka.Tests
             object res;
             if (queue.TryTake(out res,duration))
             {
-                Assert.Fail("Did not expect a message during the duration " + duration.ToString());
+                Assert.True(false, "Did not expect a message during the duration " + duration.ToString());
             }
         }
     }

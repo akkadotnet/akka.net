@@ -1,13 +1,13 @@
 ﻿using Akka.Actor;
 using Akka.Tests;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.TestKit
 {
-    [TestClass]
+    
     public class ImplicitSenderSpec : AkkaSpec, ImplicitSender
     {
-        [TestMethod]
+        [Fact]
         public void ImplicitSender_should_have_testActor_as_itself()
         {
             //arrange

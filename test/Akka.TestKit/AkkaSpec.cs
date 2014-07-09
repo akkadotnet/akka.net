@@ -1,6 +1,5 @@
 ﻿using System.Collections;
 using System.IO;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -29,23 +28,33 @@ namespace Akka.Tests
 
         public static void ShouldBe<T>(this IEnumerable<T> self, IEnumerable<T> other)
         {
-            if (self.SequenceEqual(other))
-            { }
-            else
-            {
-                Assert.Fail("Expected " + other.Select(i => string.Format("'{0}'", i)).Join(",") + " got " + self.Select(i => string.Format("'{0}'", i)).Join(","));
-
-            }
+            Xunit.Assert.True(self.SequenceEqual(other), "Expected " + other.Select(i => string.Format("'{0}'", i)).Join(",") + " got " + self.Select(i => string.Format("'{0}'", i)).Join(","));
         }
 
         public static void ShouldBe<T>(this T self, T other, string message=null)
         {
-            Assert.AreEqual(other, self,message);
+            Xunit.Assert.Equal(self, other);
         }
 
         public static void ShouldOnlyContainInOrder<T>(this IEnumerable<T> actual, params T[] expected)
         {
             ShouldBe(actual,(IEnumerable<T>) expected);
+        }
+
+        public static async Task ThrowsAsync<TException>(Func<Task> func)
+        {
+            var expected = typeof(TException);
+            Type actual = null;
+            try
+            {
+                await func();
+            }
+            catch (Exception e)
+            {
+                actual = e.GetType();
+            }
+
+            Xunit.Assert.Equal(expected, actual);
         }
     }
 
@@ -89,15 +98,10 @@ namespace Akka.Tests
     }
 
 
-    public class AkkaSpec
+    public class AkkaSpec : IDisposable
     {
 
-        protected virtual string GetConfig()
-        {
-            return "";
-        }
-        [TestInitialize]
-        public virtual void Setup()
+        public AkkaSpec()
         {
             var config = ConfigurationFactory.ParseString(GetConfig());
             queue = new BlockingCollection<object>();
@@ -107,8 +111,12 @@ namespace Akka.Tests
             echoActor = sys.ActorOf(Props.Create(() => new EchoActor(testActor)), "echo");
         }
 
-        [TestCleanup]
-        public virtual void CleanUp()
+        protected virtual string GetConfig()
+        {
+            return "";
+        }
+
+        public virtual void Dispose()
         {
             
         }
@@ -130,7 +138,7 @@ namespace Akka.Tests
         {
             var actual = queue.Take();
 
-            Assert.IsTrue(actual is Terminated);
+            Xunit.Assert.True(actual is Terminated);
 
             return (Terminated)actual;
         }
@@ -140,7 +148,7 @@ namespace Akka.Tests
             var cancellationTokenSource = new CancellationTokenSource((int) timeout.TotalMilliseconds);
             var actual = queue.Take(cancellationTokenSource.Token);
 
-            Assert.IsTrue(actual is Terminated);
+            Xunit.Assert.True(actual is Terminated);
 
             return (Terminated)actual;
         }
@@ -150,21 +158,16 @@ namespace Akka.Tests
             var actual = queue.Take();
 
             global::System.Diagnostics.Debug.WriteLine("actual: " + actual);
-            Assert.AreEqual(expected, actual);
+            Xunit.Assert.Equal(expected, actual);
             return actual;
         }
 
         protected object expectMsg(object expected, TimeSpan timeout)
         {
             object t;
-            if (queue.TryTake(out t, timeout))
-            {
-                Assert.AreEqual(expected, t);
-            }
-            else
-            {
-                Assert.Fail("exected message {0} but timed out after {1}", expected, timeout);
-            }
+            bool success = queue.TryTake(out t, timeout);
+            Xunit.Assert.True(success, string.Format("exected message {0} but timed out after {1}", expected, timeout));
+            Xunit.Assert.Equal(expected, t);
 
             return t;
         }
@@ -173,7 +176,7 @@ namespace Akka.Tests
         {
             var actual = queue.Take();
 
-            Assert.IsTrue(comparer(expected, actual));
+            Xunit.Assert.True(comparer(expected, actual));
             return actual;
 
         }
@@ -181,14 +184,10 @@ namespace Akka.Tests
         protected object expectMsg(object expected, Func<object, object, bool> comparer, TimeSpan timeout)
         {
             object t;
-            if (queue.TryTake(out t, timeout))
-            {
-                Assert.IsTrue(comparer(expected, t));
-            }
-            else
-            {
-                Assert.Fail("exected message {0} but timed out after {1}", expected, timeout);
-            }
+            bool success = queue.TryTake(out t, timeout);
+            
+            Xunit.Assert.True(success, string.Format("exected message {0} but timed out after {1}", expected, timeout));
+            Xunit.Assert.True(comparer(expected, t));
 
             return t;
         }
@@ -204,21 +203,17 @@ namespace Akka.Tests
             var actual = queue.Take();
 
             global::System.Diagnostics.Debug.WriteLine("actual: " + actual);
-            Assert.IsTrue(actual is TMessage, "expected message of type {0} but received {1} instead", typeof(TMessage), actual.GetType());
+            Xunit.Assert.True(actual is TMessage, string.Format("expected message of type {0} but received {1} instead", typeof(TMessage), actual.GetType()));
             return (TMessage)actual;
         }
 
         protected TMessage expectMsgType<TMessage>(TimeSpan timeout)
         {
             object actual;
-            if (queue.TryTake(out actual, timeout))
-            {
-                Assert.IsTrue(actual is TMessage, "expected message of type {0} but received {1} instead", typeof(TMessage), actual.GetType());
-            }
-            else
-            {
-                Assert.Fail("expected message of type {0} but timed out after {1}", typeof(TMessage), timeout);
-            }
+            bool success = queue.TryTake(out actual, timeout);
+            
+            Xunit.Assert.True(success, string.Format("expected message of type {0} but timed out after {1}", typeof(TMessage), timeout));
+            Xunit.Assert.True(actual is TMessage, string.Format("expected message of type {0} but received {1} instead", typeof(TMessage), actual.GetType()));
 
             return default(TMessage);
         }
@@ -229,40 +224,32 @@ namespace Akka.Tests
         /// </summary>
         protected void ShouldBe(double actual, double expected, double epsilon = 0.001d)
         {
-            Assert.IsTrue(Math.Abs(actual - expected) <= epsilon, "Expected {0} but received {1}", expected, actual);
+            Xunit.Assert.True(Math.Abs(actual - expected) <= epsilon, string.Format("Expected {0} but received {1}", expected, actual));
         }
 
         protected T expectMsgPF<T>(TimeSpan duration, string hint, Func<object, T> pf)
         {
             object t;
-            if (queue.TryTake(out t, duration))
-            {
-                Assert.IsNotNull(t, "expected {0} but got null message", hint);
-                Assert.IsTrue(pf.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
-                return pf.Invoke(t);
-            }
-            else
-            {
-                Assert.Fail("timeout {0} during expectMsg: {1}", duration, hint);
-            }
+            bool success = queue.TryTake(out t, duration);
 
-            return default(T);
+            Xunit.Assert.True(success, string.Format("timeout {0} during expectMsg: {1}", duration, hint));
+            Xunit.Assert.True(t != null, string.Format("expected {0} but got null message", hint));
+            Xunit.Assert.True(pf.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
+            return pf.Invoke(t);
         }
 
         protected T expectMsgPF<T>(string hint, Func<object, T> pf)
         {
             object t = queue.Take();
-            Assert.IsTrue(pf.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
+            Xunit.Assert.True(pf.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
             return pf.Invoke(t);
         }
 
         protected void expectNoMsg(TimeSpan duration)
         {
             object t;
-            if (queue.TryTake(out t, duration))
-            {
-                Assert.Fail("Expected no messages during the duration, instead we received {0}", t);
-            }
+            bool success = queue.TryTake(out t, duration);
+            Xunit.Assert.False(success, string.Format("Expected no messages during the duration, instead we received {0}", t));
         }
 
         /// <summary>
@@ -277,7 +264,7 @@ namespace Akka.Tests
         {
             var start = DateTime.UtcNow;
             var rem = end == DateTime.MinValue ? TimeSpan.MaxValue : end - start;
-            Assert.IsTrue(rem >= min, "Required min time {0} not possible, only {1} left", min, rem);
+            Xunit.Assert.True(rem >= min, string.Format("Required min time {0} not possible, only {1} left", min, rem));
 
             lastWasNoMsg = false;
 
@@ -296,10 +283,10 @@ namespace Akka.Tests
             }
 
             var diff = DateTime.UtcNow - start;
-            Assert.IsTrue(min <= diff, "block took {0}, should have at least been {1}", diff, min);
+            Xunit.Assert.True(min <= diff, string.Format("block took {0}, should have at least been {1}", diff, min));
             if (!lastWasNoMsg)
             {
-                Assert.IsTrue(diff <= max_diff, "block took {0}, exceeding {1}", diff, max_diff);
+                Xunit.Assert.True(diff <= max_diff, string.Format("block took {0}, exceeding {1}", diff, max_diff));
             }
 
             return ret;
@@ -327,7 +314,7 @@ namespace Akka.Tests
                     if (sleep <= TimeSpan.Zero)
                     {
                         if (noThrow) return false;
-                        else Assert.Fail("timeout {0} expired", max);
+                        else Xunit.Assert.True(false, string.Format("timeout {0} expired", max));
                     }
                     else
                     {
@@ -479,7 +466,7 @@ namespace Akka.Tests
                     return;
                 }
             }
-            Assert.Fail("Expected exception of type " + typeof(T).Name);
+            Xunit.Assert.True(false, "Expected exception of type " + typeof(T).Name);
         }
 
         protected void EventFilter<T>(string message, int occurances, Action intercept) where T : Exception
@@ -491,8 +478,8 @@ namespace Akka.Tests
                 var res = queue.Take();
                 var error = (Error)res;
 
-                Assert.AreEqual(typeof(T), error.Cause.GetType());
-                Assert.AreEqual(message, error.Message);
+                Xunit.Assert.Equal(typeof(T), error.Cause.GetType());
+                Xunit.Assert.Equal(message, error.Message);
             }
         }
 

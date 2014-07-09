@@ -1,11 +1,11 @@
 ﻿using Akka.Actor;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using System;
 using System.Collections.Generic;
 
 namespace Akka.Tests.Actor
 {
-    [TestClass]
+    
     public class ActorSystemSpec : AkkaSpec
     {
         private string config = @"akka.extensions = [""Akka.Tests.Actor.TestExtension,Akka.Tests""]";
@@ -14,7 +14,7 @@ namespace Akka.Tests.Actor
             return config;
         }
 
-        [TestMethod]
+        [Fact]
         public void AnActorSystemMustRejectInvalidNames()
         {
             (new List<string> { 
@@ -28,7 +28,7 @@ namespace Akka.Tests.Actor
                   "hallo/welt"}).ForEach(n => intercept<ArgumentException>(() => ActorSystem.Create(n)));
         }
 
-        [TestMethod]
+        [Fact]
         public void AnActorSystemMustAllowValidNames()
         {
             ActorSystem
@@ -40,21 +40,21 @@ namespace Akka.Tests.Actor
 
         
 
-        [TestMethod]
+        [Fact]
         public void AnActorSystem_Must_Support_Extensions()
         {
-            Assert.IsTrue(sys.HasExtension<TestExtensionImpl>());
+            Assert.True(sys.HasExtension<TestExtensionImpl>());
             var testExtension = sys.WithExtension<TestExtensionImpl>();
-            Assert.AreEqual(sys, testExtension.System);
+            Assert.Equal(sys, testExtension.System);
         }
 
-        [TestMethod]
+        [Fact]
         public void AnActorSystem_Must_Support_Dynamically_Regsitered_Extensions()
         {
-            Assert.IsFalse(sys.HasExtension<OtherTestExtensionImpl>());
+            Assert.False(sys.HasExtension<OtherTestExtensionImpl>());
             var otherTestExtension = sys.WithExtension<OtherTestExtensionImpl>(typeof(OtherTestExtension));
-            Assert.IsTrue(sys.HasExtension<OtherTestExtensionImpl>());
-            Assert.AreEqual(sys, otherTestExtension.System);
+            Assert.True(sys.HasExtension<OtherTestExtensionImpl>());
+            Assert.Equal(sys, otherTestExtension.System);
         }
 
         #endregion

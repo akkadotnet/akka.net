@@ -6,11 +6,11 @@ using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
 using Akka.Tests;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.Tests.Routing
 {
-    [TestClass]
+    
     public class RoutingSpec : AkkaSpec
     {
         protected override string GetConfig()
@@ -59,7 +59,7 @@ namespace Akka.Tests.Routing
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void Router_in_general_must_evict_terminated_routees()
         {
             var router = sys.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>()),"router");
@@ -100,7 +100,7 @@ namespace Akka.Tests.Routing
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void Router_in_general_must_not_terminate_when_resizer_is_used()
         {
             var latch = new TestLatch(sys,1);
@@ -158,7 +158,7 @@ namespace Akka.Tests.Routing
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void Router_in_general_must_be_able_to_send_their_routees()
         {
             var router = sys.ActorOf(new BroadcastPool(5).Props(Props.Create<Echo>()));
@@ -171,7 +171,7 @@ namespace Akka.Tests.Routing
             expectNoMsg(TimeSpan.FromSeconds(1));
         }
 
-        [TestMethod]
+        [Fact]
         public void Router_in_general_must_use_configured_nr_of_instances_when_FromConfig()
         {
             var router = sys.ActorOf(Props.Create<TestActor>().WithRouter(new FromConfig()), "router1");
@@ -192,7 +192,7 @@ namespace Akka.Tests.Routing
     }
       */
 
-        [TestMethod]
+        [Fact]
         public void Router_in_general_must_use_configured_nr_of_instances_when_router_is_specified()
         {
             var router = sys.ActorOf(Props.Create<TestActor>().WithRouter(new RoundRobinPool(3)), "router1");
@@ -222,7 +222,7 @@ namespace Akka.Tests.Routing
  */
 
 
-        [TestMethod]
+        [Fact]
         public void Router_in_general_mulst_use_specified_resizer_when_resizer_not_configured()
         {
             var latch = new TestLatch(sys,1);
@@ -238,7 +238,7 @@ namespace Akka.Tests.Routing
 
         }
 
-        [TestMethod]
+        [Fact]
         public void Scatter_gather_router_must_be_started_when_constructed()
         {
              /*val routedActor = system.actorOf(Props[TestActor].withRouter(
@@ -277,7 +277,7 @@ namespace Akka.Tests.Routing
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void Scatter_gather_router_must_deliver_a_broadcast_message_using_tell()
         {
             var doneLatch = new TestLatch(sys,2);

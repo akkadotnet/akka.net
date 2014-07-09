@@ -1,14 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using Akka.Util;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.Tests.Util
 {
-    [TestClass]
+    
     public class TypeExtensionsTests
     {
-        [TestMethod]
+        [Fact]
         public void TestGenericImplements()
         {
             typeof(object[]).Implements<IEnumerable>().ShouldBe(true);
@@ -17,7 +17,7 @@ namespace Akka.Tests.Util
             typeof(List<string>).Implements<IEnumerable<int>>().ShouldBe(false);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestNongenericImplements()
         {
             typeof(object[]).Implements(typeof(IEnumerable)).ShouldBe(true);
