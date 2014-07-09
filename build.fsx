@@ -1,4 +1,4 @@
-﻿#I @"packages\fake\tools\"
+﻿#I @"src\packages\fake\tools\"
 #r "FakeLib.dll"
 #r "System.Xml.Linq"
 
@@ -15,8 +15,8 @@ cd __SOURCE_DIRECTORY__
 
 
 let product = "Akka.net"
-let authors = [ "Roger Alsing"; "Aaron Stannard"; "Jérémie Chassaing"; "Stefan Alfbo" ]
-let copyright = "Copyright © Roger Asling 2013-2014"
+let authors = [ "Roger Alsing"; "Aaron Stannard"; "Jérémie Chassaing"; "Stefan Alfbo"; "Håkan Canberger" ]
+let copyright = "Copyright © Roger Alsing 2013-2014"
 let company = "Akka.net"
 let description = "Akka .NET is a port of the popular Java/Scala framework Akka to .NET."
 let tags = ["akka";"actors";"actor";"model";"Akka";"concurrency"]
@@ -82,7 +82,7 @@ Target "AssemblyInfo" <| fun _ ->
 
 Target "Build" <| fun _ ->
 
-    !!"Akka.sln"
+    !!"src/Akka.sln"
     |> MSBuildRelease "" "Rebuild"
     |> ignore
 
@@ -97,11 +97,11 @@ Target "CopyOutput" <| fun _ ->
         let src = "src" @@ project @@ @"bin\release\"
         let dst = binDir @@ project
         CopyDir dst src allFiles
-    [ "Akka"
-      "Akka.Remote"
-      "Akka.FSharp"
-      "Akka.slf4net"
-      "Akka.NLog" ]
+    [ "core/Akka"
+      "core/Akka.Remote"
+      "core/Akka.FSharp"
+      "contrib/loggers/Akka.slf4net"
+      "contrib/loggers/Akka.NLog" ]
     |> List.iter copyOutput
 
 Target "BuildRelease" DoNothing
@@ -122,7 +122,7 @@ Target "CleanTests" <| fun _ ->
 
 open MSTest
 Target "RunTests" <| fun _ ->
-    let testAssemblies = !! "test/**/bin/release/*.Tests.dll"
+    let testAssemblies = !! "src/**/bin/release/*.Tests.dll"
 
     mkdir testOutput
 
