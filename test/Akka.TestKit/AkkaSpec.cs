@@ -166,7 +166,7 @@ namespace Akka.Tests
         {
             object t;
             bool success = queue.TryTake(out t, timeout);
-            Xunit.Assert.True(success, string.format("exected message {0} but timed out after {1}", expected, timeout));
+            Xunit.Assert.True(success, string.Format("exected message {0} but timed out after {1}", expected, timeout));
             Xunit.Assert.Equal(expected, t);
 
             return t;
