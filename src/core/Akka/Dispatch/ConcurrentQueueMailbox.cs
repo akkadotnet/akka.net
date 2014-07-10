@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 
 namespace Akka.Dispatch
 {
-
     /// <summary>
     ///     Class ConcurrentQueueMailbox.
     /// </summary>
@@ -21,6 +20,7 @@ namespace Akka.Dispatch
         private readonly ConcurrentQueue<Envelope> _userMessages = new ConcurrentQueue<Envelope>();
         private Stopwatch _deadLineTimer;
         private volatile bool _isClosed;
+
         private void Run()
         {
             if (_isClosed)
@@ -50,7 +50,7 @@ namespace Akka.Dispatch
                 //start with system messages, they have the highest priority
                 while (_systemMessages.TryDequeue(out envelope))
                 {
-                    if (Mailbox.Debug) Console.WriteLine(ActorCell.Self + " processing system message " + envelope); // TODO: Add + " with " + ActorCell.GetChildren());
+                    Mailbox.DebugPrint(ActorCell.Self + " processing system message " + envelope); // TODO: Add + " with " + ActorCell.GetChildren());
                     ActorCell.SystemInvoke(envelope);
                 }
 
@@ -60,7 +60,7 @@ namespace Akka.Dispatch
                 //try dequeue a user message
                 while (!_isSuspended && _userMessages.TryDequeue(out envelope))
                 {
-                    if (Mailbox.Debug) Console.WriteLine(ActorCell.Self + " processing message " + envelope);
+                    Mailbox.DebugPrint(ActorCell.Self + " processing message " + envelope);
 
                     //run the receive handler
                     ActorCell.Invoke(envelope);
@@ -69,7 +69,7 @@ namespace Akka.Dispatch
                     if (_systemMessages.TryDequeue(out envelope))
                     {
                         //handle system message
-                        if (Mailbox.Debug) Console.WriteLine(ActorCell.Self + " processing system message " + envelope); // TODO: Add + " with " + ActorCell.GetChildren());
+                        Mailbox.DebugPrint(ActorCell.Self + " processing system message " + envelope); // TODO: Add + " with " + ActorCell.GetChildren());
                         ActorCell.SystemInvoke(envelope);
                         break;
                     }
@@ -134,12 +134,12 @@ namespace Akka.Dispatch
             hasUnscheduledMessages = true;
             if (envelope.Message is SystemMessage)
             {
-                if (Mailbox.Debug) Console.WriteLine(ActorCell.Self + " enqueued system message " + envelope);
+                Mailbox.DebugPrint(ActorCell.Self + " enqueued system message " + envelope);
                 _systemMessages.Enqueue(envelope);
             }
             else
             {
-                if (Mailbox.Debug) Console.WriteLine(ActorCell.Self + " enqueued message " + envelope);
+                Mailbox.DebugPrint(ActorCell.Self + " enqueued message " + envelope);
                 _userMessages.Enqueue(envelope);
             }
 
@@ -167,5 +167,6 @@ namespace Akka.Dispatch
         {
             return _userMessages.Count;
         }
+
     }   
 }

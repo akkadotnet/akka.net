@@ -14,9 +14,16 @@ namespace Akka.Dispatch
     /// </summary>
     public abstract class Mailbox : IDisposable
     {
-        //TODO: Maybe the value of Debug should be controlled by a conditional compilation symbol (like DEBUG)
-        public const bool Debug = false;
-        
+        /// <summary>
+        /// Prints a message tosStandard out if the Compile symbol "MAILBOXDEBUG" has been set.
+        /// If the symbol is not set all invocations to this method will be removed by the compiler.
+        /// </summary>
+        [Conditional("MAILBOXDEBUG")]
+        public static void DebugPrint(string message, params object[] args)
+        {
+            Console.WriteLine(message, args);
+        }
+
         private volatile ActorCell _actorCell;
         protected MessageDispatcher dispatcher;
         protected ActorCell ActorCell { get { return _actorCell; } }
