@@ -5,7 +5,7 @@ Licenses
 
 .. highlight:: text
 
-Akka License
+Akka.NET License
 ------------
 
 ::
@@ -26,15 +26,5 @@ Akka License
   License for the specific language governing permissions and limitations under
   the License.
 
-Akka Committer License Agreement
+Akka.NET Committer License Agreement
 --------------------------------
-
-All committers have signed this `CLA <http://www.typesafe.com/contribute/current-cla>`_. 
-It can be `signed online <http://www.typesafe.com/contribute/cla>`_.
-
-Licenses for Dependency Libraries
----------------------------------
-
-Each dependency and its license can be seen in the project build file (the comment on the side of each dependency):
-`AkkaBuild.scala <@github@/project/AkkaBuild.scala#L1054>`_ 
-
