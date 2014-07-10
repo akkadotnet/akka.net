@@ -191,7 +191,7 @@ task :akka_symbol_src_nuget_output => [:create_output_folders] do |out|
     FileUtils.cp_r File.join(src, "Routing"), dest
     FileUtils.cp_r File.join(src, "Properties"), dest
     FileUtils.cp_r File.join(src, "Serialization"), dest
-    FileUtils.cp_r File.join(src, "Tools"), dest
+    FileUtils.cp_r File.join(src, "Util"), dest
 end
 
 task :akka_nuget_output => [:akka_main_nuget_output, :akka_symbol_nuget_output, :akka_symbol_src_nuget_output]
