@@ -1,4 +1,5 @@
-﻿#I @"src\packages\fake\tools\"
+﻿#load "src/.build/boot.fsx"
+#I @"src\packages\fake\tools\"
 #r "FakeLib.dll"
 #r "System.Xml.Linq"
 
@@ -120,16 +121,17 @@ Target "CleanTests" <| fun _ ->
 //--------------------------------------------------------------------------------
 // Run tests
 
-open MSTest
+open XUnitHelper
 Target "RunTests" <| fun _ ->
-    let testAssemblies = !! "src/**/bin/release/*.Tests.dll"
+    let testAssemblies = !! "src/**/bin/release/*.Tests.dll" -- "src/**/bin/release/Akka.FSharp.Tests.dll"
 
     mkdir testOutput
 
-    MSTest
-        (fun p -> { p with ResultsDir = testOutput })
+    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
+    printfn "Using XUnit runner: %s" xunitToolPath
+    xUnit
+        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
         testAssemblies
-
 
 
 //--------------------------------------------------------------------------------

@@ -10,6 +10,7 @@ if not exist src\packages\SourceLink.Fake\tools\SourceLink.fsx (
 cls
 
 set encoding=utf-8
+src\packages\FAKE\tools\FAKE.exe boot conf
 src\packages\FAKE\tools\FAKE.exe build.fsx %*
 
 
