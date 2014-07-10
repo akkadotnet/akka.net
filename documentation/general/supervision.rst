@@ -31,7 +31,7 @@ subordinate to another supervisor higher up) and has implications on the first
 three: resuming an actor resumes all its subordinates, restarting an actor
 entails restarting all its subordinates (but see below for more details),
 similarly terminating an actor will also terminate all its subordinates. It
-should be noted that the default behavior of the :meth:`preRestart` hook of the
+should be noted that the default behavior of the :meth:`PreRestart` hook of the
 :class:`Actor` class is to terminate all its children before restarting, but
 this hook can be overridden; the recursive restart applies to all children left
 after this hook has been executed.
@@ -84,7 +84,7 @@ see :ref:`toplevel-paths`.
 
 The actor which is probably most interacted with is the parent of all
 user-created actors, the guardian named ``"/user"``. Actors created using
-``system.actorOf()`` are children of this actor. This means that when this
+``system.ActorOf()`` are children of this actor. This means that when this
 guardian terminates, all normal actors in the system will be shutdown, too. It
 also means that this guardian’s supervisor strategy determines how the
 top-level normal actors are supervised. Since Akka 2.1 it is possible to
@@ -119,7 +119,7 @@ escalated … but to whom? Since every real actor has a supervisor, the
 supervisor of the root guardian cannot be a real actor. And because this means
 that it is “outside of the bubble”, it is called the “bubble-walker”. This is a
 synthetic :class:`ActorRef` which in effect stops its child upon the first sign
-of trouble and sets the actor system’s ``isTerminated`` status to ``true`` as
+of trouble and sets the actor system’s ``IsTerminated`` status to ``true`` as
 soon as the root guardian is fully terminated (all children recursively
 stopped).
 
@@ -183,8 +183,8 @@ Lifecycle monitoring is implemented using a :class:`Terminated` message to be
 received by the monitoring actor, where the default behavior is to throw a
 special :class:`DeathPactException` if not otherwise handled. In order to start
 listening for :class:`Terminated` messages, invoke
-``ActorContext.watch(targetActorRef)``.  To stop listening, invoke
-``ActorContext.unwatch(targetActorRef)``.  One important property is that the
+``ActorContext.Watch(targetActorRef)``.  To stop listening, invoke
+``ActorContext.Unwatch(targetActorRef)``.  One important property is that the
 message will be delivered irrespective of the order in which the monitoring
 request and target’s termination occur, i.e. you still get the message even if
 at the time of registration the target is already dead.
@@ -196,7 +196,7 @@ them or schedule itself to retry this at a later time.
 
 Another common use case is that an actor needs to fail in the absence of an
 external resource, which may also be one of its own children. If a third party
-terminates a child by way of the ``system.stop(child)`` method or sending a
+terminates a child by way of the ``system.Stop(child)`` method or sending a
 :class:`PoisonPill`, the supervisor might well be affected.
 
 One-For-One Strategy vs. All-For-One Strategy

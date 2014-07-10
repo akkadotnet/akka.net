@@ -6,6 +6,3 @@ Additional Information
 
    faq
    books
-   language-bindings
-   osgi
-   http
