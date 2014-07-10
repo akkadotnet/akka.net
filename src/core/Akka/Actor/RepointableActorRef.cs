@@ -38,14 +38,18 @@ namespace Akka.Actor
 
         public void SwapUnderlying(Cell cell)
         {
-            // ReSharper disable once CSharpWarnings::CS0420    Ok to ignore "a reference to a volatile field will not be treated as volatile" for interlocked calls http://msdn.microsoft.com/en-us/library/4bw5ewxy(VS.80).aspx
+            #pragma warning disable 0420
+            //Ok to ignore CS0420 "a reference to a volatile field will not be treated as volatile" for interlocked calls http://msdn.microsoft.com/en-us/library/4bw5ewxy(VS.80).aspx
             Interlocked.Exchange(ref _underlying_DoNotCallMeDirectly, cell);
+            #pragma warning restore 0420
         }
 
         private void SwapLookup(Cell cell)
         {
-            // ReSharper disable once CSharpWarnings::CS0420    Ok to ignore "a reference to a volatile field will not be treated as volatile" for interlocked calls http://msdn.microsoft.com/en-us/library/4bw5ewxy(VS.80).aspx
+            #pragma warning disable 0420
+            //Ok to ignore CS0420 "a reference to a volatile field will not be treated as volatile" for interlocked calls http://msdn.microsoft.com/en-us/library/4bw5ewxy(VS.80).aspx
             Interlocked.Exchange(ref _lookup_DoNotCallMeDirectly, cell);
+            #pragma warning restore 0420
         }
 
         ///<summary>
