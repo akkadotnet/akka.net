@@ -2,12 +2,12 @@
 
 Akka.NET is a port of the popular Java/Scala framework Akka to .NET.
 
-Early beta, do not use in production!
-
 This is a community driven port and is not affiliated with Typesafe who makes the original Java/Scala version.
 The project was previously known as "Pigeon" before we got OK from Typesafe to use the name Akka.NET.
 
-* Subscribe to the Akka.NET dev feed: https://twitter.com/AkkaDotNet
+* Subscribe to the Akka.NET dev feed: https://twitter.com/AkkaDotNet  (@AkkaDotNet)
+* Support forum: https://groups.google.com/forum/#!forum/akkadotnet-user-list
+* Mail: akkadotnet@gmail.com
 
 ###Features
 * [Actors](https://github.com/akkadotnet/akka.net/wiki/Getting started)
@@ -26,6 +26,7 @@ The project was previously known as "Pigeon" before we got OK from Typesafe to u
 
 #####Not yet implemented:
 * Akka Cluster support
+* Akka Persistence
 
 #####Install Akka.NET via NuGet
 
@@ -48,8 +49,3 @@ PM> Install-Package Akka.FSharp
 If you are interested in helping porting Akka to .NET please take a look at [Contributing to Akka.NET](https://github.com/akkadotnet/akka.net/wiki/Contributing-to-Akka.NET).
 
 Also, please see [Building Akka .NET](https://github.com/akkadotnet/akka.net/wiki/Building-and-Distributing-Pigeon).
-
-#####Contact
-Twitter: http://twitter.com/rogeralsing  (@rogeralsing)
-
-Mail: rogeralsing@gmail.com
