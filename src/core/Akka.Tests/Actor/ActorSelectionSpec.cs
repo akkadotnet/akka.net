@@ -28,6 +28,34 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
+        public void CanResolveWildcardPartialAsterisk()
+        {
+            sys.ActorSelection("user/te*st").Tell("hello1");
+            expectMsg("hello1");
+        }
+
+        [Fact]
+        public void CanResolveWildcardFullAsterisk()
+        {
+            sys.ActorSelection("user/*").Tell("hello3");
+            expectMsg("hello3");
+        }
+
+        [Fact]
+        public void CanResolveWildcardQuestionmark()
+        {
+            sys.ActorSelection("user/t?st").Tell("hello2");
+            expectMsg("hello2");
+        }
+
+        [Fact]
+        public void CanNotResolveWildcardWhenNoMatch()
+        {
+            sys.ActorSelection("user/foo*").Tell("hello3");
+            expectNoMsg(TimeSpan.FromSeconds(1));
+        }
+
+        [Fact]
         public void CanAskActorSelection()
         {
             var selection = sys.ActorSelection("user/echo");
