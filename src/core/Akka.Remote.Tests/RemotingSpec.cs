@@ -141,7 +141,7 @@ namespace Akka.Remote.Tests
 
         #region Tests
 
-#if DEBUG
+#if TMPFIX
         [Fact]
         public void Remoting_must_support_remote_lookups()
         {
@@ -150,7 +150,7 @@ namespace Akka.Remote.Tests
         }
 #endif
 
-#if DEBUG
+#if TMPFIX
         [Fact]
         public async Task Remoting_must_support_Ask()
         {
