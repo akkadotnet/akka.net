@@ -9,6 +9,9 @@ The project was previously known as "Pigeon" before we got OK from Typesafe to u
 * Support forum: https://groups.google.com/forum/#!forum/akkadotnet-user-list
 * Mail: akkadotnet@gmail.com
 
+
+[![Build status](https://ci.appveyor.com/api/projects/status/liybm4ueeu1cq4et)](https://ci.appveyor.com/project/AkkaDotNet/akka-net-335)
+
 ###Features
 * [Actors](https://github.com/akkadotnet/akka.net/wiki/Getting started)
 * [Configuration](https://github.com/akkadotnet/akka.net/wiki/Configuration)
