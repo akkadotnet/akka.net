@@ -157,6 +157,7 @@
     <Compile Include="Event\UnhandledMessage.cs" />
     <Compile Include="Event\Warning.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="Routing\SmallestMailbox.cs" />
     <Compile Include="Serialization\ByteArraySerializer.cs" />
     <Compile Include="Serialization\NewtonSoftJsonSerializer.cs" />
     <Compile Include="Serialization\NullSerializer.cs" />
