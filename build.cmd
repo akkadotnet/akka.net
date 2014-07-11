@@ -1,15 +1,16 @@
 @echo off
 
-.nuget\nuget.exe update -self
+src\.nuget\nuget.exe update -self
 
-.nuget\nuget.exe install FAKE -OutputDirectory packages -ExcludeVersion -Version 2.10.24
+src\.nuget\nuget.exe install FAKE -OutputDirectory src\packages -ExcludeVersion -Version 2.10.24
 
-if not exist packages\SourceLink.Fake\tools\SourceLink.fsx ( 
-  .nuget\nuget.exe install SourceLink.Fake -OutputDirectory packages -ExcludeVersion
+if not exist src\packages\SourceLink.Fake\tools\SourceLink.fsx ( 
+  src\.nuget\nuget.exe install SourceLink.Fake -OutputDirectory src\packages -ExcludeVersion
 )
 cls
 
 set encoding=utf-8
-packages\FAKE\tools\FAKE.exe build.fsx %*
+src\packages\FAKE\tools\FAKE.exe boot conf
+src\packages\FAKE\tools\FAKE.exe build.fsx %*
 
 

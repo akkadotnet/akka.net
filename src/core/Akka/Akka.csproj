@@ -1,0 +1,222 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Akka</RootNamespace>
+    <AssemblyName>Akka</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Akka.XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release Mono|AnyCPU'">
+    <OutputPath>bin\Release Mono\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug Mono|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug Mono\</OutputPath>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Newtonsoft.Json.6.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\SharedAssemblyInfo.cs">
+      <Link>Properties\SharedAssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="Actor\ActorBase.cs" />
+    <Compile Include="Actor\ActorCell.cs" />
+    <Compile Include="Actor\ActorPath.cs" />
+    <Compile Include="Actor\ActorRef.cs" />
+    <Compile Include="Actor\ActorRef.Extensions.cs" />
+    <Compile Include="Actor\ActorRefFactoryShared.cs" />
+    <Compile Include="Actor\ActorRefProvider.cs" />
+    <Compile Include="Actor\ActorSelection.cs" />
+    <Compile Include="Actor\ActorSystem.cs" />
+    <Compile Include="Actor\Address.cs" />
+    <Compile Include="Actor\DeadLetterMailbox.cs" />
+    <Compile Include="Actor\Deploy.cs" />
+    <Compile Include="Actor\Futures.cs" />
+    <Compile Include="Actor\AutoReceivedMessage.cs" />
+    <Compile Include="Actor\BroadcastActorRef.cs" />
+    <Compile Include="Actor\BuiltInActors.cs" />
+    <Compile Include="Actor\Cell.cs" />
+    <Compile Include="Actor\ChildrenContainer.cs" />
+    <Compile Include="Actor\EmptyLocalActorRef.cs" />
+    <Compile Include="Actor\ICanTell.cs" />
+    <Compile Include="Actor\LocalScope.cs" />
+    <Compile Include="Actor\NameAndUid.cs" />
+    <Compile Include="Actor\RemoteScope.cs" />
+    <Compile Include="Actor\RepointableActorRef.cs" />
+    <Compile Include="Actor\RootGuardianActorRef.cs" />
+    <Compile Include="Actor\RootGuardianSupervisor.cs" />
+    <Compile Include="Actor\Deployer.cs" />
+    <Compile Include="Actor\ExtendedActorSystem.cs" />
+    <Compile Include="Actor\FSM.cs" />
+    <Compile Include="Actor\GracefulStopSupport.cs" />
+    <Compile Include="Actor\IUntypedActorContext.cs" />
+    <Compile Include="Actor\NoSerializationVerificationNeeded.cs" />
+    <Compile Include="Actor\PipeToSupport.cs" />
+    <Compile Include="Actor\Receive.cs" />
+    <Compile Include="Actor\Scheduler.cs" />
+    <Compile Include="Actor\Scope.cs" />
+    <Compile Include="Actor\Settings.cs" />
+    <Compile Include="Actor\Stash.cs" />
+    <Compile Include="Configuration\ConfigurationException.cs" />
+    <Compile Include="Configuration\ConfigurationFactory.cs" />
+    <Compile Include="Configuration\Config.cs" />
+    <Compile Include="Configuration\Hocon\HoconArray.cs" />
+    <Compile Include="Configuration\Hocon\HoconLiteral.cs" />
+    <Compile Include="Configuration\Hocon\HoconObject.cs" />
+    <Compile Include="Configuration\Hocon\HoconParser.cs" />
+    <Compile Include="Configuration\Hocon\HoconSubstitution.cs" />
+    <Compile Include="Configuration\Hocon\HoconToken.cs" />
+    <Compile Include="Configuration\Hocon\HoconTokenizer.cs" />
+    <Compile Include="Configuration\Hocon\HoconValue.cs" />
+    <Compile Include="Configuration\Hocon\IHoconElement.cs" />
+    <Compile Include="Dispatch\ConcurrentQueueMailbox.cs" />
+    <Compile Include="Dispatch\Dispatchers.cs" />
+    <Compile Include="Actor\Exceptions.cs" />
+    <Compile Include="Dispatch\FutureActor.cs" />
+    <Compile Include="Actor\IActorContext.cs" />
+    <Compile Include="Actor\IActorRefFactory.cs" />
+    <Compile Include="Dispatch\Mailbox.cs" />
+    <Compile Include="Actor\Props.cs" />
+    <Compile Include="Actor\SupervisorStrategy.cs" />
+    <Compile Include="Actor\UntypedActor.cs" />
+    <Compile Include="Actor\LocalActorRef.cs" />
+    <Compile Include="Actor\Message.cs" />
+    <Compile Include="Actor\UntypedReceive.cs" />
+    <Compile Include="Dispatch\Mailboxes.cs" />
+    <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
+    <Compile Include="Dispatch\ThreadPoolBuilder.cs" />
+    <Compile Include="Event\ActorEventBus.cs" />
+    <Compile Include="Event\AddressTerminatedTopic.cs" />
+    <Compile Include="Event\BusLogging.cs" />
+    <Compile Include="Event\DeadLetter.cs" />
+    <Compile Include="Event\DeadLetterListener.cs" />
+    <Compile Include="Event\Debug.cs" />
+    <Compile Include="Event\DefaultLogger.cs" />
+    <Compile Include="Event\Error.cs" />
+    <Compile Include="Event\EventBus.cs" />
+    <Compile Include="Event\EventStream.cs" />
+    <Compile Include="Event\Info.cs" />
+    <Compile Include="Event\InitializeLogger.cs" />
+    <Compile Include="Event\LogEvent.cs" />
+    <Compile Include="Event\LoggerInitialized.cs" />
+    <Compile Include="Event\Logging.cs" />
+    <Compile Include="Event\LoggingAdapter.cs" />
+    <Compile Include="Event\LoggingBus.cs" />
+    <Compile Include="Event\LogLevel.cs" />
+    <Compile Include="Event\StandardOutLogger.cs" />
+    <Compile Include="Event\Subscription.cs" />
+    <Compile Include="Event\TraceLogger.cs" />
+    <Compile Include="Event\UnhandledMessage.cs" />
+    <Compile Include="Event\Warning.cs" />
+    <Compile Include="Extensions.cs" />
+    <Compile Include="Serialization\ByteArraySerializer.cs" />
+    <Compile Include="Serialization\NewtonSoftJsonSerializer.cs" />
+    <Compile Include="Serialization\NullSerializer.cs" />
+    <Compile Include="Util\AtomicCounter.cs" />
+    <Compile Include="Util\AtomicCounterLong.cs" />
+    <Compile Include="Util\AtomicInteger.cs" />
+    <Compile Include="Util\AtomicLong.cs" />
+    <Compile Include="Pattern\CircuitBreaker.cs" />
+    <Compile Include="Pattern\IllegalStateException.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Actor\TypedActor.cs" />
+    <Compile Include="Routing\Broadcast.cs" />
+    <Compile Include="Routing\ConsistentHash.cs" />
+    <Compile Include="Routing\Listeners.cs" />
+    <Compile Include="Routing\Random.cs" />
+    <Compile Include="Routing\ResizablePoolActor.cs" />
+    <Compile Include="Routing\ResizablePoolCell.cs" />
+    <Compile Include="Routing\Resizer.cs" />
+    <Compile Include="Routing\RoundRobin.cs" />
+    <Compile Include="Routing\RoutedActorCell.cs" />
+    <Compile Include="Routing\RoutedActorRef.cs" />
+    <Compile Include="Routing\Router.cs" />
+    <Compile Include="Routing\RouterActor.cs" />
+    <Compile Include="Routing\RouterConfig.cs" />
+    <Compile Include="Routing\RouterMsg.cs" />
+    <Compile Include="Routing\RouterPoolActor.cs" />
+    <Compile Include="Routing\ScatterGatherFirstCompleted.cs" />
+    <Compile Include="Serialization\Serialization.cs" />
+    <Compile Include="Serialization\Serializer.cs" />
+    <Compile Include="Util\AtomicReference.cs" />
+    <Compile Include="Util\AtomicBoolean.cs" />
+    <Compile Include="Util\ConcurrentSet.cs" />
+    <Compile Include="Util\MurmurHash.cs" />
+    <Compile Include="Util\Reflection\ExpressionExtensions.cs" />
+    <Compile Include="PatternMatch.cs" />
+    <Compile Include="Util\ThreadLocalRandom.cs" />
+    <Compile Include="Util\WildcardTree.cs" />
+    <Compile Include="Util\Base64Encoding.cs" />
+    <Compile Include="Util\StringFormat.cs" />
+    <Compile Include="Util\StringLike.cs" />
+    <Compile Include="Util\Switch.cs" />
+    <Compile Include="Util\TypeExtensions.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Actor\ActorBase.SupervisorStrategy.cs" />
+    <Compile Include="Actor\ActorBase.Lifecycle.cs" />
+    <Compile Include="Actor\ActorCell.DefaultMessages.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Configuration\Pigeon.conf" />
+    <None Include="Akka.nuspec" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
