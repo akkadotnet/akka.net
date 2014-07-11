@@ -44,7 +44,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug Mono|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\Debug Mono\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
@@ -77,6 +77,7 @@
     <Compile Include="Actor\ActorSelection.cs" />
     <Compile Include="Actor\ActorSystem.cs" />
     <Compile Include="Actor\Address.cs" />
+    <Compile Include="Actor\DeadLetterMailbox.cs" />
     <Compile Include="Actor\Deploy.cs" />
     <Compile Include="Actor\Futures.cs" />
     <Compile Include="Actor\AutoReceivedMessage.cs" />
