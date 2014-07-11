@@ -325,6 +325,14 @@ namespace Akka.Actor
         #endregion
     }
 
+    public class TerminatedProps : Props
+    {
+        public override ActorBase NewActor()
+        {
+            throw new InvalidOperationException("This actor has been terminated");
+        }
+    }
+
     /// <summary>
     ///     Props instance that uses dynamic invocation to create new Actor instances,
     ///     rather than a traditional Activator.

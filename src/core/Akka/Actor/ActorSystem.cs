@@ -66,9 +66,10 @@ namespace Akka.Actor
             ConfigureSettings(config);
             ConfigureEventStream();
             ConfigureSerialization();
+            ConfigureProvider();
             ConfigureMailboxes();
             ConfigureDispatchers();
-            ConfigureProvider();
+            InitProvider();
             ConfigureLoggers();
             LoadExtensions();
             Start();
@@ -375,6 +376,10 @@ namespace Akka.Actor
             Debug.Assert(providerType != null, "providerType != null");
             var provider = (ActorRefProvider)Activator.CreateInstance(providerType,Name,Settings,EventStream);
             Provider = provider;
+        }
+
+        private void InitProvider()
+        {
             Provider.Init(this);
         }
 

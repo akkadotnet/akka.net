@@ -83,6 +83,7 @@
     <Compile Include="Actor\AskSpec.cs" />
     <Compile Include="Actor\DeadLettersSpec.cs" />
     <Compile Include="Actor\ActorSystemSpec.cs" />
+    <Compile Include="Actor\DeathWatchSpec.cs" />
     <Compile Include="Actor\DeployerSpec.cs" />
     <Compile Include="Actor\FSMTimingSpec.cs" />
     <Compile Include="Actor\FSMTransitionSpec.cs" />

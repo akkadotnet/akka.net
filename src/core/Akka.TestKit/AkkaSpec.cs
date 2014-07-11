@@ -227,6 +227,18 @@ namespace Akka.Tests
             Xunit.Assert.True(Math.Abs(actual - expected) <= epsilon, string.Format("Expected {0} but received {1}", expected, actual));
         }
 
+        protected TMessage ExpectMsgPF<TMessage>(TimeSpan timeout, Predicate<TMessage> isMessage, string hint = "")
+        {
+            object actual;
+            bool success = queue.TryTake(out actual, timeout);
+
+            Xunit.Assert.True(success, string.Format("expected message of type {0} but timed out after {1}", typeof(TMessage), timeout));
+            Xunit.Assert.True(actual is TMessage, string.Format("expected message of type {0} but received {1} instead", typeof(TMessage), actual.GetType()));
+            var message = (TMessage)actual;
+            Xunit.Assert.True(isMessage(message), string.Format("expected {0} but got {1} instead", hint, message));
+            return message;
+        }
+
         protected T expectMsgPF<T>(TimeSpan duration, string hint, Func<object, T> pf)
         {
             object t;
