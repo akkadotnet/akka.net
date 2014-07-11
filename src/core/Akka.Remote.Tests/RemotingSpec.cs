@@ -148,6 +148,7 @@ namespace Akka.Remote.Tests
             expectMsg(Tuple.Create("pong", testActor), TimeSpan.FromSeconds(1.5));
         }
 
+#if DEBUG
         [Fact]
         public async Task Remoting_must_support_Ask()
         {
@@ -158,6 +159,7 @@ namespace Akka.Remote.Tests
             Assert.Equal("pong", msg.Item1);
             Assert.IsType<FutureActorRef>(msg.Item2);
         }
+#endif
 
         [Fact]
         public void Remoting_must_create_and_supervise_children_on_remote_Node()
