@@ -10,13 +10,13 @@ namespace Akka.Tests.Actor
 
         public DeathWatchSpec()
         {
-            _supervisor = sys.ActorOf(Props.Create(() => new Supervisor(SupervisorStrategy.DefaultStrategy)), "watchers");
+            _supervisor = System.ActorOf(Props.Create<Supervisor>(() => new Supervisor(SupervisorStrategy.DefaultStrategy)), "watchers");
         }
 
         [Fact]
         public void Given_terminated_actor_When_watching_Then_should_receive_Terminated_message()
         {
-            var terminal = sys.ActorOf(Props.Empty, "killed-actor");
+            var terminal=System.ActorOf(Props.Empty,"killed-actor");
             terminal.Tell(new PoisonPill(),testActor);
             StartWatching(terminal);
             ExpectTerminationOf(terminal);

@@ -16,6 +16,8 @@ namespace Akka.Dispatch
         private readonly ActorSystem system;
 
         private readonly DeadLetterMailbox _deadLetterMailbox;
+        public static readonly string DefaultMailboxId = "akka.actor.default-mailbox";
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="Mailboxes" /> class.
         /// </summary>

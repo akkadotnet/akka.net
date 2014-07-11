@@ -54,9 +54,23 @@ namespace Akka.Actor
     }
 
     /// <summary>
+    /// Contains things needed by the framework
+    /// </summary>
+    public interface IInternalActor
+    {
+        /// <summary>Gets the context for this instance.</summary>
+        /// <value>The context.</value>
+        /// <exception cref="System.NotSupportedException">
+        /// There is no active Context, this is most likely due to use of async
+        /// operations from within this actor.
+        /// </exception>
+        IActorContext ActorContext { get; }
+    }
+
+    /// <summary>
     ///     Class ActorBase.
     /// </summary>
-    public abstract partial class ActorBase
+    public abstract partial class ActorBase : IInternalActor
     {
         private ActorRef _clearedSelf;
         private bool _hasBeenCleared;
@@ -93,6 +107,21 @@ namespace Akka.Actor
         /// <value>The context.</value>
         /// <exception cref="System.NotSupportedException">
         ///     There is no active ActorContext, this is most likely due to use of async
+        ///     operations from within this actor.
+        /// </exception>
+        IActorContext IInternalActor.ActorContext
+        {
+            get {
+                return Context;
+            }
+        }
+
+        /// <summary>
+        ///     Gets the context.
+        /// </summary>
+        /// <value>The context.</value>
+        /// <exception cref="System.NotSupportedException">
+        ///     There is no active Context, this is most likely due to use of async
         ///     operations from within this actor.
         /// </exception>
         protected static IActorContext Context

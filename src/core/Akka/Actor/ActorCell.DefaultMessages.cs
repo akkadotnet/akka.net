@@ -106,7 +106,7 @@ namespace Akka.Actor
   }
          */
 
-        private void AutoReceiveMessage(Envelope envelope)
+        protected virtual void AutoReceiveMessage(Envelope envelope)
         {
             var message = envelope.Message;
 
@@ -123,6 +123,26 @@ namespace Akka.Actor
                 .With<PoisonPill>(HandlePoisonPill)
                 .With<ActorSelectionMessage>(ReceiveSelection)
                 .With<Identify>(HandleIdentity);
+        }
+
+        /// <summary>
+        /// This is only intended to be called from TestKit's TestActorRef
+        /// </summary>
+        /// <param name="envelope"></param>
+        public void ReceiveMessageForTest(Envelope envelope)
+        {
+            var message = envelope.Message;
+            CurrentMessage = message;
+            Sender = envelope.Sender;
+            try
+            {
+                ReceiveMessage(message);
+            }
+            finally
+            {
+                CurrentMessage = null;
+                Sender = System.DeadLetters;
+            }
         }
 
         internal void ReceiveMessage(object message)

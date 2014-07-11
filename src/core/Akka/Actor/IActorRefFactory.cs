@@ -26,7 +26,7 @@
         /// <typeparam name="TActor">The type of the t actor.</typeparam>
         /// <param name="name">The name.</param>
         /// <returns>InternalActorRef.</returns>
-        InternalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase;
+        InternalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase, new();
 
 
         /// <summary>
