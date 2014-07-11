@@ -1,6 +1,0 @@
-.. _sponsors:
-
-Sponsors
-========
-
-

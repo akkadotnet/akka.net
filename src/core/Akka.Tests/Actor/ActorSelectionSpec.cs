@@ -79,7 +79,7 @@ namespace Akka.Tests.Actor
             var selection = sys.ActorSelection("user/nonexisting");
 
             //xUnit 2 will have Assert.ThrowsAsync<TException>();
-            AkkaSpecExtensions.ThrowsAsync<ActorNotFoundException>(async () => await selection.ResolveOne(TimeSpan.FromSeconds(1)));  
+            await AkkaSpecExtensions.ThrowsAsync<ActorNotFoundException>(async () => await selection.ResolveOne(TimeSpan.FromSeconds(1)));  
         }
 
         #region Tests for verifying that ActorSelections made within an ActorContext can be resolved

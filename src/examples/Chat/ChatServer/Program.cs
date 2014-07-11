@@ -85,7 +85,7 @@ akka {
         public void Handle(ConnectRequest message)
         {
          //   Console.WriteLine("User {0} has connected", message.Username);
-            clients.Add(this.Sender);
+            clients.TryAdd(this.Sender);
             Sender.Tell(new ConnectResponse
             {
                 Message = "Hello and welcome to Akka .NET chat example",
