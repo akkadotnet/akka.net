@@ -141,12 +141,14 @@ namespace Akka.Remote.Tests
 
         #region Tests
 
+#if DEBUG
         [Fact]
         public void Remoting_must_support_remote_lookups()
         {
             here.Tell("ping", testActor);
             expectMsg(Tuple.Create("pong", testActor), TimeSpan.FromSeconds(1.5));
         }
+#endif
 
 #if DEBUG
         [Fact]
