@@ -43,6 +43,7 @@ namespace Akka.Actor
         public Mailbox Mailbox { get; protected set; }
         public MessageDispatcher Dispatcher { get; private set; }
         public bool IsLocal { get{return true;} }
+        protected ActorBase Actor { get { return _actor; } }
 
         internal static ActorCell Current
         {
@@ -130,7 +131,7 @@ namespace Akka.Actor
             return ActorRefFactoryShared.ActorSelection(path, System);
         }
 
-        public virtual InternalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
+        public virtual InternalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase, new()
         {
             return ActorOf(Props.Create<TActor>(), name);
         }
