@@ -26,8 +26,7 @@ let inline (<!) (actorRef: #ActorRef) (msg: obj) =
 
 let (<?) (tell:ICanTell) (msg: obj) =
     tell.Ask msg
-    |> Async.AwaitIAsyncResult 
-    |> Async.Ignore
+    |> Async.AwaitTask
 
 /// <summary>
 /// Gives access to the next message throu let! binding in
