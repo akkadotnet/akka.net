@@ -14,8 +14,9 @@ The project was previously known as "Pigeon" before we got OK from Typesafe to u
 
 ###Features
 * [Actors](https://github.com/akkadotnet/akka.net/wiki/Getting started)
-* [Actor Lifecycle](https://github.com/akkadotnet/akka.net/blob/master/akka.net.Tests/ActorLifeCycleSpec.cs)
-* [Actor Props](https://github.com/akkadotnet/akka.net/wiki/Props)
+  * [Actor Lifecycle](https://github.com/akkadotnet/akka.net/blob/master/akka.net.Tests/ActorLifeCycleSpec.cs)
+  * [Actor Props](https://github.com/akkadotnet/akka.net/wiki/Props)
+  * [Addressing](https://github.com/akkadotnet/akka.net/wiki/Addressing)
 * [Configuration](https://github.com/akkadotnet/akka.net/wiki/Configuration)
 * [EventBus](https://github.com/akkadotnet/akka.net/wiki/EventBus)
 * [Finite State Machines](https://github.com/akkadotnet/akka.net/wiki/FSM)
