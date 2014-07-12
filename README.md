@@ -3,7 +3,6 @@
 Akka.NET is a port of the popular Java/Scala framework Akka to .NET.
 
 This is a community driven port and is not affiliated with Typesafe who makes the original Java/Scala version.
-The project was previously known as "Pigeon" before we got OK from Typesafe to use the name Akka.NET.
 
 * Subscribe to the Akka.NET dev feed: https://twitter.com/AkkaDotNet  (@AkkaDotNet)
 * Support forum: https://groups.google.com/forum/#!forum/akkadotnet-user-list
@@ -14,8 +13,9 @@ The project was previously known as "Pigeon" before we got OK from Typesafe to u
 
 ###Features
 * [Actors](https://github.com/akkadotnet/akka.net/wiki/Getting started)
-* [Actor Lifecycle](https://github.com/akkadotnet/akka.net/blob/master/akka.net.Tests/ActorLifeCycleSpec.cs)
-* [Actor Props](https://github.com/akkadotnet/akka.net/wiki/Props)
+  * [Actor Lifecycle](https://github.com/akkadotnet/akka.net/blob/master/akka.net.Tests/ActorLifeCycleSpec.cs)
+  * [Actor Props](https://github.com/akkadotnet/akka.net/wiki/Props)
+  * [Addressing](https://github.com/akkadotnet/akka.net/wiki/Addressing)
 * [Configuration](https://github.com/akkadotnet/akka.net/wiki/Configuration)
 * [EventBus](https://github.com/akkadotnet/akka.net/wiki/EventBus)
 * [Finite State Machines](https://github.com/akkadotnet/akka.net/wiki/FSM)
