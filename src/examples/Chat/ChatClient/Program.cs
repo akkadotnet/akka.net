@@ -34,17 +34,7 @@ namespace ChatClient
                 while (true)
                 {
                     var input = Console.ReadLine();
-                    if (input.StartsWith("*"))
-                    {
-                        Stopwatch sw = Stopwatch.StartNew();
-                        for (int i = 0; i < 200; i++)
-                        {
-                            tmp.Tell(new Disconnect());
-                        }
-                        sw.Stop();
-                        Console.WriteLine(sw.Elapsed);
-                    }
-                    else if (input.StartsWith("/"))
+                    if (input.StartsWith("/"))
                     {
                         var parts = input.Split(' ');
                         var cmd = parts[0].ToLowerInvariant();
