@@ -71,7 +71,7 @@ namespace Akka
 
             return self;
         }
-        public static FluentConfig DebugReceive(this FluentConfig self, bool on)
+        private static FluentConfig DebugReceive(this FluentConfig self, bool on)
         {
             if (on)
             {
@@ -79,7 +79,7 @@ namespace Akka
             }
             return self;
         }
-        public static FluentConfig DebugAutoReceive(this FluentConfig self, bool on)
+        private static FluentConfig DebugAutoReceive(this FluentConfig self, bool on)
         {
             if (on)
             {
@@ -87,7 +87,7 @@ namespace Akka
             }
             return self;
         }
-        public static FluentConfig DebugLifecycle(this FluentConfig self, bool on)
+        private static FluentConfig DebugLifecycle(this FluentConfig self, bool on)
         {
             if (on)
             {
@@ -95,7 +95,7 @@ namespace Akka
             }
             return self;
         }
-        public static FluentConfig DebugEventStream(this FluentConfig self, bool on)
+        private static FluentConfig DebugEventStream(this FluentConfig self, bool on)
         {
             if (on)
             {

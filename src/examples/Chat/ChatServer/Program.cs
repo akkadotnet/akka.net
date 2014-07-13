@@ -55,7 +55,7 @@ namespace ChatServer
             var fluentConfig = FluentConfig.Begin()
                 .StdOutLogLevel(LogLevel.DebugLevel)
                 .LogConfigOnStart(true)
-                .LogLevel(LogLevel.ErrorLevel)                
+                .LogLevel(LogLevel.ErrorLevel)   
                 .LogLocal(
                     receive: true,
                     autoReceive: true,
@@ -64,7 +64,7 @@ namespace ChatServer
                     unhandled: true
                 )
                 .LogRemote(
-                    lifecycleEvents: true,
+                    lifecycleEvents: LogLevel.DebugLevel,
                     receivedMessages: true,
                     sentMessages: true
                 )

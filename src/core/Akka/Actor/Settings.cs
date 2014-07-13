@@ -64,7 +64,7 @@ namespace Akka.Actor
             DebugLifecycle = Config.GetBoolean("akka.actor.debug.lifecycle");
             DebugEventStream = Config.GetBoolean("akka.actor.debug.event-stream");
             DebugUnhandledMessage = Config.GetBoolean("akka.actor.debug.unhandled");
-            DebugRouterMisConfiguration = Config.GetBoolean("akka.actor.debug.router-misConfiguration");
+            DebugRouterMisConfiguration = Config.GetBoolean("akka.actor.debug.router-misconfiguration");
             Home = Config.GetString("akka.home") ?? "";
 
             //TODO: dunno.. we dont have FiniteStateMachines, dont know what the rest is

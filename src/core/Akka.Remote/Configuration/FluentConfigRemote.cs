@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Akka.Event;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -25,6 +26,10 @@ remote {
         }
         log-remote-lifecycle-events = INFO
     }*/
+        public static FluentConfig StartRemotingOn(this FluentConfig self, string hostname)
+        {
+            return self.StartRemotingOn(hostname, 0);
+        }
         public static FluentConfig StartRemotingOn(this FluentConfig self, string hostname,int port)
         {
             string remoteConfig = @"
@@ -40,15 +45,13 @@ akka.remote.helios.tcp.public-hostname = {1} #but only accepts connections on lo
 
             return self;
         }
-        public static FluentConfig LogRemoteLifecycleEvents(this FluentConfig self, bool on)
+        private static FluentConfig LogRemoteLifecycleEvents(this FluentConfig self, LogLevel logLevel)
         {
-            if (on)
-            {
-                self.AsInstanceOf<FluentConfigInternals>().AppendLine("akka.remote.log-remote-lifecycle-events = on");
-            }
+            self.AsInstanceOf<FluentConfigInternals>().AppendLine(string.Format("akka.remote.log-remote-lifecycle-events = {0}", logLevel.StringFor()));
+
             return self;
         }
-        public static FluentConfig LogReceivedMessages(this FluentConfig self,bool on)
+        private static FluentConfig LogReceivedMessages(this FluentConfig self, bool on)
         {
             if (on)
             {
@@ -56,7 +59,7 @@ akka.remote.helios.tcp.public-hostname = {1} #but only accepts connections on lo
             }
             return self;
         }
-        public static FluentConfig LogSentMessages(this FluentConfig self, bool on)
+        private static FluentConfig LogSentMessages(this FluentConfig self, bool on)
         {
             if (on)
             {
@@ -64,7 +67,7 @@ akka.remote.helios.tcp.public-hostname = {1} #but only accepts connections on lo
             }
             return self;
         }
-        public static FluentConfig LogRemote(this FluentConfig self,bool lifecycleEvents=false,bool receivedMessages=false,bool sentMessages=false)
+        public static FluentConfig LogRemote(this FluentConfig self,LogLevel lifecycleEvents=LogLevel.DebugLevel,bool receivedMessages=false,bool sentMessages=false)
         {
             return self
                 .LogRemoteLifecycleEvents(lifecycleEvents)
