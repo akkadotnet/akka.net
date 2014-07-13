@@ -25,7 +25,7 @@ remote {
         }
         log-remote-lifecycle-events = INFO
     }*/
-        public static FluentConfig Remoting(this FluentConfig self, string hostname,int port)
+        public static FluentConfig StartRemotingOn(this FluentConfig self, string hostname,int port)
         {
             string remoteConfig = @"
 akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
@@ -63,6 +63,13 @@ akka.remote.helios.tcp.public-hostname = {1} #but only accepts connections on lo
                 self.AsInstanceOf<FluentConfigInternals>().AppendLine("akka.remote.log-sent-messages = on");
             }
             return self;
+        }
+        public static FluentConfig LogRemote(this FluentConfig self,bool lifecycleEvents=false,bool receivedMessages=false,bool sentMessages=false)
+        {
+            return self
+                .LogRemoteLifecycleEvents(lifecycleEvents)
+                .LogReceivedMessages(receivedMessages)
+                .LogSentMessages(sentMessages);
         }
 
     }

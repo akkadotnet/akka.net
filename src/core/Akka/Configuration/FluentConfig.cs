@@ -111,5 +111,14 @@ namespace Akka
             }
             return self;
         }
+
+        public static FluentConfig LogLocal(this FluentConfig self, bool receive = false, bool autoReceive = false, bool lifecycle = false, bool eventStream = false, bool unhandled = false)
+        {
+            return self.DebugReceive(receive)
+                .DebugAutoReceive(autoReceive)
+                .DebugLifecycle(lifecycle)
+                .DebugEventStream(eventStream)
+                .DebugUnhandled(unhandled);
+        }
     }
 }
