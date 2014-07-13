@@ -108,6 +108,7 @@
     <Compile Include="Configuration\ConfigurationException.cs" />
     <Compile Include="Configuration\ConfigurationFactory.cs" />
     <Compile Include="Configuration\Config.cs" />
+    <Compile Include="Configuration\FluentConfig.cs" />
     <Compile Include="Configuration\Hocon\HoconArray.cs" />
     <Compile Include="Configuration\Hocon\HoconLiteral.cs" />
     <Compile Include="Configuration\Hocon\HoconObject.cs" />
