@@ -71,44 +71,6 @@ namespace Akka.Routing
         }
     }
 
-    /// <summary>
-    /// A router group using smallest-mailbox-pool to select a routee. It uses optimizing algorithm,
-    /// choosing best known routee with a least number of messages in it's mailbox, to evenly distribute
-    /// a message load.
-    /// </summary>
-    public class SmallestMailboxGroup : Group
-    {
-        [Obsolete("For serialization only", true)]
-        public SmallestMailboxGroup()
-        {
-        }
-
-        public SmallestMailboxGroup(Config config)
-            : base(config.GetStringList("routees.paths"))
-        {
-        }
-
-        public SmallestMailboxGroup(params string[] paths)
-            : base(paths)
-        {
-        }
-
-        public SmallestMailboxGroup(IEnumerable<string> paths) : base(paths)
-        {
-        }
-
-        public SmallestMailboxGroup(IEnumerable<ActorRef> routees)
-            : base(routees)
-        {
-        }
-
-        public override Router CreateRouter(ActorSystem system)
-        {
-            return new Router(new SmallestMailboxRoutingLogic());
-        }
-
-    }
-
     public class SmallestMailboxPool : Pool
     {
         /// <summary>
