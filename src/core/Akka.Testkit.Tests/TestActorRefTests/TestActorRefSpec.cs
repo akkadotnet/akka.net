@@ -88,7 +88,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
             //TODO: Should have this surrounding all code EventFilter[ActorKilledException]() intercept {
             var a = TestActorRef.Create<WorkerActor>(System, "will-be-killed");
             var forwarder = System.ActorOf(Props.Create(() => new WatchAndForwardActor(a, testActor)), "forwarder");
-            a.Tell(new PoisonPill());
+            a.Tell(PoisonPill.Instance);
             ExpectMsgPF<WrappedTerminated>(TimeSpan.FromSeconds(5), w => {Console.WriteLine("Received:"+w.Terminated.ActorRef); return w.Terminated.ActorRef == a; },
                 string.Format("that the terminated actor was the one killed, i.e. {0}", a.Path));
             a.IsTerminated.ShouldBe(true);

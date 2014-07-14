@@ -110,22 +110,22 @@ namespace Akka.Tests
             var restarter = supervisor.Ask<ActorRef>(restarterProps).Result;
 
             expectMsg(Tuple.Create( "preStart", id, 0));
-            restarter.Tell(new Kill());
+            restarter.Tell(Kill.Instance);
             expectMsg(Tuple.Create("preRestart", id, 0));
             expectMsg(Tuple.Create("postRestart", id, 1));
             restarter.Tell("status");
             expectMsg(Tuple.Create("OK", id, 1));
-            restarter.Tell(new Kill());
+            restarter.Tell(Kill.Instance);
             expectMsg(Tuple.Create("preRestart", id, 1));
             expectMsg(Tuple.Create("postRestart", id, 2));
             restarter.Tell("status");
             expectMsg(Tuple.Create("OK", id, 2));
-            restarter.Tell(new Kill());
+            restarter.Tell(Kill.Instance);
             expectMsg(Tuple.Create("preRestart", id, 2));
             expectMsg(Tuple.Create("postRestart", id, 3));
             restarter.Tell("status");
             expectMsg(Tuple.Create("OK", id, 3));
-            restarter.Tell(new Kill());
+            restarter.Tell(Kill.Instance);
             expectMsg(Tuple.Create("postStop", id, 3));
             expectNoMsg(TimeSpan.FromSeconds(1));
             supervisor.Stop();
@@ -141,22 +141,22 @@ namespace Akka.Tests
             var restarter = supervisor.Ask<ActorRef>(restarterProps).Result;
 
             expectMsg(Tuple.Create("preStart", id, 0));
-            restarter.Tell(new Kill());
+            restarter.Tell(Kill.Instance);
             expectMsg(Tuple.Create("postStop", id, 0));
             expectMsg(Tuple.Create("preStart", id, 1));
             restarter.Tell("status");
             expectMsg(Tuple.Create("OK", id, 1));
-            restarter.Tell(new Kill());
+            restarter.Tell(Kill.Instance);
             expectMsg(Tuple.Create("postStop", id, 1));
             expectMsg(Tuple.Create("preStart", id, 2));
             restarter.Tell("status");
             expectMsg(Tuple.Create("OK", id, 2));
-            restarter.Tell(new Kill());
+            restarter.Tell(Kill.Instance);
             expectMsg(Tuple.Create("postStop", id, 2));
             expectMsg(Tuple.Create("preStart", id, 3));
             restarter.Tell("status");
             expectMsg(Tuple.Create("OK", id, 3));
-            restarter.Tell(new Kill());
+            restarter.Tell(Kill.Instance);
             expectMsg(Tuple.Create("postStop", id, 3));
             expectNoMsg(TimeSpan.FromSeconds(1));
             supervisor.Stop();
@@ -198,7 +198,7 @@ namespace Akka.Tests
             var a = sys.ActorOf<EmptyActor>();
             EventFilter<Exception>(message: "hurrah",occurances: 1, intercept: () =>
                 {
-                    a.Tell(new PoisonPill());
+                    a.Tell(PoisonPill.Instance);
                 });            
         }
 

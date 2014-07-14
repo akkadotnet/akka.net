@@ -17,7 +17,7 @@ namespace Akka.Tests.Actor
         public void Given_terminated_actor_When_watching_Then_should_receive_Terminated_message()
         {
             var terminal=System.ActorOf(Props.Empty,"killed-actor");
-            terminal.Tell(new PoisonPill(),testActor);
+            terminal.Tell(PoisonPill.Instance,testActor);
             StartWatching(terminal);
             ExpectTerminationOf(terminal);
         }

@@ -21,7 +21,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         {
             if(message is string && ((string)message) == "sendKill")
             {
-                _child.Tell(new Kill());
+                _child.Tell(Kill.Instance);
                 return true;
             }
             return false;

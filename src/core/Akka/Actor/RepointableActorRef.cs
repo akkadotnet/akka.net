@@ -250,7 +250,7 @@ namespace Akka.Actor
 
         public void Suspend()
         {
-            SendSystemMessage(new Suspend(), ActorCell.GetCurrentSelfOrNoSender());
+            SendSystemMessage(Akka.Dispatch.SysMsg.Suspend.Instance, ActorCell.GetCurrentSelfOrNoSender());
         }
 
         public void Resume(Exception causedByFailure)
@@ -265,7 +265,7 @@ namespace Akka.Actor
 
         public void Stop()
         {
-            SendSystemMessage(new Terminate(), ActorCell.GetCurrentSelfOrNoSender());
+            SendSystemMessage(Terminate.Instance, ActorCell.GetCurrentSelfOrNoSender());
         }
 
         public InternalActorRef Parent { get { return _supervisor; } }

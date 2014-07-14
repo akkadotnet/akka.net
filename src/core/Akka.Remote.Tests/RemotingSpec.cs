@@ -236,8 +236,8 @@ namespace Akka.Remote.Tests
             {
                 sys.EventStream.Unsubscribe(eventForwarder, typeof(AssociationErrorEvent));
                 sys.EventStream.Unsubscribe(eventForwarder, typeof(DisassociatedEvent));
-                eventForwarder.Tell(new PoisonPill());
-                bigBounceOther.Tell(new PoisonPill());
+                eventForwarder.Tell(PoisonPill.Instance);
+                bigBounceOther.Tell(PoisonPill.Instance);
             }
         }
 

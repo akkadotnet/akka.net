@@ -118,7 +118,7 @@ namespace Akka.Tests.Routing
             var routees = expectMsgType<Routees>().Members.ToList();
 
             routees.Count().ShouldBe(2);
-            routees.ForEach(r => r.Send(new PoisonPill(),testActor));
+            routees.ForEach(r => r.Send(PoisonPill.Instance,testActor));
             // expect no Terminated
             expectNoMsg(TimeSpan.FromSeconds(2));
         }

@@ -642,7 +642,7 @@ protected def terminate() {
         {
             //try
             //{
-            Self.Tell(new Terminate());
+            Self.Tell(Akka.Dispatch.SysMsg.Terminate.Instance);
             //}
             //catch
             //{
@@ -657,7 +657,7 @@ protected def terminate() {
             if (isTerminating)
                 return;
 
-            Self.Tell(new Suspend());
+            Self.Tell(Akka.Dispatch.SysMsg.Suspend.Instance);
         }
 
         /// <summary>
