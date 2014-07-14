@@ -47,6 +47,9 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MapReduce.fs" />
+    <Compile Include="Greeter.fs" />
+    <Compile Include="Supervisioning.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
   </ItemGroup>

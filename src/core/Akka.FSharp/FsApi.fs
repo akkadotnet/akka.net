@@ -8,6 +8,7 @@ type IO<'msg> = | Input
 type Actor<'msg> =
     abstract Receive : unit -> IO<'msg>
     abstract Self : ActorRef
+    abstract Context: IActorContext
     abstract Sender : unit -> ActorRef
     abstract Unhandled: 'msg -> unit
 
@@ -138,28 +139,33 @@ type ActorBuilder() =
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Linq.QuotationEvaluation
 
-type FunActor<'m,'v>(actor: Actor<'m> -> Cont<'m,'v>, strategy: unit -> SupervisorStrategy) as self =
+type FunActor<'m,'v>(actor: Actor<'m> -> Cont<'m,'v>, strategy: SupervisorStrategy) as self =
     inherit UntypedActor()
-
 
     let mutable state = 
         let self' = self.Self 
+        let context' = UntypedActor.Context :> IActorContext
         actor { new Actor<'m> with
                                 member this.Receive() = Input
                                 member this.Self = self'
+                                member this.Context = context'
                                 member this.Sender() = self.Sender()
                                 member this.Unhandled msg = self.Unhandled msg } 
-
+    
     new (actor: Expr<Actor<'m> -> Cont<'m,'v>>) = FunActor(actor.Compile() ())
-    new(actor: Actor<'m> -> Cont<'m,'v>) = FunActor(actor, fun() -> Actor.SupervisorStrategy.DefaultStrategy) 
-
-    override x.SupervisorStrategy() = strategy()
+    new(actor: Actor<'m> -> Cont<'m,'v>) = FunActor(actor, null) 
 
     member x.Sender() =
         base.Sender
 
     member x.Unhandled(msg:'m) =
         base.Unhandled msg
+
+    override x.SupervisorStrategy() =
+        if strategy <> null then
+            strategy
+        else 
+            base.SupervisorStrategy()
 
     override x.OnReceive(msg) =
         let message = msg :?> 'm
@@ -224,6 +230,39 @@ module Serialization =
 module Configuration =
     let parse = Akka.Configuration.ConfigurationFactory.ParseString
 
+module Strategy =
+    /// <summary>
+    /// Returns a builder function returning OneForOneStrategy supervisor based on provided decider func.
+    /// </summary>
+    /// <param name="decider">Supervisor strategy behavior decider function.</param>
+    let oneForOne (decider: Exception -> Directive) = 
+        OneForOneStrategy(System.Func<_,_>(decider)) :> SupervisorStrategy
+
+    /// <summary>
+    /// Returns a builder function returning OneForOneStrategy supervisor based on provided decider func.
+    /// </summary>
+    /// <param name="retries">Number of times, actor could be restarted. If negative, there is not limit.</param>
+    /// <param name="timeout">Time window for number of retries to occur.</param>
+    /// <param name="decider">Supervisor strategy behavior decider function.</param>
+    let oneForOne' retries timeout (decider: Exception -> Directive) = 
+        OneForOneStrategy(retries, timeout, System.Func<_,_>(decider)) :> SupervisorStrategy
+
+    /// <summary>
+    /// Returns a builder function returning AllForOneStrategy supervisor based on provided decider func.
+    /// </summary>
+    /// <param name="decider">Supervisor strategy behavior decider function.</param>
+    let allForOne (decider: Exception -> Directive) = 
+        AllForOneStrategy(System.Func<_,_>(decider)) :> SupervisorStrategy
+
+    /// <summary>
+    /// Returns a builder function returning AllForOneStrategy supervisor based on provided decider func.
+    /// </summary>
+    /// <param name="retries">Number of times, actor could be restarted. If negative, there is not limit.</param>
+    /// <param name="timeout">Time window for number of retries to occur.</param>
+    /// <param name="decider">Supervisor strategy behavior decider function.</param>
+    let allForOne' retries timeout (decider: Exception -> Directive) () = 
+        AllForOneStrategy(retries, timeout, System.Func<_,_>(decider)) :> SupervisorStrategy
+
 module System =
     /// <summary>
     /// Creates an actor system with remote deployment serialization enabled.
@@ -245,8 +284,8 @@ module System =
 /// <param name="name">The actor instance nane</param>
 /// <param name="f">the actor's message handling function.</param>
 let spawne (system:ActorSystem) name (f: Expr<Actor<'m> -> Cont<'m,'v>>)  =
-   let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f))
-   system.ActorOf(Props.Create(e), name)
+    let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f))
+    system.ActorOf(Props.Create(e), name)
    
 /// <summary>
 /// Spawns an actor using specified actor computation expression, with strategy supervisor factory.
@@ -256,9 +295,9 @@ let spawne (system:ActorSystem) name (f: Expr<Actor<'m> -> Cont<'m,'v>>)  =
 /// <param name="name">The actor instance name</param>
 /// <param name="strategy">Function used to generate supervisor strategy</param>
 /// <param name="f">the actor's message handling function.</param>
-let spawns (system:ActorSystem) name (strategy: unit -> SupervisorStrategy) (f: Actor<'m> -> Cont<'m,'v>)  =
-   let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f, strategy))
-   system.ActorOf(Props.Create(e), name)
+let spawns (system:ActorSystem) name (strategy: SupervisorStrategy) (f: Actor<'m> -> Cont<'m,'v>)  =
+    let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f, strategy))
+    system.ActorOf(Props.Create(e), name)
 
 /// <summary>
 /// Spawns an actor using specified actor computation expression.
@@ -268,4 +307,18 @@ let spawns (system:ActorSystem) name (strategy: unit -> SupervisorStrategy) (f: 
 /// <param name="name">The actor instance nane</param>
 /// <param name="f">the actor's message handling function.</param>
 let spawn (system:ActorSystem) name (f: Actor<'m> -> Cont<'m,'v>)  =
-   spawns system name (fun () -> Actor.SupervisorStrategy.DefaultStrategy) f
+    spawns system name null f
+
+[<AutoOpen>]
+module Actors =
+    // declare extension methods for Actor interface
+    type Actor<'msg> with
+        /// <summary>
+        /// Implementation of spawn method using actor-local context.
+        /// Actor refs returned this way are considered children of current actor.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="f"></param>
+        member this.spawn name (f: Actor<'m> -> Cont<'m,'v>) =
+            let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f))
+            this.Context.ActorOf(Props.Create(e), name)
