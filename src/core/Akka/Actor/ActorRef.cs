@@ -142,6 +142,16 @@ namespace Akka.Actor
             TellInternal(message, sender);
         }
 
+        /// <summary>
+        /// Forwards the message using the current Sender
+        /// </summary>
+        /// <param name="message"></param>
+        public void Forward(object message)
+        {
+            var sender = ActorCell.GetCurrentSenderOrNoSender();
+            TellInternal(message, sender);
+        }
+
         protected abstract void TellInternal(object message, ActorRef sender);
 
         public override string ToString()

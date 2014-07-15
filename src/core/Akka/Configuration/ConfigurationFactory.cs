@@ -22,11 +22,11 @@ namespace Akka.Configuration
         /// <summary>
         /// Parses the string.
         /// </summary>
-        /// <param name="json">The json.</param>
+        /// <param name="hocon">The json.</param>
         /// <returns>Config.</returns>
-        public static Config ParseString(string json)
+        public static Config ParseString(string hocon)
         {
-            HoconValue res = Parser.Parse(json);
+            HoconValue res = Parser.Parse(hocon);
             return new Config(res);
         }
 

@@ -13,9 +13,11 @@ namespace Akka.Actor
 {
     public partial class ActorCell : IActorContext, IUntypedActorContext, Cell 
     {
+        /// <summary>NOTE! Only constructor and ClearActorFields is allowed to update this</summary>
+        private InternalActorRef _self;
         public const int UndefinedUid = 0;
-        private readonly InternalActorRef _self;
-        private readonly Props _props;
+        private Props _props;
+        private static Props _terminatedProps=new TerminatedProps();
         [ThreadStatic] private static ActorCell current;
 
         protected ConcurrentDictionary<string, InternalActorRef> children =
@@ -25,6 +27,7 @@ namespace Akka.Actor
         protected Stack<Receive> behaviorStack = new Stack<Receive>();
         private long uid;
         private ActorBase _actor;
+        private bool _actorHasBeenCleared;
 
 
         public ActorCell(ActorSystem system, InternalActorRef self, Props props, MessageDispatcher dispatcher, InternalActorRef parent)
@@ -40,6 +43,7 @@ namespace Akka.Actor
         public Mailbox Mailbox { get; protected set; }
         public MessageDispatcher Dispatcher { get; private set; }
         public bool IsLocal { get{return true;} }
+        protected ActorBase Actor { get { return _actor; } }
 
         internal static ActorCell Current
         {
@@ -54,6 +58,7 @@ namespace Akka.Actor
         public ActorRef Sender { get; private set; }
         public bool HasMessages { get { return Mailbox.HasUnscheduledMessages; } }
         public int NumberOfMessages { get { return Mailbox.NumberOfMessages; } }
+        internal bool ActorHasBeenCleared { get { return _actorHasBeenCleared; } }
 
         public void Init(bool sendSupervise, Func<Mailbox> createMailbox /*, MailboxType mailboxType*/) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType
         {
@@ -126,7 +131,7 @@ namespace Akka.Actor
             return ActorRefFactoryShared.ActorSelection(path, System);
         }
 
-        public virtual InternalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
+        public virtual InternalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase, new()
         {
             return ActorOf(Props.Create<TActor>(), name);
         }
@@ -174,6 +179,11 @@ namespace Akka.Actor
         {
             watchees.Add(watchee);
             watchee.Tell(new Watch(watchee, Self),Self);
+            //If watchee is terminated, its mailbox have been replaced by 
+            //DeadLetterMailbox, which will forward the Watch message as a
+            //DeadLetter to DeadLetterActorRef. It inspects the message inside
+            //the DeadLetter, sees it is a Watch and sends watcher, i.e. us
+            //a DeathWatchNotification(watchee)
         }
 
         /// <summary>
@@ -312,6 +322,23 @@ namespace Akka.Actor
             Mailbox.Post(m);
         }
 
+        protected void ClearActorCell()
+        {
+            //TODO: UnstashAll();
+            _props = _terminatedProps;
+        }
+
+        protected void ClearActor()
+        {
+            if(_actor != null)
+            {
+                _actor.Clear(System.DeadLetters);
+            }
+            _actorHasBeenCleared = true;
+            CurrentMessage = null;
+            behaviorStack = null;
+        }
+
         public static NameAndUid SplitNameAndUid(string name)
         {
             var i = name.IndexOf('#');
@@ -324,6 +351,12 @@ namespace Akka.Actor
         {
             var current = Current;
             return current != null ? current.Self : NoSender.Instance;
+        }
+
+        public static ActorRef GetCurrentSenderOrNoSender()
+        {
+            var current = Current;
+            return current != null ? current.Sender : NoSender.Instance;
         }
     }
 }

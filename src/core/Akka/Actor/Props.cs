@@ -39,14 +39,7 @@ namespace Akka.Actor
         public Props()
         {
             Arguments = new object[] {};
-            Deploy = CreateDefaultDeploy();
-        }
-
-        private static Deploy CreateDefaultDeploy()
-        {
-            return new Deploy()
-                .WithMailbox("akka.actor.default-mailbox")
-                .WithDispatcher(Dispatchers.DefaultDispatcherId);
+            Deploy = new Deploy();
         }
 
         /// <summary>
@@ -58,8 +51,7 @@ namespace Akka.Actor
         {
             Type = type;
             Arguments = args;
-            Deploy = CreateDefaultDeploy();
-
+            Deploy = new Deploy();
         }
 
         /// <summary>
@@ -70,14 +62,14 @@ namespace Akka.Actor
         {
             Type = type;
             Arguments = new object[] {};
-            Deploy = CreateDefaultDeploy();
+            Deploy = new Deploy();
         }
 
         public Props(Type type, SupervisorStrategy supervisorStrategy, IEnumerable<object> args)
         {
             Type = type;
             Arguments = args.ToArray();
-            Deploy = CreateDefaultDeploy();
+            Deploy = new Deploy();
             SupervisorStrategy = supervisorStrategy;
         }
 
@@ -85,7 +77,7 @@ namespace Akka.Actor
         {
             Type = type;
             Arguments = args;
-            Deploy = CreateDefaultDeploy();
+            Deploy = new Deploy();
             SupervisorStrategy = supervisorStrategy;
         }
 
@@ -108,7 +100,11 @@ namespace Akka.Actor
         /// <value>The dispatcher.</value>
         public string Dispatcher
         {
-            get { return Deploy.Dispatcher; }
+            get
+            {
+                var dispatcher = Deploy.Dispatcher;
+                return dispatcher == Deploy.NoDispatcherGiven ? Dispatchers.DefaultDispatcherId : dispatcher;
+            }
         }
 
         /// <summary>
@@ -117,7 +113,11 @@ namespace Akka.Actor
         /// <value>The mailbox.</value>
         public string Mailbox
         {
-            get { return Deploy.Mailbox; }
+            get
+            {
+                var mailbox = Deploy.Mailbox;
+                return mailbox == Deploy.NoMailboxGiven ? Mailboxes.DefaultMailboxId: mailbox;
+            }
         }
 
         /// <summary>
@@ -183,7 +183,7 @@ namespace Akka.Actor
         /// </summary>
         /// <typeparam name="TActor">The type of the t actor.</typeparam>
         /// <returns>Props.</returns>
-        public static Props Create<TActor>() where TActor : ActorBase
+        public static Props Create<TActor>() where TActor : ActorBase, new()
         {
             return new Props(typeof (TActor));
         }
@@ -323,6 +323,14 @@ namespace Akka.Actor
         }
 
         #endregion
+    }
+
+    public class TerminatedProps : Props
+    {
+        public override ActorBase NewActor()
+        {
+            throw new InvalidOperationException("This actor has been terminated");
+        }
     }
 
     /// <summary>

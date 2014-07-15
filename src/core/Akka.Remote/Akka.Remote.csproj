@@ -79,6 +79,7 @@
     <Compile Include="AddressUidExtension.cs" />
     <Compile Include="AkkaProtocolSettings.cs" />
     <Compile Include="AssociationEvent.cs" />
+    <Compile Include="Configuration\FluentConfigRemote.cs" />
     <Compile Include="Configuration\RemoteConfigFactory.cs" />
     <Compile Include="Deadline.cs" />
     <Compile Include="DefaultFailureDetectorRegistry.cs" />
