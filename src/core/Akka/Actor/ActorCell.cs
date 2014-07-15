@@ -352,5 +352,11 @@ namespace Akka.Actor
             var current = Current;
             return current != null ? current.Self : NoSender.Instance;
         }
+
+        public static ActorRef GetCurrentSenderOrNoSender()
+        {
+            var current = Current;
+            return current != null ? current.Sender : NoSender.Instance;
+        }
     }
 }
