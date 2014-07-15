@@ -65,9 +65,9 @@ namespace Akka.Tests.Actor
             {
                 var terminated = message as Terminated;
                 if(terminated != null)
-                    _forwardToActor.Tell(new WrappedTerminated(terminated), Sender);
+                    _forwardToActor.Forward(new WrappedTerminated(terminated));
                 else
-                    _forwardToActor.Tell(message, Sender);
+                    _forwardToActor.Forward(message);
                 return true;
             }
         }

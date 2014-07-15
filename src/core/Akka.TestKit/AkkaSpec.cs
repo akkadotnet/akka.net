@@ -471,7 +471,7 @@ namespace Akka.Tests
             protected override void OnReceive(object message)
             {
                 Sender.Tell(message, Self);
-                _testActor.Tell(message, Sender);
+                _testActor.Forward(message);
             }
         }
 
