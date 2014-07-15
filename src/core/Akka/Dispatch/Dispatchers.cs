@@ -105,7 +105,7 @@ namespace Akka.Dispatch
         /// <summary>
         ///     The queue
         /// </summary>
-        private readonly ConcurrentQueue<Action> queue = new ConcurrentQueue<Action>();
+        private readonly BlockingCollection<Action> queue = new BlockingCollection<Action>();
 
         /// <summary>
         ///     The running
@@ -117,15 +117,15 @@ namespace Akka.Dispatch
         /// </summary>
         public SingleThreadDispatcher()
         {
-            var b = new BlockingCollection<Action>(queue);
-            new Thread(_ =>
+            var thread = new Thread(_ =>
             {
-                while (running)
+                foreach (var next in queue.GetConsumingEnumerable())
                 {
-                    Action next = b.Take();
                     next();
+                    if (!running) return;
                 }
             });
+            thread.Start(); //thread won't start automatically without this
         }
 
         /// <summary>
@@ -134,7 +134,7 @@ namespace Akka.Dispatch
         /// <param name="run">The run.</param>
         public override void Schedule(Action run)
         {
-            queue.Enqueue(run);
+            queue.Add(run);
         }
     }
 
