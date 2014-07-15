@@ -56,6 +56,7 @@
       <HintPath>..\..\packages\Newtonsoft.Json.6.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -92,7 +93,10 @@
     <Compile Include="Actor\Stash.cs" />
     <Compile Include="Configuration\ConfigurationFactory.cs" />
     <Compile Include="Configuration\Config.cs" />
+    <Compile Include="Configuration\Hocon\AkkaConfigurationSection.cs" />
+    <Compile Include="Configuration\Hocon\CDataConfigurationElement.cs" />
     <Compile Include="Configuration\Hocon\HoconArray.cs" />
+    <Compile Include="Configuration\Hocon\HoconConfigurationElement.cs" />
     <Compile Include="Configuration\Hocon\HoconLiteral.cs" />
     <Compile Include="Configuration\Hocon\HoconObject.cs" />
     <Compile Include="Configuration\Hocon\HoconParser.cs" />
