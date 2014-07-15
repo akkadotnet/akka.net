@@ -42,12 +42,12 @@ namespace Akka.Actor
         /// <summary>
         ///     The log
         /// </summary>
-        public LoggingAdapter log;
+        public LoggingAdapter Log;
 
         /// <summary>
         ///     The log dead letter listener
         /// </summary>
-        private InternalActorRef logDeadLetterListener;
+        private InternalActorRef _logDeadLetterListener;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorSystem" /> class.
@@ -66,9 +66,10 @@ namespace Akka.Actor
             ConfigureSettings(config);
             ConfigureEventStream();
             ConfigureSerialization();
+            ConfigureProvider();
             ConfigureMailboxes();
             ConfigureDispatchers();
-            ConfigureProvider();
+            InitProvider();
             ConfigureLoggers();
             LoadExtensions();
             Start();
@@ -174,7 +175,7 @@ namespace Akka.Actor
         /// <typeparam name="TActor">The type of the t actor.</typeparam>
         /// <param name="name">The name.</param>
         /// <returns>InternalActorRef.</returns>
-        public InternalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
+        public InternalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase, new()
         {
             return Guardian.Cell.ActorOf<TActor>(name);
         }
@@ -255,7 +256,7 @@ namespace Akka.Actor
                 var extensionType = Type.GetType(extensionFqn);
                 if (extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.IsAbstract || !extensionType.IsClass)
                 {
-                    log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
+                    Log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
                     continue;
                 }
 
@@ -266,7 +267,7 @@ namespace Akka.Actor
                 }
                 catch (Exception ex)
                 {
-                    log.Error(ex, "While trying to load extension [{0}], skipping...", extensionFqn);
+                    Log.Error(ex, "While trying to load extension [{0}], skipping...", extensionFqn);
                 }
                 
             }
@@ -375,6 +376,10 @@ namespace Akka.Actor
             Debug.Assert(providerType != null, "providerType != null");
             var provider = (ActorRefProvider)Activator.CreateInstance(providerType,Name,Settings,EventStream);
             Provider = provider;
+        }
+
+        private void InitProvider()
+        {
             Provider.Init(this);
         }
 
@@ -384,12 +389,12 @@ namespace Akka.Actor
         private void Start()
         {
             if (Settings.LogDeadLetters > 0)
-                logDeadLetterListener = SystemActorOf<DeadLetterListener>("deadLetterListener");
+                _logDeadLetterListener = SystemActorOf<DeadLetterListener>("deadLetterListener");
             
 
             if (Settings.LogConfigOnStart)
             {
-                log.Warn(Settings.ToString());
+                Log.Warn(Settings.ToString());
             }
         }
 
@@ -398,7 +403,7 @@ namespace Akka.Actor
         /// </summary>
         private void ConfigureLoggers()
         {
-            log = new BusLogging(EventStream, "ActorSystem(" + Name + ")", GetType());
+            Log = new BusLogging(EventStream, "ActorSystem(" + Name + ")", GetType());
         }
 
         /// <summary>
@@ -437,7 +442,7 @@ namespace Akka.Actor
         /// <typeparam name="TActor">The type of the t actor.</typeparam>
         /// <param name="name">The name.</param>
         /// <returns>InternalActorRef.</returns>
-        internal InternalActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase
+        internal InternalActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase, new()
         {
             return Provider.SystemGuardian.Cell.ActorOf<TActor>(name);
         }

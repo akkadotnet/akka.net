@@ -363,7 +363,7 @@ namespace Akka.Remote.Tests
             };
 
             //Dropping phase
-            System.Diagnostics.Debug.WriteLine("Starting unreliable delivery for {0} messages, with delivery probaboly P = {1}", msgCount, deliveryProbability);
+            global::System.Diagnostics.Debug.WriteLine("Starting unreliable delivery for {0} messages, with delivery probaboly P = {1}", msgCount, deliveryProbability);
             var nextSteps = msgCount*2;
             while (nextSteps > 0)
             {
@@ -372,8 +372,8 @@ namespace Akka.Remote.Tests
                 receiverStep(deliveryProbability);
                 nextSteps--;
             }
-            System.Diagnostics.Debug.WriteLine("Successfully delivered {0} messages from {1}", received.Count, msgCount);
-            System.Diagnostics.Debug.WriteLine("Entering reliable phase");
+            global::System.Diagnostics.Debug.WriteLine("Successfully delivered {0} messages from {1}", received.Count, msgCount);
+            global::System.Diagnostics.Debug.WriteLine("Entering reliable phase");
 
             //Finalizing pahase
             for (var i = 1; i <= msgCount; i++)
@@ -384,13 +384,13 @@ namespace Akka.Remote.Tests
 
             if (!received.SequenceEqual(referenceList))
             {
-                System.Diagnostics.Debug.WriteLine(string.Join(Environment.NewLine, log));
-                System.Diagnostics.Debug.WriteLine("Received: ");
-                System.Diagnostics.Debug.WriteLine(string.Join(Environment.NewLine, received.Select(x => x.ToString())));
+                global::System.Diagnostics.Debug.WriteLine(string.Join(Environment.NewLine, log));
+                global::System.Diagnostics.Debug.WriteLine("Received: ");
+                global::System.Diagnostics.Debug.WriteLine(string.Join(Environment.NewLine, received.Select(x => x.ToString())));
                 Assert.True(false,"Not all messages were received");
             }
 
-            System.Diagnostics.Debug.WriteLine("All messages have been successfully delivered");
+            global::System.Diagnostics.Debug.WriteLine("All messages have been successfully delivered");
         }
 
         #endregion

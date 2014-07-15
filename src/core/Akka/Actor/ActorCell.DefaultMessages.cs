@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
@@ -105,7 +106,7 @@ namespace Akka.Actor
   }
          */
 
-        private void AutoReceiveMessage(Envelope envelope)
+        protected virtual void AutoReceiveMessage(Envelope envelope)
         {
             var message = envelope.Message;
 
@@ -122,6 +123,26 @@ namespace Akka.Actor
                 .With<PoisonPill>(HandlePoisonPill)
                 .With<ActorSelectionMessage>(ReceiveSelection)
                 .With<Identify>(HandleIdentity);
+        }
+
+        /// <summary>
+        /// This is only intended to be called from TestKit's TestActorRef
+        /// </summary>
+        /// <param name="envelope"></param>
+        public void ReceiveMessageForTest(Envelope envelope)
+        {
+            var message = envelope.Message;
+            CurrentMessage = message;
+            Sender = envelope.Sender;
+            try
+            {
+                ReceiveMessage(message);
+            }
+            finally
+            {
+                CurrentMessage = null;
+                Sender = System.DeadLetters;
+            }
         }
 
         internal void ReceiveMessage(object message)
@@ -377,14 +398,18 @@ protected def terminate() {
                         () => Publish(new Error(x, Self.Path.ToString(), ActorType, x.Message)));
                 }
             }
+            var mailbox = Mailbox;
+            Mailbox = System.Mailboxes.DeadLetterMailbox;
+            mailbox.Stop();
             Parent.Tell(new DeathWatchNotification(Self, true, false));
             TellWatchersWeDied();
-            if (System.Settings.DebugLifecycle)
-                Publish(new Debug(Self.Path.ToString(), ActorType, "stopped"));
             UnwatchWatchedActors(a);
-            
+            if(System.Settings.DebugLifecycle)
+                Publish(new Debug(Self.Path.ToString(), ActorType, "stopped"));
+
+            ClearActor();
+            ClearActorCell();
             _actor = null;
-            Mailbox.Stop();
         }
 
         /// <summary>
@@ -617,7 +642,7 @@ protected def terminate() {
         {
             //try
             //{
-            Self.Tell(new Terminate());
+            Self.Tell(Akka.Dispatch.SysMsg.Terminate.Instance);
             //}
             //catch
             //{
@@ -632,7 +657,7 @@ protected def terminate() {
             if (isTerminating)
                 return;
 
-            Self.Tell(new Suspend());
+            Self.Tell(Akka.Dispatch.SysMsg.Suspend.Instance);
         }
 
         /// <summary>
@@ -661,9 +686,28 @@ protected def terminate() {
         /// <param name="m">The m.</param>
         private void HandleWatch(Watch m)
         {
-            WatchedBy.Add(m.Watcher);
-            if (System.Settings.DebugLifecycle)
-                Publish(new Debug(Self.Path.ToString(), ActorType, "now watched by " + m.Watcher));
+            var watchee = m.Watchee;    //The actor to watch
+            var watcher = m.Watcher;    //The actor that watches
+            var self = Self;
+            var watcheeIsSelf = watchee == self;
+            var watcherIsSelf = watcher == self;
+            if(watcheeIsSelf && !watcherIsSelf) //Check if someone else is trying to watch us
+            {
+                if(WatchedBy.TryAdd(m.Watcher))
+                {
+                    //TODO: Missing call to maintainAddressTerminatedSubscription
+                    if(System.Settings.DebugLifecycle)
+                        Publish(new Debug(Self.Path.ToString(), ActorType, "now watched by " + m.Watcher));
+                }
+            }
+            else if(!watcheeIsSelf && watcherIsSelf)  
+            {
+                Watch(watchee);
+            }
+            else
+            {
+                Publish(new Warning(self.Path.ToString(), ActorType, string.Format("BUG: illegal Watch({0},{1}) for {2}", watchee, watcher, self)));
+            }
         }
 
         //TODO: find out why this is never called

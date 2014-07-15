@@ -15,9 +15,9 @@ namespace Akka.Actor
                 this.actors.TryAdd(a, a);
         }
 
-        public void Add(ActorRef actor)
+        public bool TryAdd(ActorRef actor)
         {
-            actors.TryAdd(actor, actor);
+            return actors.TryAdd(actor, actor);
         }
 
         internal void Remove(ActorRef actor)

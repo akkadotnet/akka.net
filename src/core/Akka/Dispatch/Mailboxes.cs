@@ -15,6 +15,9 @@ namespace Akka.Dispatch
         /// </summary>
         private readonly ActorSystem system;
 
+        private readonly DeadLetterMailbox _deadLetterMailbox;
+        public static readonly string DefaultMailboxId = "akka.actor.default-mailbox";
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="Mailboxes" /> class.
         /// </summary>
@@ -22,7 +25,10 @@ namespace Akka.Dispatch
         public Mailboxes(ActorSystem system)
         {
             this.system = system;
+            _deadLetterMailbox = new DeadLetterMailbox(system.DeadLetters);
         }
+
+        public DeadLetterMailbox DeadLetterMailbox { get { return _deadLetterMailbox; } }
 
         /// <summary>
         ///     Creates a mailbox from a configuration path.

@@ -21,7 +21,10 @@ namespace Akka.Dispatch
         [Conditional("MAILBOXDEBUG")]
         public static void DebugPrint(string message, params object[] args)
         {
-            Console.WriteLine(message, args);
+            if(args.Length == 0)
+                Console.WriteLine("{0}", message);
+            else
+                Console.WriteLine(message, args);
         }
 
         private volatile ActorCell _actorCell;
@@ -46,7 +49,7 @@ namespace Akka.Dispatch
         ///     Posts the specified envelope to the mailbox.
         /// </summary>
         /// <param name="envelope">The envelope.</param>
-        public abstract void Post(Envelope envelope);
+        public abstract void Post(Envelope envelope);   //TODO: Refactor to Enqueue(ActorRef receiver, Envelope envelope)
 
         /// <summary>
         ///     Stops this instance.

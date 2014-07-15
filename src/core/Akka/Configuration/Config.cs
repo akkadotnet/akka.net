@@ -201,10 +201,7 @@ namespace Akka.Configuration
         {
             HoconValue value = GetNode(path);
             if (value == null)
-            {
-                Debug.Assert(@default != null, "@default != null");
-                return @default.Value;
-            }
+                return @default.GetValueOrDefault();
 
             return value.GetMillisDuration();
         }
