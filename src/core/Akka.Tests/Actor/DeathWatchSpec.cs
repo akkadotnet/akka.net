@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Runtime.Remoting.Contexts;
 using Akka.Actor;
+using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
+using Akka.Event;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -35,6 +39,33 @@ namespace Akka.Tests.Actor
 //                akka.stdout-loglevel = DEBUG
 //            ";
 //        }
+        [Fact]
+        public void Bug209_any_user_messages_following_a_Terminate_message_should_be_forwarded_to_DeadLetterMailbox()
+        {
+            var actor = (LocalActorRef)System.ActorOf(Props.Empty, "killed-actor");
+
+            sys.EventStream.Subscribe(testActor, typeof(DeadLetter));
+
+            var mailbox = actor.Cell.Mailbox;
+            //Wait for the mailbox to become idle after processed all initial messages.
+            AwaitCond(() =>
+                !mailbox.HasUnscheduledMessages && mailbox.Status == Mailbox.MailboxStatus.Idle,
+                TimeSpan.FromSeconds(1),
+                TimeSpan.FromMilliseconds(50));
+
+            //Suspend the mailbox and post Terminate and a user message
+            mailbox.Suspend();
+            mailbox.Post(new Envelope() { Message = Terminate.Instance, Sender = testActor });
+            mailbox.Post(new Envelope() { Message = "SomeUserMessage", Sender = testActor });
+
+            //Resume the mailbox, which will also schedule
+            mailbox.Resume();
+
+            //The actor should Terminate, exchange the mailbox to a DeadLetterMailbox and forward the user message to the DeadLetterMailbox
+            ExpectMsgPF<DeadLetter>(TimeSpan.FromSeconds(1),d=>(string) d.Message=="SomeUserMessage");
+            actor.Cell.Mailbox.ShouldBe(System.Mailboxes.DeadLetterMailbox);            
+        }
+
 
         private void ExpectTerminationOf(ActorRef actorRef)
         {

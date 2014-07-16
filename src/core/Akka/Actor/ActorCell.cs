@@ -28,6 +28,7 @@ namespace Akka.Actor
         private long uid;
         private ActorBase _actor;
         private bool _actorHasBeenCleared;
+        private Mailbox _mailbox;
 
 
         public ActorCell(ActorSystem system, InternalActorRef self, Props props, MessageDispatcher dispatcher, InternalActorRef parent)
@@ -40,7 +41,8 @@ namespace Akka.Actor
         }
 
         public object CurrentMessage { get; private set; }
-        public Mailbox Mailbox { get; protected set; }
+        public Mailbox Mailbox { get { return _mailbox; } }
+
         public MessageDispatcher Dispatcher { get; private set; }
         public bool IsLocal { get{return true;} }
         protected ActorBase Actor { get { return _actor; } }
@@ -65,7 +67,7 @@ namespace Akka.Actor
             var mailbox = createMailbox(); //Akka: dispatcher.createMailbox(this, mailboxType)
             mailbox.Setup(Dispatcher);
             mailbox.SetActor(this);
-            Mailbox = mailbox;
+            _mailbox = mailbox;
 
             var createMessage = new Create();
             // AKKA:

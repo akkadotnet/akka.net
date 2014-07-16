@@ -38,7 +38,7 @@ namespace Akka.Actor
         {            
         }
 
-        public override void Stop()
+        public override void BecomeClosed()
         {
             
         }
@@ -49,6 +49,11 @@ namespace Akka.Actor
         }
 
         protected override void Schedule()
+        {
+            //Intentionally left blank
+        }
+
+        public override void CleanUp()
         {
             //Intentionally left blank
         }

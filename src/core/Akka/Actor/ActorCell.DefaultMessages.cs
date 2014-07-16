@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -398,9 +399,17 @@ protected def terminate() {
                         () => Publish(new Error(x, Self.Path.ToString(), ActorType, x.Message)));
                 }
             }
-            var mailbox = Mailbox;
-            Mailbox = System.Mailboxes.DeadLetterMailbox;
-            mailbox.Stop();
+            //TODO: Akka Jvm: this is done in a call to dispatcher.detach()
+            {
+                //TODO: Akka Jvm: this is done in a call to MessageDispatcher.detach()
+                {
+                    var mailbox = Mailbox;
+                    var deadLetterMailbox = System.Mailboxes.DeadLetterMailbox;
+                    SwapMailbox(deadLetterMailbox);
+                    mailbox.BecomeClosed();
+                    mailbox.CleanUp();
+                }
+            }
             Parent.Tell(new DeathWatchNotification(Self, true, false));
             TellWatchersWeDied();
             UnwatchWatchedActors(a);
@@ -410,6 +419,11 @@ protected def terminate() {
             ClearActor();
             ClearActorCell();
             _actor = null;
+        }
+
+        public void SwapMailbox(DeadLetterMailbox mailbox)
+        {
+            Interlocked.Exchange(ref _mailbox, mailbox);
         }
 
         /// <summary>
