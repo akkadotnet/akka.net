@@ -226,7 +226,7 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class Restart : SystemMessage
     {
-        public Restart() { }
+        private Restart() { }
         private static readonly Restart _instance = new Restart();
         public static Restart Instance
         {
@@ -284,7 +284,7 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class Suspend : SystemMessage
     {
-        public Suspend() { }
+        private Suspend() { }
         private static readonly Suspend _instance = new Suspend();
         public static Suspend Instance
         {
@@ -300,7 +300,7 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class Stop : SystemMessage
     {
-        public Stop() { }
+        private Stop() { }
         private static readonly Stop _instance = new Stop();
         public static Stop Instance
         {
@@ -359,7 +359,7 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class Terminate : SystemMessage
     {
-        public Terminate() { }
+        private Terminate() { }
         private static readonly Terminate _instance = new Terminate();
         public static Terminate Instance
         {

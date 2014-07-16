@@ -55,7 +55,7 @@ namespace Akka.Actor
 
     public sealed class PoisonPill : AutoReceivedMessage 
     {
-        public PoisonPill() { }
+        private PoisonPill() { }
         private static readonly PoisonPill _instance = new PoisonPill();
         public static PoisonPill Instance
         {
@@ -68,7 +68,7 @@ namespace Akka.Actor
 
     public sealed class Kill : AutoReceivedMessage
     {
-        public Kill() { }
+        private Kill() { }
 
         private static readonly Kill _instance = new Kill();
         public static Kill Instance
