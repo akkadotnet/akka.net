@@ -40,6 +40,22 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         }
 
         [Fact]
+        public void TestActorRef_name_must_start_with_double_dollar_sign()
+        {
+            //Looking at the scala code, this might not be obvious that the name starts with $$
+            //object TestActorRef (TestActorRef.scala) contain this code: 
+            //    private[testkit] def randomName: String = {
+            //      val l = number.getAndIncrement()
+            //      "$" + akka.util.Helpers.base64(l)
+            //    }
+            //So it adds one $. The second is added by akka.util.Helpers.base64(l) which by default 
+            //creates a StringBuilder and adds adds $. Hence, 2 $$
+            var testActorRef = TestActorRef.Create<ReplyActor>(System);
+
+            Assert.Equal(testActorRef.Path.Name.Substring(0, 2), "$$");
+        }
+
+        [Fact]
         public void TestActorRef_must_support_nested_Actor_creation_when_used_with_TestActorRef()
         {
             var a = TestActorRef.Create<NestingActor>(System, () => new NestingActor(true));

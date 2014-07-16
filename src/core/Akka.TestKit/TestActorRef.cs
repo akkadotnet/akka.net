@@ -14,7 +14,15 @@ namespace Akka.TestKit
         private static string CreateUniqueName()
         {
             var number = _number.GetAndIncrement();
-            return "$" + number.Base64Encode();
+            return "$$" + number.Base64Encode();
+            //Looking at the scala code, this might not be obvious that the name starts with $$
+            //object TestActorRef (TestActorRef.scala) contain this code: 
+            //    private[testkit] def randomName: String = {
+            //      val l = number.getAndIncrement()
+            //      "$" + akka.util.Helpers.base64(l)
+            //    }
+            //So it adds one $. The second is added by akka.util.Helpers.base64(l) which by default 
+            //creates a StringBuilder and adds adds $. Hence, 2 $$
         }
 
         public static TestActorRef<T> Create<T>(ActorSystem system, Props props, ActorRef supervisor = null, string name = null) where T : ActorBase
