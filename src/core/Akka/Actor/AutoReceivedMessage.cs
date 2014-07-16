@@ -69,6 +69,7 @@ namespace Akka.Actor
     public sealed class Kill : AutoReceivedMessage
     {
         private Kill() { }
+
         private static readonly Kill _instance = new Kill();
         public static Kill Instance
         {
