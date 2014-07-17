@@ -10,9 +10,9 @@ open System.Runtime.InteropServices
 [<assembly: AssemblyCompanyAttribute("Akka.net")>]
 [<assembly: ComVisibleAttribute(false)>]
 [<assembly: CLSCompliantAttribute(true)>]
-[<assembly: AssemblyVersionAttribute("0.6.1.0")>]
-[<assembly: AssemblyFileVersionAttribute("0.6.1.0")>]
+[<assembly: AssemblyVersionAttribute("0.6.2.0")>]
+[<assembly: AssemblyFileVersionAttribute("0.6.2.0")>]
 do ()
 
 module internal AssemblyVersionInformation =
-    let [<Literal>] Version = "0.6.1.0"
+    let [<Literal>] Version = "0.6.2.0"
