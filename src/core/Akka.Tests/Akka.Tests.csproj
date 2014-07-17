@@ -60,6 +60,7 @@
       <HintPath>..\..\packages\fastJSON.2.0.27.1\lib\net40\fastjson.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="xunit">
       <HintPath>..\..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
     </Reference>
@@ -89,6 +90,7 @@
     <Compile Include="Actor\FSMTransitionSpec.cs" />
     <Compile Include="Actor\PatternSpec.cs" />
     <Compile Include="Actor\RootGuardianActorRef_Tests.cs" />
+    <Compile Include="Configuration\ConfigurationSpec.cs" />
     <Compile Include="Event\EventBusSpec.cs" />
     <Compile Include="Event\EventStreamSpec.cs" />
     <Compile Include="HoconTests.cs" />
@@ -112,6 +114,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="App.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />
