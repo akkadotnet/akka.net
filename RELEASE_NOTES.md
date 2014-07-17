@@ -1,3 +1,7 @@
+#### 0.6.2 Jul 15 2014
+* Upgraded Helios dependency
+* Bug fixes
+
 #### 0.6.1 Jul 09 2014
 * Upgraded Helios dependency
 * Added ConsistentHash router support
