@@ -18,37 +18,11 @@ namespace ChatClient
     {
         static void Main(string[] args)
         {
-            var config = ConfigurationFactory.ParseString(@"
-akka {  
-    log-config-on-start = on
-    stdout-loglevel = INFO
-    loglevel = ERROR
-    actor {
-        provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-        
-        debug {  
-          receive = on 
-          autoreceive = on
-          lifecycle = on
-          event-stream = on
-          unhandled = on
-        }
-    }
-    remote {
-        #this is the new upcoming remoting support, which enables multiple transports
-        helios.tcp {
-            transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
-		    applied-adapters = []
-		    transport-protocol = tcp
-		    port = 0
-            hostname = 0.0.0.0
-		    public-hostname = ""127.0.0.1""
-        }
-        log-remote-lifecycle-events = INFO
-    }
-}
-");
-            using (var system = ActorSystem.Create("MyClient",config)) 
+            var fluentConfig = FluentConfig.Begin()
+                                .StartRemotingOn("localhost") //no port given = use any free port
+                                .Build();
+
+            using (var system = ActorSystem.Create("MyClient", fluentConfig)) 
             {
                 var chatClient = system.ActorOf(Props.Create<ChatClientActor>());
                 var tmp = system.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
@@ -60,17 +34,7 @@ akka {
                 while (true)
                 {
                     var input = Console.ReadLine();
-                    if (input.StartsWith("*"))
-                    {
-                        Stopwatch sw = Stopwatch.StartNew();
-                        for (int i = 0; i < 200; i++)
-                        {
-                            tmp.Tell(new Disconnect());
-                        }
-                        sw.Stop();
-                        Console.WriteLine(sw.Elapsed);
-                    }
-                    else if (input.StartsWith("/"))
+                    if (input.StartsWith("/"))
                     {
                         var parts = input.Split(' ');
                         var cmd = parts[0].ToLowerInvariant();
@@ -108,7 +72,6 @@ akka {
 
         public ChatClientActor()
         {
-            log.Error("Testing the logging feature!");
         }
 
         private string nick = "Roggan";

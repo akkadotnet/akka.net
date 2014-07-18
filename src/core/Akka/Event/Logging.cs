@@ -30,7 +30,7 @@ namespace Akka.Event
         /// <param name="logLevel">The log level.</param>
         /// <returns>Type.</returns>
         /// <exception cref="System.ArgumentException">Unknown LogLevel;logLevel</exception>
-        public static Type ClassFor(LogLevel logLevel)
+        public static Type ClassFor(this LogLevel logLevel)
         {
             switch (logLevel)
             {
@@ -42,6 +42,28 @@ namespace Akka.Event
                     return typeof (Warning);
                 case LogLevel.ErrorLevel:
                     return typeof (Error);
+                default:
+                    throw new ArgumentException("Unknown LogLevel", "logLevel");
+            }
+        }
+
+        public static string StringFor(this LogLevel logLevel)
+        {
+            const string debug = "DEBUG";
+            const string info = "INFO";
+            const string warning = "WARNING";
+            const string error = "ERROR";
+
+            switch (logLevel)
+            {
+                case LogLevel.DebugLevel:
+                    return debug;
+                case LogLevel.InfoLevel:
+                    return info;
+                case LogLevel.WarningLevel:
+                    return warning;
+                case LogLevel.ErrorLevel:
+                    return error;
                 default:
                     throw new ArgumentException("Unknown LogLevel", "logLevel");
             }

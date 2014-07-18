@@ -7,6 +7,21 @@ using Akka.Configuration;
 
 namespace Akka.Dispatch
 {
+    public enum DispatcherType
+    {
+        Dispatcher,
+        TaskDispatcher,
+        PinnedDispatcher,
+        SynchronizedDispatcher,
+    }
+    public static class DispatcherTypeMembers
+    {
+        public static string GetName(this DispatcherType self)
+        {
+            //TODO: switch case return string?
+            return self.ToString();
+        }
+    }
     /// <summary>
     ///     Class MessageDispatcher.
     /// </summary>
@@ -60,6 +75,9 @@ namespace Akka.Dispatch
         }
     }
 
+    /// <summary>
+    ///     Task based dispatcher
+    /// </summary>
     public class TaskDispatcher : MessageDispatcher
     {
         public override void Schedule(Action run)
@@ -105,7 +123,7 @@ namespace Akka.Dispatch
         /// <summary>
         ///     The queue
         /// </summary>
-        private readonly ConcurrentQueue<Action> queue = new ConcurrentQueue<Action>();
+        private readonly BlockingCollection<Action> queue = new BlockingCollection<Action>();
 
         /// <summary>
         ///     The running
@@ -117,15 +135,15 @@ namespace Akka.Dispatch
         /// </summary>
         public SingleThreadDispatcher()
         {
-            var b = new BlockingCollection<Action>(queue);
-            new Thread(_ =>
+            var thread = new Thread(_ =>
             {
-                while (running)
+                foreach (var next in queue.GetConsumingEnumerable())
                 {
-                    Action next = b.Take();
                     next();
+                    if (!running) return;
                 }
             });
+            thread.Start(); //thread won't start automatically without this
         }
 
         /// <summary>
@@ -134,7 +152,7 @@ namespace Akka.Dispatch
         /// <param name="run">The run.</param>
         public override void Schedule(Action run)
         {
-            queue.Enqueue(run);
+            queue.Add(run);
         }
     }
 
@@ -147,6 +165,7 @@ namespace Akka.Dispatch
         ///     The default dispatcher identifier, also the full key of the configuration of the default dispatcher.
         /// </summary>
         public readonly static string DefaultDispatcherId = "akka.actor.default-dispatcher";
+        public readonly static string SynchronizedDispatcherId = "akka.actor.synchronized-dispatcher";
 
         private readonly ActorSystem _system;
 
@@ -167,12 +186,19 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        ///     Froms the current synchronization context.
+        ///     Gets the MessageDispatcher for the current SynchronizationContext.
+        ///     Use this when scheduling actors in a UI thread.
         /// </summary>
         /// <returns>MessageDispatcher.</returns>
         public static MessageDispatcher FromCurrentSynchronizationContext()
         {
             return new CurrentSynchronizationContextDispatcher();
+        }
+
+
+        public MessageDispatcher Lookup(string dispatcherName)
+        {
+            return FromConfig(string.Format("akka.actor.{0}", dispatcherName));
         }
 
         /// <summary>
@@ -195,6 +221,7 @@ namespace Akka.Dispatch
             Config config = _system.Settings.Config.GetConfig(path);
             string type = config.GetString("type");
             int throughput = config.GetInt("throughput");
+            long throughputDeadlineTime = config.GetMillisDuration("throughput-deadline-time").Ticks;
             //shutdown-timeout
             //throughput-deadline-time
             //attempt-teamwork
@@ -205,6 +232,9 @@ namespace Akka.Dispatch
             {
                 case "Dispatcher":
                     dispatcher = new ThreadPoolDispatcher();
+                    break;
+                case "TaskDispatcher":
+                    dispatcher = new TaskDispatcher();
                     break;
                 case "PinnedDispatcher":
                     dispatcher = new SingleThreadDispatcher();
@@ -223,7 +253,14 @@ namespace Akka.Dispatch
             }
 
             dispatcher.Throughput = throughput;
-            //  dispatcher.ThroughputDeadlineTime 
+            if (throughputDeadlineTime > 0)
+            {
+                dispatcher.ThroughputDeadlineTime = throughputDeadlineTime;
+            }
+            else
+            {
+                dispatcher.ThroughputDeadlineTime = null;
+            }
 
             return dispatcher;
         }

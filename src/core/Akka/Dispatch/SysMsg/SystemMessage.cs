@@ -13,7 +13,7 @@ namespace Akka.Dispatch.SysMsg
     ///     Class SystemMessage.
     /// </summary>
     /// **
-    public abstract class SystemMessage : NoSerializationVerificationNeeded
+    public interface SystemMessage : NoSerializationVerificationNeeded
     {
     }
 
@@ -226,6 +226,15 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class Restart : SystemMessage
     {
+        private Restart() { }
+        private static readonly Restart _instance = new Restart();
+        public static Restart Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
     }
 
     /// <summary>
@@ -275,6 +284,15 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class Suspend : SystemMessage
     {
+        private Suspend() { }
+        private static readonly Suspend _instance = new Suspend();
+        public static Suspend Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
     }
 
     /// <summary>
@@ -282,6 +300,15 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class Stop : SystemMessage
     {
+        private Stop() { }
+        private static readonly Stop _instance = new Stop();
+        public static Stop Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
     }
 
     /// <summary>
@@ -332,6 +359,15 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class Terminate : SystemMessage
     {
+        private Terminate() { }
+        private static readonly Terminate _instance = new Terminate();
+        public static Terminate Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
     }
 
     public sealed class Create : SystemMessage
@@ -348,5 +384,4 @@ namespace Akka.Dispatch.SysMsg
             get { return _failure; }
         }
     }
-
 }

@@ -7,6 +7,10 @@ namespace Akka.Dispatch
     {
     }
 
+    /// <summary>
+    /// Used inside Akka.Remote for constructing the low-level Helios threadpool, but inside
+    /// vanilla Akka it's also used for constructing custom fixed-size-threadpool dispatchers.
+    /// </summary>
     class ThreadPoolConfig
     {
         private readonly Config _config;

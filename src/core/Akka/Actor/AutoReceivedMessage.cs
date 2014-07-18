@@ -3,11 +3,11 @@ using Akka.Event;
 
 namespace Akka.Actor
 {
-    public abstract class AutoReceivedMessage : NoSerializationVerificationNeeded
+    public interface AutoReceivedMessage : NoSerializationVerificationNeeded
     {
     }
 
-    public class Terminated : AutoReceivedMessage, PossiblyHarmful
+    public sealed class Terminated : AutoReceivedMessage, PossiblyHarmful
     {
         public Terminated(ActorRef actorRef, bool existenceConfirmed, bool addressTerminated)
         {
@@ -30,7 +30,7 @@ namespace Akka.Actor
     }
 
     //request to an actor ref, to get back the identity of the underlying actors
-    public class Identify : AutoReceivedMessage
+    public sealed class Identify : AutoReceivedMessage
     {
         public Identify(object messageId)
         {
@@ -41,7 +41,7 @@ namespace Akka.Actor
     }
 
     //response to the Identity message, get identity by Sender
-    public class ActorIdentity : AutoReceivedMessage
+    public sealed class ActorIdentity : AutoReceivedMessage
     {
         public ActorIdentity(object messageId, ActorRef subject)
         {
@@ -53,13 +53,33 @@ namespace Akka.Actor
         public ActorRef Subject { get; private set; }
     }
 
-    public class PoisonPill : AutoReceivedMessage
+    public sealed class PoisonPill : AutoReceivedMessage 
     {
+        private PoisonPill() { }
+        private static readonly PoisonPill _instance = new PoisonPill();
+        public static PoisonPill Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
     }
 
-    public class Kill : AutoReceivedMessage
+    public sealed class Kill : AutoReceivedMessage
     {
+        private Kill() { }
+        private static readonly Kill _instance = new Kill();
+        public static Kill Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
     }
+
+
 
     /// <summary>
     /// INTERNAL API
