@@ -111,7 +111,7 @@ namespace Akka.Routing
         protected Pool(Configuration.Config config)
         {
             NrOfInstances = config.GetInt("nr-of-instances");
-            //Resizer = DefaultResizer.fromConfig(config);
+            Resizer = DefaultResizer.FromConfig(config);
             UsePoolDispatcher = config.HasPath("pool-dispatcher");
         }
 
