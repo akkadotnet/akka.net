@@ -154,7 +154,7 @@ namespace Akka.Routing
 
         public static DefaultResizer FromConfig(Config resizerConfig)
         {
-            return resizerConfig.GetBoolean("resizer.enabled") ? new DefaultResizer(resizerConfig) : null;
+            return resizerConfig.GetBoolean("resizer.enabled") ? new DefaultResizer(resizerConfig.GetConfig("resizer")) : null;
         }
 
         public override bool IsTimeForResize(long messageCounter)
@@ -267,7 +267,7 @@ namespace Akka.Routing
                                         : (_pressureThreshold < 1
                                             ? cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
                                               cell.CurrentMessage != null
-                                            : cell.Mailbox.NumberOfMessages > _pressureThreshold);
+                                            : cell.Mailbox.NumberOfMessages >= _pressureThreshold);
                             }
                             else
                             {

@@ -112,6 +112,9 @@ namespace Akka.Routing
         {
             NrOfInstances = config.GetInt("nr-of-instances");
             Resizer = DefaultResizer.FromConfig(config);
+            // let the resizer dictate the number of instances.
+            // the original JVM version doesn't need this hack - somewhere they stop the config fallback value of 1 from being substituted
+            if (Resizer != null) NrOfInstances = 0; 
             UsePoolDispatcher = config.HasPath("pool-dispatcher");
         }
 

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
+using Akka.Util;
 
 namespace Akka.Routing
 {
@@ -32,7 +33,7 @@ namespace Akka.Routing
         /// must always use ResizeInProgressState static class to compare or assign values
         /// </summary>
         private int _resizeInProgress;
-        private long _resizeCounter;
+        private AtomicCounterLong _resizeCounter;
         private readonly Props _routerProps;
         private Pool _pool;
 
@@ -45,14 +46,14 @@ namespace Akka.Routing
             resizer = pool.Resizer;
             _routerProps = routerProps;
             _pool = pool;
-            _resizeCounter = 0;
+            _resizeCounter = new AtomicCounterLong(0);
             _resizeInProgress = ResizeInProgressState.False;
         }
 
         protected override void PreStart()
         {
             // initial resize, before message send
-            if (resizer.IsTimeForResize(Interlocked.Increment(ref _resizeCounter) - 1))
+            if (resizer.IsTimeForResize(_resizeCounter.GetAndIncrement()))
             {
                 Resize(true);
             }
@@ -62,7 +63,7 @@ namespace Akka.Routing
         public override void Post(ActorRef sender, object message)
         {
             if(!(_routerProps.RouterConfig.IsManagementMessage(message)) &&
-                resizer.IsTimeForResize(Interlocked.Increment(ref _resizeCounter) - 1) &&
+                resizer.IsTimeForResize(_resizeCounter.GetAndIncrement()) &&
                 Interlocked.Exchange(ref _resizeInProgress, ResizeInProgressState.True) == ResizeInProgressState.False)
             {
                 base.Post(Self, new Resize());

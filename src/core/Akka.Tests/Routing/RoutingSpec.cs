@@ -175,10 +175,10 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Router_in_general_must_use_configured_nr_of_instances_when_FromConfig()
         {
-            var router = sys.ActorOf(Props.Create<TestActor>(), "router1");
+            var router = sys.ActorOf(Props.Create<TestActor>().WithRouter(new FromConfig()), "router1");
 
             router.Tell(new GetRoutees(),testActor);
-            expectMsgType<Routees>(DefaultTimeout).Members.Count().ShouldBe(3);
+            expectMsgType<Routees>().Members.Count().ShouldBe(3);
             watch(router);
             sys.Stop(router);
             expectTerminated(router);

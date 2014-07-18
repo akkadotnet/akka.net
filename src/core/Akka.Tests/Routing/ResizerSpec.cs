@@ -24,6 +24,7 @@ namespace Akka.Tests.Routing
             /router1 {
                 router = round-robin-pool
                     resizer {
+                        enabled = on
                         lower-bound = 2
                         upper-bound = 3
                     }
@@ -103,7 +104,7 @@ namespace Akka.Tests.Routing
         public void DefaultResizer_must_be_possible_to_define_in_configuration()
         {
             var latch = new TestLatch(sys, 3);
-            var router = sys.ActorOf<ResizerTestActor>("router1");
+            var router = sys.ActorOf(Props.Create<ResizerTestActor>().WithRouter(new FromConfig()),"router1");
 
             router.Tell(latch);
             router.Tell(latch);
@@ -143,7 +144,7 @@ namespace Akka.Tests.Routing
 
             //first message should create the minimum number of routees
             router.Tell("echo", testActor);
-            expectMsg("reply");
+            expectMsg("reply", TimeSpan.FromSeconds(1));
 
             (RouteeSize(router)).ShouldBe(resizer.LowerBound);
 
@@ -151,12 +152,12 @@ namespace Akka.Tests.Routing
             {
                 for (var i = 0; i < loops; i++)
                 {
-                    router.Tell(span);
+                    router.Tell(span, testActor);
                     //sending too quickly will result in skipped resize due to many resizeInProgress conflicts
                     Thread.Sleep(TimeSpan.FromMilliseconds(20));
                 }
                 Within(
-                    TimeSpan.FromMilliseconds(span.TotalMilliseconds * loops / resizer.LowerBound) + TimeSpan.FromSeconds(2),
+                    TimeSpan.FromMilliseconds(span.TotalMilliseconds * loops / resizer.LowerBound) + TimeSpan.FromSeconds(2.5),
                     () =>
                     {
                         for (var i = 0; i < loops; i++) expectMsg("done");
@@ -172,9 +173,49 @@ namespace Akka.Tests.Routing
            
 
             // a whole bunch should max it out
-            loop(20, TimeSpan.FromMilliseconds(50));
+            loop(20, TimeSpan.FromMilliseconds(500));
             (RouteeSize(router)).ShouldBe(resizer.UpperBound);
             
+        }
+
+        class BackoffActor : UntypedActor
+        {
+            protected override void OnReceive(object message)
+            {
+                message.Match().With<int>(i =>
+                {
+                    if (i <= 0) return; //done
+                    Thread.Sleep(i);
+                });
+            }
+        }
+
+        [Fact(Timeout = 10000)]
+        public void DefaultResizer_must_backoff_within_10_seconds()
+        {
+            var resizer = new DefaultResizer(2, 5, pressureThreshold: 1, rampupRate: 1.0d, backoffRate: 1.0d,
+               messagesPerResize: 2, backoffThreshold: 0.4d);
+
+            var router = sys.ActorOf(Props.Create<BackoffActor>().WithRouter(new RoundRobinPool(0, resizer)));
+
+            // put some pressure on the router
+            for (var i = 0; i < 15; i++)
+            {
+                router.Tell(150);
+                Thread.Sleep(20);
+            }
+
+            var z = RouteeSize(router);
+            Assert.True(z > 2);
+            Thread.Sleep(300);
+
+            // let it cool down
+            AwaitCond(() =>
+            {
+                router.Tell(0); //trigger resize
+                Thread.Sleep(20);
+                return RouteeSize(router) < z;
+            }, TimeSpan.FromMilliseconds(500)).Wait();
         }
 
         #region Internal methods
