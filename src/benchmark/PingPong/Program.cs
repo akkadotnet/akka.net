@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Management;
 using System.Runtime.Remoting.Messaging;
 using System.Threading;
@@ -13,15 +15,15 @@ using Akka.Event;
 
 namespace PingPong
 {
+    public static class Messages
+    {
+        public class Msg { public override string ToString() { return "msg"; } }
+        public class Run { public override string ToString() { return "run"; } }
+        public class Started { public override string ToString() { return "started"; } }
+    }
+
     internal class Program
     {
-        private static int redCount;
-        private static long bestThroughput;
-
-        private static readonly object msg = new Message("msg");
-        private static readonly object run = new Message("run");
-        private static readonly object started = new Message("started");
-
         public static uint CpuSpeed()
         {
 #if !mono
@@ -34,13 +36,14 @@ namespace PingPong
 #endif
         }
 
-        private static void Main()
+        private static void Main(params string[] args)
         {
-            Start();
+            uint timesToRun = args.Length == 1 ? uint.Parse(args[0]) : 1u;
+            Start(timesToRun);
             Console.ReadKey();
         }
 
-        private static async void Start()
+        private static async void Start(uint timesToRun)
         {
             const int repeatFactor = 500;
             const long repeat = 30000L * repeatFactor;
@@ -66,15 +69,36 @@ namespace PingPong
             Console.WriteLine();
 
             //Warm up
-            await Benchmark(1, 1, 1, false);
+            ActorSystem.Create("WarmupSystem").Shutdown();
+            Console.Write("ActorBase    first start time:");
+            await Benchmark<ClientActorBase>(1, 1, 1, PrintStats.StartTimeOnly, -1, -1);
+            Console.WriteLine(" ms");
+            Console.Write("ReceiveActor first start time: ");
+            await Benchmark<ClientReceiveActor>(1, 1, 1, PrintStats.StartTimeOnly, -1, -1);
+            Console.WriteLine(" ms");
             Console.WriteLine();
 
-            Console.WriteLine("Throughput, Messages/sec, Start system [ms], Total time [ms]");
-
-            foreach(var throughput in GetThroughputSettings())
+            Console.WriteLine("         ActorBase                          RecieveActor");
+            Console.WriteLine("Thruput, Msgs/sec, Start [ms], Total [ms],  Msgs/sec, Start [ms], Total [ms]");
+            for(var i = 0; i < timesToRun; i++)
             {
-                await Benchmark(throughput, processorCount, repeat);
+                var redCountActorBase=0;
+                var redCountReceiveActor=0;
+                var bestThroughputActorBase=0L;
+                var bestThroughputReceiveActor=0L;
+                foreach(var throughput in GetThroughputSettings())
+                {
+                    var result1 = await Benchmark<ClientActorBase>(throughput, processorCount, repeat, PrintStats.LineStart | PrintStats.Stats, bestThroughputActorBase, redCountActorBase);
+                    bestThroughputActorBase = result1.Item2;
+                    redCountActorBase = result1.Item3;
+                    Console.Write(",  ");
+                    await Benchmark<ClientReceiveActor>(throughput, processorCount, repeat, PrintStats.Stats, bestThroughputReceiveActor, redCountReceiveActor);
+                    bestThroughputReceiveActor = result1.Item2;
+                    redCountReceiveActor = result1.Item3;
+                    Console.WriteLine();
+                }
             }
+
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.WriteLine("Done..");
         }
@@ -95,20 +119,20 @@ namespace PingPong
             }
         }
 
-        private static async Task<bool> Benchmark(int factor, int numberOfClients, long numberOfRepeats, bool printStats = true)
+        private static async Task<Tuple<bool, long, int>> Benchmark<TActor>(int factor, int numberOfClients, long numberOfRepeats, PrintStats printStats, long bestThroughput, int redCount) where TActor : ActorBase
         {
             var totalMessagesReceived = GetTotalMessagesReceived(numberOfRepeats);
             //times 2 since the client and the destination both send messages
             long repeatsPerClient = numberOfRepeats / numberOfClients;
             var totalWatch = Stopwatch.StartNew();
 
-            var system = ActorSystem.Create("PingPong");
+            var system = ActorSystem.Create("PingPong", ConfigurationFactory.ParseString("akka.loglevel = ERROR"));
 
             var countdown = new CountdownEvent(numberOfClients * 2);
             var waitForStartsActor = system.ActorOf(Props.Create(() => new WaitForStarts(countdown)), "wait-for-starts");
             var clients = new List<ActorRef>();
             var tasks = new List<Task>();
-
+            var started = new Messages.Started();
             for(int i = 0; i < numberOfClients; i++)
             {
                 var destination = (LocalActorRef)system.ActorOf<Destination>("destination-" + i);
@@ -116,7 +140,7 @@ namespace PingPong
 
                 var ts = new TaskCompletionSource<bool>();
                 tasks.Add(ts.Task);
-                var client = (LocalActorRef)system.ActorOf(Props.Create(() => new Client(destination, repeatsPerClient, ts)), "client-" + i);
+                var client = (LocalActorRef)system.ActorOf(new Props(typeof(TActor), null, destination, repeatsPerClient, ts), "client-" + i);
                 client.Cell.Dispatcher.Throughput = factor;
                 clients.Add(client);
 
@@ -126,10 +150,11 @@ namespace PingPong
             if(!countdown.Wait(TimeSpan.FromSeconds(10)))
             {
                 Console.WriteLine("The system did not start in 10 seconds. Aborting.");
-                return false;
+                return Tuple.Create(false, bestThroughput, redCount);
             }
             var setupTime = totalWatch.Elapsed;
             var sw = Stopwatch.StartNew();
+            var run = new Messages.Run();
             clients.ForEach(c => c.Tell(run));
 
             await Task.WhenAll(tasks.ToArray());
@@ -141,7 +166,7 @@ namespace PingPong
             var elapsedMilliseconds = sw.ElapsedMilliseconds;
             long throughput = elapsedMilliseconds == 0 ? -1 : totalMessagesReceived / elapsedMilliseconds * 1000;
             var foregroundColor = Console.ForegroundColor;
-            if(throughput > bestThroughput)
+            if(throughput >= bestThroughput)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
                 bestThroughput = throughput;
@@ -152,14 +177,20 @@ namespace PingPong
                 redCount++;
                 Console.ForegroundColor = ConsoleColor.Red;
             }
-            if(printStats)
-                Console.WriteLine("{0,10}, {1,12}, {2,17}, {3,15}", factor, throughput, setupTime.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture), totalWatch.Elapsed.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture));
+            if(printStats.HasFlag(PrintStats.StartTimeOnly))
+            {
+                Console.Write("{0,5}", setupTime.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture));
+            }
+            else
+            {
+                if(printStats.HasFlag(PrintStats.LineStart))
+                    Console.Write("{0,7}, ", factor);
+                if(printStats.HasFlag(PrintStats.Stats))
+                    Console.Write("{0,8}, {1,10}, {2,10}", throughput, setupTime.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture), totalWatch.Elapsed.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture));
+            }
             Console.ForegroundColor = foregroundColor;
 
-            if(redCount > 3)
-                return false;
-
-            return true;
+            return Tuple.Create(redCount <= 3, bestThroughput, redCount);
         }
 
         private static long GetTotalMessagesReceived(long numberOfRepeats)
@@ -167,63 +198,14 @@ namespace PingPong
             return numberOfRepeats * 2;
         }
 
-        public class Client : UntypedActor
-        {
-            private readonly ActorRef actor;
-            private readonly TaskCompletionSource<bool> latch;
-            public long received;
-            public long repeat;
-            public long sent;
-
-            public Client(ActorRef actor, long repeat, TaskCompletionSource<bool> latch)
-            {
-                this.actor = actor;
-                this.repeat = repeat;
-                this.latch = latch;
-                //     Console.WriteLine("starting {0}", Self.Path);
-            }
-
-            protected override void OnReceive(object message)
-            {
-                if(message == msg)
-                {
-                    received++;
-                    if(sent < repeat)
-                    {
-                        actor.Tell(msg);
-                        sent++;
-                    }
-                    else if(received >= repeat)
-                    {
-                        //       Console.WriteLine("done {0}", Self.Path);
-                        latch.SetResult(true);
-                    }
-                }
-                else if(message == run)
-                {
-                    for(int i = 0; i < Math.Min(1000, repeat); i++)
-                    {
-                        actor.Tell(msg);
-                        sent++;
-                    }
-                }
-                else if(message == started)
-                {
-                    Sender.Tell(started);
-                }
-            }
-        }
-
         public class Destination : UntypedActor
         {
             protected override void OnReceive(object message)
             {
-                if(message == msg)
-                    Sender.Tell(msg);
-                else if(message == started)
-                {
-                    Sender.Tell(started);
-                }
+                if(message is Messages.Msg)
+                    Sender.Tell(message);
+                else if(message is Messages.Started)
+                    Sender.Tell(message);
             }
         }
 
@@ -238,24 +220,19 @@ namespace PingPong
 
             protected override void OnReceive(object message)
             {
-                if(message == started)
+                if(message is Messages.Started)
                     _countdown.Signal();
             }
         }
-    }
-
-    public class Message
-    {
-        private readonly string _description;
-
-        public Message(string description)
+        [Flags]
+        public enum PrintStats
         {
-            _description = description;
-        }
-
-        public override string ToString()
-        {
-            return _description;
+            No = 0,
+            LineStart = 1,
+            Stats = 2,
+            StartTimeOnly=32768,
         }
     }
+
+
 }

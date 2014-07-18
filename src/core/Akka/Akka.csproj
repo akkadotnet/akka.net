@@ -68,6 +68,7 @@
     <Compile Include="..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Actor\ReceiveActor.cs" />
     <Compile Include="Actor\ActorBase.cs" />
     <Compile Include="Actor\ActorCell.cs" />
     <Compile Include="Actor\ActorPath.cs" />
@@ -200,6 +201,24 @@
     <Compile Include="PatternMatch.cs" />
     <Compile Include="Util\ThreadLocalRandom.cs" />
     <Compile Include="Util\WildcardTree.cs" />
+    <Compile Include="Util\MatchHandler\Argument.cs" />
+    <Compile Include="Util\MatchHandler\CachedMatchCompiler.cs" />
+    <Compile Include="Util\MatchHandler\CompiledMatchHandlerWithArguments.cs" />
+    <Compile Include="Util\MatchHandler\ILambdaExpressionCompiler.cs" />
+    <Compile Include="Util\MatchHandler\IMatchExpressionBuilder.cs" />
+    <Compile Include="Util\MatchHandler\IPartialActionBuilder.cs" />
+    <Compile Include="Util\MatchHandler\MatchExpressionBuilderResult.cs" />
+    <Compile Include="Util\MatchHandler\MatchExpressionBuilder.cs" />
+    <Compile Include="Util\MatchHandler\PartialActionBuilder.cs" />
+    <Compile Include="Util\MatchHandler\PartialHandlerArgumentsCapture.cs" />
+    <Compile Include="Util\MatchHandler\HandlerKind.cs" />
+    <Compile Include="Util\MatchHandler\IMatchCompiler.cs" />
+    <Compile Include="Util\MatchHandler\MatchBuilder.cs" />
+    <Compile Include="Util\MatchHandler\MatchBuilderSignature.cs" />
+    <Compile Include="Util\MatchHandler\PartialAction.cs" />
+    <Compile Include="Util\MatchHandler\PredicateAndHandler.cs" />
+    <Compile Include="Util\MatchHandler\LambdaExpressionCompiler.cs" />
+    <Compile Include="Util\MatchHandler\TypeHandler.cs" />
     <Compile Include="Util\Base64Encoding.cs" />
     <Compile Include="Util\StringFormat.cs" />
     <Compile Include="Util\StringLike.cs" />
@@ -215,7 +234,9 @@
     <EmbeddedResource Include="Configuration\Pigeon.conf" />
     <None Include="Akka.nuspec" />
     <None Include="packages.config" />
+    <None Include="Util\MatchHandler\README.md" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
