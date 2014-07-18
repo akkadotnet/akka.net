@@ -32,9 +32,9 @@ namespace Akka.Tests
             Xunit.Assert.True(self.SequenceEqual(other), "Expected " + other.Select(i => string.Format("'{0}'", i)).Join(",") + " got " + self.Select(i => string.Format("'{0}'", i)).Join(","));
         }
 
-        public static void ShouldBe<T>(this T self, T other, string message = null)
+        public static void ShouldBe<T>(this T actual, T expected, string message = null)
         {
-            Xunit.Assert.Equal(self, other);
+            Xunit.Assert.Equal(expected, actual);
         }
 
         public static void ShouldOnlyContainInOrder<T>(this IEnumerable<T> actual, params T[] expected)
