@@ -78,6 +78,7 @@
     <Compile Include="Actor\ActorCellTests.cs" />
     <Compile Include="Actor\ActorLifeCycleSpec.cs" />
     <Compile Include="Actor\ActorPathSpec.cs" />
+    <Compile Include="Actor\ReceiveActorTests.cs" />
     <Compile Include="Actor\ActorRefProviderSpec.cs" />
     <Compile Include="Actor\ActorSelectionSpec.cs" />
     <Compile Include="Actor\ActorSystemTests.cs" />
@@ -91,9 +92,17 @@
     <Compile Include="Actor\PatternSpec.cs" />
     <Compile Include="Actor\RootGuardianActorRef_Tests.cs" />
     <Compile Include="Configuration\ConfigurationSpec.cs" />
+    <Compile Include="Actor\ReceiveActorTests_Become.cs" />
+    <Compile Include="Actor\ReceiveActorTests_LifeCycle.cs" />
     <Compile Include="Event\EventBusSpec.cs" />
     <Compile Include="Event\EventStreamSpec.cs" />
     <Compile Include="HoconTests.cs" />
+    <Compile Include="MatchHandler\CachedMatchCompilerTests.cs" />
+    <Compile Include="MatchHandler\MatchBuilderSignatureTests.cs" />
+    <Compile Include="MatchHandler\MatchExpressionBuilder_BuildLambdaExpression_Tests.cs" />
+    <Compile Include="MatchHandler\MatchExpressionBuilder_CreateArgumentValuesArray_Tests.cs" />
+    <Compile Include="MatchHandler\MatchHandlerBuilderTests.cs" />
+    <Compile Include="MatchHandler\PartialActionBuilderTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Routing\ListenerSpec.cs" />
     <Compile Include="Routing\RoutingSpec.cs" />
