@@ -123,7 +123,7 @@ Target "CleanTests" <| fun _ ->
 
 open XUnitHelper
 Target "RunTests" <| fun _ ->
-    let testAssemblies = !! "src/**/bin/release/*.Tests.dll" -- "src/**/bin/release/Akka.FSharp.Tests.dll"
+    let testAssemblies = !! "src/**/bin/release/*.Tests.dll" //-- "src/**/bin/release/Akka.FSharp.Tests.dll"
 
     mkdir testOutput
 
