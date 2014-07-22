@@ -238,65 +238,7 @@ namespace Akka.Tests.Routing
             sys.Stop(router);
 
         }
-
-        [Fact]
-        public void Scatter_gather_router_must_be_started_when_constructed()
-        {
-             /*val routedActor = system.actorOf(Props[TestActor].withRouter(
-        ScatterGatherFirstCompletedRouter(routees = List(newActor(0)), within = 1 seconds)))
-      routedActor.isTerminated should be(false)*/
-
-            var routedActor = sys.ActorOf(Props.Create<TestActor>().WithRouter(new ScatterGatherFirstCompletedPool(1)));
-            routedActor.IsTerminated.ShouldBe(false);
-        }
-
-
-        public class BroadcastTarget : UntypedActor
-        {
-            private AtomicInteger _counter;
-            private TestLatch _latch;
-            public BroadcastTarget(TestLatch latch,AtomicInteger counter)
-            {
-                _latch = latch;
-                _counter = counter;
-            }
-            protected override void OnReceive(object message)
-            {
-                if (message is string)
-                {
-                    var s = (string)message;
-                    if (s == "end")
-                    {
-                        _latch.CountDown();
-                    }
-                }
-                if (message is int)
-                {
-                    var i = (int)message;
-                    _counter.GetAndAdd(i);
-                }
-            }
-        }
-
-        [Fact]
-        public void Scatter_gather_router_must_deliver_a_broadcast_message_using_tell()
-        {
-            var doneLatch = new TestLatch(sys,2);
-            var counter1 = new AtomicInteger(0);
-            var counter2 = new AtomicInteger(0);
-            var actor1 = sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
-            var actor2 = sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
-
-            var routedActor = sys.ActorOf(Props.Create<TestActor>().WithRouter(new ScatterGatherFirstCompletedGroup(TimeSpan.FromSeconds(1),actor1.Path.ToString(),actor2.Path.ToString())));
-            routedActor.Tell(new Broadcast(1));
-            routedActor.Tell(new Broadcast("end"));
-         
-            doneLatch.Ready(TimeSpan.FromSeconds(1));
-
-            counter1.Value.ShouldBe(1);
-            counter2.Value.ShouldBe(1);
-
-        }
+      
         public class SmallestMailboxActor : UntypedActor
         {
             private ConcurrentDictionary<int, string> usedActors;

@@ -74,6 +74,11 @@ namespace Akka.Routing
             paths = routees.Select(x => x.Path.ToStringWithAddress()).ToArray();
         }
 
+        public Props Props()
+        {
+            return Akka.Actor.Props.Empty.WithRouter(this);
+        }
+
         public override RouterActor CreateRouterActor()
         {
             return new RouterActor();

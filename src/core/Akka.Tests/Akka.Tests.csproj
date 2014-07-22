@@ -107,6 +107,7 @@
     <Compile Include="Routing\ListenerSpec.cs" />
     <Compile Include="Routing\ResizerSpec.cs" />
     <Compile Include="Routing\RoutingSpec.cs" />
+    <Compile Include="Routing\ScatterGatherFirstCompletedSpec.cs" />
     <Compile Include="Serialization\SerializationSpec.cs" />
     <Compile Include="Tools\PatternSpec.cs" />
     <Compile Include="Util\SwitchTests.cs" />
