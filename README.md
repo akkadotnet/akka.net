@@ -8,9 +8,6 @@ This is a community driven port and is not affiliated with Typesafe who makes th
 * Support forum: https://groups.google.com/forum/#!forum/akkadotnet-user-list
 * Mail: akkadotnet@gmail.com
 
-
-[![Build status](https://ci.appveyor.com/api/projects/status/liybm4ueeu1cq4et)](https://ci.appveyor.com/project/AkkaDotNet/akka-net-335)
-
 ###Features
 * [Actors](https://github.com/akkadotnet/akka.net/wiki/Getting started)
   * [Actor Lifecycle](https://github.com/akkadotnet/akka.net/blob/master/akka.net.Tests/ActorLifeCycleSpec.cs)
