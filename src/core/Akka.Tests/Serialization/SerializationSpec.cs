@@ -52,8 +52,8 @@ namespace Akka.Tests.Serialization
         }
 
         //TODO: find out why this fails on build server
-#if TMPFIX
-        [Fact]
+
+        [Fact(Skip="Fails on buildserver")]
         public void CanSerializeFutureActorRef()
         {
             sys.EventStream.Subscribe(testActor, typeof(object));
@@ -73,6 +73,6 @@ namespace Akka.Tests.Serialization
 
             Assert.Same(f, deserialized.ActorRef);
         }
-#endif
+
     }
 }
