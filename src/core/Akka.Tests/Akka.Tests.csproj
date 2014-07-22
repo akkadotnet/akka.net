@@ -104,10 +104,12 @@
     <Compile Include="MatchHandler\MatchHandlerBuilderTests.cs" />
     <Compile Include="MatchHandler\PartialActionBuilderTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Routing\BroadcastSpec.cs" />
     <Compile Include="Routing\ListenerSpec.cs" />
     <Compile Include="Routing\ResizerSpec.cs" />
     <Compile Include="Routing\RoutingSpec.cs" />
     <Compile Include="Routing\ScatterGatherFirstCompletedSpec.cs" />
+    <Compile Include="Routing\SmallestMailboxSpec.cs" />
     <Compile Include="Serialization\SerializationSpec.cs" />
     <Compile Include="Tools\PatternSpec.cs" />
     <Compile Include="Util\SwitchTests.cs" />
