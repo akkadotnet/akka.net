@@ -314,11 +314,25 @@ module Actors =
     // declare extension methods for Actor interface
     type Actor<'msg> with
         /// <summary>
+        /// Implementation of spawne method using actor-local context.
+        /// Actor refs returned this way are considered children of current actor.
+        /// </summary>
+        member this.spawne (system:ActorSystem) name (f: Expr<Actor<'m> -> Cont<'m,'v>>)  =
+            let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f))
+            this.Context.ActorOf(Props.Create(e), name)
+        /// <summary>
+        /// Implementation of spawns method using actor-local context.
+        /// Actor refs returned this way are considered children of current actor. 
+        /// </summary>
+        /// <param name="name">The actor instance name to be created as child of current actor</param>
+        /// <param name="strategy">Function used to generate supervisor strategy</param>
+        /// <param name="f">the actor's message handling function.</param>
+        member this.spawns name (strategy: SupervisorStrategy) (f: Actor<'m> -> Cont<'m,'v>)  =
+            let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f, strategy))
+            this.Context.ActorOf(Props.Create(e), name)
+        /// <summary>
         /// Implementation of spawn method using actor-local context.
         /// Actor refs returned this way are considered children of current actor.
         /// </summary>
-        /// <param name="name"></param>
-        /// <param name="f"></param>
         member this.spawn name (f: Actor<'m> -> Cont<'m,'v>) =
-            let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f))
-            this.Context.ActorOf(Props.Create(e), name)
+            this.spawns name null f
