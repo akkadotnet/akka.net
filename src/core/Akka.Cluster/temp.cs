@@ -1,4 +1,8 @@
-﻿namespace Akka.Cluster
+﻿using System;
+using Akka.Actor;
+using Akka.Remote;
+
+namespace Akka.Cluster
 {
     public class NodeMetrics
     {
@@ -12,11 +16,9 @@
     {
     }
 
-    public class Cluster
+    public class ClusterActorRefProvider
     {
-        public static bool IsAssertInvariantsEnabled
-        {
-            get { return true; }
-        }
+        public RemoteTransport Transport { get { throw new NotImplementedException();} }
     }
+
 }

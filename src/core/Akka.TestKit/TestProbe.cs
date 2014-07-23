@@ -57,5 +57,21 @@ namespace Akka.Tests
                 Assert.True(false, "Did not expect a message during the duration " + duration.ToString());
             }
         }
+
+        public void expectMsgType<T>()
+        {
+            var res = queue.Take();
+            Assert.True(res is T);
+        }
+
+        public List<object> ReceiveN(int n)
+        {
+            var res = new List<object>();
+            for (var i = 0; i < n; i++)
+            {
+                res.Add(queue.Take());
+            }
+            return res;
+        }
     }
 }

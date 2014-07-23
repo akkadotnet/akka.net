@@ -16,7 +16,7 @@ namespace Akka.Remote
     /// be available (i.e. fully initialized) by the time the first message is received or when the Start() method
     /// returns, whichever happens first.
     /// </summary>
-    internal abstract class RemoteTransport
+    public abstract class RemoteTransport
     {
         protected RemoteTransport(ActorSystem system, RemoteActorRefProvider provider)
         {

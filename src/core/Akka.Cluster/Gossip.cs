@@ -225,6 +225,7 @@ namespace Akka.Cluster
             var reachableMembers = _overview.Reachability.IsAllReachable
                 ? mbrs
                 : mbrs.Where(m => _overview.Reachability.IsReachable(m.UniqueAddress));
+            if (!reachableMembers.Any()) return null;
             var member = reachableMembers.FirstOrDefault(m => Gossip.LeaderMemberStatus.Contains(m.Status)) ??
                          reachableMembers.Min(Member.LeaderStatusOrdering);
             return member.UniqueAddress;
