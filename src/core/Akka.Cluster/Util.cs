@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using Akka.Configuration;
 
 namespace Akka.Cluster
 {
-    static class EnumerableExtensions
+    static class Utils
     {
         //TODO: Tests
         public static T Min<T>(this IEnumerable<T> source,
@@ -62,6 +63,13 @@ namespace Akka.Cluster
                 }
                 return max;
             }
+        }
+
+        public static TimeSpan? GetMillisDurationWithOffSwitch(this Config @this, string key)
+        {
+            TimeSpan? ret = null;
+            if (@this.GetString(key).ToLower() != "off") ret = @this.GetMillisDuration(key);
+            return ret;
         }
     }
 }

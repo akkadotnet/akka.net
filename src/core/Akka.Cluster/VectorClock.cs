@@ -52,6 +52,7 @@ namespace Akka.Cluster
                 return new Node(hash);
             }
 
+            //TODO: Use murmur here?
             private static Node Hash(string name)
             {
                 var md5 = System.Security.Cryptography.MD5.Create();

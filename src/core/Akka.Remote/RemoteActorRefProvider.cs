@@ -16,7 +16,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    class RemoteActorRefProvider : ActorRefProvider
+    public class RemoteActorRefProvider : ActorRefProvider
     {
         private readonly LoggingAdapter _log;
 
@@ -48,7 +48,7 @@ namespace Akka.Remote
         }
 
         public InternalActorRef RemoteDaemon { get { return RemoteInternals.RemoteDaemon; } }
-        internal RemoteTransport Transport { get { return RemoteInternals.Transport; } }
+        public RemoteTransport Transport { get { return RemoteInternals.Transport; } }
 
         internal RemoteSettings RemoteSettings { get; private set; }
 
