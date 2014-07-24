@@ -41,8 +41,16 @@ namespace Akka.Remote.Tests
             Assert.Equal(1, remoteSettings.Transports.Length);
             Assert.Equal(typeof(HeliosTcpTransport), Type.GetType(remoteSettings.Transports.Head().TransportClass));
 
+            Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(remoteSettings.WatchFailureDetectorImplementationClass));
+            Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchHeartBeatInterval);
+            Assert.Equal(TimeSpan.FromSeconds(3), remoteSettings.WatchHeartbeatExpectedResponseAfter);
+            Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchUnreachableReaperInterval);
+            Assert.Equal(10, remoteSettings.WatchFailureDetectorConfig.GetDouble("threshold"));
+            Assert.Equal(200, remoteSettings.WatchFailureDetectorConfig.GetDouble("max-sample-size"));
+            Assert.Equal(TimeSpan.FromSeconds(10), remoteSettings.WatchFailureDetectorConfig.GetMillisDuration("acceptable-heartbeat-pause"));
+            Assert.Equal(TimeSpan.FromMilliseconds(100), remoteSettings.WatchFailureDetectorConfig.GetMillisDuration("min-std-deviation"));
+
             //TODO add adapter support
-            //TODO add remote watcher support
         }
 
         [Fact]

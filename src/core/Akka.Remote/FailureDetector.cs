@@ -1,6 +1,4 @@
 ﻿using System;
-using Akka.Configuration;
-using Akka.Event;
 
 namespace Akka.Remote
 {
@@ -29,8 +27,8 @@ namespace Akka.Remote
 
         #region Static members
 
+		//TODO: What happens when TickCount sign flips?
         public static readonly Clock DefaultClock = () => Environment.TickCount;
-
         #endregion
     }
 
