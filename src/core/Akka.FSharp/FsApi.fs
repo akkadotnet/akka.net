@@ -21,11 +21,11 @@ type Actor()=
 
 
 
-let inline (<!) (actorRef: #ActorRef) (msg: obj) =
-    actorRef.Tell msg
+let inline (<!) (actorRef: #ICanTell) (msg: obj) =
+    actorRef.Tell(msg, ActorCell.GetCurrentSelfOrNoSender())
     ignore()
 
-let (<?) (tell:ICanTell) (msg: obj) =
+let (<?) (tell:#ICanTell) (msg: obj) =
     tell.Ask msg
     |> Async.AwaitTask
 
