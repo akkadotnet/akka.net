@@ -7,11 +7,9 @@ This is a community driven port and is not affiliated with Typesafe who makes th
 * Subscribe to the Akka.NET dev feed: https://twitter.com/AkkaDotNet  (@AkkaDotNet)
 * Support forum: https://groups.google.com/forum/#!forum/akkadotnet-user-list
 * Mail: akkadotnet@gmail.com
+* Stackoverflow: http://stackoverflow.com/questions/tagged/akka.net
 
-
-[![Build status](https://ci.appveyor.com/api/projects/status/liybm4ueeu1cq4et)](https://ci.appveyor.com/project/AkkaDotNet/akka-net-335)
-
-###Features
+### Features
 * [Actors](https://github.com/akkadotnet/akka.net/wiki/Getting started)
   * [Actor Lifecycle](https://github.com/akkadotnet/akka.net/blob/master/akka.net.Tests/ActorLifeCycleSpec.cs)
   * [Actor Props](https://github.com/akkadotnet/akka.net/wiki/Props)
@@ -28,11 +26,11 @@ This is a community driven port and is not affiliated with Typesafe who makes th
 * [Supervision](https://github.com/akkadotnet/akka.net/wiki/Supervision)
 * [The F# API](https://github.com/akkadotnet/akka.net/wiki/FSharp-API)
 
-#####Not yet implemented:
+##### Not yet implemented:
 * Akka Cluster support
 * Akka Persistence
 
-#####Install Akka.NET via NuGet
+##### Install Akka.NET via NuGet
 
 If you want to include Akka.NET in your project, you can [install it directly from NuGet](https://www.nuget.org/packages/Akka)
 
@@ -49,7 +47,7 @@ And if you need F# support:
 PM> Install-Package Akka.FSharp
 ````
 
-#####Contribute
+##### Contribute
 If you are interested in helping porting Akka to .NET please take a look at [Contributing to Akka.NET](https://github.com/akkadotnet/akka.net/wiki/Contributing-to-Akka.NET).
 
 Also, please see [Building Akka .NET](https://github.com/akkadotnet/akka.net/wiki/Building-and-Distributing-Pigeon).
