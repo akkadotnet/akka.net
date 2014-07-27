@@ -27,6 +27,12 @@ namespace Akka.Actor
 
             ConfigVersion = Config.GetString("akka.version");
             ProviderClass = Config.GetString("akka.actor.provider");
+            var providerType = Type.GetType(ProviderClass);
+            if (providerType == null)
+                throw new ConfigurationException(string.Format("'akka.actor.provider' is not a valid type name : '{0}'", ProviderClass));
+            if (!typeof(ActorRefProvider).IsAssignableFrom(providerType))
+                throw new ConfigurationException(string.Format("'akka.actor.provider' is not a valid actor ref provider: '{0}'", ProviderClass));
+            
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy");
 
             CreationTimeout = Config.GetMillisDuration("akka.actor.creation-timeout");
