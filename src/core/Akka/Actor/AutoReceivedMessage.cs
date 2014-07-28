@@ -41,7 +41,7 @@ namespace Akka.Actor
     }
 
     //response to the Identity message, get identity by Sender
-    public sealed class ActorIdentity : AutoReceivedMessage
+    public sealed class ActorIdentity
     {
         public ActorIdentity(object messageId, ActorRef subject)
         {
