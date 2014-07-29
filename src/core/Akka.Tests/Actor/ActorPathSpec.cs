@@ -162,7 +162,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void PathsWithDifferentAddressesShouldNotBeEqual()
+        public void PathsWithDifferentAddressesAndSameElementsShouldNotBeEqual()
         {
             ActorPath path1 = null;
             ActorPath path2 = null;
@@ -170,6 +170,17 @@ namespace Akka.Tests.Actor
             ActorPath.TryParse("akka://remotesystem/user", out path2);
 
             Assert.NotEqual(path2, path1);
+        }
+
+        [Fact]
+        public void PathsWithSameAddressesAndSameElementsShouldNotBeEqual()
+        {
+            ActorPath path1 = null;
+            ActorPath path2 = null;
+            ActorPath.TryParse("akka.tcp://remotesystem@localhost:8080/user", out path1);
+            ActorPath.TryParse("akka.tcp://remotesystem@localhost:8080/user", out path2);
+
+            Assert.Equal(path2, path1);
         }
     }
 }
