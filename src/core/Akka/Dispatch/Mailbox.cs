@@ -118,6 +118,13 @@ namespace Akka.Dispatch
 
         protected abstract int GetNumberOfMessages();
 
+        internal bool HasMessages
+        {
+            get
+            {
+                return NumberOfMessages > 0;
+            }
+        }
         internal int NumberOfMessages
         {
             get

@@ -87,7 +87,10 @@ namespace Akka.Actor
                 Mailbox.Suspend();
                 Parent.Tell(new Failed(Self, cause));
             }
-
+            finally
+            {
+                CheckReceiveTimeout(); // Reschedule receive timeout
+            }
         }
 
 
@@ -571,6 +574,7 @@ protected def terminate() {
                 var instance = NewActor();
                 _actor = instance;
                 UseThreadContext(() => instance.AroundPreStart());
+                CheckReceiveTimeout();
                 if(System.Settings.DebugLifecycle)
                     Publish(new Debug(Self.Path.ToString(),instance.GetType(),"Started ("+instance+")"));
             }

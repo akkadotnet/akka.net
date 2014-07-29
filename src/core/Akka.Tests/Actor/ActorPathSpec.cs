@@ -160,5 +160,16 @@ namespace Akka.Tests.Actor
         {
             (new RootActorPath(new Address("akka.tcp", "mysys")) / "user" / "foo" / "bar").Elements.ShouldOnlyContainInOrder(new[] { "user", "foo", "bar" });
         }
+
+        [Fact]
+        public void PathsWithDifferentAddressesShouldNotBeEqual()
+        {
+            ActorPath path1 = null;
+            ActorPath path2 = null;
+            ActorPath.TryParse("akka.tcp://remotesystem@localhost:8080/user",out path1);
+            ActorPath.TryParse("akka://remotesystem/user", out path2);
+
+            Assert.NotEqual(path2, path1);
+        }
     }
 }
