@@ -206,5 +206,10 @@ namespace Akka.Actor
             _hasBeenCleared = true;
             _clearedSelf = self;
         }
+
+        protected void SetReceiveTimeout(TimeSpan? timeout)
+        {
+            Context.SetReceiveTimeout(timeout);
+        }
     }
 }

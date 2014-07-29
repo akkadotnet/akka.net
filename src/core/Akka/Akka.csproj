@@ -91,6 +91,7 @@
     <Compile Include="Actor\ICanTell.cs" />
     <Compile Include="Actor\LocalScope.cs" />
     <Compile Include="Actor\NameAndUid.cs" />
+    <Compile Include="Actor\ReceiveTimeout.cs" />
     <Compile Include="Actor\RemoteScope.cs" />
     <Compile Include="Actor\RepointableActorRef.cs" />
     <Compile Include="Actor\RootGuardianActorRef.cs" />
@@ -232,6 +233,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Configuration\Pigeon.conf" />
+    <Compile Include="Actor\ActorCell.ReceiveTimeout.cs" />
     <None Include="Akka.nuspec" />
     <None Include="packages.config" />
     <None Include="Util\MatchHandler\README.md" />

@@ -95,7 +95,7 @@ namespace Akka.Actor
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
         public bool Equals(ActorPath other)
         {
-            return _elements.SequenceEqual(other._elements);
+            return this.Address.Equals(other.Address) && _elements.SequenceEqual(other._elements);
         }
 
         /// <summary>
