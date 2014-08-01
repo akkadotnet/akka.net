@@ -14,8 +14,8 @@ namespace Akka.Actor
         void Unbecome();
         ActorRef Child(string name);
         IEnumerable<ActorRef> GetChildren();
-        void Watch(ActorRef subject);
-        void Unwatch(ActorRef subject);
+        ActorRef Watch(ActorRef subject);
+        ActorRef Unwatch(ActorRef subject);
         void SetReceiveTimeout(TimeSpan? timeout);
 
         /*

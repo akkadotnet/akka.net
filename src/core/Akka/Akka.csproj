@@ -68,6 +68,7 @@
     <Compile Include="..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Actor\ActorCell.DeathWatch.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
     <Compile Include="Actor\ReceiveActor.cs" />
     <Compile Include="Actor\ActorBase.cs" />
@@ -84,7 +85,6 @@
     <Compile Include="Actor\Deploy.cs" />
     <Compile Include="Actor\Futures.cs" />
     <Compile Include="Actor\AutoReceivedMessage.cs" />
-    <Compile Include="Actor\BroadcastActorRef.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Actor\Cell.cs" />
     <Compile Include="Actor\ChildrenContainer.cs" />

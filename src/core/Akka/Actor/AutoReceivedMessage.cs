@@ -7,7 +7,8 @@ namespace Akka.Actor
     {
     }
 
-    public sealed class Terminated : AutoReceivedMessage, PossiblyHarmful
+    public sealed class 
+        Terminated : AutoReceivedMessage, PossiblyHarmful
     {
         public Terminated(ActorRef actorRef, bool existenceConfirmed, bool addressTerminated)
         {
