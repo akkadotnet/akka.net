@@ -516,6 +516,20 @@ namespace Akka.Tests
             }
         }
 
+        protected void EventFilterLog<T>(string message, int occurences, Action intercept) where T : LogEvent
+        {
+            sys.EventStream.Subscribe(testActor, typeof(T));
+            intercept();
+            for (int i = 0; i < occurences; i++)
+            {
+                var res = queue.Take();
+                var error = (LogEvent)res;
+
+                Xunit.Assert.Equal(typeof(T), error.GetType());
+                var match = -1 != error.Message.ToString().IndexOf(message, StringComparison.CurrentCultureIgnoreCase);
+                Xunit.Assert.True(match);
+            }
+        }
 
         protected TestProbe TestProbe()
         {
