@@ -68,6 +68,7 @@
     <Compile Include="..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Actor\Inbox.Actor.cs" />
     <Compile Include="Actor\ReceiveActor.cs" />
     <Compile Include="Actor\ActorBase.cs" />
     <Compile Include="Actor\ActorCell.cs" />
@@ -89,6 +90,7 @@
     <Compile Include="Actor\ChildrenContainer.cs" />
     <Compile Include="Actor\EmptyLocalActorRef.cs" />
     <Compile Include="Actor\ICanTell.cs" />
+    <Compile Include="Actor\Inbox.cs" />
     <Compile Include="Actor\LocalScope.cs" />
     <Compile Include="Actor\NameAndUid.cs" />
     <Compile Include="Actor\ReceiveTimeout.cs" />
