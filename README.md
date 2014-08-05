@@ -10,7 +10,7 @@ This is a community driven port and is not affiliated with Typesafe who makes th
 * Stackoverflow: http://stackoverflow.com/questions/tagged/akka.net
 
 
-Visit us at [Akka.NET Site](http://akkadotnet.github.io)
+### Visit us at [akkadotnet.github.io](http://akkadotnet.github.io)
 
 ##### Install Akka.NET via NuGet
 
