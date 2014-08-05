@@ -9,26 +9,8 @@ This is a community driven port and is not affiliated with Typesafe who makes th
 * Mail: akkadotnet@gmail.com
 * Stackoverflow: http://stackoverflow.com/questions/tagged/akka.net
 
-### Features
-* [Actors](https://github.com/akkadotnet/akka.net/wiki/Getting started)
-  * [Actor Lifecycle](https://github.com/akkadotnet/akka.net/blob/master/akka.net.Tests/ActorLifeCycleSpec.cs)
-  * [Actor Props](https://github.com/akkadotnet/akka.net/wiki/Props)
-  * [Addressing](https://github.com/akkadotnet/akka.net/wiki/Addressing)
-* [Configuration](https://github.com/akkadotnet/akka.net/wiki/Configuration)
-* [EventBus](https://github.com/akkadotnet/akka.net/wiki/EventBus)
-* [Finite State Machines](https://github.com/akkadotnet/akka.net/wiki/FSM)
-* [Hotswap](https://github.com/akkadotnet/akka.net/wiki/Hotswap)
-* [Logging](https://github.com/akkadotnet/akka.net/wiki/Logging)
-* [Performance](https://github.com/akkadotnet/akka.net/wiki/Performance)
-* [Remoting](https://github.com/akkadotnet/akka.net/wiki/Remoting)
-* [Routing](https://github.com/akkadotnet/akka.net/wiki/Routing)
-* [Scheduling](https://github.com/akkadotnet/akka.net/wiki/Scheduler)
-* [Supervision](https://github.com/akkadotnet/akka.net/wiki/Supervision)
-* [The F# API](https://github.com/akkadotnet/akka.net/wiki/FSharp-API)
 
-##### Not yet implemented:
-* Akka Cluster support
-* Akka Persistence
+Visit us at [Akka.NET Site](http://akkadotnet.github.io)
 
 ##### Install Akka.NET via NuGet
 
