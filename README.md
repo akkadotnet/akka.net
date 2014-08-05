@@ -1,4 +1,4 @@
-# Akka.NET
+# Akka.NET [akkadotnet.github.io](http://akkadotnet.github.io)
 
 Akka.NET is a port of the popular Java/Scala framework Akka to .NET.
 
@@ -9,8 +9,6 @@ This is a community driven port and is not affiliated with Typesafe who makes th
 * Mail: akkadotnet@gmail.com
 * Stackoverflow: http://stackoverflow.com/questions/tagged/akka.net
 
-
-### Visit us at [akkadotnet.github.io](http://akkadotnet.github.io)
 
 ##### Install Akka.NET via NuGet
 
