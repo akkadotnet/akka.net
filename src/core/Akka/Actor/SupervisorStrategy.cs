@@ -184,7 +184,7 @@ namespace Akka.Actor
         /// </param>
         /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, Duration.Inf means no window.</param>
         /// <param name="decider">mapping from Exception to [[Akka.Actor.SupervisorStrategy.Directive]]</param>
-        public OneForOneStrategy(int maxNrOfRetries, TimeSpan withinTimeRange, Func<Exception, Directive> decider)
+        public OneForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> decider)
         {
             MaxNumberOfRetries = maxNrOfRetries;
             WithinTimeRange = withinTimeRange;
@@ -192,23 +192,24 @@ namespace Akka.Actor
         }
 
         //TODO: should be -1 retries, inf timeout, fix bug that prevents test to pass
+        //TODO: timeout can be null for inf.. null retries causes random remoting tests to fail/hang..
         /// <summary>
         /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
         /// </summary>
-        public OneForOneStrategy(Func<Exception, Directive> decider) : this(10, TimeSpan.FromSeconds(10), decider) { }
+        public OneForOneStrategy(Func<Exception, Directive> decider) : this(10, null, decider) { }
 
         /// <summary>
         ///     The number of times a child actor is allowed to be restarted, negative value means no limit,
         ///     if the limit is exceeded the child actor is stopped.
         /// </summary>
         /// <value>The maximum number of retries.</value>
-        public int MaxNumberOfRetries { get; private set; }
+        public int? MaxNumberOfRetries { get; private set; }
 
         /// <summary>
         ///     Duration of the time window for maxNrOfRetries, Duration.Inf means no window.
         /// </summary>
         /// <value>The duration.</value>
-        public TimeSpan WithinTimeRange { get; private set; }
+        public TimeSpan? WithinTimeRange { get; private set; }
 
         /// <summary>
         ///     Mapping from Exception to [[Akka.Actor.SupervisorStrategy.Directive]].
@@ -239,17 +240,25 @@ namespace Akka.Actor
                 Timestamp = DateTime.Now,
             });
             //remove expired
-            failures.Entries.RemoveAll(f => f.Timestamp < DateTime.Now - WithinTimeRange);
+            if (WithinTimeRange.HasValue)
+            {
+                failures.Entries.RemoveAll(f => f.Timestamp < DateTime.Now - WithinTimeRange);
+            }
             //calc count of active
             int count = failures.Entries.Count();
 
-            if (count > MaxNumberOfRetries)
+            if (ShouldStop(count))
             {
                 return Directive.Stop;
             }
 
             Directive whatToDo = Decider(x);
             return whatToDo;
+        }
+
+        private bool ShouldStop(int count)
+        {
+            return MaxNumberOfRetries.HasValue && MaxNumberOfRetries.HasValue && count > MaxNumberOfRetries.Value;
         }
 
         protected override void ProcessFailure(ActorCell actorCell, bool restart, ActorRef child, Exception cause) 
@@ -282,7 +291,7 @@ namespace Akka.Actor
         /// </param>
         /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, Duration.Inf means no window.</param>
         /// <param name="decider">mapping from Exception to [[Akka.Actor.SupervisorStrategy.Directive]]</param>
-        public AllForOneStrategy(int maxNrOfRetries, TimeSpan withinTimeRange, Func<Exception, Directive> decider)
+        public AllForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> decider)
         {
             MaxNumberOfRetries = maxNrOfRetries;
             WithinTimeRange = withinTimeRange;
@@ -293,20 +302,20 @@ namespace Akka.Actor
         /// <summary>
         /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
         /// </summary>
-        public AllForOneStrategy(Func<Exception, Directive> decider) : this(10, TimeSpan.FromSeconds(10), decider) { }
+        public AllForOneStrategy(Func<Exception, Directive> decider) : this(null, null, decider) { }
 
         /// <summary>
         ///     The number of times a child actor is allowed to be restarted, negative value means no limit,
         ///     if the limit is exceeded the child actor is stopped.
         /// </summary>
         /// <value>The maximum number of retries.</value>
-        public int MaxNumberOfRetries { get; private set; }
+        public int? MaxNumberOfRetries { get; private set; }
 
         /// <summary>
         ///     Duration of the time window for maxNrOfRetries, Duration.Inf means no window.
         /// </summary>
         /// <value>The duration.</value>
-        public TimeSpan WithinTimeRange { get; private set; }
+        public TimeSpan? WithinTimeRange { get; private set; }
 
         /// <summary>
         ///     Mapping from Exception to [[Akka.Actor.SupervisorStrategy.Directive]].
@@ -329,11 +338,14 @@ namespace Akka.Actor
                 Timestamp = DateTime.Now,
             });
             //remove expired
-            failures.Entries.RemoveAll(f => f.Timestamp < DateTime.Now - WithinTimeRange);
+            if (WithinTimeRange.HasValue)
+            {
+                failures.Entries.RemoveAll(f => f.Timestamp < DateTime.Now - WithinTimeRange);
+            }
             //calc count of active
             int count = failures.Entries.Count();
 
-            if (count > MaxNumberOfRetries)
+            if (MaxNumberOfRetries.HasValue && count > MaxNumberOfRetries)
             {
                 return Directive.Stop;
             }

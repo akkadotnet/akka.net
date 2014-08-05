@@ -34,7 +34,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Helios">
+    <Reference Include="Helios, Version=1.3.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\packages\Helios.1.3.0.0\lib\net45\Helios.dll</HintPath>
     </Reference>
     <Reference Include="System" />

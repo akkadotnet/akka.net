@@ -31,7 +31,7 @@ namespace Akka.Dispatch
             ActorCell.UseThreadContext(() =>
             {
                 //if ThroughputDeadlineTime is enabled, start a stopwatch
-                if (dispatcher.ThroughputDeadlineTime.HasValue)
+                if (dispatcher.ThroughputDeadlineTime.HasValue && dispatcher.ThroughputDeadlineTime.Value > 0)
                 {
                     if (_deadLineTimer != null)
                     {
@@ -58,7 +58,7 @@ namespace Akka.Dispatch
                 int left = dispatcher.Throughput;
 
                 //try dequeue a user message
-                while (!_isSuspended && _userMessages.TryDequeue(out envelope))
+                while (!_isSuspended && !_isClosed && _userMessages.TryDequeue(out envelope))
                 {
                     Mailbox.DebugPrint(ActorCell.Self + " processing message " + envelope);
 
@@ -78,7 +78,7 @@ namespace Akka.Dispatch
                         return;
 
                     //if deadline time have expired, stop and break
-                    if (dispatcher.ThroughputDeadlineTime.HasValue &&
+                    if (dispatcher.ThroughputDeadlineTime.HasValue && dispatcher.ThroughputDeadlineTime.Value > 0 &&
                         _deadLineTimer.ElapsedTicks > dispatcher.ThroughputDeadlineTime.Value)
                     {
                         _deadLineTimer.Stop();
@@ -149,7 +149,7 @@ namespace Akka.Dispatch
         /// <summary>
         ///     Stops this instance.
         /// </summary>
-        public override void Stop()
+        public override void BecomeClosed()
         {
             _isClosed = true;
         }
@@ -162,11 +162,44 @@ namespace Akka.Dispatch
             _isClosed = true;
         }
 
-
+        //TODO: should we only check userMessages? not system messages?
         protected override int GetNumberOfMessages()
         {
             return _userMessages.Count;
         }
 
+        public override void CleanUp()
+        {
+            var actorCell = ActorCell;
+            if(actorCell != null) // actor is null for the deadLetterMailbox
+            {
+                var deadLetterMailbox = actorCell.System.Mailboxes.DeadLetterMailbox;
+                Envelope envelope   ;
+                while(_systemMessages.TryDequeue(out envelope))
+                {
+                    deadLetterMailbox.Post(envelope);
+                }
+                while(_userMessages.TryDequeue(out envelope))
+                {
+                    deadLetterMailbox.Post(envelope);
+                }
+            }
+
+            //Akka JVM code:
+            //   if (actor ne null) { // actor is null for the deadLetterMailbox
+            //     val dlm = actor.dispatcher.mailboxes.deadLetterMailbox
+            //     var messageList = systemDrain(new LatestFirstSystemMessageList(NoMessage))
+            //     while (messageList.nonEmpty) {
+            //       // message must be “virgin” before being able to systemEnqueue again
+            //       val msg = messageList.head
+            //       messageList = messageList.tail
+            //       msg.unlink()
+            //       dlm.systemEnqueue(actor.self, msg)
+            //     }
+
+            //     if (messageQueue ne null) // needed for CallingThreadDispatcher, which never calls Mailbox.run()
+            //       messageQueue.cleanUp(actor.self, actor.dispatcher.mailboxes.deadLetterMailbox.messageQueue)
+            //   }
+        }
     }   
 }

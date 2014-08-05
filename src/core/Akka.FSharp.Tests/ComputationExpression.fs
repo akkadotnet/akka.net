@@ -2,10 +2,12 @@
 
 open Akka.FSharp
 open System
+open Xunit
+open FsCheck
+open FsCheck.Xunit
 
+module ComputationExpression =
 
-[<TestClass>]
-type ComputationExpression() =
     let send m =
         function
         | Func f -> f m
@@ -14,18 +16,18 @@ type ComputationExpression() =
     let value =
         function
         | Return (v:'a) -> v
-        | _ -> Microsoft.VisualStudio.TestTools.UnitTesting.Assert.Fail("Expected a value, found a continuation.")
+        | _ -> failwith "Expected a value, found a continuation."
                Unchecked.defaultof<'a>
 
-    [<TestMethod>]
-    member x.``return should return value``() =
+    [<Fact>]
+    let ``return should return value``() =
         actor { return 1}
         |> value
         |> equals 1
 
 
-    [<TestMethod>]
-    member x.``let should bind message``() =
+    [<Fact>]
+    let ``let should bind message``() =
         actor { let! m = IO<int>.Input
                 return m } 
         |> send 42
@@ -33,8 +35,8 @@ type ComputationExpression() =
         |> equals 42
 
 
-    [<TestMethod>]
-    member x.``let should bind functions``() =
+    [<Fact>]
+    let ``let should bind functions``() =
         let f() = actor { let! m = IO<int>.Input
                           return m}
         actor {
@@ -46,8 +48,8 @@ type ComputationExpression() =
         |> value
         |> equals (42, 84)
 
-    [<TestMethod>]
-    member x.``successive bindings can be combined``() =
+    [<Fact>]
+    let ``successive bindings can be combined``() =
         actor {
             let! m = IO<int>.Input
             let! n = IO<int>.Input
@@ -57,8 +59,8 @@ type ComputationExpression() =
         |> value
         |> equals (42, 84)
 
-    [<TestMethod>]
-    member x.``zero can be used when no ouput is given``() =
+    [<Fact>]
+    let ``zero can be used when no ouput is given``() =
         actor {
             let! m = IO<int>.Input
             do () }
@@ -66,8 +68,8 @@ type ComputationExpression() =
         |> value
         |> equals ()
 
-    [<TestMethod>]
-    member x.``returnfrom can return a whole actor result``() = 
+    [<Fact>]
+    let ``returnfrom can return a whole actor result``() = 
         let rec f n = actor { let! m = IO<int>.Input 
                               match m with
                               | 42 -> return n
@@ -81,8 +83,8 @@ type ComputationExpression() =
         |> value
         |> equals 3
 
-    [<TestMethod>]
-    member x.``try catch should catch exceptions after getting message``() =
+    [<Fact>]
+    let ``try catch should catch exceptions after getting message``() =
        actor {
             try
                 let! m = IO<int>.Input
@@ -96,8 +98,8 @@ type ComputationExpression() =
        |> value
        |> equals (Some "Should stop here !")
 
-    [<TestMethod>]
-    member x.``try catch should catch exceptions befor getting message``() =
+    [<Fact>]
+    let ``try catch should catch exceptions befor getting message``() =
        actor {
             try
                 failwith "Should stop here !"
@@ -111,8 +113,8 @@ type ComputationExpression() =
        |> equals (Some "Should stop here !")
 
 
-    [<TestMethod>]
-     member x.``try catch returns body content when no exception occure``() =
+    [<Fact>]
+    let ``try catch returns body content when no exception occure``() =
        actor {
             try
                 let! m = IO<int>.Input
@@ -125,8 +127,8 @@ type ComputationExpression() =
        |> value
        |> equals None
 
-    [<TestMethod>]
-    member x.``While should loop only when condition holds``() =
+    [<Fact>]
+    let ``While should loop only when condition holds``() =
         let cont = ref true
         let count = ref 0
         let r = 
@@ -145,8 +147,8 @@ type ComputationExpression() =
         |> value
         |> equals 3
 
-    [<TestMethod>]
-    member x.``Loops without message input should loop``() =
+    [<Fact>]
+    let ``Loops without message input should loop``() =
         let count = ref 0
         actor {
             while !count<10 do
@@ -156,8 +158,8 @@ type ComputationExpression() =
         |> value
         |> equals  10
 
-    [<TestMethod>]
-    member x.``finally should be executed when an exception occures before first message``() =
+    [<Fact>]
+    let ``finally should be executed when an exception occures before first message``() =
         let finallyCalled = ref false
         let result =
             try
@@ -176,8 +178,8 @@ type ComputationExpression() =
 
         (!finallyCalled, result) |> equals (true, Choice2Of2 "exception")
 
-    [<TestMethod>]
-    member x.``finally should be executed when an exception occures before after message``() =
+    [<Fact>]
+    let ``finally should be executed when an exception occures before after message``() =
         let finallyCalled = ref false
         let result =
             try
@@ -201,8 +203,8 @@ type ComputationExpression() =
 
         (!finallyCalled, result) |> equals (true, Choice2Of2 "exception")
 
-    [<TestMethod>]
-    member x.``finally should be executed when no exception occures``() =
+    [<Fact>]
+    let ``finally should be executed when no exception occures``() =
         let finallyCalled = ref false
         let result =
             try
@@ -223,8 +225,8 @@ type ComputationExpression() =
 
         (!finallyCalled, result) |> equals (true, Choice1Of2 (1,2))
 
-    [<TestMethod>]
-    member x.``use should be disposed when an exception occures before before message``() =
+    [<Fact>]
+    let ``use should be disposed when an exception occures before before message``() =
         let disposeCalled = ref false
         let result =
             try
@@ -242,8 +244,8 @@ type ComputationExpression() =
 
         (!disposeCalled, result) |> equals (true, Choice2Of2 "exception")
 
-    [<TestMethod>]
-    member x.``use should be disposed when an exception occures before after message``() =
+    [<Fact>]
+    let ``use should be disposed when an exception occures before after message``() =
         let disposeCalled = ref false
         let result =
             try
@@ -264,8 +266,8 @@ type ComputationExpression() =
         (!disposeCalled, result) |> equals (true, Choice2Of2 "exception")
 
 
-    [<TestMethod>]
-    member x.``use should be disposed when no exception occures``() =
+    [<Fact>]
+    let ``use should be disposed when no exception occures``() =
         let disposeCalled = ref false
         let result =
             try
@@ -284,8 +286,8 @@ type ComputationExpression() =
 
         (!disposeCalled, result) |> equals (true, Choice1Of2 (1,2))
 
-    [<TestMethod>]
-    member x.``for should loop message handler``() =
+    [<Fact>]
+    let ``for should loop message handler``() =
         actor {
             let total = ref 0
             for i in [1 .. 3] do
@@ -299,8 +301,8 @@ type ComputationExpression() =
         |> equals 6
 
 
-    [<TestMethod>]
-    member x.``for should loop with no message handler``() =
+    [<Fact>]
+    let ``for should loop with no message handler``() =
         actor {
             let total = ref 0
             for i in [1 .. 3] do
@@ -310,8 +312,8 @@ type ComputationExpression() =
         |> equals 6
 
 
-    [<TestMethod>]
-    member x.``for should do nothing when source is empty``() =
+    [<Fact>]
+    let ``for should do nothing when source is empty``() =
         actor {
             let total = ref 0
             for i in [] do

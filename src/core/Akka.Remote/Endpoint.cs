@@ -443,7 +443,7 @@ namespace Akka.Remote
                 })
                 .With<EndpointWriter.StopReading>(stopped =>
                 {
-                    _writer.Tell(stopped, Sender); //forward the request
+                    _writer.Forward(stopped); //forward the request
                 });
         }
 
@@ -914,7 +914,7 @@ namespace Akka.Remote
                     {
                         if (reader != null)
                         {
-                            reader.Tell(stop, Sender);
+                            reader.Forward(stop);
                         }
                         else
                         {

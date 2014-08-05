@@ -74,6 +74,11 @@ namespace Akka.Routing
             paths = routees.Select(x => x.Path.ToStringWithAddress()).ToArray();
         }
 
+        public Props Props()
+        {
+            return Akka.Actor.Props.Empty.WithRouter(this);
+        }
+
         public override RouterActor CreateRouterActor()
         {
             return new RouterActor();
@@ -111,7 +116,7 @@ namespace Akka.Routing
         protected Pool(Configuration.Config config)
         {
             NrOfInstances = config.GetInt("nr-of-instances");
-            //Resizer = DefaultResizer.fromConfig(config);
+            Resizer = DefaultResizer.FromConfig(config);
             UsePoolDispatcher = config.HasPath("pool-dispatcher");
         }
 

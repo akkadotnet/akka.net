@@ -28,7 +28,7 @@ namespace Akka.Actor
     {
         public static Task<bool> GracefulStop(this ActorRef target, TimeSpan timeout)
         {
-            return GracefulStop(target, timeout, new PoisonPill());
+            return GracefulStop(target, timeout, PoisonPill.Instance);
         }
 
         public static Task<bool> GracefulStop(this ActorRef target, TimeSpan timeout, object stopMessage)

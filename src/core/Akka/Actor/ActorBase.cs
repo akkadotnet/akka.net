@@ -54,10 +54,27 @@ namespace Akka.Actor
     }
 
     /// <summary>
+    /// Contains things needed by the framework
+    /// </summary>
+    public interface IInternalActor
+    {
+        /// <summary>Gets the context for this instance.</summary>
+        /// <value>The context.</value>
+        /// <exception cref="System.NotSupportedException">
+        /// There is no active Context, this is most likely due to use of async
+        /// operations from within this actor.
+        /// </exception>
+        IActorContext ActorContext { get; }
+    }
+
+    /// <summary>
     ///     Class ActorBase.
     /// </summary>
-    public abstract partial class ActorBase
-    {    
+    public abstract partial class ActorBase : IInternalActor
+    {
+        private ActorRef _clearedSelf;
+        private bool _hasBeenCleared;
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorBase" /> class.
         /// </summary>
@@ -82,7 +99,7 @@ namespace Akka.Actor
         ///     Gets the self ActorRef
         /// </summary>
         /// <value>Self ActorRef</value>
-        protected ActorRef Self { get { return Context.Self; } }
+        protected ActorRef Self { get { return _hasBeenCleared?  _clearedSelf : Context.Self; } }
 
         /// <summary>
         ///     Gets the context.
@@ -92,16 +109,31 @@ namespace Akka.Actor
         ///     There is no active ActorContext, this is most likely due to use of async
         ///     operations from within this actor.
         /// </exception>
+        IActorContext IInternalActor.ActorContext
+        {
+            get {
+                return Context;
+            }
+        }
+
+        /// <summary>
+        ///     Gets the context.
+        /// </summary>
+        /// <value>The context.</value>
+        /// <exception cref="System.NotSupportedException">
+        ///     There is no active Context, this is most likely due to use of async
+        ///     operations from within this actor.
+        /// </exception>
         protected static IActorContext Context
         {
             get
-            {
-                ActorCell context = ActorCell.Current;
+            {                
+                var context = ActorCell.Current;
                 if (context == null)
                     throw new NotSupportedException(
                         "There is no active ActorContext, this is most likely due to use of async operations from within this actor.");
 
-                return context;
+                return context.ActorHasBeenCleared ? null : context;
             }
         }
 
@@ -167,6 +199,17 @@ namespace Akka.Actor
         protected void Unbecome()
         {
             Context.Unbecome();
+        }
+
+        internal void Clear(ActorRef self)
+        {
+            _hasBeenCleared = true;
+            _clearedSelf = self;
+        }
+
+        protected void SetReceiveTimeout(TimeSpan? timeout)
+        {
+            Context.SetReceiveTimeout(timeout);
         }
     }
 }

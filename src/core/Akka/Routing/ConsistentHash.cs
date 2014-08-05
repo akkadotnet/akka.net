@@ -46,13 +46,13 @@ namespace Akka.Routing
                     return NoRoutee.NoRoutee;
 
                 var hash = Murmur3.Hash(key);
-                return routees[hash % routees.Length];
+                return routees[Math.Abs(hash) % routees.Length]; //The hash might be negative, so we have to make sure it's positive
             }
             else if (message is ConsistentHashable)
             {
                 var hashable = (ConsistentHashable) message;
                 int hash = Murmur3.Hash(hashable.ConsistentHashKey);
-                return routees[hash%routees.Length];
+                return routees[Math.Abs(hash) % routees.Length]; //The hash might be negative, so we have to make sure it's positive
             }
             else
             {

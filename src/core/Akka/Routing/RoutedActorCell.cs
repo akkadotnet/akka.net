@@ -52,7 +52,7 @@ namespace Akka.Routing
                     Watch(@ref);
                 }
             }
-            _router = _router.WithRoutees(routees);
+            _router = _router.WithRoutees(_router.Routees.Concat(routees).ToArray());
         }
 
         protected override ActorBase CreateNewActorInstance()

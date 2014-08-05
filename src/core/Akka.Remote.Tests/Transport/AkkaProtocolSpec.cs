@@ -71,6 +71,10 @@ namespace Akka.Remote.Tests.Transport
             return new Collaborators(registry, transport, handle, new TestFailureDetector());
         }
 
+        protected override string GetConfig()
+        {
+            return @"akka.test.default-timeout = 1.5 s";
+        }
 
         public class TestFailureDetector : FailureDetector
         {

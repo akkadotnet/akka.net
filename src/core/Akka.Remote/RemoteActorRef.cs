@@ -107,7 +107,7 @@ namespace Akka.Remote
         /// </summary>
         public override void Stop()
         {
-            SendSystemMessage(new Terminate());
+            SendSystemMessage(Terminate.Instance);
         }
 
         /// <summary>
@@ -124,7 +124,7 @@ namespace Akka.Remote
         /// </summary>
         public override void Suspend()
         {
-            SendSystemMessage(new Suspend());
+            SendSystemMessage(Akka.Dispatch.SysMsg.Suspend.Instance);
         }
 
         public override bool IsLocal

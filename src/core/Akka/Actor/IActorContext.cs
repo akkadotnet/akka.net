@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Akka.Actor
 {
@@ -15,6 +16,7 @@ namespace Akka.Actor
         IEnumerable<ActorRef> GetChildren();
         void Watch(ActorRef subject);
         void Unwatch(ActorRef subject);
+        void SetReceiveTimeout(TimeSpan? timeout);
 
         /*
   def self: ActorRef
