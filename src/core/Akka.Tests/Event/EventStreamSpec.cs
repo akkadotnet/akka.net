@@ -123,10 +123,10 @@ namespace Akka.Tests.Event
             var a3 = TestProbe();
             var a4 = TestProbe();
 
-            es.Subscribe(a1.Ref, typeof(AT));
-            es.Subscribe(a2.Ref, typeof(BT)) ;
-            es.Subscribe(a3.Ref, typeof(CC));
-            es.Subscribe(a4.Ref, typeof(CCATBT)) ;
+            es.Subscribe(a1.Ref, typeof(AT)).Then(Assert.True);
+            es.Subscribe(a2.Ref, typeof(BT)).Then(Assert.True);
+            es.Subscribe(a3.Ref, typeof(CC)).Then(Assert.True);
+            es.Subscribe(a4.Ref, typeof(CCATBT)).Then(Assert.True);
             es.Publish(tm1);
             es.Publish(tm2);
             a1.expectMsg(tm2);

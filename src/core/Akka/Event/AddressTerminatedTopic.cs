@@ -11,9 +11,14 @@ namespace Akka.Event
     /// <see cref="AddressTerminated"/> notifications. Remote and cluster death watchers
     /// publish <see cref="AddressTerminated"/> when a remote system is deemed dead.
     /// </summary>
-    internal sealed class AddressTerminatedTopic
+    internal sealed class AddressTerminatedTopic : IExtension
     {
         private readonly AtomicReference<HashSet<ActorRef>> _subscribers = new AtomicReference<HashSet<ActorRef>>();
+
+        public static AddressTerminatedTopic Get(ActorSystem system)
+        {
+            return system.WithExtension<AddressTerminatedTopic>();
+        }
 
         public void Subscribe(ActorRef subscriber)
         {

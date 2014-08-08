@@ -23,7 +23,6 @@ namespace Akka.Actor
         protected ConcurrentDictionary<string, InternalActorRef> children =
             new ConcurrentDictionary<string, InternalActorRef>();
 
-        protected HashSet<ActorRef> watchees = new HashSet<ActorRef>();
         protected Stack<Receive> behaviorStack = new Stack<Receive>();
         private long uid;
         private ActorBase _actor;
@@ -171,31 +170,6 @@ namespace Akka.Actor
         void IUntypedActorContext.Become(UntypedReceive receive, bool discardOld)
         {
             Become(m => { receive(m); return true; }, discardOld);
-        }
-
-        /// <summary>
-        ///     May only be called from the owner actor
-        /// </summary>
-        /// <param name="watchee"></param>
-        public void Watch(ActorRef watchee)
-        {
-            watchees.Add(watchee);
-            watchee.Tell(new Watch(watchee, Self),Self);
-            //If watchee is terminated, its mailbox have been replaced by 
-            //DeadLetterMailbox, which will forward the Watch message as a
-            //DeadLetter to DeadLetterActorRef. It inspects the message inside
-            //the DeadLetter, sees it is a Watch and sends watcher, i.e. us
-            //a DeathWatchNotification(watchee)
-        }
-
-        /// <summary>
-        ///     May only be called from the owner actor
-        /// </summary>
-        /// <param name="watchee"></param>
-        public void Unwatch(ActorRef watchee)
-        {
-            watchees.Remove(watchee);
-            watchee.Tell(new Unwatch(watchee, Self));
         }
 
         private InternalActorRef MakeChild(Props props, string name)
