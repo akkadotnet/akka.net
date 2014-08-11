@@ -9,14 +9,16 @@ namespace Akka.Configuration
     {
         private readonly Config _fallback;
         private readonly HoconValue _node;
+        private readonly IEnumerable<HoconSubstitution> _substitutions;
 
         public Config()
         {
         }
 
-        public Config(HoconValue node)
+        public Config(HoconRoot root)
         {
-            this._node = node;
+            this._node = root.Value;
+            this._substitutions = root.Substitutions;
         }
 
         public Config(Config source, Config fallback)
@@ -185,10 +187,10 @@ namespace Akka.Configuration
             if (_fallback != null)
             {
                 Config f = _fallback.GetConfig(path);
-                return new Config(new Config(value), f);
+                return new Config(new Config(new HoconRoot(value)), f);
             }
 
-            return  new Config(value);
+            return  new Config(new HoconRoot(value));
         }
 
         public HoconValue GetValue(string path)

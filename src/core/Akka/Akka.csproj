@@ -119,6 +119,7 @@
     <Compile Include="Configuration\Hocon\HoconLiteral.cs" />
     <Compile Include="Configuration\Hocon\HoconObject.cs" />
     <Compile Include="Configuration\Hocon\HoconParser.cs" />
+    <Compile Include="Configuration\Hocon\HoconRoot.cs" />
     <Compile Include="Configuration\Hocon\HoconSubstitution.cs" />
     <Compile Include="Configuration\Hocon\HoconToken.cs" />
     <Compile Include="Configuration\Hocon\HoconTokenizer.cs" />
