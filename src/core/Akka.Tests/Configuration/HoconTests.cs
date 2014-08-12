@@ -470,6 +470,51 @@ foo {
             config.GetInt("foo.bar.zork").ShouldBe(555);
             config.GetInt("foo.bar.borkbork").ShouldBe(-1);
         }
+
+        [Fact]
+        public void CanUseFluentMultiLevelFallback()
+        {
+            var hocon1 = @"
+foo {
+   bar {
+      a=123
+   }
+}";
+            var hocon2 = @"
+foo {
+   bar {
+      a=1
+      b=2
+      c=3
+   }
+}";
+            var hocon3 = @"
+foo {
+   bar {
+      a=99
+      zork=555
+   }
+}";
+            var hocon4 = @"
+foo {
+   bar {
+      borkbork=-1
+   }
+}";
+
+            var config1 = ConfigurationFactory.ParseString(hocon1);
+            var config2 = ConfigurationFactory.ParseString(hocon2);
+            var config3 = ConfigurationFactory.ParseString(hocon3);
+            var config4 = ConfigurationFactory.ParseString(hocon4);
+
+            var config = config1.WithFallback(config2).WithFallback(config3).WithFallback(config4);
+
+            config.GetInt("foo.bar.a").ShouldBe(123);
+            config.GetInt("foo.bar.b").ShouldBe(2);
+            config.GetInt("foo.bar.c").ShouldBe(3);
+            config.GetInt("foo.bar.zork").ShouldBe(555);
+            config.GetInt("foo.bar.borkbork").ShouldBe(-1);
+        }
     }
 }
 
