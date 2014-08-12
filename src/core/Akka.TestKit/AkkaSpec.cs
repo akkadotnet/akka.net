@@ -124,6 +124,7 @@ namespace Akka.Tests
 
         public AkkaSpec()
         {
+
             var config = ConfigurationFactory.ParseString(GetConfig());
             queue = new BlockingCollection<object>();
             messages = new List<object>();
@@ -134,7 +135,7 @@ namespace Akka.Tests
 
         protected virtual string GetConfig()
         {
-            return "";
+            return ""+"";
         }
 
         public virtual void Dispose()

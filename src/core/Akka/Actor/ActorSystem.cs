@@ -49,17 +49,22 @@ namespace Akka.Actor
         /// </summary>
         private InternalActorRef _logDeadLetterListener;
 
+        public ActorSystem(string name) : this(name,ConfigurationFactory.Load())
+        {
+        }
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorSystem" /> class.
         /// </summary>
         /// <param name="name">The name.</param>
         /// <param name="config">The configuration.</param>
-        public ActorSystem(string name, Config config = null)
+        public ActorSystem(string name, Config config)
         {
             if (!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
                 throw new ArgumentException(
                     "invalid ActorSystem name [" + name +
                     "], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')");
+            if (config == null)
+                throw new ArgumentNullException("config");
 
             Name = name;
             ConfigureScheduler();
