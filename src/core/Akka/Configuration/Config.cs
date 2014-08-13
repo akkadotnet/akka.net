@@ -7,20 +7,40 @@ namespace Akka.Configuration
 {
     public class Config
     {
-        private readonly Config _fallback;
-        private readonly HoconValue _node;
+        private Config _fallback;
+        private HoconValue _node;
+        private IEnumerable<HoconSubstitution> _substitutions;
+
+
+        protected Config Copy()
+        {
+            //deep clone
+            return new Config()
+            {
+                _fallback = _fallback != null ? _fallback.Copy() : null,
+                _node = _node,
+                _substitutions = _substitutions
+            };
+        }
 
         public Config()
         {
         }
 
-        public Config(HoconValue node)
+        public Config(HoconRoot root)
         {
-            this._node = node;
+            if (root.Value == null)
+                throw new ArgumentNullException("root.Value");
+
+            this._node = root.Value;
+            this._substitutions = root.Substitutions;
         }
 
         public Config(Config source, Config fallback)
         {
+            if (source == null)
+                throw new ArgumentNullException("source");
+
             _node = source._node;
             this._fallback = fallback;
         }
@@ -41,10 +61,7 @@ namespace Akka.Configuration
             HoconValue currentNode = _node;
             if (currentNode == null)
             {
-                if (_fallback != null)
-                    return _fallback.GetNode(path);
-
-                return null;
+                throw new Exception("Current node should not be null");
             }
             foreach (string key in elements)
             {
@@ -185,10 +202,18 @@ namespace Akka.Configuration
             if (_fallback != null)
             {
                 Config f = _fallback.GetConfig(path);
-                return new Config(new Config(value), f);
+                if (value == null && f == null)
+                    return null;
+                if (value == null)
+                    return f;
+
+                return new Config(new HoconRoot(value)).WithFallback(f);
             }
 
-            return  new Config(value);
+            if (value == null)
+                return null;
+
+            return new Config(new HoconRoot(value));
         }
 
         public HoconValue GetValue(string path)
@@ -208,12 +233,27 @@ namespace Akka.Configuration
 
         public override string ToString()
         {
+            if (_node == null)
+                return "";
+
             return _node.ToString();
         }
 
         public Config WithFallback(Config fallback)
         {
-            return new Config(this, fallback);
+            if (fallback == this)
+                throw new ArgumentException("Config can not have itself as fallback", "fallback");
+
+            var clone = this.Copy();
+
+            var current = clone;
+            while(current._fallback != null)
+            {
+                current = current._fallback;
+            }
+            current._fallback = fallback;
+
+            return clone;
         }
 
 

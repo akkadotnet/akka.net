@@ -26,7 +26,7 @@ namespace Akka.Configuration
         /// <returns>Config.</returns>
         public static Config ParseString(string hocon)
         {
-            HoconValue res = Parser.Parse(hocon);
+            HoconRoot res = Parser.Parse(hocon);
             return new Config(res);
         }
 
@@ -36,7 +36,10 @@ namespace Akka.Configuration
         /// <returns>Config.</returns>
         public static Config Load()
         {
-            return ParseString("");
+            var section = new AkkaConfigurationSection();
+            var config = section.AkkaConfig;
+
+            return config;
         }
 
         /// <summary>
