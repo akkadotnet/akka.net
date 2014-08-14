@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -45,6 +46,14 @@ namespace Akka.Actor
         public LoggingAdapter Log;
 
         /// <summary>
+        /// A wait handle that an Akka.NET client or server can wait on until the actor system is shut down.
+        /// 
+        /// Designed to make it easy for developers to build applications that can block the main application thread
+        /// from exiting while the system runs, particularly inside console applications.
+        /// </summary>
+        private ManualResetEvent _systemWaitHandle;
+
+        /// <summary>
         ///     The log dead letter listener
         /// </summary>
         private InternalActorRef _logDeadLetterListener;
@@ -67,6 +76,7 @@ namespace Akka.Actor
                 throw new ArgumentNullException("config");
 
             Name = name;
+            _systemWaitHandle = new ManualResetEvent(false); //unsignaled
             ConfigureScheduler();
             ConfigureSettings(config);
             ConfigureEventStream();
@@ -428,6 +438,7 @@ namespace Akka.Actor
         public void Shutdown()
         {
             Provider.Guardian.Stop();
+            _systemWaitHandle.Set(); //signal that the actorsystem is being shut down
         }
 
         /// <summary>
@@ -462,6 +473,15 @@ namespace Akka.Actor
                 SystemGuardian.Tell(new StopChild(actor));
             else
                 ((InternalActorRef) actor).Stop();            
+        }
+
+        /// <summary>
+        /// Block and prevent the main application thread from exiting unless
+        /// the actor system is shut down.
+        /// </summary>
+        public void WaitForShutdown()
+        {
+            _systemWaitHandle.WaitOne();
         }
 
         #region Equality methods

@@ -1,4 +1,5 @@
-﻿using Akka.Actor;
+﻿using System.Threading.Tasks;
+using Akka.Actor;
 using Xunit;
 using System;
 using System.Collections.Generic;
@@ -34,6 +35,18 @@ namespace Akka.Tests.Actor
             ActorSystem
                 .Create("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-")
                 .Shutdown();
+        }
+
+        [Fact]
+        public void AnActorSystemShouldBeAllowedToBlockUntilExit()
+        {
+            var actorSystem = ActorSystem
+                .Create(Guid.NewGuid().ToString());
+            var startTime = DateTime.UtcNow;
+            var asyncShutdownTask = Task.Delay(TimeSpan.FromSeconds(1)).ContinueWith(_ => actorSystem.Shutdown());
+            actorSystem.WaitForShutdown();
+            var endTime = DateTime.UtcNow;
+            Assert.True((endTime - startTime).TotalSeconds >= .9);
         }
 
         #region Extensions tests
