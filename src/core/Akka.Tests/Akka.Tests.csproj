@@ -99,7 +99,6 @@
     <Compile Include="Configuration\HoconTests.cs" />
     <Compile Include="Event\EventBusSpec.cs" />
     <Compile Include="Event\EventStreamSpec.cs" />
-    <Compile Include="HoconTests.cs" />
     <Compile Include="MatchHandler\CachedMatchCompilerTests.cs" />
     <Compile Include="MatchHandler\MatchBuilderSignatureTests.cs" />
     <Compile Include="MatchHandler\MatchExpressionBuilder_BuildLambdaExpression_Tests.cs" />
