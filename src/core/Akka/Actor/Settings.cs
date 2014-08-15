@@ -20,7 +20,7 @@ namespace Akka.Actor
         {
             Config fallback = ConfigurationFactory.Default();
 
-            Config merged = config == null ? fallback : new Config(config, fallback);
+            Config merged = config == null ? fallback : config.WithFallback(fallback);
 
             System = system;
             Config = merged;
