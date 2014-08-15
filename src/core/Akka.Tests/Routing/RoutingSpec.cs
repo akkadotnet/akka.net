@@ -44,7 +44,7 @@ namespace Akka.Tests.Routing
     ";
         }
 
-        public new class TestActor : UntypedActor
+        public class TestActor : UntypedActor
         {
             protected override void OnReceive(object message)
             {

@@ -72,7 +72,13 @@
     <Compile Include="AkkaSpec.cs" />
     <Compile Include="CallingThreadDispatcher.cs" />
     <Compile Include="FSMSpecHelpers.cs" />
+    <Compile Include="AutoPilots.cs" />
+    <Compile Include="Internals\TestActor.cs" />
+    <Compile Include="MessageEnvelope.cs" />
+    <Compile Include="NullMessageEnvelope.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RealMessageEnvelope.cs" />
+    <Compile Include="TestActor.cs" />
     <Compile Include="TestActorRef.cs" />
     <Compile Include="TestEvents.cs" />
     <Compile Include="TestKitExtension.cs" />

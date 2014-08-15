@@ -9,22 +9,23 @@ namespace Akka.Tests.TestUtils
      */
     public class Supervisor : UntypedActor
     {
-        private SupervisorStrategy supervisorStrategy;
+        private readonly SupervisorStrategy _supervisorStrategy;
         public Supervisor(SupervisorStrategy supervisorStrategy)
         {
-            this.supervisorStrategy = supervisorStrategy;
+            _supervisorStrategy = supervisorStrategy;
         }
 
         protected override SupervisorStrategy SupervisorStrategy()
         {
-            return supervisorStrategy;
+            return _supervisorStrategy;
         }
 
         protected override void OnReceive(object message)
         {
-            if (message is Props)
+            var props = message as Props;
+            if (props != null)
             {
-                Sender.Tell(Context.ActorOf((Props)message));
+                Sender.Tell(Context.ActorOf(props));
             }
         }
 

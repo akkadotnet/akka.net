@@ -18,7 +18,8 @@ namespace Akka.Tests
         {
             sys.EventStream.Subscribe(testActor, typeof(DeadLetter));
             sys.DeadLetters.Tell("foobar");
-            var message = queue.Take();
+            var envelope = queue.Take();
+            var message = envelope.Message;
             Assert.IsType<DeadLetter>(message);
             var deadLetter = (DeadLetter)message;
             var payload = (string)deadLetter.Message;

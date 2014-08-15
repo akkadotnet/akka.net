@@ -177,7 +177,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
             var a = TestActorRef.Create<WorkerActor>(sys);
             a.Receive("work", testActor);
             Assert.True(a.IsTerminated);
-            expectMsg("workDone");
+            expectMsg("workDone", DefaultTimeout);
         }
 
         private class SaveStringActor : TActorBase

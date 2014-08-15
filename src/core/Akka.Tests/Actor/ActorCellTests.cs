@@ -32,7 +32,7 @@ namespace Akka.Tests
             };
             testActor.Tell(message);
 
-            var result = queue.Take();
+            var result = queue.Take().Message;
 
             Assert.False(sys.Settings.SerializeAllMessages);
             Assert.Equal(message, result);
@@ -44,7 +44,7 @@ namespace Akka.Tests
        {
            var config = ConfigurationFactory.ParseString(@"akka.actor.serialize-messages = on");
            var sys = ActorSystem.Create("test",config);
-           testActor = sys.ActorOf(Props.Create(() => new TestActor(queue,messages)));      
+           testActor = sys.ActorOf(Props.Create(() => new TestKit.Internals.TestActor(queue)));      
 
            var message = new SomeUserMessage
            {
@@ -57,8 +57,8 @@ namespace Akka.Tests
            var result = queue.Take();
 
            Assert.True(sys.Settings.SerializeAllMessages);
-           Assert.Equal(message, result);
-           Assert.NotSame(message, result);
+           Assert.Equal(message, result.Message);
+           Assert.NotSame(message, result.Message);
        }
     }
 }

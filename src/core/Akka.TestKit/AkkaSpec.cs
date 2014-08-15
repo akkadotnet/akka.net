@@ -55,45 +55,6 @@ namespace Akka.TestKit
         }
     }
 
-    public abstract class Message
-    {
-        public abstract object Msg { get; }
-
-        public abstract ActorRef Sender { get; }
-    }
-
-    public class RealMessage : Message
-    {
-        public RealMessage(object msg, ActorRef sender)
-        {
-            _msg = msg;
-            _sender = sender;
-        }
-
-        private object _msg;
-        public override object Msg { get { return _msg; } }
-
-        private ActorRef _sender;
-
-        public override ActorRef Sender
-        {
-            get { return _sender; }
-        }
-    }
-
-    public class NullMessage : Message
-    {
-        public override object Msg
-        {
-            get { throw new IllegalActorStateException("last receive did not dequeue a message"); }
-        }
-
-        public override ActorRef Sender
-        {
-            get { throw new IllegalActorStateException("last receive did not dequeue a message"); }
-        }
-    }
-
     public abstract class TestKitBase
     {
         private ActorSystem _system;
@@ -122,10 +83,10 @@ namespace Akka.TestKit
         {
 
             var config = ConfigurationFactory.ParseString(GetConfig());
-            queue = new BlockingCollection<object>();
+            queue = new BlockingCollection<MessageEnvelope>();
             messages = new List<object>();
             System = ActorSystem.Create("test", config);
-            testActor = sys.ActorOf(Props.Create(() => new TestActor(queue, messages)), "test");
+            testActor = sys.ActorOf(Props.Create(() => new Internals.TestActor(queue)), "test");
             echoActor = sys.ActorOf(Props.Create(() => new EchoActor(testActor)), "echo");
         }
 
@@ -139,7 +100,7 @@ namespace Akka.TestKit
 
         }
 
-        protected BlockingCollection<object> queue;
+        protected BlockingCollection<MessageEnvelope> queue;
         protected List<object> messages;
         protected ActorSystem sys { get { return System; } }
         protected ActorRef testActor;
@@ -150,15 +111,14 @@ namespace Akka.TestKit
 
         public TimeSpan DefaultTimeout { get { return TestKitSettings.DefaultTimeout; } }
 
-        private Message lastMessage = new NullMessage();
+        private MessageEnvelope lastMessage = NullMessageEnvelope.Instance;
 
         protected Terminated expectTerminated(ActorRef @ref)
         {
             var actual = queue.Take();
 
-            Xunit.Assert.True(actual is Terminated);
-
-            return (Terminated)actual;
+            Xunit.Assert.True(actual.Message is Terminated);
+            return (Terminated)actual.Message;
         }
 
         protected Terminated expectTerminated(ActorRef @ref, TimeSpan timeout)
@@ -166,9 +126,9 @@ namespace Akka.TestKit
             var cancellationTokenSource = new CancellationTokenSource((int)timeout.TotalMilliseconds);
             var actual = queue.Take(cancellationTokenSource.Token);
 
-            Xunit.Assert.True(actual is Terminated);
+            Xunit.Assert.True(actual.Message is Terminated);
 
-            return (Terminated)actual;
+            return (Terminated)actual.Message;
         }
 
         protected object expectMsg(object expected)
@@ -176,16 +136,16 @@ namespace Akka.TestKit
             var actual = queue.Take();
 
             global::System.Diagnostics.Debug.WriteLine("actual: " + actual);
-            Xunit.Assert.Equal(expected, actual);
+            Xunit.Assert.Equal(expected, actual.Message);
             return actual;
         }
 
         protected object expectMsg(object expected, TimeSpan timeout)
         {
-            object t;
+            MessageEnvelope t;
             bool success = queue.TryTake(out t, timeout);
             Xunit.Assert.True(success, string.Format("exected message {0} but timed out after {1}", expected, timeout));
-            Xunit.Assert.Equal(expected, t);
+            Xunit.Assert.Equal(expected, t.Message);
 
             return t;
         }
@@ -194,18 +154,18 @@ namespace Akka.TestKit
         {
             var actual = queue.Take();
 
-            Xunit.Assert.True(comparer(expected, actual));
-            return actual;
+            Xunit.Assert.True(comparer(expected, actual.Message));
+            return actual.Message;
 
         }
 
         protected object expectMsg(object expected, Func<object, object, bool> comparer, TimeSpan timeout)
         {
-            object t;
+            MessageEnvelope t;
             bool success = queue.TryTake(out t, timeout);
             
             Xunit.Assert.True(success, string.Format("exected message {0} but timed out after {1}", expected, timeout));
-            Xunit.Assert.True(comparer(expected, t));
+            Xunit.Assert.True(comparer(expected, t.Message));
 
             return t;
         }
@@ -218,8 +178,8 @@ namespace Akka.TestKit
 
         protected TMessage expectMsgType<TMessage>()
         {
-            var actual = queue.Take();
-
+            var envelope = queue.Take();
+            var actual = envelope.Message;
             global::System.Diagnostics.Debug.WriteLine("actual: " + actual);
             Xunit.Assert.True(actual is TMessage, string.Format("expected message of type {0} but received {1} instead", typeof(TMessage), actual.GetType()));
             return (TMessage)actual;
@@ -227,11 +187,11 @@ namespace Akka.TestKit
 
         protected TMessage expectMsgType<TMessage>(TimeSpan timeout)
         {
-            object actual;
+            MessageEnvelope actual;
             bool success = queue.TryTake(out actual, timeout);
             
             Xunit.Assert.True(success, string.Format("expected message of type {0} but timed out after {1}", typeof(TMessage), timeout));
-            Xunit.Assert.True(actual is TMessage, string.Format("expected message of type {0} but received {1} instead", typeof(TMessage), actual.GetType()));
+            Xunit.Assert.True(actual.Message is TMessage, string.Format("expected message of type {0} but received {1} instead", typeof(TMessage), actual.GetType()));
 
             return default(TMessage);
         }
@@ -253,37 +213,38 @@ namespace Akka.TestKit
 
         protected TMessage ExpectMsgPF<TMessage>(TimeSpan timeout, Predicate<TMessage> isMessage, string hint = "")
         {
-            object actual;
-            bool success = queue.TryTake(out actual, timeout);
+            MessageEnvelope envelope;
+            var success = queue.TryTake(out envelope, timeout);
 
             Xunit.Assert.True(success, string.Format("expected message of type {0} but timed out after {1}", typeof(TMessage), timeout));
-            Xunit.Assert.True(actual is TMessage, string.Format("expected message of type {0} but received {1} instead", typeof(TMessage), actual.GetType()));
-            var message = (TMessage) actual;
-            Xunit.Assert.True(isMessage(message), string.Format("expected {0} but got {1} instead", hint, message));
-            return message;
+            var message = envelope.Message;
+            Xunit.Assert.True(message is TMessage, string.Format("expected message of type {0} but received {2} (type {1}) instead", typeof(TMessage), message.GetType(), message));
+            var tMessage = (TMessage) message;
+            Xunit.Assert.True(isMessage(tMessage), string.Format("expected {0} but got {1} instead", hint, tMessage));
+            return tMessage;
         }
 
         protected T expectMsgPF<T>(TimeSpan duration, string hint, Func<object, T> pf)
         {
-            object t;
+            MessageEnvelope t;
             bool success = queue.TryTake(out t, duration);
 
             Xunit.Assert.True(success, string.Format("timeout {0} during expectMsg: {1}", duration, hint));
-            Xunit.Assert.True(t != null, string.Format("expected {0} but got null message", hint));
-            Xunit.Assert.True(pf.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
-            return pf.Invoke(t);
+            Xunit.Assert.True(t.Message != null, string.Format("expected {0} but got null message", hint));
+            Xunit.Assert.True(pf.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t.Message)), string.Format("expected {0} but got {1} instead", hint, t.Message));
+            return pf.Invoke(t.Message);
         }
 
         protected T expectMsgPF<T>(string hint, Func<object, T> pf)
         {
-            object t = queue.Take();
-            Xunit.Assert.True(pf.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
-            return pf.Invoke(t);
+            MessageEnvelope t = queue.Take();
+            Xunit.Assert.True(pf.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t.Message)), string.Format("expected {0} but got {1} instead", hint, t.Message));
+            return pf.Invoke(t.Message);
         }
 
         protected void expectNoMsg(TimeSpan duration)
         {
-            object t;
+            MessageEnvelope t;
             bool success = queue.TryTake(out t, duration);
             Xunit.Assert.False(success, string.Format("Expected no messages during the duration, instead we received {0}", t));
         }
@@ -374,27 +335,27 @@ namespace Akka.TestKit
         /// <returns>the first available message from the queue, or null in the event of a timeout</returns>
         protected object receiveOne(TimeSpan duration)
         {
-            object t;
+            MessageEnvelope t;
 
             if (duration.Milliseconds < 0) return null;
-
+            object msg=null;
             if (queue.TryTake(out t, duration))
             {
                 t.Match()
-                    .With<RealMessage>(r =>
+                    .With<RealMessageEnvelope>(r =>
                     {
-                        t = r.Msg;
+                        msg = r.Message;
                         lastMessage = r;
                     })
-                    .With<NullMessage>(n =>
+                    .With<NullMessageEnvelope>(n =>
                     {
-                        t = null;
+                        msg = null;
                         lastMessage = n;
                     });
                 lastWasNoMsg = false;
             }
 
-            return t;
+            return msg;
         }
 
         protected IList<T> receiveWhile<T>(TimeSpan max, Func<object, T> filter,
@@ -440,23 +401,6 @@ namespace Akka.TestKit
                 return t2;
             else
                 return t1;
-        }
-
-        public class TestActor : UntypedActor
-        {
-            private BlockingCollection<object> queue;
-            private List<object> messages;
-            public TestActor(BlockingCollection<object> queue, List<object> messages)
-            {
-                this.queue = queue;
-                this.messages = messages;
-            }
-            protected override void OnReceive(object message)
-            {
-                global::System.Diagnostics.Debug.WriteLine("testactor received " + message);
-                messages.Add(message);
-                queue.Add(message);
-            }
         }
 
         /// <summary>
@@ -536,7 +480,7 @@ namespace Akka.TestKit
             for (int i = 0; i < occurances; i++)
             {
                 var res = queue.Take();
-                var error = (Error)res;
+                var error = (Error)res.Message;
 
                 Xunit.Assert.Equal(typeof(T), error.Cause.GetType());
                 Xunit.Assert.Equal(message, error.Message);
@@ -550,7 +494,7 @@ namespace Akka.TestKit
             for (int i = 0; i < occurences; i++)
             {
                 var res = queue.Take();
-                var error = (LogEvent)res;
+                var error = (LogEvent)res.Message;
 
                 Xunit.Assert.Equal(typeof(T), error.GetType());
                 var match = -1 != error.Message.ToString().IndexOf(message, StringComparison.CurrentCultureIgnoreCase);

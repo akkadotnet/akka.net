@@ -126,9 +126,11 @@ namespace Akka.Tests.Actor
 
         protected T expectMsg<T>(Func<T, bool> isTheExpected, TimeSpan timespan)
         {
-            object m;
-            if(queue.TryTake(out m, timespan))
+            MessageEnvelope env;
+            if(queue.TryTake(out env, timespan))
             {
+                var m = env.Message;
+
                 Assert.True(m is T,string.Format("Expected a message of type <{0}>. Actual: <{1}>", typeof(T), m.GetType()));
                 var actual = (T)m;
                 if(isTheExpected != null)
