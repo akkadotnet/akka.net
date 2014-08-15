@@ -11,71 +11,6 @@ using Akka.Event;
 
 namespace Akka.TestKit
 {
-    public static class AkkaSpecExtensions
-    {
-        public static void Then<T>(this T self, Action<T> body)
-        {
-            body(self);
-        }
-
-        public static void Then<T>(this T self, Action<T, T> body, T other)
-        {
-            body(other, self);
-        }
-
-        public static void ShouldBe<T>(this IEnumerable<T> self, IEnumerable<T> other)
-        {
-            Xunit.Assert.True(self.SequenceEqual(other), "Expected " + other.Select(i => string.Format("'{0}'", i)).Join(",") + " got " + self.Select(i => string.Format("'{0}'", i)).Join(","));
-        }
-
-        public static void ShouldBe<T>(this T actual, T expected, string message = null)
-        {
-            Xunit.Assert.Equal(expected, actual);
-        }
-
-        public static void ShouldOnlyContainInOrder<T>(this IEnumerable<T> actual, params T[] expected)
-        {
-            ShouldBe(actual, (IEnumerable<T>)expected);
-        }
-
-        public static async Task ThrowsAsync<TException>(Func<Task> func)
-        {
-            var expected = typeof(TException);
-            Type actual = null;
-            try
-            {
-                await func();
-            }
-            catch (Exception e)
-            {
-                actual = e.GetType();
-            }
-
-            Xunit.Assert.Equal(expected, actual);
-        }
-    }
-
-    public abstract class TestKitBase
-    {
-        private ActorSystem _system;
-        private TestKitSettings _testKitSettings;
-
-        protected ActorSystem System
-        {
-            get { return _system; }
-            set
-            {
-                if(_system!=value)
-                {
-                    _system = value;
-                    _testKitSettings = TestKitExtension.For(_system);
-                }
-            }
-        }
-
-        public TestKitSettings TestKitSettings { get { return _testKitSettings; } }
-    }
-
     public class AkkaSpec : TestKitBase, IDisposable
     {
 
@@ -529,8 +464,4 @@ namespace Akka.TestKit
     }
 
     // ReSharper disable once InconsistentNaming
-    public interface ImplicitSender
-    {
-        ActorRef Self { get; }
-    }
 }

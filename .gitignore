@@ -4,6 +4,10 @@
 src/.build/**
 
 
+
+#GitExtensions
+us.stackdump
+
 #-------------------------------------------------------------------------------
 #Based on https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 

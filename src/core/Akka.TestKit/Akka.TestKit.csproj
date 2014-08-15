@@ -70,9 +70,11 @@
   </Choose>
   <ItemGroup>
     <Compile Include="AkkaSpec.cs" />
+    <Compile Include="AkkaSpecExtensions.cs" />
     <Compile Include="CallingThreadDispatcher.cs" />
     <Compile Include="FSMSpecHelpers.cs" />
     <Compile Include="AutoPilots.cs" />
+    <Compile Include="ImplicitSender.cs" />
     <Compile Include="Internals\TestActor.cs" />
     <Compile Include="MessageEnvelope.cs" />
     <Compile Include="NullMessageEnvelope.cs" />
@@ -81,6 +83,7 @@
     <Compile Include="TestActor.cs" />
     <Compile Include="TestActorRef.cs" />
     <Compile Include="TestEvents.cs" />
+    <Compile Include="TestKitBase.cs" />
     <Compile Include="TestKitExtension.cs" />
     <Compile Include="TestKitSettings.cs" />
     <Compile Include="TestLatch.cs" />
