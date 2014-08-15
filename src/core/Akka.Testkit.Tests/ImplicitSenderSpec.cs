@@ -1,4 +1,5 @@
 ﻿using Akka.Actor;
+using Akka.TestKit;
 using Akka.Tests;
 using Xunit;
 

@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Linq;
-using System.Linq.Expressions;
+using Akka.TestKit;
 using Akka.Tools.MatchHandler;
 using Xunit;
 

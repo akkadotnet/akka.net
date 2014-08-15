@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using Akka.TestKit;
+using Xunit;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using System;

@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
-using Akka.Tests;
+using Akka.TestKit;
 using Akka.Util;
 using Google.ProtocolBuffers;
 using Xunit;

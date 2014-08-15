@@ -1,20 +1,15 @@
-﻿using System.Collections;
-using System.IO;
-using Akka.TestKit;
-using Akka.Actor;
-using Akka.Configuration;
-using Akka.Event;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit.Sdk;
+using Akka.Actor;
+using Akka.Configuration;
+using Akka.Event;
 
-namespace Akka.Tests
+namespace Akka.TestKit
 {
     public static class AkkaSpecExtensions
     {

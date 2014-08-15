@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using Akka.TestKit;
 using Akka.Tools.MatchHandler;
 using Xunit;
 

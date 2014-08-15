@@ -1,6 +1,7 @@
 ﻿using System;
 using Akka.Actor;
 using Akka.Dispatch;
+using Akka.TestKit;
 using Akka.Tests.TestUtils;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;

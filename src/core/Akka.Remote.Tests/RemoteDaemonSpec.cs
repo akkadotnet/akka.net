@@ -1,6 +1,6 @@
 ﻿using System;
+using Akka.TestKit;
 using Xunit;
-using Akka.Tests;
 using Akka.Actor;
 using Akka.Configuration;
 using System.Collections.Concurrent;

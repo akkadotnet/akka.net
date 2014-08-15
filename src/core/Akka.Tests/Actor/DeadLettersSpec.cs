@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using Akka.TestKit;
+using Xunit;
 using Akka.Event;
 using System;
 using System.Collections.Concurrent;

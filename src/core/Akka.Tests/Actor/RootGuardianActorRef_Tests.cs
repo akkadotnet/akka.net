@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using Akka.Actor;
 using Akka.Dispatch;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Tests.Actor

@@ -1,11 +1,11 @@
 ﻿using System.Threading;
-using Akka.Util;
-using Xunit;
-using Akka.Actor;
 using System;
 using System.Collections.Concurrent;
+using Akka.Actor;
+using Akka.Util;
+using Xunit;
 
-namespace Akka.Tests
+namespace Akka.TestKit
 {
     public class TestProbeActorRef : ActorRef
     {

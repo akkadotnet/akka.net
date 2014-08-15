@@ -1,6 +1,6 @@
 ﻿using System;
 using Akka.Remote.Transport.Helios;
-using Akka.Tests;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Remote.Tests

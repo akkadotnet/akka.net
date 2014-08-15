@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using Akka.Actor;
 using Akka.Routing;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Tests.Actor

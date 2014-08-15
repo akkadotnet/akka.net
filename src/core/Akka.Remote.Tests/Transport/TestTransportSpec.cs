@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using Akka.Actor;
 using Akka.Remote.Transport;
-using Akka.Tests;
+using Akka.TestKit;
 using Google.ProtocolBuffers;
 using Xunit;
 
