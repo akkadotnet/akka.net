@@ -73,7 +73,6 @@
     <Compile Include="CallingThreadDispatcher.cs" />
     <Compile Include="FSMSpecHelpers.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Supervisor.cs" />
     <Compile Include="TestActorRef.cs" />
     <Compile Include="TestEvents.cs" />
     <Compile Include="TestKitExtension.cs" />
