@@ -55,9 +55,6 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="fastjson">
-      <HintPath>..\..\packages\fastJSON.2.0.27.1\lib\net40\fastjson.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="xunit">
       <HintPath>..\..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
@@ -74,7 +71,6 @@
   <ItemGroup>
     <Compile Include="AkkaSpec.cs" />
     <Compile Include="CallingThreadDispatcher.cs" />
-    <Compile Include="Comparable.cs" />
     <Compile Include="FSMSpecHelpers.cs" />
     <Compile Include="HoconTests.cs" />
     <Compile Include="ImplicitSenderSpec.cs" />
@@ -86,9 +82,6 @@
     <Compile Include="TestKitSettings.cs" />
     <Compile Include="TestLatch.cs" />
     <Compile Include="TestProbe.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka\Akka.csproj">

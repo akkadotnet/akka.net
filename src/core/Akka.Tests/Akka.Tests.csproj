@@ -116,6 +116,7 @@
     <Compile Include="Routing\ScatterGatherFirstCompletedSpec.cs" />
     <Compile Include="Routing\SmallestMailboxSpec.cs" />
     <Compile Include="Serialization\SerializationSpec.cs" />
+    <Compile Include="TestUtils\Comparable.cs" />
     <Compile Include="Tools\PatternSpec.cs" />
     <Compile Include="Util\SwitchTests.cs" />
     <Compile Include="Util\TypeExtensionsTests.cs" />
