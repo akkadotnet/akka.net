@@ -55,6 +55,7 @@
     <Compile Include="..\Akka.Tests\XUnitHelpers.cs">
       <Link>Helpers\XUnitHelpers.cs</Link>
     </Compile>
+    <Compile Include="ImplicitSenderSpec.cs" />
     <Compile Include="TestActorRefTests\BossActor.cs" />
     <Compile Include="TestActorRefTests\WatchAndForwardActor.cs" />
     <Compile Include="TestActorRefTests\Logger.cs" />

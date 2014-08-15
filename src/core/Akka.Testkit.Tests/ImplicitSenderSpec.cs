@@ -2,7 +2,7 @@
 using Akka.Tests;
 using Xunit;
 
-namespace Akka.TestKit
+namespace Akka.Testkit.Tests
 {
     
     public class ImplicitSenderSpec : AkkaSpec, ImplicitSender
