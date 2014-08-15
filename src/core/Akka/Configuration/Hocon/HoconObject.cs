@@ -14,6 +14,20 @@ namespace Akka.Configuration.Hocon
             get { return _children.Values; }
         }
 
+        public IDictionary<string, object> Unwrapped
+        {
+            get
+            {
+                return _children.ToDictionary(k => k.Key, v =>
+                {
+                    HoconObject obj = v.Value.GetObject();
+                    if (obj != null)
+                        return (object) obj.Unwrapped;
+                    return null;
+                });
+            }
+        }
+
         public bool IsString()
         {
             return false;
@@ -27,17 +41,6 @@ namespace Akka.Configuration.Hocon
         public bool IsArray()
         {
             return false;
-        }
-
-        public IDictionary<string, object> Unwrapped
-        {
-            get { return _children.ToDictionary(k => k.Key, v =>
-            {
-                var obj = v.Value.GetObject();
-                if (obj != null)
-                    return (object)obj.Unwrapped;
-                return null;
-            }); }
         }
 
         public IList<HoconValue> GetArray()

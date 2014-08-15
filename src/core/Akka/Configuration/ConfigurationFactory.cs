@@ -6,12 +6,12 @@ using Akka.Configuration.Hocon;
 namespace Akka.Configuration
 {
     /// <summary>
-    /// Class ConfigurationFactory.
+    ///     Class ConfigurationFactory.
     /// </summary>
     public class ConfigurationFactory
     {
         /// <summary>
-        /// Gets the empty.
+        ///     Gets the empty.
         /// </summary>
         /// <value>The empty.</value>
         public static Config Empty
@@ -20,7 +20,7 @@ namespace Akka.Configuration
         }
 
         /// <summary>
-        /// Parses the string.
+        ///     Parses the string.
         /// </summary>
         /// <param name="hocon">The json.</param>
         /// <returns>Config.</returns>
@@ -31,19 +31,19 @@ namespace Akka.Configuration
         }
 
         /// <summary>
-        /// Loads this instance.
+        ///     Loads this instance.
         /// </summary>
         /// <returns>Config.</returns>
         public static Config Load()
         {
             var section = new AkkaConfigurationSection();
-            var config = section.AkkaConfig;
+            Config config = section.AkkaConfig;
 
             return config;
         }
 
         /// <summary>
-        /// Defaults this instance.
+        ///     Defaults this instance.
         /// </summary>
         /// <returns>Config.</returns>
         public static Config Default()
@@ -52,7 +52,7 @@ namespace Akka.Configuration
         }
 
         /// <summary>
-        /// Froms the resource.
+        ///     Froms the resource.
         /// </summary>
         /// <param name="resourceName">Name of the resource.</param>
         /// <returns>Config.</returns>

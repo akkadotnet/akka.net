@@ -15,7 +15,7 @@ namespace Akka.Configuration.Hocon
         [ConfigurationProperty(ConfigurationPropertyName, IsRequired = true)]
         public HoconConfigurationElement Hocon
         {
-            get { return (HoconConfigurationElement)base[ConfigurationPropertyName]; }
+            get { return (HoconConfigurationElement) base[ConfigurationPropertyName]; }
             set { base[ConfigurationPropertyName] = value; }
         }
     }

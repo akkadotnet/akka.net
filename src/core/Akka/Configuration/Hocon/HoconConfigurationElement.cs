@@ -7,7 +7,7 @@ namespace Akka.Configuration.Hocon
         [ConfigurationProperty(ContentPropertyName, IsRequired = true, IsKey = true)]
         public string Content
         {
-            get { return (string)base[ContentPropertyName]; }
+            get { return (string) base[ContentPropertyName]; }
             set { base[ContentPropertyName] = value; }
         }
     }

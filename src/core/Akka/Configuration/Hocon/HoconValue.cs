@@ -7,48 +7,17 @@ namespace Akka.Configuration.Hocon
 {
     public class HoconValue : IMightBeAHoconObject
     {
-        private readonly List<IHoconElement> values = new List<IHoconElement>();
+        private readonly List<IHoconElement> _values = new List<IHoconElement>();
 
         public bool IsEmpty
         {
-            get { return values.Count == 0; }
-        }
-
-        public void AppendValue(IHoconElement value)
-        {
-            values.Add(value);
-        }
-
-        public void Clear()
-        {
-            values.Clear();
-        }
-
-        public void NewValue(IHoconElement value)
-        {
-            values.Clear();
-            values.Add(value);
-        }
-
-        public bool IsString()
-        {
-            return values.Any() && values.All(v => v.IsString());
-        }
-
-        private string ConcatString()
-        {
-            string concat = string.Join("", values.Select(l => l.GetString())).Trim();
-
-            if (concat == "null")
-                return null;
-
-            return concat;
+            get { return _values.Count == 0; }
         }
 
         public HoconObject GetObject()
         {
             //TODO: merge objects?
-            var raw = values.FirstOrDefault();
+            IHoconElement raw = _values.FirstOrDefault();
             var o = raw as HoconObject;
             var sub = raw as IMightBeAHoconObject;
             if (o != null) return o;
@@ -56,14 +25,45 @@ namespace Akka.Configuration.Hocon
             return null;
         }
 
-        public HoconValue GetChildObject(string key)
-        {
-            return GetObject().GetKey(key);
-        }
-
         public bool IsObject()
         {
             return GetObject() != null;
+        }
+
+        public void AppendValue(IHoconElement value)
+        {
+            _values.Add(value);
+        }
+
+        public void Clear()
+        {
+            _values.Clear();
+        }
+
+        public void NewValue(IHoconElement value)
+        {
+            _values.Clear();
+            _values.Add(value);
+        }
+
+        public bool IsString()
+        {
+            return _values.Any() && _values.All(v => v.IsString());
+        }
+
+        private string ConcatString()
+        {
+            string concat = string.Join("", _values.Select(l => l.GetString())).Trim();
+
+            if (concat == "null")
+                return null;
+
+            return concat;
+        }
+
+        public HoconValue GetChildObject(string key)
+        {
+            return GetObject().GetKey(key);
         }
 
         public bool GetBoolean()
@@ -165,7 +165,7 @@ namespace Akka.Configuration.Hocon
 
         public IList<HoconValue> GetArray()
         {
-            IEnumerable<HoconValue> x = from arr in values
+            IEnumerable<HoconValue> x = from arr in _values
                 where arr.IsArray()
                 from e in arr.GetArray()
                 select e;
@@ -184,24 +184,24 @@ namespace Akka.Configuration.Hocon
             string res = GetString();
             if (res.EndsWith("ms"))
             {
-                var v = res.Substring(0, res.Length - 2);
-                return TimeSpan.FromMilliseconds(double.Parse(v,NumberFormatInfo.InvariantInfo));
+                string v = res.Substring(0, res.Length - 2);
+                return TimeSpan.FromMilliseconds(double.Parse(v, NumberFormatInfo.InvariantInfo));
             }
             if (res.EndsWith("s"))
             {
-                var v = res.Substring(0, res.Length - 1);
+                string v = res.Substring(0, res.Length - 1);
                 return TimeSpan.FromSeconds(double.Parse(v, NumberFormatInfo.InvariantInfo));
             }
 
             if (res.EndsWith("m"))
             {
-                var v = res.Substring(0, res.Length - 1);
+                string v = res.Substring(0, res.Length - 1);
                 return TimeSpan.FromMinutes(double.Parse(v, NumberFormatInfo.InvariantInfo));
             }
 
             if (res.EndsWith("d"))
             {
-                var v = res.Substring(0, res.Length - 1);
+                string v = res.Substring(0, res.Length - 1);
                 return TimeSpan.FromDays(double.Parse(v, NumberFormatInfo.InvariantInfo));
             }
 
@@ -210,10 +210,10 @@ namespace Akka.Configuration.Hocon
 
         public long? GetByteSize()
         {
-            var res = GetString();
+            string res = GetString();
             if (res.EndsWith("b"))
             {
-                var v = res.Substring(0, res.Length - 1);
+                string v = res.Substring(0, res.Length - 1);
                 return long.Parse(v);
             }
 

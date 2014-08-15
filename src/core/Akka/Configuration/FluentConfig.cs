@@ -1,17 +1,15 @@
-﻿using Akka.Configuration;
+﻿using System;
+using System.Text;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
+// ReSharper disable once CheckNamespace
 namespace Akka
 {
     public class FluentConfig : FluentConfigInternals
     {
-        private StringBuilder _hoconConfiguration = new StringBuilder();
+        private readonly StringBuilder _hoconConfiguration = new StringBuilder();
 
         void FluentConfigInternals.AppendLine(string configString)
         {
@@ -51,6 +49,7 @@ namespace Akka
           unhandled = on
         }
 */
+
         public static FluentConfig LogConfigOnStart(this FluentConfig self, bool on)
         {
             if (on)
@@ -59,19 +58,23 @@ namespace Akka
             }
             return self;
         }
+
         public static FluentConfig StdOutLogLevel(this FluentConfig self, LogLevel logLevel)
         {
-            self.AsInstanceOf<FluentConfigInternals>().AppendLine(string.Format("akka.stdout-loglevel = {0}", logLevel.StringFor()));
+            self.AsInstanceOf<FluentConfigInternals>()
+                .AppendLine(string.Format("akka.stdout-loglevel = {0}", logLevel.StringFor()));
 
             return self;
         }
 
         public static FluentConfig LogLevel(this FluentConfig self, LogLevel logLevel)
         {
-            self.AsInstanceOf<FluentConfigInternals>().AppendLine(string.Format("akka.loglevel = {0}", logLevel.StringFor()));
+            self.AsInstanceOf<FluentConfigInternals>()
+                .AppendLine(string.Format("akka.loglevel = {0}", logLevel.StringFor()));
 
             return self;
         }
+
         private static FluentConfig DebugReceive(this FluentConfig self, bool on)
         {
             if (on)
@@ -80,6 +83,7 @@ namespace Akka
             }
             return self;
         }
+
         private static FluentConfig DebugAutoReceive(this FluentConfig self, bool on)
         {
             if (on)
@@ -88,6 +92,7 @@ namespace Akka
             }
             return self;
         }
+
         private static FluentConfig DebugLifecycle(this FluentConfig self, bool on)
         {
             if (on)
@@ -96,6 +101,7 @@ namespace Akka
             }
             return self;
         }
+
         private static FluentConfig DebugEventStream(this FluentConfig self, bool on)
         {
             if (on)
@@ -104,6 +110,7 @@ namespace Akka
             }
             return self;
         }
+
         public static FluentConfig DebugUnhandled(this FluentConfig self, bool on)
         {
             if (on)
@@ -113,7 +120,8 @@ namespace Akka
             return self;
         }
 
-        public static FluentConfig LogLocal(this FluentConfig self, bool receive = false, bool autoReceive = false, bool lifecycle = false, bool eventStream = false, bool unhandled = false)
+        public static FluentConfig LogLocal(this FluentConfig self, bool receive = false, bool autoReceive = false,
+            bool lifecycle = false, bool eventStream = false, bool unhandled = false)
         {
             return self.DebugReceive(receive)
                 .DebugAutoReceive(autoReceive)
@@ -122,26 +130,33 @@ namespace Akka
                 .DebugUnhandled(unhandled);
         }
 
-        public static FluentConfig DefaultDispatcher(this FluentConfig self,DispatcherType dispatcherType, int throughput=100, TimeSpan? throughputDeadlineTimeout=null)
+        public static FluentConfig DefaultDispatcher(this FluentConfig self, DispatcherType dispatcherType,
+            int throughput = 100, TimeSpan? throughputDeadlineTimeout = null)
         {
-            var type = dispatcherType.GetName();
-            self.ConfigureDispatcher( type, throughput, throughputDeadlineTimeout);
+            string type = dispatcherType.GetName();
+            self.ConfigureDispatcher(type, throughput, throughputDeadlineTimeout);
 
             return self;
         }
 
-        public static FluentConfig DefaultDispatcher(this FluentConfig self, Type dispatcherType, int throughput = 100, TimeSpan? throughputDeadlineTimeout = null)
+        public static FluentConfig DefaultDispatcher(this FluentConfig self, Type dispatcherType, int throughput = 100,
+            TimeSpan? throughputDeadlineTimeout = null)
         {
-            var type = dispatcherType.AssemblyQualifiedName;
+            string type = dispatcherType.AssemblyQualifiedName;
             self.ConfigureDispatcher(type, throughput, throughputDeadlineTimeout);
             return self;
         }
 
-        private static void ConfigureDispatcher(this FluentConfig self, string type, int throughput, TimeSpan? throughputDeadlineTimeout)
+        private static void ConfigureDispatcher(this FluentConfig self, string type, int throughput,
+            TimeSpan? throughputDeadlineTimeout)
         {
-            self.AsInstanceOf<FluentConfigInternals>().AppendLine(string.Format("akka.actor.default-dispatcher.type = '{0}'", type));
-            self.AsInstanceOf<FluentConfigInternals>().AppendLine(string.Format("akka.actor.default-dispatcher.throughput = {0}", throughput));
-            self.AsInstanceOf<FluentConfigInternals>().AppendLine(string.Format("akka.actor.default-dispatcher.throughput-deadline-time = {0}ms", throughputDeadlineTimeout.GetValueOrDefault(TimeSpan.FromSeconds(0)).TotalMilliseconds));
+            self.AsInstanceOf<FluentConfigInternals>()
+                .AppendLine(string.Format("akka.actor.default-dispatcher.type = '{0}'", type));
+            self.AsInstanceOf<FluentConfigInternals>()
+                .AppendLine(string.Format("akka.actor.default-dispatcher.throughput = {0}", throughput));
+            self.AsInstanceOf<FluentConfigInternals>()
+                .AppendLine(string.Format("akka.actor.default-dispatcher.throughput-deadline-time = {0}ms",
+                    throughputDeadlineTimeout.GetValueOrDefault(TimeSpan.FromSeconds(0)).TotalMilliseconds));
         }
     }
 }
