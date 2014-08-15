@@ -1,4 +1,5 @@
 ﻿using System.Threading;
+using Akka.Util;
 using Xunit;
 using Akka.Actor;
 using System;
@@ -8,7 +9,7 @@ namespace Akka.Tests
 {
     public class TestProbeActorRef : ActorRef
     {
-        public static AtomicInteger TestActorId =  new AtomicInteger(0);
+        public static AtomicCounter TestActorId = new AtomicCounter(0);
 
         private readonly TestProbe _owner;
         private readonly ActorPath _path=new RootActorPath(Address.AllSystems,"/TestProbe" + TestActorId.GetAndIncrement());

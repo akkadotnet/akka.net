@@ -1,4 +1,5 @@
 ﻿using Xunit;
+using Akka.Util;
 using Akka.Actor;
 using System;
 using System.Collections.Concurrent;
@@ -16,16 +17,16 @@ namespace Akka.Tests
     {
         public class LifeCycleTestActor : UntypedActor
         {
-            private AtomicInteger generationProvider;
+            private AtomicCounter generationProvider;
             private string id;
             private ActorRef testActor;
             private int CurrentGeneration;
-            public LifeCycleTestActor(ActorRef testActor,string id,AtomicInteger generationProvider)
+            public LifeCycleTestActor(ActorRef testActor,string id,AtomicCounter generationProvider)
             {
                 this.testActor = testActor;
                 this.id = id;
                 this.generationProvider = generationProvider;
-                this.CurrentGeneration = generationProvider.GetAndIncrement();
+                this.CurrentGeneration = generationProvider.Next;
             }
 
             private void Report(object message)
@@ -64,16 +65,16 @@ namespace Akka.Tests
 
         public class LifeCycleTest2Actor : UntypedActor
         {
-            private AtomicInteger generationProvider;
+            private AtomicCounter generationProvider;
             private string id;
             private ActorRef testActor;
             private int CurrentGeneration;
-            public LifeCycleTest2Actor(ActorRef testActor, string id, AtomicInteger generationProvider)
+            public LifeCycleTest2Actor(ActorRef testActor, string id, AtomicCounter generationProvider)
             {
                 this.testActor = testActor;
                 this.id = id;
                 this.generationProvider = generationProvider;
-                this.CurrentGeneration = generationProvider.GetAndIncrement();
+                this.CurrentGeneration = generationProvider.Next;
             }
 
             private void Report(object message)
@@ -103,7 +104,7 @@ namespace Akka.Tests
         [Fact(DisplayName = "invoke preRestart, preStart, postRestart when using OneForOneStrategy")]
         public void ActorLifecycleTest1()
         {
-            var generationProvider = new AtomicInteger();
+            var generationProvider = new AtomicCounter();
             string id = Guid.NewGuid().ToString();
             var supervisor = sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTestActor(testActor, id, generationProvider));
@@ -134,7 +135,7 @@ namespace Akka.Tests
         [Fact(DisplayName="default for preRestart and postRestart is to call postStop and preStart respectively")]
         public void ActorLifecycleTest2()
         {
-            var generationProvider = new AtomicInteger();
+            var generationProvider = new AtomicCounter();
             string id = Guid.NewGuid().ToString();            
             var supervisor = sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(testActor, id, generationProvider));
@@ -165,7 +166,7 @@ namespace Akka.Tests
         [Fact(DisplayName="not invoke preRestart and postRestart when never restarted using OneForOneStrategy")]
         public void ActorLifecycleTest3()
         {
-            var generationProvider = new AtomicInteger();
+            var generationProvider = new AtomicCounter();
             string id = Guid.NewGuid().ToString();            
             var supervisor = sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(testActor, id, generationProvider));

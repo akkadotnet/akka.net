@@ -73,7 +73,6 @@
   </Choose>
   <ItemGroup>
     <Compile Include="AkkaSpec.cs" />
-    <Compile Include="AtomicInteger.cs" />
     <Compile Include="CallingThreadDispatcher.cs" />
     <Compile Include="Comparable.cs" />
     <Compile Include="FSMSpecHelpers.cs" />

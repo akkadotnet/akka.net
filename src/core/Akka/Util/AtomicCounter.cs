@@ -4,27 +4,31 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor;
 
 namespace Akka.Util
 {
     /// <summary>
     /// Class used for atomic counters and increments.
-    /// 
-    /// Used inside the <see cref="FSM{TS,TD}"/> and in parts of Akka.Remote.
     /// </summary>
     public class AtomicCounter
     {
-        public AtomicCounter(int seed)
+        /// <summary>
+        /// Creates a new instance initialized to the value specified by <paramref name="initialValue"/>.
+        /// If  <paramref name="initialValue"/> is not specified it defaults to -1.
+        /// </summary>
+        /// <param name="initialValue"></param>
+        public AtomicCounter(int initialValue=-1)
         {
-            _seed = seed;
+            _value = initialValue;
         }
 
-        private int _seed;
+        private int _value;
 
         /// <summary>
         /// Retrieves the current value of the counter
         /// </summary>
-        public int Current { get { return _seed; } }
+        public int Current { get { return _value; } }
 
         /// <summary>
         /// Increments the counter and returns the next value
@@ -33,7 +37,7 @@ namespace Akka.Util
         {
             get
             {
-                return Interlocked.Increment(ref _seed);
+                return Interlocked.Increment(ref _value);
             }
         }
 
@@ -42,9 +46,19 @@ namespace Akka.Util
         /// </summary>
         public int GetAndIncrement()
         {
-            var rValue = Current;
             var nextValue = Next;
-            return rValue;
+            return nextValue-1;
+        }
+
+        /// <summary>
+        /// Returns the current value and adds the specified value to the counter.
+        /// </summary>
+        /// <param name="amount"></param>
+        /// <returns></returns>
+        public int GetAndAdd(int amount)
+        {
+            var newValue=Interlocked.Add(ref _value, amount);
+            return newValue-amount;
         }
     }
 }

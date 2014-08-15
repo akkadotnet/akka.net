@@ -7,6 +7,7 @@ using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
 using Akka.Tests;
+using Akka.Util;
 using Xunit;
 using System.Threading;
 
@@ -24,9 +25,9 @@ namespace Akka.Tests.Routing
 
         public class BroadcastTarget : UntypedActor
         {
-            private AtomicInteger _counter;
+            private AtomicCounter _counter;
             private TestLatch _latch;
-            public BroadcastTarget(TestLatch latch, AtomicInteger counter)
+            public BroadcastTarget(TestLatch latch, AtomicCounter counter)
             {
                 _latch = latch;
                 _counter = counter;
@@ -64,8 +65,8 @@ namespace Akka.Tests.Routing
         public void Scatter_gather_router_must_deliver_a_broadcast_message_using_tell()
         {
             var doneLatch = new TestLatch(sys, 2);
-            var counter1 = new AtomicInteger(0);
-            var counter2 = new AtomicInteger(0);
+            var counter1 = new AtomicCounter(0);
+            var counter2 = new AtomicCounter(0);
             var actor1 = sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
             var actor2 = sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
 
@@ -75,8 +76,8 @@ namespace Akka.Tests.Routing
 
             doneLatch.Ready(TimeSpan.FromSeconds(1));
 
-            counter1.Value.ShouldBe(1);
-            counter2.Value.ShouldBe(1);
+            counter1.Current.ShouldBe(1);
+            counter2.Current.ShouldBe(1);
 
         }
 
