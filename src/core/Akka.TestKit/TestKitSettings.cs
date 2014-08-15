@@ -29,11 +29,34 @@ namespace Akka.TestKit
             }
         }
 
-        //TODO: Implement:
-        //  val TestTimeFactor = config.getDouble("akka.test.timefactor").
-        //       requiring(tf ⇒ !tf.isInfinite && tf > 0, "akka.test.timefactor must be positive finite double")
-        // val SingleExpectDefaultTimeout: FiniteDuration = config.getMillisDuration("akka.test.single-expect-default")
-        // val TestEventFilterLeeway: FiniteDuration = config.getMillisDuration("akka.test.filter-leeway")
+        public double TestTimeFactor
+        {
+            get
+            {
+                var factor = _config.GetDouble("akka.test.timefactor");
+                if (double.IsInfinity(factor) || factor > 0.0)
+                {
+                    throw new Exception("akka.test.timefactor must be positive finite double");
+                }
 
+                return factor;
+            }
+        }
+
+        public TimeSpan SingleExpectDefaultTimeout
+        {
+            get
+            {
+                return _config.GetMillisDuration("akka.test.single-expect-default", TimeSpan.FromSeconds(5));
+            }
+        }
+
+        public TimeSpan TestEventFilterLeeway
+        {
+            get
+            {
+                return _config.GetMillisDuration("akka.test.filter-leeway", TimeSpan.FromSeconds(5));
+            }
+        }
     }
 }

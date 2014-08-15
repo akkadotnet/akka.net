@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using System.Threading;
+using Xunit;
 using Akka.Actor;
 using System;
 using System.Collections.Concurrent;
@@ -55,6 +56,16 @@ namespace Akka.Tests
             {
                 Assert.True(false, "Did not expect a message during the duration " + duration.ToString());
             }
+        }
+
+        public Terminated ExpectTerminated(TimeSpan timeout)
+        {
+            var cancellationTokenSource = new CancellationTokenSource((int)timeout.TotalMilliseconds);
+            var actual = queue.Take(cancellationTokenSource.Token);
+
+            Assert.True(actual is Terminated);
+
+            return (Terminated)actual;
         }
     }
 }
