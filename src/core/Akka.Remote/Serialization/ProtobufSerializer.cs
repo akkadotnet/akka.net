@@ -7,7 +7,7 @@ namespace Akka.Remote.Serialization
 {
     public class ProtobufSerializer : Serializer
     {
-        public ProtobufSerializer(ActorSystem system) : base(system)
+        public ProtobufSerializer(ExtendedActorSystem system) : base(system)
         {
         }
 

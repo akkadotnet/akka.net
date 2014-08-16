@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internals;
 
 namespace Akka.Remote.Transport
 {
@@ -16,9 +17,9 @@ namespace Akka.Remote.Transport
 
     internal class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
     {
-        public override TransportAdapters CreateExtension(ActorSystem system)
+        public override TransportAdapters CreateExtension(ExtendedActorSystem system)
         {
-            return new TransportAdapters(system);
+            return new TransportAdapters((ActorSystemImpl) system);
         }
 
         #region Static methods
@@ -38,7 +39,7 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal class TransportAdapters : IExtension
     {
-        public TransportAdapters(ActorSystem system)
+        public TransportAdapters(ExtendedActorSystem system)
         {
             System = system;
             Settings = ((RemoteActorRefProvider)system.Provider).RemoteSettings;
@@ -281,7 +282,7 @@ namespace Akka.Remote.Transport
             System = system;
         }
 
-        protected new ActorSystem System;
+        protected new ActorSystem System;       //TODO: Is it supposed to hide base? Explain why, or remove
 
         protected abstract string ManagerName { get; }
         protected abstract Props ManagerProps { get; }
@@ -310,7 +311,7 @@ namespace Akka.Remote.Transport
 
         public override Task<bool> Shutdown()
         {
-            var stopTask = manager.GracefulStop(((RemoteActorRefProvider) System.Provider).RemoteSettings.FlushWait);
+            var stopTask = manager.GracefulStop(((RemoteActorRefProvider)((ActorSystemImpl) System).Provider).RemoteSettings.FlushWait);
             var transportStopTask = WrappedTransport.Shutdown();
             return Task.WhenAll(stopTask, transportStopTask).ContinueWith(x => x.IsCompleted, TaskContinuationOptions.ExecuteSynchronously);
         }

@@ -248,7 +248,7 @@ namespace Akka.Remote.Tests
 
         private Address Addr(ActorSystem system, string proto)
         {
-            return system.Provider.GetExternalAddressFor(new Address(string.Format("akka.{0}", proto), "", "", 0));
+            return ((ExtendedActorSystem) system).Provider.GetExternalAddressFor(new Address(string.Format("akka.{0}", proto), "", "", 0));
         }
 
         private int Port(ActorSystem system, string proto)
@@ -258,7 +258,7 @@ namespace Akka.Remote.Tests
 
         private void Deploy(ActorSystem system, Deploy d)
         {
-            system.Provider.AsInstanceOf<RemoteActorRefProvider>().Deployer.SetDeploy(d);
+            ((ExtendedActorSystem)system).Provider.AsInstanceOf<RemoteActorRefProvider>().Deployer.SetDeploy(d);
         }
 
         #endregion

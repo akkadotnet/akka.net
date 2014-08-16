@@ -32,7 +32,7 @@ namespace Akka.Remote
     {
         private readonly LoggingAdapter log;
         private volatile IDictionary<string, HashSet<ProtocolTransportAddressPair>> _transportMapping;
-        private volatile InternalActorRef _endpointManager;
+        private volatile ActorRef _endpointManager;
 
         // This is effectively a write-once variable similar to a lazy val. The reason for not using a lazy val is exception
         // handling.
@@ -42,10 +42,10 @@ namespace Akka.Remote
         // a lazy val
         private volatile Address _defaultAddress;
 
-        private InternalActorRef _transportSupervisor;
+        private ActorRef _transportSupervisor;
         private EventPublisher _eventPublisher;
 
-        public Remoting(ActorSystem system, RemoteActorRefProvider provider)
+        public Remoting(ExtendedActorSystem system, RemoteActorRefProvider provider)
             : base(system, provider)
         {
             log = Logging.GetLogger(system, "remoting");

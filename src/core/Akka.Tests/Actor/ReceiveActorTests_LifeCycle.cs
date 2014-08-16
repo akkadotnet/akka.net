@@ -10,7 +10,7 @@ namespace Akka.Tests.Actor
         public void Given_actor_When_it_restarts_Then_uses_the_handler()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<CrashActor>("crash");
             
             //When
@@ -25,7 +25,7 @@ namespace Akka.Tests.Actor
         public void Given_actor_that_has_replaced_its_initial_handler_When_it_restarts_Then_uses_the_initial_handler()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<CrashActor>("crash");
             actor.Tell("BECOME-DISCARD");
 
@@ -42,7 +42,7 @@ namespace Akka.Tests.Actor
         public void Given_actor_that_has_pushed_a_new_handler_When_it_restarts_Then_uses_the_initial_handler()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<CrashActor>("crash");
             actor.Tell("BECOME");
 

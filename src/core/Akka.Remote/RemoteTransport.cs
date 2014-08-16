@@ -18,14 +18,14 @@ namespace Akka.Remote
     /// </summary>
     internal abstract class RemoteTransport
     {
-        protected RemoteTransport(ActorSystem system, RemoteActorRefProvider provider)
+        protected RemoteTransport(ExtendedActorSystem system, RemoteActorRefProvider provider)
         {
             System = system;
             Provider = provider;
             Addresses = null;
         }
 
-        public ActorSystem System { get; private set; }
+        protected ExtendedActorSystem System { get; private set; }
         public RemoteActorRefProvider Provider { get; private set; }
 
         /// <summary>

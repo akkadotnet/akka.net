@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor.Internals;
 using Akka.Util;
 
 namespace Akka.Actor
@@ -237,7 +238,7 @@ namespace Akka.Actor
             var inboxSize = config.GetInt("inbox-size");
             var timeout = config.GetMillisDuration("default-timeout");
 
-            var receiver = system.SystemActorOf(Props.Create(() => new InboxActor(inboxSize)), "inbox-" + Interlocked.Increment(ref inboxNr));
+            var receiver =((ActorSystemImpl) system).SystemActorOf(Props.Create(() => new InboxActor(inboxSize)), "inbox-" + Interlocked.Increment(ref inboxNr));
 
             var inbox = new Inbox(timeout, receiver, system);
             return inbox;

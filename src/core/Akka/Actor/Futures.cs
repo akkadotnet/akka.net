@@ -44,7 +44,7 @@ namespace Akka.Actor
         internal static ActorRefProvider ResolveProvider(ICanTell self)
         {
             if (ActorCell.Current != null)
-                return ActorCell.Current.System.Provider;
+                return ActorCell.Current.SystemImpl.Provider;
 
             if (self is InternalActorRef)
                 return self.AsInstanceOf<InternalActorRef>().Provider;

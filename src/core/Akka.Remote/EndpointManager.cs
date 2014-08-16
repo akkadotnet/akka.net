@@ -736,13 +736,13 @@ namespace Akka.Remote
             }
         }
 
-        private InternalActorRef CreateEndpoint(Address remoteAddress, Address localAddress, AkkaProtocolTransport transport,
+        private ActorRef CreateEndpoint(Address remoteAddress, Address localAddress, AkkaProtocolTransport transport,
             RemoteSettings endpointSettings, bool writing, AkkaProtocolHandle handleOption = null, int? refuseUid = null)
         {
             System.Diagnostics.Debug.Assert(_transportMapping.ContainsKey(localAddress));
             System.Diagnostics.Debug.Assert(writing || refuseUid == null);
 
-            InternalActorRef endpointActor;
+            ActorRef endpointActor;
 
             if (writing)
             {

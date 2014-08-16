@@ -12,7 +12,7 @@ namespace Akka.Tests.Actor
 {
     public class DeathWatchSpec : AkkaSpec
     {
-        private readonly InternalActorRef _supervisor;
+        private readonly ActorRef _supervisor;
         private ActorRef _terminal;
 
         public DeathWatchSpec()

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Akka.Actor.Internals;
 
 namespace Akka.Event
 {
@@ -75,7 +76,7 @@ namespace Akka.Event
         /// </summary>
         /// <param name="system">The system.</param>
         /// <exception cref="System.Exception">Can not use logger of type: + loggerType</exception>
-        public async void StartDefaultLoggers(ActorSystem system)
+        public async void StartDefaultLoggers(ActorSystemImpl system)
         {
             //TODO: find out why we have logName and in AddLogger, "name"
             string logName = SimpleName(this) + "(" + system.Name + ")";
@@ -112,7 +113,7 @@ namespace Akka.Event
         /// <param name="logLevel">The log level.</param>
         /// <param name="logName">Name of the log.</param>
         /// <returns>Task.</returns>
-        private async Task AddLogger(ActorSystem system, Type actorClass, LogLevel logLevel, string logName)
+        private async Task AddLogger(ActorSystemImpl system, Type actorClass, LogLevel logLevel, string logName)
         {
             //TODO: remove the newguid stuff
             string name = "log" + system.Name + "-" + SimpleName(actorClass);

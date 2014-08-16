@@ -1,4 +1,5 @@
 ﻿using System;
+using Akka.Actor.Internals;
 using Akka.TestKit;
 using Xunit;
 using Akka.Actor;
@@ -57,12 +58,12 @@ akka {
             var p = new TestProbe();
             sys.EventStream.Subscribe(p.Ref, typeof(string));
             var supervisor = sys.ActorOf<SomeActor>();
-            var provider = (RemoteActorRefProvider)sys.Provider;
+            var provider = (RemoteActorRefProvider)((ActorSystemImpl)sys).Provider;
             var daemon = provider.RemoteDaemon;
             var childCreatedEvent=new ManualResetEventSlim();
 
 
-            var path = (sys.Guardian.Path + "/foo").ToString();
+            var path = (((ActorSystemImpl) sys).Guardian.Path + "/foo").ToString();
 
             //ask to create an actor MyRemoteActor, this actor has a child "child"
             daemon.Tell(new DaemonMsgCreate(Props.Create(() => new MyRemoteActor(childCreatedEvent)), null, path, supervisor));

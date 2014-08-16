@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -49,7 +50,7 @@ namespace Akka.Actor
         /// and then—when the ActorSystem is constructed—the second phase during
         /// which actors may be created (e.g. the guardians).
         /// </summary>
-        void Init(ActorSystem system);
+        void Init(ActorSystemImpl system);
 
         /// <summary>Gets the deployer.</summary>
         Deployer Deployer { get; }
@@ -79,7 +80,7 @@ namespace Akka.Actor
         /// but it should be overridable from external configuration; the lookup of
         /// the latter can be suppressed by setting "lookupDeploy" to "false".
         /// </summary>
-        InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async);
+        InternalActorRef ActorOf(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async);
 
         /// <summary>Get the actor reference for a specified path. If no such actor exists, it will be (equivalent to) a dead letter reference.</summary>
         ActorRef ResolveActorRef(string path);
@@ -118,7 +119,7 @@ namespace Akka.Actor
         private readonly LoggingAdapter _log;
         private readonly AtomicCounterLong _tempNumber;
         private readonly ActorPath _tempNode;
-        private ActorSystem _system;
+        private ActorSystemImpl _system;
         private readonly Dictionary<string, InternalActorRef> _extraNames = new Dictionary<string, InternalActorRef>();
         private readonly TaskCompletionSource<Status> _terminationPromise = new TaskCompletionSource<Status>();
         private SupervisorStrategy _systemGuardianStrategy;
@@ -197,7 +198,7 @@ namespace Akka.Actor
 
 
 
-        private RootGuardianActorRef CreateRootGuardian(ActorSystem system)
+        private RootGuardianActorRef CreateRootGuardian(ActorSystemImpl system)
         {
             var supervisor = new RootGuardianSupervisor(_rootPath, this, _terminationPromise, _log);
             var rootGuardianStrategy = new OneForOneStrategy(ex =>
@@ -263,7 +264,7 @@ namespace Akka.Actor
             _tempContainer.RemoveChild(path.Name);
         }
 
-        public void Init(ActorSystem system)
+        public void Init(ActorSystemImpl system)
         {
             _system = system;
             //The following are the lazy val statements in Akka
@@ -342,7 +343,7 @@ namespace Akka.Actor
         }
 
 
-        public InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
+        public InternalActorRef ActorOf(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
             //TODO: This does not match Akka's ActorOf at all
 

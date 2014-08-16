@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq.Expressions;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Pattern;
 using Akka.Util;
@@ -27,7 +28,8 @@ namespace Akka.TestKit
 
         public static TestActorRef<T> Create<T>(ActorSystem system, Props props, ActorRef supervisor = null, string name = null) where T : ActorBase
         {
-            return TestActorRef<T>.Create(system, props, supervisor ?? system.Guardian, name ?? CreateUniqueName());
+            var systemImpl = (ActorSystemImpl)system;
+            return TestActorRef<T>.Create(systemImpl, props, supervisor ?? systemImpl.Guardian, name ?? CreateUniqueName());
         }
 
         public static TestActorRef<T> Create<T>(ActorSystem system, Props props, string name) where T : ActorBase
@@ -73,7 +75,7 @@ namespace Akka.TestKit
 
         protected static ActorCell NewActorCell(ActorSystem system, LocalActorRef actorRef, Props props, MessageDispatcher dispatcher, InternalActorRef supervisor, Func<Mailbox> createMailbox)
         {
-            var cell = new TestActorCell(system, actorRef, props, dispatcher, supervisor);
+            var cell = new TestActorCell((ActorSystemImpl) system, actorRef, props, dispatcher, supervisor);
             cell.Init(sendSupervise: false, createMailbox: createMailbox);
             return cell;
         }
@@ -193,7 +195,7 @@ namespace Akka.TestKit
 
         protected class TestActorCell : ActorCell
         {
-            public TestActorCell(ActorSystem system, InternalActorRef self, Props props, MessageDispatcher dispatcher, InternalActorRef parent)
+            public TestActorCell(ActorSystemImpl system, InternalActorRef self, Props props, MessageDispatcher dispatcher, InternalActorRef parent)
                 : base(system, self, props, dispatcher, parent)
             {
             }

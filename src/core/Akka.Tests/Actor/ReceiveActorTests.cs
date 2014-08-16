@@ -16,7 +16,7 @@ namespace Akka.Tests.Actor
         public void Given_actor_with_no_receive_specified_When_receiving_message_Then_it_should_be_unhandled()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<NoReceiveActor>("no-receive-specified");
             system.EventStream.Subscribe(testActor, typeof(UnhandledMessage));
 
@@ -33,7 +33,7 @@ namespace Akka.Tests.Actor
         public void Test_that_actor_cannot_call_receive_out_of_construction_and_become()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<CallReceiveWhenHandlingMessageActor>("receive-on-handling-message");
 
             //When
@@ -48,7 +48,7 @@ namespace Akka.Tests.Actor
         public void Given_an_EchoActor_When_receiveing_messages_Then_messages_should_be_sent_back()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<EchoReceiveActor>("no-receive-specified");
 
             //When
@@ -64,7 +64,7 @@ namespace Akka.Tests.Actor
         public void Given_an_actor_which_uses_predicates_When_sending_different_messages_Then_correct_handler_should_be_invoked()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<IntPredicatesActor>("predicates");
 
             //When
@@ -84,7 +84,7 @@ namespace Akka.Tests.Actor
         public void Given_an_actor_that_uses_non_generic_and_predicates_When_sending_different_messages_Then_correct_handler_should_be_invoked()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<TypePredicatesActor>("predicates");
 
             //When
@@ -107,7 +107,7 @@ namespace Akka.Tests.Actor
         public void Given_an_actor_with_ReceiveAny_When_sending_different_messages_Then_correct_handler_should_be_invoked()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<ReceiveAnyActor>("matchany");
 
             //When

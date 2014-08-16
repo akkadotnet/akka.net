@@ -76,7 +76,7 @@ namespace Akka.Tests.Actor
 
     public class OtherTestExtension : ExtensionIdProvider<OtherTestExtensionImpl>
     {
-        public override OtherTestExtensionImpl CreateExtension(ActorSystem system)
+        public override OtherTestExtensionImpl CreateExtension(ExtendedActorSystem system)
         {
             return new OtherTestExtensionImpl(system);
         }
@@ -94,7 +94,7 @@ namespace Akka.Tests.Actor
 
     public class TestExtension : ExtensionIdProvider<TestExtensionImpl>
     {
-        public override TestExtensionImpl CreateExtension(ActorSystem system)
+        public override TestExtensionImpl CreateExtension(ExtendedActorSystem system)
         {
             return new TestExtensionImpl(system);
         }

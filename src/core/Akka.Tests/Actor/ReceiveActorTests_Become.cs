@@ -10,7 +10,7 @@ namespace Akka.Tests.Actor
         public void Given_actor_When_it_calls_Become_Then_it_switches_handler()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<BecomeActor>("become");
             system.EventStream.Subscribe(testActor, typeof(UnhandledMessage));
 
@@ -35,7 +35,7 @@ namespace Akka.Tests.Actor
         public void Given_actor_that_has_called_Become_When_it_calls_Unbecome_Then_it_switches_back_handler()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<BecomeActor>("become");
             actor.Tell("BECOME", testActor);    //Switch to state2
             actor.Tell("BECOME", testActor);    //Switch to state3
@@ -52,7 +52,7 @@ namespace Akka.Tests.Actor
         public void Given_actor_that_has_called_Become_at_construction_time_When_it_calls_Unbecome_Then_it_switches_back_handler()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<BecomeDirectlyInConstructorActor>("become");
 
             //When

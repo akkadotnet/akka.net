@@ -1,4 +1,6 @@
-﻿using Akka.TestKit;
+﻿using Akka.Actor;
+using Akka.Actor.Internals;
+using Akka.TestKit;
 using Xunit;
 using System;
 using System.Collections.Generic;
@@ -15,7 +17,7 @@ namespace Akka.Tests.Actor
         public void CanResolveActorRef()
         {
             var path = testActor.Path.ToString();
-            var resolved = sys.Provider.ResolveActorRef(path);
+            var resolved = ((ActorSystemImpl)sys).Provider.ResolveActorRef(path);
             Assert.Same(testActor, resolved);
         }
     }

@@ -24,7 +24,7 @@ namespace Akka.Serialization
         private Serializer newtonsoftJsonSerializer;
 
 
-        public Serialization(ActorSystem system)
+        public Serialization(ExtendedActorSystem system)
         {
             System = system;
             newtonsoftJsonSerializer = new NewtonSoftJsonSerializer(system);

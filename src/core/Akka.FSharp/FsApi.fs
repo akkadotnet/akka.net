@@ -271,7 +271,7 @@ module System =
     /// <param name="configStr">The configuration</param>
     let create name (config: Configuration.Config) =
         let system = ActorSystem.Create(name, config)
-        let serializer = new Serialization.ExprSerializer(system)
+        let serializer = new Serialization.ExprSerializer(system :?> ExtendedActorSystem)
         system.Serialization.AddSerializer(serializer)
         system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
         system

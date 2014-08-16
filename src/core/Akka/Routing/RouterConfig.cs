@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Dispatch;
 
 namespace Akka.Routing
@@ -91,7 +92,7 @@ namespace Akka.Routing
 
         public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
         {
-            return paths.Select(routedActorCell.System.ActorSelection).Select(actor => new ActorSelectionRoutee(actor));
+            return paths.Select(((ActorSystemImpl) routedActorCell.System).ActorSelection).Select(actor => new ActorSelectionRoutee(actor));
         }
     }
 

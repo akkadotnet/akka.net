@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using System.Threading;
 using Akka.Event;
@@ -171,7 +172,7 @@ namespace Akka.Actor
 
         public static implicit operator ActorRef(ActorRefSurrogate surrogate)
         {
-            return Serialization.Serialization.CurrentSystem.Provider.ResolveActorRef(surrogate.Path);
+            return ((ActorSystemImpl)Serialization.Serialization.CurrentSystem).Provider.ResolveActorRef(surrogate.Path);
         }
 
         public override bool Equals(object obj)

@@ -41,7 +41,7 @@ namespace Akka.Tests.Routing
             fooLatch.Ready(TestLatch.DefaultTimeout);
             foreach (var actor in new[] {a1, a2, a3, broadcast})
             {
-                actor.Stop();
+                System.Stop(actor);
             }
         }
 

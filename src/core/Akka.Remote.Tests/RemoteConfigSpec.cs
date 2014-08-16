@@ -1,4 +1,6 @@
 ﻿using System;
+using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Remote.Transport.Helios;
 using Akka.TestKit;
 using Xunit;
@@ -22,7 +24,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_should_contain_correct_configuration_values_in_ReferenceConf()
         {
-            var remoteSettings = ((RemoteActorRefProvider) sys.Provider).RemoteSettings;
+            var remoteSettings = ((RemoteActorRefProvider)((ExtendedActorSystem) sys).Provider).RemoteSettings;
 
             Assert.False(remoteSettings.LogReceive);
             Assert.False(remoteSettings.LogSend);
@@ -51,7 +53,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_should_be_able_to_parse_AkkaProtocol_related_config_elements()
         {
-            var settings = new AkkaProtocolSettings(((RemoteActorRefProvider) sys.Provider).RemoteSettings.Config);
+            var settings = new AkkaProtocolSettings(((RemoteActorRefProvider)((ExtendedActorSystem)sys).Provider).RemoteSettings.Config);
 
             //TODO fill this in when we add secure cookie support
             Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(settings.TransportFailureDetectorImplementationClass));
@@ -65,7 +67,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_should_contain_correct_heliosTCP_values_in_ReferenceConf()
         {
-            var c = ((RemoteActorRefProvider)sys.Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
+            var c = ((RemoteActorRefProvider)((ActorSystemImpl)sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
             var s = new HeliosTransportSettings(c);
 
             Assert.Equal(TimeSpan.FromSeconds(15), s.ConnectTimeout);
@@ -86,7 +88,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_should_contain_correct_socket_worker_pool_configuration_values_in_ReferenceConf()
         {
-            var c = ((RemoteActorRefProvider)sys.Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
+            var c = ((RemoteActorRefProvider)((ActorSystemImpl)sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
 
             // server-socket-worker-pool
             {

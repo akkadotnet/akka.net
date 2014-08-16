@@ -12,7 +12,7 @@ namespace Akka.TestKit
     /// </summary>
     public class TestKitExtension : ExtensionIdProvider<TestKitSettings>
     {      
-        public override TestKitSettings CreateExtension(ActorSystem system)
+        public override TestKitSettings CreateExtension(ExtendedActorSystem system)
         {
             return new TestKitSettings(system.Settings.Config);
         }

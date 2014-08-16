@@ -1,4 +1,5 @@
 ﻿using Akka.Actor;
+using Akka.Actor.Internals;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -25,7 +26,7 @@ namespace Akka.Serialization
         ///     Initializes a new instance of the <see cref="NewtonSoftJsonSerializer" /> class.
         /// </summary>
         /// <param name="system">The system.</param>
-        public NewtonSoftJsonSerializer(ActorSystem system)
+        public NewtonSoftJsonSerializer(ExtendedActorSystem system)
             : base(system)
         {
             //TODO: we should use an instanced serializer to be threadsafe for other ActorSystems
@@ -112,7 +113,7 @@ namespace Akka.Serialization
                 JsonSerializer serializer)
             {
                 var surrogate = serializer.Deserialize<ActorRefSurrogate>(reader);
-                return Serialization.CurrentSystem.Provider.ResolveActorRef(surrogate.Path);
+                return ((ActorSystemImpl) Serialization.CurrentSystem).Provider.ResolveActorRef(surrogate.Path);
             }
 
             /// <summary>

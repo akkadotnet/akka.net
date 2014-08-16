@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -35,7 +36,7 @@ namespace Akka.Remote
 
         private readonly LocalActorRefProvider _local;
         private Internals _internals;
-        private ActorSystem _system;
+        private ActorSystemImpl _system;
 
         private Internals RemoteInternals
         {
@@ -87,7 +88,7 @@ namespace Akka.Remote
             _local.UnregisterTempActor(path);
         }
 
-        public void Init(ActorSystem system)
+        public void Init(ActorSystemImpl system)
         {
             _system = system;
             //TODO: this should not be here
@@ -106,7 +107,7 @@ namespace Akka.Remote
             //      RemoteHost.StartHost(System, port);
         }
 
-        public InternalActorRef ActorOf(ActorSystem system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
+        public InternalActorRef ActorOf(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
             if(systemService) return LocalActorOf(system, props, supervisor, path, true, deploy, lookupDeploy, async);
 
@@ -187,7 +188,7 @@ namespace Akka.Remote
                 Deploy.None);
         }
 
-        private InternalActorRef RemoteActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
+        private InternalActorRef RemoteActorOf(ActorSystemImpl system, Props props, InternalActorRef supervisor,
             ActorPath path)
         {
             var scope = (RemoteScope) props.Deploy.Scope;
@@ -204,7 +205,7 @@ namespace Akka.Remote
             return remoteRef;
         }
 
-        private InternalActorRef LocalActorOf(ActorSystem system, Props props, InternalActorRef supervisor,
+        private InternalActorRef LocalActorOf(ActorSystemImpl system, Props props, InternalActorRef supervisor,
             ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
             return _local.ActorOf(system, props, supervisor, path, systemService, deploy, lookupDeploy, async);

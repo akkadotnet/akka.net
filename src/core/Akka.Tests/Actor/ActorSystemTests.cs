@@ -1,4 +1,5 @@
 ﻿using System;
+using Akka.Actor.Internals;
 using Xunit;
 using Akka.Actor;
 using System.Linq;
@@ -19,7 +20,8 @@ namespace Akka.Tests
         public void ActorSystem_ActorOf_adds_a_child_to_Guardian()
         {
             //arrange
-            var system = new ActorSystem("test");
+            var system = new ActorSystemImpl("test");
+            system.Start(); //When we create a system manually we have to start it ourselves
 
             //act
             var child = system.ActorOf<TestActor>("test");
@@ -33,8 +35,8 @@ namespace Akka.Tests
         public void ActorOf_gives_child_unique_name_if_not_specified()
         {
             //arrange
-            var system = new ActorSystem("test");
-
+            var system = new ActorSystemImpl("test");
+            system.Start(); //When we create a system manually we have to start it ourselves
             //act
             var child1 = system.ActorOf<TestActor>();
             var child2 = system.ActorOf<TestActor>();

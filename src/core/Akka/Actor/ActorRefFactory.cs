@@ -1,15 +1,17 @@
 ﻿namespace Akka.Actor
 {
     /// <summary>
-    /// Interface IActorRefFactory
+    /// Interface ActorRefFactory
     /// </summary>
-    public interface IActorRefFactory
+    // ReSharper disable once InconsistentNaming
+    public interface ActorRefFactory
     {
+        //TODO: Fix comment
         /// <summary>
         /// Create new actor as child of this context with the given name, which must
         /// not start with “$”. If the given name is already in use,
         /// and `InvalidActorNameException` is thrown.
-        /// See [[Akka.Actor.Props]] for details on how to obtain a `Props` object.
+        /// See <see cref="Props"/> for details on how to obtain a <see cref="Props"/> object.
         /// @throws akka.actor.InvalidActorNameException if the given name is
         /// invalid or already in use
         /// @throws akka.ConfigurationException if deployment, dispatcher
@@ -18,17 +20,9 @@
         /// <param name="props">The props.</param>
         /// <param name="name">The name.</param>
         /// <returns>InternalActorRef.</returns>
-        InternalActorRef ActorOf(Props props, string name = null);
+        ActorRef ActorOf(Props props, string name = null);
 
-        /// <summary>
-        /// Actors the of.
-        /// </summary>
-        /// <typeparam name="TActor">The type of the t actor.</typeparam>
-        /// <param name="name">The name.</param>
-        /// <returns>InternalActorRef.</returns>
-        InternalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase, new();
-
-
+       
         /// <summary>
         /// Construct an <see cref="Akka.Actor.ActorSelection" /> from the given path, which is
         /// parsed for wildcards (these are replaced by regular expressions

@@ -130,8 +130,8 @@ namespace Akka.Remote.Tests.Transport
         {
             var collaborators = GetCollaborators();
             sys.ActorOf(ProtocolStateActor.InboundProps(new HandshakeInfo(localAddress, 42), collaborators.Handle,
-                    new ActorAssociationEventListener(testActor), new AkkaProtocolSettings(config), codec,
-                    collaborators.FailureDetector));
+                new ActorAssociationEventListener(testActor), new AkkaProtocolSettings(config), codec,
+                collaborators.FailureDetector));
 
             await AwaitCond(() => collaborators.Handle.ReadHandlerSource.Task.IsCompleted, DefaultTimeout);
         }

@@ -131,7 +131,7 @@ namespace Akka.Tests
             restarter.Tell(Kill.Instance);
             expectMsg(Tuple.Create("postStop", id, 3));
             expectNoMsg(TimeSpan.FromSeconds(1));
-            supervisor.Stop();
+            System.Stop(supervisor);
         }
 
         [Fact(DisplayName="default for preRestart and postRestart is to call postStop and preStart respectively")]
@@ -162,7 +162,7 @@ namespace Akka.Tests
             restarter.Tell(Kill.Instance);
             expectMsg(Tuple.Create("postStop", id, 3));
             expectNoMsg(TimeSpan.FromSeconds(1));
-            supervisor.Stop();
+            System.Stop(supervisor);
         } 
 
         [Fact(DisplayName="not invoke preRestart and postRestart when never restarted using OneForOneStrategy")]

@@ -21,7 +21,7 @@ namespace Akka.Serialization
         ///     Initializes a new instance of the <see cref="ByteArraySerializer" /> class.
         /// </summary>
         /// <param name="system">The system.</param>
-        public ByteArraySerializer(ActorSystem system)
+        public ByteArraySerializer(ExtendedActorSystem system)
             : base(system)
         {
         }
