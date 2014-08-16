@@ -1,6 +1,6 @@
 ﻿using Xunit;
 
-namespace Akka.Tests.Tools
+namespace Akka.Tests.Util
 {
     
     public class PatternSpec

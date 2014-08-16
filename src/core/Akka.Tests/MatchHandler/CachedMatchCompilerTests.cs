@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
+using Akka.TestKit;
 using Akka.Tools.MatchHandler;
 using Xunit;
 

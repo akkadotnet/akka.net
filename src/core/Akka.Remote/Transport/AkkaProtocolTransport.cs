@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Util;
 using Google.ProtocolBuffers;
 
@@ -490,7 +491,7 @@ namespace Akka.Remote.Transport
                             else
                             {
                                 SetTimer("associate-retry", wrappedHandle,
-                                    ((RemoteActorRefProvider) Context.System.Provider)
+                                    ((RemoteActorRefProvider) ((ActorSystemImpl) Context.System).Provider)
                                         .RemoteSettings.BackoffPeriod, repeat: false);
                                 nextState = Stay();
                             }

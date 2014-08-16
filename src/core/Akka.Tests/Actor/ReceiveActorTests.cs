@@ -1,6 +1,7 @@
 ﻿using System;
 using Akka.Actor;
 using Akka.Event;
+using Akka.TestKit;
 using Xunit;
 
 
@@ -9,22 +10,20 @@ namespace Akka.Tests.Actor
 
     public partial class ReceiveActorTests : AkkaSpec
     {
-        private readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(2);
-
         [Fact]
         public void Given_actor_with_no_receive_specified_When_receiving_message_Then_it_should_be_unhandled()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<NoReceiveActor>("no-receive-specified");
-            system.EventStream.Subscribe(testActor, typeof(UnhandledMessage));
+            system.EventStream.Subscribe(TestActor, typeof(UnhandledMessage));
 
             //When
             actor.Tell("Something");
 
             //Then
-            expectMsg<UnhandledMessage>(m => ((string)m.Message) == "Something" && m.Recipient == actor, _defaultTimeout);
-            system.EventStream.Unsubscribe(testActor, typeof(UnhandledMessage));
+            ExpectMsg<UnhandledMessage>(m => ((string)m.Message) == "Something" && m.Recipient == actor);
+            system.EventStream.Unsubscribe(TestActor, typeof(UnhandledMessage));
         }
 
 
@@ -32,73 +31,73 @@ namespace Akka.Tests.Actor
         public void Test_that_actor_cannot_call_receive_out_of_construction_and_become()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<CallReceiveWhenHandlingMessageActor>("receive-on-handling-message");
 
             //When
-            actor.Tell("Something that will trigger the actor do call Receive", testActor);
+            actor.Tell("Something that will trigger the actor do call Receive", TestActor);
 
             //Then
             //We expect a exception was thrown when the actor called Receive, and that it was sent back to us
-            expectMsg<InvalidOperationException>();
+            ExpectMsg<InvalidOperationException>();
         }
 
         [Fact]
         public void Given_an_EchoActor_When_receiveing_messages_Then_messages_should_be_sent_back()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<EchoReceiveActor>("no-receive-specified");
 
             //When
-            actor.Tell("Something", testActor);
-            actor.Tell("Something else", testActor);
+            actor.Tell("Something", TestActor);
+            actor.Tell("Something else", TestActor);
 
             //Then
-            expectMsg("Something", _defaultTimeout);
-            expectMsg("Something else", _defaultTimeout);
+            ExpectMsg((object) "Something");
+            ExpectMsg((object) "Something else");
         }
 
         [Fact]
         public void Given_an_actor_which_uses_predicates_When_sending_different_messages_Then_correct_handler_should_be_invoked()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<IntPredicatesActor>("predicates");
 
             //When
-            actor.Tell(0, testActor);
-            actor.Tell(5, testActor);
-            actor.Tell(10, testActor);
-            actor.Tell(15, testActor);
+            actor.Tell(0, TestActor);
+            actor.Tell(5, TestActor);
+            actor.Tell(10, TestActor);
+            actor.Tell(15, TestActor);
 
             //Then
-            expectMsg("int<5:0", _defaultTimeout);
-            expectMsg("int<10:5", _defaultTimeout);
-            expectMsg("int<15:10", _defaultTimeout);
-            expectMsg("int:15", _defaultTimeout);
+            ExpectMsg((object) "int<5:0");
+            ExpectMsg((object) "int<10:5");
+            ExpectMsg((object) "int<15:10");
+            ExpectMsg((object) "int:15");
         }
 
         [Fact]
         public void Given_an_actor_that_uses_non_generic_and_predicates_When_sending_different_messages_Then_correct_handler_should_be_invoked()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<TypePredicatesActor>("predicates");
 
             //When
-            actor.Tell(0, testActor);
-            actor.Tell(5, testActor);
-            actor.Tell(10, testActor);
-            actor.Tell(15, testActor);
-            actor.Tell("hello", testActor);
+            actor.Tell(0, TestActor);
+            actor.Tell(5, TestActor);
+            actor.Tell(10, TestActor);
+            actor.Tell(15, TestActor);
+            actor.Tell("hello", TestActor);
 
             //Then
-            expectMsg("int<5:0", _defaultTimeout);
-            expectMsg("int<10:5", _defaultTimeout);
-            expectMsg("int<15:10", _defaultTimeout);
-            expectMsg("int:15", _defaultTimeout);
-            expectMsg("string:hello", _defaultTimeout);
+            ExpectMsg((object) "int<5:0");
+            ExpectMsg((object) "int<10:5");
+            ExpectMsg((object) "int<15:10");
+            ExpectMsg((object) "int:15");
+            ExpectMsg((object) "string:hello");
         }
 
 
@@ -106,36 +105,16 @@ namespace Akka.Tests.Actor
         public void Given_an_actor_with_ReceiveAny_When_sending_different_messages_Then_correct_handler_should_be_invoked()
         {
             //Given
-            var system = new ActorSystem("test");
+            var system = ActorSystem.Create("test");
             var actor = system.ActorOf<ReceiveAnyActor>("matchany");
 
             //When
-            actor.Tell(4711, testActor);
-            actor.Tell("hello", testActor);
+            actor.Tell(4711, TestActor);
+            actor.Tell("hello", TestActor);
 
             //Then
-            expectMsg("int:4711", _defaultTimeout);
-            expectMsg("any:hello", _defaultTimeout);
-        }
-
-        protected T expectMsg<T>(Func<T, bool> isTheExpected = null)
-        {
-            return expectMsg<T>(isTheExpected, _defaultTimeout);
-        }
-
-        protected T expectMsg<T>(Func<T, bool> isTheExpected, TimeSpan timespan)
-        {
-            object m;
-            if(queue.TryTake(out m, timespan))
-            {
-                Assert.True(m is T,string.Format("Expected a message of type <{0}>. Actual: <{1}>", typeof(T), m.GetType()));
-                var actual = (T)m;
-                if(isTheExpected != null)
-                    Assert.True(isTheExpected(actual), "The message did not match the predicate.");
-                return actual;
-            }
-            XAssert.Fail(string.Format("Timed out. Expected a message of type {0} within {1}", typeof(T), timespan));
-            return default(T);
+            ExpectMsg((object) "int:4711");
+            ExpectMsg((object) "any:hello");
         }
 
         private class NoReceiveActor : ReceiveActor

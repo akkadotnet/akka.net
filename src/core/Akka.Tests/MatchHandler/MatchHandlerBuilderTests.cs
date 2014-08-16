@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using Akka.TestKit;
 using Akka.Tools.MatchHandler;
 using Xunit;
 
@@ -18,7 +19,7 @@ namespace Akka.Tests.MatchHandler
 
             //As we have added a handler that matches everything, adding another handler is pointless, so
             //the builder should throw an exception.
-            intercept<InvalidOperationException>(() => builder.Match<object>(_ => { }));
+            Assert.Throws<InvalidOperationException>(() => ((Action) (() => builder.Match<object>(_ => { })))());
         }
         [Fact]
         public void Given_A_Match_object_handler_has_been_added_When_adding_handler_Then_it_fails()
@@ -28,7 +29,7 @@ namespace Akka.Tests.MatchHandler
 
             //As we have added a handler that matches everything, adding another handler is pointless, so
             //the builder should throw an exception.
-            intercept<InvalidOperationException>(() => builder.Match<object>(_ => { }));
+            Assert.Throws<InvalidOperationException>(() => ((Action) (() => builder.Match<object>(_ => { })))());
         }
 
         [Fact]
@@ -47,7 +48,7 @@ namespace Akka.Tests.MatchHandler
         {
             var builder = new MatchBuilder<IEnumerable>(new DummyCompiler<IEnumerable>());
 
-            intercept<ArgumentException>(() => builder.Match(typeof(int), _ => { }));
+            Assert.Throws<ArgumentException>(() => ((Action) (() => builder.Match(typeof(int), _ => { })))());
         }
 
 
@@ -67,8 +68,8 @@ namespace Akka.Tests.MatchHandler
             builder.Build();
 
             //As we have built, no more handlers should be accepted
-            intercept<InvalidOperationException>(() => builder.Match<string>(_ => { }));
-            intercept<InvalidOperationException>(() => builder.MatchAny(_ => { }));
+            Assert.Throws<InvalidOperationException>(() => ((Action) (() => builder.Match<string>(_ => { })))());
+            Assert.Throws<InvalidOperationException>(() => ((Action) (() => builder.MatchAny(_ => { })))());
         }
 
         [Fact]

@@ -34,8 +34,15 @@ namespace Akka.Remote.Transport
 
         public TestTransport(ActorSystem system, Config conf)
             : this(
-                Address.Parse(conf.GetString("local-address")), AssociationRegistry.Get(conf.GetString("registry-key")),
-                conf.GetString("scheme-identifier")) { }
+                Address.Parse(GetConfigString(conf, "local-address")), AssociationRegistry.Get(GetConfigString(conf,"registry-key")),
+                GetConfigString(conf,"scheme-identifier")) { }
+
+        private static string GetConfigString(Config conf, string name)
+        {
+            var value = conf.GetString(name);
+            if(value==null) throw new Exception("you must specify a value for config setting \""+name+"\"");
+            return value;
+        }
 
         public TestTransport(Address localAddress, AssociationRegistry registry, string schemeIdentifier = "test")
         {

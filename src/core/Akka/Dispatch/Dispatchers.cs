@@ -242,11 +242,13 @@ namespace Akka.Dispatch
                 case "SynchronizedDispatcher":
                     dispatcher = new CurrentSynchronizationContextDispatcher();
                     break;
+                case null:
+                    throw new NotSupportedException("Could not resolve dispatcher for path " + path+". type is null");
                 default:
                     Type dispatcherType = Type.GetType(type);
                     if (dispatcherType == null)
                     {
-                        throw new NotSupportedException("Could not resolve dispatcher type " + type);
+                        throw new NotSupportedException("Could not resolve dispatcher type " + type+" for path "+ path);
                     }
                     dispatcher = (MessageDispatcher) Activator.CreateInstance(dispatcherType);
                     break;

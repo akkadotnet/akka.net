@@ -25,7 +25,7 @@ namespace Akka.Serialization
         ///     Initializes a new instance of the <see cref="NullSerializer" /> class.
         /// </summary>
         /// <param name="system">The system.</param>
-        public NullSerializer(ActorSystem system)
+        public NullSerializer(ExtendedActorSystem system)
             : base(system)
         {
         }

@@ -1,10 +1,10 @@
 ﻿using Akka.Actor;
-using Akka.Tests;
+using Akka.TestKit;
 using Xunit;
 
-namespace Akka.TestKit
+namespace Akka.Testkit.Tests
 {
-    
+
     public class ImplicitSenderSpec : AkkaSpec, ImplicitSender
     {
         [Fact]
@@ -15,9 +15,9 @@ namespace Akka.TestKit
             //act
 
             //assert
-            Self.ShouldBe(testActor);
+            Self.ShouldBe(TestActor);
         }
 
-        public ActorRef Self { get { return testActor; } }
+        public ActorRef Self { get { return TestActor; } }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using Akka.Configuration.Hocon;
@@ -60,7 +61,28 @@ namespace Akka.Configuration
         {
             Assembly assembly = Assembly.GetExecutingAssembly();
 
-            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+            return FromResource(resourceName, assembly);
+        }
+
+        public static Config FromResource(string resourceName, object instanceInAssembly)
+        {
+            var type = instanceInAssembly as Type;
+            if(type != null)
+                return FromResource(resourceName, type.Assembly);
+            var assembly = instanceInAssembly as Assembly;
+            if(assembly != null)
+                return FromResource(resourceName, assembly);
+            return FromResource(resourceName, instanceInAssembly.GetType().Assembly);
+        }
+
+        public static Config FromResource<TypeInAssembly>(string resourceName)
+        {
+            return FromResource(resourceName, typeof(TypeInAssembly).Assembly);
+        }
+
+        public static Config FromResource(string resourceName, Assembly assembly)
+        {
+            using(Stream stream = assembly.GetManifestResourceStream(resourceName))
             {
                 Debug.Assert(stream != null, "stream != null");
                 using (var reader = new StreamReader(stream))

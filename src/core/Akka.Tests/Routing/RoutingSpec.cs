@@ -6,25 +6,31 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
+using Akka.TestKit.Internals;
 using Akka.Tests;
 using Xunit;
+using Akka.Util;
 
 namespace Akka.Tests.Routing
 {
     
     public class RoutingSpec : AkkaSpec
     {
-        protected override string GetConfig()
+        public RoutingSpec() :base(GetConfig())   
+        {
+        }
+
+        private static string GetConfig()
         {
             return @"
     akka.actor.serialize-messages = off
-    akka.actor.debug {  
-          receive = on 
-          autoreceive = on
-          lifecycle = on
-          event-stream = on
-          unhandled = on
-        }
+#    akka.actor.debug {  
+#          receive = on 
+#          autoreceive = on
+#          lifecycle = on
+#          event-stream = on
+#          unhandled = on
+#        }
     akka.stdout-loglevel = DEBUG
     akka.actor.deployment {
       /router1 {
@@ -43,7 +49,7 @@ namespace Akka.Tests.Routing
     ";
         }
 
-        public new class TestActor : UntypedActor
+        public class NoOpActor : UntypedActor
         {
             protected override void OnReceive(object message)
             {
@@ -63,23 +69,23 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Router_in_general_must_evict_terminated_routees()
         {
-            var router = sys.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>()),"router");
-            router.Tell("",testActor);
-            router.Tell("",testActor);
-            var c1 = expectMsgType<ActorRef>();
-            var c2 = expectMsgType<ActorRef>();
-            watch(router);
-            watch(c2);
-            sys.Stop(c2);
-            expectTerminated(c2).ExistenceConfirmed.ShouldBe(true);
+            var router = Sys.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>()), "router");
+            router.Tell("",TestActor);
+            router.Tell("",TestActor);
+            var c1 = ExpectMsg<ActorRef>();
+            var c2 = ExpectMsg<ActorRef>();
+            Watch(router);
+            Watch(c2);
+            Sys.Stop(c2);
+            ExpectTerminated(c2).ExistenceConfirmed.ShouldBe(true);
             // it might take a while until the Router has actually processed the Terminated message
             Task.Delay(100).Wait();
-            router.Tell("", testActor);
-            router.Tell("", testActor);
-            expectMsgType<ActorRef>().ShouldBe(c1);           
-            expectMsgType<ActorRef>().ShouldBe(c1);
-            sys.Stop(c1);
-            expectTerminated(router).ExistenceConfirmed.ShouldBe(true);
+            router.Tell("", TestActor);
+            router.Tell("", TestActor);
+            ExpectMsg<ActorRef>().ShouldBe(c1);           
+            ExpectMsg<ActorRef>().ShouldBe(c1);
+            Sys.Stop(c1);
+            ExpectTerminated(router).ExistenceConfirmed.ShouldBe(true);
         }
 
         public class TestResizer : Resizer
@@ -104,23 +110,23 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Router_in_general_must_not_terminate_when_resizer_is_used()
         {
-            var latch = new TestLatch(sys,1);
+            var latch = new TestLatch(Sys,1);
             var resizer = new TestResizer(latch);
             var router =
-                sys.ActorOf(new RoundRobinPool( 0, resizer,SupervisorStrategy.DefaultStrategy,"").Props(Props.Create<TestActor>()));
+                Sys.ActorOf(new RoundRobinPool( 0, resizer,SupervisorStrategy.DefaultStrategy,"").Props(Props.Create<NoOpActor>()));
 
-            watch(router);
-            
+            Watch(router);
+
             latch.Open();
             //Await.ready(latch, remainingOrDefault); //TODO: what is remainingOrDefault
             
-            router.Tell(new GetRoutees(),testActor);
-            var routees = expectMsgType<Routees>().Members.ToList();
+            router.Tell(new GetRoutees(),TestActor);
+            var routees = ExpectMsg<Routees>().Members.ToList();
 
             routees.Count().ShouldBe(2);
-            routees.ForEach(r => r.Send(PoisonPill.Instance,testActor));
+            routees.ForEach(r => r.Send(PoisonPill.Instance,TestActor));
             // expect no Terminated
-            expectNoMsg(TimeSpan.FromSeconds(2));
+            ExpectNoMsg(TimeSpan.FromSeconds(2));
         }
 
 
@@ -162,26 +168,26 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Router_in_general_must_be_able_to_send_their_routees()
         {
-            var router = sys.ActorOf(new BroadcastPool(5).Props(Props.Create<Echo>()));
-            router.Tell("hello",testActor);
-            expectMsgType<ActorRef>();
-            expectMsgType<ActorRef>();
-            expectMsgType<ActorRef>();
-            expectMsgType<ActorRef>();
-            expectMsgType<ActorRef>();
-            expectNoMsg(TimeSpan.FromSeconds(1));
+            var router = Sys.ActorOf(new BroadcastPool(5).Props(Props.Create<Echo>()));
+            router.Tell("hello",TestActor);
+            ExpectMsg<ActorRef>();
+            ExpectMsg<ActorRef>();
+            ExpectMsg<ActorRef>();
+            ExpectMsg<ActorRef>();
+            ExpectMsg<ActorRef>();
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
         public void Router_in_general_must_use_configured_nr_of_instances_when_FromConfig()
         {
-            var router = sys.ActorOf(Props.Create<TestActor>().WithRouter(new FromConfig()), "router1");
+            var router = Sys.ActorOf(Props.Create<NoOpActor>().WithRouter(new FromConfig()), "router1");
 
-            router.Tell(new GetRoutees(),testActor);
-            expectMsgType<Routees>().Members.Count().ShouldBe(3);
-            watch(router);
-            sys.Stop(router);
-            expectTerminated(router);
+            router.Tell(new GetRoutees(),TestActor);
+            ExpectMsg<Routees>().Members.Count().ShouldBe(3);
+            Watch(router);
+            Sys.Stop(router);
+            ExpectTerminated(router);
         }
 
         /*
@@ -196,12 +202,12 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Router_in_general_must_use_configured_nr_of_instances_when_router_is_specified()
         {
-            var router = sys.ActorOf(Props.Create<TestActor>().WithRouter(new RoundRobinPool(3)), "router1");
-            router.Tell(new GetRoutees(), testActor);
-            expectMsgType<Routees>().Members.Count().ShouldBe(3);
-            watch(router);
-            sys.Stop(router);
-            expectTerminated(router);
+            var router = Sys.ActorOf(Props.Create<NoOpActor>().WithRouter(new RoundRobinPool(3)), "router1");
+            router.Tell(new GetRoutees(), TestActor);
+            ExpectMsg<Routees>().Members.Count().ShouldBe(3);
+            Watch(router);
+            Sys.Stop(router);
+            ExpectTerminated(router);
         }
 
 /*
@@ -224,18 +230,18 @@ namespace Akka.Tests.Routing
 
 
         [Fact]
-        public void Router_in_general_mulst_use_specified_resizer_when_resizer_not_configured()
+        public void Router_in_general_must_use_specified_resizer_when_resizer_not_configured()
         {
-            var latch = new TestLatch(sys,1);
+            var latch = new TestLatch(Sys,1);
             var resizer = new TestResizer(latch);
             var router =
-                sys.ActorOf(
-                    Props.Create<TestActor>()
+                Sys.ActorOf(
+                    Props.Create<NoOpActor>()
                         .WithRouter(new RoundRobinPool(0, resizer, SupervisorStrategy.DefaultStrategy, "")));
             latch.Open();
-            router.Tell(new GetRoutees(),testActor);
-            expectMsgType<Routees>().Members.Count().ShouldBe(2);
-            sys.Stop(router);
+            router.Tell(new GetRoutees(),TestActor);
+            ExpectMsg<Routees>().Members.Count().ShouldBe(2);
+            Sys.Stop(router);
 
         }             
     }

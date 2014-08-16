@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Akka.Actor
 {
-    public interface IActorContext : IActorRefFactory
+    public interface IActorContext : ActorRefFactory
     {
         ActorRef Self { get; }
         Props Props { get; }

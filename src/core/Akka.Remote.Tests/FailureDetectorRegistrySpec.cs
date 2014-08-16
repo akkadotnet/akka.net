@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime;
-using Akka.Tests;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Remote.Tests

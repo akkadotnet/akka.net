@@ -734,7 +734,7 @@ namespace Akka.Remote
             this.codec = codec;
             this.reliableDeliverySupervisor = reliableDeliverySupervisor;
             system = Context.System;
-            provider = (RemoteActorRefProvider)Context.System.Provider;
+            provider = (RemoteActorRefProvider)((ExtendedActorSystem) Context.System).Provider;
             _msgDispatcher = new DefaultMessageDispatcher(system, provider, Log);
             this.receiveBuffers = receiveBuffers;
             Inbound = handleOrActive != null;
@@ -1206,7 +1206,7 @@ namespace Akka.Remote
             _uid = uid;
             _reliableDeliverySupervisor = reliableDelvierySupervisor;
             _codec = codec;
-            _provider = (RemoteActorRefProvider)Context.System.Provider;
+            _provider = (RemoteActorRefProvider)((ExtendedActorSystem) Context.System).Provider;
         }
 
         private AkkaPduCodec _codec;

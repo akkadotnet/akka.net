@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
@@ -56,6 +57,8 @@ namespace Akka.Remote
     /// </summary>
     public class RemoteDaemon : VirtualPathContainer
     {
+        private readonly ActorSystemImpl _system;
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="RemoteDaemon" /> class.
         /// </summary>
@@ -63,18 +66,13 @@ namespace Akka.Remote
         /// <param name="path">The path.</param>
         /// <param name="parent">The parent.</param>
         /// <param name="log"></param>
-        public RemoteDaemon(ActorSystem system, ActorPath path, InternalActorRef parent, LoggingAdapter log)
+        public RemoteDaemon(ActorSystemImpl system, ActorPath path, InternalActorRef parent, LoggingAdapter log)
             : base(system.Provider, path, parent, log)
         {
-            System = system;
+            _system = system;
         }
 
-        /// <summary>
-        ///     Gets the system.
-        /// </summary>
-        /// <value>The system.</value>
-        public ActorSystem System { get; private set; }
-
+       
         /// <summary>
         ///     Called when [receive].
         /// </summary>
@@ -111,7 +109,7 @@ namespace Akka.Remote
                 IEnumerable<string> subPath = childPath.Elements;
                 ActorPath path = Path/subPath;
                 var localProps = props; //.WithDeploy(new Deploy(Scope.Local));
-                InternalActorRef actor = System.Provider.ActorOf(System, localProps, supervisor, path, false,
+                InternalActorRef actor = _system.Provider.ActorOf(_system, localProps, supervisor, path, false,
                     message.Deploy, true, false);
                 string childName = subPath.Join("/");
                 AddChild(childName, actor);

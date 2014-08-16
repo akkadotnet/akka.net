@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Serialization;
@@ -28,13 +29,14 @@ namespace Akka.Actor
         private ActorBase _actor;
         private bool _actorHasBeenCleared;
         private Mailbox _mailbox;
+        private readonly ActorSystemImpl _systemImpl;
 
 
-        public ActorCell(ActorSystem system, InternalActorRef self, Props props, MessageDispatcher dispatcher, InternalActorRef parent)
+        public ActorCell(ActorSystemImpl system, InternalActorRef self, Props props, MessageDispatcher dispatcher, InternalActorRef parent)
         {
             _self = self;
             _props = props;
-            System = system;
+            _systemImpl = system;
             Parent = parent;
             Dispatcher = dispatcher;            
         }
@@ -51,7 +53,8 @@ namespace Akka.Actor
             get { return current; }
         }
 
-        public ActorSystem System { get; private set; }
+        public ActorSystem System { get { return _systemImpl; } }
+        public ActorSystemImpl SystemImpl { get { return _systemImpl; } }
         public Props Props { get { return _props; } }
         public ActorRef Self { get { return _self; } }
         ActorRef IActorContext.Parent { get { return Parent; } }
@@ -124,20 +127,15 @@ namespace Akka.Actor
 
         public ActorSelection ActorSelection(string path)
         {
-            return ActorRefFactoryShared.ActorSelection(path, System, Self);
+            return ActorRefFactoryShared.ActorSelection(path, _systemImpl, Self);
         }
 
         public ActorSelection ActorSelection(ActorPath path)
         {
-            return ActorRefFactoryShared.ActorSelection(path, System);
+            return ActorRefFactoryShared.ActorSelection(path, _systemImpl);
         }
 
-        public virtual InternalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase, new()
-        {
-            return ActorOf(Props.Create<TActor>(), name);
-        }
-
-        public virtual InternalActorRef ActorOf(Props props, string name = null)
+        public virtual ActorRef ActorOf(Props props, string name = null)
         {
             return MakeChild(props, name);
         }
@@ -182,7 +180,7 @@ namespace Akka.Actor
             try
             {
                 ActorPath childPath = (Self.Path/name).WithUid(childUid);
-                actor = System.Provider.ActorOf(System, props, _self, childPath,false,null,true,false);
+                actor = _systemImpl.Provider.ActorOf(_systemImpl, props, _self, childPath,false,null,true,false);
             }
             catch
             {
@@ -268,14 +266,14 @@ namespace Akka.Actor
             {
                 return;
                 //stackoverflow if this is the deadletters actorref
-                //this.System.DeadLetters.Tell(new DeadLetter(message, sender, this.Self));
+                //this._systemImpl.DeadLetters.Tell(new DeadLetter(message, sender, this.Self));
             }
 
-            if (System.Settings.SerializeAllMessages && !(message is NoSerializationVerificationNeeded))
+            if (_systemImpl.Settings.SerializeAllMessages && !(message is NoSerializationVerificationNeeded))
             {
-                Serializer serializer = System.Serialization.FindSerializerFor(message);
+                Serializer serializer = _systemImpl.Serialization.FindSerializerFor(message);
                 byte[] serialized = serializer.ToBinary(message);
-                object deserialized = System.Serialization.Deserialize(serialized, serializer.Identifier,
+                object deserialized = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier,
                     message.GetType());
                 message = deserialized;
             }
@@ -308,7 +306,7 @@ namespace Akka.Actor
         {
             if(_actor != null)
             {
-                _actor.Clear(System.DeadLetters);
+                _actor.Clear(_systemImpl.DeadLetters);
             }
             _actorHasBeenCleared = true;
             CurrentMessage = null;

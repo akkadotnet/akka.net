@@ -1,71 +1,72 @@
 ﻿using System;
 using Akka.Actor;
 using Akka.Dispatch;
+using Akka.TestKit;
+using Akka.Tests.TestUtils;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Tests.Actor
 {
     public class DeathWatchSpec : AkkaSpec
     {
-        private readonly InternalActorRef _supervisor;
+        private readonly ActorRef _supervisor;
         private ActorRef _terminal;
 
         public DeathWatchSpec()
         {
-            _supervisor = System.ActorOf(Props.Create(() => new Supervisor(SupervisorStrategy.DefaultStrategy)), "watchers");
-            _terminal = sys.ActorOf(Props.Empty);
+            _supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(SupervisorStrategy.DefaultStrategy)), "watchers");
+            _terminal = Sys.ActorOf(Props.Empty);
         }
 
         [Fact]
         public void DeathWatch_must_notify_with_one_Terminated_message_when_an_Actor_is_already_terminated()
         {
-            var terminal = System.ActorOf(Props.Empty, "killed-actor");
-            terminal.Tell(PoisonPill.Instance, testActor);
+            var terminal=Sys.ActorOf(Props.Empty, "killed-actor");
+            terminal.Tell(PoisonPill.Instance,TestActor);
             StartWatching(terminal);
             ExpectTerminationOf(terminal);
         }
 
-        //        protected override string GetConfig()
-        //        {
-        //            return @"
-        //                akka.log-dead-letters-during-shutdown = true
-        //                akka.actor.debug.autoreceive = true
-        //                akka.actor.debug.lifecycle = true
-        //                akka.actor.debug.event-stream = true
-        //                akka.actor.debug.unhandled = true
-        //                akka.log-dead-letters = true
-        //                akka.loglevel = DEBUG
-        //                akka.stdout-loglevel = DEBUG
-        //            ";
-        //        }
+//        protected static string GetConfig()
+//        {
+//            return @"
+//                akka.log-dead-letters-during-shutdown = true
+//                akka.actor.debug.autoreceive = true
+//                akka.actor.debug.lifecycle = true
+//                akka.actor.debug.event-stream = true
+//                akka.actor.debug.unhandled = true
+//                akka.log-dead-letters = true
+//                akka.loglevel = DEBUG
+//                akka.stdout-loglevel = DEBUG
+//            ";
+//        }
         [Fact]
         public void Bug209_any_user_messages_following_a_Terminate_message_should_be_forwarded_to_DeadLetterMailbox()
         {
-            var actor = (LocalActorRef)System.ActorOf(Props.Empty, "killed-actor");
+            var actor = (LocalActorRef)Sys.ActorOf(Props.Empty, "killed-actor");
 
-            sys.EventStream.Subscribe(testActor, typeof(DeadLetter));
+            Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
 
             var mailbox = actor.Cell.Mailbox;
             //Wait for the mailbox to become idle after processed all initial messages.
-            AwaitCond(() =>
+            AwaitCondition(() =>
                 !mailbox.HasUnscheduledMessages && mailbox.Status == Mailbox.MailboxStatus.Idle,
                 TimeSpan.FromSeconds(1),
                 TimeSpan.FromMilliseconds(50));
 
             //Suspend the mailbox and post Terminate and a user message
             mailbox.Suspend();
-            mailbox.Post(new Envelope() { Message = Terminate.Instance, Sender = testActor });
-            mailbox.Post(new Envelope() { Message = "SomeUserMessage", Sender = testActor });
+            mailbox.Post(new Envelope() { Message = Terminate.Instance, Sender = TestActor });
+            mailbox.Post(new Envelope() { Message = "SomeUserMessage", Sender = TestActor });
 
             //Resume the mailbox, which will also schedule
             mailbox.Resume();
 
             //The actor should Terminate, exchange the mailbox to a DeadLetterMailbox and forward the user message to the DeadLetterMailbox
-            ExpectMsgPF<DeadLetter>(TimeSpan.FromSeconds(1), d => (string)d.Message == "SomeUserMessage");
-            actor.Cell.Mailbox.ShouldBe(System.Mailboxes.DeadLetterMailbox);
+            ExpectMsg<DeadLetter>(TimeSpan.FromSeconds(1), d => (string)d.Message == "SomeUserMessage");
+            actor.Cell.Mailbox.ShouldBe(Sys.Mailboxes.DeadLetterMailbox);
         }
 
         [Fact]
@@ -73,7 +74,7 @@ namespace Akka.Tests.Actor
         {
             const string msg = "hello";
             StartWatching(_terminal).Tell(msg);
-            expectMsg(msg);
+            ExpectMsg(msg);
             _terminal.Tell(PoisonPill.Instance);
             ExpectTerminationOf(_terminal);
         }
@@ -91,29 +92,29 @@ namespace Akka.Tests.Actor
             ExpectTerminationOf(_terminal);
             ExpectTerminationOf(_terminal);
 
-            sys.Stop(monitor1);
-            sys.Stop(monitor2);
-            sys.Stop(monitor3);
+            Sys.Stop(monitor1);
+            Sys.Stop(monitor2);
+            Sys.Stop(monitor3);
         }
 
         [Fact]
         public void DeathWatch_must_notify_with_current_monitors_with_one_Terminated_message_when_Actor_is_stopped()
         {
             var monitor1 = StartWatching(_terminal);
-            var monitor2 = sys.ActorOf(Props.Create(() => new WatchAndUnwatchMonitor(_terminal, testActor)).WithDeploy(Deploy.Local));
+            var monitor2 = Sys.ActorOf(Props.Create(() => new WatchAndUnwatchMonitor(_terminal, TestActor)).WithDeploy(Deploy.Local));
             var monitor3 = StartWatching(_terminal);
 
             monitor2.Tell("ping");
-            expectMsg("pong");      // since Watch and Unwatch are asynchronous, we need some sync
+            ExpectMsg("pong");      // since Watch and Unwatch are asynchronous, we need some sync
 
             _terminal.Tell(PoisonPill.Instance);
 
             ExpectTerminationOf(_terminal);
             ExpectTerminationOf(_terminal);
 
-            sys.Stop(monitor1);
-            sys.Stop(monitor2);
-            sys.Stop(monitor3);
+            Sys.Stop(monitor1);
+            Sys.Stop(monitor2);
+            Sys.Stop(monitor3);
         }
 
         //[Fact]
@@ -186,20 +187,20 @@ namespace Akka.Tests.Actor
         [Fact]
         public void DeathWatch_must_be_able_to_watch_child_with_the_same_name_after_the_old_one_died()
         {
-            var parent = sys.ActorOf(Props.Create(() => new KnobActor(testActor)).WithDeploy(Deploy.Local));
+            var parent = Sys.ActorOf(Props.Create(() => new KnobActor(TestActor)).WithDeploy(Deploy.Local));
 
             parent.Tell(Knob);
-            expectMsg(Bonk);
+            ExpectMsg(Bonk);
             parent.Tell(Knob);
-            expectMsg(Bonk);
+            ExpectMsg(Bonk);
         }
 
         [Fact]
         public void DeathWatch_must_notify_only_when_watching()
         {
-            var subject = sys.ActorOf(Props.Create(() => new EchoActor(_terminal)));
-            testActor.Tell(new DeathWatchNotification(subject, true, false));
-            expectNoMsg(TimeSpan.FromSeconds(3));
+            var subject = Sys.ActorOf(Props.Create(() => new EchoActor(_terminal)));
+            TestActor.Tell(new DeathWatchNotification(subject, true, false));
+            ExpectNoMsg(TimeSpan.FromSeconds(3));
         }
 
         //// See issue: #61
@@ -228,12 +229,12 @@ namespace Akka.Tests.Actor
 
         private void ExpectTerminationOf(ActorRef actorRef)
         {
-            ExpectMsgPF<WrappedTerminated>(TimeSpan.FromSeconds(5), w => ReferenceEquals(w.Terminated.ActorRef, actorRef));
+            ExpectMsg<WrappedTerminated>(w => ReferenceEquals(w.Terminated.ActorRef, actorRef));
         }
 
         private ActorRef StartWatching(ActorRef target)
         {
-            var task = _supervisor.Ask(CreateWatchAndForwarderProps(target, testActor), TimeSpan.FromSeconds(3));
+            var task = _supervisor.Ask(CreateWatchAndForwarderProps(target, TestActor), TimeSpan.FromSeconds(3));
             task.Wait(TimeSpan.FromSeconds(3));
             return (ActorRef)task.Result;
         }
@@ -437,5 +438,23 @@ namespace Akka.Tests.Actor
             public TestLatch T2 { get; set; }
         }
 
+        /// <summary>
+        /// Used for testing Ask / reply behaviors
+        /// </summary>
+        public class EchoActor : UntypedActor
+        {
+            private ActorRef _testActor;
+
+            public EchoActor(ActorRef testActorRef)
+            {
+                _testActor = testActorRef;
+            }
+
+            protected override void OnReceive(object message)
+            {
+                Sender.Forward(message);
+                _testActor.Tell(message, Sender);
+            }
+        }
     }
 }

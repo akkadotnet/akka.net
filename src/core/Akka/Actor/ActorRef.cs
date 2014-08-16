@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using System.Threading;
 using Akka.Event;
@@ -15,9 +16,10 @@ namespace Akka.Actor
     /// All ActorRefs have a scope which describes where they live. Since it is often
     /// necessary to distinguish between local and non-local references, this is the only
     /// method provided on the scope.
+    /// INTERNAL
     /// </summary>
 // ReSharper disable once InconsistentNaming
-    internal interface ActorRefScope
+    public interface ActorRefScope
     {
         bool IsLocal { get; }
     }
@@ -35,8 +37,9 @@ namespace Akka.Actor
     /// the feature that it starts out “not fully started” (but you can send to it),
     /// which is why <see cref="IsSt"/> features here; it is not improbable that cluster
     /// actor refs will have the same behavior.
+    /// INTERNAL
     /// </summary>
-    internal interface RepointableRef : ActorRefScope
+    public interface RepointableRef : ActorRefScope
     {
         bool IsStarted { get; }
     }
@@ -171,7 +174,7 @@ namespace Akka.Actor
 
         public static implicit operator ActorRef(ActorRefSurrogate surrogate)
         {
-            return Serialization.Serialization.CurrentSystem.Provider.ResolveActorRef(surrogate.Path);
+            return ((ActorSystemImpl)Serialization.Serialization.CurrentSystem).Provider.ResolveActorRef(surrogate.Path);
         }
 
         public override bool Equals(object obj)

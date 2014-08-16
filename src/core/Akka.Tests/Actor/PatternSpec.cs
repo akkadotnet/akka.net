@@ -14,7 +14,7 @@ namespace Akka.Tests.Actor
         public void GracefulStop_must_provide_Task_for_stopping_an_actor()
         {
             //arrange
-            var target = sys.ActorOf<TargetActor>();
+            var target = Sys.ActorOf<TargetActor>();
 
             //act
             var result = target.GracefulStop(TimeSpan.FromSeconds(5));
@@ -29,7 +29,7 @@ namespace Akka.Tests.Actor
         public async Task GracefulStop_must_complete_Task_when_actor_already_terminated()
         {
             //arrange
-            var target = sys.ActorOf<TargetActor>();
+            var target = Sys.ActorOf<TargetActor>();
 
             //act
             
@@ -43,14 +43,14 @@ namespace Akka.Tests.Actor
         public void GracefulStop_must_complete_Task_with_TaskCanceledException_when_actor_not_terminated_within_timeout()
         {
             //arrange
-            var target = sys.ActorOf<TargetActor>();
-            var latch = new TestLatch(sys);
+            var target = Sys.ActorOf<TargetActor>();
+            var latch = new TestLatch(Sys);
 
             //act
             target.Tell(Tuple.Create(latch, TimeSpan.FromSeconds(2)));
 
             //assert
-            intercept<TaskCanceledException>(() =>
+            XAssert.Throws<TaskCanceledException>(() =>
             {
                 var task = target.GracefulStop(TimeSpan.FromMilliseconds(500));
                 task.Wait();

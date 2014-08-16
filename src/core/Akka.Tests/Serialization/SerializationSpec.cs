@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using Akka.TestKit;
+using Xunit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,14 +30,14 @@ namespace Akka.Tests.Serialization
         {
             var message = new SomeMessage
             {
-                ActorRef = testActor,
+                ActorRef = TestActor,
             };
 
-            var serializer = sys.Serialization.FindSerializerFor(message);
+            var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
             var deserialized = (SomeMessage)serializer.FromBinary(serialized, typeof(SomeMessage));
 
-            Assert.Same(testActor, deserialized.ActorRef);
+            Assert.Same(TestActor, deserialized.ActorRef);
         }
 
         [Fact]
@@ -44,7 +45,7 @@ namespace Akka.Tests.Serialization
         {
             var message = Terminate.Instance;
 
-            var serializer = sys.Serialization.FindSerializerFor(message);
+            var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
             var deserialized = (Terminate)serializer.FromBinary(serialized, typeof(Terminate));
 
@@ -56,10 +57,10 @@ namespace Akka.Tests.Serialization
         [Fact(Skip="Fails on buildserver")]
         public void CanSerializeFutureActorRef()
         {
-            sys.EventStream.Subscribe(testActor, typeof(object));
-            var empty = sys.ActorOf<EmptyActor>();
+            Sys.EventStream.Subscribe(TestActor, typeof(object));
+            var empty = Sys.ActorOf<EmptyActor>();
             empty.Ask("hello");
-            var f = (FutureActorRef)queue.Take();
+            var f = ExpectMsg<FutureActorRef>();
 
 
             var message = new SomeMessage
@@ -67,7 +68,7 @@ namespace Akka.Tests.Serialization
                 ActorRef = f,
             };
 
-            var serializer = sys.Serialization.FindSerializerFor(message);
+            var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
             var deserialized = (SomeMessage)serializer.FromBinary(serialized, typeof(SomeMessage));
 

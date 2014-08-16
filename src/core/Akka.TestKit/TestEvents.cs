@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Xunit.Sdk;
 
 namespace Akka.TestKit
 {
@@ -63,7 +62,8 @@ namespace Akka.TestKit
         public T Intercept<T>(ActorSystem system, Func<T> func)
         {
             system.EventStream.Publish(new Mute(this));
-            var leeway = TestKitExtension.For(system).TestEventFilterLeeway;
+            var testKitSettings = TestKitExtension.For(system);
+            var leeway = testKitSettings.TestEventFilterLeeway;
             try
             {
                 var result = func();
@@ -72,9 +72,10 @@ namespace Akka.TestKit
                 {
                     var msg = Occurrences > 0
                         ? string.Format("Timeout ({0}) waiting for {1} messages on {2}", leeway, Occurrences, this)
-                        : string.Format("Received -{0} messages too many on {1}", Occurrences, this);
+                        : string.Format("Received {0} messages too many on {1}", -Occurrences, this);
 
-                    throw new AssertException(msg);
+                    var testKitAssertionsProvider = TestKitAssertionsExtension.For(system);
+                    testKitAssertionsProvider.Assertions.Fail(msg);
                 }
                 return result;
             }
@@ -149,14 +150,14 @@ namespace Akka.TestKit
         }
     }
 
-    public class WarningFIlter : EventFilter
+    public class WarningFilter : EventFilter
     {
-        public WarningFIlter() 
+        public WarningFilter() 
             : this(int.MaxValue, null, null, false)
         {
         }
 
-        public WarningFIlter(int occurrences, string message, string source, bool complete)
+        public WarningFilter(int occurrences, string message, string source, bool complete)
             : base(occurrences, message, source, complete)
         {
         }
@@ -172,14 +173,14 @@ namespace Akka.TestKit
         }
     }
 
-    public class InfoFIlter : EventFilter
+    public class InfoFilter : EventFilter
     {
-        public InfoFIlter()
+        public InfoFilter()
             : this(int.MaxValue, null, null, false)
         {
         }
 
-        public InfoFIlter(int occurrences, string message, string source, bool complete)
+        public InfoFilter(int occurrences, string message, string source, bool complete)
             : base(occurrences, message, source, complete)
         {
         }
@@ -195,14 +196,14 @@ namespace Akka.TestKit
         }
     }
 
-    public class DebugFIlter : EventFilter
+    public class DebugFilter : EventFilter
     {
-        public DebugFIlter()
+        public DebugFilter()
             : this(int.MaxValue, null, null, false)
         {
         }
 
-        public DebugFIlter(int occurrences, string message, string source, bool complete)
+        public DebugFilter(int occurrences, string message, string source, bool complete)
             : base(occurrences, message, source, complete)
         {
         }

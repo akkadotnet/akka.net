@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Akka.Actor.Internals;
 
 namespace Akka.Actor
 {
     /// <summary>
     /// This class contains implementations originally found in Akka´s trait ActorRefFactory in ActorRefProvider.scala
     /// https://github.com/akka/akka/blob/master/akka-actor/src/main/scala/akka/actor/ActorRefProvider.scala#L180
-    /// <see cref="IActorRefFactory"/> corresponds to that trait, but since it is an interface it
+    /// <see cref="ActorRefFactory"/> corresponds to that trait, but since it is an interface it
     /// cannot contain any code, hence this class.
     /// </summary>
     public static class ActorRefFactoryShared
@@ -21,7 +22,7 @@ namespace Akka.Actor
         /// </summary>
         public static ActorSelection ActorSelection(ActorPath actorPath, ActorSystem system)
         {
-            return new ActorSelection(system.Provider.RootGuardianAt(actorPath.Address), actorPath.Elements);
+            return new ActorSelection(((ActorSystemImpl)system).Provider.RootGuardianAt(actorPath.Address), actorPath.Elements);
         }
 
         /// <summary>
@@ -33,7 +34,7 @@ namespace Akka.Actor
         /// </summary>
         public static ActorSelection ActorSelection(string path, ActorSystem system, ActorRef lookupRoot)
         {
-            var provider = system.Provider;
+            var provider = ((ActorSystemImpl)system).Provider;
             if(Uri.IsWellFormedUriString(path, UriKind.Absolute))
             {
                 ActorPath actorPath;

@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Threading;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Dispatch;
-using Akka.Tests;
+using Akka.Util;
 using Xunit;
 
 namespace Akka.TestKit.Tests.TestActorRefTests
@@ -15,23 +16,16 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
 
         public TestActorRefSpec()
+            : base(GetConfig())
         {
             OtherThread = null;
         }
+        private TimeSpan DefaultTimeout { get { return Dilated(TestKitSettings.DefaultTimeout); } }
 
-        protected override string GetConfig()
+        private static Config GetConfig()
         {
-            return @"test-dispatcher1.type=""" + typeof(TaskDispatcher).FullName+ @"""
-                akka.test.default-timeout = 1.5 s
-                akka.log-dead-letters-during-shutdown = true
-                akka.actor.debug.autoreceive = true
-                akka.actor.debug.lifecycle = true
-                akka.actor.debug.event-stream = true
-                akka.actor.debug.unhandled = true
-                akka.log-dead-letters = true
-                akka.loglevel = DEBUG
-                akka.stdout-loglevel = DEBUG
-            ";                
+            return (@"test-dispatcher1.type=""" + typeof(TaskDispatcher).FullName);
+            //return (@"test-dispatcher1.type=""" + typeof(TaskDispatcher).FullName) + FullDebugConfig;
         }
 
         private void AssertThread()
@@ -50,7 +44,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
             //    }
             //So it adds one $. The second is added by akka.util.Helpers.base64(l) which by default 
             //creates a StringBuilder and adds adds $. Hence, 2 $$
-            var testActorRef = TestActorRef.Create<ReplyActor>(System);
+            var testActorRef = TestActorRef.Create<ReplyActor>(Sys);
 
             Assert.Equal(testActorRef.Path.Name.Substring(0, 2), "$$");
         }
@@ -58,7 +52,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact]
         public void TestActorRef_must_support_nested_Actor_creation_when_used_with_TestActorRef()
         {
-            var a = TestActorRef.Create<NestingActor>(System, () => new NestingActor(true));
+            var a = TestActorRef.Create<NestingActor>(Sys, () => new NestingActor(true));
             Assert.NotNull(a);
             var nested = a.Ask<ActorRef>("any", DefaultTimeout).Result;
             Assert.NotNull(nested);
@@ -68,7 +62,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact]
         public void TestActorRef_must_support_nested_Actor_creation_when_used_with_ActorRef()
         {
-            var a = TestActorRef.Create<NestingActor>(System, () => new NestingActor(false));
+            var a = TestActorRef.Create<NestingActor>(Sys, () => new NestingActor(false));
             Assert.NotNull(a);
             var nested = a.Ask<ActorRef>("any", DefaultTimeout).Result;
             Assert.NotNull(nested);
@@ -78,8 +72,8 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact]
         public void TestActorRef_must_support_reply_via_sender()
         {
-            var serverRef = TestActorRef.Create<ReplyActor>(System);
-            var clientRef = TestActorRef.Create<SenderActor>(System, () => new SenderActor(serverRef));
+            var serverRef = TestActorRef.Create<ReplyActor>(Sys);
+            var clientRef = TestActorRef.Create<SenderActor>(Sys, () => new SenderActor(serverRef));
 
             Counter = 4;
             clientRef.Tell("complex");
@@ -102,11 +96,10 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         public void TestActorRef_must_stop_when_sent_a_PoisonPill()
         {
             //TODO: Should have this surrounding all code EventFilter[ActorKilledException]() intercept {
-            var a = TestActorRef.Create<WorkerActor>(System, "will-be-killed");
-            var forwarder = System.ActorOf(Props.Create(() => new WatchAndForwardActor(a, testActor)), "forwarder");
+            var a = TestActorRef.Create<WorkerActor>(Sys, "will-be-killed");
+            var forwarder = Sys.ActorOf(Props.Create(() => new WatchAndForwardActor(a, TestActor)), "forwarder");
             a.Tell(PoisonPill.Instance);
-            ExpectMsgPF<WrappedTerminated>(TimeSpan.FromSeconds(5), w => {Console.WriteLine("Received:"+w.Terminated.ActorRef); return w.Terminated.ActorRef == a; },
-                string.Format("that the terminated actor was the one killed, i.e. {0}", a.Path));
+            ExpectMsg<WrappedTerminated>(TimeSpan.FromSeconds(10), string.Format("that the terminated actor was the one killed, i.e. {0}", a.Path), w => w.Terminated.ActorRef == a);
             a.IsTerminated.ShouldBe(true);
             AssertThread();
         }
@@ -116,7 +109,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         {
             //TODO: Should have this surrounding all code EventFilter[ActorKilledException]() intercept {
             Counter = 2;
-            var boss = TestActorRef.Create<BossActor>(sys);
+            var boss = TestActorRef.Create<BossActor>(Sys);
 
             boss.Tell("sendKill");
             Assert.Equal(0, Counter);
@@ -126,7 +119,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact]
         public void TestActorRef_must_support_futures()
         {
-            var worker = TestActorRef.Create<WorkerActor>(sys);
+            var worker = TestActorRef.Create<WorkerActor>(Sys);
             var task = worker.Ask("work");
             Assert.True(task.IsCompleted, "Task should be completed");
             if(!task.Wait(DefaultTimeout)) XAssert.Fail("Timed out");    //Using a timeout to stop the test if there is something wrong with the code
@@ -136,7 +129,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact]
         public void TestActorRef_must_allow_access_to_internals()
         {
-            var actorRef = TestActorRef.Create<SaveStringActor>(sys);
+            var actorRef = TestActorRef.Create<SaveStringActor>(Sys);
             actorRef.Tell("Hejsan!");
             var actor = actorRef.UnderlyingActor;
             Assert.Equal("Hejsan!", actor.ReceivedString);
@@ -145,28 +138,28 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact(Skip = "Context.ReceiveTimeout is not implemented. Test cannot run")]
         public void TestActorRef_must_set_ReceiveTimeout_to_None()
         {
-            var a = TestActorRef.Create<WorkerActor>(sys);
+            var a = TestActorRef.Create<WorkerActor>(Sys);
             //TODO: When Context.ReceiveTimeout is implemented: Assert.Equal(((IInternalActor)a.UnderlyingActor).ActorContext.ReceiveTimeout, not sure what value to put here: null or Timeout.InfiniteTimeSpan);
         }
 
         [Fact]
         public void TestActorRef_must_set_CallingThreadDispatcher()
         {
-            var a = TestActorRef.Create<WorkerActor>(sys);
+            var a = TestActorRef.Create<WorkerActor>(Sys);
             Assert.IsType<CallingThreadDispatcher>(a.Cell.Dispatcher);
         }
 
         [Fact]
         public void TestActorRef_must_allow_override_of_dispatcher()
         {
-            var a = TestActorRef.Create<WorkerActor>(sys, Props.Create<WorkerActor>().WithDispatcher("test-dispatcher1"));
+            var a = TestActorRef.Create<WorkerActor>(Sys, Props.Create<WorkerActor>().WithDispatcher("test-dispatcher1"));
             Assert.IsType<TaskDispatcher>(a.Cell.Dispatcher);
         }
 
         [Fact]
         public void TestActorRef_must_proxy_receive_for_the_underlying_actor_without_sender()
         {
-            var a = TestActorRef.Create<WorkerActor>(sys);
+            var a = TestActorRef.Create<WorkerActor>(Sys);
             a.Receive("work");
             Assert.True(a.IsTerminated);
         }
@@ -174,10 +167,10 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact]
         public void TestActorRef_must_proxy_receive_for_the_underlying_actor_with_sender()
         {
-            var a = TestActorRef.Create<WorkerActor>(sys);
-            a.Receive("work", testActor);
+            var a = TestActorRef.Create<WorkerActor>(Sys);
+            a.Receive("work", TestActor);
             Assert.True(a.IsTerminated);
-            expectMsg("workDone");
+            ExpectMsg("workDone");
         }
 
         private class SaveStringActor : TActorBase

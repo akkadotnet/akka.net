@@ -60,7 +60,7 @@ namespace Akka.Remote.Transport.Helios
             var protocolString = Config.GetString("transport-protocol");
             if (protocolString.Equals("tcp")) TransportMode = new Tcp();
             else if (protocolString.Equals("udp")) TransportMode = new Udp();
-            else throw new ConfigurationException(string.Format("Unknown transport {0}", protocolString));
+            else throw new ConfigurationException(string.Format("Unknown transport transport-protocol='{0}'", protocolString));
             EnableSsl = Config.GetBoolean("enable-ssl");
             ConnectTimeout = Config.GetMillisDuration("connection-timeout");
             WriteBufferHighWaterMark = OptionSize("write-buffer-high-water-mark");

@@ -1,11 +1,7 @@
-﻿using Akka.Actor;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
+using Akka.Actor;
 
-namespace Akka.Tests
+namespace Akka.Tests.TestUtils
 {
     /**
      * For testing Supervisor behavior, normally you don't supply the strategy
@@ -13,22 +9,23 @@ namespace Akka.Tests
      */
     public class Supervisor : UntypedActor
     {
-        private SupervisorStrategy supervisorStrategy;
+        private readonly SupervisorStrategy _supervisorStrategy;
         public Supervisor(SupervisorStrategy supervisorStrategy)
         {
-            this.supervisorStrategy = supervisorStrategy;
+            _supervisorStrategy = supervisorStrategy;
         }
 
         protected override SupervisorStrategy SupervisorStrategy()
         {
-            return supervisorStrategy;
+            return _supervisorStrategy;
         }
 
         protected override void OnReceive(object message)
         {
-            if (message is Props)
+            var props = message as Props;
+            if (props != null)
             {
-                Sender.Tell(Context.ActorOf((Props)message));
+                Sender.Tell(Context.ActorOf(props));
             }
         }
 

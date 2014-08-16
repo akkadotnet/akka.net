@@ -76,6 +76,7 @@
     <Compile Include="Actor\ActorPath.cs" />
     <Compile Include="Actor\ActorRef.cs" />
     <Compile Include="Actor\ActorRef.Extensions.cs" />
+    <Compile Include="Actor\ActorRefFactoryExtensions.cs" />
     <Compile Include="Actor\ActorRefFactoryShared.cs" />
     <Compile Include="Actor\ActorRefProvider.cs" />
     <Compile Include="Actor\ActorSelection.cs" />
@@ -83,6 +84,7 @@
     <Compile Include="Actor\Address.cs" />
     <Compile Include="Actor\DeadLetterMailbox.cs" />
     <Compile Include="Actor\Deploy.cs" />
+    <Compile Include="Actor\ExtendedActorSystem.cs" />
     <Compile Include="Actor\Futures.cs" />
     <Compile Include="Actor\AutoReceivedMessage.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
@@ -91,6 +93,7 @@
     <Compile Include="Actor\EmptyLocalActorRef.cs" />
     <Compile Include="Actor\ICanTell.cs" />
     <Compile Include="Actor\Inbox.cs" />
+    <Compile Include="Actor\Internals\ActorSystemImpl.cs" />
     <Compile Include="Actor\LocalScope.cs" />
     <Compile Include="Actor\NameAndUid.cs" />
     <Compile Include="Actor\ReceiveTimeout.cs" />
@@ -99,7 +102,7 @@
     <Compile Include="Actor\RootGuardianActorRef.cs" />
     <Compile Include="Actor\RootGuardianSupervisor.cs" />
     <Compile Include="Actor\Deployer.cs" />
-    <Compile Include="Actor\ExtendedActorSystem.cs" />
+    <Compile Include="Actor\Extensions.cs" />
     <Compile Include="Actor\FSM.cs" />
     <Compile Include="Actor\GracefulStopSupport.cs" />
     <Compile Include="Actor\IUntypedActorContext.cs" />
@@ -132,7 +135,7 @@
     <Compile Include="Actor\Exceptions.cs" />
     <Compile Include="Dispatch\FutureActor.cs" />
     <Compile Include="Actor\IActorContext.cs" />
-    <Compile Include="Actor\IActorRefFactory.cs" />
+    <Compile Include="Actor\ActorRefFactory.cs" />
     <Compile Include="Dispatch\Mailbox.cs" />
     <Compile Include="Actor\Props.cs" />
     <Compile Include="Actor\SupervisorStrategy.cs" />
