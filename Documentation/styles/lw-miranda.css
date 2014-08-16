@@ -1,0 +1,16 @@
+﻿div.imhistory
+{
+    border: 1px solid #BBB;
+}
+
+.imhistory-title 
+{
+    border-bottom: 1px solid #BBB;
+    padding: 3px;
+}
+
+
+.imhistory-content
+{
+    margin: 3px;
+}

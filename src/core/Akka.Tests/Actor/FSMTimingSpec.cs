@@ -264,27 +264,27 @@ namespace Akka.Tests.Actor
                 When(State.Initial, @event =>
                 {
                     State<State, int> nextState = null;
-                    @event.FsmEvent.Match()
-                        .With<State>(s =>
+                    if (@event.FsmEvent is State)
+                    {
+                        var s = (State) @event.FsmEvent;
+                        switch (s)
                         {
-                            switch (s)
-                            {
-                                case State.TestSingleTimer:
-                                    SetTimer("tester", new Tick(), TimeSpan.FromMilliseconds(500), false);
-                                    nextState = GoTo(State.TestSingleTimer);
-                                    break;
-                                case State.TestRepeatedTimer:
-                                    SetTimer("tester", new Tick(), TimeSpan.FromMilliseconds(100), true);
-                                    nextState = GoTo(State.TestRepeatedTimer).Using(4);
-                                    break;
-                                case State.TestStateTimeoutOverride:
-                                    nextState = GoTo(State.TestStateTimeout).ForMax(TimeSpan.MaxValue);
-                                    break;
-                                default:
-                                    nextState = GoTo(s);
-                                    break;
-                            }
-                        });
+                            case State.TestSingleTimer:
+                                SetTimer("tester", new Tick(), TimeSpan.FromMilliseconds(500), false);
+                                nextState = GoTo(State.TestSingleTimer);
+                                break;
+                            case State.TestRepeatedTimer:
+                                SetTimer("tester", new Tick(), TimeSpan.FromMilliseconds(100), true);
+                                nextState = GoTo(State.TestRepeatedTimer).Using(4);
+                                break;
+                            case State.TestStateTimeoutOverride:
+                                nextState = GoTo(State.TestStateTimeout).ForMax(TimeSpan.MaxValue);
+                                break;
+                            default:
+                                nextState = GoTo(s);
+                                break;
+                        }
+                    }
                     return nextState;
                 });
 
@@ -307,12 +307,11 @@ namespace Akka.Tests.Actor
                 When(State.TestSingleTimer, @event =>
                 {
                     State<State, int> nextState = null;
-                    @event.FsmEvent.Match()
-                        .With<Tick>(t =>
-                        {
-                            Tester.Tell(new Tick());
-                            nextState = GoTo(State.Initial);
-                        });
+                    if (@event.FsmEvent is Tick)
+                    {
+                        Tester.Tell(new Tick());
+                        nextState = GoTo(State.Initial);
+                    }
                     return nextState;
                 });
 
@@ -350,7 +349,7 @@ namespace Akka.Tests.Actor
                         {
                             SetTimer("hallo", new Tock(), TimeSpan.FromMilliseconds(1));
                             var contextLocal = Context;
-                            AwaitCond(() => contextLocal.AsInstanceOf<ActorCell>().Mailbox.HasUnscheduledMessages, TimeSpan.FromSeconds(1)).Wait();
+                            AwaitCond(() => ((ActorCell) contextLocal).Mailbox.HasUnscheduledMessages, TimeSpan.FromSeconds(1)).Wait();
                             CancelTimer("hallo");
                             Sender.Tell(new Tick());
                             SetTimer("hallo", new Tock(), TimeSpan.FromMilliseconds(500));
@@ -374,21 +373,20 @@ namespace Akka.Tests.Actor
                 {
                     State<State, int> nextState = null;
 
-                    @event.FsmEvent.Match()
-                        .With<Tick>(tick =>
+                    if (@event.FsmEvent is Tick)
+                    {
+                        var remaining = @event.StateData;
+                        Tester.Tell(new Tick());
+                        if (remaining == 0)
                         {
-                            var remaining = @event.StateData;
-                            Tester.Tell(new Tick());
-                            if (remaining == 0)
-                            {
-                                CancelTimer("tester");
-                                nextState = GoTo(State.Initial);
-                            }
-                            else
-                            {
-                                nextState = Stay().Using(remaining - 1);
-                            }
-                        });
+                            CancelTimer("tester");
+                            nextState = GoTo(State.Initial);
+                        }
+                        else
+                        {
+                            nextState = Stay().Using(remaining - 1);
+                        }
+                    }
 
                     return nextState;
                 });
@@ -404,7 +402,7 @@ namespace Akka.Tests.Actor
                             Suspend(Self);
                             SetTimer("named", new Tock(), TimeSpan.FromMilliseconds(1));
                             var contextLocal = Context;
-                            AwaitCond(() => contextLocal.AsInstanceOf<ActorCell>().Mailbox.HasUnscheduledMessages,
+                            AwaitCond(() => ((ActorCell) contextLocal).Mailbox.HasUnscheduledMessages,
                                     TimeSpan.FromSeconds(1)).Wait();
                             nextState = Stay().ForMax(TimeSpan.FromMilliseconds(1)).Replying(new Tick());
                         })

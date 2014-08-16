@@ -445,18 +445,18 @@ namespace Akka.Remote
                 .With<Quarantine>(quarantine =>
                 {
                     //Stop writers
-                    endpoints.WritableEndpointWithPolicyFor(quarantine.RemoteAddress).Match()
-                        .With<Pass>(pass =>
+                    if (endpoints.WritableEndpointWithPolicyFor(quarantine.RemoteAddress) is Pass)
+                    {
+                        var pass = (Pass) endpoints.WritableEndpointWithPolicyFor(quarantine.RemoteAddress);
+                        Context.Stop(pass.Endpoint);
+                        if (!pass.Uid.HasValue)
                         {
-                            Context.Stop((InternalActorRef) pass.Endpoint);
-                            if (!pass.Uid.HasValue)
-                            {
-                                log.Warn("Association to [{0}] with unknown UID is reported as quarantined, but " +
-                                         "address cannot be quarantined without knowing the UID, gated instead for {0} ms",
-                                    quarantine.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds);
-                                endpoints.MarkAsFailed(pass.Endpoint, Deadline.Now + settings.RetryGateClosedFor);
-                            }
-                        });
+                            log.Warn("Association to [{0}] with unknown UID is reported as quarantined, but " +
+                                     "address cannot be quarantined without knowing the UID, gated instead for {0} ms",
+                                quarantine.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds);
+                            endpoints.MarkAsFailed(pass.Endpoint, Deadline.Now + settings.RetryGateClosedFor);
+                        }
+                    }
 
                     //Stop inbound read-only association
                     var read = endpoints.ReadOnlyEndpointFor(quarantine.RemoteAddress);
@@ -575,7 +575,7 @@ namespace Akka.Remote
         private void HandleInboundAssociation(InboundAssociation ia)
         {
             var readonlyEndpoint = endpoints.ReadOnlyEndpointFor(ia.Association.RemoteAddress);
-            var handle = ia.Association.AsInstanceOf<AkkaProtocolHandle>();
+            var handle = ((AkkaProtocolHandle) ia.Association);
             if (readonlyEndpoint != null)
             {
                 if (pendingReadHandoffs.ContainsKey(readonlyEndpoint)) pendingReadHandoffs[readonlyEndpoint].Disassociate();
@@ -588,36 +588,37 @@ namespace Akka.Remote
                     handle.Disassociate(DisassociateInfo.Quarantined);
                 else
                 {
-                    endpoints.WritableEndpointWithPolicyFor(handle.RemoteAddress).Match()
-                        .With<Pass>(pass =>
+                    if (endpoints.WritableEndpointWithPolicyFor(handle.RemoteAddress) is Pass)
+                    {
+                        var pass = (Pass) endpoints.WritableEndpointWithPolicyFor(handle.RemoteAddress);
+                        if (!pass.Uid.HasValue)
                         {
-                            if (!pass.Uid.HasValue)
+                            if (stashedInbound.ContainsKey(pass.Endpoint)) stashedInbound[pass.Endpoint].Add(ia);
+                            else stashedInbound.AddOrSet(pass.Endpoint, new List<InboundAssociation>() {ia});
+                        }
+                        else
+                        {
+                            if (handle.HandshakeInfo.Uid == pass.Uid)
                             {
-                                if (stashedInbound.ContainsKey(pass.Endpoint)) stashedInbound[pass.Endpoint].Add(ia);
-                                else stashedInbound.AddOrSet(pass.Endpoint, new List<InboundAssociation>() { ia });
+                                if (pendingReadHandoffs.ContainsKey(pass.Endpoint))
+                                    pendingReadHandoffs[pass.Endpoint].Disassociate();
+                                pendingReadHandoffs.AddOrSet(pass.Endpoint, handle);
+                                pass.Endpoint.Tell(new EndpointWriter.StoppedReading(pass.Endpoint));
                             }
                             else
                             {
-                                if (handle.HandshakeInfo.Uid == pass.Uid)
-                                {
-                                    if (pendingReadHandoffs.ContainsKey(pass.Endpoint))
-                                        pendingReadHandoffs[pass.Endpoint].Disassociate();
-                                    pendingReadHandoffs.AddOrSet(pass.Endpoint, handle);
-                                    pass.Endpoint.Tell(new EndpointWriter.StoppedReading(pass.Endpoint));
-                                }
-                                else
-                                {
-                                    Context.Stop((InternalActorRef)pass.Endpoint);
-                                    endpoints.UnregisterEndpoint(pass.Endpoint);
-                                    pendingReadHandoffs.Remove(pass.Endpoint);
-                                    CreateAndRegisterEndpoint(handle, pass.Uid);
-                                }
+                                Context.Stop(pass.Endpoint);
+                                endpoints.UnregisterEndpoint(pass.Endpoint);
+                                pendingReadHandoffs.Remove(pass.Endpoint);
+                                CreateAndRegisterEndpoint(handle, pass.Uid);
                             }
-                        })
-                        .Default(state =>
-                        {
-                            CreateAndRegisterEndpoint(handle, null);
-                        });
+                        }
+                    }
+                    else
+                    {
+                        var state = endpoints.WritableEndpointWithPolicyFor(handle.RemoteAddress);
+                        CreateAndRegisterEndpoint(handle, null);
+                    }
                 }
             }
         }

@@ -54,7 +54,7 @@ namespace Akka
         {
             if (on)
             {
-                self.AsInstanceOf<FluentConfigInternals>().AppendLine("akka.log-config-on-start = on");
+                ((FluentConfigInternals) self).AppendLine("akka.log-config-on-start = on");
             }
             return self;
         }

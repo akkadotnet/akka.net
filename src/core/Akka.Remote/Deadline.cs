@@ -28,7 +28,7 @@ namespace Akka.Remote
 
         public override bool Equals(object obj)
         {
-            var deadlineObj = obj.AsInstanceOf<Deadline>();
+            var deadlineObj = ((Deadline) obj);
             if (deadlineObj == null)
             {
                 return false;

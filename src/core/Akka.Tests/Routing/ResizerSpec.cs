@@ -104,7 +104,7 @@ namespace Akka.Tests.Routing
         public void DefaultResizer_must_be_possible_to_define_in_configuration()
         {
             var latch = new TestLatch(sys, 3);
-            var router = sys.ActorOf(Props.Create<ResizerTestActor>().WithRouter(new FromConfig()),"router1");
+            var router = sys.ActorOf(Props.Create<ResizerTestActor>().WithRouter(new FromConfig()), "router1");
 
             router.Tell(latch);
             router.Tell(latch);
@@ -165,28 +165,29 @@ namespace Akka.Tests.Routing
                     });
             };
 
-           
+
 
             // 2 more should go through without triggering more
             loop(2, TimeSpan.FromMilliseconds(200));
             (RouteeSize(router)).ShouldBe(resizer.LowerBound);
-           
+
 
             // a whole bunch should max it out
             loop(20, TimeSpan.FromMilliseconds(500));
             (RouteeSize(router)).ShouldBe(resizer.UpperBound);
-            
+
         }
 
         class BackoffActor : UntypedActor
         {
             protected override void OnReceive(object message)
             {
-                message.Match().With<int>(i =>
+                if (message is int)
                 {
+                    var i = (int) message;
                     if (i <= 0) return; //done
                     Thread.Sleep(i);
-                });
+                }
             }
         }
 

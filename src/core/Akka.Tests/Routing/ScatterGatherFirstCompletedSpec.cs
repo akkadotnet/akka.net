@@ -99,20 +99,19 @@ namespace Akka.Tests.Routing
             }
             protected override void OnReceive(object message)
             {
-                message.Match()
-                    .With<Stop>(s =>
+                if (message is Stop)
+                {
+                    var s = (Stop) message;
+                    if (s.Id == null || s.Id == _id)
                     {
-                        if (s.Id == null || s.Id == _id)
-                        {
-                            Context.Stop(Self);
-                        }
-                    })
-                    .Default(_ =>
-                        {
-                            Thread.Sleep(100 * _id);
-                            Sender.Tell(_id);
-                        }
-                    );
+                        Context.Stop(Self);
+                    }
+                }
+                else
+                {
+                    Thread.Sleep(100*_id);
+                    Sender.Tell(_id);
+                }
             }
         }
 
