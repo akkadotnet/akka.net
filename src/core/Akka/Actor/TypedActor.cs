@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 
 namespace Akka.Actor
 {
@@ -18,6 +19,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class TypedActor.
     /// </summary>
+    [Obsolete("This class is renamed to HandleActor",false)]
     public abstract class TypedActor : ActorBase
     {
         /// <summary>

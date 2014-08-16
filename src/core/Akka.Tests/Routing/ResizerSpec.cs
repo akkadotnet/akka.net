@@ -116,21 +116,20 @@ namespace Akka.Tests.Routing
             (RouteeSize(router)).ShouldBe(2);
         }
 
-        class PressureActor : UntypedActor
+        private class PressureActor : ReceiveActor
         {
-            protected override void OnReceive(object message)
+            public PressureActor()
             {
-                message.Match().With<TimeSpan>(
-                    d =>
-                    {
-                        Thread.Sleep(d);
-                        Sender.Tell("done");
-                    })
-                    .With<string>(s =>
-                    {
-                        if (s.Equals("echo"))
-                            Sender.Tell("reply");
-                    });
+                Receive<TimeSpan>(d =>
+                {
+                    Thread.Sleep(d);
+                    Sender.Tell("done");
+                });
+                Receive<string>(s =>
+                {
+                    if (s.Equals("echo"))
+                        Sender.Tell("reply");
+                });
             }
         }
 

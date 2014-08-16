@@ -1,20 +1,15 @@
-﻿using ChatMessages;
+﻿using System;
 using Akka;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Remote;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Event;
+using ChatMessages;
 
 namespace ChatServer
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             //            var config = ConfigurationFactory.ParseString(@"
             //akka {  
@@ -52,35 +47,27 @@ namespace ChatServer
             //
             //}
             //");
-            var fluentConfig = FluentConfig.Begin()
+            Config fluentConfig = FluentConfig.Begin()
                 .StdOutLogLevel(LogLevel.DebugLevel)
                 .LogConfigOnStart(true)
-                .LogLevel(LogLevel.ErrorLevel)   
-                .LogLocal(
-                    receive: true,
-                    autoReceive: true,
-                    lifecycle: true,
-                    eventStream: true,
-                    unhandled: true
+                .LogLevel(LogLevel.ErrorLevel)
+                .LogLocal(true, true, true, true, true
                 )
-                .LogRemote(
-                    lifecycleEvents: LogLevel.DebugLevel,
-                    receivedMessages: true,
-                    sentMessages: true
+                .LogRemote(LogLevel.DebugLevel, true, true
                 )
                 .StartRemotingOn("localhost", 8081)
                 .Build();
 
-            using (var system = ActorSystem.Create("MyServer", fluentConfig))
+            using (ActorSystem system = ActorSystem.Create("MyServer", fluentConfig))
             {
-                var server = system.ActorOf<ChatServerActor>("ChatServer");
+                InternalActorRef server = system.ActorOf<ChatServerActor>("ChatServer");
 
                 Console.ReadLine();
             }
         }
     }
 
-    class ChatServerActor : TypedActor , 
+    internal class ChatServerActor : TypedActor,
         IHandle<SayRequest>,
         IHandle<ConnectRequest>,
         IHandle<NickRequest>,
@@ -89,27 +76,24 @@ namespace ChatServer
         ILogReceive
 
     {
-        private BroadcastActorRef clients = new BroadcastActorRef();
+        private readonly BroadcastActorRef _clients = new BroadcastActorRef();
 
-        public void Handle(SayRequest message)
+        public void Handle(ChannelsRequest message)
         {
-          //  Console.WriteLine("User {0} said {1}",message.Username , message.Text);
-            var response = new SayResponse
-            {
-                Username = message.Username,
-                Text = message.Text,
-            };
-            clients.Tell(response, Self);
         }
 
         public void Handle(ConnectRequest message)
         {
-         //   Console.WriteLine("User {0} has connected", message.Username);
-            clients.TryAdd(this.Sender);
+            //   Console.WriteLine("User {0} has connected", message.Username);
+            _clients.TryAdd(Sender);
             Sender.Tell(new ConnectResponse
             {
                 Message = "Hello and welcome to Akka .NET chat example",
             }, Self);
+        }
+
+        public void Handle(Disconnect message)
+        {
         }
 
         public void Handle(NickRequest message)
@@ -120,17 +104,18 @@ namespace ChatServer
                 NewUsername = message.NewUsername,
             };
 
-            clients.Tell(response, Self);
+            _clients.Tell(response, Self);
         }
 
-        public void Handle(Disconnect message)
+        public void Handle(SayRequest message)
         {
-            
-        }
-
-        public void Handle(ChannelsRequest message)
-        {
-            
+            //  Console.WriteLine("User {0} said {1}",message.Username , message.Text);
+            var response = new SayResponse
+            {
+                Username = message.Username,
+                Text = message.Text,
+            };
+            _clients.Tell(response, Self);
         }
     }
 }

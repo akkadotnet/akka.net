@@ -1,44 +1,38 @@
-﻿using ChatMessages;
+﻿using System;
+using System.Linq;
 using Akka;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.Remote;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using ChatMessages;
 
 namespace ChatClient
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            var fluentConfig = FluentConfig.Begin()
-                                .StartRemotingOn("localhost") //no port given = use any free port
-                                .Build();
+            Config fluentConfig = FluentConfig.Begin()
+                .StartRemotingOn("localhost") //no port given = use any free port
+                .Build();
 
-            using (var system = ActorSystem.Create("MyClient", fluentConfig)) 
+            using (ActorSystem system = ActorSystem.Create("MyClient", fluentConfig))
             {
-                var chatClient = system.ActorOf(Props.Create<ChatClientActor>());
-                var tmp = system.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
-                chatClient.Tell(new ConnectRequest()
+                InternalActorRef chatClient = system.ActorOf(Props.Create<ChatClientActor>());
+                ActorSelection tmp = system.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
+                chatClient.Tell(new ConnectRequest
                 {
                     Username = "Roggan",
                 });
 
                 while (true)
                 {
-                    var input = Console.ReadLine();
+                    string input = Console.ReadLine();
                     if (input.StartsWith("/"))
                     {
-                        var parts = input.Split(' ');
-                        var cmd = parts[0].ToLowerInvariant();
-                        var rest = string.Join(" ",parts.Skip(1));
+                        string[] parts = input.Split(' ');
+                        string cmd = parts[0].ToLowerInvariant();
+                        string rest = string.Join(" ", parts.Skip(1));
 
                         if (cmd == "/nick")
                         {
@@ -46,11 +40,11 @@ namespace ChatClient
                             {
                                 NewUsername = rest
                             });
-                        }                        
+                        }
                     }
                     else
                     {
-                        chatClient.Tell(new SayRequest()
+                        chatClient.Tell(new SayRequest
                         {
                             Text = input,
                         });
@@ -60,7 +54,7 @@ namespace ChatClient
         }
     }
 
-    class ChatClientActor : TypedActor,
+    internal class ChatClientActor : TypedActor,
         IHandle<ConnectRequest>,
         IHandle<ConnectResponse>,
         IHandle<NickRequest>,
@@ -68,27 +62,31 @@ namespace ChatClient
         IHandle<SayRequest>,
         IHandle<SayResponse>, ILogReceive
     {
-        LoggingAdapter log = Logging.GetLogger(Context);
+        private readonly ActorSelection _server =
+            Context.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
 
-        public ChatClientActor()
+        private LoggingAdapter _log = Logging.GetLogger(Context);
+
+        private string _nick = "Roggan";
+
+        public void Handle(ConnectRequest message)
         {
+            Console.WriteLine("Connecting....");
+            _server.Tell(message);
         }
 
-        private string nick = "Roggan";
-        private ActorSelection server = Context.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
-        
         public void Handle(ConnectResponse message)
         {
             Console.WriteLine("Connected!");
-            Console.WriteLine(message.Message);         
+            Console.WriteLine(message.Message);
         }
 
         public void Handle(NickRequest message)
         {
-            message.OldUsername = this.nick;
+            message.OldUsername = _nick;
             Console.WriteLine("Changing nick to {0}", message.NewUsername);
-            this.nick = message.NewUsername;
-            server.Tell(message);
+            _nick = message.NewUsername;
+            _server.Tell(message);
         }
 
         public void Handle(NickResponse message)
@@ -96,21 +94,15 @@ namespace ChatClient
             Console.WriteLine("{0} is now known as {1}", message.OldUsername, message.NewUsername);
         }
 
+        public void Handle(SayRequest message)
+        {
+            message.Username = _nick;
+            _server.Tell(message);
+        }
+
         public void Handle(SayResponse message)
         {
             Console.WriteLine("{0}: {1}", message.Username, message.Text);
         }
-
-        public void Handle(ConnectRequest message)
-        {
-            Console.WriteLine("Connecting....");
-            server.Tell(message);
-        }
-
-        public void Handle(SayRequest message)
-        {
-            message.Username = this.nick;
-            server.Tell(message);
-        }     
     }
 }

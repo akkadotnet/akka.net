@@ -5,6 +5,7 @@ namespace Akka.Actor
     /// <summary>
     /// Class UntypedActor.
     /// </summary>
+    [Obsolete("Use Akka.Actor.ReceiveActor",false)]
     public abstract class UntypedActor : ActorBase
     {
         protected sealed override bool Receive(object message)
