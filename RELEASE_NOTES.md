@@ -1,3 +1,8 @@
+#### 0.6.3 Aug 13 2014
+* Made it so HOCON config sections chain properly
+* Optimized actor memory footprint
+* Fixed a Helios bug that caused Akka.NET to drop messages larger than 32kb
+
 #### 0.6.2 Aug 05 2014
 * Upgraded Helios dependency
 * Bug fixes
