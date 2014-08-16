@@ -173,6 +173,24 @@ namespace Akka.Actor
         {
             return Serialization.Serialization.CurrentSystem.Provider.ResolveActorRef(surrogate.Path);
         }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as ActorRef;
+            if (other == null) return false;
+            return Path.Uid == other.Path.Uid && Path.Equals(other.Path);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hash = 17;
+                hash = hash*23 + Path.Uid.GetHashCode();
+                hash = hash*23 + Path.GetHashCode();
+                return hash;
+            }
+        }
     }
 
 
@@ -270,6 +288,17 @@ namespace Akka.Actor
         public override ActorRefProvider Provider
         {
             get { throw new NotSupportedException("Reserved does not provide"); }
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj == null) return false;
+            return obj == Instance;
+        }
+
+        public override int GetHashCode()
+        {
+            return 17;
         }
     }
 

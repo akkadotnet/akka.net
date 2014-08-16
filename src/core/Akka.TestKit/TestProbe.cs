@@ -1,17 +1,17 @@
-﻿using Xunit;
+﻿using System.Threading;
+using Xunit;
 using Akka.Actor;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Akka.Tests
 {
     public class TestProbeActorRef : ActorRef
     {
+        public static AtomicInteger TestActorId =  new AtomicInteger(0);
+
         private readonly TestProbe _owner;
-        private readonly ActorPath _path=new RootActorPath(Address.AllSystems,"/TestProbe");
+        private readonly ActorPath _path=new RootActorPath(Address.AllSystems,"/TestProbe" + TestActorId.GetAndIncrement());
 
         public TestProbeActorRef(TestProbe owner)
         {
@@ -56,6 +56,16 @@ namespace Akka.Tests
             {
                 Assert.True(false, "Did not expect a message during the duration " + duration.ToString());
             }
+        }
+
+        public Terminated ExpectTerminated(TimeSpan timeout)
+        {
+            var cancellationTokenSource = new CancellationTokenSource((int)timeout.TotalMilliseconds);
+            var actual = queue.Take(cancellationTokenSource.Token);
+
+            Assert.True(actual is Terminated);
+
+            return (Terminated)actual;
         }
     }
 }

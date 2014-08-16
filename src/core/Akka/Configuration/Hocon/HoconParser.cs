@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Akka.Configuration.Hocon
 {
@@ -26,7 +27,7 @@ namespace Akka.Configuration.Hocon
         /// </summary>
         /// <param name="text">The text.</param>
         /// <returns>HoconValue.</returns>
-        public static HoconValue Parse(string text)
+        public static HoconRoot Parse(string text)
         {
             return new Parser().ParseText(text);
         }
@@ -37,14 +38,14 @@ namespace Akka.Configuration.Hocon
         /// <param name="text">The text.</param>
         /// <returns>HoconValue.</returns>
         /// <exception cref="System.Exception">Unresolved substitution: + sub.Path</exception>
-        private HoconValue ParseText(string text)
+        private HoconRoot ParseText(string text)
         {
             root = new HoconValue();
             reader = new HoconTokenizer(text);
             reader.PullWhitespaceAndComments();
             ParseObject(root, true);
 
-            var c = new Config(root);
+            var c = new Config(new HoconRoot(root,Enumerable.Empty<HoconSubstitution>()));
             foreach (HoconSubstitution sub in substitutions)
             {
                 HoconValue res = c.GetValue(sub.Path);
@@ -52,7 +53,7 @@ namespace Akka.Configuration.Hocon
                     throw new Exception("Unresolved substitution:" + sub.Path);
                 sub.ResolvedValue = res;
             }
-            return root;
+            return new HoconRoot(root, substitutions);
         }
 
         /// <summary>

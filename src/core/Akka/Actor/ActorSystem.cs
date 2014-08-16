@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -45,23 +46,37 @@ namespace Akka.Actor
         public LoggingAdapter Log;
 
         /// <summary>
+        /// A wait handle that an Akka.NET client or server can wait on until the actor system is shut down.
+        /// 
+        /// Designed to make it easy for developers to build applications that can block the main application thread
+        /// from exiting while the system runs, particularly inside console applications.
+        /// </summary>
+        private ManualResetEvent _systemWaitHandle;
+
+        /// <summary>
         ///     The log dead letter listener
         /// </summary>
         private InternalActorRef _logDeadLetterListener;
 
+        public ActorSystem(string name) : this(name,ConfigurationFactory.Load())
+        {
+        }
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorSystem" /> class.
         /// </summary>
         /// <param name="name">The name.</param>
         /// <param name="config">The configuration.</param>
-        public ActorSystem(string name, Config config = null)
+        public ActorSystem(string name, Config config)
         {
             if (!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
                 throw new ArgumentException(
                     "invalid ActorSystem name [" + name +
                     "], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')");
+            if (config == null)
+                throw new ArgumentNullException("config");
 
             Name = name;
+            _systemWaitHandle = new ManualResetEvent(false); //unsignaled
             ConfigureScheduler();
             ConfigureSettings(config);
             ConfigureEventStream();
@@ -224,7 +239,7 @@ namespace Akka.Actor
         /// <returns>ActorSystem.</returns>
         public static ActorSystem Create(string name, Config config)
         {
-            return new ActorSystem(name, config.WithFallback(ConfigurationFactory.Default()));
+            return new ActorSystem(name, config);
         }
 
         /// <summary>
@@ -423,6 +438,7 @@ namespace Akka.Actor
         public void Shutdown()
         {
             Provider.Guardian.Stop();
+            _systemWaitHandle.Set(); //signal that the actorsystem is being shut down
         }
 
         /// <summary>
@@ -457,6 +473,15 @@ namespace Akka.Actor
                 SystemGuardian.Tell(new StopChild(actor));
             else
                 ((InternalActorRef) actor).Stop();            
+        }
+
+        /// <summary>
+        /// Block and prevent the main application thread from exiting unless
+        /// the actor system is shut down.
+        /// </summary>
+        public void WaitForShutdown()
+        {
+            _systemWaitHandle.WaitOne();
         }
 
         #region Equality methods

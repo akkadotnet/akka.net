@@ -246,6 +246,9 @@ namespace Akka.Configuration.Hocon
 
         private string QuoteIfNeeded(string text)
         {
+            if (text == null)
+                return null;
+
             if (text.ToCharArray().Intersect(" \t".ToCharArray()).Any())
             {
                 return "\"" + text + "\"";
