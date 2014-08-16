@@ -99,10 +99,13 @@ Target "CopyOutput" <| fun _ ->
         let dst = binDir @@ project
         CopyDir dst src allFiles
     [ "core/Akka"
-      "core/Akka.Remote"
       "core/Akka.FSharp"
+      "core/Akka.TestKit"
+      "core/Akka.Remote"
       "contrib/loggers/Akka.slf4net"
-      "contrib/loggers/Akka.NLog" ]
+      "contrib/loggers/Akka.NLog" 
+      "contrib/testkits/Akka.TestKit.Xunit" 
+      ]
     |> List.iter copyOutput
 
 Target "BuildRelease" DoNothing
@@ -143,6 +146,7 @@ module Nuget =
     let getAkkaDependency project =
         match project with
         | "Akka" -> []
+        | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
 
     // selected nuget description
@@ -175,7 +179,8 @@ Target "Nuget" <| fun _ ->
         let projectDir = Path.GetDirectoryName nuspec
         let releaseDir = projectDir @@ @"bin\Release"
         let packages = projectDir @@ "packages.config"
-
+        let packageDependencies = if (fileExists packages) then (getDependencies packages) else []
+        let dependencies = packageDependencies @ getAkkaDependency project
         let pack outputDir =
             NuGetHelper.NuGet
                 (fun p ->
@@ -193,7 +198,7 @@ Target "Nuget" <| fun _ ->
                         AccessKey = getBuildParamOrDefault "nugetkey" ""
                         Publish = hasBuildParam "nugetkey"
                         
-                        Dependencies = getDependencies packages @ getAkkaDependency project })
+                        Dependencies = dependencies })
                 nuspec
         // pack nuget (with only dll and xml files)
 
