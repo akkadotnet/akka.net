@@ -1,74 +1,85 @@
 ﻿namespace Akka.Configuration.Hocon
 {
     /// <summary>
-    /// Enum TokenType
+    ///     Enum TokenType
     /// </summary>
     public enum TokenType
     {
         /// <summary>
-        /// The comment
+        ///     The comment
         /// </summary>
         Comment,
+
         /// <summary>
-        /// The key
+        ///     The key
         /// </summary>
         Key,
+
         /// <summary>
-        /// The literal value
+        ///     The literal value
         /// </summary>
         LiteralValue,
+
         /// <summary>
-        /// The assign
+        ///     The assign
         /// </summary>
         Assign,
+
         /// <summary>
-        /// The object start
+        ///     The object start
         /// </summary>
         ObjectStart,
+
         /// <summary>
-        /// The object end
+        ///     The object end
         /// </summary>
         ObjectEnd,
+
         /// <summary>
-        /// The dot
+        ///     The dot
         /// </summary>
         Dot,
+
         /// <summary>
-        /// The eo f
+        ///     The eo f
         /// </summary>
         EoF,
+
         /// <summary>
-        /// The array start
+        ///     The array start
         /// </summary>
         ArrayStart,
+
         /// <summary>
-        /// The array end
+        ///     The array end
         /// </summary>
         ArrayEnd,
+
         /// <summary>
-        /// The comma
+        ///     The comma
         /// </summary>
         Comma,
+
         /// <summary>
-        /// The substitute
+        ///     The substitute
         /// </summary>
         Substitute,
     }
 
     /// <summary>
-    /// Class Token.
+    ///     Class Token.
     /// </summary>
     public class Token
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="Token"/> class.
+        ///     Initializes a new instance of the <see cref="Token" /> class.
         /// </summary>
         protected Token()
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Token"/> class.
+        ///     Initializes a new instance of the <see cref="Token" /> class.
         /// </summary>
         /// <param name="type">The type.</param>
         public Token(TokenType type)
@@ -77,7 +88,7 @@
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Token"/> class.
+        ///     Initializes a new instance of the <see cref="Token" /> class.
         /// </summary>
         /// <param name="value">The value.</param>
         public Token(string value)
@@ -87,18 +98,19 @@
         }
 
         /// <summary>
-        /// If this instance is a LiteralValue, the Value property holds the string literal.
+        ///     If this instance is a LiteralValue, the Value property holds the string literal.
         /// </summary>
         /// <value>The value.</value>
         public string Value { get; set; }
+
         /// <summary>
-        /// The type of the token.
+        ///     The type of the token.
         /// </summary>
         /// <value>The type.</value>
         public TokenType Type { get; set; }
 
         /// <summary>
-        /// Creates a Key token.
+        ///     Creates a Key token.
         /// </summary>
         /// <param name="key">The key.</param>
         /// <returns>Token.</returns>
@@ -112,7 +124,7 @@
         }
 
         /// <summary>
-        /// Creates a Substitution token with a given Path
+        ///     Creates a Substitution token with a given Path
         /// </summary>
         /// <param name="path">The path.</param>
         /// <returns>Token.</returns>
@@ -126,7 +138,7 @@
         }
 
         /// <summary>
-        /// Creates a string Literal token.
+        ///     Creates a string Literal token.
         /// </summary>
         /// <param name="value">The value.</param>
         /// <returns>Token.</returns>

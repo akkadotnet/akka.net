@@ -90,7 +90,7 @@ namespace Akka.Remote.Transport
 
             manager.Tell(new AssociateUnderlyingRefuseUid(SchemeAugmenter.RemoveScheme(remoteAddress), statusPromise, refuseUid));
 
-            return statusPromise.Task.ContinueWith(result => result.Result.AsInstanceOf<AkkaProtocolHandle>(),
+            return statusPromise.Task.ContinueWith(result => ((AkkaProtocolHandle) result.Result),
                 TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously);
         }
 
@@ -490,7 +490,7 @@ namespace Akka.Remote.Transport
                             else
                             {
                                 SetTimer("associate-retry", wrappedHandle,
-                                    Context.System.Provider.AsInstanceOf<RemoteActorRefProvider>()
+                                    ((RemoteActorRefProvider) Context.System.Provider)
                                         .RemoteSettings.BackoffPeriod, repeat: false);
                                 nextState = Stay();
                             }
@@ -705,10 +705,10 @@ namespace Akka.Remote.Transport
                 .With<AssociatedWaitHandler>(awh =>
                 {
                     Disassociated disassociateNotification = null;
-                    if (@event.Reason is Failure && ((Failure)@event.Reason).Cause is DisassociateInfo)
+                    if (@event.Reason is Failure && @event.Reason.AsInstanceOf<Failure>().Cause is DisassociateInfo)
                     {
                         disassociateNotification =
-                            new Disassociated(((Failure)@event.Reason).Cause.AsInstanceOf<DisassociateInfo>());
+                            new Disassociated(@event.Reason.AsInstanceOf<Failure>().Cause.AsInstanceOf<DisassociateInfo>());
                     }
                     else
                     {

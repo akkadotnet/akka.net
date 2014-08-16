@@ -408,17 +408,17 @@ namespace Akka.Remote.Tests.Transport
         {
             if (associationRegistry.LogSnapshot().Count == 0) return false;
             var rValue = false;
-            associationRegistry.LogSnapshot().Last().Match()
-                .With<WriteAttempt>(attempt =>
+            if (associationRegistry.LogSnapshot().Last() is WriteAttempt)
+            {
+                var attempt = (WriteAttempt) associationRegistry.LogSnapshot().Last();
+                if (attempt.Sender.Equals(localAddress) && attempt.Recipient.Equals(remoteAddress))
                 {
-                    if (attempt.Sender.Equals(localAddress) && attempt.Recipient.Equals(remoteAddress))
-                    {
-                        codec.DecodePdu(attempt.Payload)
-                            .Match()
-                            .With<Heartbeat>(h => rValue = true)
-                            .Default(msg => rValue = false);
-                    }
-                });
+                    codec.DecodePdu(attempt.Payload)
+                        .Match()
+                        .With<Heartbeat>(h => rValue = true)
+                        .Default(msg => rValue = false);
+                }
+            }
 
             return rValue;
         }
@@ -427,17 +427,17 @@ namespace Akka.Remote.Tests.Transport
         {
             if (associationRegistry.LogSnapshot().Count == 0) return false;
             var rValue = false;
-            associationRegistry.LogSnapshot().Last().Match()
-                .With<WriteAttempt>(attempt =>
+            if (associationRegistry.LogSnapshot().Last() is WriteAttempt)
+            {
+                var attempt = (WriteAttempt) associationRegistry.LogSnapshot().Last();
+                if (attempt.Sender.Equals(localAddress) && attempt.Recipient.Equals(remoteAddress))
                 {
-                    if (attempt.Sender.Equals(localAddress) && attempt.Recipient.Equals(remoteAddress))
-                    {
-                        codec.DecodePdu(attempt.Payload)
-                            .Match()
-                            .With<Associate>(h => rValue = h.Info.Origin.Equals(localAddress) && h.Info.Uid == uid)
-                            .Default(msg => rValue = false);
-                    }
-                });
+                    codec.DecodePdu(attempt.Payload)
+                        .Match()
+                        .With<Associate>(h => rValue = h.Info.Origin.Equals(localAddress) && h.Info.Uid == uid)
+                        .Default(msg => rValue = false);
+                }
+            }
 
             return rValue;
         }
@@ -446,17 +446,15 @@ namespace Akka.Remote.Tests.Transport
         {
             if (associationRegistry.LogSnapshot().Count == 0) return false;
             var rValue = false;
-            associationRegistry.LogSnapshot().Last().Match()
-                .With<WriteAttempt>(attempt =>
-                {
-                    if (attempt.Sender.Equals(localAddress) && attempt.Recipient.Equals(remoteAddress))
-                    {
-                        codec.DecodePdu(attempt.Payload)
-                            .Match()
-                            .With<Disassociate>(h => rValue = true)
-                            .Default(msg => rValue = false);
-                    }
-                });
+            if (associationRegistry.LogSnapshot().Last() is WriteAttempt)
+            {
+                var attempt = (WriteAttempt) associationRegistry.LogSnapshot().Last();
+                if (attempt.Sender.Equals(localAddress) && attempt.Recipient.Equals(remoteAddress))
+                    codec.DecodePdu(attempt.Payload)
+                        .Match()
+                        .With<Disassociate>(h => rValue = true)
+                        .Default(msg => rValue = false);
+            }
 
             return rValue;
         }

@@ -1,0 +1,214 @@
+﻿/*
+ * VS 2010 Presentation Template for Sandcastle
+ * (styles for the Syntax code section)
+ *
+ * Based on the MSDN Library Lightweight style.
+ */
+
+/**
+ * Hide othe code than .cs
+ */
+
+.cpp, .vb, .nu, .fs {
+    display: none
+}
+
+pre.libCScode {
+    font-family: Consolas, "Courier New", monospace;
+	white-space:-moz-pre-wrap;
+	word-wrap:break-word;
+	overflow:hidden;
+	margin: 0;
+}
+
+.libCScode .keyword {
+    color: Navy;
+}
+
+
+div.CodeSnippetContainerCode {
+    display: none;
+}
+
+div.CodeSnippetContainerCode.CSharpCode,
+div.CodeSnippetContainerCode.JSharpCode {
+    display: block;
+}
+
+
+div.CodeSnippetContainerTab.CSharpTab {
+    background:white;
+    border-bottom-color:White;
+}
+
+/**
+ * Code snippet window
+ */
+
+.CodeSnippetContainer {
+	clear:both;
+	width:100%;
+	margin-top:20px
+}
+
+div.CodeSnippetContainerTabs {
+	vertical-align:middle;
+	font-family:'Segoe UI', Verdana, Arial;
+	font-size:10pt!important;
+	height:22px;
+	position:relative;
+	z-index:1
+}
+.CodeSnippetContainerTabLeft, .CodeSnippetContainerTabRight, .CodeSnippetContainerTabLeftActive, .CodeSnippetContainerTabRightActive, .CodeSnippetContainerTabRightActiveDisabled, .CodeSnippetContainerTabLeftUnrecognized, .CodeSnippetContainerTabRightUnrecognized, .CodeSnippetContainerTabLeftDisabled, .CodeSnippetContainerTabRightDisabled {
+	width:6px;
+	height:20px;
+	float:left;
+	border-bottom:solid 2px #d0d2d2
+}
+.CodeSnippetContainerTabLeft {
+	background-image:url(../Images/LT_tab.gif)
+}
+.CodeSnippetContainerTabRight {
+	background-image:url(../Images/RT_tab.gif)
+}
+.CodeSnippetContainerTabLeftActive {
+	height:22px;
+	border-bottom:none;
+	background-image:url(../Images/LT_tab_Active.gif)
+}
+.CodeSnippetContainerTabRightActive, .CodeSnippetContainerTabRightActiveDisabled {
+	height:22px;
+	border-bottom:none;
+	background-image:url(../Images/RT_tab_Active.gif)
+}
+.CodeSnippetContainerTabLeftUnrecognized {
+	height:22px;
+	border-bottom:none;
+	background-image:url(../Images/LT_tab_Unrecognized.gif)
+}
+.CodeSnippetContainerTabRightUnrecognized {
+	height:22px;
+	border-bottom:none;
+	background-image:url(../Images/RT_tab_Unrecognized.gif)
+}
+.CodeSnippetContainerTabLeftDisabled {
+	background-image:url(../Images/LT_tab_Disabled.gif)
+}
+.CodeSnippetContainerTabRightDisabled {
+	background-image:url(../Images/RT_tab_Disabled.gif)
+}
+.CodeSnippetContainerTabFirst, .CodeSnippetContainerTab, .CodeSnippetContainerTabUnrecognized, .CodeSnippetContainerTabUnrecognizedNotFirst, .CodeSnippetContainerTabActive, .CodeSnippetContainerTabActiveNotFirst, .CodeSnippetContainerTabDisabled, .CodeSnippetContainerTabDisabledNotFirst, .CodeSnippetContainerTabDisabledActive, .CodeSnippetContainerTabDisabledActiveNotFirst {
+	height:19px;
+	float:left;
+	width:auto;
+	border-top:solid 1px #bbb;
+	border-bottom:solid 2px #d0d2d2;
+	padding:0 12px 0 12px;
+	background:#dfedfe
+}
+.CodeSnippetContainerTabDisabledActive A {
+	FONT-WEIGHT:bold;
+	COLOR:#e66a38;
+	TEXT-DECORATION:none
+}
+.CodeSnippetContainerTabFirst {
+	padding:0 12px 0 6px
+}
+.CodeSnippetContainerTabDisabled, .CodeSnippetContainerTabDisabledNotFirst {
+	background:#dfedfe
+}
+.CodeSnippetContainerTabActive, .CodeSnippetContainerTabActiveNotFirst, .CodeSnippetContainerTabDisabledActive, .CodeSnippetContainerTabDisabledActiveNotFirst {
+	background:#fff;
+	border-bottom:solid 2px #fff
+}
+.CodeSnippetContainerTabUnrecognized {
+	background:#dfedfe;
+	border-bottom:solid 2px #fff
+}
+.CodeSnippetContainerTab, .CodeSnippetContainerTabUnrecognizedNotFirst, .CodeSnippetContainerTabActiveNotFirst, .CodeSnippetContainerTabDisabledNotFirst, .CodeSnippetContainerTabDisabledActiveNotFirst {
+	border-left:solid 1px #929292
+}
+div.CodeSnippetContainerTabUnrecognized a, div.CodeSnippetContainerTabActive a, div.CodeSnippetContainerTabActiveNotFirst a, div.CodeSnippetContainerTabDisabledActiveNotFirst a {
+	color:#e66a38;
+	font-weight:bold;
+	text-decoration:none
+}
+div.CodeSnippetContainerTab a, div.CodeSnippetContainerTab a:link, div.CodeSnippetContainerTab a:visited, div.CodeSnippetContainerTab a:active {
+	color:#2178e0;
+	font-weight:bold;
+	text-decoration:none
+}
+div.CodeSnippetContainerTab a:hover {
+	color:#e66a38
+}
+div.CodeSnippetContainerTabFirst a:link, div.CodeSnippetContainerTabFirst a:visited, div.CodeSnippetContainerTabFirst a:active {
+	color:#2178e0;
+	font-weight:bold;
+	text-decoration:none
+}
+div.CodeSnippetContainerTabFirst a:hover {
+	font-weight:bold;
+	color:#e66a38
+}
+div.CodeSnippetContainerTabDisabled a, div.CodeSnippetContainerTabDisabledNotFirst a {
+	color:#2178e0;
+	text-decoration:none
+}
+div.CodeSnippetContainerTabDisabled a, div.CodeSnippetContainerTabDisabledNotFirst a {
+	color:#2178e0;
+	text-decoration:none
+}
+div.CodeSnippetContainerTabDisabledNotFirst a:hover {
+	color:#e66a38
+}
+.CodeSnippetToolBar {
+	width:auto;
+	height:auto;
+	border-top:solid 3px #e5e5e5;
+	border-left:solid 1px #bbb;
+	border-right:solid 3px #e5e5e5
+}
+.CodeSnippetToolBarText {
+	float:right;
+	top:-10px;
+	position:relative;
+	background-color:#fff;
+	width:auto;
+	margin-right:8px;
+	padding-left:8px;
+	padding-right:8px;
+	height:0;
+	z-index:20
+}
+div.CodeSnippetToolBarText a:link, div.CodeSnippetToolBarText a:visited, div.CodeSnippetToolBarText a:active {
+	margin-left:5px;
+	margin-right:5px;
+	text-decoration:none;
+	color:#2178e0;
+	font-family:'Segoe UI', Verdana, Arial;
+	font-size:10pt;
+	background-color:White
+}
+div.CodeSnippetToolBarText a:hover {
+	margin-left:5px;
+	margin-right:5px;
+	text-decoration:none;
+	color:#e66a38;
+	font-family:'Segoe UI', Verdana, Arial;
+	font-size:10pt
+}
+.CodeSnippetContainerCodeCollection {
+	border-left:solid 1px #bbb;
+	border-bottom:solid 3px #e5e5e5;
+	border-right:solid 3px #e5e5e5;
+	clear:both;
+	margin-bottom:12px;
+	position:relative;
+	top:-3px
+}
+.CodeSnippetContainerCode {
+	font-size:1.1em;
+	padding:0.8em;
+	width:auto;
+	margin:0
+}

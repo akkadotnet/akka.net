@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Akka.Configuration.Hocon;
 
 namespace Akka.Configuration
@@ -12,17 +11,6 @@ namespace Akka.Configuration
         private IEnumerable<HoconSubstitution> _substitutions;
 
 
-        protected Config Copy()
-        {
-            //deep clone
-            return new Config()
-            {
-                _fallback = _fallback != null ? _fallback.Copy() : null,
-                _node = _node,
-                _substitutions = _substitutions
-            };
-        }
-
         public Config()
         {
         }
@@ -32,8 +20,8 @@ namespace Akka.Configuration
             if (root.Value == null)
                 throw new ArgumentNullException("root.Value");
 
-            this._node = root.Value;
-            this._substitutions = root.Substitutions;
+            _node = root.Value;
+            _substitutions = root.Substitutions;
         }
 
         public Config(Config source, Config fallback)
@@ -42,18 +30,35 @@ namespace Akka.Configuration
                 throw new ArgumentNullException("source");
 
             _node = source._node;
-            this._fallback = fallback;
+            _fallback = fallback;
         }
 
         /// <summary>
-        /// Lets the caller know if this root node contains any values
+        ///     Lets the caller know if this root node contains any values
         /// </summary>
-        public bool IsEmpty { get { return _node == null || _node.IsEmpty; } }
+        public bool IsEmpty
+        {
+            get { return _node == null || _node.IsEmpty; }
+        }
 
         /// <summary>
-        /// Returns the root node of this configuration section
+        ///     Returns the root node of this configuration section
         /// </summary>
-        public HoconValue Root { get { return _node; } }
+        public HoconValue Root
+        {
+            get { return _node; }
+        }
+
+        protected Config Copy()
+        {
+            //deep clone
+            return new Config
+            {
+                _fallback = _fallback != null ? _fallback.Copy() : null,
+                _node = _node,
+                _substitutions = _substitutions
+            };
+        }
 
         private HoconValue GetNode(string path)
         {
@@ -244,10 +249,10 @@ namespace Akka.Configuration
             if (fallback == this)
                 throw new ArgumentException("Config can not have itself as fallback", "fallback");
 
-            var clone = this.Copy();
+            Config clone = Copy();
 
-            var current = clone;
-            while(current._fallback != null)
+            Config current = clone;
+            while (current._fallback != null)
             {
                 current = current._fallback;
             }
@@ -259,7 +264,7 @@ namespace Akka.Configuration
 
         public bool HasPath(string path)
         {
-            var value = GetNode(path);
+            HoconValue value = GetNode(path);
             return value != null;
         }
     }

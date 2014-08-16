@@ -3,7 +3,7 @@
 namespace Akka.Configuration.Hocon
 {
     /// <summary>
-    /// Marker interface to make it easier to retrieve Hocon objects for substitutions
+    ///     Marker interface to make it easier to retrieve Hocon objects for substitutions
     /// </summary>
     public interface IMightBeAHoconObject
     {

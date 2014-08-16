@@ -11,15 +11,15 @@ namespace Akka.Configuration.Hocon
         {
             foreach (ConfigurationProperty configurationProperty in Properties)
             {
-                var name = configurationProperty.Name;
+                string name = configurationProperty.Name;
                 if (name == ContentPropertyName)
                 {
-                    var contentString = reader.ReadString();
+                    string contentString = reader.ReadString();
                     base[name] = contentString.Trim();
                 }
                 else
                 {
-                    var attributeValue = reader.GetAttribute(name);
+                    string attributeValue = reader.GetAttribute(name);
                     base[name] = attributeValue;
                 }
             }

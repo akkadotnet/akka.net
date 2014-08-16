@@ -545,14 +545,13 @@ namespace Akka.Remote
 
         protected void FlushWait(object message)
         {
-            message.Match()
-                .With<Terminated>(terminated =>
-                {
-                    //Clear buffer to prevent sending system messages to dead letters -- at this point we are shutting down and
-                    //don't know if they were properly delivered or not
-                    _resendBuffer = new AckedSendBuffer<EndpointManager.Send>(0);
-                    Context.Stop(Self);
-                });
+            if (message is Terminated)
+            {
+                //Clear buffer to prevent sending system messages to dead letters -- at this point we are shutting down and
+                //don't know if they were properly delivered or not
+                _resendBuffer = new AckedSendBuffer<EndpointManager.Send>(0);
+                Context.Stop(Self);
+            }
         }
 
         private void HandleSend(EndpointManager.Send send)
@@ -882,18 +881,17 @@ namespace Akka.Remote
             When(State.Handoff, @event =>
             {
                 State<State, bool> nextState = null;
-                @event.FsmEvent.Match()
-                    .With<Terminated>(terminated =>
-                    {
-                        reader = StartReadEndpoint(_handle);
-                        CurrentStash.UnstashAll();
-                        nextState = GoTo(State.Writing);
-                    })
-                    .Default(msg =>
-                    {
-                        CurrentStash.Stash();
-                        nextState = Stay();
-                    });
+                if (@event.FsmEvent is Terminated)
+                {
+                    reader = StartReadEndpoint(_handle);
+                    CurrentStash.UnstashAll();
+                    nextState = GoTo(State.Writing);
+                }
+                else
+                {
+                    CurrentStash.Stash();
+                    nextState = Stay();
+                }
 
                 return nextState;
             });
