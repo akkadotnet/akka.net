@@ -433,7 +433,7 @@ namespace Akka.Tests.MatchHandler
         {
             var builder = new PartialActionBuilder();
             var delegateArguments = new object[] { "a1", 1, 3.0f, "a4", 5, 6.0f, "a7", 8, 9.0f, "a10", 11, 12f, "a13", 14, 15f,"a16" };
-            intercept<ArgumentException>(() => builder.Build<object>(new CompiledMatchHandlerWithArguments(null, delegateArguments)));
+            Assert.Throws<ArgumentException>(() => ((Action) (() => builder.Build<object>(new CompiledMatchHandlerWithArguments(null, delegateArguments))))());
         }
 
         private static void AssertAreSame(object[] delegateArguments, object[] updatedArgs)

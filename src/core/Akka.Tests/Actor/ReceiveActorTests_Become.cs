@@ -1,4 +1,5 @@
-﻿using Akka.Actor;
+﻿using System;
+using Akka.Actor;
 using Akka.Event;
 using Xunit;
 
@@ -12,23 +13,23 @@ namespace Akka.Tests.Actor
             //Given
             var system = ActorSystem.Create("test");
             var actor = system.ActorOf<BecomeActor>("become");
-            system.EventStream.Subscribe(testActor, typeof(UnhandledMessage));
+            system.EventStream.Subscribe(TestActor, typeof(UnhandledMessage));
 
             //When
-            actor.Tell("BECOME", testActor);    //Switch to state2   
-            actor.Tell("hello", testActor);
-            actor.Tell(4711, testActor);
+            actor.Tell("BECOME", TestActor);    //Switch to state2   
+            actor.Tell("hello", TestActor);
+            actor.Tell(4711, TestActor);
             //Then
-            expectMsg("string2:hello", _defaultTimeout);
-            expectMsg<UnhandledMessage>(m => ((int)m.Message) == 4711 && m.Recipient == actor, _defaultTimeout);
+            ExpectMsg((object) "string2:hello");
+            ExpectMsg<UnhandledMessage>( m => ((int)m.Message) == 4711 && m.Recipient == actor);
 
             //When
-            actor.Tell("BECOME", testActor);    //Switch to state3
-            actor.Tell("hello", testActor);
-            actor.Tell(4711, testActor);
+            actor.Tell("BECOME", TestActor);    //Switch to state3
+            actor.Tell("hello", TestActor);
+            actor.Tell(4711, TestActor);
             //Then
-            expectMsg("string3:hello", _defaultTimeout);
-            expectMsg<UnhandledMessage>(m => ((int)m.Message) == 4711 && m.Recipient == actor, _defaultTimeout);
+            ExpectMsg((object) "string3:hello");
+            ExpectMsg<UnhandledMessage>(m => ((int)m.Message) == 4711 && m.Recipient == actor);
         }
 
         [Fact]
@@ -37,15 +38,15 @@ namespace Akka.Tests.Actor
             //Given
             var system = ActorSystem.Create("test");
             var actor = system.ActorOf<BecomeActor>("become");
-            actor.Tell("BECOME", testActor);    //Switch to state2
-            actor.Tell("BECOME", testActor);    //Switch to state3
+            actor.Tell("BECOME", TestActor);    //Switch to state2
+            actor.Tell("BECOME", TestActor);    //Switch to state3
 
             //When
-            actor.Tell("UNBECOME", testActor);  //Switch back to state2
-            actor.Tell("hello", testActor);
+            actor.Tell("UNBECOME", TestActor);  //Switch back to state2
+            actor.Tell("hello", TestActor);
 
             //Then
-            expectMsg("string2:hello", _defaultTimeout);
+            ExpectMsg((object) "string2:hello");
         }
 
         [Fact]
@@ -56,27 +57,27 @@ namespace Akka.Tests.Actor
             var actor = system.ActorOf<BecomeDirectlyInConstructorActor>("become");
 
             //When
-            actor.Tell("hello", testActor);
+            actor.Tell("hello", TestActor);
             //Then
-            expectMsg("string3:hello", _defaultTimeout);
+            ExpectMsg((object) "string3:hello");
 
             //When
-            actor.Tell("UNBECOME", testActor);  //Switch back to state2
-            actor.Tell("hello", testActor);
+            actor.Tell("UNBECOME", TestActor);  //Switch back to state2
+            actor.Tell("hello", TestActor);
             //Then
-            expectMsg("string2:hello", _defaultTimeout);
+            ExpectMsg((object) "string2:hello");
 
             //When
-            actor.Tell("UNBECOME", testActor);  //Switch back to state1
-            actor.Tell("hello", testActor);
+            actor.Tell("UNBECOME", TestActor);  //Switch back to state1
+            actor.Tell("hello", TestActor);
             //Then
-            expectMsg("string1:hello", _defaultTimeout);
+            ExpectMsg((object) "string1:hello");
 
             //When
-            actor.Tell("UNBECOME", testActor);  //should still be in state1
-            actor.Tell("hello", testActor);
+            actor.Tell("UNBECOME", TestActor);  //should still be in state1
+            actor.Tell("hello", TestActor);
             //Then
-            expectMsg("string1:hello", _defaultTimeout);
+            ExpectMsg((object) "string1:hello");
         }
 
         private class BecomeActor : ReceiveActor

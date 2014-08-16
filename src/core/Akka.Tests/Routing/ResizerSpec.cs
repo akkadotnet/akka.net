@@ -15,7 +15,11 @@ namespace Akka.Tests.Routing
     /// </summary>
     public class ResizerSpec : AkkaSpec
     {
-        protected override string GetConfig()
+        public ResizerSpec() : base(GetConfig())
+        {
+        }
+
+        private static string GetConfig()
         {
             return @"
             akka.actor.serialize-messages = off
@@ -48,8 +52,8 @@ namespace Akka.Tests.Routing
 
             var current = new Routee[]
             {
-                new ActorRefRoutee(System.ActorOf<ResizerTestActor>()),
-                new ActorRefRoutee(System.ActorOf<ResizerTestActor>())
+                new ActorRefRoutee(Sys.ActorOf<ResizerTestActor>()),
+                new ActorRefRoutee(Sys.ActorOf<ResizerTestActor>())
             };
             var c2 = resizer.Capacity(current);
             c2.ShouldBe(0);
@@ -85,15 +89,15 @@ namespace Akka.Tests.Routing
         [Fact]
         public void DefaultResizer_must_be_possible_to_define_programmatically()
         {
-            var latch = new TestLatch(sys, 3);
+            var latch = new TestLatch(Sys, 3);
             var resizer = new DefaultResizer(2, 3);
-            var router = sys.ActorOf(Props.Create<ResizerTestActor>().WithRouter(new RoundRobinPool(0, resizer)));
+            var router = Sys.ActorOf(Props.Create<ResizerTestActor>().WithRouter(new RoundRobinPool(0, resizer)));
 
             router.Tell(latch);
             router.Tell(latch);
             router.Tell(latch);
 
-            latch.Ready(DefaultTimeout);
+            latch.Ready(TestKitSettings.DefaultTimeout);
 
             //messagesPerResize is 10 so there is no risk of additional resize
             (RouteeSize(router)).ShouldBe(2);
@@ -102,14 +106,14 @@ namespace Akka.Tests.Routing
         [Fact]
         public void DefaultResizer_must_be_possible_to_define_in_configuration()
         {
-            var latch = new TestLatch(sys, 3);
-            var router = sys.ActorOf(Props.Create<ResizerTestActor>().WithRouter(new FromConfig()), "router1");
+            var latch = new TestLatch(Sys, 3);
+            var router = Sys.ActorOf(Props.Create<ResizerTestActor>().WithRouter(new FromConfig()), "router1");
 
             router.Tell(latch);
             router.Tell(latch);
             router.Tell(latch);
 
-            latch.Ready(DefaultTimeout);
+            latch.Ready(TestKitSettings.DefaultTimeout);
 
             //messagesPerResize is 10 so there is no risk of additional resize
             (RouteeSize(router)).ShouldBe(2);
@@ -139,11 +143,11 @@ namespace Akka.Tests.Routing
             var resizer = new DefaultResizer(3, 5, pressureThreshold: 1, rampupRate: 0.1d, backoffRate: 0.0d,
                 messagesPerResize: 1, backoffThreshold: 0.0d);
 
-            var router = sys.ActorOf(Props.Create<PressureActor>().WithRouter(new RoundRobinPool(0, resizer)));
+            var router = Sys.ActorOf(Props.Create<PressureActor>().WithRouter(new RoundRobinPool(0, resizer)));
 
             //first message should create the minimum number of routees
-            router.Tell("echo", testActor);
-            expectMsg("reply", TimeSpan.FromSeconds(1));
+            router.Tell("echo", TestActor);
+            ExpectMsg("reply", TimeSpan.FromSeconds(1));
 
             (RouteeSize(router)).ShouldBe(resizer.LowerBound);
 
@@ -151,7 +155,7 @@ namespace Akka.Tests.Routing
             {
                 for (var i = 0; i < loops; i++)
                 {
-                    router.Tell(span, testActor);
+                    router.Tell(span, TestActor);
                     //sending too quickly will result in skipped resize due to many resizeInProgress conflicts
                     Thread.Sleep(TimeSpan.FromMilliseconds(20));
                 }
@@ -159,7 +163,7 @@ namespace Akka.Tests.Routing
                     TimeSpan.FromMilliseconds(span.TotalMilliseconds * loops / resizer.LowerBound) + TimeSpan.FromSeconds(2.5),
                     () =>
                     {
-                        for (var i = 0; i < loops; i++) expectMsg("done");
+                        for (var i = 0; i < loops; i++) ExpectMsg("done");
                         return true;
                     });
             };
@@ -196,7 +200,7 @@ namespace Akka.Tests.Routing
             var resizer = new DefaultResizer(2, 5, pressureThreshold: 1, rampupRate: 1.0d, backoffRate: 1.0d,
                messagesPerResize: 2, backoffThreshold: 0.4d);
 
-            var router = sys.ActorOf(Props.Create<BackoffActor>().WithRouter(new RoundRobinPool(0, resizer)));
+            var router = Sys.ActorOf(Props.Create<BackoffActor>().WithRouter(new RoundRobinPool(0, resizer)));
 
             // put some pressure on the router
             for (var i = 0; i < 15; i++)
@@ -210,20 +214,20 @@ namespace Akka.Tests.Routing
             Thread.Sleep(300);
 
             // let it cool down
-            AwaitCond(() =>
+            AwaitCondition(() =>
             {
                 router.Tell(0); //trigger resize
                 Thread.Sleep(20);
                 return RouteeSize(router) < z;
-            }, TimeSpan.FromMilliseconds(500)).Wait();
+            }, TimeSpan.FromMilliseconds(500));
         }
 
         #region Internal methods
 
         private int RouteeSize(ActorRef router)
         {
-            var routeesTask = router.Ask<Routees>(new GetRoutees(), DefaultTimeout);
-            routeesTask.Wait(DefaultTimeout);
+            var routeesTask = router.Ask<Routees>(new GetRoutees(), TestKitSettings.DefaultTimeout);
+            routeesTask.Wait(TestKitSettings.DefaultTimeout);
             return routeesTask.Result.Members.Count();
         }
 

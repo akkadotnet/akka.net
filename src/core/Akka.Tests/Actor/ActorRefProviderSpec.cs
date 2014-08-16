@@ -16,9 +16,9 @@ namespace Akka.Tests.Actor
         [Fact]
         public void CanResolveActorRef()
         {
-            var path = testActor.Path.ToString();
-            var resolved = ((ActorSystemImpl)sys).Provider.ResolveActorRef(path);
-            Assert.Same(testActor, resolved);
+            var path = TestActor.Path.ToString();
+            var resolved = ((ActorSystemImpl)Sys).Provider.ResolveActorRef(path);
+            Assert.Same(TestActor, resolved);
         }
     }
 }

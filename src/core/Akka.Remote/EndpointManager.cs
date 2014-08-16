@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -659,14 +660,32 @@ namespace Akka.Remote
                         try
                         {
                             var driverType = Type.GetType(transportSettings.TransportClass);
+                            if(driverType==null)
+                                throw new Exception(string.Format("Cannot instantiate transport [{0}]. Cannot find the type.",transportSettings.TransportClass));
+
+                            if(!typeof(Transport.Transport).IsAssignableFrom(driverType))
+                                throw new Exception(string.Format("Cannot instantiate transport [{0}]. It does not implement [{1}].",transportSettings.TransportClass,typeof(Transport.Transport).FullName));
+
+                            var constructorInfo = driverType.GetConstructor(new []{typeof(ActorSystem),typeof(Config)});
+                            if(constructorInfo==null)
+                                throw new Exception(string.Format("Cannot instantiate transport [{0}]. " +
+                                                                          "It has no public constructor with " +
+                                                                          "[{1}] and [{2}] parameters",transportSettings.TransportClass,typeof(ActorSystem).FullName,typeof(Config).FullName));
+
                             // ReSharper disable once AssignNullToNotNullAttribute
                             driver = (Transport.Transport)Activator.CreateInstance(driverType, args);
                         }
                         catch (Exception ex)
                         {
-                            throw new ArgumentException(string.Format("Cannot instantiate transport [{0}]. " +
-                                                                      "Make sure it extends [Akka.Remote.Transport.Transport and has constructor with " +
-                                                                      "[Akka.Actor.ActorSystem] and [Akka.Configuration.Config] parameters", transportSettings.TransportClass), ex);
+                            var ei = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex);
+                            var task = new Task<List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>>>(() =>
+                            {
+                                ei.Throw();
+                                return null;
+                            });
+                            task.RunSynchronously();
+                            _listens = task;
+                            return _listens;
                         }
 
                         //Iteratively decorates the bottom level driver with a list of adapters

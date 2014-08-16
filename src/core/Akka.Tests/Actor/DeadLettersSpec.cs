@@ -1,4 +1,5 @@
-﻿using Akka.TestKit;
+﻿using Akka.Actor;
+using Akka.TestKit;
 using Xunit;
 using Akka.Event;
 using System;
@@ -16,14 +17,9 @@ namespace Akka.Tests
         [Fact]
         public void CanSendMessagesToDeadLetters()
         {
-            sys.EventStream.Subscribe(testActor, typeof(DeadLetter));
-            sys.DeadLetters.Tell("foobar");
-            var envelope = queue.Take();
-            var message = envelope.Message;
-            Assert.IsType<DeadLetter>(message);
-            var deadLetter = (DeadLetter)message;
-            var payload = (string)deadLetter.Message;
-            Assert.Equal("foobar", payload);
+            Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
+            Sys.DeadLetters.Tell("foobar");
+            ExpectMsg<DeadLetter>(deadLetter=>deadLetter.Message.Equals("foobar"));
         }
     }
 }

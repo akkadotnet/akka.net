@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 
 namespace Akka.Configuration.Hocon
 {
@@ -178,42 +179,57 @@ namespace Akka.Configuration.Hocon
             return GetArray() != null;
         }
 
-        //TODO: implement this
-        public TimeSpan GetMillisDuration()
+        public TimeSpan GetMillisDuration(bool allowInfinite = true)
         {
             string res = GetString();
             if (res.EndsWith("ms"))
+            //TODO: Add support for ns, us, and non abbreviated versions (second, seconds and so on) see https://github.com/typesafehub/config/blob/master/HOCON.md#duration-format
             {
-                string v = res.Substring(0, res.Length - 2);
-                return TimeSpan.FromMilliseconds(double.Parse(v, NumberFormatInfo.InvariantInfo));
+                var v = res.Substring(0, res.Length - 2);
+                return TimeSpan.FromMilliseconds(ParsePositiveValue(v));
             }
             if (res.EndsWith("s"))
             {
-                string v = res.Substring(0, res.Length - 1);
-                return TimeSpan.FromSeconds(double.Parse(v, NumberFormatInfo.InvariantInfo));
+                var v = res.Substring(0, res.Length - 1);
+                return TimeSpan.FromSeconds(ParsePositiveValue(v));
             }
-
-            if (res.EndsWith("m"))
+            if(res.EndsWith("m"))
             {
-                string v = res.Substring(0, res.Length - 1);
-                return TimeSpan.FromMinutes(double.Parse(v, NumberFormatInfo.InvariantInfo));
+                var v = res.Substring(0, res.Length - 1);
+                return TimeSpan.FromMinutes(ParsePositiveValue(v));
             }
-
+            if(res.EndsWith("h"))
+            {
+                var v = res.Substring(0, res.Length - 1);
+                return TimeSpan.FromHours(ParsePositiveValue(v));
+            }
             if (res.EndsWith("d"))
             {
-                string v = res.Substring(0, res.Length - 1);
-                return TimeSpan.FromDays(double.Parse(v, NumberFormatInfo.InvariantInfo));
+                var v = res.Substring(0, res.Length - 1);
+                return TimeSpan.FromDays(ParsePositiveValue(v));
+            }
+            if(allowInfinite && res.Equals("infinite", StringComparison.OrdinalIgnoreCase))  //Not in Hocon spec
+            {
+                return Timeout.InfiniteTimeSpan;
             }
 
-            return TimeSpan.FromSeconds(double.Parse(res, NumberFormatInfo.InvariantInfo));
+            return TimeSpan.FromMilliseconds(ParsePositiveValue(res));
+        }
+
+        private static double ParsePositiveValue(string v)
+        {
+            var value = double.Parse(v, NumberFormatInfo.InvariantInfo);
+            if(value < 0)
+                throw new FormatException("Expected a positive value instead of " + value);
+            return value;
         }
 
         public long? GetByteSize()
         {
-            string res = GetString();
+            var res = GetString();
             if (res.EndsWith("b"))
             {
-                string v = res.Substring(0, res.Length - 1);
+                var v = res.Substring(0, res.Length - 1);
                 return long.Parse(v);
             }
 
@@ -246,10 +262,8 @@ namespace Akka.Configuration.Hocon
 
         private string QuoteIfNeeded(string text)
         {
-            if (text == null)
-                return null;
-
-            if (text.ToCharArray().Intersect(" \t".ToCharArray()).Any())
+            if(text == null) return "";
+            if(text.ToCharArray().Intersect(" \t".ToCharArray()).Any())
             {
                 return "\"" + text + "\"";
             }

@@ -61,21 +61,21 @@ namespace Akka.Tests.Actor
         [Fact]
         public void CanAskActor()
         {
-            var actor = sys.ActorOf<SomeActor>();
+            var actor = Sys.ActorOf<SomeActor>();
             actor.Ask<string>("answer").Result.ShouldBe("answer");
         }
 
         [Fact]
         public void CanAskActorWithTimeout()
         {
-            var actor = sys.ActorOf<SomeActor>();
+            var actor = Sys.ActorOf<SomeActor>();
             actor.Ask<string>("answer",TimeSpan.FromSeconds(10)).Result.ShouldBe("answer");
         }
 
         [Fact]
         public void CanGetTimeoutWhenAskingActor()
         {
-            var actor = sys.ActorOf<SomeActor>();
+            var actor = Sys.ActorOf<SomeActor>();
             Assert.Throws<AggregateException>(() => { actor.Ask<string>("timeout", TimeSpan.FromSeconds(3)).Wait(); });
         }
 
@@ -86,10 +86,10 @@ namespace Akka.Tests.Actor
         [Fact]
         public void CanAskActorInsideReceiveLoop()
         {
-            var replyActor = sys.ActorOf<ReplyActor>();
-            var waitActor = sys.ActorOf(Props.Create(() => new WaitActor(replyActor, testActor)));
+            var replyActor = Sys.ActorOf<ReplyActor>();
+            var waitActor = Sys.ActorOf(Props.Create(() => new WaitActor(replyActor, TestActor)));
             waitActor.Tell("ask");
-            expectMsg("bar");
+            ExpectMsg("bar");
         }
     }
 }

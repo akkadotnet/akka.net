@@ -8,7 +8,6 @@ namespace Akka.Tests.Actor
     
     public class ActorBecomeTests : AkkaSpec
     {
-        private static readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(2);
 
         [Fact]
         public void When_calling_become_Then_the_new_handler_is_used()
@@ -19,11 +18,11 @@ namespace Akka.Tests.Actor
             var actor = system.ActorOf<BecomeActor>("become");
 
             //When
-            actor.Tell("DEFAULTBECOME", testActor);
-            actor.Tell("hello", testActor);
+            actor.Tell("DEFAULTBECOME", TestActor);
+            actor.Tell("hello", TestActor);
 
             //Then
-            expectMsg("2:hello", _defaultTimeout);
+            ExpectMsg("2:hello");
         }
 
 
@@ -37,19 +36,19 @@ namespace Akka.Tests.Actor
             var system = ActorSystem.Create("test");
             var actor = system.ActorOf<Become2Actor>("become"); 
             //Now OnReceive is used
-            actor.Tell("DEFAULTBECOME", testActor);
+            actor.Tell("DEFAULTBECOME", TestActor);
             //Now OnReceive2 is used
-            actor.Tell("DEFAULTBECOME", testActor);
+            actor.Tell("DEFAULTBECOME", TestActor);
             //Now OnReceive3 is used
 
             //When
-            actor.Tell("UNBECOME", testActor);
+            actor.Tell("UNBECOME", TestActor);
             //Since we used the default Become(receive) above, i.e. Become(receive, discardOld:true)
             //the OnReceive2 was overwritten, so the actor will revert to the default one, ie OnReceive
-            actor.Tell("hello", testActor);
+            actor.Tell("hello", TestActor);
 
             //Then
-            expectMsg("1:hello", _defaultTimeout);
+            ExpectMsg("1:hello");
         }
 
 
@@ -63,18 +62,18 @@ namespace Akka.Tests.Actor
             var system = ActorSystem.Create("test");
             var actor = system.ActorOf<Become2Actor>("become");
             //Now OnReceive is used
-            actor.Tell("BECOMESTACKED", testActor);
+            actor.Tell("BECOMESTACKED", TestActor);
             //Now OnReceive2 is used
-            actor.Tell("BECOMESTACKED", testActor);
+            actor.Tell("BECOMESTACKED", TestActor);
             //Now OnReceive3 is used, and OnReceive2 was persisted
 
             //When
-            actor.Tell("UNBECOME", testActor);
+            actor.Tell("UNBECOME", TestActor);
             //Since we used Become(receive, discardOld:true) the actor will revert to OnReceive2
-            actor.Tell("hello", testActor);
+            actor.Tell("hello", TestActor);
 
             //Then
-            expectMsg("2:hello", _defaultTimeout);
+            ExpectMsg("2:hello");
         }
 
         private class BecomeActor : UntypedActor

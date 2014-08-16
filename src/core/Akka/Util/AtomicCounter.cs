@@ -51,6 +51,15 @@ namespace Akka.Util
         }
 
         /// <summary>
+        /// Increments the counter and returns the new value
+        /// </summary>
+        public int IncrementAndGet()
+        {
+            var nextValue = Next;
+            return nextValue;
+        }
+
+        /// <summary>
         /// Returns the current value and adds the specified value to the counter.
         /// </summary>
         /// <param name="amount"></param>
@@ -59,6 +68,18 @@ namespace Akka.Util
         {
             var newValue=Interlocked.Add(ref _value, amount);
             return newValue-amount;
+        }
+
+
+        /// <summary>
+        /// Adds the specified value to the counter and returns the new value
+        /// </summary>
+        /// <param name="amount"></param>
+        /// <returns></returns>
+        public int AddAndGet(int amount)
+        {
+            var newValue = Interlocked.Add(ref _value, amount);
+            return newValue;
         }
     }
 }

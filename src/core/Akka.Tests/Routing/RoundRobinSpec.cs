@@ -38,25 +38,25 @@ namespace Akka.Tests.Routing
         public void RoundRobin_must_be_able_to_shut_down_its_instance()
         {
             const int routeeCount = 7;
-            var testLatch = new TestLatch(sys, routeeCount);
-            var router = sys.ActorOf(new RoundRobinPool(routeeCount).Props(Props.Create(() => new HelloWorldActor(testLatch))));
-            router.Tell("hello", testActor);
-            router.Tell("hello", testActor);
-            router.Tell("hello", testActor);
-            router.Tell("hello", testActor);
-            router.Tell("hello", testActor);
+            var testLatch = new TestLatch(Sys, routeeCount);
+            var router = Sys.ActorOf(new RoundRobinPool(routeeCount).Props(Props.Create(() => new HelloWorldActor(testLatch))));
+            router.Tell("hello", TestActor);
+            router.Tell("hello", TestActor);
+            router.Tell("hello", TestActor);
+            router.Tell("hello", TestActor);
+            router.Tell("hello", TestActor);
 
             Within(TimeSpan.FromSeconds(2), () =>
             {
-                expectMsg("world");
-                expectMsg("world");
-                expectMsg("world");
-                expectMsg("world");
-                expectMsg("world");
+                ExpectMsg("world");
+                ExpectMsg("world");
+                ExpectMsg("world");
+                ExpectMsg("world");
+                ExpectMsg("world");
                 return true;
             });
 
-            sys.Stop(router);
+            Sys.Stop(router);
             testLatch.Ready(TimeSpan.FromSeconds(5));
         }
     }

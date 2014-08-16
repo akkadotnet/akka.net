@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Akka.Actor;
 using Akka.Remote.Transport;
 using Akka.TestKit;
@@ -16,8 +17,8 @@ namespace Akka.Remote.Tests.Transport{
         protected Address addressB = new Address("test", "testsystemB", "testhostB", 5432);
         protected Address nonExistantAddress = new Address("test", "nosystem", "nohost", 0);
 
-        public ActorRef Self { get { return testActor; } }
-
+        public ActorRef Self { get { return TestActor; } }
+        private TimeSpan DefaultTimeout { get { return Dilated(TestKitSettings.DefaultTimeout); } }
         #endregion
 
         #region Tests
@@ -66,7 +67,7 @@ namespace Akka.Remote.Tests.Transport{
             Assert.True(ready);
 
             transportA.Associate(addressB);
-            expectMsgPF<AssociationHandle>(DefaultTimeout, "Expect InboundAssociation from A",
+            ExpectMsgPf<AssociationHandle>(DefaultTimeout, "Expect InboundAssociation from A",
                 m => m.AsInstanceOf<InboundAssociation>().Association);
 
             //assert
@@ -88,7 +89,7 @@ namespace Akka.Remote.Tests.Transport{
             result.Result.Item2.SetResult(new ActorAssociationEventListener(Self));
 
             //assert
-            intercept<InvalidAssociationException>(() =>
+            XAssert.Throws<InvalidAssociationException>(() =>
             {
                 var associateTask = transportA.Associate(nonExistantAddress);
                 associateTask.Wait(DefaultTimeout);
@@ -119,7 +120,7 @@ namespace Akka.Remote.Tests.Transport{
             Assert.True(ready);
 
             var associate = transportA.Associate(addressB);
-            var handleB = expectMsgPF<AssociationHandle>(DefaultTimeout, "Expect InboundAssociation from A", o =>
+            var handleB = ExpectMsgPf<AssociationHandle>(DefaultTimeout, "Expect InboundAssociation from A", o =>
             {
                 var handle = o as InboundAssociation;
                 if (handle != null && handle.Association.RemoteAddress.Equals(addressA)) return handle.Association;
@@ -141,7 +142,7 @@ namespace Akka.Remote.Tests.Transport{
             handleA.Write(akkaPDU);
 
             //assert
-            expectMsgPF(DefaultTimeout, "Expect InboundPayload from A", o =>
+            ExpectMsgPf(DefaultTimeout, "Expect InboundPayload from A", o =>
             {
                 var payload = o as InboundPayload;
                 if (payload != null && payload.Payload.Equals(akkaPDU)) return akkaPDU;
@@ -176,7 +177,7 @@ namespace Akka.Remote.Tests.Transport{
             Assert.True(ready);
 
             var associate = transportA.Associate(addressB);
-            var handleB = expectMsgPF<AssociationHandle>(DefaultTimeout, "Expect InboundAssociation from A", o =>
+            var handleB = ExpectMsgPf<AssociationHandle>(DefaultTimeout, "Expect InboundAssociation from A", o =>
             {
                 var handle = o as InboundAssociation;
                 if (handle != null && handle.Association.RemoteAddress.Equals(addressA)) return handle.Association;
@@ -195,7 +196,7 @@ namespace Akka.Remote.Tests.Transport{
 
             handleA.Disassociate();
 
-            var msg = expectMsgPF(DefaultTimeout, "Expected Disassociated", o => o.AsInstanceOf<Disassociated>());
+            var msg = ExpectMsgPf(DefaultTimeout, "Expected Disassociated", o => o.AsInstanceOf<Disassociated>());
 
             //assert
             Assert.NotNull(msg);

@@ -14,15 +14,15 @@ namespace Akka.Tests.Routing
         public void Listener_must_listen_in()
         {
             //arrange
-            var fooLatch = new TestLatch(sys, 2);
-            var barLatch = new TestLatch(sys, 2);
+            var fooLatch = new TestLatch(Sys, 2);
+            var barLatch = new TestLatch(Sys, 2);
             var barCount = new AtomicCounter(0);
 
-            var broadcast = sys.ActorOf<BroadcastActor>();
+            var broadcast = Sys.ActorOf<BroadcastActor>();
             var newListenerProps = Props.Create(() => new ListenerActor(fooLatch, barLatch, barCount));
-            var a1 = sys.ActorOf(newListenerProps);
-            var a2 = sys.ActorOf(newListenerProps);
-            var a3 = sys.ActorOf(newListenerProps);
+            var a1 = Sys.ActorOf(newListenerProps);
+            var a2 = Sys.ActorOf(newListenerProps);
+            var a3 = Sys.ActorOf(newListenerProps);
 
             //act
             broadcast.Tell(new Listen(a1));
@@ -41,7 +41,7 @@ namespace Akka.Tests.Routing
             fooLatch.Ready(TestLatch.DefaultTimeout);
             foreach (var actor in new[] {a1, a2, a3, broadcast})
             {
-                System.Stop(actor);
+                Sys.Stop(actor);
             }
         }
 

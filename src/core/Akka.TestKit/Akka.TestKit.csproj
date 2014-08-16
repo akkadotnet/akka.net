@@ -56,9 +56,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="xunit">
-      <HintPath>..\..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <Choose>
     <When Condition="('$(VisualStudioVersion)' == '10.0' or '$(VisualStudioVersion)' == '') and '$(TargetFrameworkVersion)' == 'v3.5'">
@@ -69,13 +66,18 @@
     <Otherwise />
   </Choose>
   <ItemGroup>
-    <Compile Include="AkkaSpec.cs" />
-    <Compile Include="AkkaSpecExtensions.cs" />
+    <Compile Include="..\..\SharedAssemblyInfo.cs">
+      <Link>Properties\SharedAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="CallingThreadDispatcher.cs" />
     <Compile Include="FSMSpecHelpers.cs" />
     <Compile Include="AutoPilots.cs" />
     <Compile Include="ImplicitSender.cs" />
-    <Compile Include="Internals\TestActor.cs" />
+    <Compile Include="Internals\BlockingCollectionTestActorQueue.cs" />
+    <Compile Include="Internals\InternalTestActor.cs" />
+    <Compile Include="Internals\ITestActorQueue.cs" />
+    <Compile Include="Internals\TimeSpanExtensions.cs" />
+    <Compile Include="TestKitAssertions.cs" />
     <Compile Include="MessageEnvelope.cs" />
     <Compile Include="NullMessageEnvelope.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -83,7 +85,15 @@
     <Compile Include="TestActor.cs" />
     <Compile Include="TestActorRef.cs" />
     <Compile Include="TestEvents.cs" />
+    <Compile Include="TestKitAssertionsExtension.cs" />
+    <Compile Include="TestKitAssertionsProvider.cs" />
     <Compile Include="TestKitBase.cs" />
+    <Compile Include="TestKitBase_Obsolete.cs" />
+    <Compile Include="TestKitBase_AwaitAssert.cs" />
+    <Compile Include="TestKitBase_Expect.cs" />
+    <Compile Include="TestKitBase_Within.cs" />
+    <Compile Include="TestKitBase_Receive.cs" />
+    <Compile Include="TestKitBase_AwaitConditions.cs" />
     <Compile Include="TestKitExtension.cs" />
     <Compile Include="TestKitSettings.cs" />
     <Compile Include="TestLatch.cs" />
@@ -94,6 +104,9 @@
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Internals\Reference.conf" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

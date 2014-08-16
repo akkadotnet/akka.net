@@ -73,7 +73,8 @@ namespace Akka.Remote
 
                     addressPromise.Task.Wait(Provider.RemoteSettings.StartupTimeout);
                     var akkaProtocolTransports = addressPromise.Task.Result;
-
+                    if(akkaProtocolTransports.Count==0)
+                        throw new Exception("No transports enabled");
                     Addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address));
                     //   this.transportMapping = akkaProtocolTransports
                     //       .ToDictionary(p => p.ProtocolTransport.Transport.SchemeIdentifier,);

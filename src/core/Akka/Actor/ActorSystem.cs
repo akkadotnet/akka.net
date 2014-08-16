@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor.Internals;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -141,6 +142,43 @@ namespace Akka.Actor
         /// </summary>
         public abstract void Shutdown();
 
+        /// <summary>
+        /// Returns a task that will be completed when the system has terminated.
+        /// </summary>
+        public abstract Task TerminationTask { get; }
+
+        /// <summary>
+        /// Block current thread until the system has been shutdown.
+        /// This will block until after all on termination callbacks have been run.
+        /// </summary>
+        public abstract void AwaitTermination();
+
+        /// <summary>
+        /// Block current thread until the system has been shutdown, or the specified
+        /// timeout has elapsed. 
+        /// This will block until after all on termination callbacks have been run.
+        /// <para>Returns <c>true</c> if the system was shutdown during the specified time;
+        /// <c>false</c> if it timed out.</para>
+        /// </summary>
+        /// <param name="timeout">The timeout.</param>
+        /// <returns>Returns <c>true</c> if the system was shutdown during the specified time;
+        /// <c>false</c> if it timed out.</returns>
+        public abstract bool AwaitTermination(TimeSpan timeout);
+
+        /// <summary>
+        /// Block current thread until the system has been shutdown, or the specified
+        /// timeout has elapsed, or the cancellationToken was canceled. 
+        /// This will block until after all on termination callbacks have been run.
+        /// <para>Returns <c>true</c> if the system was shutdown during the specified time;
+        /// <c>false</c> if it timed out, or the cancellationToken was canceled. </para>
+        /// </summary>
+        /// <param name="timeout">The timeout.</param>
+        /// <param name="cancellationToken">A cancellation token that cancels the wait operation.</param>
+        /// <returns>Returns <c>true</c> if the system was shutdown during the specified time;
+        /// <c>false</c> if it timed out, or the cancellationToken was canceled. </returns>
+        public abstract bool AwaitTermination(TimeSpan timeout, CancellationToken cancellationToken);
+
+
         public abstract void Stop(ActorRef actor);
         private bool _isDisposed; //Automatically initialized to false;
 
@@ -204,6 +242,10 @@ namespace Akka.Actor
         /// Block and prevent the main application thread from exiting unless
         /// the actor system is shut down.
         /// </summary>
-        public abstract void WaitForShutdown();
+        [Obsolete("Use AwaitTermination instead")]
+        public void WaitForShutdown()
+        {
+            AwaitTermination();
+        }
     }
 }

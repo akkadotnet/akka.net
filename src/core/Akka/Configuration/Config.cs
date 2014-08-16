@@ -227,13 +227,13 @@ namespace Akka.Configuration
             return value;
         }
 
-        public TimeSpan GetMillisDuration(string path, TimeSpan? @default = null)
+        public TimeSpan GetMillisDuration(string path, TimeSpan? @default = null, bool allowInfinite = true)
         {
             HoconValue value = GetNode(path);
             if (value == null)
                 return @default.GetValueOrDefault();
 
-            return value.GetMillisDuration();
+            return value.GetMillisDuration(allowInfinite);
         }
 
         public override string ToString()
@@ -266,6 +266,34 @@ namespace Akka.Configuration
         {
             HoconValue value = GetNode(path);
             return value != null;
+        }
+
+        public static Config operator +(Config config, string fallback)
+        {
+            var fallbackConfig = ConfigurationFactory.ParseString(fallback);
+            return config.WithFallback(fallbackConfig);
+        }
+
+        public static Config operator +(string configHocon, Config fallbackConfig)
+        {
+            var config = ConfigurationFactory.ParseString(configHocon);
+            return config.WithFallback(fallbackConfig);
+        }
+
+        public static implicit operator Config(string str)
+        {
+            var config = ConfigurationFactory.ParseString(str);
+            return config;
+        }
+    }
+
+    public static class ConfigExtensions
+    {
+        public static Config SafeWithFallback(this Config config, Config fallback)
+        {
+            return config == null ? fallback 
+                : ReferenceEquals(config,fallback) ? config 
+                : config.WithFallback(fallback);
         }
     }
 }

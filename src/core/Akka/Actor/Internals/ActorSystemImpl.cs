@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -18,13 +19,6 @@ namespace Akka.Actor.Internals
     {
         private ActorRef _logDeadLetterListener;
         private readonly ConcurrentDictionary<Type, object> _extensions = new ConcurrentDictionary<Type, object>();
-        /// <summary>
-        /// A wait handle that an Akka.NET client or server can wait on until the actor system is shut down.
-        /// 
-        /// Designed to make it easy for developers to build applications that can block the main application thread
-        /// from exiting while the system runs, particularly inside console applications.
-        /// </summary>
-        private ManualResetEvent _systemWaitHandle = new ManualResetEvent(false); //unsignaled
 
         private LoggingAdapter _log;
         private ActorRefProvider _provider;
@@ -284,7 +278,32 @@ namespace Akka.Actor.Internals
         public override void Shutdown()
         {
             _provider.Guardian.Stop();
-            _systemWaitHandle.Set(); //signal that the actorsystem is being shut down
+        }
+
+
+        public override Task TerminationTask { get { return _provider.TerminationTask; } }
+
+        public override void AwaitTermination()
+        {
+            AwaitTermination(Timeout.InfiniteTimeSpan, CancellationToken.None);
+        }
+
+        public override bool AwaitTermination(TimeSpan timeout)
+        {
+            return AwaitTermination(timeout, CancellationToken.None);
+        }
+
+        public override bool AwaitTermination(TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return _provider.TerminationTask.Wait((int) timeout.TotalMilliseconds, cancellationToken);
+            }
+            catch(OperationCanceledException)
+            {
+                //The cancellationToken was canceled.
+                return false;
+            }
         }
 
         public override void Stop(ActorRef actor)
@@ -299,11 +318,6 @@ namespace Akka.Actor.Internals
                 ((InternalActorRef)actor).Stop();
         }
 
-
-        public override void WaitForShutdown()
-        {
-            _systemWaitHandle.WaitOne();
-        }
 
     }
 }

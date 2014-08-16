@@ -14,9 +14,7 @@ namespace Akka.Remote.Tests
     
     public class RemotingSpec : AkkaSpec
     {
-        #region Setup / Config
-
-        public RemotingSpec()
+        public RemotingSpec():base(GetConfig())
         {
             var c1 = ConfigurationFactory.ParseString(GetConfig());
             var c2 = ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
@@ -25,14 +23,14 @@ namespace Akka.Remote.Tests
             var conf = c2.WithFallback(c1);  //ConfigurationFactory.ParseString(GetOtherRemoteSysConfig());
 
             remoteSystem = ActorSystem.Create("remote-sys", conf);
-            Deploy(sys, new Deploy(@"/gonk", new RemoteScope(Addr(remoteSystem, "tcp"))));
-            Deploy(sys, new Deploy(@"/zagzag", new RemoteScope(Addr(remoteSystem, "udp"))));
+            Deploy(Sys, new Deploy(@"/gonk", new RemoteScope(Addr(remoteSystem, "tcp"))));
+            Deploy(Sys, new Deploy(@"/zagzag", new RemoteScope(Addr(remoteSystem, "udp"))));
 
             remote = remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
-            here = sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
+            here = Sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
         }
 
-        protected override string GetConfig()
+        private static string GetConfig()
         {
             return @"
             common-helios-settings {
@@ -129,15 +127,13 @@ namespace Akka.Remote.Tests
         private ICanTell here;
 
 
-
-        
-        public override void Dispose()
+        protected override void AfterTest()
         {
             remoteSystem.Shutdown();
             AssociationRegistry.Clear();
+            base.AfterTest();
         }
 
-        #endregion
 
         #region Tests
 
@@ -145,8 +141,8 @@ namespace Akka.Remote.Tests
         [Fact(Skip = "Fails on buildserver")]
         public void Remoting_must_support_remote_lookups()
         {
-            here.Tell("ping", testActor);
-            expectMsg(Tuple.Create("pong", testActor), TimeSpan.FromSeconds(1.5));
+            here.Tell("ping", TestActor);
+            ExpectMsg(Tuple.Create("pong", TestActor), TimeSpan.FromSeconds(1.5));
         }
 
         [Fact(Skip = "Fails on buildserver")]
@@ -164,7 +160,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_must_create_and_supervise_children_on_remote_Node()
         {
-            var r = sys.ActorOf<Echo1>("blub");
+            var r = Sys.ActorOf<Echo1>("blub");
             Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/blub", r.Path.ToString());
         }
 
@@ -176,8 +172,8 @@ namespace Akka.Remote.Tests
         {
             get
             {
-                var byteSize = sys.Settings.Config.GetByteSize("akka.remote.test.maximum-payload-bytes");
-                if (byteSize != null)
+                var byteSize = Sys.Settings.Config.GetByteSize("akka.remote.test.maximum-payload-bytes");
+        if (byteSize != null)
                     return (int)byteSize.Value;
                 return 0;
             }
@@ -220,20 +216,20 @@ namespace Akka.Remote.Tests
                 bigBounceId);
 
             var bigBounceHere =
-                sys.ActorSelection(string.Format("akka.test://remote-sys@localhost:12346/user/{0}", bigBounceId));
-            var eventForwarder = sys.ActorOf(Props.Create(() => new Forwarder(testActor)).WithDeploy(Actor.Deploy.Local));
-            sys.EventStream.Subscribe(eventForwarder, typeof(AssociationErrorEvent));
-            sys.EventStream.Subscribe(eventForwarder, typeof(DisassociatedEvent));
+                Sys.ActorSelection(string.Format("akka.test://remote-sys@localhost:12346/user/{0}", bigBounceId));
+            var eventForwarder = Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)).WithDeploy(Actor.Deploy.Local));
+            Sys.EventStream.Subscribe(eventForwarder, typeof(AssociationErrorEvent));
+            Sys.EventStream.Subscribe(eventForwarder, typeof(DisassociatedEvent));
             try
             {
-                bigBounceHere.Tell(msg, testActor);
+                bigBounceHere.Tell(msg, TestActor);
                 afterSend();
-                expectNoMsg(TimeSpan.FromMilliseconds(500));
+                ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             }
             finally
             {
-                sys.EventStream.Unsubscribe(eventForwarder, typeof(AssociationErrorEvent));
-                sys.EventStream.Unsubscribe(eventForwarder, typeof(DisassociatedEvent));
+                Sys.EventStream.Unsubscribe(eventForwarder, typeof(AssociationErrorEvent));
+                Sys.EventStream.Unsubscribe(eventForwarder, typeof(DisassociatedEvent));
                 eventForwarder.Tell(PoisonPill.Instance);
                 bigBounceOther.Tell(PoisonPill.Instance);
             }

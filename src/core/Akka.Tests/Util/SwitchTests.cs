@@ -44,7 +44,7 @@ namespace Akka.Tests.Util
         public void Given_OffSwitch_When_SwitchOn_throws_exception_Then_Should_revert()
         {
             var s = new Switch(false);
-            intercept<InvalidOperationException>(() => s.SwitchOn(() => { throw new InvalidOperationException(); }));
+            XAssert.Throws<InvalidOperationException>(() => s.SwitchOn(() => { throw new InvalidOperationException(); }));
             Assert.True(s.IsOff);
             Assert.False(s.IsOn);
         }
@@ -54,7 +54,7 @@ namespace Akka.Tests.Util
         public void Given_OnSwitch_When_SwitchOff_throws_exception_Then_Should_revert()
         {
             var s = new Switch(true);
-            intercept<InvalidOperationException>(() => s.SwitchOff(() => { throw new InvalidOperationException(); }));
+            XAssert.Throws<InvalidOperationException>(() => s.SwitchOff(() => { throw new InvalidOperationException(); }));
             Assert.True(s.IsOn);
             Assert.False(s.IsOff);
         }

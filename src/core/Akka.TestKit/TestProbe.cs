@@ -1,72 +1,79 @@
 ﻿using System.Threading;
 using System;
-using System.Collections.Concurrent;
 using Akka.Actor;
 using Akka.Util;
-using Xunit;
 
 namespace Akka.TestKit
 {
-    public class TestProbeActorRef : ActorRef
+    /// <summary>
+    /// TestKit-based probe which allows sending, reception and reply.
+    /// </summary>
+    public class TestProbe : TestKitBase
     {
-        public static AtomicCounter TestActorId = new AtomicCounter(0);
-
-        private readonly TestProbe _owner;
-        private readonly ActorPath _path=new RootActorPath(Address.AllSystems,"/TestProbe" + TestActorId.GetAndIncrement());
-
-        public TestProbeActorRef(TestProbe owner)
+        [Obsolete("Use TestKit.CreateTestProbe() instead!")]
+        public TestProbe():base(null,null)
         {
-            _owner = owner;
+            throw new NotSupportedException("TestProbes must be created via Testkit.CreateTestProbe()");    
         }
 
-        public override ActorPath Path
+        public TestProbe(ActorSystem system, TestKitAssertions assertions)
+            : base(assertions, system)
         {
-            get { return _path; }
         }
 
-        protected override void TellInternal(object message, ActorRef sender)
+        /// <summary>Gets the reference of this probe.</summary>
+        public ActorRef Ref { get { return TestActor; } }
+
+        /// <summary>Gets the sender of the last message</summary>
+        public ActorRef Sender { get { return LastSender; } }
+
+        /// <summary>
+        /// Send message to an actor while using the probe as the sender.
+        /// Replies will be available for inspection with all of TestKit's assertion
+        /// methods.
+        /// </summary>
+        /// <param name="actor">The actor.</param>
+        /// <param name="message">The message.</param>
+        public void Send(ActorRef actor, object message)
         {
-            _owner.Tell(message, sender);
-        }        
-    }
-    public class TestProbe
-    {
-        private BlockingCollection<object> queue = new BlockingCollection<object>();
-        public TestProbe()
-        {
-            this.Ref = new TestProbeActorRef(this);
+            actor.Tell(message, TestActor);
         }
 
-        public ActorRef Ref { get;private set; }
 
-        public void expectMsg(object expected)
+        /// <summary>
+        /// Forwards a message to the specified actor. As sender the sender of the last message is used.
+        /// </summary>
+        /// <param name="actor">The actor to forward to.</param>
+        /// <param name="message">The message.</param>
+        public void Forward(ActorRef actor, object message)
         {
-            var res = queue.Take();
-            Assert.Equal(expected, res);
+            actor.Tell(message, Sender);
         }
 
-        public void Tell(object message, ActorRef sender)
+        /// <summary>
+        /// Forwards the last received message to the specified actor as if the 
+        /// <see cref="TestKitBase.LastMessage"/> was sent directly to the actor in the first place.
+        /// </summary>
+        /// <param name="actor">The actor to forward to.</param>
+        public void Forward(ActorRef actor)
         {
-            queue.Add(message);
+            actor.Tell(LastMessage, Sender);
         }
 
-        public void expectNoMsg(TimeSpan duration)
+
+        /// <summary>
+        /// Send message to the sender of the last received message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public void Reply(object message)
         {
-            object res;
-            if (queue.TryTake(out res,duration))
-            {
-                Assert.True(false, "Did not expect a message during the duration " + duration.ToString());
-            }
+            Sender.Tell(message,TestActor);
         }
 
-        public Terminated ExpectTerminated(TimeSpan timeout)
+        protected override TestProbe CreateTestProbe()
         {
-            var cancellationTokenSource = new CancellationTokenSource((int)timeout.TotalMilliseconds);
-            var actual = queue.Take(cancellationTokenSource.Token);
-
-            Assert.True(actual is Terminated);
-
-            return (Terminated)actual;
+            throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
         }
+
     }
 }

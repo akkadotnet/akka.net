@@ -64,6 +64,10 @@
     <Reference Include="xunit">
       <HintPath>..\..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
     </Reference>
+    <Reference Include="xunit.extensions">
+      <HintPath>..\..\packages\xunit.extensions.1.9.2\lib\net20\xunit.extensions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
   </ItemGroup>
   <Choose>
     <When Condition="('$(VisualStudioVersion)' == '10.0' or '$(VisualStudioVersion)' == '') and '$(TargetFrameworkVersion)' == 'v3.5'">
@@ -75,7 +79,7 @@
   </Choose>
   <ItemGroup>
     <Compile Include="Actor\ActorBecomeTests.cs" />
-    <Compile Include="Actor\ActorCellTests.cs" />
+    <Compile Include="Actor\ActorCellTests_SerializationOfUserMessages.cs" />
     <Compile Include="Actor\ActorLifeCycleSpec.cs" />
     <Compile Include="Actor\ActorPathSpec.cs" />
     <Compile Include="Actor\InboxSpec.cs" />
@@ -117,12 +121,19 @@
     <Compile Include="Serialization\SerializationSpec.cs" />
     <Compile Include="TestUtils\Comparable.cs" />
     <Compile Include="TestUtils\Supervisor.cs" />
-    <Compile Include="Tools\PatternSpec.cs" />
+    <Compile Include="Util\PatternSpec.cs" />
     <Compile Include="Util\SwitchTests.cs" />
     <Compile Include="Util\TypeExtensionsTests.cs" />
-    <Compile Include="XUnitHelpers.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj">
+      <Project>{11f4d4b8-7e07-4457-abf2-609b3e7b2649}</Project>
+      <Name>Akka.TestKit.Xunit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj">
+      <Project>{E636D23C-3432-4AA9-9A5D-5F29D33D3399}</Project>
+      <Name>Akka.Tests.Shared.Internals</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>

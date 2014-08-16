@@ -8,13 +8,13 @@ namespace Akka.TestKit.Internals
     /// An actor that enqueues received messages to a <see cref="BlockingCollection{T}"/>.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    public class TestActor : ActorBase
+    public class InternalTestActor : ActorBase
     {
-        private readonly BlockingCollection<MessageEnvelope> _queue;
+        private readonly ITestActorQueue<MessageEnvelope> _queue;
         private TestKit.TestActor.Ignore _ignore;
         private AutoPilot _autoPilot;
 
-        public TestActor(BlockingCollection<MessageEnvelope> queue)
+        public InternalTestActor(ITestActorQueue<MessageEnvelope> queue)
         {
             _queue = queue;
         }
@@ -62,12 +62,12 @@ namespace Akka.TestKit.Internals
         protected override void PostStop()
         {
             var self = Self;
-            MessageEnvelope message;
-            while(_queue.TryTake(out message))
+            foreach(var messageEnvelope in _queue.GetAll())
             {
-                var messageSender = message.Sender;
-                Context.System.DeadLetters.Tell(new DeadLetter(message.Message, messageSender, self), messageSender);
-            }
+                var messageSender = messageEnvelope.Sender;
+                var message = messageEnvelope.Message;
+                Context.System.DeadLetters.Tell(new DeadLetter(message, messageSender, self), messageSender);
+            }          
         }
 
 

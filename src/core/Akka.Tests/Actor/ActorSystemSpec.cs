@@ -10,11 +10,12 @@ namespace Akka.Tests.Actor
     
     public class ActorSystemSpec : AkkaSpec
     {
-        private string config = @"akka.extensions = [""Akka.Tests.Actor.TestExtension,Akka.Tests""]";
-        protected override string GetConfig()
+
+        public ActorSystemSpec()
+            : base(@"akka.extensions = [""Akka.Tests.Actor.TestExtension,Akka.Tests""]")
         {
-            return config;
         }
+       
 
         [Fact]
         public void AnActorSystemMustRejectInvalidNames()
@@ -27,7 +28,10 @@ namespace Akka.Tests.Actor
                   "hallo#welt",
                   "hallo$welt",
                   "hallo%welt",
-                  "hallo/welt"}).ForEach(n => intercept<ArgumentException>(() => ActorSystem.Create(n)));
+                  "hallo/welt"}).ForEach(n =>
+                  {
+                      XAssert.Throws<ArgumentException>(() => ActorSystem.Create(n));
+                  });
         }
 
         [Fact]
@@ -45,9 +49,16 @@ namespace Akka.Tests.Actor
                 .Create(Guid.NewGuid().ToString());
             var startTime = DateTime.UtcNow;
             var asyncShutdownTask = Task.Delay(TimeSpan.FromSeconds(1)).ContinueWith(_ => actorSystem.Shutdown());
-            actorSystem.WaitForShutdown();
+            actorSystem.AwaitTermination(TimeSpan.FromSeconds(2)).ShouldBeTrue();
             var endTime = DateTime.UtcNow;
             Assert.True((endTime - startTime).TotalSeconds >= .9);
+        }
+
+        [Fact]
+        public void Given_a_system_that_isnt_going_to_shutdown_When_waiting_for_system_shutdown_Then_it_times_out()
+        {
+            var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
+            actorSystem.AwaitTermination(TimeSpan.FromMilliseconds(10)).ShouldBeFalse();
         }
 
         #region Extensions tests
@@ -57,18 +68,18 @@ namespace Akka.Tests.Actor
         [Fact]
         public void AnActorSystem_Must_Support_Extensions()
         {
-            Assert.True(sys.HasExtension<TestExtensionImpl>());
-            var testExtension = sys.WithExtension<TestExtensionImpl>();
-            Assert.Equal(sys, testExtension.System);
+            Assert.True(Sys.HasExtension<TestExtensionImpl>());
+            var testExtension = Sys.WithExtension<TestExtensionImpl>();
+            Assert.Equal(Sys, testExtension.System);
         }
 
         [Fact]
         public void AnActorSystem_Must_Support_Dynamically_Regsitered_Extensions()
         {
-            Assert.False(sys.HasExtension<OtherTestExtensionImpl>());
-            var otherTestExtension = sys.WithExtension<OtherTestExtensionImpl>(typeof(OtherTestExtension));
-            Assert.True(sys.HasExtension<OtherTestExtensionImpl>());
-            Assert.Equal(sys, otherTestExtension.System);
+            Assert.False(Sys.HasExtension<OtherTestExtensionImpl>());
+            var otherTestExtension = Sys.WithExtension<OtherTestExtensionImpl>(typeof(OtherTestExtension));
+            Assert.True(Sys.HasExtension<OtherTestExtensionImpl>());
+            Assert.Equal(Sys, otherTestExtension.System);
         }
 
         #endregion

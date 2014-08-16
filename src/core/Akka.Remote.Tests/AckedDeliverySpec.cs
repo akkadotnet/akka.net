@@ -121,7 +121,7 @@ namespace Akka.Remote.Tests
         {
             var buffer = new AckedSendBuffer<Sequenced>(4).Buffer(Msg(0)).Buffer(Msg(1)).Buffer(Msg(2)).Buffer(Msg(3));
 
-            intercept<ResendBufferCapacityReachedException>(() => buffer.Buffer(Msg(4)));
+            XAssert.Throws<ResendBufferCapacityReachedException>(() => buffer.Buffer(Msg(4)));
         }
 
         [Fact]
@@ -206,7 +206,7 @@ namespace Akka.Remote.Tests
             var msg2 = Msg(2);
 
             var b1 = b0.Buffer(msg1).Buffer(msg2);
-            intercept<ResendUnfulfillableException>(() => b1.Acknowledge(new Ack(new SeqNo(2), new []{ new SeqNo(0) })));
+            XAssert.Throws<ResendUnfulfillableException>(() => b1.Acknowledge(new Ack(new SeqNo(2), new []{ new SeqNo(0) })));
         }
 
         [Fact]

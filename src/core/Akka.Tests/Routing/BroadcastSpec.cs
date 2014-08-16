@@ -53,13 +53,13 @@ namespace Akka.Tests.Routing
         [Fact]
         public void BroadcastGroup_router_must_broadcast_message_using_Tell()
         {
-            var doneLatch = new TestLatch(sys, 2);
+            var doneLatch = new TestLatch(Sys, 2);
             var counter1 = new AtomicCounter(0);
             var counter2 = new AtomicCounter(0);
-            var actor1 = sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
-            var actor2 = sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
+            var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
+            var actor2 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
 
-            var routedActor = sys.ActorOf(Props.Create<TestActor>().WithRouter(new BroadcastGroup(actor1.Path.ToString(), actor2.Path.ToString())));
+            var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new BroadcastGroup(actor1.Path.ToString(), actor2.Path.ToString())));
             routedActor.Tell(new Broadcast(1));
             routedActor.Tell(new Broadcast("end"));
 
@@ -72,13 +72,13 @@ namespace Akka.Tests.Routing
         [Fact]
         public void BroadcastGroup_router_must_broadcast_message_using_Ask()
         {
-            var doneLatch = new TestLatch(sys, 2);
+            var doneLatch = new TestLatch(Sys, 2);
             var counter1 = new AtomicCounter(0);
             var counter2 = new AtomicCounter(0);
-            var actor1 = sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
-            var actor2 = sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
+            var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
+            var actor2 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)));
 
-            var routedActor = sys.ActorOf(Props.Create<TestActor>().WithRouter(new BroadcastGroup(actor1.Path.ToString(), actor2.Path.ToString())));
+            var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new BroadcastGroup(actor1.Path.ToString(), actor2.Path.ToString())));
             routedActor.Ask(new Broadcast(1));
             routedActor.Tell(new Broadcast("end"));
 

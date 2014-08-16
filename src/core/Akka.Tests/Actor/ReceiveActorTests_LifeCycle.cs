@@ -17,8 +17,8 @@ namespace Akka.Tests.Actor
             actor.Tell("CRASH");
 
             //Then
-            actor.Tell("hello", testActor);
-            expectMsg("1:hello", _defaultTimeout);
+            actor.Tell("hello", TestActor);
+            ExpectMsg((object) "1:hello");
         }
 
         [Fact]
@@ -30,11 +30,11 @@ namespace Akka.Tests.Actor
             actor.Tell("BECOME-DISCARD");
 
             //When
-            actor.Tell("CRASH", testActor);
+            actor.Tell("CRASH", TestActor);
 
             //Then
-            actor.Tell("hello", testActor);
-            expectMsg("1:hello", _defaultTimeout);
+            actor.Tell("hello", TestActor);
+            ExpectMsg((object) "1:hello");
         }
 
 
@@ -47,11 +47,11 @@ namespace Akka.Tests.Actor
             actor.Tell("BECOME");
 
             //When
-            actor.Tell("CRASH", testActor);
+            actor.Tell("CRASH", TestActor);
 
             //Then
-            actor.Tell("hello", testActor);
-            expectMsg("1:hello", _defaultTimeout);
+            actor.Tell("hello", TestActor);
+            ExpectMsg((object) "1:hello");
         }
 
         private class CrashActor : ReceiveActor

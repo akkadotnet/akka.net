@@ -12,6 +12,8 @@ namespace Akka.Remote.Tests
     
     public class RemoteDaemonSpec : AkkaSpec
     {
+        public RemoteDaemonSpec(): base(GetConfig()){}
+
         public class SomeActor : UntypedActor
         {
             protected override void OnReceive(object message)
@@ -32,7 +34,7 @@ namespace Akka.Remote.Tests
             }
         }
 
-        protected override string GetConfig()
+        private static string GetConfig()
         {
             return @"
 akka {  
@@ -55,15 +57,15 @@ akka {
         [Fact]
         public void CanCreateActorUsingRemoteDaemonAndInteractWithChild()
         {
-            var p = new TestProbe();
-            sys.EventStream.Subscribe(p.Ref, typeof(string));
-            var supervisor = sys.ActorOf<SomeActor>();
-            var provider = (RemoteActorRefProvider)((ActorSystemImpl)sys).Provider;
+            var p = CreateTestProbe();
+            Sys.EventStream.Subscribe(p.Ref, typeof(string));
+            var supervisor = Sys.ActorOf<SomeActor>();
+            var provider = (RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider;
             var daemon = provider.RemoteDaemon;
             var childCreatedEvent=new ManualResetEventSlim();
 
 
-            var path = (((ActorSystemImpl) sys).Guardian.Path + "/foo").ToString();
+            var path = (((ActorSystemImpl) Sys).Guardian.Path + "/foo").ToString();
 
             //ask to create an actor MyRemoteActor, this actor has a child "child"
             daemon.Tell(new DaemonMsgCreate(Props.Create(() => new MyRemoteActor(childCreatedEvent)), null, path, supervisor));
@@ -76,7 +78,7 @@ akka {
             //pass a message to the child
             child.Tell("hello");
             //expect the child to forward the message to the eventstream
-            p.expectMsg("hello");
+            p.ExpectMsg("hello");
         }
     }
 }
