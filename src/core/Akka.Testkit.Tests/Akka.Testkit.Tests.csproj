@@ -70,6 +70,8 @@
     <Compile Include="TestActorRefTests\WrappedTerminated.cs" />
     <Compile Include="TestKitBaseTests\AwaitAssertTests.cs" />
     <Compile Include="TestKitBaseTests\DilatedTests.cs" />
+    <Compile Include="TestKitBaseTests\ExpectTests.cs" />
+    <Compile Include="TestKitBaseTests\ReceiveTests.cs" />
     <Compile Include="TestKitBaseTests\RemainingTests.cs" />
     <Compile Include="TestKit_Config_Tests.cs" />
   </ItemGroup>

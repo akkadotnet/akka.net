@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.TestKit.Internals;
 
 namespace Akka.TestKit
 {
@@ -60,7 +64,7 @@ namespace Akka.TestKit
         /// block, if inside a `within` block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        public T ExpectMsg<T>(Predicate<T> isMessage, string hint=null)
+        public T ExpectMsg<T>(Predicate<T> isMessage, string hint = null)
         {
             return ExpectMsg(RemainingOrDefault, isMessage, hint);
         }
@@ -255,7 +259,72 @@ namespace Akka.TestKit
             _assertions.AssertFalse(success, string.Format("Expected no messages during the duration, instead we received {0}", t));
         }
 
+        /// <summary>
+        /// Receive a number of messages from the test actor matching the given
+        /// number of objects and assert that for each given object one is received
+        /// which equals it and vice versa. This construct is useful when the order in
+        /// which the objects are received is not fixed. Wait time is bounded by 
+        /// <see cref="RemainingOrDefault"/> as duration, with an assertion exception being thrown in case of timeout.
+        /// 
+        /// <pre>
+        ///   dispatcher.Tell(SomeWork1())
+        ///   dispatcher.Tell(SomeWork2())
+        ///   ExpectMsgAllOf(TimeSpan.FromSeconds(1), Result1(), Result2())
+        /// </pre>
+        /// </summary>
+        /// <typeparam name="T">The type of the messages</typeparam>
+        /// <param name="messages">The messages.</param>
+        /// <returns>The received messages in received order</returns>
+        public IReadOnlyCollection<T> ExpectMsgAllOf<T>(params T[] messages)
+        {
+            return InternalExpectMsgAllOf(RemainingOrDefault, messages);
+        }
 
-        //TODO: Implement expectMsgAllOf, make it public
+
+        /// <summary>
+        /// Receive a number of messages from the test actor matching the given
+        /// number of objects and assert that for each given object one is received
+        /// which equals it and vice versa. This construct is useful when the order in
+        /// which the objects are received is not fixed. Wait time is bounded by the
+        /// given duration, with an assertion exception being thrown in case of timeout.
+        /// 
+        /// <pre>
+        ///   dispatcher.Tell(SomeWork1())
+        ///   dispatcher.Tell(SomeWork2())
+        ///   ExpectMsgAllOf(TimeSpan.FromSeconds(1), Result1(), Result2())
+        /// </pre>
+        /// The deadline is scaled by "akka.test.timefactor" using <see cref="Dilated"/>.
+        /// </summary>
+        /// <typeparam name="T">The type of the messages</typeparam>
+        /// <param name="max">The deadline. The deadline is scaled by "akka.test.timefactor" using <see cref="Dilated"/>.</param>
+        /// <param name="messages">The messages.</param>
+        /// <returns>The received messages in received order</returns>
+        public IReadOnlyCollection<T> ExpectMsgAllOf<T>(TimeSpan max, params T[] messages)
+        {
+            max.EnsureIsPositiveFinite("max");
+            var dilated = Dilated(max);
+            return InternalExpectMsgAllOf(dilated, messages);
+        }
+
+        private IReadOnlyCollection<T> InternalExpectMsgAllOf<T>(TimeSpan max, IReadOnlyCollection<T> messages, Func<T, T, bool> areEqual = null)
+        {
+            areEqual = areEqual ?? ((x, y) => Equals(x, y));
+            var receivedMessages = InternalReceiveN(messages.Count, max).ToList();
+            var missing = messages.Where(m => !receivedMessages.Any(r => r is T && areEqual((T)r, m))).ToList();
+            var unexpected = receivedMessages.Where(r => !messages.Any(m => r is T && areEqual((T)r, m))).ToList();
+            CheckMissingAndUnexpected(missing, unexpected, "not found", "found unexpected");
+            return receivedMessages.Cast<T>().ToList();
+        }
+
+
+        private void CheckMissingAndUnexpected<TMissing, TUnexpected>(IReadOnlyCollection<TMissing> missing, IReadOnlyCollection<TUnexpected> unexpected, string missingMessage, string unexpectedMessage)
+        {
+            var missingIsEmpty = missing.Count == 0;
+            var unexpectedIsEmpty = unexpected.Count == 0;
+            _assertions.AssertTrue(missingIsEmpty && unexpectedIsEmpty,
+                (missingIsEmpty ? "" : missingMessage + " [" + string.Join(", ", missing) + "] ") +
+            (unexpectedIsEmpty ? "" : unexpectedMessage + " [" + string.Join(", ", unexpected) + "]"));
+
+        }
     }
 }

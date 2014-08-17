@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Akka.TestKit.Internals;
 
@@ -42,7 +44,7 @@ namespace Akka.TestKit
         /// If set to a negative value or <see cref="Timeout.InfiniteTimeSpan"/>, blocks forever.
         /// <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks></param>
         /// <returns>The message if one was received; <c>null</c> otherwise</returns>
-        public object ReceiveOne(TimeSpan? max=null)
+        public object ReceiveOne(TimeSpan? max = null)
         {
             MessageEnvelope envelope;
             if(TryReceiveOne(out envelope, max, CancellationToken.None))
@@ -78,7 +80,7 @@ namespace Akka.TestKit
         ///     If set to a negative value or <see cref="Timeout.InfiniteTimeSpan"/>, blocks forever.
         ///     <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks></param>
         /// <returns><c>True</c> if a message was received within the specified duration; <c>false</c> otherwise.</returns>
-        public bool TryReceiveOne(out MessageEnvelope envelope, TimeSpan? max=null)
+        public bool TryReceiveOne(out MessageEnvelope envelope, TimeSpan? max = null)
         {
             return TryReceiveOne(out envelope, max, CancellationToken.None);
         }
@@ -169,7 +171,7 @@ namespace Akka.TestKit
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
         public IReadOnlyList<T> ReceiveWhile<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue)
-        {      
+        {
             var stop = Now + RemainingOrDilated(max);
 
             var count = 0;
@@ -200,29 +202,43 @@ namespace Akka.TestKit
             _lastWasNoMsg = true;
             return acc;
         }
-        
 
-        //TODO: Implement receiveN, make it public
-        //   /**
-        //   * Same as `receiveN(n, remaining)` but correctly taking into account
-        //   * Duration.timeFactor.
-        //   */
-        //  def receiveN(n: Int): immutable.Seq[AnyRef] = receiveN_internal(n, remainingOrDefault)
-  
-        //  /**
-        //   * Receive N messages in a row before the given deadline.
-        //   */
-        //  def receiveN(n: Int, max: FiniteDuration): immutable.Seq[AnyRef] = receiveN_internal(n, max.dilated)
-  
-        //  private def receiveN_internal(n: Int, max: Duration): immutable.Seq[AnyRef] = {
-        //    val stop = max + now
-        //    for { x ← 1 to n } yield {
-        //      val timeout = stop - now
-        //      val o = receiveOne(timeout)
-        //      assert(o ne null, s"timeout ($max) while expecting $n messages (got ${x - 1})")
-        //      o
-        //    }
-        //  }
+        /// <summary>
+        /// Receive the specified number of messages using <see cref="RemainingOrDefault"/> as timeout.
+        /// </summary>
+        /// <param name="numberOfMessages">The number of messages.</param>
+        /// <returns>The received messages</returns>
+        public IReadOnlyCollection<object> ReceiveN(int numberOfMessages)
+        {
+            var result = InternalReceiveN(numberOfMessages, RemainingOrDefault).ToList();
+            return result;
+        }
 
+        /// <summary>
+        /// Receive the specified number of messages in a row before the given deadline.
+        /// The deadline is scaled by "akka.test.timefactor" using <see cref="Dilated"/>.
+        /// </summary>
+        /// <param name="numberOfMessages">The number of messages.</param>
+        /// <param name="max">The timeout scaled by "akka.test.timefactor" using <see cref="Dilated"/>.</param>
+        /// <returns>The received messages</returns>
+        public IReadOnlyCollection<object> ReceiveN(int numberOfMessages, TimeSpan max)
+        {
+            max.EnsureIsPositiveFinite("max");
+            var dilated = Dilated(max);
+            var result = InternalReceiveN(numberOfMessages, dilated).ToList();
+            return result;
+        }
+
+        private IEnumerable<object> InternalReceiveN(int numberOfMessages, TimeSpan max)
+        {
+            var stop = max + Now;
+            for(int i = 0; i < numberOfMessages; i++)
+            {
+                var timeout = stop - Now;
+                var o = ReceiveOne(timeout);
+                _assertions.AssertTrue(o != null, "Timeout ({0}) while expecting {1} messages. Only got {2}.", max, numberOfMessages, i);
+                yield return o;
+            }
+        }
     }
 }
