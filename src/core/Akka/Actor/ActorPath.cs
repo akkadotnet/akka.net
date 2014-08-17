@@ -26,16 +26,14 @@ namespace Akka.Actor
         public static readonly Regex ElementRegex =
             new Regex(@"(?:[-\w:@&=+,.!~*'_;]|%\\p{N}{2})(?:[-\w:@&=+,.!~*'$_;]|%\\p{N}{2})*", RegexOptions.Compiled);
 
-        private readonly string _name;
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorPath" /> class.
         /// </summary>
         /// <param name="address"> The address. </param>
-        /// <param name="name"> The name. </param>
-        protected ActorPath(Address address, string name)
-        {
-            _name = name;            
+        protected ActorPath(Address address)
+        {          
             Address = address;
         }
 
@@ -43,13 +41,11 @@ namespace Akka.Actor
         /// Initializes a new instance of the <see cref="ActorPath" /> class.
         /// </summary>
         /// <param name="parentPath"> The parent path. </param>
-        /// <param name="name"> The name. </param>
         /// <param name="uid"> The uid. </param>
-        protected ActorPath(ActorPath parentPath, string name, long uid)
+        protected ActorPath(ActorPath parentPath, long uid)
         {
             Address = parentPath.Address;
             Uid = uid;
-            _name = name;
         }
 
         /// <summary>
@@ -82,10 +78,7 @@ namespace Akka.Actor
         /// Gets the name.
         /// </summary>
         /// <value> The name. </value>
-        public string Name
-        {
-            get { return _name; }
-        }
+        public abstract string Name { get; }
 
         /// <summary>
         /// The Address under which this path can be reached; walks up the tree to
@@ -134,7 +127,7 @@ namespace Akka.Actor
         public static ActorPath operator /(ActorPath path, IEnumerable<string> name)
         {
             var a = path;
-            foreach (string element in name)
+            foreach (var element in name)
             {
                 a = a/element;
             }
@@ -333,8 +326,7 @@ namespace Akka.Actor
         /// Initializes a new instance of the <see cref="RootActorPath" /> class.
         /// </summary>
         /// <param name="address"> The address. </param>
-        /// <param name="name"> The name. </param>
-        public RootActorPath(Address address, string name = "") : base(address, name)
+        public RootActorPath(Address address) : base(address)
         {
         }
 
@@ -360,6 +352,11 @@ namespace Akka.Actor
                 return this;
             throw new NotSupportedException("RootActorPath must have undefinedUid");
         }
+
+        public override string Name
+        {
+            get { return ""; }
+        }
     }
 
     /// <summary>
@@ -377,7 +374,7 @@ namespace Akka.Actor
         /// <param name="name"> The name. </param>
         /// <param name="uid"> The uid. </param>
         public ChildActorPath(ActorPath parentPath, string name, long uid)
-            : base(parentPath, name, uid)
+            : base(parentPath, uid)
         {
             _name = name;
             _parent = parentPath;
@@ -411,6 +408,11 @@ namespace Akka.Actor
             if (uid == Uid)
                 return this;
             return new ChildActorPath(_parent, _name, uid);
+        }
+
+        public override string Name
+        {
+            get { return _name; }
         }
     }
 }

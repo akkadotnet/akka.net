@@ -275,7 +275,7 @@ namespace Akka.Actor
     public sealed class Nobody : MinimalActorRef
     {
         public static Nobody Instance = new Nobody();
-        private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/Nobody");
+        private readonly ActorPath _path = new RootActorPath(Address.AllSystems) / "Nobody";
 
         private Nobody() { }
 
@@ -323,7 +323,7 @@ namespace Akka.Actor
     public sealed class NoSender : ActorRef
     {
         public static readonly NoSender Instance = new NoSender();
-        private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/NoSender");
+        private readonly ActorPath _path = new RootActorPath(Address.AllSystems) / "NoSender";
 
         private NoSender() { }
 
