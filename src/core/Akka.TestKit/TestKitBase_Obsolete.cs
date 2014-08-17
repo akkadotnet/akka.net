@@ -91,13 +91,13 @@ namespace Akka.TestKit
         }
 
         [Obsolete("Use ReceiveWhile instead. This member will be removed.")]
-        protected IList<T> receiveWhile<T>(TimeSpan max, Func<object, T> filter, int msgs = int.MaxValue)
+        protected IList<T> receiveWhile<T>(TimeSpan max, Func<object, T> filter, int msgs = int.MaxValue) where T: class 
         {
             return ReceiveWhile<T>(max, filter, msgs).ToList();
         }
 
         [Obsolete("Use ReceiveWhile instead. This member will be removed.")]
-        protected IList<T> receiveWhile<T>(TimeSpan max, TimeSpan idle, Func<object, T> filter, int msgs = int.MaxValue)
+        protected IList<T> receiveWhile<T>(TimeSpan max, TimeSpan idle, Func<object, T> filter, int msgs = int.MaxValue) where T : class
         {
             return ReceiveWhile<T>(max, filter, msgs).ToList();
         }

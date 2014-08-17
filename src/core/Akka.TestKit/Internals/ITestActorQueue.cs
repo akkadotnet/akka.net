@@ -12,7 +12,7 @@ namespace Akka.TestKit.Internals
     {
         /// <summary>Adds the specified item to the queue.</summary>
         /// <param name="item">The item.</param>
-        void Add(T item);
+        void Enqueue(T item);
     }
 
     /// <summary>
