@@ -68,7 +68,7 @@ namespace ChatServer
 
             using (var system = ActorSystem.Create("MyServer", fluentConfig))
             {
-                var server = system.ActorOf<ChatServerActor>("ChatServer");
+                system.ActorOf<ChatServerActor>("ChatServer");
 
                 Console.ReadLine();
             }

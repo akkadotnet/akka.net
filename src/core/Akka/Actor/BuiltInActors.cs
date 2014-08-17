@@ -7,14 +7,15 @@ namespace Akka.Actor
     /// <summary>
     ///     Class EventStreamActor.
     /// </summary>
-    public class EventStreamActor : UntypedActor
+    public class EventStreamActor : ActorBase
     {
         /// <summary>
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected override void OnReceive(object message)
+        protected override bool Receive(object message)
         {
+            return true;
         }
     }
 

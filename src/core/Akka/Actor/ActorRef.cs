@@ -98,9 +98,15 @@ namespace Akka.Actor
 
         protected void SendSystemMessage(SystemMessage message, ActorRef sender)
         {
-            PatternMatch.Match(message)
-                .With<Terminate>(t => Stop())
-                .With<DeathWatchNotification>(d => Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated)));
+            var d = message as DeathWatchNotification;
+            if (message is Terminate)
+            {
+                Stop();
+            }
+            else if (d != null)
+            {
+                Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated));
+            }
         }
     }
 
@@ -119,7 +125,7 @@ namespace Akka.Actor
         public static ActorRef GetSelfOrNoSender()
         {
             var actorCell = ActorCell.Current;
-            return actorCell != null ? (ActorRef)actorCell.Self : ActorRef.NoSender;
+            return actorCell != null ? actorCell.Self : ActorRef.NoSender;
         }
     }
 

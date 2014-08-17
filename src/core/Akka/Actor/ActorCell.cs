@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using Akka.Actor.Internals;
 using Akka.Dispatch;
@@ -18,14 +17,14 @@ namespace Akka.Actor
         private InternalActorRef _self;
         public const int UndefinedUid = 0;
         private Props _props;
-        private static Props _terminatedProps=new TerminatedProps();
+        private static readonly Props terminatedProps=new TerminatedProps();
         [ThreadStatic] private static ActorCell current;
 
         protected ConcurrentDictionary<string, InternalActorRef> children =
             new ConcurrentDictionary<string, InternalActorRef>();
 
         protected Stack<Receive> behaviorStack = new Stack<Receive>();
-        private long uid;
+        private long _uid;
         private ActorBase _actor;
         private bool _actorHasBeenCleared;
         private Mailbox _mailbox;
@@ -98,7 +97,7 @@ namespace Akka.Actor
 
             //// ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅
             //mailbox.systemEnqueue(self, createMessage)
-            mailbox.Post(new Envelope(){Message = createMessage, Sender = Self});
+            mailbox.Post(new Envelope {Message = createMessage, Sender = Self});
 
             if(sendSupervise)
             {
@@ -216,11 +215,11 @@ namespace Akka.Actor
 
         private long NewUid()
         {
-            long auid = Interlocked.Increment(ref uid);
+            long auid = Interlocked.Increment(ref _uid);
             return auid;
         }
 
-        private string GetActorName(string name, long actorUid)
+        private static string GetActorName(string name, long actorUid)
         {
             return name ?? ("$" + actorUid.Base64Encode());
         }
@@ -299,7 +298,7 @@ namespace Akka.Actor
         protected void ClearActorCell()
         {
             //TODO: UnstashAll();
-            _props = _terminatedProps;
+            _props = terminatedProps;
         }
 
         protected void ClearActor()

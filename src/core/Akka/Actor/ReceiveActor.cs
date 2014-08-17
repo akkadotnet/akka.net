@@ -8,7 +8,7 @@ namespace Akka.Actor
     public abstract class ReceiveActor : UntypedActor
     {
         private bool _shouldUnhandle = true;
-        private Stack<MatchBuilder> _matchHandlerBuilders = new Stack<MatchBuilder>();
+        private readonly Stack<MatchBuilder> _matchHandlerBuilders = new Stack<MatchBuilder>();
         private PartialAction<object> _partialReceive = _ => false;
         private bool _hasBeenInitialized;
 

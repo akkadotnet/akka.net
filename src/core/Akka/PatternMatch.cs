@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Akka
 {
@@ -7,12 +7,13 @@ namespace Akka
     /// </summary>
     public static class PatternMatch
     {
-        //[Obsolete("This is horribly slow, should be replaced with standard 'is' checks",false)]
+        
         /// <summary>
         /// Matches the specified target.
         /// </summary>
         /// <param name="target">The target.</param>
         /// <returns>Case.</returns>
+        [Obsolete("Use is/as checks or replace actor with ReceiveActor/TypedActor",false)]
         public static Case Match(this object target)
         {
             return new Case(target);

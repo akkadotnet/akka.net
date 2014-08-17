@@ -1,16 +1,10 @@
-﻿using Akka.TestKit;
-using Xunit;
+﻿using System.Linq;
 using Akka.Configuration;
-using Akka.Configuration.Hocon;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.TestKit;
+using Xunit;
 
 namespace Akka.Tests.Configuration
 {
-    
     public class HoconTests
     {
         //Added tests to conform to the HOCON spec https://github.com/typesafehub/config/blob/master/HOCON.md
@@ -19,7 +13,8 @@ namespace Akka.Tests.Configuration
         {
             var hocon1 = @"3.14 : 42";
             var hocon2 = @"3 { 14 : 42}";
-            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("3.14"), ConfigurationFactory.ParseString(hocon2).GetString("3.14"));
+            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("3.14"),
+                ConfigurationFactory.ParseString(hocon2).GetString("3.14"));
         }
 
         [Fact]
@@ -27,7 +22,8 @@ namespace Akka.Tests.Configuration
         {
             var hocon1 = @"3 : 42";
             var hocon2 = @"""3"" : 42";
-            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("3"), ConfigurationFactory.ParseString(hocon2).GetString("3"));
+            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("3"),
+                ConfigurationFactory.ParseString(hocon2).GetString("3"));
         }
 
         [Fact]
@@ -35,7 +31,8 @@ namespace Akka.Tests.Configuration
         {
             var hocon1 = @"true : 42";
             var hocon2 = @"""true"" : 42";
-            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("true"), ConfigurationFactory.ParseString(hocon2).GetString("true"));
+            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("true"),
+                ConfigurationFactory.ParseString(hocon2).GetString("true"));
         }
 
         [Fact]
@@ -43,7 +40,8 @@ namespace Akka.Tests.Configuration
         {
             var hocon1 = @"foo.bar : 42";
             var hocon2 = @"foo { bar : 42 }";
-            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("foo.bar"), ConfigurationFactory.ParseString(hocon2).GetString("foo.bar"));
+            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("foo.bar"),
+                ConfigurationFactory.ParseString(hocon2).GetString("foo.bar"));
         }
 
         [Fact]
@@ -51,7 +49,8 @@ namespace Akka.Tests.Configuration
         {
             var hocon1 = @"foo.bar.baz : 42";
             var hocon2 = @"foo { bar { baz : 42 } }";
-            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("foo.bar.baz"), ConfigurationFactory.ParseString(hocon2).GetString("foo.bar.baz"));
+            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("foo.bar.baz"),
+                ConfigurationFactory.ParseString(hocon2).GetString("foo.bar.baz"));
         }
 
         [Fact]
@@ -59,8 +58,10 @@ namespace Akka.Tests.Configuration
         {
             var hocon1 = @"a.x : 42, a.y : 43";
             var hocon2 = @"a { x : 42, y : 43 }";
-            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("a.x"), ConfigurationFactory.ParseString(hocon2).GetString("a.x"));
-            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("a.y"), ConfigurationFactory.ParseString(hocon2).GetString("a.y"));
+            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("a.x"),
+                ConfigurationFactory.ParseString(hocon2).GetString("a.x"));
+            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("a.y"),
+                ConfigurationFactory.ParseString(hocon2).GetString("a.y"));
         }
 
         [Fact]
@@ -68,7 +69,8 @@ namespace Akka.Tests.Configuration
         {
             var hocon1 = @"a b c : 42";
             var hocon2 = @"""a b c"" : 42";
-            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("a b c"), ConfigurationFactory.ParseString(hocon2).GetString("a b c"));
+            Assert.Equal(ConfigurationFactory.ParseString(hocon1).GetString("a b c"),
+                ConfigurationFactory.ParseString(hocon2).GetString("a b c"));
         }
 
 
@@ -79,7 +81,7 @@ namespace Akka.Tests.Configuration
   name = Roger
   c = Hello my name is ${a.name}
 }";
-            Assert.Equal("Hello my name is Roger",ConfigurationFactory.ParseString(hocon).GetString("a.c"));
+            Assert.Equal("Hello my name is Roger", ConfigurationFactory.ParseString(hocon).GetString("a.c"));
         }
 
         [Fact]
@@ -89,7 +91,7 @@ namespace Akka.Tests.Configuration
   b = [1,2,3]
   c = ${a.b} [4,5,6]
 }";
-            Assert.True(new[] { 1, 2, 3, 4, 5, 6 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("a.c")));
+            Assert.True(new[] {1, 2, 3, 4, 5, 6}.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("a.c")));
         }
 
         [Fact]
@@ -144,9 +146,14 @@ root {
             Assert.Equal("foo", config.GetString("root.quoted-string"));
             Assert.Equal("bar", config.GetString("root.unquoted-string"));
             Assert.Equal("foo bar", config.GetString("root.concat-string"));
-            Assert.True(new[] { 1, 2, 3,4 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("root.array")));
-            Assert.True(new[] { 1, 2, 3, 4 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("root.array-newline-element")));
-            Assert.True(new[] { "1 2 3 4" }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetStringList("root.array-single-element")));
+            Assert.True(
+                new[] {1, 2, 3, 4}.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("root.array")));
+            Assert.True(
+                new[] {1, 2, 3, 4}.SequenceEqual(
+                    ConfigurationFactory.ParseString(hocon).GetIntList("root.array-newline-element")));
+            Assert.True(
+                new[] {"1 2 3 4"}.SequenceEqual(
+                    ConfigurationFactory.ParseString(hocon).GetStringList("root.array-single-element")));
         }
 
         [Fact]
@@ -172,8 +179,7 @@ root {
             Assert.Equal(true, config.GetBoolean("root.object.hasContent"));
             Assert.Equal(null, config.GetString("root.null"));
             Assert.Equal("foo", config.GetString("root.string"));
-            Assert.True(new[] { 1, 2, 3 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("root.array")));
-
+            Assert.True(new[] {1, 2, 3}.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("root.array")));
         }
 
         [Fact]
@@ -297,7 +303,7 @@ a.b.e.f=3
     2
     3
 ]";
-            Assert.True(new[] { 1, 2, 3 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("a")));
+            Assert.True(new[] {1, 2, 3}.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("a")));
 
             //hocon = @"a= [ 1, 2, 3 ]";
             //Assert.True(new[] { 1, 2, 3 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("a")));
@@ -307,7 +313,7 @@ a.b.e.f=3
         public void CanConcatenateArray()
         {
             var hocon = @"a=[1,2] [3,4]";
-            Assert.True(new[] { 1, 2, 3, 4 }.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("a")));
+            Assert.True(new[] {1, 2, 3, 4}.SequenceEqual(ConfigurationFactory.ParseString(hocon).GetIntList("a")));
         }
 
         [Fact]
@@ -354,7 +360,7 @@ a.b.e.f=3
         public void CanAssignQuotedStringToField()
         {
             var hocon = @"a=""hello""";
-            Assert.Equal("hello", ConfigurationFactory.ParseString(hocon).GetString("a"));           
+            Assert.Equal("hello", ConfigurationFactory.ParseString(hocon).GetString("a"));
         }
 
         [Fact]
@@ -518,4 +524,3 @@ foo {
         }
     }
 }
-

@@ -13,7 +13,7 @@ namespace Akka.slf4net.Event.slf4net
 
         private readonly LoggingAdapter log = Logging.GetLogger(Context);
 
-        private void WithMDC(string logSource, LogEvent logEvent, Action<ILogger> logStatement)
+        private void WithMDC(Action<ILogger> logStatement)
         {
             ILogger logger = LoggerFactory.GetLogger(GetType());
             logStatement(logger);
@@ -23,10 +23,10 @@ namespace Akka.slf4net.Event.slf4net
         {
             message
                 .Match()
-                .With<Error>(m => WithMDC(m.LogSource, m, logger => logger.Error("{0}", m.Message)))
-                .With<Warning>(m => WithMDC(m.LogSource, m, logger => logger.Warn("{0}", m.Message)))
-                .With<Info>(m => WithMDC(m.LogSource, m, logger => logger.Info("{0}", m.Message)))
-                .With<Debug>(m => WithMDC(m.LogSource, m, logger => logger.Debug("{0}", m.Message)))
+                .With<Error>(m => WithMDC(logger => logger.Error("{0}", m.Message)))
+                .With<Warning>(m => WithMDC(logger => logger.Warn("{0}", m.Message)))
+                .With<Info>(m => WithMDC(logger => logger.Info("{0}", m.Message)))
+                .With<Debug>(m => WithMDC(logger => logger.Debug("{0}", m.Message)))
                 .With<InitializeLogger>(m =>
                 {
                     log.Info("Slf4jLogger started");
