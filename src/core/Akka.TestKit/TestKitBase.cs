@@ -251,16 +251,27 @@ namespace Akka.TestKit
             return timeout.GetValueOrDefault(SingleExpectDefaultTimeout);
         }
 
-
         /// <summary>
-        /// Shuts down the specified system. In future releases this will wait for termination
+        /// Shuts down this system.
         /// On failure debug output will be logged about the remaining actors in the system.
         /// If verifySystemShutdown is true, then an exception will be thrown on failure.
         /// </summary>
-        /// <param name="system">Optional: The system to shutdown. Default: this instance's <see cref="ActorSystem"/>.</param>
-        /// <param name="duration">The duration to wait for shutdown. Currently not used.</param>
-        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure. Currently not used.</param>
-        protected virtual void Shutdown(ActorSystem system=null, TimeSpan? duration=null, bool verifySystemShutdown = false)
+        /// <param name="duration">The duration to wait for shutdown.</param>
+        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
+        protected virtual void Shutdown(TimeSpan? duration = null, bool verifySystemShutdown = false)
+        {
+           Shutdown(_system,duration,verifySystemShutdown);
+        }
+
+        /// <summary>
+        /// Shuts down the specified system.
+        /// On failure debug output will be logged about the remaining actors in the system.
+        /// If verifySystemShutdown is true, then an exception will be thrown on failure.
+        /// </summary>
+        /// <param name="system">The system to shutdown.</param>
+        /// <param name="duration">The duration to wait for shutdown.</param>
+        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
+        protected virtual void Shutdown(ActorSystem system, TimeSpan? duration=null, bool verifySystemShutdown = false)
         {
             if(system == null) system = _system;
 
@@ -300,7 +311,12 @@ namespace Akka.TestKit
             return testActor;
         }
 
-        protected abstract TestProbe CreateTestProbe();
+
+        protected virtual TestProbe CreateTestProbe()
+        {
+            return new TestProbe(Sys, _assertions);
+        }
+
 
     }
     
