@@ -31,9 +31,9 @@ namespace Akka.Actor
 
         internal void Init()
         {
-            //This might be called directly after the constructor, or when the same actor Instance has been returned
+            //This might be called directly after the constructor, or when the same actor instance has been returned
             //during recreate. Make sure what happens here is idempotent
-            if(!_hasBeenInitialized)	//Do not perform this when "recreating" the same Instance
+            if(!_hasBeenInitialized)	//Do not perform this when "recreating" the same instance
             {
                 _partialReceive = BuildNewReceiveHandler(_matchHandlerBuilders.Pop());
                 _hasBeenInitialized = true;
