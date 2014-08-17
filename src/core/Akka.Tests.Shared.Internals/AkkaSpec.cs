@@ -8,6 +8,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 using Xunit;
+using Xunit.Sdk;
 
 // ReSharper disable once CheckNamespace
 namespace Akka.TestKit
@@ -112,7 +113,25 @@ namespace Akka.TestKit
         }
 
 
-        [Obsolete("Use Xunit.Assert.Throws<T>(action) instead. This member will be removed.")]
+        protected void Intercept<T>(Action actionThatThrows) where T : Exception
+        {
+            Assert.Throws<T>(() => actionThatThrows());
+        }
+
+        protected void Intercept(Action actionThatThrows)
+        {
+            try
+            {
+                actionThatThrows();                
+            }
+            catch(Exception)
+            {
+                return;
+            }
+            throw new ThrowsException(typeof(Exception));
+        }
+
+        [Obsolete("Use Intercept instead. This member will be removed.")]
         protected void intercept<T>(Action actionThatThrows) where T : Exception
         {
             Assert.Throws<T>(() => actionThatThrows());

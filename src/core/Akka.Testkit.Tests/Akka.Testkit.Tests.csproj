@@ -68,6 +68,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestActorRefTests\WorkerActor.cs" />
     <Compile Include="TestActorRefTests\WrappedTerminated.cs" />
+    <Compile Include="TestKitBaseTests\AwaitAssertTests.cs" />
+    <Compile Include="TestKitBaseTests\DilatedTests.cs" />
+    <Compile Include="TestKitBaseTests\RemainingTests.cs" />
     <Compile Include="TestKit_Config_Tests.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -91,6 +94,7 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>
