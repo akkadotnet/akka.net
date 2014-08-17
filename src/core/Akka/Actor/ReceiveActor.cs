@@ -8,7 +8,7 @@ namespace Akka.Actor
     public abstract class ReceiveActor : UntypedActor
     {
         private bool _shouldUnhandle = true;
-        private Stack<MatchBuilder> _matchHandlerBuilders = new Stack<MatchBuilder>();
+        private readonly Stack<MatchBuilder> _matchHandlerBuilders = new Stack<MatchBuilder>();
         private PartialAction<object> _partialReceive = _ => false;
         private bool _hasBeenInitialized;
 
@@ -31,9 +31,9 @@ namespace Akka.Actor
 
         internal void Init()
         {
-            //This might be called directly after the constructor, or when the same actor instance has been returned
+            //This might be called directly after the constructor, or when the same actor Instance has been returned
             //during recreate. Make sure what happens here is idempotent
-            if(!_hasBeenInitialized)	//Do not perform this when "recreating" the same instance
+            if(!_hasBeenInitialized)	//Do not perform this when "recreating" the same Instance
             {
                 _partialReceive = BuildNewReceiveHandler(_matchHandlerBuilders.Pop());
                 _hasBeenInitialized = true;
