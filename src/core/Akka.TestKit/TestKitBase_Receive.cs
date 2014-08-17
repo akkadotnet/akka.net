@@ -9,28 +9,43 @@ namespace Akka.TestKit
 {
     public abstract partial class TestKitBase
     {
-        //TODO: Implement fishForMessage
-        // /**
-        //  * Hybrid of expectMsgPF and receiveWhile: receive messages while the
-        //  * partial function matches and returns false. Use it to ignore certain
-        //  * messages while waiting for a specific message.
-        //  *
-        //  * @return the last received messsage, i.e. the first one for which the
-        //  *         partial function returned true
-        //  */
-        // def fishForMessage(max: Duration = Duration.Undefined, hint: String = "")(f: PartialFunction[Any, Boolean]): Any = {
-        //   val _max = remainingOrDilated(max)
-        //   val end = now + _max
-        //   @tailrec
-        //   def recv: Any = {
-        //     val o = receiveOne(end - now)
-        //     assert(o ne null, s"timeout (${_max}) during fishForMessage, hint: $hint")
-        //     assert(f.isDefinedAt(o), s"fishForMessage($hint) found unexpected message $o")
-        //     if (f(o)) o else recv
-        //   }
-        //   recv
-        // }
+        /// <summary>
+        /// Receives messages until <paramref name="isMessage"/> returns <c>true</c>.
+        /// Use it to ignore certain messages while waiting for a specific message.
+        /// </summary>
+        /// <param name="isMessage">The is message.</param>
+        /// <param name="max">The maximum.</param>
+        /// <param name="hint">The hint.</param>
+        /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
+        public object FishForMessage(Predicate<object> isMessage, TimeSpan? max = null, string hint = "")
+        {
+            return FishForMessage<object>(isMessage, max, hint);
+        }
 
+        /// <summary>
+        /// Receives messages until <paramref name="isMessage"/> returns <c>true</c>.
+        /// Use it to ignore certain messages while waiting for a specific message.
+        /// </summary>
+        /// <typeparam name="T">The type of the expected message. Messages of other types are ignored.</typeparam>
+        /// <param name="isMessage">The is message.</param>
+        /// <param name="max">The maximum.</param>
+        /// <param name="hint">The hint.</param>
+        /// <returns>Returns the message that <paramref name="isMessage"/> matched</returns>
+        public T FishForMessage<T>(Predicate<T> isMessage, TimeSpan? max = null, string hint = "")
+        {
+            var maxValue = RemainingOrDilated(max);
+            var end = Now + maxValue;
+            while(true)
+            {
+                var left = end - Now;
+                var msg = ReceiveOne(left);
+                _assertions.AssertTrue(msg != null, "Timeout ({0}) during fishForMessage{1}", maxValue, string.IsNullOrEmpty(hint) ? "" : ", hint: " + hint);
+                if(msg is T && isMessage((T)msg))
+                {
+                    return (T) msg;
+                }
+            }
+        }
 
 
         /// <summary>
@@ -98,7 +113,7 @@ namespace Akka.TestKit
         /// <param name="envelope">The received envelope.</param>
         /// <param name="max">The maximum duration to wait. 
         ///     If <c>null</c> the config value "akka.test.single-expect-default" is used as timeout.
-        ///     If set to a negative value or <see cref="Timeout.InfiniteTimeSpan"/>, blocks forever (or until cancelled).
+        ///     If set to <see cref="Timeout.InfiniteTimeSpan"/>, blocks forever (or until cancelled).
         ///     <remarks>This method does NOT automatically scale its Duration parameter using <see cref="Dilated(TimeSpan)" />!</remarks>
         /// </param>
         /// <param name="cancellationToken">A token used to cancel the operation.</param>
@@ -114,11 +129,17 @@ namespace Akka.TestKit
             else if(maxDuration.IsPositiveFinite())
             {
                 didTake = _queue.TryTake(out envelope, (int)maxDuration.TotalMilliseconds, cancellationToken);
-            }
-            else  //Infinite
+            }               
+            else if(maxDuration == Timeout.InfiniteTimeSpan)
             {
                 envelope = _queue.Take(cancellationToken);
                 didTake = true;
+            }
+            else
+            {
+                //Negative
+                envelope = null;
+                didTake = false;
             }
 
             _lastWasNoMsg = false;

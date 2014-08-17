@@ -215,6 +215,7 @@ namespace Akka.TestKit
         /// If <paramref name="duration"/> is finite it is returned after it has been scaled using <see cref="Dilated(TimeSpan)"/>.
         /// If <paramref name="duration"/> is undefined, it returns the remaining time (if within a `within` block) or the properly dilated 
         /// default from settings (key "akka.test.single-expect-default").
+        /// If <paramref name="duration"/> is infinite, an <see cref="ArgumentException"/> is thrown.
         /// <remarks>The returned value is always finite.</remarks>
         /// </summary>
         /// <param name="duration">The maximum.</param>
