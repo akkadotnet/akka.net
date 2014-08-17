@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Util;
@@ -85,7 +86,7 @@ namespace Akka.Actor
         /// <param name="message">The message.</param>
         public void Tell(object message)
         {
-            ActorRef sender = ActorRef.NoSender;
+            var sender = ActorRef.NoSender;
             if (ActorCell.Current != null && ActorCell.Current.Self != null)
                 sender = ActorCell.Current.Self;
 
@@ -125,7 +126,7 @@ namespace Akka.Actor
             }
             else
             {
-                SelectionPathElement element = Elements[pathIndex];
+                var element = Elements[pathIndex];
                 if (current is ActorRefWithCell)
                 {
                     var withCell = (ActorRefWithCell) current;
@@ -137,26 +138,26 @@ namespace Akka.Actor
                     else if (element is SelectChildPattern)
                     {
                         var pattern = element as SelectChildPattern;
-                        var children = withCell.Children.Where(c => c.Path.Name.Like(pattern.PatternStr));
-                        foreach(var matchingChild in children)
+                        var children =
+                            withCell.Children.Where(c => c.Path.Name.Like(pattern.PatternStr));
+                        foreach (ActorRef matchingChild in children)
                         {
                             Deliver(message, sender, pathIndex + 1, matchingChild);
-                        }                        
+                        }
                     }
                 }
                 else
                 {
-                    SelectionPathElement[] rest = Elements.Skip(pathIndex).ToArray();
+                    var rest = Elements.Skip(pathIndex).ToArray();
                     current.Tell(new ActorSelectionMessage(message, rest), sender);
                 }
             }
         }
 
         /// <summary>
-        /// INTERNAL API
-        /// 
-        /// Convenience method used by remoting when receiving <see cref="ActorSelectionMessage"/> from a remote
-        /// actor.
+        ///     INTERNAL API
+        ///     Convenience method used by remoting when receiving <see cref="ActorSelectionMessage" /> from a remote
+        ///     actor.
         /// </summary>
         internal static void DeliverSelection(InternalActorRef anchor, ActorRef sender, ActorSelectionMessage sel)
         {
@@ -175,7 +176,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="elements">The elements.</param>
-        public ActorSelectionMessage(object message, SelectionPathElement[] elements, bool wildCardFanOut=false)
+        public ActorSelectionMessage(object message, SelectionPathElement[] elements, bool wildCardFanOut = false)
         {
             Message = message;
             Elements = elements;
@@ -245,7 +246,7 @@ namespace Akka.Actor
         /// <param name="patternStr">The pattern string.</param>
         public SelectChildPattern(string patternStr)
         {
-            PatternStr = patternStr;        
+            PatternStr = patternStr;
         }
 
         /// <summary>
@@ -260,7 +261,7 @@ namespace Akka.Actor
         /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
         public override string ToString()
         {
-            return PatternStr.ToString();
+            return PatternStr.ToString(CultureInfo.InvariantCulture);
         }
     }
 

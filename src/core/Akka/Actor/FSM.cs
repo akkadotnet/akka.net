@@ -149,8 +149,8 @@ namespace Akka.Actor
                 _ref = new CancellationTokenSource();
             }
 
-            private Scheduler _scheduler;
-            private CancellationTokenSource _ref;
+            private readonly Scheduler _scheduler;
+            private readonly CancellationTokenSource _ref;
 
             public string Name { get; private set; }
 
@@ -164,7 +164,7 @@ namespace Akka.Actor
 
             public void Schedule(ActorRef actor, TimeSpan timeout)
             {
-                string name = Name;
+                var name = Name;
                 var message = Message;
 
                 Action send;
@@ -302,7 +302,7 @@ namespace Akka.Actor
             {
                 if(ReferenceEquals(null, obj)) return false;
                 if(ReferenceEquals(this, obj)) return true;
-                if(obj.GetType() != this.GetType()) return false;
+                if(obj.GetType() != GetType()) return false;
                 return Equals((State<TS, TD>)obj);
             }
 
@@ -409,7 +409,7 @@ namespace Akka.Actor
         /// <param name="timeout">State timeout for the initial state, overriding the default timeout for that state.</param>
         public void StartWith(TS stateName, TD stateData, TimeSpan? timeout = null)
         {
-            currentState = new State<TS, TD>(stateName, stateData, timeout);
+            _currentState = new State<TS, TD>(stateName, stateData, timeout);
         }
 
         /// <summary>
@@ -420,7 +420,7 @@ namespace Akka.Actor
         /// <returns>State transition descriptor</returns>
         public State<TS, TD> GoTo(TS nextStateName)
         {
-            return new State<TS, TD>(nextStateName, currentState.StateData);
+            return new State<TS, TD>(nextStateName, _currentState.StateData);
         }
 
         /// <summary>
@@ -430,7 +430,7 @@ namespace Akka.Actor
         /// <returns>Descriptor for staying in the current state.</returns>
         public State<TS, TD> Stay()
         {
-            return GoTo(currentState.StateName);
+            return GoTo(_currentState.StateName);
         }
 
         /// <summary>
@@ -446,7 +446,7 @@ namespace Akka.Actor
         /// </summary>
         public State<TS, TD> Stop(Reason reason)
         {
-            return Stop(reason, currentState.StateData);
+            return Stop(reason, _currentState.StateData);
         }
 
         public State<TS, TD> Stop(Reason reason, TD stateData)
@@ -483,15 +483,15 @@ namespace Akka.Actor
         {
             if(DebugEvent)
                 Log.Debug("setting " + (repeat ? "repeating" : "") + "timer '{0}' / {1}: {2}", name, timeout, msg);
-            if(timers.ContainsKey(name))
-                timers[name].Cancel();
-            var timer = new Timer(name, msg, repeat, timerGen.Next, Context, DebugEvent ? Log : null);
+            if(_timers.ContainsKey(name))
+                _timers[name].Cancel();
+            var timer = new Timer(name, msg, repeat, _timerGen.Next, Context, DebugEvent ? Log : null);
             timer.Schedule(Self, timeout);
 
-            if (!timers.ContainsKey(name))
-                timers.Add(name, timer);
+            if (!_timers.ContainsKey(name))
+                _timers.Add(name, timer);
             else
-                timers[name] = timer;
+                _timers[name] = timer;
         }
 
         /// <summary>
@@ -505,10 +505,10 @@ namespace Akka.Actor
                 Log.Debug("Cancelling timer {0}", name);
             }
 
-            if (timers.ContainsKey(name))
+            if (_timers.ContainsKey(name))
             {
-                timers[name].Cancel();
-                timers.Remove(name);
+                _timers[name].Cancel();
+                _timers.Remove(name);
             }
         }
 
@@ -519,7 +519,7 @@ namespace Akka.Actor
         /// </summary>
         public bool IsTimerActive(string name)
         {
-            return timers.ContainsKey(name);
+            return _timers.ContainsKey(name);
         }
 
         /// <summary>
@@ -528,10 +528,10 @@ namespace Akka.Actor
         /// </summary>
         public void SetStateTimeout(TS state, TimeSpan? timeout)
         {
-            if(!stateTimeouts.ContainsKey(state))
-                stateTimeouts.Add(state, timeout);
+            if(!_stateTimeouts.ContainsKey(state))
+                _stateTimeouts.Add(state, timeout);
             else
-                stateTimeouts[state] = timeout;
+                _stateTimeouts[state] = timeout;
         }
 
         /// <summary>
@@ -541,7 +541,7 @@ namespace Akka.Actor
         {
             get
             {
-                return timeoutFuture != null;
+                return _timeoutFuture != null;
             }
         }
 
@@ -570,7 +570,7 @@ namespace Akka.Actor
         /// <param name="stateFunction"></param>
         public void WhenUnhandled(StateFunction stateFunction)
         {
-            handleEvent = OrElse(stateFunction, handleEventDefault);
+            handleEvent = OrElse(stateFunction, HandleEventDefault);
         }
 
         /// <summary>
@@ -580,7 +580,7 @@ namespace Akka.Actor
         /// </summary>
         public void Initialize()
         {
-            MakeTransition(currentState);
+            MakeTransition(_currentState);
         }
 
         /// <summary>
@@ -588,7 +588,7 @@ namespace Akka.Actor
         /// </summary>
         public TS StateName
         {
-            get { return currentState.StateName; }
+            get { return _currentState.StateName; }
         }
 
         /// <summary>
@@ -596,7 +596,7 @@ namespace Akka.Actor
         /// </summary>
         public TD StateData
         {
-            get { return currentState.StateData; }
+            get { return _currentState.StateData; }
         }
 
         /// <summary>
@@ -606,8 +606,8 @@ namespace Akka.Actor
         {
             get
             {
-                if(nextState == null) throw new InvalidOperationException("NextStateData is only available during OnTransition");
-                return nextState.StateData;
+                if(_nextState == null) throw new InvalidOperationException("NextStateData is only available during OnTransition");
+                return _nextState.StateData;
             }
         }
 
@@ -628,42 +628,42 @@ namespace Akka.Actor
         /// <summary>
         /// FSM state data and current timeout handling
         /// </summary>
-        private State<TS, TD> currentState;
+        private State<TS, TD> _currentState;
 
-        private CancellationTokenSource timeoutFuture;
-        private State<TS, TD> nextState;
-        private long generation = 0L;
+        private CancellationTokenSource _timeoutFuture;
+        private State<TS, TD> _nextState;
+        private long _generation = 0L;
 
         /// <summary>
         /// Timer handling
         /// </summary>
-        private IDictionary<string, Timer> timers = new Dictionary<string, Timer>();
-        private AtomicCounter timerGen = new AtomicCounter(0);
+        private readonly IDictionary<string, Timer> _timers = new Dictionary<string, Timer>();
+        private readonly AtomicCounter _timerGen = new AtomicCounter(0);
 
         /// <summary>
         /// State definitions
         /// </summary>
-        private Dictionary<TS, StateFunction> stateFunctions = new Dictionary<TS, StateFunction>();
-        private Dictionary<TS, TimeSpan?> stateTimeouts = new Dictionary<TS, TimeSpan?>();
+        private readonly Dictionary<TS, StateFunction> _stateFunctions = new Dictionary<TS, StateFunction>();
+        private readonly Dictionary<TS, TimeSpan?> _stateTimeouts = new Dictionary<TS, TimeSpan?>();
 
         private void Register(TS name, StateFunction function, TimeSpan? timeout)
         {
-            if (stateFunctions.ContainsKey(name))
+            if (_stateFunctions.ContainsKey(name))
             {
-                stateFunctions[name] = OrElse(stateFunctions[name], function);
-                stateTimeouts[name] = stateTimeouts[name] ?? timeout;
+                _stateFunctions[name] = OrElse(_stateFunctions[name], function);
+                _stateTimeouts[name] = _stateTimeouts[name] ?? timeout;
             }
             else
             {
-                stateFunctions.Add(name, function);
-                stateTimeouts.Add(name, timeout);
+                _stateFunctions.Add(name, function);
+                _stateTimeouts.Add(name, timeout);
             }
         }
 
         /// <summary>
         /// Unhandled event handler
         /// </summary>
-        private StateFunction handleEventDefault
+        private StateFunction HandleEventDefault
         {
             get
             {
@@ -679,7 +679,7 @@ namespace Akka.Actor
 
         private StateFunction handleEvent
         {
-            get { return _handleEvent ?? (_handleEvent = handleEventDefault); }
+            get { return _handleEvent ?? (_handleEvent = HandleEventDefault); }
             set { _handleEvent = value; }
         }
         
@@ -695,7 +695,7 @@ namespace Akka.Actor
         /// <summary>
         /// Transition handling
         /// </summary>
-        private IList<TransitionHandler> transitionEvent = new List<TransitionHandler>();
+        private readonly IList<TransitionHandler> transitionEvent = new List<TransitionHandler>();
 
         private void HandleTransition(TS previous, TS next)
         {
@@ -738,24 +738,24 @@ namespace Akka.Actor
             var match = PatternMatch.Match(message)
                 .With<TimeoutMarker>(marker =>
                 {
-                    if (generation == marker.Generation)
+                    if (_generation == marker.Generation)
                     {
                         ProcessMsg(new StateTimeout(), "state timeout");
                     }
                 })
                 .With<Timer>(t =>
                 {
-                    if (timers.ContainsKey(t.Name) && timers[t.Name].Generation == t.Generation)
+                    if (_timers.ContainsKey(t.Name) && _timers[t.Name].Generation == t.Generation)
                     {
-                        if (timeoutFuture != null)
+                        if (_timeoutFuture != null)
                         {
-                            timeoutFuture.Cancel(false);
-                            timeoutFuture = null;
+                            _timeoutFuture.Cancel(false);
+                            _timeoutFuture = null;
                         }
-                        generation++;
+                        _generation++;
                         if (!t.Repeat)
                         {
-                            timers.Remove(t.Name);
+                            _timers.Remove(t.Name);
                         }
                         ProcessMsg(t.Message,t);
                     }
@@ -765,13 +765,13 @@ namespace Akka.Actor
                     Context.Watch(cb.ActorRef);
                     Listeners.Add(cb.ActorRef);
                     //send the current state back as a reference point
-                    cb.ActorRef.Tell(new CurrentState<TS>(Self, currentState.StateName));
+                    cb.ActorRef.Tell(new CurrentState<TS>(Self, _currentState.StateName));
                 })
                 .With<Listen>(l =>
                 {
                     Context.Watch(l.Listener);
                     Listeners.Add(l.Listener);
-                    l.Listener.Tell(new CurrentState<TS>(Self, currentState.StateName));
+                    l.Listener.Tell(new CurrentState<TS>(Self, _currentState.StateName));
                 })
                 .With<UnsubscribeTransitionCallBack>(ucb =>
                 {
@@ -786,12 +786,12 @@ namespace Akka.Actor
                 .With<Terminated>(t => Listeners.Remove(t.ActorRef))
                 .Default(msg =>
                 {
-                    if (timeoutFuture != null)
+                    if (_timeoutFuture != null)
                     {
-                        timeoutFuture.Cancel(false);
-                        timeoutFuture = null;
+                        _timeoutFuture.Cancel(false);
+                        _timeoutFuture = null;
                     }
-                    generation++;
+                    _generation++;
                     ProcessMsg(msg, Sender);
                 });
             return match.WasHandled;
@@ -799,7 +799,7 @@ namespace Akka.Actor
 
         private void ProcessMsg(object any, object source)
         {
-            var fsmEvent = new Event<TD>(any, currentState.StateData);
+            var fsmEvent = new Event<TD>(any, _currentState.StateData);
             ProcessEvent(fsmEvent, source);
         }
 
@@ -810,8 +810,8 @@ namespace Akka.Actor
                 var srcStr = GetSourceString(source);
                 Log.Debug("processing {0} from {1}", fsmEvent, srcStr);
             }
-            var stateFunc = stateFunctions[currentState.StateName];
-            var oldState = currentState;
+            var stateFunc = _stateFunctions[_currentState.StateName];
+            var oldState = _currentState;
             State<TS, TD> upcomingState = null;
 
             if(stateFunc != null)
@@ -859,7 +859,7 @@ namespace Akka.Actor
 
         private void MakeTransition(State<TS, TD> upcomingState)
         {
-            if (!stateFunctions.ContainsKey(upcomingState.StateName))
+            if (!_stateFunctions.ContainsKey(upcomingState.StateName))
             {
                 Terminate(
                     Stay()
@@ -871,23 +871,23 @@ namespace Akka.Actor
                 var replies = upcomingState.Replies;
                 replies.Reverse();
                 foreach (var r in replies) { Sender.Tell(r); }
-                if (!currentState.StateName.Equals(upcomingState.StateName))
+                if (!_currentState.StateName.Equals(upcomingState.StateName))
                 {
-                    nextState = upcomingState;
-                    HandleTransition(currentState.StateName, nextState.StateName);
-                    Listeners.Gossip(new Transition<TS>(Self, currentState.StateName, nextState.StateName));
-                    nextState = null;
+                    _nextState = upcomingState;
+                    HandleTransition(_currentState.StateName, _nextState.StateName);
+                    Listeners.Gossip(new Transition<TS>(Self, _currentState.StateName, _nextState.StateName));
+                    _nextState = null;
                 }
-                currentState = upcomingState;
-                var timeout = currentState.Timeout ?? stateTimeouts[currentState.StateName];
+                _currentState = upcomingState;
+                var timeout = _currentState.Timeout ?? _stateTimeouts[_currentState.StateName];
                 if (timeout.HasValue)
                 {
                     var t = timeout.Value;
                     if (t < TimeSpan.MaxValue)
                     {
-                        timeoutFuture = new CancellationTokenSource();
+                        _timeoutFuture = new CancellationTokenSource();
                         Context.System.Scheduler.ScheduleOnce(t, Self,
-                            new TimeoutMarker(generation), timeoutFuture.Token);
+                            new TimeoutMarker(_generation), _timeoutFuture.Token);
                     }
                 }
             }
@@ -895,15 +895,15 @@ namespace Akka.Actor
 
         private void Terminate(State<TS, TD> upcomingState)
         {
-            if (currentState.StopReason == null)
+            if (_currentState.StopReason == null)
             {
                 var reason = upcomingState.StopReason;
                 LogTermination(reason);
-                foreach (var t in timers) { t.Value.Cancel(); }
-                timers.Clear();
-                currentState = upcomingState;
+                foreach (var t in _timers) { t.Value.Cancel(); }
+                _timers.Clear();
+                _currentState = upcomingState;
 
-                var stopEvent = new StopEvent<TS, TD>(reason, currentState.StateName, currentState.StateData);
+                var stopEvent = new StopEvent<TS, TD>(reason, _currentState.StateName, _currentState.StateData);
                 terminateEvent(stopEvent);
             }
         }

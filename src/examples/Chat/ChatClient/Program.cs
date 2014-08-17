@@ -2,7 +2,6 @@
 using Akka;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Event;
 using Akka.Remote;
 using System;
 using System.Collections.Generic;
@@ -25,7 +24,7 @@ namespace ChatClient
             using (var system = ActorSystem.Create("MyClient", fluentConfig)) 
             {
                 var chatClient = system.ActorOf(Props.Create<ChatClientActor>());
-                var tmp = system.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
+                system.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
                 chatClient.Tell(new ConnectRequest()
                 {
                     Username = "Roggan",
@@ -68,14 +67,8 @@ namespace ChatClient
         IHandle<SayRequest>,
         IHandle<SayResponse>, ILogReceive
     {
-        LoggingAdapter log = Logging.GetLogger(Context);
-
-        public ChatClientActor()
-        {
-        }
-
-        private string nick = "Roggan";
-        private ActorSelection server = Context.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
+        private string _nick = "Roggan";
+        private readonly ActorSelection _server = Context.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");
         
         public void Handle(ConnectResponse message)
         {
@@ -85,10 +78,10 @@ namespace ChatClient
 
         public void Handle(NickRequest message)
         {
-            message.OldUsername = this.nick;
+            message.OldUsername = this._nick;
             Console.WriteLine("Changing nick to {0}", message.NewUsername);
-            this.nick = message.NewUsername;
-            server.Tell(message);
+            this._nick = message.NewUsername;
+            _server.Tell(message);
         }
 
         public void Handle(NickResponse message)
@@ -104,13 +97,13 @@ namespace ChatClient
         public void Handle(ConnectRequest message)
         {
             Console.WriteLine("Connecting....");
-            server.Tell(message);
+            _server.Tell(message);
         }
 
         public void Handle(SayRequest message)
         {
-            message.Username = this.nick;
-            server.Tell(message);
+            message.Username = this._nick;
+            _server.Tell(message);
         }     
     }
 }

@@ -1,9 +1,5 @@
-﻿using Akka.Actor;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
+using Akka.Actor;
 
 namespace Shared
 {
@@ -11,8 +7,9 @@ namespace Shared
     {
         public SomeActor(string someArg, long otherArg)
         {
-            Console.WriteLine("Constructing SomeActor with {0},{1}",someArg,otherArg);
+            Console.WriteLine("Constructing SomeActor with {0},{1}", someArg, otherArg);
         }
+
         protected override void OnReceive(object message)
         {
             if (message is long)

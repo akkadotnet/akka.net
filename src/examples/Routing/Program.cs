@@ -1,11 +1,8 @@
-﻿using Akka.Actor;
+﻿using System;
+using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Configuration;
 using Akka.Routing;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Routing
 {
@@ -16,10 +13,7 @@ namespace Routing
 
         public object ConsistentHashKey
         {
-            get
-            {
-                return Id;
-            }
+            get { return Id; }
         }
 
         public override string ToString()
@@ -27,11 +21,11 @@ namespace Routing
             return string.Format("{0} {1}", Id, Name);
         }
     }
-    class Program
-    {
-        static void Main(string[] args)
-        {
 
+    internal class Program
+    {
+        private static void Main(string[] args)
+        {
             using (var system = ActorSystem.Create("MySystem"))
             {
                 system.ActorOf<Worker>("Worker1");
@@ -54,7 +48,7 @@ routees.paths = [
                 Console.WriteLine("This is because of the 'Throughput' setting of the MessageDispatcher");
                 Console.WriteLine("it lets each actor process X message per scheduled run");
                 Console.WriteLine();
-                for (int i = 0; i < 20; i++)
+                for (var i = 0; i < 20; i++)
                 {
                     roundRobinGroup.Tell(i);
                 }
@@ -64,11 +58,11 @@ routees.paths = [
                 var hashGroup = system.ActorOf(Props.Empty.WithRouter(new ConsistentHashingGroup(config)));
                 Task.Delay(500).Wait();
                 Console.WriteLine();
-                for (int i = 0; i < 5; i++)
+                for (var i = 0; i < 5; i++)
                 {
-                    for (int j = 0; j < 7; j++)
+                    for (var j = 0; j < 7; j++)
                     {
-                        var message = new HashableMessage()
+                        var message = new HashableMessage
                         {
                             Name = Guid.NewGuid().ToString(),
                             Id = j,
@@ -78,11 +72,7 @@ routees.paths = [
                     }
                 }
 
-                var roundRobinPool = system.ActorOf(new RoundRobinPool(
-                    nrOfInstances: 5,
-                    resizer: null,
-                    supervisorStrategy: null,
-                    routerDispatcher: null,
+                var roundRobinPool = system.ActorOf(new RoundRobinPool(5, null, null, null,
                     usePoolDispatcher: false).Props(Props.Create<Worker>()));
                 //or: var actor = system.ActorOf(new Props().WithRouter(new RoundRobinGroup("user/Worker1", "user/Worker2", "user/Worker3", "user/Worker4")));
 
@@ -90,7 +80,7 @@ routees.paths = [
                 Console.WriteLine("This is because of the 'Throughput' setting of the MessageDispatcher");
                 Console.WriteLine("it lets each actor process X message per scheduled run");
                 Console.WriteLine();
-                for (int i = 0; i < 20; i++)
+                for (var i = 0; i < 20; i++)
                 {
                     roundRobinPool.Tell(i);
                 }
@@ -105,7 +95,7 @@ routees.paths = [
     {
         protected override void OnReceive(object message)
         {
-            Console.WriteLine("{0} received {1}",Self.Path.Name ,message);
+            Console.WriteLine("{0} received {1}", Self.Path.Name, message);
         }
     }
 }

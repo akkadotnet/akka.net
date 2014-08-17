@@ -30,7 +30,7 @@ namespace SymbolLookup.Actors
             foreach(var symbol in symbols)
             {
                 var stockActor = Context.ActorOf(Props.Create<StockActor>(), "stock-" + _stockActorNumber + "-" + symbol);
-                stockActor.Tell(new DownloadSymbolData() {Symbol = symbol});
+                stockActor.Tell(new DownloadSymbolData {Symbol = symbol});
                 _stockActorNumber++;
             }
         }
