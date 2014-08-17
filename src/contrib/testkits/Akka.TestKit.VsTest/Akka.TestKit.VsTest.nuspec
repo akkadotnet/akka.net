@@ -10,11 +10,14 @@
     <projectUrl>https://github.com/akkadotnet/akka.net</projectUrl>
     <iconUrl>https://raw.githubusercontent.com/akkadotnet/akka.net/gh-pages/images/icon.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>TestKit for writing tests for Akka.NET using xUnit.</description>
+    <description>TestKit for writing tests for Akka.NET using Visual Studio Unit Testing Framework.</description>
     <releaseNotes>@releaseNotes@</releaseNotes>
     <copyright>@copyright@</copyright>
     <tags>@tags@</tags>
     @dependencies@
     @references@
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="Microsoft.VisualStudio.QualityTools.UnitTestFramework" />
+    </frameworkAssemblies>
   </metadata>
 </package>

@@ -70,6 +70,7 @@ namespace Akka.TestKit
             Sender.Tell(message,TestActor);
         }
 
+        [Obsolete("Cannot create a TestProbe from a TestProbe", true)]
         protected override TestProbe CreateTestProbe()
         {
             throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");

@@ -10,7 +10,9 @@
     <projectUrl>https://github.com/akkadotnet/akka.net</projectUrl>
     <iconUrl>https://raw.githubusercontent.com/akkadotnet/akka.net/gh-pages/images/icon.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>@description@</description>
+    <description>This contains base functionality for writing tests for the Akka.Net framework. 
+    You should not add this package manually to your project. Add the one appropiate for the test framework
+    you use instead. For example: Akka.TestKit.Xunit or Akka.TestKit.VsTest</description>
     <releaseNotes>@releaseNotes@</releaseNotes>
     <copyright>@copyright@</copyright>
     <tags>@tags@</tags>

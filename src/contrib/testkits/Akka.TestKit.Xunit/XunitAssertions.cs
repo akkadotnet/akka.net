@@ -10,7 +10,7 @@ namespace Akka.TestKit.Xunit
     /// </summary>
     public class XunitAssertions : TestKitAssertions
     {
-        public void Fail(string format, params object[] args)
+        public void Fail(string format = "", params object[] args)
         {
             Assert.True(false, string.Format(format, args));
         }
@@ -36,13 +36,6 @@ namespace Akka.TestKit.Xunit
         public void AssertEqual<T>(T expected, T actual, Func<T, T, bool> comparer, string format = "", params object[] args)
         {
             if(!comparer(expected, actual))
-                throw new AkkaEqualException(expected, actual, format, args);
-        }
-
-        public void AssertEqualEnumerable<T>(IEnumerable<T> expected, IEnumerable<T> actual, string format = "", params object[] args)
-        {
-            var comparer = new AkkaAssertEqualityComparer<IEnumerable<T>>(true);
-            if(!comparer.Equals(expected, actual))
                 throw new AkkaEqualException(expected, actual, format, args);
         }
 
