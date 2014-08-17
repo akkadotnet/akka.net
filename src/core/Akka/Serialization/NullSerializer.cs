@@ -22,7 +22,7 @@ namespace Akka.Serialization
         private readonly byte[] nullBytes = { };
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="NullSerializer" /> class.
+        ///     Initializes a new Instance of the <see cref="NullSerializer" /> class.
         /// </summary>
         /// <param name="system">The system.</param>
         public NullSerializer(ExtendedActorSystem system)
