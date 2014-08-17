@@ -55,7 +55,7 @@ namespace Akka.TestKit.Internals
                     _autoPilot = newAutoPilot;
             }
             if(_ignore == null || !_ignore(message))
-                _queue.Add(new RealMessageEnvelope(message, actorRef));
+                _queue.Enqueue(new RealMessageEnvelope(message, actorRef));
             return true;
         }
 

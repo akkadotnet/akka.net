@@ -163,7 +163,7 @@ namespace Akka.TestKit
         /// Note that it is not an error to hit the `max` duration in this case.
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
-        public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, Func<object, T> filter, int msgs = int.MaxValue)
+        public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, Func<object, T> filter, int msgs = int.MaxValue) where T : class
         {
             return ReceiveWhile(filter, max, Timeout.InfiniteTimeSpan, msgs);
         }
@@ -177,7 +177,7 @@ namespace Akka.TestKit
         /// Note that it is not an error to hit the `max` duration in this case.
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
-        public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue)
+        public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue) where T : class
         {
             return ReceiveWhile(filter, max, idle, msgs);
         }
@@ -191,7 +191,7 @@ namespace Akka.TestKit
         /// Note that it is not an error to hit the `max` duration in this case.
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
-        public IReadOnlyList<T> ReceiveWhile<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue)
+        public IReadOnlyList<T> ReceiveWhile<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue) where T : class
         {
             var stop = Now + RemainingOrDilated(max);
 
@@ -211,13 +211,74 @@ namespace Akka.TestKit
                 var result = filter(message);
                 if(result == null)
                 {
-                    //TODO: We use a BlockingQueue that do not allow AddFirst. _queue.AddFirst(message);  //Put the message back in the queue
+                    _queue.AddFirst(envelope);  //Put the message back in the queue
                     _lastMessage = msg;
                     break;
                 }
                 msg = envelope;
                 acc.Add(result);
                 count++;
+            }
+
+            _lastWasNoMsg = true;
+            return acc;
+        }
+
+
+        /// <summary>
+        /// Receive a series of messages.
+        /// It will continue to receive messages until the <see cref="shouldIgnore"/> predicate returns <c>false</c> or the idle 
+        /// timeout is met (disabled by default) or the overall
+        /// maximum duration is elapsed or expected messages count is reached.
+        /// If a message that isn't of type <typeparamref name="T"/> the parameter <paramref name="shouldIgnoreOtherMessageTypes"/> 
+        /// declares if the message should be ignored or not.
+        /// <para>Returns the sequence of messages.</para>
+        /// 
+        /// Note that it is not an error to hit the `max` duration in this case.
+        /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
+        /// </summary>
+        public IReadOnlyList<T> ReceiveWhile<T>(Predicate<T> shouldIgnore, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes=true) where T : class
+        {
+            var stop = Now + RemainingOrDilated(max);
+
+            var count = 0;
+            var acc = new List<T>();
+            var idleValue = idle.GetValueOrDefault(Timeout.InfiniteTimeSpan);
+            MessageEnvelope msg = NullMessageEnvelope.Instance;
+            while(count < msgs)
+            {
+                MessageEnvelope envelope;
+                if(!TryReceiveOne(out envelope, (stop - Now).Min(idleValue)))
+                {
+                    _lastMessage = msg;
+                    break;
+                }
+                var message = envelope.Message;
+                var typedMessage = message as T;
+                var shouldStop = false;
+                if(typedMessage != null)
+                {
+                    if(shouldIgnore(typedMessage))
+                    {
+                        acc.Add(typedMessage);
+                        count++;
+                    }
+                    else
+                    {
+                        shouldStop = true;
+                    }
+                }
+                else
+                {
+                    shouldStop = !shouldIgnoreOtherMessageTypes;
+                }
+                if(shouldStop)
+                {
+                    _queue.AddFirst(envelope);  //Put the message back in the queue
+                    _lastMessage = msg;
+                    break;
+                }
+                msg = envelope;
             }
 
             _lastWasNoMsg = true;

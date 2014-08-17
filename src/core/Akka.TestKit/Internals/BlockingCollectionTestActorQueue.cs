@@ -8,22 +8,22 @@ namespace Akka.TestKit.Internals
     /// </summary>
     public class BlockingCollectionTestActorQueue<T> : ITestActorQueue<T>
     {
-        private readonly BlockingCollection<T> _collection;
+        private readonly BlockingQueue<T> _queue;
 
-        public BlockingCollectionTestActorQueue(BlockingCollection<T> collection)
+        public BlockingCollectionTestActorQueue(BlockingQueue<T> queue)
         {
-            _collection = collection;
+            _queue = queue;
         }
 
-        public void Add(T item)
+        public void Enqueue(T item)
         {
-            _collection.Add(item);
+            _queue.Enqueue(item);
         }
 
         public IEnumerable<T> GetAll()
         {
             T item;
-            while(_collection.TryTake(out item))
+            while(_queue.TryTake(out item))
             {
                 yield return item;
             }

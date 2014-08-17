@@ -30,7 +30,7 @@ namespace Akka.TestKit
         private readonly TestKitAssertions _assertions;
         private readonly ActorSystem _system;
         private readonly TestKitSettings _testKitSettings;
-        private readonly BlockingCollection<MessageEnvelope> _queue;
+        private readonly BlockingQueue<MessageEnvelope> _queue;
         private MessageEnvelope _lastMessage = NullMessageEnvelope.Instance;
         private static readonly AtomicCounter _testActorId = new AtomicCounter(0);
         private readonly ActorRef _testActor;
@@ -77,7 +77,7 @@ namespace Akka.TestKit
             system.RegisterExtension(new TestKitExtension());
             system.RegisterExtension(new TestKitAssertionsExtension(assertions));
             _testKitSettings = TestKitExtension.For(_system);
-            _queue = new BlockingCollection<MessageEnvelope>();
+            _queue = new BlockingQueue<MessageEnvelope>();
             _log = Logging.GetLogger(system, GetType());
 
 

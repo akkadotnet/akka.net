@@ -55,5 +55,80 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             TestActor.Tell("2");
             Intercept(() => FishForMessage(_ => false, TimeSpan.FromMilliseconds(100)));
         }
+
+        [Fact]
+        public void ReceiveWhile_Filter_should_on_a_timeout_return_no_messages()
+        {
+            ReceiveWhile<object>(_ => _, TimeSpan.FromMilliseconds(10)).Count.ShouldBe(0);
+        }
+
+        [Fact]
+        public void ReceiveWhile_Filter_should_break_on_function_returning_null_and_return_correct_messages()
+        {
+            TestActor.Tell("1");
+            TestActor.Tell(2);
+            TestActor.Tell("3");
+            TestActor.Tell(99999.0);
+            TestActor.Tell(4);
+            ReceiveWhile<string>(_ => _ is double ? null : _.ToString()).ShouldOnlyContainInOrder("1", "2", "3");
+        }
+
+        [Fact]
+        public void ReceiveWhile_Filter_should_not_consume_last_message_that_didnt_match()
+        {
+            TestActor.Tell("1");
+            TestActor.Tell("2");
+            TestActor.Tell(4711);
+            ReceiveWhile<object>(_ => _ is string ? _ : null);
+            ExpectMsg(4711);
+        }
+
+        [Fact]
+        public void ReceiveWhile_Predicate_should_on_a_timeout_return_no_messages()
+        {
+            ReceiveWhile<object>(_ => false, TimeSpan.FromMilliseconds(10)).Count.ShouldBe(0);
+        }
+
+        [Fact]
+        public void ReceiveWhile_Predicate_should_break_when_predicate_returns_false_and_return_correct_messages()
+        {
+            TestActor.Tell("1");
+            TestActor.Tell("2");
+            TestActor.Tell("3");
+            TestActor.Tell("-----------");
+            TestActor.Tell("4");
+            ReceiveWhile<string>(s => s.Length == 1).ShouldOnlyContainInOrder("1", "2", "3");
+        }
+        [Fact]
+        public void ReceiveWhile_Predicate_should_break_when_type_is_wrong_and_we_dont_ignore_those_and_return_correct_messages()
+        {
+            TestActor.Tell("1");
+            TestActor.Tell("2");
+            TestActor.Tell("3");
+            TestActor.Tell(4);
+            TestActor.Tell("5");
+            ReceiveWhile<string>(s => s.Length == 1, shouldIgnoreOtherMessageTypes: false).ShouldOnlyContainInOrder("1", "2", "3");
+        }
+        [Fact]
+        public void ReceiveWhile_Predicate_should_continue_when_type_is_other_but_we_ignore_other_types_and_return_correct_messages()
+        {
+            TestActor.Tell("1");
+            TestActor.Tell("2");
+            TestActor.Tell("3");
+            TestActor.Tell(4);
+            TestActor.Tell("5");
+            ReceiveWhile<string>(s => s.Length == 1, shouldIgnoreOtherMessageTypes: true).ShouldOnlyContainInOrder("1", "2", "3","5");
+        }
+
+        [Fact]
+        public void ReceiveWhile_Predicate_should_not_consume_last_message_that_didnt_match()
+        {
+            TestActor.Tell("1");
+            TestActor.Tell("2");
+            TestActor.Tell(4711);
+            ReceiveWhile<object>(_ => _ is string);
+            ExpectMsg(4711);
+        }
+
     }
 }

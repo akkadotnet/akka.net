@@ -51,5 +51,15 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             var diff = (after - before).TotalMilliseconds;
             Assert.True(Math.Abs(diff - ExpectedTimeout) <= DiffDelta, string.Format("Expected the timeout to be {0} but in fact it was {1}.", ExpectedTimeout, diff));
         }
+
+        [Fact]
+        public void FishForMessage_should_dilate_timeout()
+        {
+            var before = Now;
+            Intercept(() => FishForMessage(_=>false, TimeSpan.FromMilliseconds(Timeout)));
+            var after = Now;
+            var diff = (after - before).TotalMilliseconds;
+            Assert.True(Math.Abs(diff - ExpectedTimeout) <= DiffDelta, string.Format("Expected the timeout to be {0} but in fact it was {1}.", ExpectedTimeout, diff));
+        }
     }
 }
