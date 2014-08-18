@@ -18,12 +18,21 @@ namespace Akka.Serilog.Event.Serilog
             var logger = Log.Logger.ForContext(GetType());
             logStatement(logger);
         }
+
+        private ILogger SetContextFromLogEvent(ILogger logger, LogEvent logEvent)
+        {
+            logger.ForContext("Timestamp", logEvent.Timestamp);
+            logger.ForContext("LogSource", logEvent.LogSource);
+            logger.ForContext("Thread", logEvent.Thread);
+            return logger;
+        }
+
         protected SerilogLogger()
         {
-            Receive<Error>(m => WithSerilog(logger => logger.Error("{0}", m.Message)));
-            Receive<Warning>(m => WithSerilog(logger => logger.Warning("{0}", m.Message)));
-            Receive<Info>(m => WithSerilog(logger => logger.Information("{0}", m.Message)));
-            Receive<Debug>(m => WithSerilog(logger => logger.Debug("{0}", m.Message)));
+            Receive<Error>(m => WithSerilog(logger => SetContextFromLogEvent(logger,m).Error(m.Cause,"{Message}", m.Message)));
+            Receive<Warning>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Warning("{Message}", m.Message)));
+            Receive<Info>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Information("{Message}", m.Message)));
+            Receive<Debug>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Debug("{Message}", m.Message)));
             Receive<InitializeLogger>(m =>
             {
                 log.Info("SerilogLogger started");
