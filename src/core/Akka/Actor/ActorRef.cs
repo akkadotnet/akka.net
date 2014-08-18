@@ -18,7 +18,7 @@ namespace Akka.Actor
     /// method provided on the scope.
     /// INTERNAL
     /// </summary>
-// ReSharper disable once InconsistentNaming
+    // ReSharper disable once InconsistentNaming
     public interface ActorRefScope
     {
         bool IsLocal { get; }
@@ -69,7 +69,7 @@ namespace Akka.Actor
             get { throw new NotImplementedException(); }
         }
 
-        
+
         private const int INITIATED = 0;
         private const int COMPLETED = 1;
         private int status = INITIATED;
@@ -81,7 +81,7 @@ namespace Akka.Actor
             }
             else
             {
-                if (Interlocked.Exchange(ref status,COMPLETED) == INITIATED)
+                if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
                 {
                     _unregister();
                     if (_sender == NoSender || message is Terminated)
@@ -93,7 +93,7 @@ namespace Akka.Actor
                         _sender.Tell(new CompleteFuture(() => _result.TrySetResult(message)));
                     }
                 }
-            }            
+            }
         }
 
         protected void SendSystemMessage(SystemMessage message, ActorRef sender)
@@ -140,7 +140,7 @@ namespace Akka.Actor
 
         public void Tell(object message, ActorRef sender)
         {
-            if(sender == null) throw new ArgumentNullException("sender", "A sender must be specified");
+            if (sender == null) throw new ArgumentNullException("sender", "A sender must be specified");
 
             TellInternal(message, sender);
         }
@@ -170,7 +170,7 @@ namespace Akka.Actor
 
         public static implicit operator ActorRefSurrogate(ActorRef @ref)
         {
-            if(@ref != null)
+            if (@ref != null)
             {
                 return new ActorRefSurrogate(Serialization.Serialization.SerializedActorPath(@ref));
             }
@@ -195,8 +195,8 @@ namespace Akka.Actor
             unchecked
             {
                 var hash = 17;
-                hash = hash*23 + Path.Uid.GetHashCode();
-                hash = hash*23 + Path.GetHashCode();
+                hash = hash * 23 + Path.Uid.GetHashCode();
+                hash = hash * 23 + Path.GetHashCode();
                 return hash;
             }
         }
@@ -236,7 +236,7 @@ namespace Akka.Actor
 
         public override ActorRef GetChild(IEnumerable<string> name)
         {
-            if(name.All(string.IsNullOrEmpty))
+            if (name.All(string.IsNullOrEmpty))
                 return this;
             return Nobody;
         }
@@ -275,7 +275,7 @@ namespace Akka.Actor
     public sealed class Nobody : MinimalActorRef
     {
         public static Nobody Instance = new Nobody();
-        private readonly ActorPath _path = new RootActorPath(Address.AllSystems) / "Nobody";
+        private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/Nobody");
 
         private Nobody() { }
 
@@ -323,7 +323,7 @@ namespace Akka.Actor
     public sealed class NoSender : ActorRef
     {
         public static readonly NoSender Instance = new NoSender();
-        private readonly ActorPath _path = new RootActorPath(Address.AllSystems) / "NoSender";
+        private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/NoSender");
 
         private NoSender() { }
 
@@ -389,7 +389,7 @@ namespace Akka.Actor
         public void RemoveChild(string name)
         {
             InternalActorRef tmp;
-            if(!_children.TryRemove(name, out tmp))
+            if (!_children.TryRemove(name, out tmp))
             {
                 //TODO: log.warning("{} trying to remove non-child {}", path, name)
             }
@@ -415,23 +415,23 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
         {
             //Using enumerator to avoid multiple enumerations of name.
             var enumerator = name.GetEnumerator();
-            if(!enumerator.MoveNext())
+            if (!enumerator.MoveNext())
             {
                 //name was empty
                 return this;
             }
             var firstName = enumerator.Current;
-            if(string.IsNullOrEmpty(firstName))
+            if (string.IsNullOrEmpty(firstName))
                 return this;
             InternalActorRef child;
-            if(_children.TryGetValue(firstName, out child))
+            if (_children.TryGetValue(firstName, out child))
                 return child.GetChild(new Enumerable<string>(enumerator));
             return Nobody;
         }
 
         public void ForeachActorRef(Action<ActorRef> action)
         {
-            foreach(InternalActorRef child in _children.Values)
+            foreach (InternalActorRef child in _children.Values)
             {
                 action(child);
             }

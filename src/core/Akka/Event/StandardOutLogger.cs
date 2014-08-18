@@ -12,7 +12,7 @@ namespace Akka.Event
     /// </summary>
     public class StandardOutLogger : MinimalActorRef
     {
-        private ActorPath _path = new RootActorPath(Address.AllSystems) / "StandardOutLogger";
+        private ActorPath _path = new RootActorPath(Address.AllSystems, "/StandardOutLogger");
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="StandardOutLogger" /> class.

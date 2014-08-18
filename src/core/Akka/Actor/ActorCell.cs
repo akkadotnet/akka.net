@@ -215,7 +215,7 @@ namespace Akka.Actor
 
         private long NewUid()
         {
-            long auid = Interlocked.Increment(ref _uid);
+            var auid = Interlocked.Increment(ref _uid);
             return auid;
         }
 

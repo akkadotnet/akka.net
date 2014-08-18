@@ -26,14 +26,16 @@ namespace Akka.Actor
         public static readonly Regex ElementRegex =
             new Regex(@"(?:[-\w:@&=+,.!~*'_;]|%\\p{N}{2})(?:[-\w:@&=+,.!~*'$_;]|%\\p{N}{2})*", RegexOptions.Compiled);
 
-
+        private readonly string _name;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorPath" /> class.
         /// </summary>
         /// <param name="address"> The address. </param>
-        protected ActorPath(Address address)
-        {          
+        /// <param name="name"> The name. </param>
+        protected ActorPath(Address address, string name)
+        {
+            _name = name;
             Address = address;
         }
 
@@ -41,11 +43,13 @@ namespace Akka.Actor
         /// Initializes a new instance of the <see cref="ActorPath" /> class.
         /// </summary>
         /// <param name="parentPath"> The parent path. </param>
+        /// <param name="name"> The name. </param>
         /// <param name="uid"> The uid. </param>
-        protected ActorPath(ActorPath parentPath, long uid)
+        protected ActorPath(ActorPath parentPath, string name, long uid)
         {
             Address = parentPath.Address;
             Uid = uid;
+            _name = name;
         }
 
         /// <summary>
@@ -78,7 +82,10 @@ namespace Akka.Actor
         /// Gets the name.
         /// </summary>
         /// <value> The name. </value>
-        public abstract string Name { get; }
+        public string Name
+        {
+            get { return _name; }
+        }
 
         /// <summary>
         /// The Address under which this path can be reached; walks up the tree to
@@ -127,9 +134,9 @@ namespace Akka.Actor
         public static ActorPath operator /(ActorPath path, IEnumerable<string> name)
         {
             var a = path;
-            foreach (var element in name)
+            foreach (string element in name)
             {
-                a = a/element;
+                a = a / element;
             }
             return a;
         }
@@ -148,7 +155,7 @@ namespace Akka.Actor
             Uri uri;
             if (!TryParseAddress(path, out address, out uri)) return false;
             var pathElements = uri.AbsolutePath.Split('/');
-            actorPath = new RootActorPath(address)/pathElements.Skip(1);
+            actorPath = new RootActorPath(address) / pathElements.Skip(1);
             return true;
         }
 
@@ -247,7 +254,7 @@ namespace Akka.Actor
         /// <returns> ActorPath. </returns>
         public ActorPath Child(string childName)
         {
-            return this/childName;
+            return this / childName;
         }
 
         /// <summary>
@@ -269,7 +276,7 @@ namespace Akka.Actor
         /// </returns>
         public override bool Equals(object obj)
         {
-            return Equals((ActorPath) obj);
+            return Equals((ActorPath)obj);
         }
 
         public static bool operator ==(ActorPath left, ActorPath right)
@@ -326,7 +333,9 @@ namespace Akka.Actor
         /// Initializes a new instance of the <see cref="RootActorPath" /> class.
         /// </summary>
         /// <param name="address"> The address. </param>
-        public RootActorPath(Address address) : base(address)
+        /// <param name="name"> The name. </param>
+        public RootActorPath(Address address, string name = "")
+            : base(address, name)
         {
         }
 
@@ -352,11 +361,6 @@ namespace Akka.Actor
                 return this;
             throw new NotSupportedException("RootActorPath must have undefinedUid");
         }
-
-        public override string Name
-        {
-            get { return ""; }
-        }
     }
 
     /// <summary>
@@ -374,7 +378,7 @@ namespace Akka.Actor
         /// <param name="name"> The name. </param>
         /// <param name="uid"> The uid. </param>
         public ChildActorPath(ActorPath parentPath, string name, long uid)
-            : base(parentPath, uid)
+            : base(parentPath, name, uid)
         {
             _name = name;
             _parent = parentPath;
@@ -392,7 +396,7 @@ namespace Akka.Actor
                 var current = _parent;
                 while (current is ChildActorPath)
                 {
-                    current = ((ChildActorPath) current)._parent;
+                    current = ((ChildActorPath)current)._parent;
                 }
                 return current.Root;
             }
@@ -408,11 +412,6 @@ namespace Akka.Actor
             if (uid == Uid)
                 return this;
             return new ChildActorPath(_parent, _name, uid);
-        }
-
-        public override string Name
-        {
-            get { return _name; }
         }
     }
 }
