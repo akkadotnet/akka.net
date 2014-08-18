@@ -15,11 +15,11 @@ cd __SOURCE_DIRECTORY__
 //--------------------------------------------------------------------------------
 
 
-let product = "Akka.net"
-let authors = [ "Roger Alsing"; "Aaron Stannard"; "Jérémie Chassaing"; "Stefan Alfbo"; "Håkan Canberger" ]
-let copyright = "Copyright © Roger Alsing 2013-2014"
-let company = "Akka.net"
-let description = "Akka .NET is a port of the popular Java/Scala framework Akka to .NET."
+let product = "Akka.NET"
+let authors = [ "Akka.NET Team" ]
+let copyright = "Copyright © 2013-2014 Akka.NET Team"
+let company = "Akka.NET Team"
+let description = "Akka.NET is a port of the popular Java/Scala framework Akka to .NET"
 let tags = ["akka";"actors";"actor";"model";"Akka";"concurrency"]
 let configuration = "Release"
 

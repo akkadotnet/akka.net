@@ -2,7 +2,7 @@
 using System.Reflection;
 
 [assembly: AssemblyCompanyAttribute("Akka")]
-[assembly: AssemblyCopyrightAttribute("Copyright © Roger Alsing 2013-2014")]
+[assembly: AssemblyCopyrightAttribute("Copyright © 2013-2014 Akka.NET Team")]
 [assembly: AssemblyTrademarkAttribute("")]
 [assembly: AssemblyVersionAttribute("0.6.3.0")]
 [assembly: AssemblyFileVersionAttribute("0.6.3.0")]
