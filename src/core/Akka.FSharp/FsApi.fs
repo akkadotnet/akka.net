@@ -214,7 +214,7 @@ module Serialization =
         inherit Serializer(system)
         
 
-        let fsp = new FsPickler()
+        let fsp = FsPickler.CreateBinary()
         override x.Identifier = 9
         override x.IncludeManifest = true
 
