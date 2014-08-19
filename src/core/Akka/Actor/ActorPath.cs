@@ -1,133 +1,142 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Akka.Actor
 {
     /// <summary>
-    ///     Actor path is a unique path to an actor that shows the creation path
-    ///     up through the actor tree to the root actor.
-    ///     ActorPath defines a natural ordering (so that ActorRefs can be put into
-    ///     collections with this requirement); this ordering is intended to be as fast
-    ///     as possible, which owing to the bottom-up recursive nature of ActorPath
-    ///     is sorted by path elements FROM RIGHT TO LEFT, where RootActorPath >
-    ///     ChildActorPath in case the number of elements is different.
-    ///     Two actor paths are compared equal when they have the same name and parent
-    ///     elements, including the root address information. That does not necessarily
-    ///     mean that they point to the same incarnation of the actor if the actor is
-    ///     re-created with the same path. In other words, in contrast to how actor
-    ///     references are compared the unique id of the actor is not taken into account
-    ///     when comparing actor paths.
+    /// Actor path is a unique path to an actor that shows the creation path
+    /// up through the actor tree to the root actor.
+    /// ActorPath defines a natural ordering (so that ActorRefs can be put into
+    /// collections with this requirement); this ordering is intended to be as fast
+    /// as possible, which owing to the bottom-up recursive nature of ActorPath
+    /// is sorted by path elements FROM RIGHT TO LEFT, where RootActorPath >
+    /// ChildActorPath in case the number of elements is different.
+    /// Two actor paths are compared equal when they have the same name and parent
+    /// elements, including the root address information. That does not necessarily
+    /// mean that they point to the same incarnation of the actor if the actor is
+    /// re-created with the same path. In other words, in contrast to how actor
+    /// references are compared the unique id of the actor is not taken into account
+    /// when comparing actor paths.
     /// </summary>
     public abstract class ActorPath : IEquatable<ActorPath>
     {
-        /// <summary>The regex that actor names must conform to</summary>
+        /// <summary> The regex that actor names must conform to </summary>
         public static readonly Regex ElementRegex =
             new Regex(@"(?:[-\w:@&=+,.!~*'_;]|%\\p{N}{2})(?:[-\w:@&=+,.!~*'$_;]|%\\p{N}{2})*", RegexOptions.Compiled);
 
-        private readonly IReadOnlyList<string> _elements;
+        private readonly string _name;
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="ActorPath" /> class.
+        /// Initializes a new instance of the <see cref="ActorPath" /> class.
         /// </summary>
-        /// <param name="address">The address.</param>
-        /// <param name="name">The name.</param>
-        public ActorPath(Address address, string name)
+        /// <param name="address"> The address. </param>
+        /// <param name="name"> The name. </param>
+        protected ActorPath(Address address, string name)
         {
-            _elements = name != "" ? new[]{name} : new string[0];
+            _name = name;
             Address = address;
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="ActorPath" /> class.
+        /// Initializes a new instance of the <see cref="ActorPath" /> class.
         /// </summary>
-        /// <param name="parentPath">The parent path.</param>
-        /// <param name="name">The name.</param>
-        /// <param name="uid">The uid.</param>
-        public ActorPath(ActorPath parentPath, string name, long uid)
+        /// <param name="parentPath"> The parent path. </param>
+        /// <param name="name"> The name. </param>
+        /// <param name="uid"> The uid. </param>
+        protected ActorPath(ActorPath parentPath, string name, long uid)
         {
             Address = parentPath.Address;
             Uid = uid;
-            var elements=new List<string>(parentPath._elements) {name};
-            _elements = elements;
+            _name = name;
         }
 
         /// <summary>
-        ///     Gets the uid.
+        /// Gets the uid.
         /// </summary>
-        /// <value>The uid.</value>
+        /// <value> The uid. </value>
         public long Uid { get; private set; }
 
         /// <summary>
-        ///     Gets the elements.
+        /// Gets the elements.
         /// </summary>
-        /// <value>The elements.</value>
+        /// <value> The elements. </value>
         public IReadOnlyList<string> Elements
         {
-            get { return _elements; }
+            get
+            {
+                var current = this;
+                var elements = new List<string>();
+                while (!(current is RootActorPath))
+                {
+                    elements.Add(current.Name);
+                    current = current.Parent;
+                }
+                elements.Reverse();
+                return elements.AsReadOnly();
+            }
         }
 
         /// <summary>
-        ///     Gets the name.
+        /// Gets the name.
         /// </summary>
-        /// <value>The name.</value>
+        /// <value> The name. </value>
         public string Name
         {
-            get { return _elements.LastOrDefault(); }
+            get { return _name; }
         }
 
         /// <summary>
-        ///     The Address under which this path can be reached; walks up the tree to
-        ///     the RootActorPath.
+        /// The Address under which this path can be reached; walks up the tree to
+        /// the RootActorPath.
         /// </summary>
-        /// <value>The address.</value>
+        /// <value> The address. </value>
         public Address Address { get; private set; }
 
         public abstract ActorPath Root { get; }
         public abstract ActorPath Parent { get; }
 
         /// <summary>
-        ///     Indicates whether the current object is equal to another object of the same type.
+        /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>
-        /// <param name="other">An object to compare with this object.</param>
-        /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
+        /// <param name="other"> An object to compare with this object. </param>
+        /// <returns> true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false. </returns>
         public bool Equals(ActorPath other)
         {
-            return this.Address.Equals(other.Address) && _elements.SequenceEqual(other._elements);
+            return Address.Equals(other.Address) && Elements.SequenceEqual(other.Elements);
         }
 
         /// <summary>
-        ///     Withes the uid.
+        /// Withes the uid.
         /// </summary>
-        /// <param name="uid">The uid.</param>
-        /// <returns>ActorPath.</returns>
+        /// <param name="uid"> The uid. </param>
+        /// <returns> ActorPath. </returns>
         public abstract ActorPath WithUid(long uid);
 
         /// <summary>
-        ///     Create a new child actor path.
+        /// Create a new child actor path.
         /// </summary>
-        /// <param name="path">The path.</param>
-        /// <param name="name">The name.</param>
-        /// <returns>The result of the operator.</returns>
+        /// <param name="path"> The path. </param>
+        /// <param name="name"> The name. </param>
+        /// <returns> The result of the operator. </returns>
         public static ActorPath operator /(ActorPath path, string name)
         {
             return new ChildActorPath(path, name, 0);
         }
 
         /// <summary>
-        ///     Recursively create a descendant’s path by appending all child names.
+        /// Recursively create a descendant’s path by appending all child names.
         /// </summary>
-        /// <param name="path">The path.</param>
-        /// <param name="name">The name.</param>
-        /// <returns>The result of the operator.</returns>
+        /// <param name="path"> The path. </param>
+        /// <param name="name"> The name. </param>
+        /// <returns> The result of the operator. </returns>
         public static ActorPath operator /(ActorPath path, IEnumerable<string> name)
         {
-            ActorPath a = path;
+            var a = path;
             foreach (string element in name)
             {
-                a = a/element;
+                a = a / element;
             }
             return a;
         }
@@ -141,10 +150,10 @@ namespace Akka.Actor
         {
             actorPath = null;
 
-           
+
             Address address;
-            Uri uri ;
-            if(!TryParseAddress(path, out address, out uri)) return false;
+            Uri uri;
+            if (!TryParseAddress(path, out address, out uri)) return false;
             var pathElements = uri.AbsolutePath.Split('/');
             actorPath = new RootActorPath(address) / pathElements.Skip(1);
             return true;
@@ -159,18 +168,18 @@ namespace Akka.Actor
         private static bool TryParseAddress(string path, out Address address, out Uri uri)
         {
             //This code corresponds to AddressFromURIString.unapply
-            uri=null;
+            uri = null;
             address = null;
             try
             {
                 uri = new Uri(path);
             }
-            catch(UriFormatException)
+            catch (UriFormatException)
             {
                 return false;
             }
             var protocol = uri.Scheme; //Typically "akka"
-            if(!protocol.StartsWith("akka", StringComparison.OrdinalIgnoreCase))
+            if (!protocol.StartsWith("akka", StringComparison.OrdinalIgnoreCase))
             {
                 // Protocol must start with 'akka.*
                 return false;
@@ -180,10 +189,10 @@ namespace Akka.Actor
             string systemName;
             string host = null;
             int? port = null;
-            if(string.IsNullOrEmpty(uri.UserInfo))
+            if (string.IsNullOrEmpty(uri.UserInfo))
             {
                 //  protocol://SystemName/Path1/Path2
-                if(uri.Port > 0)
+                if (uri.Port > 0)
                 {
                     //port may not be specified for these types of paths
                     return false;
@@ -209,62 +218,65 @@ namespace Akka.Actor
 
 
         /// <summary>
-        ///     Joins this instance.
+        /// Joins this instance.
         /// </summary>
-        /// <returns>System.String.</returns>
+        /// <returns> System.String. </returns>
         private string Join()
         {
-            string joined = string.Join("/", _elements);
+            var joined = string.Join("/", Elements);
             return "/" + joined;
         }
 
         /// <summary>
-        ///     String representation of the path elements, excluding the address
-        ///     information. The elements are separated with "/" and starts with "/",
-        ///     e.g. "/user/a/b".
+        /// String representation of the path elements, excluding the address
+        /// information. The elements are separated with "/" and starts with "/",
+        /// e.g. "/user/a/b".
         /// </summary>
-        /// <returns>System.String.</returns>
+        /// <returns> System.String. </returns>
         public string ToStringWithoutAddress()
         {
             return Join();
         }
 
         /// <summary>
-        ///     Returns a <see cref="System.String" /> that represents this instance.
+        /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
-        /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
+        /// <returns> A <see cref="System.String" /> that represents this instance. </returns>
         public override string ToString()
         {
             return ToStringWithAddress();
         }
 
         /// <summary>
-        ///     Childs the specified child name.
+        /// Creates a child with the specified name
         /// </summary>
-        /// <param name="childName">Name of the child.</param>
-        /// <returns>ActorPath.</returns>
+        /// <param name="childName"> Name of the child. </param>
+        /// <returns> ActorPath. </returns>
         public ActorPath Child(string childName)
         {
-            return this/childName;
+            return this / childName;
         }
 
         /// <summary>
-        ///     Returns a hash code for this instance.
+        /// Returns a hash code for this instance.
         /// </summary>
-        /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
+        /// <returns> A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. </returns>
         public override int GetHashCode()
         {
             return ToString().GetHashCode();
         }
 
         /// <summary>
-        ///     Determines whether the specified <see cref="System.Object" /> is equal to this instance.
+        /// Determines whether the specified <see cref="System.Object" /> is equal to this instance.
         /// </summary>
-        /// <param name="obj">The object to compare with the current object.</param>
-        /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
+        /// <param name="obj"> The object to compare with the current object. </param>
+        /// <returns>
+        /// <c> true </c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise,
+        /// <c> false </c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
-            return Equals((ActorPath) obj);
+            return Equals((ActorPath)obj);
         }
 
         public static bool operator ==(ActorPath left, ActorPath right)
@@ -278,9 +290,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Generate String representation, with the address in the RootActorPath.
+        /// Generate String representation, with the address in the RootActorPath.
         /// </summary>
-        /// <returns>System.String.</returns>
+        /// <returns> System.String. </returns>
         public string ToStringWithAddress()
         {
             return ToStringWithAddress(Address);
@@ -292,12 +304,12 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Generate String representation, replacing the Address in the RootActorPath
-        ///     with the given one unless this path’s address includes host and port
-        ///     information.
+        /// Generate String representation, replacing the Address in the RootActorPath
+        /// with the given one unless this path’s address includes host and port
+        /// information.
         /// </summary>
-        /// <param name="address">The address.</param>
-        /// <returns>System.String.</returns>
+        /// <param name="address"> The address. </param>
+        /// <returns> System.String. </returns>
         public string ToStringWithAddress(Address address)
         {
             if (Address.Host != null && Address.Port.HasValue)
@@ -313,27 +325,36 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    ///     Class RootActorPath.
+    /// Class RootActorPath.
     /// </summary>
     public class RootActorPath : ActorPath
     {
         /// <summary>
-        ///     Initializes a new instance of the <see cref="RootActorPath" /> class.
+        /// Initializes a new instance of the <see cref="RootActorPath" /> class.
         /// </summary>
-        /// <param name="address">The address.</param>
-        /// <param name="name">The name.</param>
-        public RootActorPath(Address address, string name = "") : base(address, name)
+        /// <param name="address"> The address. </param>
+        /// <param name="name"> The name. </param>
+        public RootActorPath(Address address, string name = "")
+            : base(address, name)
         {
         }
 
-        public override ActorPath Parent { get { return this; } }
-        public override ActorPath Root { get { return this; } }
+        public override ActorPath Parent
+        {
+            get { return null; }
+        }
+
+        public override ActorPath Root
+        {
+            get { return this; }
+        }
+
         /// <summary>
-        ///     Withes the uid.
+        /// Withes the uid.
         /// </summary>
-        /// <param name="uid">The uid.</param>
-        /// <returns>ActorPath.</returns>
-        /// <exception cref="System.NotSupportedException">RootActorPath must have undefinedUid</exception>
+        /// <param name="uid"> The uid. </param>
+        /// <returns> ActorPath. </returns>
+        /// <exception cref="System.NotSupportedException"> RootActorPath must have undefinedUid </exception>
         public override ActorPath WithUid(long uid)
         {
             if (uid == 0)
@@ -343,7 +364,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    ///     Class ChildActorPath.
+    /// Class ChildActorPath.
     /// </summary>
     public class ChildActorPath : ActorPath
     {
@@ -351,11 +372,11 @@ namespace Akka.Actor
         private readonly ActorPath _parent;
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="ChildActorPath" /> class.
+        /// Initializes a new instance of the <see cref="ChildActorPath" /> class.
         /// </summary>
-        /// <param name="parentPath">The parent path.</param>
-        /// <param name="name">The name.</param>
-        /// <param name="uid">The uid.</param>
+        /// <param name="parentPath"> The parent path. </param>
+        /// <param name="name"> The name. </param>
+        /// <param name="uid"> The uid. </param>
         public ChildActorPath(ActorPath parentPath, string name, long uid)
             : base(parentPath, name, uid)
         {
@@ -363,14 +384,17 @@ namespace Akka.Actor
             _parent = parentPath;
         }
 
-        public override ActorPath Parent { get { return _parent; } }
+        public override ActorPath Parent
+        {
+            get { return _parent; }
+        }
 
         public override ActorPath Root
         {
             get
             {
                 var current = _parent;
-                while(current is ChildActorPath)
+                while (current is ChildActorPath)
                 {
                     current = ((ChildActorPath)current)._parent;
                 }
@@ -379,10 +403,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Creates a copy of the given ActorPath and applies a new Uid
+        /// Creates a copy of the given ActorPath and applies a new Uid
         /// </summary>
-        /// <param name="uid">The uid.</param>
-        /// <returns>ActorPath.</returns>
+        /// <param name="uid"> The uid. </param>
+        /// <returns> ActorPath. </returns>
         public override ActorPath WithUid(long uid)
         {
             if (uid == Uid)

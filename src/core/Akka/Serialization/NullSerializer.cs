@@ -12,7 +12,7 @@ namespace Akka.Serialization
      */
 
     /// <summary>
-    ///     Class NullSerializer.
+    /// Class NullSerializer.
     /// </summary>
     public class NullSerializer : Serializer
     {

@@ -249,6 +249,7 @@ namespace Akka.Remote
         {
             if(HasAddress(actorPath.Address))
             {
+                var elements = actorPath.Elements;
                 if (actorPath.Elements.Head() == "remote")
                 {
                     if (actorPath.ToStringWithoutAddress() == "/remote")
@@ -256,13 +257,13 @@ namespace Akka.Remote
                         return RemoteDaemon;
                     }
                     //skip ""/"remote", 
-                    string[] parts = actorPath.Elements.Drop(1).ToArray();
+                    var parts = elements.Drop(1);
                     return RemoteDaemon.GetChild(parts);
                 }
                 if (actorPath.Elements.Head() == "temp")
                 {
                     //skip ""/"temp", 
-                    string[] parts = actorPath.Elements.Drop(1).ToArray();
+                    var parts = elements.Drop(1);
                     return TempContainer.GetChild(parts);
                 }
                 //standard
@@ -271,7 +272,7 @@ namespace Akka.Remote
                 {
                     return rootGuardian;
                 }
-                return rootGuardian.GetChild(actorPath.Elements);
+                return rootGuardian.GetChild(elements);
             }
             return new RemoteActorRef(Transport,
                 Transport.LocalAddressForRemote(actorPath.Address),
