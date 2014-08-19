@@ -113,8 +113,21 @@ namespace Akka.Tests.Actor
             actor.Tell("hello", TestActor);
 
             //Then
-            ExpectMsg((object) "int:4711");
-            ExpectMsg((object) "any:hello");
+            ExpectMsg((object)"int:4711");
+            ExpectMsg((object)"any:hello");
+        }
+
+        [Fact]
+        public void Given_an_actor_which_overrides_PreStart_When_sending_a_message_Then_the_message_should_be_handled()
+        {
+            //Given
+            var actor = Sys.ActorOf<PreStartEchoReceiveActor>("echo");
+
+            //When
+            actor.Tell(4711, TestActor);
+
+            //Then
+            ExpectMsg(4711);
         }
 
         private class NoReceiveActor : ReceiveActor
@@ -126,6 +139,20 @@ namespace Akka.Tests.Actor
             public EchoReceiveActor()
             {
                 Receive<object>(msg => Sender.Tell(msg, Self));
+            }
+        }
+
+
+        private class PreStartEchoReceiveActor : ReceiveActor
+        {
+            public PreStartEchoReceiveActor()
+            {
+                Receive<object>(msg => Sender.Tell(msg, Self));
+            }
+
+            protected override void PreStart()
+            {
+                //Just here to make sure base.PreStart isn't called
             }
         }
 
