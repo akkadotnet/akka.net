@@ -23,11 +23,18 @@ let description = "Akka.NET is a port of the popular Java/Scala framework Akka t
 let tags = ["akka";"actors";"actor";"model";"Akka";"concurrency"]
 let configuration = "Release"
 
+
 // Read release notes and version
 
-let release =
+let parsedRelease =
     File.ReadLines "RELEASE_NOTES.md"
     |> ReleaseNotesHelper.parseReleaseNotes
+
+//Fake.ReleaseNotesHelper.Parse assumes letters+int in PreRelease.TryParse. 
+//This means we cannot append the full date yyyMMddHHmmss to prerelease. 
+//See https://github.com/fsharp/FAKE/issues/522
+//TODO: When this has been fixed, switch to DateTime.UtcNow.ToString("yyyyMMddHHmmss")
+let release = if hasBuildParam "nugetprerelease" then ReleaseNotesHelper.ReleaseNotes.New(parsedRelease.AssemblyVersion, parsedRelease.AssemblyVersion + "-" + (getBuildParam "nugetprerelease") + DateTime.UtcNow.ToString("yyMMddHHmm"), parsedRelease.Notes) else parsedRelease
 
 //--------------------------------------------------------------------------------
 // Directories
@@ -171,16 +178,16 @@ Target "CleanNuget" <| fun _ ->
 // Publish to nuget.org if nugetkey is specified
 
 Target "Nuget" <| fun _ ->
-
     for nuspec in !! "src/**/*.nuspec" do
         CleanDir workingDir
 
         let project = Path.GetFileNameWithoutExtension nuspec 
         let projectDir = Path.GetDirectoryName nuspec
         let releaseDir = projectDir @@ @"bin\Release"
-        let packages = projectDir @@ "packages.config"
+        let packages = projectDir @@ "packages.config"        
         let packageDependencies = if (fileExists packages) then (getDependencies packages) else []
         let dependencies = packageDependencies @ getAkkaDependency project
+
         let pack outputDir =
             NuGetHelper.NuGet
                 (fun p ->
@@ -197,7 +204,7 @@ Target "Nuget" <| fun _ ->
                         WorkingDir = workingDir
                         AccessKey = getBuildParamOrDefault "nugetkey" ""
                         Publish = hasBuildParam "nugetkey"
-                        
+                        PublishUrl = getBuildParamOrDefault "nugetpublishurl" ""
                         Dependencies = dependencies })
                 nuspec
         // pack nuget (with only dll and xml files)
@@ -250,21 +257,25 @@ Target "Help" <| fun _ ->
       "build [target]"
       ""
       " Targets for building:"
-      " * Build"
-      " * Nuget Create nugets packages"
-      " * All  (Build all)"
+      " * Build    Builds"
+      " * Nuget    Create nugets packages"
+      " * RunTests Runs tests"
+      " * All      Builds, run tests and creates nuget packages"
       ""
       " Targets for publishing:"
-      " * Nuget nugetkey=<key> publish packages to nuget.org"
-
+      " * Nuget nugetkey=<key>                       publish packages to nuget.org"
+      " * Nuget nugetkey=<key> nugetpublishurl=<url> publish packages to url"
+      " * Nuget nugetprerelease=<prefix>             creates a pre-release package."
+      "             Can be combined with nugetkey and nugetpublishurl"
+      "             The version will be version-prefix<date>"
+      "             Example: nugetprerelease=dev =>  0.6.3-dev1408191917"
+      ""
       " Other Targets"
       " * Help - Display this help" ]
 
 //--------------------------------------------------------------------------------
 //  Target dependencies
 //--------------------------------------------------------------------------------
-
-Target "All" DoNothing
 
 // build dependencies
 "Clean" ==> "AssemblyInfo" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
@@ -275,7 +286,7 @@ Target "All" DoNothing
 // nuget dependencies
 "CleanNuget" ==> "BuildRelease" ==> "Nuget"
 
-
+Target "All" DoNothing
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
 "Nuget" ==> "All"

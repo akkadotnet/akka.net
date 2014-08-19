@@ -1,3 +1,5 @@
+#### 0.6.4
+
 #### 0.6.3 Aug 13 2014
 * Made it so HOCON config sections chain properly
 * Optimized actor memory footprint
