@@ -7,6 +7,7 @@ open System
 open System.IO
 open Fake
 open Fake.FileUtils
+open Fake.MSTest
 
 cd __SOURCE_DIRECTORY__
 
@@ -132,17 +133,20 @@ Target "CleanTests" <| fun _ ->
 // Run tests
 
 open XUnitHelper
-Target "RunTests" <| fun _ ->
-    let testAssemblies = !! "src/**/bin/release/*.Tests.dll" //-- "src/**/bin/release/Akka.FSharp.Tests.dll"
+Target "RunTests" <| fun _ ->  
+    let msTestAssemblies = !! "src/**/bin/release/Akka.TestKit.VsTest.Tests.dll"
+    let xunitTestAssemblies = !! "src/**/bin/release/*.Tests.dll" -- "src/**/bin/release/Akka.TestKit.VsTest.Tests.dll"
 
     mkdir testOutput
+
+    MSTest (fun p -> p) msTestAssemblies
 
     let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
     printfn "Using XUnit runner: %s" xunitToolPath
     xUnit
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
-        testAssemblies
-
+        xunitTestAssemblies
+        
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
