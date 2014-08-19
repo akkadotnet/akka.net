@@ -233,14 +233,20 @@ namespace Akka.Actor
                 behaviorStack.Clear();
                 instance = CreateNewActorInstance();
                 instance.supervisorStrategy = _props.SupervisorStrategy;
-                //defaults to null - won't affect lazy instantion unless explicitly set in props
+                //defaults to null - won't affect lazy instantiation unless explicitly set in props
             });
             return instance;
         }
 
         protected virtual ActorBase CreateNewActorInstance()
         {
-            return _props.NewActor();
+            var actor = _props.NewActor();
+            var initializableActor = actor as InitializableActor;
+            if(initializableActor != null)
+            {
+                initializableActor.Init();
+            }
+            return actor;
         }
 
         public void UseThreadContext(Action action)
