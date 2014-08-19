@@ -168,16 +168,16 @@ namespace Akka.Tests.Routing
                     });
             };
 
-
+            
 
             // 2 more should go through without triggering more
             loop(2, TimeSpan.FromMilliseconds(200));
-            (RouteeSize(router)).ShouldBe(resizer.LowerBound);
+            RouteeSize(router).ShouldBe(resizer.LowerBound);
 
 
             // a whole bunch should max it out
             loop(20, TimeSpan.FromMilliseconds(500));
-            (RouteeSize(router)).ShouldBe(resizer.UpperBound);
+            RouteeSize(router).ShouldBe(resizer.UpperBound);
 
         }
 

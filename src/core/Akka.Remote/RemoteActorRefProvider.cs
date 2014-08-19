@@ -250,7 +250,7 @@ namespace Akka.Remote
             if(HasAddress(actorPath.Address))
             {
                 var elements = actorPath.Elements;
-                if (actorPath.Elements.Head() == "remote")
+                if (elements.Head() == "remote")
                 {
                     if (actorPath.ToStringWithoutAddress() == "/remote")
                     {
@@ -260,7 +260,7 @@ namespace Akka.Remote
                     var parts = elements.Drop(1);
                     return RemoteDaemon.GetChild(parts);
                 }
-                if (actorPath.Elements.Head() == "temp")
+                if (elements.Head() == "temp")
                 {
                     //skip ""/"temp", 
                     var parts = elements.Drop(1);

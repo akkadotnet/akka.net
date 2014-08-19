@@ -177,11 +177,10 @@ namespace Akka.Routing
         public int Capacity(IEnumerable<Routee> currentRoutees)
         {
             var routees = currentRoutees as Routee[] ?? currentRoutees.ToArray();
-            var currentSize = routees.Count();
+            var currentSize = routees.Length;
             var pressure = Pressure(routees);
             var delta = Filter(pressure, currentSize);
             var proposed = currentSize + delta;
-
 
             if (proposed < LowerBound)
                 return delta + (LowerBound - proposed);
@@ -211,10 +210,11 @@ namespace Akka.Routing
         /// <returns>proposed decrease in capacity (as a negative number)</returns>
         public int Backoff(int pressure, int capacity)
         {
-            return _backoffThreshold > 0.0 && _backoffRate > 0.0 && capacity > 0 &&
-                   (Convert.ToDouble(pressure)/Convert.ToDouble(capacity)) < _backoffThreshold
-                ? Convert.ToInt32(Math.Floor(-1.0*_backoffRate*capacity))
-                : 0;
+            if (_backoffThreshold > 0.0 && _backoffRate > 0.0 && capacity > 0 && (Convert.ToDouble(pressure)/Convert.ToDouble(capacity)) < _backoffThreshold)
+            {
+                return Convert.ToInt32(Math.Floor(-1.0*_backoffRate*capacity));
+            }
+            return 0;
         }
 
         /// <summary>
