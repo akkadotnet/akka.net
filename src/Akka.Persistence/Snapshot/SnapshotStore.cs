@@ -1,0 +1,4 @@
+﻿namespace Akka.Persistence.Snapshot
+{
+ 
+}
