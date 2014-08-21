@@ -31,7 +31,7 @@ namespace Akka.Cluster
 #if DEBUG
             string ActualValue { get; set; }
 #endif
-            Node(string value)
+            public Node(string value)
             {
                 _value = value;
             }

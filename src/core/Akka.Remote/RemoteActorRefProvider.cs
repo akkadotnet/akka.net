@@ -87,7 +87,7 @@ namespace Akka.Remote
             _local.UnregisterTempActor(path);
         }
 
-        public void Init(ActorSystem system)
+        public virtual void Init(ActorSystem system)
         {
             _system = system;
             //TODO: this should not be here

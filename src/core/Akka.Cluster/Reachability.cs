@@ -289,6 +289,16 @@ namespace Akka.Cluster
             return IsAllReachable || !AllUnreachableOrTerminated.Contains(node);
         }
 
+        public bool IsReachable(UniqueAddress observer, UniqueAddress subject)
+        {
+            return Status(observer, subject) == ReachabilityStatus.Reachable;
+        }
+
+        /*
+         *  def isReachable(observer: UniqueAddress, subject: UniqueAddress): Boolean =
+            status(observer, subject) == Reachable
+         */
+
         public bool IsAllReachable
         {
             get { return _records.IsEmpty; } 

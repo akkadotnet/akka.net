@@ -8,6 +8,14 @@ using Akka.Util;
 
 namespace Akka.Cluster
 {
+    public class ClusterExtension : ExtensionIdProvider<Cluster>
+    {
+        public override Cluster CreateExtension(ActorSystem system)
+        {
+            return new Cluster(system);
+        }
+    }
+
     //TODO: xmldoc
     /// <summary>
     /// This module is responsible cluster membership information. Changes to the cluster
@@ -18,13 +26,13 @@ namespace Akka.Cluster
     /// the cluster address of this actor system is [[#selfAddress]]. A member also has a status;
     /// initially [[MemberStatus.Joining]] followed by [[MemberStatus.Up]].
     /// </summary>
-    public class Cluster : ExtensionIdProvider<Cluster>, IExtension
+    public class Cluster :IExtension
     {
         //TODO: Issue with missing overrides for Get and Lookup
-        
-        public override Cluster CreateExtension(ActorSystem system)
+
+        public static Cluster Get(ActorSystem system)
         {
-            return new Cluster(system);
+            return system.WithExtension<Cluster, ClusterExtension>();
         }
 
         public static bool IsAssertInvariantsEnabled
@@ -34,8 +42,10 @@ namespace Akka.Cluster
         }
 
         readonly ClusterSettings _settings;
+        public ClusterSettings Settings { get { return _settings; } }
         readonly UniqueAddress _selfUniqueAddress;
-
+        public UniqueAddress SelfUniqueAddress {get{return _selfUniqueAddress;}}
+        
         public Cluster(ActorSystem system)
         {
             _settings = new ClusterSettings(system.Settings.Config, system.Name);    
@@ -84,12 +94,13 @@ namespace Akka.Cluster
             get { return _settings.Roles; }
         }
 
-        private readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
+        readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
 
-        private readonly LoggingAdapter _log;
+        readonly LoggingAdapter _log;
         //TODO: Jmx
 
-        private readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
+        readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
+        public DefaultFailureDetectorRegistry<Address> FailureDetector { get { return _failureDetector; } }
 
         // ========================================================
         // ===================== WORK DAEMONS =====================
@@ -102,6 +113,11 @@ namespace Akka.Cluster
         {
             //TODO: Whole load of stuff missing here!
             return system.Scheduler;
+        }
+
+        public void Shutdown()
+        {
+            throw new NotImplementedException();
         }
 
         private ActorRef _clusterDaemons;

@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization.Formatters;
 
 namespace Akka
 {
@@ -67,6 +69,11 @@ namespace Akka
         {
             hash.AddOrSet(key, value);
             return hash;
+        }
+
+        public static TimeSpan Max(this TimeSpan @this, TimeSpan other) 
+        {
+            return @this > other ? @this : other;
         }
     }
 }
