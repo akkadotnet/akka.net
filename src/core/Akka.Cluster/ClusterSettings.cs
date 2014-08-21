@@ -4,6 +4,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Tests.Event;
 
 namespace Akka.Cluster
 {
@@ -37,6 +38,7 @@ namespace Akka.Cluster
         readonly TimeSpan _metricsGossipInterval;
         readonly TimeSpan _metricsMovingAverageHalfLife;
         readonly int _minNrOfMembers;
+        readonly ImmutableDictionary<string, int> _minNrOfMembersOfRole;
 
         public ClusterSettings(Config config, string systemName)
         {
@@ -67,7 +69,7 @@ namespace Akka.Cluster
             //_minNrOfMembersOfRole = cc.GetConfig("role").Root.GetArray().ToImmutableDictionary(o => o. )
             //TODO: Ignored jmx
             _useDispatcher = cc.GetString("use-dispatcher");
-            if(String.IsNullOrEmpty(_useDispatcher)) _useDispatcher = Dispatchers.DefaultDispatcherId;
+            if (String.IsNullOrEmpty(_useDispatcher)) _useDispatcher = Dispatchers.DefaultDispatcherId;
             _gossipDifferentViewProbability = cc.GetDouble("gossip-different-view-probability");
             _reduceGossipDifferentViewProbability = cc.GetInt("reduce-gossip-different-view-probability");
             _schedulerTickDuration = cc.GetMillisDuration("scheduler.tick-duration");
@@ -77,6 +79,9 @@ namespace Akka.Cluster
             _metricsInterval = cc.GetMillisDuration("metrics.collect-interval");
             _metricsGossipInterval = cc.GetMillisDuration("metrics.gossip-interval");
             _metricsMovingAverageHalfLife = cc.GetMillisDuration("metrics.moving-average-half-life");
+
+
+            //TODO: _minNrOfMembersOfRole;
         }
 
         public bool LogInfo
@@ -217,6 +222,11 @@ namespace Akka.Cluster
         public int MinNrOfMembers
         {
             get { return _minNrOfMembers; }
+        }
+
+        public ImmutableDictionary<string, int> MinNrOfMembersOfRole
+        {
+            get { return _minNrOfMembersOfRole; }
         }
     }
 }

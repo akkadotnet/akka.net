@@ -636,15 +636,12 @@ namespace Akka.Cluster
 
         protected override void OnReceive(object message)
         {
-            if (message is InternalClusterAction.PublishChanges) PublishChanges(((InternalClusterAction.PublishChanges)message).NewGossip);
-            else if (message is ClusterEvent.CurrentInternalStats) PublishInternalStats(((ClusterEvent.CurrentInternalStats)message));
-            else if (message is InternalClusterAction.SendCurrentClusterState) SendCurrentClusterState(((InternalClusterAction.SendCurrentClusterState)message).Receiver);
-            else if (message is InternalClusterAction.Subscribe)
-            {
-                var m = (InternalClusterAction.Subscribe)message;
-                Subscribe(m.Subscriber, m.InitialStateMode, m.To);
-            }
-            else if (message is InternalClusterAction.PublishEvent) Publish(message);
+            message.Match()
+                .With<InternalClusterAction.PublishChanges>(m => PublishChanges(m.NewGossip))
+                .With<ClusterEvent.CurrentInternalStats>(PublishInternalStats)
+                .With<InternalClusterAction.SendCurrentClusterState>(m => SendCurrentClusterState(m.Receiver))
+                .With<InternalClusterAction.Subscribe>(m => Subscribe(m.Subscriber, m.InitialStateMode, m.To))
+                .With<InternalClusterAction.PublishEvent>(Publish);
         }
 
         readonly EventStream _eventStream;
@@ -723,7 +720,7 @@ namespace Akka.Cluster
             _eventStream.Publish(@event);
         }
 
-        private void clearState()
+        private void ClearState()
         {
             _latestGossip = Gossip.Empty;
         }

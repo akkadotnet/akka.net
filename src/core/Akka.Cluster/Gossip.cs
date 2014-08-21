@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using Akka.Remote;
 
 namespace Akka.Cluster
 {
@@ -306,13 +307,24 @@ namespace Akka.Cluster
     /// </summary>
     class GossipEnvelope
     {
-        //TODO: Deadline stuff
+        //TODO: Serialization?
+        //TODO: ser stuff?
 
-        public GossipEnvelope()
+        readonly UniqueAddress _from;
+        readonly UniqueAddress _to;
+
+        public GossipEnvelope(UniqueAddress from, UniqueAddress to, Gossip gossip, Deadline deadline = null)
         {
-            //TODO:
-            throw new NotImplementedException();
+            _from = from;
+            _to = to;
+            Gossip = gossip;
+            Deadline = deadline;
         }
+
+        public UniqueAddress From { get { return _from; } }
+        public UniqueAddress To { get { return _to; } }
+        public Gossip Gossip { get; set; }
+        public Deadline Deadline { get; set; }
     }
 
     /// <summary>
