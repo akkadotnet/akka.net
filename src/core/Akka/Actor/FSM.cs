@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
