@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Configuration;
-using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Configuration;
@@ -26,7 +25,7 @@ namespace Akka.Remote
         public RemoteActorRefProvider(string systemName, Settings settings, EventStream eventStream)
         {
             var remoteDeployer = new RemoteDeployer(settings);
-            Func<ActorPath, InternalActorRef> deadLettersFactory = null; //TODO:  path => new RemoteDeadLetterActorRef(this, path, eventStream);
+            Func<ActorPath, InternalActorRef> deadLettersFactory = path => new RemoteDeadLetterActorRef(this, path, eventStream);
             _local = new LocalActorRefProvider(systemName, settings, eventStream, remoteDeployer, deadLettersFactory);
             Config = settings.Config.WithFallback(RemoteConfigFactory.Default());
             RemoteSettings = new RemoteSettings(Config);
@@ -68,7 +67,7 @@ namespace Akka.Remote
         public InternalActorRef TempContainer { get { return _local.TempContainer; } }
         public ActorRef DeadLetters { get { return _local.DeadLetters; } }
         public Deployer Deployer { get; private set; }
-        public Address DefaultAddress { get; private set; } //TODO: Should be Transport.DefaultAddress
+        public Address DefaultAddress { get { return Transport.DefaultAddress; } }
         public Settings Settings { get { return _local.Settings; } }
         public Task TerminationTask { get { return _local.TerminationTask; } }
         private InternalActorRef InternalDeadLetters { get { return (InternalActorRef) _local.DeadLetters; } }
@@ -88,13 +87,17 @@ namespace Akka.Remote
             _local.UnregisterTempActor(path);
         }
 
+        //TODO: Why volatile?
+        private ActorRef _remoteWatcher;
+
         public void Init(ActorSystemImpl system)
         {
             _system = system;
-            //TODO: this should not be here
-            DefaultAddress = new Address("akka", system.Name); //TODO: this should not work this way...
 
             _local.Init(system);
+
+            //TODO: RemotingTerminator
+
 
             var daemonMsgCreateSerializer = new DaemonMsgCreateSerializer(system);
             var messageContainerSerializer = new MessageContainerSerializer(system);
@@ -105,6 +108,27 @@ namespace Akka.Remote
 
             Transport.Start();
             //      RemoteHost.StartHost(System, port);
+            _remoteWatcher = CreateRemoteWatcher(system);
+        }
+
+        ActorRef CreateRemoteWatcher(ActorSystem system)
+        {
+            var failureDetector = CreateRemoteWatcherFailureDetector(system);
+            return
+                system.ActorOf(
+                    RemoteSettings.ConfigureDispatcher(
+                        RemoteWatcher.Props(
+                            failureDetector,
+                            RemoteSettings.WatchHeartBeatInterval, 
+                            RemoteSettings.WatchUnreachableReaperInterval,
+                            RemoteSettings.WatchHeartbeatExpectedResponseAfter)), "remote-watcher");
+        }
+
+        DefaultFailureDetectorRegistry<Address> CreateRemoteWatcherFailureDetector(ActorSystem system)
+        {
+            return new DefaultFailureDetectorRegistry<Address>(() => 
+                FailureDetectorLoader.Load(RemoteSettings.WatchFailureDetectorImplementationClass,
+                RemoteSettings.WatchFailureDetectorConfig, _system));
         }
 
         public InternalActorRef ActorOf(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
@@ -312,24 +336,28 @@ namespace Akka.Remote
         }
 
         /// <summary>
+        /// Marks a remote system as out of sync and prevents reconnects until the quarantine timeout elapses.
+        /// </summary>
+        /// <param name="address">Address of the remote system to be quarantined</param>
+        /// <param name="uid">UID of the remote system, if the uid is not defined it will not be a strong quarantine but
+        /// the current endpoint writer will be stopped (dropping system messages) and the address will be gated
+        /// </param>
+        public void Quarantine(Address address, int? uid)
+        {
+            Transport.Quarantine(address, uid);
+        }
+
+        /// <summary>
         ///     Afters the send system message.
         /// </summary>
         /// <param name="message">The message.</param>
         public void AfterSendSystemMessage(SystemMessage message)
         {
             message.Match()
-                .With<Watch>(m => { })
-                .With<Unwatch>(m => { });
+                .With<RemoteWatcher.Rewatch>(rew => _remoteWatcher.Tell(new RemoteWatcher.RewatchRemote(rew.Watchee, rew.Watcher)))
+                .With<Watch>(m => _remoteWatcher.Tell(new RemoteWatcher.WatchRemote(m.Watchee, m.Watcher)))
+                .With<Unwatch>(m => _remoteWatcher.Tell(new RemoteWatcher.UnwatchRemote(m.Watchee, m.Watcher)));
 
-            //    message match {
-            //  // Sending to local remoteWatcher relies strong delivery guarantees of local send, i.e.
-            //  // default dispatcher must not be changed to an implementation that defeats that
-            //  case rew: RemoteWatcher.Rewatch ⇒
-            //    remoteWatcher ! RemoteWatcher.RewatchRemote(rew.watchee, rew.watcher)
-            //  case Watch(watchee, watcher)   ⇒ remoteWatcher ! RemoteWatcher.WatchRemote(watchee, watcher)
-            //  case Unwatch(watchee, watcher) ⇒ remoteWatcher ! RemoteWatcher.UnwatchRemote(watchee, watcher)
-            //  case _                         ⇒
-            //}
         }
 
 
@@ -394,5 +422,33 @@ namespace Akka.Remote
 
         #endregion
 
+        private class RemoteDeadLetterActorRef : DeadLetterActorRef
+        {
+            public RemoteDeadLetterActorRef(ActorRefProvider provider, ActorPath actorPath, EventStream eventStream)
+                : base(provider, actorPath, eventStream)
+            {
+            }
+
+            protected override void TellInternal(object message, ActorRef sender)
+            {
+                var send = message as EndpointManager.Send;
+                if (send != null)
+                {
+                    // else ignore: it is a reliably delivered message that might be retried later, and it has not yet deserved
+                    // the dead letter status
+                    //TODO: Seems to have started causing endless cycle of messages (and stack overflow)
+                    //if (send.Seq == null) Tell(message, sender);
+                    return;                    
+                }
+                var deadLetter = message as DeadLetter;
+                if (deadLetter != null)
+                {
+                    // else ignore: it is a reliably delivered message that might be retried later, and it has not yet deserved
+                    // the dead letter status
+                    //TODO: if(deadLetter.Message)
+                }
+
+            }
+        }
     }
 }

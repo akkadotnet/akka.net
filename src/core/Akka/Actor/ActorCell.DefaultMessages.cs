@@ -157,7 +157,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
+        /// <summary>   
         ///     Receives the selection.
         /// </summary>
         /// <param name="m">The m.</param>
@@ -271,7 +271,7 @@ namespace Akka.Actor
             _self.IsTerminated = true;
 
             UnwatchWatchedActors(_actor);
-            foreach (InternalActorRef child in GetChildren())
+            foreach (var child in GetChildren())
             {
                 child.Stop();
             }

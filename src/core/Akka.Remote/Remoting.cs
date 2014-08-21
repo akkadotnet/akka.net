@@ -87,7 +87,7 @@ namespace Akka.Remote
                         _transportMapping.Add(g.Key, set);
                     }
 
-                    _defaultAddress = akkaProtocolTransports.Head().Address;
+                    DefaultAddress = akkaProtocolTransports.Head().Address;
                     _addresses = new HashSet<Address>(akkaProtocolTransports.Select(x => x.Address));
 
                     log.Info("Remoting started; listening on addresses : [{0}]", string.Join(",", _addresses.Select(x => x.ToString())));
