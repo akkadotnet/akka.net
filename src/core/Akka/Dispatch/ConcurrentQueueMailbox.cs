@@ -1,23 +1,26 @@
-﻿using Akka.Actor;
-using Akka.Dispatch.SysMsg;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Dispatch.SysMsg;
+#if MONO
+using Akka.Util;
+#endif
 
 namespace Akka.Dispatch
 {
     /// <summary>
-    ///     Class ConcurrentQueueMailbox.
+    /// Class ConcurrentQueueMailbox.
     /// </summary>
     public class ConcurrentQueueMailbox : Mailbox
     {
+#if MONO
+        private readonly MonoConcurrentQueue<Envelope> _systemMessages = new MonoConcurrentQueue<Envelope>();
+        private readonly MonoConcurrentQueue<Envelope> _userMessages = new MonoConcurrentQueue<Envelope>();
+#else
         private readonly ConcurrentQueue<Envelope> _systemMessages = new ConcurrentQueue<Envelope>();
         private readonly ConcurrentQueue<Envelope> _userMessages = new ConcurrentQueue<Envelope>();
+#endif
         private Stopwatch _deadLineTimer;
         private volatile bool _isClosed;
 
@@ -50,12 +53,13 @@ namespace Akka.Dispatch
                 //start with system messages, they have the highest priority
                 while (_systemMessages.TryDequeue(out envelope))
                 {
-                    Mailbox.DebugPrint(ActorCell.Self + " processing system message " + envelope); // TODO: Add + " with " + ActorCell.GetChildren());
+                    Mailbox.DebugPrint(ActorCell.Self + " processing system message " + envelope);
+                    // TODO: Add + " with " + ActorCell.GetChildren());
                     ActorCell.SystemInvoke(envelope);
                 }
 
                 //we should process x messages in this run
-                int left = dispatcher.Throughput;
+                var left = dispatcher.Throughput;
 
                 //try dequeue a user message
                 while (!_isSuspended && !_isClosed && _userMessages.TryDequeue(out envelope))
@@ -69,7 +73,8 @@ namespace Akka.Dispatch
                     if (_systemMessages.TryDequeue(out envelope))
                     {
                         //handle system message
-                        Mailbox.DebugPrint(ActorCell.Self + " processing system message " + envelope); // TODO: Add + " with " + ActorCell.GetChildren());
+                        Mailbox.DebugPrint(ActorCell.Self + " processing system message " + envelope);
+                        // TODO: Add + " with " + ActorCell.GetChildren());
                         ActorCell.SystemInvoke(envelope);
                         break;
                     }
@@ -111,7 +116,7 @@ namespace Akka.Dispatch
 
 
         /// <summary>
-        ///     Schedules this instance.
+        /// Schedules this instance.
         /// </summary>
         protected override void Schedule()
         {
@@ -123,9 +128,9 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        ///     Posts the specified envelope.
+        /// Posts the specified envelope.
         /// </summary>
-        /// <param name="envelope">The envelope.</param>
+        /// <param name="envelope"> The envelope. </param>
         public override void Post(Envelope envelope)
         {
             if (_isClosed)
@@ -147,7 +152,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        ///     Stops this instance.
+        /// Stops this instance.
         /// </summary>
         public override void BecomeClosed()
         {
@@ -155,7 +160,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        ///     Disposes this instance.
+        /// Disposes this instance.
         /// </summary>
         public override void Dispose()
         {
@@ -171,15 +176,15 @@ namespace Akka.Dispatch
         public override void CleanUp()
         {
             var actorCell = ActorCell;
-            if(actorCell != null) // actor is null for the deadLetterMailbox
+            if (actorCell != null) // actor is null for the deadLetterMailbox
             {
                 var deadLetterMailbox = actorCell.System.Mailboxes.DeadLetterMailbox;
-                Envelope envelope   ;
-                while(_systemMessages.TryDequeue(out envelope))
+                Envelope envelope;
+                while (_systemMessages.TryDequeue(out envelope))
                 {
                     deadLetterMailbox.Post(envelope);
                 }
-                while(_userMessages.TryDequeue(out envelope))
+                while (_userMessages.TryDequeue(out envelope))
                 {
                     deadLetterMailbox.Post(envelope);
                 }
@@ -201,5 +206,5 @@ namespace Akka.Dispatch
             //       messageQueue.cleanUp(actor.self, actor.dispatcher.mailboxes.deadLetterMailbox.messageQueue)
             //   }
         }
-    }   
+    }
 }
