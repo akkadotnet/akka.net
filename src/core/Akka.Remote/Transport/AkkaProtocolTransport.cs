@@ -557,7 +557,7 @@ namespace Akka.Remote.Transport
                                     })
                                     .Default(d =>
                                     {
-                                        _log.Debug(string.Format("Exepcted message of type Associate; instead received {0}", d));
+                                        Log.Debug(string.Format("Exepcted message of type Associate; instead received {0}", d));
                                         //Expect handshake to be finished, dropping connection
                                         SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
                                         nextState = Stop();
@@ -880,7 +880,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         private void PublishError(UnderlyingTransportError transportError)
         {
-            _log.Error(transportError.Cause, transportError.Message);
+            Log.Error(transportError.Cause, transportError.Message);
         }
 
         #endregion
