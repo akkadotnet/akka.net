@@ -801,7 +801,10 @@ namespace Akka.Remote
                         CurrentStash.Stash();
                         nextState = Stay();
                     })
-                    .With<BackoffTimer>(timer => nextState = GoTo(State.Writing))
+                    .With<BackoffTimer>(timer =>
+                    {
+                        nextState = GoTo(State.Writing);
+                    })
                     .With<FlushAndStop>(flush =>
                     {
                         CurrentStash.Stash(); //Flushing is postponed after the pending writes
