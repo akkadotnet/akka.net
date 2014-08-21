@@ -52,7 +52,9 @@ namespace Akka.Actor
         protected override bool Receive(object message)
         {
             //TODO need to add termination hook support
-            Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Self), Sender);
+            if(message is StopChild) Context.Stop(((StopChild)message).Child);
+            else
+                Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Self), Sender);
             return true;
         }
     }

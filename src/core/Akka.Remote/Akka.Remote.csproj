@@ -65,11 +65,6 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Web" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\SharedAssemblyInfo.cs">
@@ -97,6 +92,7 @@
     <Compile Include="RemoteDeployer.cs" />
     <Compile Include="RemoteSettings.cs" />
     <Compile Include="RemoteTransport.cs" />
+    <Compile Include="RemoteWatcher.cs" />
     <Compile Include="Remoting.cs" />
     <Compile Include="RemotingLifecycleEvent.cs" />
     <Compile Include="Serialization\DaemonMsgCreateSerializer.cs" />

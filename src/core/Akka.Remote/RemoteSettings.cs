@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Akka.Actor;
 using Akka.Configuration;
 
@@ -16,6 +17,7 @@ namespace Akka.Remote
             UntrustedMode = config.GetBoolean("akka.remote.untrusted-mode");
             TrustedSelectionPaths = new HashSet<string>(config.GetStringList("akka.remote.trusted-selection-paths"));
             RemoteLifecycleEventsLogLevel = config.GetString("akka.remote.log-remote-lifecycle-events") ?? "DEBUG";
+            Dispatcher = config.GetString("akka.remote.use-dispatcher");
             if (RemoteLifecycleEventsLogLevel.Equals("on")) RemoteLifecycleEventsLogLevel = "DEBUG";
             FlushWait = config.GetMillisDuration("akka.remote.flush-wait-on-shutdown");
             ShutdownTimeout = config.GetMillisDuration("akka.remote.shutdown-timeout");
@@ -34,6 +36,12 @@ namespace Akka.Remote
             QuarantineDuration = config.GetMillisDuration("akka.remote.prune-quarantine-marker-after");
             StartupTimeout = config.GetMillisDuration("akka.remote.startup-timeout");
             CommandAckTimeout = config.GetMillisDuration("akka.remote.command-ack-timeout");
+
+            WatchFailureDetectorConfig = config.GetConfig("akka.remote.watch-failure-detector");
+            WatchFailureDetectorImplementationClass = WatchFailureDetectorConfig.GetString("implementation-class");
+            WatchHeartBeatInterval = WatchFailureDetectorConfig.GetMillisDuration("heartbeat-interval");
+            WatchUnreachableReaperInterval = WatchFailureDetectorConfig.GetMillisDuration("unreachable-nodes-reaper-interval");
+            WatchHeartbeatExpectedResponseAfter = WatchFailureDetectorConfig.GetMillisDuration("expected-response-after");
         }
 
         /// <summary>
@@ -52,6 +60,8 @@ namespace Akka.Remote
         public bool LogReceive { get; set; }
 
         public string RemoteLifecycleEventsLogLevel { get; set; }
+
+        public string Dispatcher { get; set; }
 
         public TimeSpan ShutdownTimeout { get; set; }
 
@@ -73,9 +83,20 @@ namespace Akka.Remote
         public TimeSpan StartupTimeout { get; set; }
         public TimeSpan CommandAckTimeout { get; set; }
 
+        public Config WatchFailureDetectorConfig { get; set; }
+        public string WatchFailureDetectorImplementationClass { get; set; }
+        public TimeSpan WatchHeartBeatInterval { get; set; }
+        public TimeSpan WatchUnreachableReaperInterval { get; set; }
+        public TimeSpan WatchHeartbeatExpectedResponseAfter { get; set; }
+
         private Config TransportConfigFor(string transportName)
         {
             return Config.GetConfig(transportName);
+        }
+
+        public Props ConfigureDispatcher(Props props)
+        {
+            return String.IsNullOrEmpty(Dispatcher) ? props : props.WithDispatcher(Dispatcher);
         }
 
         public class TransportSettings

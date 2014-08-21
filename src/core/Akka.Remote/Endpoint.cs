@@ -711,7 +711,7 @@ namespace Akka.Remote
             }
             catch (Exception ex)
             {
-                _log.Error(ex, "Unable to publish error event to EventStream");
+                Log.Error(ex, "Unable to publish error event to EventStream");
             }
         }
 

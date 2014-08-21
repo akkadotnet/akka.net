@@ -70,7 +70,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// Unsubscribe from <see cref="SubscribeTransitionCallBack"/> notifications which were
-        /// initializd by sending the corresponding <see cref="Transition{TS}"/>.
+        /// initialized by sending the corresponding <see cref="Transition{TS}"/>.
         /// </summary>
         public class UnsubscribeTransitionCallBack
         {
@@ -213,7 +213,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// This captures all of the managed state of the <see cref="FSM{T,S}"/>: the state name,
-        /// the state data, possibly custom timeout, stop reason, and repleis accumulated while
+        /// the state data, possibly custom timeout, stop reason, and replies accumulated while
         /// processing the last message.
         /// </summary>
         /// <typeparam name="TS">The name of the state</typeparam>
@@ -367,21 +367,24 @@ namespace Akka.Actor
     /// <summary>
     /// Finite state machine (FSM) actor.
     /// </summary>
-    /// <typeparam name="TS">The state name type</typeparam>
-    /// <typeparam name="TD">The state data type</typeparam>
-    public abstract class FSM<TS, TD> : FSMBase, IActorLogging, IListeners
+    /// <typeparam name="TState">The state name type</typeparam>
+    /// <typeparam name="TData">The state data type</typeparam>
+    public abstract class FSM<TState, TData> : FSMBase, IActorLogging, IListeners
     {
+        private readonly LoggingAdapter _logAdapter = Logging.GetLogger(Context);
         protected FSM()
         {
             if(this is LoggingFSM)
                 DebugEvent = Context.System.Settings.FsmDebugEvent;
         }
-        public delegate State<TS, TD> StateFunction(Event<TD> fsmEvent);
+        public delegate State<TState, TData> StateFunction(Event<TData> fsmEvent);
 
-        public delegate void TransitionHandler(TS initialState, TS nextState);
+        public delegate void TransitionHandler(TState initialState, TState nextState);
 
-        protected readonly LoggingAdapter _log = Logging.GetLogger(Context);
-        public LoggingAdapter Log { get { return _log; } }
+        [Obsolete("Use Log instead")]
+        protected LoggingAdapter _log { get { return _logAdapter; } }   //When removing this rename _logAdapter to _log
+
+        public LoggingAdapter Log { get { return _logAdapter; } }
 
         #region Finite State Machine Domain Specific Language (FSM DSL if you like acronyms)
 
@@ -393,7 +396,7 @@ namespace Akka.Actor
         /// <param name="stateName">designator for the state</param>
         /// <param name="func">delegate describing this state's response to input</param>
         /// <param name="timeout">default timeout for this state</param>
-        public void When(TS stateName, StateFunction func, TimeSpan? timeout = null)
+        public void When(TState stateName, StateFunction func, TimeSpan? timeout = null)
         {
             Register(stateName, func, timeout);
         }
@@ -406,9 +409,9 @@ namespace Akka.Actor
         /// <param name="stateName">Initial state designator.</param>
         /// <param name="stateData">Initial state data.</param>
         /// <param name="timeout">State timeout for the initial state, overriding the default timeout for that state.</param>
-        public void StartWith(TS stateName, TD stateData, TimeSpan? timeout = null)
+        public void StartWith(TState stateName, TData stateData, TimeSpan? timeout = null)
         {
-            _currentState = new State<TS, TD>(stateName, stateData, timeout);
+            _currentState = new State<TState, TData>(stateName, stateData, timeout);
         }
 
         /// <summary>
@@ -417,9 +420,9 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="nextStateName">State designator for the next state</param>
         /// <returns>State transition descriptor</returns>
-        public State<TS, TD> GoTo(TS nextStateName)
+        public State<TState, TData> GoTo(TState nextStateName)
         {
-            return new State<TS, TD>(nextStateName, _currentState.StateData);
+            return new State<TState, TData>(nextStateName, _currentState.StateData);
         }
 
         /// <summary>
@@ -427,7 +430,7 @@ namespace Akka.Actor
         /// when no state change is to be effected.
         /// </summary>
         /// <returns>Descriptor for staying in the current state.</returns>
-        public State<TS, TD> Stay()
+        public State<TState, TData> Stay()
         {
             return GoTo(_currentState.StateName);
         }
@@ -435,7 +438,7 @@ namespace Akka.Actor
         /// <summary>
         /// Produce change descriptor to stop this FSM actor with <see cref="FSMBase.Reason"/> <see cref="FSMBase.Normal"/>
         /// </summary>
-        public State<TS, TD> Stop()
+        public State<TState, TData> Stop()
         {
             return Stop(new Normal());
         }
@@ -443,12 +446,12 @@ namespace Akka.Actor
         /// <summary>
         /// Produce change descriptor to stop this FSM actor with the specified <see cref="FSMBase.Reason"/>.
         /// </summary>
-        public State<TS, TD> Stop(Reason reason)
+        public State<TState, TData> Stop(Reason reason)
         {
             return Stop(reason, _currentState.StateData);
         }
 
-        public State<TS, TD> Stop(Reason reason, TD stateData)
+        public State<TState, TData> Stop(Reason reason, TData stateData)
         {
             return Stay().Using(stateData).WithStopReason(reason);
         }
@@ -462,7 +465,7 @@ namespace Akka.Actor
 
             public StateFunction Func { get; private set; }
 
-            public StateFunction Using(Func<State<TS, TD>, State<TS, TD>> andThen)
+            public StateFunction Using(Func<State<TState, TData>, State<TState, TData>> andThen)
             {
                 StateFunction continuedDelegate = @event => andThen.Invoke(Func.Invoke(@event));
                 return continuedDelegate;
@@ -481,10 +484,10 @@ namespace Akka.Actor
         public void SetTimer(string name, object msg, TimeSpan timeout, bool repeat = false)
         {
             if(DebugEvent)
-                Log.Debug("setting " + (repeat ? "repeating" : "") + "timer '{0}' / {1}: {2}", name, timeout, msg);
+                _logAdapter.Debug("setting " + (repeat ? "repeating" : "") + "timer '{0}' / {1}: {2}", name, timeout, msg);
             if(_timers.ContainsKey(name))
                 _timers[name].Cancel();
-            var timer = new Timer(name, msg, repeat, _timerGen.Next, Context, DebugEvent ? Log : null);
+            var timer = new Timer(name, msg, repeat, _timerGen.Next, Context, DebugEvent ? _logAdapter : null);
             timer.Schedule(Self, timeout);
 
             if (!_timers.ContainsKey(name))
@@ -501,7 +504,7 @@ namespace Akka.Actor
         {
             if (DebugEvent)
             {
-                Log.Debug("Cancelling timer {0}", name);
+                _logAdapter.Debug("Cancelling timer {0}", name);
             }
 
             if (_timers.ContainsKey(name))
@@ -525,7 +528,7 @@ namespace Akka.Actor
         /// Set the state timeout explicitly. This method can be safely used from
         /// within a state handler.
         /// </summary>
-        public void SetStateTimeout(TS state, TimeSpan? timeout)
+        public void SetStateTimeout(TState state, TimeSpan? timeout)
         {
             if(!_stateTimeouts.ContainsKey(state))
                 _stateTimeouts.Add(state, timeout);
@@ -550,16 +553,16 @@ namespace Akka.Actor
         /// </summary>
         public void OnTransition(TransitionHandler transitionHandler)
         {
-            transitionEvent.Add(transitionHandler);
+            _transitionEvent.Add(transitionHandler);
         }
 
         /// <summary>
         /// Set the handler which is called upon termination of this FSM actor. Calling this
         /// method again will overwrite the previous contents.
         /// </summary>
-        public void OnTermination(Action<StopEvent<TS, TD>> terminationHandler)
+        public void OnTermination(Action<StopEvent<TState, TData>> terminationHandler)
         {
-            terminateEvent = terminationHandler;
+            _terminateEvent = terminationHandler;
         }
 
         /// <summary>
@@ -569,7 +572,7 @@ namespace Akka.Actor
         /// <param name="stateFunction"></param>
         public void WhenUnhandled(StateFunction stateFunction)
         {
-            handleEvent = OrElse(stateFunction, HandleEventDefault);
+            HandleEvent = OrElse(stateFunction, HandleEventDefault);
         }
 
         /// <summary>
@@ -585,7 +588,7 @@ namespace Akka.Actor
         /// <summary>
         /// Current state name
         /// </summary>
-        public TS StateName
+        public TState StateName
         {
             get { return _currentState.StateName; }
         }
@@ -593,7 +596,7 @@ namespace Akka.Actor
         /// <summary>
         /// Current state data
         /// </summary>
-        public TD StateData
+        public TData StateData
         {
             get { return _currentState.StateData; }
         }
@@ -601,7 +604,7 @@ namespace Akka.Actor
         /// <summary>
         /// Return next state data (available in <see cref="OnTransition"/> handlers)
         /// </summary>
-        public TD NextStateData
+        public TData NextStateData
         {
             get
             {
@@ -627,10 +630,10 @@ namespace Akka.Actor
         /// <summary>
         /// FSM state data and current timeout handling
         /// </summary>
-        private State<TS, TD> _currentState;
+        private State<TState, TData> _currentState;
 
         private CancellationTokenSource _timeoutFuture;
-        private State<TS, TD> _nextState;
+        private State<TState, TData> _nextState;
         private long _generation = 0L;
 
         /// <summary>
@@ -642,10 +645,10 @@ namespace Akka.Actor
         /// <summary>
         /// State definitions
         /// </summary>
-        private readonly Dictionary<TS, StateFunction> _stateFunctions = new Dictionary<TS, StateFunction>();
-        private readonly Dictionary<TS, TimeSpan?> _stateTimeouts = new Dictionary<TS, TimeSpan?>();
+        private readonly Dictionary<TState, StateFunction> _stateFunctions = new Dictionary<TState, StateFunction>();
+        private readonly Dictionary<TState, TimeSpan?> _stateTimeouts = new Dictionary<TState, TimeSpan?>();
 
-        private void Register(TS name, StateFunction function, TimeSpan? timeout)
+        private void Register(TState name, StateFunction function, TimeSpan? timeout)
         {
             if (_stateFunctions.ContainsKey(name))
             {
@@ -666,9 +669,9 @@ namespace Akka.Actor
         {
             get
             {
-                return delegate(Event<TD> @event)
+                return delegate(Event<TData> @event)
                 {
-                    Log.Warn(String.Format("unhandled event {0} in state {1}", @event.FsmEvent, StateName));
+                    _logAdapter.Warn(String.Format("unhandled event {0} in state {1}", @event.FsmEvent, StateName));
                     return Stay();
                 };
             }
@@ -676,7 +679,7 @@ namespace Akka.Actor
 
         private StateFunction _handleEvent;
 
-        private StateFunction handleEvent
+        private StateFunction HandleEvent
         {
             get { return _handleEvent ?? (_handleEvent = HandleEventDefault); }
             set { _handleEvent = value; }
@@ -686,19 +689,16 @@ namespace Akka.Actor
         /// <summary>
         /// Termination handling
         /// </summary>
-        private Action<StopEvent<TS, TD>> terminateEvent = @event =>
-        {
-
-        };
+        private Action<StopEvent<TState, TData>> _terminateEvent = @event =>{};
 
         /// <summary>
         /// Transition handling
         /// </summary>
-        private readonly IList<TransitionHandler> transitionEvent = new List<TransitionHandler>();
+        private readonly IList<TransitionHandler> _transitionEvent = new List<TransitionHandler>();
 
-        private void HandleTransition(TS previous, TS next)
+        private void HandleTransition(TState previous, TState next)
         {
-            foreach (var tran in transitionEvent)
+            foreach (var tran in _transitionEvent)
             {
                 tran.Invoke(previous, next);
             }
@@ -714,7 +714,7 @@ namespace Akka.Actor
         /// <returns>A <see cref="StateFunction"/> which combines both the results of <see cref="original"/> and <see cref="fallback"/></returns>
         private static StateFunction OrElse(StateFunction original, StateFunction fallback)
         {
-            StateFunction chained = delegate(Event<TD> @event)
+            StateFunction chained = delegate(Event<TData> @event)
             {
                 var originalResult = original.Invoke(@event);
                 if (originalResult == null) return fallback.Invoke(@event);
@@ -764,13 +764,13 @@ namespace Akka.Actor
                     Context.Watch(cb.ActorRef);
                     Listeners.Add(cb.ActorRef);
                     //send the current state back as a reference point
-                    cb.ActorRef.Tell(new CurrentState<TS>(Self, _currentState.StateName));
+                    cb.ActorRef.Tell(new CurrentState<TState>(Self, _currentState.StateName));
                 })
                 .With<Listen>(l =>
                 {
                     Context.Watch(l.Listener);
                     Listeners.Add(l.Listener);
-                    l.Listener.Tell(new CurrentState<TS>(Self, _currentState.StateName));
+                    l.Listener.Tell(new CurrentState<TState>(Self, _currentState.StateName));
                 })
                 .With<UnsubscribeTransitionCallBack>(ucb =>
                 {
@@ -798,20 +798,20 @@ namespace Akka.Actor
 
         private void ProcessMsg(object any, object source)
         {
-            var fsmEvent = new Event<TD>(any, _currentState.StateData);
+            var fsmEvent = new Event<TData>(any, _currentState.StateData);
             ProcessEvent(fsmEvent, source);
         }
 
-        private void ProcessEvent(Event<TD> fsmEvent, object source)
+        private void ProcessEvent(Event<TData> fsmEvent, object source)
         {
             if(DebugEvent)
             {
                 var srcStr = GetSourceString(source);
-                Log.Debug("processing {0} from {1}", fsmEvent, srcStr);
+                _logAdapter.Debug("processing {0} from {1}", fsmEvent, srcStr);
             }
             var stateFunc = _stateFunctions[_currentState.StateName];
             var oldState = _currentState;
-            State<TS, TD> upcomingState = null;
+            State<TState, TData> upcomingState = null;
 
             if(stateFunc != null)
             {
@@ -820,13 +820,13 @@ namespace Akka.Actor
 
             if(upcomingState == null)
             {
-                upcomingState = handleEvent(fsmEvent);
+                upcomingState = HandleEvent(fsmEvent);
             }
 
             ApplyState(upcomingState);
-            if(DebugEvent && oldState != upcomingState)
+            if(DebugEvent && !Equals(oldState, upcomingState))
             {
-                Log.Debug("transition {0} -> {1}", oldState, upcomingState);
+                _logAdapter.Debug("transition {0} -> {1}", oldState, upcomingState);
             }
         }
 
@@ -841,7 +841,7 @@ namespace Akka.Actor
             return "unknown";
         }
 
-        private void ApplyState(State<TS, TD> upcomingState)
+        private void ApplyState(State<TState, TData> upcomingState)
         {
             if (upcomingState.StopReason == null){ MakeTransition(upcomingState);
                 return;
@@ -856,14 +856,14 @@ namespace Akka.Actor
             Context.Stop(Self);
         }
 
-        private void MakeTransition(State<TS, TD> upcomingState)
+        private void MakeTransition(State<TState, TData> upcomingState)
         {
             if (!_stateFunctions.ContainsKey(upcomingState.StateName))
             {
                 Terminate(
                     Stay()
                         .WithStopReason(
-                            new Failure(String.Format((string) "Next state {0} does not exist", (object) upcomingState.StateName))));
+                            new Failure(String.Format("Next state {0} does not exist", upcomingState.StateName))));
             }
             else
             {
@@ -874,7 +874,7 @@ namespace Akka.Actor
                 {
                     _nextState = upcomingState;
                     HandleTransition(_currentState.StateName, _nextState.StateName);
-                    Listeners.Gossip(new Transition<TS>(Self, _currentState.StateName, _nextState.StateName));
+                    Listeners.Gossip(new Transition<TState>(Self, _currentState.StateName, _nextState.StateName));
                     _nextState = null;
                 }
                 _currentState = upcomingState;
@@ -892,7 +892,7 @@ namespace Akka.Actor
             }
         }
 
-        private void Terminate(State<TS, TD> upcomingState)
+        private void Terminate(State<TState, TData> upcomingState)
         {
             if (_currentState.StopReason == null)
             {
@@ -902,8 +902,8 @@ namespace Akka.Actor
                 _timers.Clear();
                 _currentState = upcomingState;
 
-                var stopEvent = new StopEvent<TS, TD>(reason, _currentState.StateName, _currentState.StateData);
-                terminateEvent(stopEvent);
+                var stopEvent = new StopEvent<TState, TData>(reason, _currentState.StateName, _currentState.StateData);
+                _terminateEvent(stopEvent);
             }
         }
 
@@ -938,11 +938,11 @@ namespace Akka.Actor
                 {
                     if (f.Cause is Exception)
                     {
-                        Log.Error(f.Cause.AsInstanceOf<Exception>(), "terminating due to Failure");
+                        _logAdapter.Error(f.Cause.AsInstanceOf<Exception>(), "terminating due to Failure");
                     }
                     else
                     {
-                        Log.Error(f.Cause.ToString());
+                        _logAdapter.Error(f.Cause.ToString());
                     }
                 });
         }
@@ -951,5 +951,6 @@ namespace Akka.Actor
     /// <summary>
     /// Marker interface to let the setting "akka.actor.debug.fsm" control if logging should occur in <see cref="FSM{TS,TD}"/>
     /// </summary>
+    // ReSharper disable once InconsistentNaming
     public interface LoggingFSM { }
 }
