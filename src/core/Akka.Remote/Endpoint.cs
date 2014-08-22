@@ -488,7 +488,11 @@ namespace Akka.Remote
                     }
                 })
                 .With<EndpointWriter.FlushAndStop>(flush => Context.Stop(Self))
-                .With<EndpointWriter.StopReading>(w => Sender.Tell(new EndpointWriter.StoppedReading(w.Writer)));
+                .With<EndpointWriter.StopReading>(stop =>
+                {
+                    stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer));
+                    Sender.Tell(new EndpointWriter.StoppedReading(stop.Writer));
+                });
         }
 
         protected void Idle(object message)
@@ -508,7 +512,7 @@ namespace Akka.Remote
                     Context.Become(OnReceive);
                 })
                 .With<EndpointWriter.FlushAndStop>(stop => Context.Stop(Self))
-                .With<EndpointWriter.StopReading>(stop => Sender.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
+                .With<EndpointWriter.StopReading>(stop => stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
         }
 
 
@@ -801,7 +805,10 @@ namespace Akka.Remote
                         CurrentStash.Stash();
                         nextState = Stay();
                     })
-                    .With<BackoffTimer>(timer => nextState = GoTo(State.Writing))
+                    .With<BackoffTimer>(timer =>
+                    {
+                        nextState = GoTo(State.Writing);
+                    })
                     .With<FlushAndStop>(flush =>
                     {
                         CurrentStash.Stash(); //Flushing is postponed after the pending writes
@@ -912,7 +919,7 @@ namespace Akka.Remote
                     {
                         if (reader != null)
                         {
-                            reader.Forward(stop);
+                            reader.Tell(stop, stop.ReplyTo);
                         }
                         else
                         {
@@ -926,7 +933,7 @@ namespace Akka.Remote
                         // Shutdown old reader
                         _handle.Disassociate();
                         _handle = takeover.ProtocolHandle;
-                        Sender.Tell(new TookOver(Self, _handle));
+                        takeover.ReplyTo.Tell(new TookOver(Self, _handle));
                         nextState = GoTo(State.Handoff);
                     })
                     .With<FlushAndStop>(flush =>
@@ -1104,12 +1111,15 @@ namespace Akka.Remote
             /// Create a new TakeOver command
             /// </summary>
             /// <param name="protocolHandle">The handle of the new association</param>
-            public TakeOver(AkkaProtocolHandle protocolHandle)
+            public TakeOver(AkkaProtocolHandle protocolHandle, ActorRef replyTo)
             {
                 ProtocolHandle = protocolHandle;
+                ReplyTo = replyTo;
             }
 
             public AkkaProtocolHandle ProtocolHandle { get; private set; }
+
+            public ActorRef ReplyTo { get; private set; }
         }
 
         public sealed class TookOver : NoSerializationVerificationNeeded
@@ -1143,12 +1153,15 @@ namespace Akka.Remote
 
         public sealed class StopReading
         {
-            public StopReading(ActorRef writer)
+            public StopReading(ActorRef writer, ActorRef replyTo)
             {
                 Writer = writer;
+                ReplyTo = replyTo;
             }
 
             public ActorRef Writer { get; private set; }
+
+            public ActorRef ReplyTo { get; private set; }
         }
 
         public sealed class StoppedReading
@@ -1264,7 +1277,7 @@ namespace Akka.Remote
                 {
                     SaveState();
                     Context.Become(NotReading);
-                    Sender.Tell(new EndpointWriter.StoppedReading(stop.Writer));
+                    stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer));
                 });
         }
 

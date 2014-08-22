@@ -782,7 +782,6 @@ namespace Akka.Actor
                     Context.Unwatch(d.Listener);
                     Listeners.Remove(d.Listener);
                 })
-                .With<Terminated>(t => Listeners.Remove(t.ActorRef))
                 .Default(msg =>
                 {
                     if (_timeoutFuture != null)

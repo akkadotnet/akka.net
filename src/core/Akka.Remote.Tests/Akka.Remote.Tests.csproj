@@ -79,6 +79,7 @@
   <ItemGroup>
     <Compile Include="AccrualFailureDetectorSpec.cs" />
     <Compile Include="AckedDeliverySpec.cs" />
+    <Compile Include="DeadlineFailureDetectorSpec.cs" />
     <Compile Include="EndpointRegistrySpec.cs" />
     <Compile Include="FailureDetectorRegistrySpec.cs" />
     <Compile Include="RemoteConfigSpec.cs" />
