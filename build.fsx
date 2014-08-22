@@ -1,5 +1,4 @@
-﻿#load "src/.build/boot.fsx"
-#I @"src\packages\fake\tools\"
+﻿#I @"src/packages/FAKE/tools"
 #r "FakeLib.dll"
 #r "System.Xml.Linq"
 
@@ -103,7 +102,7 @@ Target "Build" <| fun _ ->
 Target "CopyOutput" <| fun _ ->
     
     let copyOutput project =
-        let src = "src" @@ project @@ @"bin\release\"
+        let src = "src" @@ project @@ @"bin/Release/"
         let dst = binDir @@ project
         CopyDir dst src allFiles
     [ "core/Akka"
@@ -134,8 +133,8 @@ Target "CleanTests" <| fun _ ->
 
 open XUnitHelper
 Target "RunTests" <| fun _ ->  
-    let msTestAssemblies = !! "src/**/bin/release/Akka.TestKit.VsTest.Tests.dll"
-    let xunitTestAssemblies = !! "src/**/bin/release/*.Tests.dll" -- "src/**/bin/release/Akka.TestKit.VsTest.Tests.dll"
+    let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
+    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
 
     mkdir testOutput
 
@@ -225,7 +224,7 @@ Target "Nuget" <| fun _ ->
         !! (releaseDir @@ project + ".pdb")
         |> CopyFiles libDir
 
-        let nugetSrcDir = workingDir @@ @"src\"
+        let nugetSrcDir = workingDir @@ @"src/"
         CreateDir nugetSrcDir
 
         let isCs = hasExt ".cs"
