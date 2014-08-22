@@ -412,7 +412,23 @@ namespace Akka.Remote.Transport
         public AssociationHandle WrappedHandle { get; private set; }
     }
 
-    internal class TimeoutReason { }
+    /// <summary>
+    /// Message sent when a <see cref="FailureDetector.IsAvailable"/> returns false, signaling a transport timeout.
+    /// </summary>
+    internal class TimeoutReason
+    {
+        public TimeoutReason(string errorMessage)
+        {
+            ErrorMessage = errorMessage;
+        }
+
+        public string ErrorMessage { get; private set; }
+
+        public override string ToString()
+        {
+            return string.Format("Timeout: {0}", ErrorMessage);
+        }
+    }
     internal class ForbiddenUidReason { }
 
     internal class ProtocolStateActor : FSM<AssociationState, ProtocolStateData>
@@ -618,27 +634,32 @@ namespace Akka.Remote.Transport
                                 _failureDetector.HeartBeat();
                                 nextState = Stay();
                             })
-                            .With<Payload>(p => @event.StateData.Match()
-                                .With<AssociatedWaitHandler>(awh =>
-                                {
-                                    var nQueue = new Queue<ByteString>(awh.Queue);
-                                    nQueue.Enqueue(p.Bytes);
-                                    nextState =
-                                        Stay()
-                                            .Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle,
-                                                nQueue));
-                                })
-                                .With<ListenerReady>(lr =>
-                                {
-                                    lr.Listener.Notify(new InboundPayload(p.Bytes));
-                                    nextState = Stay();
-                                })
-                                .Default(msg =>
-                                {
-                                    throw new AkkaProtocolException(
-                                        string.Format("Unhandled message in state Open(InboundPayload) with type {0}",
-                                            msg));
-                                }))
+                            .With<Payload>(p =>
+                            {
+                                _failureDetector.HeartBeat();
+                                @event.StateData.Match()
+                                    .With<AssociatedWaitHandler>(awh =>
+                                    {
+                                        var nQueue = new Queue<ByteString>(awh.Queue);
+                                        nQueue.Enqueue(p.Bytes);
+                                        nextState =
+                                            Stay()
+                                                .Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle,
+                                                    nQueue));
+                                    })
+                                    .With<ListenerReady>(lr =>
+                                    {
+                                        lr.Listener.Notify(new InboundPayload(p.Bytes));
+                                        nextState = Stay();
+                                    })
+                                    .Default(msg =>
+                                    {
+                                        throw new AkkaProtocolException(
+                                            string.Format(
+                                                "Unhandled message in state Open(InboundPayload) with type {0}",
+                                                msg));
+                                    });
+                            })
                             .Default(d =>
                             {
                                 nextState = Stay();
@@ -687,7 +708,7 @@ namespace Akka.Remote.Transport
                             .With<TimeoutReason>(
                                 timeout =>
                                     associationFailure =
-                                        new AkkaProtocolException("No reponse from remote. Handshake timed out."))
+                                        new AkkaProtocolException(timeout.ErrorMessage))
                             .With<ForbiddenUidReason>(
                                 forbidden =>
                                     associationFailure =
@@ -750,6 +771,20 @@ namespace Akka.Remote.Transport
 
         }
 
+        protected override void LogTermination(Reason reason)
+        {
+            var failure = reason as Failure;
+            if (failure != null)
+            {
+                failure.Cause.Match()
+                    .With<DisassociateInfo>(() => { }) //no logging
+                    .With<ForbiddenUidReason>(() => { }) //no logging
+                    .With<TimeoutReason>(timeoutReason => Log.Info(timeoutReason.ErrorMessage));
+            }
+            else
+                base.LogTermination(reason);
+        }
+
         #endregion
 
         #region Actor methods
@@ -787,8 +822,9 @@ namespace Akka.Remote.Transport
             }
             else
             {
+                //send diassociate just to be sure
                 SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
-                return Stop(new Failure(new TimeoutReason()));
+                return Stop(new Failure(new TimeoutReason("No response from remote. Handshake timed out or transport failure detector triggered.")));
             }
         }
 
@@ -863,11 +899,11 @@ namespace Akka.Remote.Transport
             }
         }
 
-        private void SendHeartBeat(AssociationHandle wrappedHandle)
+        private bool SendHeartBeat(AssociationHandle wrappedHandle)
         {
             try
             {
-                wrappedHandle.Write(_codec.ConstructHeartbeat());
+                return wrappedHandle.Write(_codec.ConstructHeartbeat());
             }
             catch (Exception ex)
             {

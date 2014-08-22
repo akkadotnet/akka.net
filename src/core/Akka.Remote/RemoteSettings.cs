@@ -14,6 +14,18 @@ namespace Akka.Remote
             Config = config;
             LogReceive = config.GetBoolean("akka.remote.log-received-messages");
             LogSend = config.GetBoolean("akka.remote.log-sent-messages");
+
+            var bufferSizeLogKey = "akka.remote.log-buffer-size-exceeding";
+            if (config.GetString(bufferSizeLogKey).ToLowerInvariant().Equals("off") ||
+                config.GetString(bufferSizeLogKey).ToLowerInvariant().Equals("false"))
+            {
+                LogBufferSizeExceeding = Int32.MaxValue;
+            }
+            else
+            {
+                LogBufferSizeExceeding = config.GetInt(bufferSizeLogKey);
+            }
+
             UntrustedMode = config.GetBoolean("akka.remote.untrusted-mode");
             TrustedSelectionPaths = new HashSet<string>(config.GetStringList("akka.remote.trusted-selection-paths"));
             RemoteLifecycleEventsLogLevel = config.GetString("akka.remote.log-remote-lifecycle-events") ?? "DEBUG";
@@ -58,6 +70,8 @@ namespace Akka.Remote
         public bool LogSend { get; set; }
 
         public bool LogReceive { get; set; }
+
+        public int LogBufferSizeExceeding { get; set; }
 
         public string RemoteLifecycleEventsLogLevel { get; set; }
 
