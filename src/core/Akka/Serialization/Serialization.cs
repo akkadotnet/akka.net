@@ -22,12 +22,6 @@ namespace Akka.Serialization
 
         private readonly Dictionary<Type, Serializer> _serializerMap = new Dictionary<Type, Serializer>();
         private readonly Dictionary<int, Serializer> _serializers = new Dictionary<int, Serializer>();
-        //private Serializer byteArraySerializer;
-        //private Serializer javaSerializer;
-        //private Serializer newtonsoftJsonSerializer;
-
-        private Config _serializersConfig;
-        private Config _serializerBindingConfig;
 
         public Serialization(ExtendedActorSystem system)
         {
@@ -67,32 +61,9 @@ namespace Akka.Serialization
                 var serializer = namedSerializers[serializerName];
                 _serializerMap.Add(messageType,serializer);
             }
-
-
-            //newtonsoftJsonSerializer = new NewtonSoftJsonSerializer(system);
-
-
-
-
-            ////protobufnetSerializer = new ProtoBufNetSerializer(system);
-            ////jsonSerializer = new FastJsonSerializer(system);
-            //javaSerializer = new JavaSerializer(system);
-            
-            //byteArraySerializer = new ByteArraySerializer(system);
-
-            //serializers.Add(newtonsoftJsonSerializer.Identifier, newtonsoftJsonSerializer);
-            ////serializers.Add(protobufnetSerializer.Identifier, protobufnetSerializer);
-            ////serializers.Add(jsonSerializer.Identifier, jsonSerializer);
-            //serializers.Add(javaSerializer.Identifier, javaSerializer);
-            //serializers.Add(nullSerializer.Identifier, nullSerializer);
-            //serializers.Add(byteArraySerializer.Identifier, byteArraySerializer);
-
-            //serializerMap.Add(typeof (object), newtonsoftJsonSerializer);
         }
 
         public ActorSystem System { get; private set; }
-
-
 
         public void AddSerializer(Serializer serializer)
         {
@@ -113,8 +84,6 @@ namespace Akka.Serialization
         {
             if (obj == null)
                 return _nullSerializer;
-            //if (obj is byte[])
-            //    return byteArraySerializer;
 
             Type type = obj.GetType();
             return FindSerializerForType(type);
