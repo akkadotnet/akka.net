@@ -81,6 +81,8 @@ namespace Akka.Tests.Serialization
         {
             sys.Serialization.FindSerializerFor(null).GetType().ShouldBe(typeof(NullSerializer));
             sys.Serialization.FindSerializerFor(new byte[]{1,2,3}).GetType().ShouldBe(typeof(ByteArraySerializer));
+            sys.Serialization.FindSerializerFor("dummy").GetType().ShouldBe(typeof(DummySerializer));
+            sys.Serialization.FindSerializerFor(123).GetType().ShouldBe(typeof(NewtonSoftJsonSerializer));
         }
 
 
@@ -94,17 +96,41 @@ namespace Akka.Tests.Serialization
 
 akka.actor {
     serializers {
-		json = ""Akka.Serialization.NewtonSoftJsonSerializer""
-		java = ""Akka.Serialization.JavaSerializer""
-		bytes = ""Akka.Serialization.ByteArraySerializer""
+        dummy = """ + typeof(DummySerializer).AssemblyQualifiedName + @"""
 	}
 
     serialization-bindings {
-      ""System.Byte[]"" = bytes
-      ""System.Object"" = json
+      ""System.String"" = dummy
     }
 }
 ";
+        }
+
+        public class DummySerializer : Serializer
+        {
+            public DummySerializer(ExtendedActorSystem system) : base(system)
+            {
+            }
+
+            public override int Identifier
+            {
+                get { return -5; }
+            }
+
+            public override bool IncludeManifest
+            {
+                get { throw new NotImplementedException(); }
+            }
+
+            public override byte[] ToBinary(object obj)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override object FromBinary(byte[] bytes, Type type)
+            {
+                throw new NotImplementedException();
+            }
         }
     }
 }

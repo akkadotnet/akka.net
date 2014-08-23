@@ -43,6 +43,11 @@ namespace Akka.Serialization
             {
                 var serializerTypeName = kvp.Value.GetString();
                 var serializerType = Type.GetType(serializerTypeName);
+                if (serializerType == null)
+                    throw new ConfigurationException(
+                        string.Format("The type name for serializer '{0}' did not resolve to an actual Type: '{1}'",
+                            kvp.Key, serializerTypeName));
+
                 var serializer = (Serializer)Activator.CreateInstance(serializerType,system);
                 _serializers.Add(serializer.Identifier, serializer);
                 namedSerializers.Add(kvp.Key,serializer);
@@ -53,6 +58,12 @@ namespace Akka.Serialization
                 var typename = kvp.Key;
                 var serializerName = kvp.Value.GetString();
                 var messageType = Type.GetType(typename);
+
+                if (messageType == null)
+                    throw new ConfigurationException(
+                        string.Format("The type name for message/serializer binding '{0}' did not resolve to an actual Type: '{1}'",
+                            serializerName, messageType));
+
                 var serializer = namedSerializers[serializerName];
                 _serializerMap.Add(messageType,serializer);
             }

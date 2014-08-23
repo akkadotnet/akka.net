@@ -292,7 +292,7 @@ namespace Akka.Configuration
             var current = this;
             while (current != null)
             {
-                foreach (var kvp in Root.GetObject().AsEnumerable())
+                foreach (var kvp in current.Root.GetObject().AsEnumerable())
                 {
                     if (!used.Contains(kvp.Key))
                     {
