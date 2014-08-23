@@ -329,6 +329,7 @@ namespace Akka.Remote
                                  "Address is now gated for {1} ms, all messages to this address will be delivered to dead letters. Reason: [{2}]",
                                  ia.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds, ia.Message);
                         endpoints.MarkAsFailed(Sender, Deadline.Now + settings.RetryGateClosedFor);
+                        AddressTerminatedTopic.Get(Context.System).Publish(new AddressTerminated(ia.RemoteAddress));
                         directive = Directive.Stop;
                     })
                     .With<ShutDownAssociation>(shutdown =>
@@ -337,6 +338,7 @@ namespace Akka.Remote
                                   "Address is not gated for {1}ms, all messages to this address will be delivered to dead letters.",
                                   shutdown.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds);
                         endpoints.MarkAsFailed(Sender, Deadline.Now + settings.RetryGateClosedFor);
+                        AddressTerminatedTopic.Get(Context.System).Publish(new AddressTerminated(shutdown.RemoteAddress));
                         directive = Directive.Stop;
                     })
                     .With<HopelessAssociation>(hopeless =>
@@ -355,6 +357,7 @@ namespace Akka.Remote
                                 hopeless.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds);
                             endpoints.MarkAsFailed(Sender, Deadline.Now + settings.RetryGateClosedFor);
                         }
+                        AddressTerminatedTopic.Get(Context.System).Publish(new AddressTerminated(hopeless.RemoteAddress));
                         directive = Directive.Stop;
                     })
                     .Default(msg =>
