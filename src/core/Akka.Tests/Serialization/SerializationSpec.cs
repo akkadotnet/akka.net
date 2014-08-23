@@ -1,4 +1,5 @@
-﻿using Akka.TestKit;
+﻿using Akka.Serialization;
+using Akka.TestKit;
 using Xunit;
 using System;
 using System.Collections.Generic;
@@ -75,5 +76,35 @@ namespace Akka.Tests.Serialization
             Assert.Same(f, deserialized.ActorRef);
         }
 
+        [Fact()]
+        public void CanGetSerializerByBinding()
+        {
+            sys.Serialization.FindSerializerFor(null).GetType().ShouldBe(typeof(NullSerializer));
+            sys.Serialization.FindSerializerFor(new byte[]{1,2,3}).GetType().ShouldBe(typeof(ByteArraySerializer));
+        }
+
+
+        public SerializationSpec():base(GetConfig())
+        {
+        }
+
+        private static string GetConfig()
+        {
+            return @"
+
+akka.actor {
+    serializers {
+		json = ""Akka.Serialization.NewtonSoftJsonSerializer""
+		java = ""Akka.Serialization.JavaSerializer""
+		bytes = ""Akka.Serialization.ByteArraySerializer""
+	}
+
+    serialization-bindings {
+      ""System.Byte[]"" = bytes
+      ""System.Object"" = json
+    }
+}
+";
+        }
     }
 }

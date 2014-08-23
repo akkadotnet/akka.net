@@ -1,6 +1,9 @@
 ﻿using System;
+
 using System.Collections.Generic;
+using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 
 namespace Akka.Serialization
 {
@@ -15,56 +18,90 @@ namespace Akka.Serialization
         [ThreadStatic] public static Information CurrentTransportInformation;
 
         [ThreadStatic] public static ActorSystem CurrentSystem;
-        private readonly Serializer nullSerializer;
+        private readonly Serializer _nullSerializer;
 
-        private readonly Dictionary<Type, Serializer> serializerMap = new Dictionary<Type, Serializer>();
-        private readonly Dictionary<int, Serializer> serializers = new Dictionary<int, Serializer>();
-        private Serializer byteArraySerializer;
-        private Serializer javaSerializer;
-        private Serializer newtonsoftJsonSerializer;
+        private readonly Dictionary<Type, Serializer> _serializerMap = new Dictionary<Type, Serializer>();
+        private readonly Dictionary<int, Serializer> _serializers = new Dictionary<int, Serializer>();
+        //private Serializer byteArraySerializer;
+        //private Serializer javaSerializer;
+        //private Serializer newtonsoftJsonSerializer;
 
+        private Config _serializersConfig;
+        private Config _serializerBindingConfig;
 
         public Serialization(ExtendedActorSystem system)
         {
             System = system;
-            newtonsoftJsonSerializer = new NewtonSoftJsonSerializer(system);
-            //protobufnetSerializer = new ProtoBufNetSerializer(system);
-            //jsonSerializer = new FastJsonSerializer(system);
-            javaSerializer = new JavaSerializer(system);
-            nullSerializer = new NullSerializer(system);
-            byteArraySerializer = new ByteArraySerializer(system);
 
-            serializers.Add(newtonsoftJsonSerializer.Identifier, newtonsoftJsonSerializer);
-            //serializers.Add(protobufnetSerializer.Identifier, protobufnetSerializer);
-            //serializers.Add(jsonSerializer.Identifier, jsonSerializer);
-            serializers.Add(javaSerializer.Identifier, javaSerializer);
-            serializers.Add(nullSerializer.Identifier, nullSerializer);
-            serializers.Add(byteArraySerializer.Identifier, byteArraySerializer);
+            _nullSerializer = new NullSerializer(system);
+            _serializers.Add(_nullSerializer.Identifier,_nullSerializer);
 
-            serializerMap.Add(typeof (object), newtonsoftJsonSerializer);
+            var serializersConfig = system.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
+            var serializerBindingConfig = system.Settings.Config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
+            var namedSerializers = new Dictionary<string, Serializer>();
+            foreach (var kvp in serializersConfig)
+            {
+                var serializerTypeName = kvp.Value.GetString();
+                var serializerType = Type.GetType(serializerTypeName);
+                var serializer = (Serializer)Activator.CreateInstance(serializerType,system);
+                _serializers.Add(serializer.Identifier, serializer);
+                namedSerializers.Add(kvp.Key,serializer);
+            }
+
+            foreach (var kvp in serializerBindingConfig)
+            {
+                var typename = kvp.Key;
+                var serializerName = kvp.Value.GetString();
+                var messageType = Type.GetType(typename);
+                var serializer = namedSerializers[serializerName];
+                _serializerMap.Add(messageType,serializer);
+            }
+
+
+            //newtonsoftJsonSerializer = new NewtonSoftJsonSerializer(system);
+
+
+
+
+            ////protobufnetSerializer = new ProtoBufNetSerializer(system);
+            ////jsonSerializer = new FastJsonSerializer(system);
+            //javaSerializer = new JavaSerializer(system);
+            
+            //byteArraySerializer = new ByteArraySerializer(system);
+
+            //serializers.Add(newtonsoftJsonSerializer.Identifier, newtonsoftJsonSerializer);
+            ////serializers.Add(protobufnetSerializer.Identifier, protobufnetSerializer);
+            ////serializers.Add(jsonSerializer.Identifier, jsonSerializer);
+            //serializers.Add(javaSerializer.Identifier, javaSerializer);
+            //serializers.Add(nullSerializer.Identifier, nullSerializer);
+            //serializers.Add(byteArraySerializer.Identifier, byteArraySerializer);
+
+            //serializerMap.Add(typeof (object), newtonsoftJsonSerializer);
         }
 
         public ActorSystem System { get; private set; }
 
+
+
         public void AddSerializer(Serializer serializer)
         {
-            serializers.Add(serializer.Identifier, serializer);
+            _serializers.Add(serializer.Identifier, serializer);
         }
 
         public void AddSerializationMap(Type type, Serializer serializer)
         {
-            serializerMap.Add(type, serializer);
+            _serializerMap.Add(type, serializer);
         }
 
         public object Deserialize(byte[] bytes, int serializerId, Type type)
         {
-            return serializers[serializerId].FromBinary(bytes, type);
+            return _serializers[serializerId].FromBinary(bytes, type);
         }
 
         public Serializer FindSerializerFor(object obj)
         {
             if (obj == null)
-                return nullSerializer;
+                return _nullSerializer;
             //if (obj is byte[])
             //    return byteArraySerializer;
 
@@ -77,8 +114,8 @@ namespace Akka.Serialization
             Type type = objectType;
             while (type != null)
             {
-                if (serializerMap.ContainsKey(type))
-                    return serializerMap[type];
+                if (_serializerMap.ContainsKey(type))
+                    return _serializerMap[type];
                 type = type.BaseType;
             }
             throw new Exception("Serializer not found for type " + objectType.Name);
@@ -122,7 +159,7 @@ val path = actorRef.path
 
         public Serializer GetSerializerById(int serializerId)
         {
-            return serializers[serializerId];
+            return _serializers[serializerId];
         }
     }
 }
