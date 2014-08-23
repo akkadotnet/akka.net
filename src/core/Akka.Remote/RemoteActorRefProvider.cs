@@ -27,6 +27,8 @@ namespace Akka.Remote
             var remoteDeployer = new RemoteDeployer(settings);
             Func<ActorPath, InternalActorRef> deadLettersFactory = path => new RemoteDeadLetterActorRef(this, path, eventStream);
             _local = new LocalActorRefProvider(systemName, settings, eventStream, remoteDeployer, deadLettersFactory);
+            var remoteConfig = RemoteConfigFactory.Default();
+            settings.SetProviderConfig(remoteConfig);
             Config = settings.Config.WithFallback(RemoteConfigFactory.Default());
             RemoteSettings = new RemoteSettings(Config);
             Deployer = remoteDeployer;
@@ -98,16 +100,7 @@ namespace Akka.Remote
 
             //TODO: RemotingTerminator
 
-
-            var daemonMsgCreateSerializer = new DaemonMsgCreateSerializer(system);
-            var messageContainerSerializer = new MessageContainerSerializer(system);
-            system.Serialization.AddSerializer(daemonMsgCreateSerializer);
-            system.Serialization.AddSerializationMap(typeof(DaemonMsgCreate), daemonMsgCreateSerializer);
-            system.Serialization.AddSerializer(messageContainerSerializer);
-            system.Serialization.AddSerializationMap(typeof(ActorSelectionMessage), messageContainerSerializer);
-
             Transport.Start();
-            //      RemoteHost.StartHost(System, port);
             _remoteWatcher = CreateRemoteWatcher(system);
         }
 

@@ -82,6 +82,11 @@ namespace Akka.Actor
              */
         }
 
+        public void SetProviderConfig(Config config)
+        {
+            Config = Config.WithFallback(config);
+        }
+
         /// <summary>
         ///     Gets the system.
         /// </summary>

@@ -79,10 +79,10 @@ namespace Akka.Tests.Serialization
         [Fact()]
         public void CanGetSerializerByBinding()
         {
-            sys.Serialization.FindSerializerFor(null).GetType().ShouldBe(typeof(NullSerializer));
-            sys.Serialization.FindSerializerFor(new byte[]{1,2,3}).GetType().ShouldBe(typeof(ByteArraySerializer));
-            sys.Serialization.FindSerializerFor("dummy").GetType().ShouldBe(typeof(DummySerializer));
-            sys.Serialization.FindSerializerFor(123).GetType().ShouldBe(typeof(NewtonSoftJsonSerializer));
+            Sys.Serialization.FindSerializerFor(null).GetType().ShouldBe(typeof(NullSerializer));
+            Sys.Serialization.FindSerializerFor(new byte[]{1,2,3}).GetType().ShouldBe(typeof(ByteArraySerializer));
+            Sys.Serialization.FindSerializerFor("dummy").GetType().ShouldBe(typeof(DummySerializer));
+            Sys.Serialization.FindSerializerFor(123).GetType().ShouldBe(typeof(NewtonSoftJsonSerializer));
         }
 
 
