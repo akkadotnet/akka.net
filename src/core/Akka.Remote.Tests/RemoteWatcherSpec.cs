@@ -381,8 +381,45 @@ namespace Akka.Remote.Tests
 
             //assume that connection comes up again, or remote system is restarted
             var c = CreateRemoteActor(Props.Create<MyActor>(), "c6");
+            monitorA.Tell(new RemoteWatcher.WatchRemote(c,a));
 
-            //TODO: Finish test
+            monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
+            ExpectMsg<RemoteWatcher.Heartbeat>();
+            monitorA.Tell(_heartbeatRspB, monitorB);
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
+            ExpectMsg<RemoteWatcher.Heartbeat>();
+            monitorA.Tell(_heartbeatRspB, monitorB);
+            monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
+            ExpectMsg<RemoteWatcher.Heartbeat>();
+            monitorA.Tell(RemoteWatcher.ReapUnreachableTick.Instance, TestActor);
+            p.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
+            ExpectMsg<RemoteWatcher.Heartbeat>();
+            monitorA.Tell(_heartbeatRspB, monitorB);
+            monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
+            ExpectMsg<RemoteWatcher.Heartbeat>();
+            monitorA.Tell(RemoteWatcher.ReapUnreachableTick.Instance, TestActor);
+            p.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            q.ExpectNoMsg(TimeSpan.FromSeconds(1));
+
+            //then stop heartbeating again; should generate a new AddressTerminated
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                AwaitAssert(() =>
+                {
+                    monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
+                    ExpectMsg<RemoteWatcher.Heartbeat>();
+                    //but no HeartbeatRsp
+                    monitorA.Tell(RemoteWatcher.ReapUnreachableTick.Instance);
+                    p.ExpectMsg(new TestRemoteWatcher.AddressTerm(b.Path.Address), TimeSpan.FromSeconds(1));
+                    q.ExpectMsg(new TestRemoteWatcher.Quarantined(b.Path.Address, RemoteAddressUid), TimeSpan.FromSeconds(1));
+                });
+                return true;
+            });
+
+            //make sure nothing floods over to next test
+            ExpectNoMsg(TimeSpan.FromSeconds(2));
         }
 
     }
