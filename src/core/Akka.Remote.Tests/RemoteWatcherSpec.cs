@@ -163,13 +163,11 @@ namespace Akka.Remote.Tests
             _heartbeatRspB = new RemoteWatcher.HeartbeatRsp(remoteAddressUid);
         }
 
-        //TODO: AfterTermination
-        /*
-          override def afterTermination() {
-            shutdown(remoteSystem)
-          }
-         */
-
+        protected override void AfterTest()
+        {
+            Shutdown(_remoteSystem);
+            base.AfterTest();
+        }
         readonly ActorSystem _remoteSystem;
         readonly Address _remoteAddress;
         readonly RemoteWatcher.HeartbeatRsp _heartbeatRspB;
