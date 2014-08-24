@@ -118,6 +118,7 @@
     <Compile Include="Routing\RoutingSpec.cs" />
     <Compile Include="Routing\ScatterGatherFirstCompletedSpec.cs" />
     <Compile Include="Routing\SmallestMailboxSpec.cs" />
+    <Compile Include="Routing\TailChoppingSpec.cs" />
     <Compile Include="Serialization\SerializationSpec.cs" />
     <Compile Include="TestUtils\Comparable.cs" />
     <Compile Include="TestUtils\Supervisor.cs" />

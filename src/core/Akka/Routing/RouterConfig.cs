@@ -121,11 +121,24 @@ namespace Akka.Routing
             UsePoolDispatcher = config.HasPath("pool-dispatcher");
         }
 
+        /// <summary>
+        /// The number of instances in the pool.
+        /// </summary>
         public int NrOfInstances { get; set; }
 
+        /// <summary>
+        /// Whether or not to use the pool dispatcher.
+        /// </summary>
         public bool UsePoolDispatcher { get; set; }
 
+        /// <summary>
+        /// An instance of the resizer for this pool.
+        /// </summary>
         public Resizer Resizer { get; set; }
+
+        /// <summary>
+        /// An instance of the supervisor strategy for this pool.
+        /// </summary>
         public SupervisorStrategy SupervisorStrategy { get; set; }
 
         public Routee NewRoutee(Props routeeProps, IActorContext context)
