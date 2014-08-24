@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Akka.Persistence.Tests
 {
-    public class AtLeastOnceDeliverySpec : PersistenceSpec
+    public class GuaranteedDeliverySpec : PersistenceSpec
     {
         [Fact]
         public void AtLeastOnceDelivery_must_deliver_messages_in_order_when_nothing_is_lost()
@@ -237,7 +237,7 @@ namespace Akka.Persistence.Tests
             resC.ShouldOnlyContainInOrder(c);
         }
 
-        class Sender : PersistentActorBase, IAtLeastOnceDelivery
+        class Sender : PersistentActorBase
         {
             public Sender(ActorRef testActor, string name, TimeSpan redeliverInterval, int warn, bool async,
             IDictionary<string, ActorPath> destinations)
@@ -248,7 +248,7 @@ namespace Akka.Persistence.Tests
             public int NumberOfUnconfirmedAttemptsWarning { get; private set; }
             public int MaxUnconfirmedMessages { get; private set; }
             public int UnconfirmedMessages { get; private set; }
-            public AtLeastOnceDeliverySnapshot DeliverySnapshot { get; set; }
+            public GuaranteedDeliverySnapshot DeliverySnapshot { get; set; }
             public void Deliver(ActorPath destination, Func<long, object> idToMessageMapper)
             {
                 throw new NotImplementedException();
@@ -385,13 +385,13 @@ namespace Akka.Persistence.Tests
 
         struct Snap
         {
-            public Snap(AtLeastOnceDeliverySnapshot deliverySnapshot)
+            public Snap(GuaranteedDeliverySnapshot deliverySnapshot)
                 : this()
             {
                 DeliverySnapshot = deliverySnapshot;
             }
 
-            public AtLeastOnceDeliverySnapshot DeliverySnapshot { get; private set; }
+            public GuaranteedDeliverySnapshot DeliverySnapshot { get; private set; }
         }
     }
 }

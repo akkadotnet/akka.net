@@ -70,4 +70,16 @@ namespace Akka.Persistence
             throw new System.NotImplementedException();
         }
     }
+
+    public interface IPersistentId
+    {
+        string PersistenceId { get; }
+        long SequenceNr { get; }
+    }
+
+    public interface IPersistentConfirmation
+    {
+        string PersistenceId { get; }
+        long SequenceNr { get; }
+    }
 }

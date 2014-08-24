@@ -1,20 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Pattern;
 using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Persistence.Tests
 {
-    public class AtLeastOnceDeliveryFailureSpec : AkkaSpec
+    public class GuaranteedDeliveryFailureSpec : AkkaSpec
     {
         private Config _config;
         internal const int NumberOfMessages = 10;
 
-        public AtLeastOnceDeliveryFailureSpec()
+        public GuaranteedDeliveryFailureSpec()
         {
             _config = ConfigurationFactory.ParseString(
             @"akka.persistence.sender.chaos.live-processing-failure-rate = 0.3
@@ -135,7 +133,7 @@ namespace Akka.Persistence.Tests
         internal static void Add(this IChaosSupport chaos, int i)
         {
             chaos.State.Add(i);
-            if (chaos.State.Count >= AtLeastOnceDeliveryFailureSpec.NumberOfMessages)
+            if (chaos.State.Count >= GuaranteedDeliveryFailureSpec.NumberOfMessages)
             {
                 chaos.Probe.Tell(new Done(chaos.State.ToArray()));
             }
@@ -147,7 +145,7 @@ namespace Akka.Persistence.Tests
         }
     }
 
-    class ChaosSender : PersistentActorBase, IAtLeastOnceDelivery, IChaosSupport
+    class ChaosSender : PersistentActorBase
     {
         private readonly ActorRef _destination;
         private readonly Config _config;
@@ -167,22 +165,7 @@ namespace Akka.Persistence.Tests
         }
 
         public string PersistenceId { get; set; }
-
-        public TimeSpan RedeliverInterval { get { return TimeSpan.FromMilliseconds(500); }}
-        public int NumberOfUnconfirmedAttemptsWarning { get; private set; }
-        public int MaxUnconfirmedMessages { get; private set; }
-        public int UnconfirmedMessages { get; private set; }
-        public AtLeastOnceDeliverySnapshot DeliverySnapshot { get; set; }
-        public void Deliver(ActorPath destination, Func<long, object> idToMessageMapper)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool ConfirmDelivery(long deliveryId)
-        {
-            throw new NotImplementedException();
-        }
-
+        
         public ActorRef Probe { get; private set; }
         public List<int> State { get; set; }
     }
@@ -235,7 +218,7 @@ namespace Akka.Persistence.Tests
 
             Receive<Start>(_ =>
             {
-                for (int i = 1; i < AtLeastOnceDeliveryFailureSpec.NumberOfMessages; i++)
+                for (int i = 1; i < GuaranteedDeliveryFailureSpec.NumberOfMessages; i++)
                 {
                     _sender.Tell(i);
                 }

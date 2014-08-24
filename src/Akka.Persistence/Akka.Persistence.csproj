@@ -48,16 +48,20 @@
     <Compile Include="Eventsourced.cs" />
     <Compile Include="JournalProtocol.cs" />
     <Compile Include="Journal\AsyncRecovery.cs" />
+    <Compile Include="Journal\AsyncWriteJournal.cs" />
+    <Compile Include="Journal\AsyncWriteProxy.cs" />
     <Compile Include="Journal\MemoryJournal.cs" />
+    <Compile Include="Journal\SyncWriteJournal.cs" />
     <Compile Include="Journal\WriteJournal.cs" />
     <Compile Include="Persistence.cs" />
     <Compile Include="Persistent.cs" />
     <Compile Include="Processor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Recovery.cs" />
+    <Compile Include="Recover.cs" />
     <Compile Include="Serialization\MessageSerializer.cs" />
     <Compile Include="Serialization\SnapshotSerializer.cs" />
     <Compile Include="Snapshot.cs" />
+    <Compile Include="Snapshot\LocalSnapshotStore.cs" />
     <Compile Include="Snapshot\SnapshotStore.cs" />
     <Compile Include="Views.cs" />
   </ItemGroup>

@@ -1,4 +1,7 @@
-﻿namespace Akka.Persistence
+﻿using System;
+using Akka.Actor;
+
+namespace Akka.Persistence
 {
     public interface IRecovery
     {
@@ -21,4 +24,5 @@
         public long ToSequenceNr { get; private set; }
         public long ReplayMax { get; private set; }
     }
+
 }

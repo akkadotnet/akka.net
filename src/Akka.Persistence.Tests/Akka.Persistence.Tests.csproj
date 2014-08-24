@@ -44,8 +44,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AtLeastOnceDeliveryFailureSpec.cs" />
-    <Compile Include="AtLeastOnceDeliverySpec.cs" />
+    <Compile Include="GuaranteedDeliveryFailureSpec.cs" />
+    <Compile Include="GuaranteedDeliverySpec.cs" />
     <Compile Include="PersistenceSpec.cs" />
     <Compile Include="PersistentActorSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -75,6 +75,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <Compile Include="PersistentActorSpec.Mocks.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

@@ -4,7 +4,6 @@ namespace Akka.Persistence.Tests
 {
     public partial class PersistentActorSpec
     {
-
         struct Cmd
         {
             public Cmd(object data)
