@@ -40,7 +40,6 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromSeconds(30), remoteSettings.CommandAckTimeout);
             Assert.Equal(1, remoteSettings.Transports.Length);
             Assert.Equal(typeof(HeliosTcpTransport), Type.GetType(remoteSettings.Transports.Head().TransportClass));
-
             Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(remoteSettings.WatchFailureDetectorImplementationClass));
             Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchHeartBeatInterval);
             Assert.Equal(TimeSpan.FromSeconds(3), remoteSettings.WatchHeartbeatExpectedResponseAfter);
@@ -59,12 +58,9 @@ namespace Akka.Remote.Tests
             var settings = new AkkaProtocolSettings(((RemoteActorRefProvider)((ExtendedActorSystem)Sys).Provider).RemoteSettings.Config);
 
             //TODO fill this in when we add secure cookie support
-            Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(settings.TransportFailureDetectorImplementationClass));
+            Assert.Equal(typeof(DeadlineFailureDetector), Type.GetType(settings.TransportFailureDetectorImplementationClass));
             Assert.Equal(TimeSpan.FromSeconds(4), settings.TransportHeartBeatInterval);
-            Assert.True(Math.Abs(settings.TransportFailureDetectorConfig.GetDouble("threshold") - 7.0) <= 0.0001);
-            Assert.Equal(100, settings.TransportFailureDetectorConfig.GetDouble("max-sample-size"));
-            Assert.Equal(TimeSpan.FromSeconds(10), settings.TransportFailureDetectorConfig.GetMillisDuration("acceptable-heartbeat-pause"));
-            Assert.Equal(TimeSpan.FromMilliseconds(100), settings.TransportFailureDetectorConfig.GetMillisDuration("min-std-deviation"));
+            Assert.Equal(TimeSpan.FromSeconds(20), settings.TransportFailureDetectorConfig.GetMillisDuration("acceptable-heartbeat-pause"));
         }
 
         [Fact]

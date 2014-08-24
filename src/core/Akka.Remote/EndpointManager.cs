@@ -581,7 +581,7 @@ namespace Akka.Remote
             {
                 if (pendingReadHandoffs.ContainsKey(readonlyEndpoint)) pendingReadHandoffs[readonlyEndpoint].Disassociate();
                 pendingReadHandoffs.AddOrSet(readonlyEndpoint, handle);
-                readonlyEndpoint.Tell(new EndpointWriter.TakeOver(handle));
+                readonlyEndpoint.Tell(new EndpointWriter.TakeOver(handle, Self));
             }
             else
             {
@@ -604,7 +604,7 @@ namespace Akka.Remote
                                 if (pendingReadHandoffs.ContainsKey(pass.Endpoint))
                                     pendingReadHandoffs[pass.Endpoint].Disassociate();
                                 pendingReadHandoffs.AddOrSet(pass.Endpoint, handle);
-                                pass.Endpoint.Tell(new EndpointWriter.StoppedReading(pass.Endpoint));
+                                pass.Endpoint.Tell(new EndpointWriter.StopReading(pass.Endpoint, Self));
                             }
                             else
                             {
