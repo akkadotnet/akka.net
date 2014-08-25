@@ -445,7 +445,7 @@ namespace Akka.Remote
             // the monitoring is removed, subsequent node failure is not detected and the original watcher is
             // never notified. This may occur for normal system shutdown of the watchee system when not all remote
             // messages are flushed at shutdown.
-            var toProcess = _watching.Where(t => t.Item1 == watchee);
+            var toProcess = _watching.Where(t => t.Item1.Equals(watchee)).ToList();
             foreach (var t in toProcess)
             {
                 if(!addressTerminated && t.Item2 != Self)

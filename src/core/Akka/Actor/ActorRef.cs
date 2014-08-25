@@ -334,7 +334,7 @@ namespace Akka.Actor
         }
     }
 
-    public class VirtualPathContainer : MinimalActorRef
+    internal class VirtualPathContainer : MinimalActorRef
     {
         private readonly InternalActorRef _parent;
         private readonly LoggingAdapter _log;
@@ -429,7 +429,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             return Nobody;
         }
 
-        public void ForeachActorRef(Action<ActorRef> action)
+        public void ForeachActorRef(Action<InternalActorRef> action)
         {
             foreach (InternalActorRef child in _children.Values)
             {

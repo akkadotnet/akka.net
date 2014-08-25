@@ -4,13 +4,19 @@ using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Util;
 
 namespace Akka.Remote
 {
     /// <summary>
-    ///     Class DaemonMsgCreate.
+    /// INTERNAL API
     /// </summary>
-    public class DaemonMsgCreate
+    internal interface IDaemonMsg { }
+
+    /// <summary>
+    ///  INTERNAL API
+    /// </summary>
+    internal class DaemonMsgCreate : IDaemonMsg
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="DaemonMsgCreate" /> class.
@@ -53,9 +59,13 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    ///     Class RemoteDaemon.
+    ///  INTERNAL API
+    /// 
+    /// Internal system "daemon" actor for remote internal communication.
+    /// 
+    /// It acts as the brain of the remote that respons to system remote messages and executes actions accordingly.
     /// </summary>
-    public class RemoteDaemon : VirtualPathContainer
+    internal class RemoteDaemon : VirtualPathContainer
     {
         private readonly ActorSystemImpl _system;
 
@@ -70,6 +80,7 @@ namespace Akka.Remote
             : base(system.Provider, path, parent, log)
         {
             _system = system;
+            AddressTerminatedTopic.Get(system).Subscribe(this);
         }
 
        
@@ -79,9 +90,23 @@ namespace Akka.Remote
         /// <param name="message">The message.</param>
         protected void OnReceive(object message)
         {
-            if (message is DaemonMsgCreate)
+            //note: RemoteDaemon does not handle ActorSelection messages - those are handled directly by the RemoteActorRefProvider.
+            if (message is IDaemonMsg)
             {
-                HandleDaemonMsgCreate((DaemonMsgCreate) message);
+                Log.Debug("Received command [{0}] to RemoteSystemDaemon on [{1}]", message, Path.Address);
+                if (message is DaemonMsgCreate) HandleDaemonMsgCreate((DaemonMsgCreate)message);
+            }
+
+            //Remote ActorSystem on another process / machine has died. 
+            //Need to clean up any references to remote deployments here.
+            else if (message is AddressTerminated)
+            {
+                var addressTerminated = (AddressTerminated) message;
+                //stop any remote actors that belong to this address
+                ForeachActorRef(@ref =>
+                {
+                    if(@ref.Parent.Path.Address == addressTerminated.Address) _system.Stop(@ref);
+                });
             }
         }
 

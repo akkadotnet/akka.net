@@ -119,6 +119,7 @@ namespace Akka.Actor
             envelope.Message
                 .Match()
                 .With<Terminated>(ReceivedTerminated)
+                .With<AddressTerminated>(a => AddressTerminated(a.Address))
                 .With<Kill>(Kill)
                 .With<PoisonPill>(HandlePoisonPill)
                 .With<ActorSelectionMessage>(ReceiveSelection)
