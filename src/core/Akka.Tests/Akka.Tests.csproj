@@ -82,6 +82,7 @@
     <Compile Include="Actor\ActorCellTests_SerializationOfUserMessages.cs" />
     <Compile Include="Actor\ActorLifeCycleSpec.cs" />
     <Compile Include="Actor\ActorPathSpec.cs" />
+    <Compile Include="Actor\ActorRefSpec.cs" />
     <Compile Include="Actor\InboxSpec.cs" />
     <Compile Include="Actor\ReceiveActorTests.cs" />
     <Compile Include="Actor\ActorRefProviderSpec.cs" />
