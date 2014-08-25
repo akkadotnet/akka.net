@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.TestKit;
+using Akka.TestKit.Xunit;
 using Xunit;
 using Assert = Xunit.Assert;
 
@@ -128,7 +129,7 @@ namespace Akka.Cluster.Tests
             _publisher.Tell(new InternalClusterAction.PublishChanges(g8));
             _publisher.Tell(new InternalClusterAction.Subscribe(subscriber.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, ImmutableHashSet.Create(typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.ReachabilityEvent))));
             var received = subscriber.ReceiveN(4);
-            Assert.Equal(
+            XunitAssertions.Equivalent(
                 new object[]
                 {
                     new ClusterEvent.MemberUp(aUp), new ClusterEvent.MemberUp(cUp), new ClusterEvent.MemberUp(dUp),
