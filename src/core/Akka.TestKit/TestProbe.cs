@@ -76,5 +76,20 @@ namespace Akka.TestKit
             throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
         }
 
+        public void expectMsgType<T>()
+        {
+            var res = queue.Take();
+            Assert.True(res is T);
+        }
+
+        public List<object> ReceiveN(int n)
+        {
+            var res = new List<object>();
+            for (var i = 0; i < n; i++)
+            {
+                res.Add(queue.Take());
+            }
+            return res;
+        }
     }
 }

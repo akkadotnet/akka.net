@@ -47,7 +47,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="type">The type.</param>
         /// <param name="args">The arguments.</param>
-        protected Props(Type type, object[] args)
+        public Props(Type type, object[] args)
         {
             Type = type;
             Arguments = args;
