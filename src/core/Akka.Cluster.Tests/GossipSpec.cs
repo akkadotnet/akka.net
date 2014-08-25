@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.TestKit.Xunit;
 using Xunit;
 
 namespace Akka.Cluster.Tests
@@ -51,11 +52,12 @@ namespace Akka.Cluster.Tests
             var g2 = new Gossip(ImmutableSortedSet.Create(a1, b1, c1, d1), new GossipOverview(r2));
 
             var merged1 = g1.Merge(g2);
-            Assert.Equal(ImmutableHashSet.Create(a1.UniqueAddress, c1.UniqueAddress, d1.UniqueAddress),
+            
+            XunitAssertions.Equivalent(ImmutableHashSet.Create(a1.UniqueAddress, c1.UniqueAddress, d1.UniqueAddress),
                 merged1.Overview.Reachability.AllUnreachable);
 
             var merged2 = g2.Merge(g1);
-            Assert.Equal(merged1.Overview.Reachability.AllUnreachable,
+            XunitAssertions.Equivalent(merged1.Overview.Reachability.AllUnreachable,
                 merged2.Overview.Reachability.AllUnreachable
                 );
         }
