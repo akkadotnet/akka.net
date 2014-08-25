@@ -21,3 +21,5 @@ using System.Runtime.InteropServices;
 
 [assembly: Guid("78986bdb-73f7-4532-8e03-1c9ccbe8148e")]
 [assembly: InternalsVisibleTo("Akka.Remote.Tests")]
+[assembly: InternalsVisibleTo("Akka.Cluster")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Tests")]

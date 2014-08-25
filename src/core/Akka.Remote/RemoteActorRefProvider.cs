@@ -89,7 +89,7 @@ namespace Akka.Remote
         //TODO: Why volatile?
         private ActorRef _remoteWatcher;
 
-        public void Init(ActorSystemImpl system)
+        public virtual void Init(ActorSystemImpl system)
         {
             _system = system;
 

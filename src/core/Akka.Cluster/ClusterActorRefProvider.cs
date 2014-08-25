@@ -1,5 +1,6 @@
 ﻿using System;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Event;
 using Akka.Remote;
 
@@ -18,8 +19,9 @@ namespace Akka.Cluster
         {
         }
 
-        public override void Init(ActorSystem system)
+        public override void Init(ActorSystemImpl system)
         {
+            //Complete the usual RemoteActorRefProvider initializations - need access to transports and RemoteWatcher before clustering can work
             base.Init(system);
 
             // initialize/load the Cluster extension

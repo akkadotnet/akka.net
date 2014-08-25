@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Threading;
 using System;
 using Akka.Actor;
 using Akka.Util;
@@ -74,22 +75,6 @@ namespace Akka.TestKit
         protected override TestProbe CreateTestProbe()
         {
             throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
-        }
-
-        public void expectMsgType<T>()
-        {
-            var res = queue.Take();
-            Assert.True(res is T);
-        }
-
-        public List<object> ReceiveN(int n)
-        {
-            var res = new List<object>();
-            for (var i = 0; i < n; i++)
-            {
-                res.Add(queue.Take());
-            }
-            return res;
         }
     }
 }

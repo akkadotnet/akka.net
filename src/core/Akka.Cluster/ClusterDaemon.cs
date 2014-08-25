@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
@@ -449,7 +450,7 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class ClusterDaemon : UntypedActor, IActorLogging
     {
-        readonly InternalActorRef _coreSupervisor;
+        readonly ActorRef _coreSupervisor;
         readonly ClusterSettings _settings;
 
         public ClusterDaemon(ClusterSettings settings)
@@ -492,8 +493,8 @@ namespace Akka.Cluster
     /// </summary>
     class ClusterCoreSupervisor : UntypedActor, IActorLogging
     {
-        readonly InternalActorRef _publisher;
-        readonly InternalActorRef _coreDaemon;
+        readonly ActorRef _publisher;
+        readonly ActorRef _coreDaemon;
 
         public ClusterCoreSupervisor()
         {
@@ -533,7 +534,7 @@ namespace Akka.Cluster
 
     class ClusterCoreDaemon : UntypedActor, IActorLogging
     {
-        readonly Cluster _cluster = new Cluster(Context.System);
+        readonly Cluster _cluster = new Cluster((ActorSystemImpl)Context.System);
         protected readonly UniqueAddress SelfUniqueAddress;
         const int NumberOfGossipsBeforeShutdownWhenLeaderExits = 3;
         readonly VectorClock.Node _vclockNode;
