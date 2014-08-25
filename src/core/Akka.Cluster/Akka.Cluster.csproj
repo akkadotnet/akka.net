@@ -65,10 +65,6 @@
       <Project>{ea4ff8fd-7c53-49c8-b9aa-02e458b3e6a7}</Project>
       <Name>Akka.Remote</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Akka.Tests\Akka.Tests.csproj">
-      <Project>{3F786C7D-70E3-4836-8B33-EC9A5AF72330}</Project>
-      <Name>Akka.Tests</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
