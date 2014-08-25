@@ -270,5 +270,19 @@ namespace Akka.Cluster
         {
             return string.Format("UniqueAddress: ({0}, {1})", Address, _uid);
         }
+
+        #region operator overloads
+
+        public static bool operator ==(UniqueAddress left, UniqueAddress right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(UniqueAddress left, UniqueAddress right)
+        {
+            return !Equals(left, right);
+        }
+
+        #endregion
     }
 }

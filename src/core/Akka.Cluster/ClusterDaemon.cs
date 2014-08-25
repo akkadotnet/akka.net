@@ -18,12 +18,8 @@ namespace Akka.Cluster
     {
     }
 
-    //TODO: Xmldoc
-    //TODO: Comment mentions JMX
     /// <summary>
-    /// Cluster commands sent by the USER via
-    /// [[akka.cluster.Cluster]] extension
-    /// or JMX.
+    /// Cluster commands sent by the USER via <see cref="Cluster"/> extension.
     /// </summary>
     internal class ClusterUserAction
     {
@@ -134,11 +130,11 @@ namespace Akka.Cluster
 
         /// <summary>
         /// Start message of the process to join one of the seed nodes.
-        /// The node sends `InitJoin` to all seed nodes, which replies
-        /// with `InitJoinAck`. The first reply is used others are discarded.
-        /// The node sends `Join` command to the seed node that replied first.
+        /// The node sends <see cref="InitJoin"/> to all seed nodes, which replies
+        /// with <see cref="InitJoinAck"/>. The first reply is used others are discarded.
+        /// The node sends <see cref="Join"/> command to the seed node that replied first.
         /// If a node is uninitialized it will reply to `InitJoin` with
-        /// `InitJoinNack`.
+        /// <see cref="InitJoinNack"/>.
         /// </summary>
         internal class JoinSeenNode
         {
@@ -461,7 +457,6 @@ namespace Akka.Cluster
             _coreSupervisor =
                 Context.ActorOf(Props.Create<ClusterCoreSupervisor>().WithDispatcher(Context.Props.Dispatcher), "core");
 
-            //TODO: Scope?
             Context.ActorOf(Props.Create<ClusterHeartbeatReceiver>().WithDispatcher(Context.Props.Dispatcher), "heartbeatReceiver");
 
             _settings = settings;
@@ -473,7 +468,7 @@ namespace Akka.Cluster
                 .With<InternalClusterAction.GetClusterCoreRef>(msg => _coreSupervisor.Forward(msg))
                 .With<InternalClusterAction.AddOnMemberUpListener>(
                     msg =>
-                        Context.ActorOf(new Props(Deploy.Local, typeof (OnMemberUpListener), new object[] {msg.Callback})))
+                        Context.ActorOf(Props.Create(() => new OnMemberUpListener(msg.Callback)).WithDeploy(Deploy.Local)))
                 .With<InternalClusterAction.PublisherCreated>(
                     msg =>
                     {
@@ -491,10 +486,13 @@ namespace Akka.Cluster
     /// ClusterCoreDaemon and ClusterDomainEventPublisher can't be restarted because the state
     /// would be obsolete. Shutdown the member if any those actors crashed.
     /// </summary>
-    class ClusterCoreSupervisor : UntypedActor, IActorLogging
+    class ClusterCoreSupervisor : ReceiveActor, IActorLogging
     {
         readonly ActorRef _publisher;
         readonly ActorRef _coreDaemon;
+
+        private readonly LoggingAdapter _log = Logging.GetLogger(Context);
+        public LoggingAdapter Log { get { return _log; } }
 
         public ClusterCoreSupervisor()
         {
@@ -504,6 +502,8 @@ namespace Akka.Cluster
             Context.Watch(_coreDaemon);
 
             Context.Parent.Tell(new InternalClusterAction.PublisherCreated(_publisher));
+
+            Receive<InternalClusterAction.GetClusterCoreRef>(cr => Sender.Tell(_coreDaemon));
         }
 
         protected override SupervisorStrategy SupervisorStrategy()
@@ -522,14 +522,7 @@ namespace Akka.Cluster
         {
             Cluster.Get(Context.System).Shutdown();
         }
-
-        protected override void OnReceive(object message)
-        {
-            message.Match()
-                .With<InternalClusterAction.GetClusterCoreRef>(m => Sender.Tell(_coreDaemon));
-        }
-
-        public LoggingAdapter Log { get; private set; }
+        
     }
 
     class ClusterCoreDaemon : UntypedActor, IActorLogging
@@ -1430,14 +1423,60 @@ namespace Akka.Cluster
     }
 
 
-    class OnMemberUpListener : UntypedActor, IActorLogging
+    class OnMemberUpListener : ReceiveActor, IActorLogging
     {
-        protected override void OnReceive(object message)
+        private readonly Action _callback;
+        private LoggingAdapter _log = Logging.GetLogger(Context);
+        private Cluster _cluster;
+        public LoggingAdapter Log { get { return _log; } }
+
+        public OnMemberUpListener(Action callback)
         {
-            throw new NotImplementedException();
+            _callback = callback;
+            _cluster = Cluster.Get(Context.System);
+            Receive<ClusterEvent.CurrentClusterState>(state =>
+            {
+                if(state.Members.Any(IsSelfUp))
+                    Done();
+            });
+
+            Receive<ClusterEvent.MemberUp>(up =>
+            {
+                if (IsSelfUp(up.Member))
+                    Done();
+            });
         }
 
-        public LoggingAdapter Log { get; private set; }
+        protected override void PreStart()
+        {
+            _cluster.Subscribe(Self, new []{ typeof(ClusterEvent.MemberUp) });
+        }
+
+        protected override void PostStop()
+        {
+            _cluster.Unsubscribe(Self);
+        }
+
+        private void Done()
+        {
+            try
+            {
+                _callback.Invoke();
+            }
+            catch(Exception ex)
+            {
+                Log.Error(ex, "OnMemberUp callback failed with [{0}]", ex.Message);
+            }
+            finally
+            {
+                Context.Stop(Self);
+            }
+        }
+
+        private bool IsSelfUp(Member m)
+        {
+            return m.UniqueAddress == _cluster.SelfUniqueAddress && m.Status == MemberStatus.Up;
+        }
     }
 
     public class VectorClockStats

@@ -13,6 +13,8 @@ namespace Akka.Cluster
         /// </summary>
         ClusterEvent.CurrentClusterState _state;
 
+        public ClusterEvent.CurrentClusterState State { get { return _state; } }
+
         Reachability _reachability;
 
         /// <summary>
