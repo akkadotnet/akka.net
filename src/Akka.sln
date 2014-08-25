@@ -87,7 +87,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.NLog", "contrib\logger
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Loggers", "Loggers", "{FFEC736B-EDA3-433C-8564-7C14676601A1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.Tests", "core\Akka.Testkit.Tests\Akka.TestKit.Tests.csproj", "{D2BED2D5-B152-48C1-9818-1097BECDDF98}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.Tests", "core\Akka.TestKit.Tests\Akka.TestKit.Tests.csproj", "{D2BED2D5-B152-48C1-9818-1097BECDDF98}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Tests.Shared.Internals", "core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj", "{E636D23C-3432-4AA9-9A5D-5F29D33D3399}"
 EndProject
