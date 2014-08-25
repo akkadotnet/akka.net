@@ -2,15 +2,14 @@
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using Xunit;
 
 namespace Akka.Cluster.Tests
 {
-    [TestClass]
     public class MemberOrderingSpec
     {
-        [TestMethod]
+        [Fact]
         public void MemberOrderingMustOrderMembersByHostAndPort()
         {
             var sortedSet = new SortedSet<Member>         
@@ -27,10 +26,10 @@ namespace Akka.Cluster.Tests
                 TestMember.Create(Address.Parse("akka://sys@darkstar:1113"), MemberStatus.Joining),
             };
 
-            CollectionAssert.AreEqual(expected, sortedSet.ToList());
+            Assert.Equal(expected, sortedSet.ToList());
         }
 
-        [TestMethod]
+        [Fact]
         public void MemberOrderingMustBeSortedByAddressCorrectly()
         {
             var m1 = TestMember.Create(new Address("akka.tcp", "sys1", "host1", 9000), MemberStatus.Up);
@@ -42,13 +41,13 @@ namespace Akka.Cluster.Tests
             var expected = new List<Member> { m1, m2, m3, m4, m5 };
 
             var shuffled = expected.Shuffle();
-            CollectionAssert.AreEqual(expected, new SortedSet<Member>(shuffled));
+            Assert.Equal(expected, new SortedSet<Member>(shuffled));
 
             shuffled.Sort();
-            CollectionAssert.AreEqual(expected, shuffled);
+            Assert.Equal(expected, shuffled);
         }
 
-        [TestMethod]
+        [Fact]
         public void MemberOrderingMustHaveStableEqualsAndHashCode()
         {
             var address = new Address("akka.tcp", "sys1", "host1", 9000);
@@ -58,16 +57,16 @@ namespace Akka.Cluster.Tests
             var m22 = m11.Copy(status: MemberStatus.Up);
             var m3 = TestMember.Create(address.Copy(port: 10000), MemberStatus.Up);
 
-            Assert.AreEqual(m1, m2);
-            Assert.AreEqual(m1.GetHashCode(), m2.GetHashCode());
-            Assert.AreNotEqual(m3, m2);
-            Assert.AreNotEqual(m3, m1);
-            Assert.AreEqual(m11, m22);
-            Assert.AreNotEqual(m1, m11);
-            Assert.AreNotEqual(m2, m22);
+            Assert.Equal(m1, m2);
+            Assert.Equal(m1.GetHashCode(), m2.GetHashCode());
+            Assert.NotEqual(m3, m2);
+            Assert.NotEqual(m3, m1);
+            Assert.Equal(m11, m22);
+            Assert.NotEqual(m1, m11);
+            Assert.NotEqual(m2, m22);
         }
 
-        [TestMethod]
+        [Fact]
         public void MemberOrderingMustConsitentOrderingAndEquals()
         {
             var address1 = new Address("akka.tcp", "sys1", "host1", 9001);
@@ -76,17 +75,17 @@ namespace Akka.Cluster.Tests
             var x = TestMember.Create(address1, MemberStatus.Exiting);
             var y = TestMember.Create(address1, MemberStatus.Removed);
             var z = TestMember.Create(address2, MemberStatus.Up);
-            Assert.AreEqual(0, Member.Ordering.Compare(x,y));
-            Assert.AreEqual(Member.Ordering.Compare(y, z), Member.Ordering.Compare(x, z));
+            Assert.Equal(0, Member.Ordering.Compare(x,y));
+            Assert.Equal(Member.Ordering.Compare(y, z), Member.Ordering.Compare(x, z));
 
             //different uid
             var a = TestMember.Create(address1, MemberStatus.Joining);
             var b = Member.Create(new UniqueAddress(address1, -3), ImmutableHashSet.Create<string>());
-            Assert.AreEqual(1, Member.Ordering.Compare(a, b));
-            Assert.AreEqual(-1, Member.Ordering.Compare(b, a));
+            Assert.Equal(1, Member.Ordering.Compare(a, b));
+            Assert.Equal(-1, Member.Ordering.Compare(b, a));
         }
 
-        [TestMethod]
+        [Fact]
         public void MemberOrderingMustWorkWithSortedSet()
         {
             var address1 = new Address("akka.tcp", "sys1", "host1", 9001);
@@ -98,21 +97,21 @@ namespace Akka.Cluster.Tests
                 TestMember.Create(address1, MemberStatus.Joining)
             };
             set.Remove(TestMember.Create(address1, MemberStatus.Up));
-            CollectionAssert.AreEqual(new SortedSet<Member>(), set);
+            Assert.Equal(new SortedSet<Member>(), set);
 
             set = new SortedSet<Member>
             {
                 TestMember.Create(address1, MemberStatus.Exiting)
             };
             set.Remove(TestMember.Create(address1, MemberStatus.Removed));
-            CollectionAssert.AreEqual(new SortedSet<Member>(), set);
+            Assert.Equal(new SortedSet<Member>(), set);
 
             set = new SortedSet<Member>
             {
                 TestMember.Create(address1, MemberStatus.Up)
             };
             set.Remove(TestMember.Create(address1, MemberStatus.Exiting));
-            CollectionAssert.AreEqual(new SortedSet<Member>(), set);
+            Assert.Equal(new SortedSet<Member>(), set);
 
             set = new SortedSet<Member>
             {
@@ -121,14 +120,14 @@ namespace Akka.Cluster.Tests
                 TestMember.Create(address3, MemberStatus.Exiting)
             };
             set.Remove(TestMember.Create(address1, MemberStatus.Removed));
-            CollectionAssert.AreEqual(new SortedSet<Member>
+            Assert.Equal(new SortedSet<Member>
             {
                 TestMember.Create(address2, MemberStatus.Up),
                 TestMember.Create(address3, MemberStatus.Joining)                
             }, set);
         }
 
-        [TestMethod]
+        [Fact]
         public void AddressOrderingMustOrderAddressesByPort()
         {
             var addresses = new SortedSet<Address>(Member.AddressOrdering)
@@ -140,14 +139,14 @@ namespace Akka.Cluster.Tests
             };
 
             var seq = addresses.ToList();
-            Assert.AreEqual(4, seq.Count);
-            Assert.AreEqual(Address.Parse("akka://sys@darkstar:1110"), seq[0]);
-            Assert.AreEqual(Address.Parse("akka://sys@darkstar:1111"), seq[1]);
-            Assert.AreEqual(Address.Parse("akka://sys@darkstar:1112"), seq[2]);
-            Assert.AreEqual(Address.Parse("akka://sys@darkstar:1113"), seq[3]);
+            Assert.Equal(4, seq.Count);
+            Assert.Equal(Address.Parse("akka://sys@darkstar:1110"), seq[0]);
+            Assert.Equal(Address.Parse("akka://sys@darkstar:1111"), seq[1]);
+            Assert.Equal(Address.Parse("akka://sys@darkstar:1112"), seq[2]);
+            Assert.Equal(Address.Parse("akka://sys@darkstar:1113"), seq[3]);
         }
 
-        [TestMethod]
+        [Fact]
         public void AddressOrderingMustOrderAddressesByHostName()
         {
             var addresses = new SortedSet<Address>(Member.AddressOrdering)
@@ -159,14 +158,14 @@ namespace Akka.Cluster.Tests
             };
 
             var seq = addresses.ToList();
-            Assert.AreEqual(4, seq.Count);
-            Assert.AreEqual(Address.Parse("akka://sys@darkstar0:1110"), seq[0]);
-            Assert.AreEqual(Address.Parse("akka://sys@darkstar1:1110"), seq[1]);
-            Assert.AreEqual(Address.Parse("akka://sys@darkstar2:1110"), seq[2]);
-            Assert.AreEqual(Address.Parse("akka://sys@darkstar3:1110"), seq[3]);
+            Assert.Equal(4, seq.Count);
+            Assert.Equal(Address.Parse("akka://sys@darkstar0:1110"), seq[0]);
+            Assert.Equal(Address.Parse("akka://sys@darkstar1:1110"), seq[1]);
+            Assert.Equal(Address.Parse("akka://sys@darkstar2:1110"), seq[2]);
+            Assert.Equal(Address.Parse("akka://sys@darkstar3:1110"), seq[3]);
         }
 
-        [TestMethod]
+        [Fact]
         public void AddressOrderingMustOrderAddressesByHostNameAndPort()
         {
             var addresses = new SortedSet<Address>(Member.AddressOrdering)
@@ -178,15 +177,15 @@ namespace Akka.Cluster.Tests
             };
 
             var seq = addresses.ToList();
-            Assert.AreEqual(4, seq.Count);
-            Assert.AreEqual(Address.Parse("akka://sys@darkstar0:1110"), seq[0]);
-            Assert.AreEqual(Address.Parse("akka://sys@darkstar0:1111"), seq[1]);
-            Assert.AreEqual(Address.Parse("akka://sys@darkstar2:1110"), seq[2]);
-            Assert.AreEqual(Address.Parse("akka://sys@darkstar2:1111"), seq[3]);
+            Assert.Equal(4, seq.Count);
+            Assert.Equal(Address.Parse("akka://sys@darkstar0:1110"), seq[0]);
+            Assert.Equal(Address.Parse("akka://sys@darkstar0:1111"), seq[1]);
+            Assert.Equal(Address.Parse("akka://sys@darkstar2:1110"), seq[2]);
+            Assert.Equal(Address.Parse("akka://sys@darkstar2:1111"), seq[3]);
         }
 
 
-        [TestMethod]
+        [Fact]
         public void LeaderOrderingMustOrderMembersWithStatusJoiningExitingDownLast()
         {
             var address = new Address("akka.tcp", "sys1", "host1", 5000);
@@ -202,7 +201,7 @@ namespace Akka.Cluster.Tests
             var expected = new List<Member> {m7, m8, m1, m2, m3, m4, m5, m6};
             var shuffled = expected.Shuffle();
             shuffled.Sort(Member.LeaderStatusOrdering);
-            CollectionAssert.AreEqual(expected, shuffled);
+            Assert.Equal(expected, shuffled);
         }
     }
 

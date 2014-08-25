@@ -4,7 +4,6 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
-using Akka.Tests.Event;
 
 namespace Akka.Cluster
 {
