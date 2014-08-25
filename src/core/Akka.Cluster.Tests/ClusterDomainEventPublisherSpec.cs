@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Immutable;
 using Akka.Actor;
-using Akka.Tests;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Akka.TestKit;
+using Xunit;
+using Assert = Xunit.Assert;
 
 namespace Akka.Cluster.Tests
 {
-    [TestClass]
     public class ClusterDomainEventPublisherSpec : AkkaSpec
     {
         ActorRef _publisher;
@@ -34,130 +34,129 @@ namespace Akka.Cluster.Tests
         
         TestProbe _memberSubscriber;
 
-        [TestInitialize]
-        public void Initialize()
+        public ClusterDomainEventPublisherSpec()
         {
-            _memberSubscriber = TestProbe();
-            sys.EventStream.Subscribe(_memberSubscriber.Ref, typeof(ClusterEvent.IMemberEvent));
-            sys.EventStream.Subscribe(_memberSubscriber.Ref, typeof(ClusterEvent.LeaderChanged));
+            _memberSubscriber = CreateTestProbe();
+            Sys.EventStream.Subscribe(_memberSubscriber.Ref, typeof(ClusterEvent.IMemberEvent));
+            Sys.EventStream.Subscribe(_memberSubscriber.Ref, typeof(ClusterEvent.LeaderChanged));
 
-            _publisher = sys.ActorOf(Props.Create<ClusterDomainEventPublisher>());
+            _publisher = Sys.ActorOf(Props.Create<ClusterDomainEventPublisher>());
             //TODO: If parent told of exception then test should fail (if not expected in some way)?
             _publisher.Tell(new InternalClusterAction.PublishChanges(g0));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberUp(aUp));
-            _memberSubscriber.expectMsg(new ClusterEvent.LeaderChanged(aUp.Address));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(aUp));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.LeaderChanged(aUp.Address));
         }
 
-        [TestMethod]
+        [Fact]
         public void ClusterDomainEventPublisherMustPublishMemberUp()
         {
             _publisher.Tell(new InternalClusterAction.PublishChanges(g2));
             _publisher.Tell(new InternalClusterAction.PublishChanges(g3));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberExited(bExiting));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberUp(cUp));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberExited(bExiting));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(cUp));
         }
 
-        [TestMethod]
+        [Fact]
         public void ClusterDomainEventPublisherMustPublishLeaderChanged()
         {
             _publisher.Tell(new InternalClusterAction.PublishChanges(g4));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberUp(a51Up));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberExited(bExiting));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberUp(cUp));
-            _memberSubscriber.expectMsg(new ClusterEvent.LeaderChanged(a51Up.Address));
-            _memberSubscriber.expectNoMsg(TimeSpan.FromMilliseconds(500));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(a51Up));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberExited(bExiting));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(cUp));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.LeaderChanged(a51Up.Address));
+            _memberSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
         }
 
-        [TestMethod]
+        [Fact]
         public void ClusterDomainEventPublisherMustPublishLeaderChangedWhenOldLeaderLeavesAndIsRemoved()
         {
             _publisher.Tell(new InternalClusterAction.PublishChanges(g3));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberExited(bExiting));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberUp(cUp));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberExited(bExiting));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(cUp));
             _publisher.Tell(new InternalClusterAction.PublishChanges(g6));
-            _memberSubscriber.expectNoMsg(TimeSpan.FromMilliseconds(500));
+            _memberSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             _publisher.Tell(new InternalClusterAction.PublishChanges(g7));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberExited(aExiting));
-            _memberSubscriber.expectMsg(new ClusterEvent.LeaderChanged(cUp.Address));
-            _memberSubscriber.expectNoMsg(TimeSpan.FromMilliseconds(500));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberExited(aExiting));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.LeaderChanged(cUp.Address));
+            _memberSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             // at the removed member a an empty gossip is the last thing
             _publisher.Tell(new InternalClusterAction.PublishChanges(Gossip.Empty));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberRemoved(aRemoved, MemberStatus.Exiting));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberRemoved(bRemoved, MemberStatus.Exiting));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberRemoved(cRemoved, MemberStatus.Up));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberRemoved(aRemoved, MemberStatus.Exiting));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberRemoved(bRemoved, MemberStatus.Exiting));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberRemoved(cRemoved, MemberStatus.Up));
             //TODO: Null leader stuff is messy. Better approach?
-            _memberSubscriber.expectMsg(new ClusterEvent.LeaderChanged(null));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.LeaderChanged(null));
         }
 
-        [TestMethod]
+        [Fact]
         public void ClusterDomainEventPublisherMustNotPublishLeaderChangedWhenSameLeader()
         {
             _publisher.Tell(new InternalClusterAction.PublishChanges(g4));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberUp(a51Up));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberExited(bExiting));
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberUp(cUp));
-            _memberSubscriber.expectMsg(new ClusterEvent.LeaderChanged(a51Up.Address));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(a51Up));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberExited(bExiting));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(cUp));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.LeaderChanged(a51Up.Address));
 
             _publisher.Tell(new InternalClusterAction.PublishChanges(g5));
-            _memberSubscriber.expectNoMsg(TimeSpan.FromMilliseconds(500));
+            _memberSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
         }
 
-        [TestMethod]
+        [Fact]
         public void ClusterDomainEventPublisherMustPublishRoleLeaderChanged()
         {
-            var subscriber = TestProbe();
+            var subscriber = CreateTestProbe();
             _publisher.Tell(new InternalClusterAction.Subscribe(subscriber.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot, ImmutableHashSet.Create(typeof(ClusterEvent.RoleLeaderChanged))));
-            subscriber.expectMsgType<ClusterEvent.CurrentClusterState>();
+            subscriber.ExpectMsg<ClusterEvent.CurrentClusterState>();
             // but only to the new subscriber
-            _memberSubscriber.expectNoMsg(TimeSpan.FromMilliseconds(500));
+            _memberSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
         }
 
-        [TestMethod]
+        [Fact]
         public void ClusterDomainEventPublisherMustSendCurrentClusterStateWhenSubscribe()
         {
-            var subscriber = TestProbe();
+            var subscriber = CreateTestProbe();
             _publisher.Tell(new InternalClusterAction.Subscribe(subscriber.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot, ImmutableHashSet.Create(typeof(ClusterEvent.IClusterDomainEvent))));
-            subscriber.expectMsgType<ClusterEvent.CurrentClusterState>();
+            subscriber.ExpectMsg<ClusterEvent.CurrentClusterState>();
             // but only to the new subscriber
-            _memberSubscriber.expectNoMsg(TimeSpan.FromMilliseconds(500));
+            _memberSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
         }
 
-        [TestMethod]
+        [Fact]
         public void ClusterDomainEventPublisherMustSendEventsCorrespondingToCurrentStateWhenSubscribe()
         {
-            var subscriber = TestProbe();
+            var subscriber = CreateTestProbe();
             _publisher.Tell(new InternalClusterAction.PublishChanges(g8));
             _publisher.Tell(new InternalClusterAction.Subscribe(subscriber.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, ImmutableHashSet.Create(typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.ReachabilityEvent))));
             var received = subscriber.ReceiveN(4);
-            CollectionAssert.AreEquivalent(
+            Assert.Equal(
                 new object[]
                 {
                     new ClusterEvent.MemberUp(aUp), new ClusterEvent.MemberUp(cUp), new ClusterEvent.MemberUp(dUp),
                     new ClusterEvent.MemberExited(bExiting)
                 }, received );
-            subscriber.expectMsg(new ClusterEvent.UnreachableMember(dUp));
-            subscriber.expectNoMsg(TimeSpan.FromMilliseconds(500));
+            subscriber.ExpectMsg(new ClusterEvent.UnreachableMember(dUp));
+            subscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
         }
 
-        [TestMethod]
+        [Fact]
         public void ClusterDomainEventPublisherMustSendPublishSeenChanged()
         {
-            var subscriber = TestProbe();
+            var subscriber = CreateTestProbe();
             _publisher.Tell(new InternalClusterAction.Subscribe(subscriber.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot, ImmutableHashSet.Create(typeof(ClusterEvent.SeenChanged))));
-            subscriber.expectMsgType<ClusterEvent.CurrentClusterState>();
+            subscriber.ExpectMsg<ClusterEvent.CurrentClusterState>();
             _publisher.Tell(new InternalClusterAction.PublishChanges(g2));
-            subscriber.expectMsgType<ClusterEvent.SeenChanged>();
-            subscriber.expectNoMsg(TimeSpan.FromMilliseconds(500));
+            subscriber.ExpectMsg<ClusterEvent.SeenChanged>();
+            subscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             _publisher.Tell(new InternalClusterAction.PublishChanges(g3));
-            subscriber.expectMsgType<ClusterEvent.SeenChanged>();
-            subscriber.expectNoMsg(TimeSpan.FromMilliseconds(500));
+            subscriber.ExpectMsg<ClusterEvent.SeenChanged>();
+            subscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
         }
 
-        [TestMethod]
+        [Fact]
         public void ClusterDomainEventPublisherMustPublishRemovedWhenStopped()
         {
             _publisher.Tell(PoisonPill.Instance);
-            _memberSubscriber.expectMsg(new ClusterEvent.MemberRemoved(aRemoved, MemberStatus.Up));
+            _memberSubscriber.ExpectMsg(new ClusterEvent.MemberRemoved(aRemoved, MemberStatus.Up));
         }
 
     }
