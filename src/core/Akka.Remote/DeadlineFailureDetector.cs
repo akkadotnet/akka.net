@@ -2,7 +2,9 @@
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
+using Akka.Util.Internal;
 using Helios.Util;
+using System.Threading;
 
 namespace Akka.Remote
 {
@@ -44,7 +46,7 @@ namespace Akka.Remote
             _clock = clock ?? DefaultClock;
         }
 
-        private AtomicLong _heartbeatTimestamp = new AtomicLong(0L);
+        private long _heartbeatTimestamp = 0L;
         private readonly long _acceptableHeartbeatMillis;
         private volatile bool _active = false;
 
@@ -60,13 +62,13 @@ namespace Akka.Remote
 
         public override void HeartBeat()
         {
-            _heartbeatTimestamp.Set(_clock());
+            Interlocked.Exchange(ref _heartbeatTimestamp, _clock());
             _active = true;
         }
 
         private bool IsAvailableTicks(long timestamp)
         {
-            if (_active) return (_heartbeatTimestamp.Value + _acceptableHeartbeatMillis) > timestamp;
+            if (_active) return (Interlocked.Read(ref _heartbeatTimestamp) + _acceptableHeartbeatMillis) > timestamp;
             return true; //treat unmanaged connections, e.g. with zero heartbeats, as healthy connections
         }
     }

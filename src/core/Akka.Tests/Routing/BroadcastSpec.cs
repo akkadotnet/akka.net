@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Util;
 using Xunit;
+using Akka.Util.Internal;
 
 namespace Akka.Tests.Routing
 {

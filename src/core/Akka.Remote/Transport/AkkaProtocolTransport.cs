@@ -6,6 +6,7 @@ using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Util;
 using Google.ProtocolBuffers;
+using Akka.Util.Internal;
 
 namespace Akka.Remote.Transport
 {

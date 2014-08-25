@@ -5,12 +5,13 @@ using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Pattern;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.TestKit
 {
     public static class TestActorRef
     {
-        private static AtomicLong _number = new AtomicLong();
+        private static AtomicCounterLong _number = new AtomicCounterLong(0);
 
         private static string CreateUniqueName()
         {
