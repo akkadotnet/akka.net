@@ -9,6 +9,10 @@ This is a community driven port and is not affiliated with Typesafe who makes th
 * Mail: akkadotnet@gmail.com
 * Stackoverflow: http://stackoverflow.com/questions/tagged/akka.net
 
+## BETA
+Please note that Akka.NET is currently in beta. Some features are missing, and we have a few known bugs.
+You can follow our work towards version 1 here: https://github.com/akkadotnet/akka.net/milestones/Version%201
+
 ### Documentation and resources
 
 #### [akkadotnet.github.io](http://akkadotnet.github.io)
