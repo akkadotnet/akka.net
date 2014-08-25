@@ -129,7 +129,7 @@ namespace Akka.Actor
         }
     }
 
-    public abstract class ActorRef : ICanTell
+    public abstract class ActorRef : ICanTell, IEquatable<ActorRef>
     {
 
         public static readonly Nobody Nobody = Nobody.Instance;
@@ -187,7 +187,7 @@ namespace Akka.Actor
         {
             var other = obj as ActorRef;
             if (other == null) return false;
-            return Path.Uid == other.Path.Uid && Path.Equals(other.Path);
+            return Equals(other);
         }
 
         public override int GetHashCode()
@@ -199,6 +199,21 @@ namespace Akka.Actor
                 hash = hash * 23 + Path.GetHashCode();
                 return hash;
             }
+        }
+
+        public bool Equals(ActorRef other)
+        {
+            return Path.Uid == other.Path.Uid && Path.Equals(other.Path);
+        }
+
+        public static bool operator ==(ActorRef left, ActorRef right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(ActorRef left, ActorRef right)
+        {
+            return !Equals(left, right);
         }
     }
 
