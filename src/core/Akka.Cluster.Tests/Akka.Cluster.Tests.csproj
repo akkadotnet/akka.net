@@ -41,6 +41,9 @@
     <Reference Include="System.Collections.Immutable">
       <HintPath>..\..\packages\Microsoft.Bcl.Immutable.1.0.30\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
     </Reference>
+    <Reference Include="xunit">
+      <HintPath>..\..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <Choose>
     <When Condition="('$(VisualStudioVersion)' == '10.0' or '$(VisualStudioVersion)' == '') and '$(TargetFrameworkVersion)' == 'v3.5'">
@@ -48,11 +51,7 @@
         <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
       </ItemGroup>
     </When>
-    <Otherwise>
-      <ItemGroup>
-        <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework" />
-      </ItemGroup>
-    </Otherwise>
+    <Otherwise />
   </Choose>
   <ItemGroup>
     <Compile Include="ClusterConfigSpec.cs" />
@@ -66,6 +65,10 @@
     <Compile Include="VectorClockSpec.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj">
+      <Project>{11f4d4b8-7e07-4457-abf2-609b3e7b2649}</Project>
+      <Name>Akka.TestKit.Xunit</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj">
       <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
       <Name>Akka.Cluster</Name>
@@ -77,6 +80,10 @@
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">
       <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
       <Name>Akka.TestKit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj">
+      <Project>{e636d23c-3432-4aa9-9a5d-5f29d33d3399}</Project>
+      <Name>Akka.Tests.Shared.Internals</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
