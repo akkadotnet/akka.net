@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
@@ -10,9 +11,9 @@ namespace Akka.Cluster
 {
     public class ClusterExtension : ExtensionIdProvider<Cluster>
     {
-        public override Cluster CreateExtension(ActorSystem system)
+        public override Cluster CreateExtension(ExtendedActorSystem system)
         {
-            return new Cluster(system);
+            return new Cluster((ActorSystemImpl)system);
         }
     }
 
@@ -46,7 +47,7 @@ namespace Akka.Cluster
         readonly UniqueAddress _selfUniqueAddress;
         public UniqueAddress SelfUniqueAddress {get{return _selfUniqueAddress;}}
         
-        public Cluster(ActorSystem system)
+        public Cluster(ActorSystemImpl system)
         {
             _settings = new ClusterSettings(system.Settings.Config, system.Name);    
 

@@ -40,6 +40,9 @@
     <Reference Include="System.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\SharedAssemblyInfo.cs">
+      <Link>Properties\SharedAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="AutoDown.cs" />
     <Compile Include="Cluster.cs" />
     <Compile Include="ClusterActorRefProvider.cs" />

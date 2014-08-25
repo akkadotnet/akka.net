@@ -6,5 +6,3 @@ using System.Reflection;
 [assembly: AssemblyTrademarkAttribute("")]
 [assembly: AssemblyVersionAttribute("0.6.4.0")]
 [assembly: AssemblyFileVersionAttribute("0.6.4.0")]
-namespace System {
-}
