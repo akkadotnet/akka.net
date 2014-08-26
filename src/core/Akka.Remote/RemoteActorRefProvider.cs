@@ -28,7 +28,7 @@ namespace Akka.Remote
             Func<ActorPath, InternalActorRef> deadLettersFactory = path => new RemoteDeadLetterActorRef(this, path, eventStream);
             _local = new LocalActorRefProvider(systemName, settings, eventStream, remoteDeployer, deadLettersFactory);
             var remoteConfig = RemoteConfigFactory.Default();
-            settings.SetProviderConfig(remoteConfig);
+            settings.InjectTopLevelFallback(remoteConfig);
             Config = settings.Config.WithFallback(RemoteConfigFactory.Default());
             RemoteSettings = new RemoteSettings(Config);
             Deployer = remoteDeployer;
