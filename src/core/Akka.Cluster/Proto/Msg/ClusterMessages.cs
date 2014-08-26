@@ -6,7 +6,7 @@ using pb = global::Google.ProtocolBuffers;
 using pbc = global::Google.ProtocolBuffers.Collections;
 using pbd = global::Google.ProtocolBuffers.Descriptors;
 using scg = global::System.Collections.Generic;
-namespace Akka.Cluster.Proto {
+namespace Akka.Cluster.Proto.Msg {
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
   public static partial class ClusterMessages {
@@ -17,45 +17,45 @@ namespace Akka.Cluster.Proto {
     #endregion
     #region Static variables
     internal static pbd::MessageDescriptor internal__static_Join__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Join, global::Akka.Cluster.Proto.Join.Builder> internal__static_Join__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.Join, global::Akka.Cluster.Proto.Msg.Join.Builder> internal__static_Join__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_Welcome__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Welcome, global::Akka.Cluster.Proto.Welcome.Builder> internal__static_Welcome__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.Welcome, global::Akka.Cluster.Proto.Msg.Welcome.Builder> internal__static_Welcome__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_GossipEnvelope__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.GossipEnvelope, global::Akka.Cluster.Proto.GossipEnvelope.Builder> internal__static_GossipEnvelope__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.GossipEnvelope, global::Akka.Cluster.Proto.Msg.GossipEnvelope.Builder> internal__static_GossipEnvelope__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_GossipStatus__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.GossipStatus, global::Akka.Cluster.Proto.GossipStatus.Builder> internal__static_GossipStatus__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.GossipStatus, global::Akka.Cluster.Proto.Msg.GossipStatus.Builder> internal__static_GossipStatus__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_Gossip__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Gossip, global::Akka.Cluster.Proto.Gossip.Builder> internal__static_Gossip__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.Gossip, global::Akka.Cluster.Proto.Msg.Gossip.Builder> internal__static_Gossip__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_GossipOverview__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.GossipOverview, global::Akka.Cluster.Proto.GossipOverview.Builder> internal__static_GossipOverview__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.GossipOverview, global::Akka.Cluster.Proto.Msg.GossipOverview.Builder> internal__static_GossipOverview__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_ObserverReachability__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.ObserverReachability, global::Akka.Cluster.Proto.ObserverReachability.Builder> internal__static_ObserverReachability__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.ObserverReachability, global::Akka.Cluster.Proto.Msg.ObserverReachability.Builder> internal__static_ObserverReachability__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_SubjectReachability__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.SubjectReachability, global::Akka.Cluster.Proto.SubjectReachability.Builder> internal__static_SubjectReachability__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.SubjectReachability, global::Akka.Cluster.Proto.Msg.SubjectReachability.Builder> internal__static_SubjectReachability__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_Member__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Member, global::Akka.Cluster.Proto.Member.Builder> internal__static_Member__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.Member, global::Akka.Cluster.Proto.Msg.Member.Builder> internal__static_Member__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_VectorClock__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.VectorClock, global::Akka.Cluster.Proto.VectorClock.Builder> internal__static_VectorClock__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.VectorClock, global::Akka.Cluster.Proto.Msg.VectorClock.Builder> internal__static_VectorClock__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_VectorClock_Version__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.VectorClock.Types.Version, global::Akka.Cluster.Proto.VectorClock.Types.Version.Builder> internal__static_VectorClock_Version__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version, global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder> internal__static_VectorClock_Version__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_MetricsGossipEnvelope__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.MetricsGossipEnvelope, global::Akka.Cluster.Proto.MetricsGossipEnvelope.Builder> internal__static_MetricsGossipEnvelope__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.MetricsGossipEnvelope, global::Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder> internal__static_MetricsGossipEnvelope__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_MetricsGossip__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.MetricsGossip, global::Akka.Cluster.Proto.MetricsGossip.Builder> internal__static_MetricsGossip__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.MetricsGossip, global::Akka.Cluster.Proto.Msg.MetricsGossip.Builder> internal__static_MetricsGossip__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_NodeMetrics__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.NodeMetrics, global::Akka.Cluster.Proto.NodeMetrics.Builder> internal__static_NodeMetrics__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.NodeMetrics, global::Akka.Cluster.Proto.Msg.NodeMetrics.Builder> internal__static_NodeMetrics__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_NodeMetrics_Number__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.NodeMetrics.Types.Number, global::Akka.Cluster.Proto.NodeMetrics.Types.Number.Builder> internal__static_NodeMetrics_Number__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number, global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder> internal__static_NodeMetrics_Number__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_NodeMetrics_EWMA__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA, global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA.Builder> internal__static_NodeMetrics_EWMA__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA, global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder> internal__static_NodeMetrics_EWMA__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_NodeMetrics_Metric__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.NodeMetrics.Types.Metric, global::Akka.Cluster.Proto.NodeMetrics.Types.Metric.Builder> internal__static_NodeMetrics_Metric__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric, global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder> internal__static_NodeMetrics_Metric__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_Empty__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Empty, global::Akka.Cluster.Proto.Empty.Builder> internal__static_Empty__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.Empty, global::Akka.Cluster.Proto.Msg.Empty.Builder> internal__static_Empty__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_Address__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Address, global::Akka.Cluster.Proto.Address.Builder> internal__static_Address__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.Address, global::Akka.Cluster.Proto.Msg.Address.Builder> internal__static_Address__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_UniqueAddress__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.UniqueAddress, global::Akka.Cluster.Proto.UniqueAddress.Builder> internal__static_UniqueAddress__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.UniqueAddress, global::Akka.Cluster.Proto.Msg.UniqueAddress.Builder> internal__static_UniqueAddress__FieldAccessorTable;
     #endregion
     #region Descriptor
     public static pbd::FileDescriptor Descriptor {
@@ -114,83 +114,83 @@ namespace Akka.Cluster.Proto {
         descriptor = root;
         internal__static_Join__Descriptor = Descriptor.MessageTypes[0];
         internal__static_Join__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Join, global::Akka.Cluster.Proto.Join.Builder>(internal__static_Join__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.Join, global::Akka.Cluster.Proto.Msg.Join.Builder>(internal__static_Join__Descriptor,
                 new string[] { "Node", "Roles", });
         internal__static_Welcome__Descriptor = Descriptor.MessageTypes[1];
         internal__static_Welcome__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Welcome, global::Akka.Cluster.Proto.Welcome.Builder>(internal__static_Welcome__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.Welcome, global::Akka.Cluster.Proto.Msg.Welcome.Builder>(internal__static_Welcome__Descriptor,
                 new string[] { "From", "Gossip", });
         internal__static_GossipEnvelope__Descriptor = Descriptor.MessageTypes[2];
         internal__static_GossipEnvelope__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.GossipEnvelope, global::Akka.Cluster.Proto.GossipEnvelope.Builder>(internal__static_GossipEnvelope__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.GossipEnvelope, global::Akka.Cluster.Proto.Msg.GossipEnvelope.Builder>(internal__static_GossipEnvelope__Descriptor,
                 new string[] { "From", "To", "SerializedGossip", });
         internal__static_GossipStatus__Descriptor = Descriptor.MessageTypes[3];
         internal__static_GossipStatus__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.GossipStatus, global::Akka.Cluster.Proto.GossipStatus.Builder>(internal__static_GossipStatus__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.GossipStatus, global::Akka.Cluster.Proto.Msg.GossipStatus.Builder>(internal__static_GossipStatus__Descriptor,
                 new string[] { "From", "AllHashes", "Version", });
         internal__static_Gossip__Descriptor = Descriptor.MessageTypes[4];
         internal__static_Gossip__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Gossip, global::Akka.Cluster.Proto.Gossip.Builder>(internal__static_Gossip__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.Gossip, global::Akka.Cluster.Proto.Msg.Gossip.Builder>(internal__static_Gossip__Descriptor,
                 new string[] { "AllAddresses", "AllRoles", "AllHashes", "Members", "Overview", "Version", });
         internal__static_GossipOverview__Descriptor = Descriptor.MessageTypes[5];
         internal__static_GossipOverview__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.GossipOverview, global::Akka.Cluster.Proto.GossipOverview.Builder>(internal__static_GossipOverview__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.GossipOverview, global::Akka.Cluster.Proto.Msg.GossipOverview.Builder>(internal__static_GossipOverview__Descriptor,
                 new string[] { "Seen", "ObserverReachability", });
         internal__static_ObserverReachability__Descriptor = Descriptor.MessageTypes[6];
         internal__static_ObserverReachability__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.ObserverReachability, global::Akka.Cluster.Proto.ObserverReachability.Builder>(internal__static_ObserverReachability__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.ObserverReachability, global::Akka.Cluster.Proto.Msg.ObserverReachability.Builder>(internal__static_ObserverReachability__Descriptor,
                 new string[] { "AddressIndex", "Version", "SubjectReachability", });
         internal__static_SubjectReachability__Descriptor = Descriptor.MessageTypes[7];
         internal__static_SubjectReachability__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.SubjectReachability, global::Akka.Cluster.Proto.SubjectReachability.Builder>(internal__static_SubjectReachability__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.SubjectReachability, global::Akka.Cluster.Proto.Msg.SubjectReachability.Builder>(internal__static_SubjectReachability__Descriptor,
                 new string[] { "AddressIndex", "Status", "Version", });
         internal__static_Member__Descriptor = Descriptor.MessageTypes[8];
         internal__static_Member__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Member, global::Akka.Cluster.Proto.Member.Builder>(internal__static_Member__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.Member, global::Akka.Cluster.Proto.Msg.Member.Builder>(internal__static_Member__Descriptor,
                 new string[] { "AddressIndex", "UpNumber", "Status", "RolesIndexes", });
         internal__static_VectorClock__Descriptor = Descriptor.MessageTypes[9];
         internal__static_VectorClock__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.VectorClock, global::Akka.Cluster.Proto.VectorClock.Builder>(internal__static_VectorClock__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.VectorClock, global::Akka.Cluster.Proto.Msg.VectorClock.Builder>(internal__static_VectorClock__Descriptor,
                 new string[] { "Timestamp", "Versions", });
         internal__static_VectorClock_Version__Descriptor = internal__static_VectorClock__Descriptor.NestedTypes[0];
         internal__static_VectorClock_Version__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.VectorClock.Types.Version, global::Akka.Cluster.Proto.VectorClock.Types.Version.Builder>(internal__static_VectorClock_Version__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version, global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder>(internal__static_VectorClock_Version__Descriptor,
                 new string[] { "HashIndex", "Timestamp", });
         internal__static_MetricsGossipEnvelope__Descriptor = Descriptor.MessageTypes[10];
         internal__static_MetricsGossipEnvelope__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.MetricsGossipEnvelope, global::Akka.Cluster.Proto.MetricsGossipEnvelope.Builder>(internal__static_MetricsGossipEnvelope__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.MetricsGossipEnvelope, global::Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Builder>(internal__static_MetricsGossipEnvelope__Descriptor,
                 new string[] { "From", "Gossip", "Reply", });
         internal__static_MetricsGossip__Descriptor = Descriptor.MessageTypes[11];
         internal__static_MetricsGossip__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.MetricsGossip, global::Akka.Cluster.Proto.MetricsGossip.Builder>(internal__static_MetricsGossip__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.MetricsGossip, global::Akka.Cluster.Proto.Msg.MetricsGossip.Builder>(internal__static_MetricsGossip__Descriptor,
                 new string[] { "AllAddresses", "AllMetricNames", "NodeMetrics", });
         internal__static_NodeMetrics__Descriptor = Descriptor.MessageTypes[12];
         internal__static_NodeMetrics__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.NodeMetrics, global::Akka.Cluster.Proto.NodeMetrics.Builder>(internal__static_NodeMetrics__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.NodeMetrics, global::Akka.Cluster.Proto.Msg.NodeMetrics.Builder>(internal__static_NodeMetrics__Descriptor,
                 new string[] { "AddressIndex", "Timestamp", "Metrics", });
         internal__static_NodeMetrics_Number__Descriptor = internal__static_NodeMetrics__Descriptor.NestedTypes[0];
         internal__static_NodeMetrics_Number__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.NodeMetrics.Types.Number, global::Akka.Cluster.Proto.NodeMetrics.Types.Number.Builder>(internal__static_NodeMetrics_Number__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number, global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder>(internal__static_NodeMetrics_Number__Descriptor,
                 new string[] { "Type", "Value32", "Value64", "Serialized", });
         internal__static_NodeMetrics_EWMA__Descriptor = internal__static_NodeMetrics__Descriptor.NestedTypes[1];
         internal__static_NodeMetrics_EWMA__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA, global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA.Builder>(internal__static_NodeMetrics_EWMA__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA, global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder>(internal__static_NodeMetrics_EWMA__Descriptor,
                 new string[] { "Value", "Alpha", });
         internal__static_NodeMetrics_Metric__Descriptor = internal__static_NodeMetrics__Descriptor.NestedTypes[2];
         internal__static_NodeMetrics_Metric__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.NodeMetrics.Types.Metric, global::Akka.Cluster.Proto.NodeMetrics.Types.Metric.Builder>(internal__static_NodeMetrics_Metric__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric, global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder>(internal__static_NodeMetrics_Metric__Descriptor,
                 new string[] { "NameIndex", "Number", "Ewma", });
         internal__static_Empty__Descriptor = Descriptor.MessageTypes[13];
         internal__static_Empty__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Empty, global::Akka.Cluster.Proto.Empty.Builder>(internal__static_Empty__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.Empty, global::Akka.Cluster.Proto.Msg.Empty.Builder>(internal__static_Empty__Descriptor,
                 new string[] { });
         internal__static_Address__Descriptor = Descriptor.MessageTypes[14];
         internal__static_Address__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Address, global::Akka.Cluster.Proto.Address.Builder>(internal__static_Address__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.Address, global::Akka.Cluster.Proto.Msg.Address.Builder>(internal__static_Address__Descriptor,
                 new string[] { "System", "Hostname", "Port", "Protocol", });
         internal__static_UniqueAddress__Descriptor = Descriptor.MessageTypes[15];
         internal__static_UniqueAddress__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.UniqueAddress, global::Akka.Cluster.Proto.UniqueAddress.Builder>(internal__static_UniqueAddress__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::Akka.Cluster.Proto.Msg.UniqueAddress, global::Akka.Cluster.Proto.Msg.UniqueAddress.Builder>(internal__static_UniqueAddress__Descriptor,
                 new string[] { "Address", "Uid", });
         return null;
       };
@@ -239,21 +239,21 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_Join__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_Join__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<Join, Join.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_Join__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_Join__FieldAccessorTable; }
     }
     
     public const int NodeFieldNumber = 1;
     private bool hasNode;
-    private global::Akka.Cluster.Proto.UniqueAddress node_;
+    private global::Akka.Cluster.Proto.Msg.UniqueAddress node_;
     public bool HasNode {
       get { return hasNode; }
     }
-    public global::Akka.Cluster.Proto.UniqueAddress Node {
-      get { return node_ ?? global::Akka.Cluster.Proto.UniqueAddress.DefaultInstance; }
+    public global::Akka.Cluster.Proto.Msg.UniqueAddress Node {
+      get { return node_ ?? global::Akka.Cluster.Proto.Msg.UniqueAddress.DefaultInstance; }
     }
     
     public const int RolesFieldNumber = 2;
@@ -404,11 +404,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.Join.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.Join.Descriptor; }
       }
       
       public override Join DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.Join.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.Join.DefaultInstance; }
       }
       
       public override Join BuildPartial() {
@@ -429,7 +429,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(Join other) {
-        if (other == global::Akka.Cluster.Proto.Join.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.Join.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasNode) {
           MergeNode(other.Node);
@@ -481,7 +481,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 10: {
-              global::Akka.Cluster.Proto.UniqueAddress.Builder subBuilder = global::Akka.Cluster.Proto.UniqueAddress.CreateBuilder();
+              global::Akka.Cluster.Proto.Msg.UniqueAddress.Builder subBuilder = global::Akka.Cluster.Proto.Msg.UniqueAddress.CreateBuilder();
               if (result.hasNode) {
                 subBuilder.MergeFrom(Node);
               }
@@ -506,30 +506,30 @@ namespace Akka.Cluster.Proto {
       public bool HasNode {
        get { return result.hasNode; }
       }
-      public global::Akka.Cluster.Proto.UniqueAddress Node {
+      public global::Akka.Cluster.Proto.Msg.UniqueAddress Node {
         get { return result.Node; }
         set { SetNode(value); }
       }
-      public Builder SetNode(global::Akka.Cluster.Proto.UniqueAddress value) {
+      public Builder SetNode(global::Akka.Cluster.Proto.Msg.UniqueAddress value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasNode = true;
         result.node_ = value;
         return this;
       }
-      public Builder SetNode(global::Akka.Cluster.Proto.UniqueAddress.Builder builderForValue) {
+      public Builder SetNode(global::Akka.Cluster.Proto.Msg.UniqueAddress.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasNode = true;
         result.node_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeNode(global::Akka.Cluster.Proto.UniqueAddress value) {
+      public Builder MergeNode(global::Akka.Cluster.Proto.Msg.UniqueAddress value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasNode &&
-            result.node_ != global::Akka.Cluster.Proto.UniqueAddress.DefaultInstance) {
-            result.node_ = global::Akka.Cluster.Proto.UniqueAddress.CreateBuilder(result.node_).MergeFrom(value).BuildPartial();
+            result.node_ != global::Akka.Cluster.Proto.Msg.UniqueAddress.DefaultInstance) {
+            result.node_ = global::Akka.Cluster.Proto.Msg.UniqueAddress.CreateBuilder(result.node_).MergeFrom(value).BuildPartial();
         } else {
           result.node_ = value;
         }
@@ -576,7 +576,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static Join() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -599,31 +599,31 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_Welcome__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_Welcome__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<Welcome, Welcome.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_Welcome__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_Welcome__FieldAccessorTable; }
     }
     
     public const int FromFieldNumber = 1;
     private bool hasFrom;
-    private global::Akka.Cluster.Proto.UniqueAddress from_;
+    private global::Akka.Cluster.Proto.Msg.UniqueAddress from_;
     public bool HasFrom {
       get { return hasFrom; }
     }
-    public global::Akka.Cluster.Proto.UniqueAddress From {
-      get { return from_ ?? global::Akka.Cluster.Proto.UniqueAddress.DefaultInstance; }
+    public global::Akka.Cluster.Proto.Msg.UniqueAddress From {
+      get { return from_ ?? global::Akka.Cluster.Proto.Msg.UniqueAddress.DefaultInstance; }
     }
     
     public const int GossipFieldNumber = 2;
     private bool hasGossip;
-    private global::Akka.Cluster.Proto.Gossip gossip_;
+    private global::Akka.Cluster.Proto.Msg.Gossip gossip_;
     public bool HasGossip {
       get { return hasGossip; }
     }
-    public global::Akka.Cluster.Proto.Gossip Gossip {
-      get { return gossip_ ?? global::Akka.Cluster.Proto.Gossip.DefaultInstance; }
+    public global::Akka.Cluster.Proto.Msg.Gossip Gossip {
+      get { return gossip_ ?? global::Akka.Cluster.Proto.Msg.Gossip.DefaultInstance; }
     }
     
     public override bool IsInitialized {
@@ -758,11 +758,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.Welcome.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.Welcome.Descriptor; }
       }
       
       public override Welcome DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.Welcome.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.Welcome.DefaultInstance; }
       }
       
       public override Welcome BuildPartial() {
@@ -783,7 +783,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(Welcome other) {
-        if (other == global::Akka.Cluster.Proto.Welcome.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.Welcome.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasFrom) {
           MergeFrom(other.From);
@@ -835,7 +835,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 10: {
-              global::Akka.Cluster.Proto.UniqueAddress.Builder subBuilder = global::Akka.Cluster.Proto.UniqueAddress.CreateBuilder();
+              global::Akka.Cluster.Proto.Msg.UniqueAddress.Builder subBuilder = global::Akka.Cluster.Proto.Msg.UniqueAddress.CreateBuilder();
               if (result.hasFrom) {
                 subBuilder.MergeFrom(From);
               }
@@ -844,7 +844,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 18: {
-              global::Akka.Cluster.Proto.Gossip.Builder subBuilder = global::Akka.Cluster.Proto.Gossip.CreateBuilder();
+              global::Akka.Cluster.Proto.Msg.Gossip.Builder subBuilder = global::Akka.Cluster.Proto.Msg.Gossip.CreateBuilder();
               if (result.hasGossip) {
                 subBuilder.MergeFrom(Gossip);
               }
@@ -865,30 +865,30 @@ namespace Akka.Cluster.Proto {
       public bool HasFrom {
        get { return result.hasFrom; }
       }
-      public global::Akka.Cluster.Proto.UniqueAddress From {
+      public global::Akka.Cluster.Proto.Msg.UniqueAddress From {
         get { return result.From; }
         set { SetFrom(value); }
       }
-      public Builder SetFrom(global::Akka.Cluster.Proto.UniqueAddress value) {
+      public Builder SetFrom(global::Akka.Cluster.Proto.Msg.UniqueAddress value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasFrom = true;
         result.from_ = value;
         return this;
       }
-      public Builder SetFrom(global::Akka.Cluster.Proto.UniqueAddress.Builder builderForValue) {
+      public Builder SetFrom(global::Akka.Cluster.Proto.Msg.UniqueAddress.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasFrom = true;
         result.from_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeFrom(global::Akka.Cluster.Proto.UniqueAddress value) {
+      public Builder MergeFrom(global::Akka.Cluster.Proto.Msg.UniqueAddress value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasFrom &&
-            result.from_ != global::Akka.Cluster.Proto.UniqueAddress.DefaultInstance) {
-            result.from_ = global::Akka.Cluster.Proto.UniqueAddress.CreateBuilder(result.from_).MergeFrom(value).BuildPartial();
+            result.from_ != global::Akka.Cluster.Proto.Msg.UniqueAddress.DefaultInstance) {
+            result.from_ = global::Akka.Cluster.Proto.Msg.UniqueAddress.CreateBuilder(result.from_).MergeFrom(value).BuildPartial();
         } else {
           result.from_ = value;
         }
@@ -905,30 +905,30 @@ namespace Akka.Cluster.Proto {
       public bool HasGossip {
        get { return result.hasGossip; }
       }
-      public global::Akka.Cluster.Proto.Gossip Gossip {
+      public global::Akka.Cluster.Proto.Msg.Gossip Gossip {
         get { return result.Gossip; }
         set { SetGossip(value); }
       }
-      public Builder SetGossip(global::Akka.Cluster.Proto.Gossip value) {
+      public Builder SetGossip(global::Akka.Cluster.Proto.Msg.Gossip value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasGossip = true;
         result.gossip_ = value;
         return this;
       }
-      public Builder SetGossip(global::Akka.Cluster.Proto.Gossip.Builder builderForValue) {
+      public Builder SetGossip(global::Akka.Cluster.Proto.Msg.Gossip.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasGossip = true;
         result.gossip_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeGossip(global::Akka.Cluster.Proto.Gossip value) {
+      public Builder MergeGossip(global::Akka.Cluster.Proto.Msg.Gossip value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasGossip &&
-            result.gossip_ != global::Akka.Cluster.Proto.Gossip.DefaultInstance) {
-            result.gossip_ = global::Akka.Cluster.Proto.Gossip.CreateBuilder(result.gossip_).MergeFrom(value).BuildPartial();
+            result.gossip_ != global::Akka.Cluster.Proto.Msg.Gossip.DefaultInstance) {
+            result.gossip_ = global::Akka.Cluster.Proto.Msg.Gossip.CreateBuilder(result.gossip_).MergeFrom(value).BuildPartial();
         } else {
           result.gossip_ = value;
         }
@@ -943,7 +943,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static Welcome() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -966,31 +966,31 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_GossipEnvelope__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_GossipEnvelope__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<GossipEnvelope, GossipEnvelope.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_GossipEnvelope__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_GossipEnvelope__FieldAccessorTable; }
     }
     
     public const int FromFieldNumber = 1;
     private bool hasFrom;
-    private global::Akka.Cluster.Proto.UniqueAddress from_;
+    private global::Akka.Cluster.Proto.Msg.UniqueAddress from_;
     public bool HasFrom {
       get { return hasFrom; }
     }
-    public global::Akka.Cluster.Proto.UniqueAddress From {
-      get { return from_ ?? global::Akka.Cluster.Proto.UniqueAddress.DefaultInstance; }
+    public global::Akka.Cluster.Proto.Msg.UniqueAddress From {
+      get { return from_ ?? global::Akka.Cluster.Proto.Msg.UniqueAddress.DefaultInstance; }
     }
     
     public const int ToFieldNumber = 2;
     private bool hasTo;
-    private global::Akka.Cluster.Proto.UniqueAddress to_;
+    private global::Akka.Cluster.Proto.Msg.UniqueAddress to_;
     public bool HasTo {
       get { return hasTo; }
     }
-    public global::Akka.Cluster.Proto.UniqueAddress To {
-      get { return to_ ?? global::Akka.Cluster.Proto.UniqueAddress.DefaultInstance; }
+    public global::Akka.Cluster.Proto.Msg.UniqueAddress To {
+      get { return to_ ?? global::Akka.Cluster.Proto.Msg.UniqueAddress.DefaultInstance; }
     }
     
     public const int SerializedGossipFieldNumber = 3;
@@ -1142,11 +1142,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.GossipEnvelope.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.GossipEnvelope.Descriptor; }
       }
       
       public override GossipEnvelope DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.GossipEnvelope.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.GossipEnvelope.DefaultInstance; }
       }
       
       public override GossipEnvelope BuildPartial() {
@@ -1167,7 +1167,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(GossipEnvelope other) {
-        if (other == global::Akka.Cluster.Proto.GossipEnvelope.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.GossipEnvelope.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasFrom) {
           MergeFrom(other.From);
@@ -1222,7 +1222,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 10: {
-              global::Akka.Cluster.Proto.UniqueAddress.Builder subBuilder = global::Akka.Cluster.Proto.UniqueAddress.CreateBuilder();
+              global::Akka.Cluster.Proto.Msg.UniqueAddress.Builder subBuilder = global::Akka.Cluster.Proto.Msg.UniqueAddress.CreateBuilder();
               if (result.hasFrom) {
                 subBuilder.MergeFrom(From);
               }
@@ -1231,7 +1231,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 18: {
-              global::Akka.Cluster.Proto.UniqueAddress.Builder subBuilder = global::Akka.Cluster.Proto.UniqueAddress.CreateBuilder();
+              global::Akka.Cluster.Proto.Msg.UniqueAddress.Builder subBuilder = global::Akka.Cluster.Proto.Msg.UniqueAddress.CreateBuilder();
               if (result.hasTo) {
                 subBuilder.MergeFrom(To);
               }
@@ -1256,30 +1256,30 @@ namespace Akka.Cluster.Proto {
       public bool HasFrom {
        get { return result.hasFrom; }
       }
-      public global::Akka.Cluster.Proto.UniqueAddress From {
+      public global::Akka.Cluster.Proto.Msg.UniqueAddress From {
         get { return result.From; }
         set { SetFrom(value); }
       }
-      public Builder SetFrom(global::Akka.Cluster.Proto.UniqueAddress value) {
+      public Builder SetFrom(global::Akka.Cluster.Proto.Msg.UniqueAddress value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasFrom = true;
         result.from_ = value;
         return this;
       }
-      public Builder SetFrom(global::Akka.Cluster.Proto.UniqueAddress.Builder builderForValue) {
+      public Builder SetFrom(global::Akka.Cluster.Proto.Msg.UniqueAddress.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasFrom = true;
         result.from_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeFrom(global::Akka.Cluster.Proto.UniqueAddress value) {
+      public Builder MergeFrom(global::Akka.Cluster.Proto.Msg.UniqueAddress value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasFrom &&
-            result.from_ != global::Akka.Cluster.Proto.UniqueAddress.DefaultInstance) {
-            result.from_ = global::Akka.Cluster.Proto.UniqueAddress.CreateBuilder(result.from_).MergeFrom(value).BuildPartial();
+            result.from_ != global::Akka.Cluster.Proto.Msg.UniqueAddress.DefaultInstance) {
+            result.from_ = global::Akka.Cluster.Proto.Msg.UniqueAddress.CreateBuilder(result.from_).MergeFrom(value).BuildPartial();
         } else {
           result.from_ = value;
         }
@@ -1296,30 +1296,30 @@ namespace Akka.Cluster.Proto {
       public bool HasTo {
        get { return result.hasTo; }
       }
-      public global::Akka.Cluster.Proto.UniqueAddress To {
+      public global::Akka.Cluster.Proto.Msg.UniqueAddress To {
         get { return result.To; }
         set { SetTo(value); }
       }
-      public Builder SetTo(global::Akka.Cluster.Proto.UniqueAddress value) {
+      public Builder SetTo(global::Akka.Cluster.Proto.Msg.UniqueAddress value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasTo = true;
         result.to_ = value;
         return this;
       }
-      public Builder SetTo(global::Akka.Cluster.Proto.UniqueAddress.Builder builderForValue) {
+      public Builder SetTo(global::Akka.Cluster.Proto.Msg.UniqueAddress.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasTo = true;
         result.to_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeTo(global::Akka.Cluster.Proto.UniqueAddress value) {
+      public Builder MergeTo(global::Akka.Cluster.Proto.Msg.UniqueAddress value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasTo &&
-            result.to_ != global::Akka.Cluster.Proto.UniqueAddress.DefaultInstance) {
-            result.to_ = global::Akka.Cluster.Proto.UniqueAddress.CreateBuilder(result.to_).MergeFrom(value).BuildPartial();
+            result.to_ != global::Akka.Cluster.Proto.Msg.UniqueAddress.DefaultInstance) {
+            result.to_ = global::Akka.Cluster.Proto.Msg.UniqueAddress.CreateBuilder(result.to_).MergeFrom(value).BuildPartial();
         } else {
           result.to_ = value;
         }
@@ -1355,7 +1355,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static GossipEnvelope() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -1378,21 +1378,21 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_GossipStatus__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_GossipStatus__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<GossipStatus, GossipStatus.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_GossipStatus__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_GossipStatus__FieldAccessorTable; }
     }
     
     public const int FromFieldNumber = 1;
     private bool hasFrom;
-    private global::Akka.Cluster.Proto.UniqueAddress from_;
+    private global::Akka.Cluster.Proto.Msg.UniqueAddress from_;
     public bool HasFrom {
       get { return hasFrom; }
     }
-    public global::Akka.Cluster.Proto.UniqueAddress From {
-      get { return from_ ?? global::Akka.Cluster.Proto.UniqueAddress.DefaultInstance; }
+    public global::Akka.Cluster.Proto.Msg.UniqueAddress From {
+      get { return from_ ?? global::Akka.Cluster.Proto.Msg.UniqueAddress.DefaultInstance; }
     }
     
     public const int AllHashesFieldNumber = 2;
@@ -1409,12 +1409,12 @@ namespace Akka.Cluster.Proto {
     
     public const int VersionFieldNumber = 3;
     private bool hasVersion;
-    private global::Akka.Cluster.Proto.VectorClock version_;
+    private global::Akka.Cluster.Proto.Msg.VectorClock version_;
     public bool HasVersion {
       get { return hasVersion; }
     }
-    public global::Akka.Cluster.Proto.VectorClock Version {
-      get { return version_ ?? global::Akka.Cluster.Proto.VectorClock.DefaultInstance; }
+    public global::Akka.Cluster.Proto.Msg.VectorClock Version {
+      get { return version_ ?? global::Akka.Cluster.Proto.Msg.VectorClock.DefaultInstance; }
     }
     
     public override bool IsInitialized {
@@ -1561,11 +1561,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.GossipStatus.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.GossipStatus.Descriptor; }
       }
       
       public override GossipStatus DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.GossipStatus.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.GossipStatus.DefaultInstance; }
       }
       
       public override GossipStatus BuildPartial() {
@@ -1586,7 +1586,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(GossipStatus other) {
-        if (other == global::Akka.Cluster.Proto.GossipStatus.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.GossipStatus.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasFrom) {
           MergeFrom(other.From);
@@ -1641,7 +1641,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 10: {
-              global::Akka.Cluster.Proto.UniqueAddress.Builder subBuilder = global::Akka.Cluster.Proto.UniqueAddress.CreateBuilder();
+              global::Akka.Cluster.Proto.Msg.UniqueAddress.Builder subBuilder = global::Akka.Cluster.Proto.Msg.UniqueAddress.CreateBuilder();
               if (result.hasFrom) {
                 subBuilder.MergeFrom(From);
               }
@@ -1654,7 +1654,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 26: {
-              global::Akka.Cluster.Proto.VectorClock.Builder subBuilder = global::Akka.Cluster.Proto.VectorClock.CreateBuilder();
+              global::Akka.Cluster.Proto.Msg.VectorClock.Builder subBuilder = global::Akka.Cluster.Proto.Msg.VectorClock.CreateBuilder();
               if (result.hasVersion) {
                 subBuilder.MergeFrom(Version);
               }
@@ -1675,30 +1675,30 @@ namespace Akka.Cluster.Proto {
       public bool HasFrom {
        get { return result.hasFrom; }
       }
-      public global::Akka.Cluster.Proto.UniqueAddress From {
+      public global::Akka.Cluster.Proto.Msg.UniqueAddress From {
         get { return result.From; }
         set { SetFrom(value); }
       }
-      public Builder SetFrom(global::Akka.Cluster.Proto.UniqueAddress value) {
+      public Builder SetFrom(global::Akka.Cluster.Proto.Msg.UniqueAddress value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasFrom = true;
         result.from_ = value;
         return this;
       }
-      public Builder SetFrom(global::Akka.Cluster.Proto.UniqueAddress.Builder builderForValue) {
+      public Builder SetFrom(global::Akka.Cluster.Proto.Msg.UniqueAddress.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasFrom = true;
         result.from_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeFrom(global::Akka.Cluster.Proto.UniqueAddress value) {
+      public Builder MergeFrom(global::Akka.Cluster.Proto.Msg.UniqueAddress value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasFrom &&
-            result.from_ != global::Akka.Cluster.Proto.UniqueAddress.DefaultInstance) {
-            result.from_ = global::Akka.Cluster.Proto.UniqueAddress.CreateBuilder(result.from_).MergeFrom(value).BuildPartial();
+            result.from_ != global::Akka.Cluster.Proto.Msg.UniqueAddress.DefaultInstance) {
+            result.from_ = global::Akka.Cluster.Proto.Msg.UniqueAddress.CreateBuilder(result.from_).MergeFrom(value).BuildPartial();
         } else {
           result.from_ = value;
         }
@@ -1747,30 +1747,30 @@ namespace Akka.Cluster.Proto {
       public bool HasVersion {
        get { return result.hasVersion; }
       }
-      public global::Akka.Cluster.Proto.VectorClock Version {
+      public global::Akka.Cluster.Proto.Msg.VectorClock Version {
         get { return result.Version; }
         set { SetVersion(value); }
       }
-      public Builder SetVersion(global::Akka.Cluster.Proto.VectorClock value) {
+      public Builder SetVersion(global::Akka.Cluster.Proto.Msg.VectorClock value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasVersion = true;
         result.version_ = value;
         return this;
       }
-      public Builder SetVersion(global::Akka.Cluster.Proto.VectorClock.Builder builderForValue) {
+      public Builder SetVersion(global::Akka.Cluster.Proto.Msg.VectorClock.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasVersion = true;
         result.version_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeVersion(global::Akka.Cluster.Proto.VectorClock value) {
+      public Builder MergeVersion(global::Akka.Cluster.Proto.Msg.VectorClock value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasVersion &&
-            result.version_ != global::Akka.Cluster.Proto.VectorClock.DefaultInstance) {
-            result.version_ = global::Akka.Cluster.Proto.VectorClock.CreateBuilder(result.version_).MergeFrom(value).BuildPartial();
+            result.version_ != global::Akka.Cluster.Proto.Msg.VectorClock.DefaultInstance) {
+            result.version_ = global::Akka.Cluster.Proto.Msg.VectorClock.CreateBuilder(result.version_).MergeFrom(value).BuildPartial();
         } else {
           result.version_ = value;
         }
@@ -1785,7 +1785,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static GossipStatus() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -1808,22 +1808,22 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_Gossip__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_Gossip__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<Gossip, Gossip.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_Gossip__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_Gossip__FieldAccessorTable; }
     }
     
     public const int AllAddressesFieldNumber = 1;
-    private pbc::PopsicleList<global::Akka.Cluster.Proto.UniqueAddress> allAddresses_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.UniqueAddress>();
-    public scg::IList<global::Akka.Cluster.Proto.UniqueAddress> AllAddressesList {
+    private pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.UniqueAddress> allAddresses_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.UniqueAddress>();
+    public scg::IList<global::Akka.Cluster.Proto.Msg.UniqueAddress> AllAddressesList {
       get { return allAddresses_; }
     }
     public int AllAddressesCount {
       get { return allAddresses_.Count; }
     }
-    public global::Akka.Cluster.Proto.UniqueAddress GetAllAddresses(int index) {
+    public global::Akka.Cluster.Proto.Msg.UniqueAddress GetAllAddresses(int index) {
       return allAddresses_[index];
     }
     
@@ -1852,45 +1852,45 @@ namespace Akka.Cluster.Proto {
     }
     
     public const int MembersFieldNumber = 4;
-    private pbc::PopsicleList<global::Akka.Cluster.Proto.Member> members_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.Member>();
-    public scg::IList<global::Akka.Cluster.Proto.Member> MembersList {
+    private pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.Member> members_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.Member>();
+    public scg::IList<global::Akka.Cluster.Proto.Msg.Member> MembersList {
       get { return members_; }
     }
     public int MembersCount {
       get { return members_.Count; }
     }
-    public global::Akka.Cluster.Proto.Member GetMembers(int index) {
+    public global::Akka.Cluster.Proto.Msg.Member GetMembers(int index) {
       return members_[index];
     }
     
     public const int OverviewFieldNumber = 5;
     private bool hasOverview;
-    private global::Akka.Cluster.Proto.GossipOverview overview_;
+    private global::Akka.Cluster.Proto.Msg.GossipOverview overview_;
     public bool HasOverview {
       get { return hasOverview; }
     }
-    public global::Akka.Cluster.Proto.GossipOverview Overview {
-      get { return overview_ ?? global::Akka.Cluster.Proto.GossipOverview.DefaultInstance; }
+    public global::Akka.Cluster.Proto.Msg.GossipOverview Overview {
+      get { return overview_ ?? global::Akka.Cluster.Proto.Msg.GossipOverview.DefaultInstance; }
     }
     
     public const int VersionFieldNumber = 6;
     private bool hasVersion;
-    private global::Akka.Cluster.Proto.VectorClock version_;
+    private global::Akka.Cluster.Proto.Msg.VectorClock version_;
     public bool HasVersion {
       get { return hasVersion; }
     }
-    public global::Akka.Cluster.Proto.VectorClock Version {
-      get { return version_ ?? global::Akka.Cluster.Proto.VectorClock.DefaultInstance; }
+    public global::Akka.Cluster.Proto.Msg.VectorClock Version {
+      get { return version_ ?? global::Akka.Cluster.Proto.Msg.VectorClock.DefaultInstance; }
     }
     
     public override bool IsInitialized {
       get {
         if (!hasOverview) return false;
         if (!hasVersion) return false;
-        foreach (global::Akka.Cluster.Proto.UniqueAddress element in AllAddressesList) {
+        foreach (global::Akka.Cluster.Proto.Msg.UniqueAddress element in AllAddressesList) {
           if (!element.IsInitialized) return false;
         }
-        foreach (global::Akka.Cluster.Proto.Member element in MembersList) {
+        foreach (global::Akka.Cluster.Proto.Msg.Member element in MembersList) {
           if (!element.IsInitialized) return false;
         }
         if (!Overview.IsInitialized) return false;
@@ -1930,7 +1930,7 @@ namespace Akka.Cluster.Proto {
         if (size != -1) return size;
         
         size = 0;
-        foreach (global::Akka.Cluster.Proto.UniqueAddress element in AllAddressesList) {
+        foreach (global::Akka.Cluster.Proto.Msg.UniqueAddress element in AllAddressesList) {
           size += pb::CodedOutputStream.ComputeMessageSize(1, element);
         }
         {
@@ -1949,7 +1949,7 @@ namespace Akka.Cluster.Proto {
           size += dataSize;
           size += 1 * allHashes_.Count;
         }
-        foreach (global::Akka.Cluster.Proto.Member element in MembersList) {
+        foreach (global::Akka.Cluster.Proto.Msg.Member element in MembersList) {
           size += pb::CodedOutputStream.ComputeMessageSize(4, element);
         }
         if (hasOverview) {
@@ -2059,11 +2059,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.Gossip.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.Gossip.Descriptor; }
       }
       
       public override Gossip DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.Gossip.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.Gossip.DefaultInstance; }
       }
       
       public override Gossip BuildPartial() {
@@ -2084,7 +2084,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(Gossip other) {
-        if (other == global::Akka.Cluster.Proto.Gossip.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.Gossip.DefaultInstance) return this;
         PrepareBuilder();
         if (other.allAddresses_.Count != 0) {
           result.allAddresses_.Add(other.allAddresses_);
@@ -2148,7 +2148,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 10: {
-              input.ReadMessageArray(tag, field_name, result.allAddresses_, global::Akka.Cluster.Proto.UniqueAddress.DefaultInstance, extensionRegistry);
+              input.ReadMessageArray(tag, field_name, result.allAddresses_, global::Akka.Cluster.Proto.Msg.UniqueAddress.DefaultInstance, extensionRegistry);
               break;
             }
             case 18: {
@@ -2160,11 +2160,11 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 34: {
-              input.ReadMessageArray(tag, field_name, result.members_, global::Akka.Cluster.Proto.Member.DefaultInstance, extensionRegistry);
+              input.ReadMessageArray(tag, field_name, result.members_, global::Akka.Cluster.Proto.Msg.Member.DefaultInstance, extensionRegistry);
               break;
             }
             case 42: {
-              global::Akka.Cluster.Proto.GossipOverview.Builder subBuilder = global::Akka.Cluster.Proto.GossipOverview.CreateBuilder();
+              global::Akka.Cluster.Proto.Msg.GossipOverview.Builder subBuilder = global::Akka.Cluster.Proto.Msg.GossipOverview.CreateBuilder();
               if (result.hasOverview) {
                 subBuilder.MergeFrom(Overview);
               }
@@ -2173,7 +2173,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 50: {
-              global::Akka.Cluster.Proto.VectorClock.Builder subBuilder = global::Akka.Cluster.Proto.VectorClock.CreateBuilder();
+              global::Akka.Cluster.Proto.Msg.VectorClock.Builder subBuilder = global::Akka.Cluster.Proto.Msg.VectorClock.CreateBuilder();
               if (result.hasVersion) {
                 subBuilder.MergeFrom(Version);
               }
@@ -2191,40 +2191,40 @@ namespace Akka.Cluster.Proto {
       }
       
       
-      public pbc::IPopsicleList<global::Akka.Cluster.Proto.UniqueAddress> AllAddressesList {
+      public pbc::IPopsicleList<global::Akka.Cluster.Proto.Msg.UniqueAddress> AllAddressesList {
         get { return PrepareBuilder().allAddresses_; }
       }
       public int AllAddressesCount {
         get { return result.AllAddressesCount; }
       }
-      public global::Akka.Cluster.Proto.UniqueAddress GetAllAddresses(int index) {
+      public global::Akka.Cluster.Proto.Msg.UniqueAddress GetAllAddresses(int index) {
         return result.GetAllAddresses(index);
       }
-      public Builder SetAllAddresses(int index, global::Akka.Cluster.Proto.UniqueAddress value) {
+      public Builder SetAllAddresses(int index, global::Akka.Cluster.Proto.Msg.UniqueAddress value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.allAddresses_[index] = value;
         return this;
       }
-      public Builder SetAllAddresses(int index, global::Akka.Cluster.Proto.UniqueAddress.Builder builderForValue) {
+      public Builder SetAllAddresses(int index, global::Akka.Cluster.Proto.Msg.UniqueAddress.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.allAddresses_[index] = builderForValue.Build();
         return this;
       }
-      public Builder AddAllAddresses(global::Akka.Cluster.Proto.UniqueAddress value) {
+      public Builder AddAllAddresses(global::Akka.Cluster.Proto.Msg.UniqueAddress value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.allAddresses_.Add(value);
         return this;
       }
-      public Builder AddAllAddresses(global::Akka.Cluster.Proto.UniqueAddress.Builder builderForValue) {
+      public Builder AddAllAddresses(global::Akka.Cluster.Proto.Msg.UniqueAddress.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.allAddresses_.Add(builderForValue.Build());
         return this;
       }
-      public Builder AddRangeAllAddresses(scg::IEnumerable<global::Akka.Cluster.Proto.UniqueAddress> values) {
+      public Builder AddRangeAllAddresses(scg::IEnumerable<global::Akka.Cluster.Proto.Msg.UniqueAddress> values) {
         PrepareBuilder();
         result.allAddresses_.Add(values);
         return this;
@@ -2299,40 +2299,40 @@ namespace Akka.Cluster.Proto {
         return this;
       }
       
-      public pbc::IPopsicleList<global::Akka.Cluster.Proto.Member> MembersList {
+      public pbc::IPopsicleList<global::Akka.Cluster.Proto.Msg.Member> MembersList {
         get { return PrepareBuilder().members_; }
       }
       public int MembersCount {
         get { return result.MembersCount; }
       }
-      public global::Akka.Cluster.Proto.Member GetMembers(int index) {
+      public global::Akka.Cluster.Proto.Msg.Member GetMembers(int index) {
         return result.GetMembers(index);
       }
-      public Builder SetMembers(int index, global::Akka.Cluster.Proto.Member value) {
+      public Builder SetMembers(int index, global::Akka.Cluster.Proto.Msg.Member value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.members_[index] = value;
         return this;
       }
-      public Builder SetMembers(int index, global::Akka.Cluster.Proto.Member.Builder builderForValue) {
+      public Builder SetMembers(int index, global::Akka.Cluster.Proto.Msg.Member.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.members_[index] = builderForValue.Build();
         return this;
       }
-      public Builder AddMembers(global::Akka.Cluster.Proto.Member value) {
+      public Builder AddMembers(global::Akka.Cluster.Proto.Msg.Member value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.members_.Add(value);
         return this;
       }
-      public Builder AddMembers(global::Akka.Cluster.Proto.Member.Builder builderForValue) {
+      public Builder AddMembers(global::Akka.Cluster.Proto.Msg.Member.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.members_.Add(builderForValue.Build());
         return this;
       }
-      public Builder AddRangeMembers(scg::IEnumerable<global::Akka.Cluster.Proto.Member> values) {
+      public Builder AddRangeMembers(scg::IEnumerable<global::Akka.Cluster.Proto.Msg.Member> values) {
         PrepareBuilder();
         result.members_.Add(values);
         return this;
@@ -2346,30 +2346,30 @@ namespace Akka.Cluster.Proto {
       public bool HasOverview {
        get { return result.hasOverview; }
       }
-      public global::Akka.Cluster.Proto.GossipOverview Overview {
+      public global::Akka.Cluster.Proto.Msg.GossipOverview Overview {
         get { return result.Overview; }
         set { SetOverview(value); }
       }
-      public Builder SetOverview(global::Akka.Cluster.Proto.GossipOverview value) {
+      public Builder SetOverview(global::Akka.Cluster.Proto.Msg.GossipOverview value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasOverview = true;
         result.overview_ = value;
         return this;
       }
-      public Builder SetOverview(global::Akka.Cluster.Proto.GossipOverview.Builder builderForValue) {
+      public Builder SetOverview(global::Akka.Cluster.Proto.Msg.GossipOverview.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasOverview = true;
         result.overview_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeOverview(global::Akka.Cluster.Proto.GossipOverview value) {
+      public Builder MergeOverview(global::Akka.Cluster.Proto.Msg.GossipOverview value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasOverview &&
-            result.overview_ != global::Akka.Cluster.Proto.GossipOverview.DefaultInstance) {
-            result.overview_ = global::Akka.Cluster.Proto.GossipOverview.CreateBuilder(result.overview_).MergeFrom(value).BuildPartial();
+            result.overview_ != global::Akka.Cluster.Proto.Msg.GossipOverview.DefaultInstance) {
+            result.overview_ = global::Akka.Cluster.Proto.Msg.GossipOverview.CreateBuilder(result.overview_).MergeFrom(value).BuildPartial();
         } else {
           result.overview_ = value;
         }
@@ -2386,30 +2386,30 @@ namespace Akka.Cluster.Proto {
       public bool HasVersion {
        get { return result.hasVersion; }
       }
-      public global::Akka.Cluster.Proto.VectorClock Version {
+      public global::Akka.Cluster.Proto.Msg.VectorClock Version {
         get { return result.Version; }
         set { SetVersion(value); }
       }
-      public Builder SetVersion(global::Akka.Cluster.Proto.VectorClock value) {
+      public Builder SetVersion(global::Akka.Cluster.Proto.Msg.VectorClock value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasVersion = true;
         result.version_ = value;
         return this;
       }
-      public Builder SetVersion(global::Akka.Cluster.Proto.VectorClock.Builder builderForValue) {
+      public Builder SetVersion(global::Akka.Cluster.Proto.Msg.VectorClock.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasVersion = true;
         result.version_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeVersion(global::Akka.Cluster.Proto.VectorClock value) {
+      public Builder MergeVersion(global::Akka.Cluster.Proto.Msg.VectorClock value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasVersion &&
-            result.version_ != global::Akka.Cluster.Proto.VectorClock.DefaultInstance) {
-            result.version_ = global::Akka.Cluster.Proto.VectorClock.CreateBuilder(result.version_).MergeFrom(value).BuildPartial();
+            result.version_ != global::Akka.Cluster.Proto.Msg.VectorClock.DefaultInstance) {
+            result.version_ = global::Akka.Cluster.Proto.Msg.VectorClock.CreateBuilder(result.version_).MergeFrom(value).BuildPartial();
         } else {
           result.version_ = value;
         }
@@ -2424,7 +2424,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static Gossip() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -2447,11 +2447,11 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_GossipOverview__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_GossipOverview__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<GossipOverview, GossipOverview.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_GossipOverview__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_GossipOverview__FieldAccessorTable; }
     }
     
     public const int SeenFieldNumber = 1;
@@ -2467,20 +2467,20 @@ namespace Akka.Cluster.Proto {
     }
     
     public const int ObserverReachabilityFieldNumber = 2;
-    private pbc::PopsicleList<global::Akka.Cluster.Proto.ObserverReachability> observerReachability_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.ObserverReachability>();
-    public scg::IList<global::Akka.Cluster.Proto.ObserverReachability> ObserverReachabilityList {
+    private pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.ObserverReachability> observerReachability_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.ObserverReachability>();
+    public scg::IList<global::Akka.Cluster.Proto.Msg.ObserverReachability> ObserverReachabilityList {
       get { return observerReachability_; }
     }
     public int ObserverReachabilityCount {
       get { return observerReachability_.Count; }
     }
-    public global::Akka.Cluster.Proto.ObserverReachability GetObserverReachability(int index) {
+    public global::Akka.Cluster.Proto.Msg.ObserverReachability GetObserverReachability(int index) {
       return observerReachability_[index];
     }
     
     public override bool IsInitialized {
       get {
-        foreach (global::Akka.Cluster.Proto.ObserverReachability element in ObserverReachabilityList) {
+        foreach (global::Akka.Cluster.Proto.Msg.ObserverReachability element in ObserverReachabilityList) {
           if (!element.IsInitialized) return false;
         }
         return true;
@@ -2514,7 +2514,7 @@ namespace Akka.Cluster.Proto {
           size += dataSize;
           size += 1 * seen_.Count;
         }
-        foreach (global::Akka.Cluster.Proto.ObserverReachability element in ObserverReachabilityList) {
+        foreach (global::Akka.Cluster.Proto.Msg.ObserverReachability element in ObserverReachabilityList) {
           size += pb::CodedOutputStream.ComputeMessageSize(2, element);
         }
         size += UnknownFields.SerializedSize;
@@ -2616,11 +2616,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.GossipOverview.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.GossipOverview.Descriptor; }
       }
       
       public override GossipOverview DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.GossipOverview.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.GossipOverview.DefaultInstance; }
       }
       
       public override GossipOverview BuildPartial() {
@@ -2641,7 +2641,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(GossipOverview other) {
-        if (other == global::Akka.Cluster.Proto.GossipOverview.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.GossipOverview.DefaultInstance) return this;
         PrepareBuilder();
         if (other.seen_.Count != 0) {
           result.seen_.Add(other.seen_);
@@ -2698,7 +2698,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 18: {
-              input.ReadMessageArray(tag, field_name, result.observerReachability_, global::Akka.Cluster.Proto.ObserverReachability.DefaultInstance, extensionRegistry);
+              input.ReadMessageArray(tag, field_name, result.observerReachability_, global::Akka.Cluster.Proto.Msg.ObserverReachability.DefaultInstance, extensionRegistry);
               break;
             }
           }
@@ -2741,40 +2741,40 @@ namespace Akka.Cluster.Proto {
         return this;
       }
       
-      public pbc::IPopsicleList<global::Akka.Cluster.Proto.ObserverReachability> ObserverReachabilityList {
+      public pbc::IPopsicleList<global::Akka.Cluster.Proto.Msg.ObserverReachability> ObserverReachabilityList {
         get { return PrepareBuilder().observerReachability_; }
       }
       public int ObserverReachabilityCount {
         get { return result.ObserverReachabilityCount; }
       }
-      public global::Akka.Cluster.Proto.ObserverReachability GetObserverReachability(int index) {
+      public global::Akka.Cluster.Proto.Msg.ObserverReachability GetObserverReachability(int index) {
         return result.GetObserverReachability(index);
       }
-      public Builder SetObserverReachability(int index, global::Akka.Cluster.Proto.ObserverReachability value) {
+      public Builder SetObserverReachability(int index, global::Akka.Cluster.Proto.Msg.ObserverReachability value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.observerReachability_[index] = value;
         return this;
       }
-      public Builder SetObserverReachability(int index, global::Akka.Cluster.Proto.ObserverReachability.Builder builderForValue) {
+      public Builder SetObserverReachability(int index, global::Akka.Cluster.Proto.Msg.ObserverReachability.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.observerReachability_[index] = builderForValue.Build();
         return this;
       }
-      public Builder AddObserverReachability(global::Akka.Cluster.Proto.ObserverReachability value) {
+      public Builder AddObserverReachability(global::Akka.Cluster.Proto.Msg.ObserverReachability value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.observerReachability_.Add(value);
         return this;
       }
-      public Builder AddObserverReachability(global::Akka.Cluster.Proto.ObserverReachability.Builder builderForValue) {
+      public Builder AddObserverReachability(global::Akka.Cluster.Proto.Msg.ObserverReachability.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.observerReachability_.Add(builderForValue.Build());
         return this;
       }
-      public Builder AddRangeObserverReachability(scg::IEnumerable<global::Akka.Cluster.Proto.ObserverReachability> values) {
+      public Builder AddRangeObserverReachability(scg::IEnumerable<global::Akka.Cluster.Proto.Msg.ObserverReachability> values) {
         PrepareBuilder();
         result.observerReachability_.Add(values);
         return this;
@@ -2786,7 +2786,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static GossipOverview() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -2809,11 +2809,11 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_ObserverReachability__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_ObserverReachability__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<ObserverReachability, ObserverReachability.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_ObserverReachability__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_ObserverReachability__FieldAccessorTable; }
     }
     
     public const int AddressIndexFieldNumber = 1;
@@ -2837,14 +2837,14 @@ namespace Akka.Cluster.Proto {
     }
     
     public const int SubjectReachabilityFieldNumber = 2;
-    private pbc::PopsicleList<global::Akka.Cluster.Proto.SubjectReachability> subjectReachability_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.SubjectReachability>();
-    public scg::IList<global::Akka.Cluster.Proto.SubjectReachability> SubjectReachabilityList {
+    private pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.SubjectReachability> subjectReachability_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.SubjectReachability>();
+    public scg::IList<global::Akka.Cluster.Proto.Msg.SubjectReachability> SubjectReachabilityList {
       get { return subjectReachability_; }
     }
     public int SubjectReachabilityCount {
       get { return subjectReachability_.Count; }
     }
-    public global::Akka.Cluster.Proto.SubjectReachability GetSubjectReachability(int index) {
+    public global::Akka.Cluster.Proto.Msg.SubjectReachability GetSubjectReachability(int index) {
       return subjectReachability_[index];
     }
     
@@ -2852,7 +2852,7 @@ namespace Akka.Cluster.Proto {
       get {
         if (!hasAddressIndex) return false;
         if (!hasVersion) return false;
-        foreach (global::Akka.Cluster.Proto.SubjectReachability element in SubjectReachabilityList) {
+        foreach (global::Akka.Cluster.Proto.Msg.SubjectReachability element in SubjectReachabilityList) {
           if (!element.IsInitialized) return false;
         }
         return true;
@@ -2887,7 +2887,7 @@ namespace Akka.Cluster.Proto {
         if (hasVersion) {
           size += pb::CodedOutputStream.ComputeInt64Size(4, Version);
         }
-        foreach (global::Akka.Cluster.Proto.SubjectReachability element in SubjectReachabilityList) {
+        foreach (global::Akka.Cluster.Proto.Msg.SubjectReachability element in SubjectReachabilityList) {
           size += pb::CodedOutputStream.ComputeMessageSize(2, element);
         }
         size += UnknownFields.SerializedSize;
@@ -2988,11 +2988,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.ObserverReachability.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.ObserverReachability.Descriptor; }
       }
       
       public override ObserverReachability DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.ObserverReachability.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.ObserverReachability.DefaultInstance; }
       }
       
       public override ObserverReachability BuildPartial() {
@@ -3013,7 +3013,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(ObserverReachability other) {
-        if (other == global::Akka.Cluster.Proto.ObserverReachability.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.ObserverReachability.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasAddressIndex) {
           AddressIndex = other.AddressIndex;
@@ -3072,7 +3072,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 18: {
-              input.ReadMessageArray(tag, field_name, result.subjectReachability_, global::Akka.Cluster.Proto.SubjectReachability.DefaultInstance, extensionRegistry);
+              input.ReadMessageArray(tag, field_name, result.subjectReachability_, global::Akka.Cluster.Proto.Msg.SubjectReachability.DefaultInstance, extensionRegistry);
               break;
             }
             case 32: {
@@ -3129,40 +3129,40 @@ namespace Akka.Cluster.Proto {
         return this;
       }
       
-      public pbc::IPopsicleList<global::Akka.Cluster.Proto.SubjectReachability> SubjectReachabilityList {
+      public pbc::IPopsicleList<global::Akka.Cluster.Proto.Msg.SubjectReachability> SubjectReachabilityList {
         get { return PrepareBuilder().subjectReachability_; }
       }
       public int SubjectReachabilityCount {
         get { return result.SubjectReachabilityCount; }
       }
-      public global::Akka.Cluster.Proto.SubjectReachability GetSubjectReachability(int index) {
+      public global::Akka.Cluster.Proto.Msg.SubjectReachability GetSubjectReachability(int index) {
         return result.GetSubjectReachability(index);
       }
-      public Builder SetSubjectReachability(int index, global::Akka.Cluster.Proto.SubjectReachability value) {
+      public Builder SetSubjectReachability(int index, global::Akka.Cluster.Proto.Msg.SubjectReachability value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.subjectReachability_[index] = value;
         return this;
       }
-      public Builder SetSubjectReachability(int index, global::Akka.Cluster.Proto.SubjectReachability.Builder builderForValue) {
+      public Builder SetSubjectReachability(int index, global::Akka.Cluster.Proto.Msg.SubjectReachability.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.subjectReachability_[index] = builderForValue.Build();
         return this;
       }
-      public Builder AddSubjectReachability(global::Akka.Cluster.Proto.SubjectReachability value) {
+      public Builder AddSubjectReachability(global::Akka.Cluster.Proto.Msg.SubjectReachability value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.subjectReachability_.Add(value);
         return this;
       }
-      public Builder AddSubjectReachability(global::Akka.Cluster.Proto.SubjectReachability.Builder builderForValue) {
+      public Builder AddSubjectReachability(global::Akka.Cluster.Proto.Msg.SubjectReachability.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.subjectReachability_.Add(builderForValue.Build());
         return this;
       }
-      public Builder AddRangeSubjectReachability(scg::IEnumerable<global::Akka.Cluster.Proto.SubjectReachability> values) {
+      public Builder AddRangeSubjectReachability(scg::IEnumerable<global::Akka.Cluster.Proto.Msg.SubjectReachability> values) {
         PrepareBuilder();
         result.subjectReachability_.Add(values);
         return this;
@@ -3174,7 +3174,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static ObserverReachability() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -3197,11 +3197,11 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_SubjectReachability__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_SubjectReachability__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<SubjectReachability, SubjectReachability.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_SubjectReachability__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_SubjectReachability__FieldAccessorTable; }
     }
     
     public const int AddressIndexFieldNumber = 1;
@@ -3216,11 +3216,11 @@ namespace Akka.Cluster.Proto {
     
     public const int StatusFieldNumber = 3;
     private bool hasStatus;
-    private global::Akka.Cluster.Proto.ReachabilityStatus status_ = global::Akka.Cluster.Proto.ReachabilityStatus.Reachable;
+    private global::Akka.Cluster.Proto.Msg.ReachabilityStatus status_ = global::Akka.Cluster.Proto.Msg.ReachabilityStatus.Reachable;
     public bool HasStatus {
       get { return hasStatus; }
     }
-    public global::Akka.Cluster.Proto.ReachabilityStatus Status {
+    public global::Akka.Cluster.Proto.Msg.ReachabilityStatus Status {
       get { return status_; }
     }
     
@@ -3371,11 +3371,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.SubjectReachability.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.SubjectReachability.Descriptor; }
       }
       
       public override SubjectReachability DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.SubjectReachability.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.SubjectReachability.DefaultInstance; }
       }
       
       public override SubjectReachability BuildPartial() {
@@ -3396,7 +3396,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(SubjectReachability other) {
-        if (other == global::Akka.Cluster.Proto.SubjectReachability.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.SubjectReachability.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasAddressIndex) {
           AddressIndex = other.AddressIndex;
@@ -3503,11 +3503,11 @@ namespace Akka.Cluster.Proto {
       public bool HasStatus {
        get { return result.hasStatus; }
       }
-      public global::Akka.Cluster.Proto.ReachabilityStatus Status {
+      public global::Akka.Cluster.Proto.Msg.ReachabilityStatus Status {
         get { return result.Status; }
         set { SetStatus(value); }
       }
-      public Builder SetStatus(global::Akka.Cluster.Proto.ReachabilityStatus value) {
+      public Builder SetStatus(global::Akka.Cluster.Proto.Msg.ReachabilityStatus value) {
         PrepareBuilder();
         result.hasStatus = true;
         result.status_ = value;
@@ -3516,7 +3516,7 @@ namespace Akka.Cluster.Proto {
       public Builder ClearStatus() {
         PrepareBuilder();
         result.hasStatus = false;
-        result.status_ = global::Akka.Cluster.Proto.ReachabilityStatus.Reachable;
+        result.status_ = global::Akka.Cluster.Proto.Msg.ReachabilityStatus.Reachable;
         return this;
       }
       
@@ -3541,7 +3541,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static SubjectReachability() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -3564,11 +3564,11 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_Member__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_Member__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<Member, Member.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_Member__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_Member__FieldAccessorTable; }
     }
     
     public const int AddressIndexFieldNumber = 1;
@@ -3593,11 +3593,11 @@ namespace Akka.Cluster.Proto {
     
     public const int StatusFieldNumber = 3;
     private bool hasStatus;
-    private global::Akka.Cluster.Proto.MemberStatus status_ = global::Akka.Cluster.Proto.MemberStatus.Joining;
+    private global::Akka.Cluster.Proto.Msg.MemberStatus status_ = global::Akka.Cluster.Proto.Msg.MemberStatus.Joining;
     public bool HasStatus {
       get { return hasStatus; }
     }
-    public global::Akka.Cluster.Proto.MemberStatus Status {
+    public global::Akka.Cluster.Proto.Msg.MemberStatus Status {
       get { return status_; }
     }
     
@@ -3766,11 +3766,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.Member.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.Member.Descriptor; }
       }
       
       public override Member DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.Member.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.Member.DefaultInstance; }
       }
       
       public override Member BuildPartial() {
@@ -3791,7 +3791,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(Member other) {
-        if (other == global::Akka.Cluster.Proto.Member.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.Member.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasAddressIndex) {
           AddressIndex = other.AddressIndex;
@@ -3926,11 +3926,11 @@ namespace Akka.Cluster.Proto {
       public bool HasStatus {
        get { return result.hasStatus; }
       }
-      public global::Akka.Cluster.Proto.MemberStatus Status {
+      public global::Akka.Cluster.Proto.Msg.MemberStatus Status {
         get { return result.Status; }
         set { SetStatus(value); }
       }
-      public Builder SetStatus(global::Akka.Cluster.Proto.MemberStatus value) {
+      public Builder SetStatus(global::Akka.Cluster.Proto.Msg.MemberStatus value) {
         PrepareBuilder();
         result.hasStatus = true;
         result.status_ = value;
@@ -3939,7 +3939,7 @@ namespace Akka.Cluster.Proto {
       public Builder ClearStatus() {
         PrepareBuilder();
         result.hasStatus = false;
-        result.status_ = global::Akka.Cluster.Proto.MemberStatus.Joining;
+        result.status_ = global::Akka.Cluster.Proto.Msg.MemberStatus.Joining;
         return this;
       }
       
@@ -3974,7 +3974,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static Member() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -3997,11 +3997,11 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_VectorClock__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_VectorClock__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<VectorClock, VectorClock.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_VectorClock__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_VectorClock__FieldAccessorTable; }
     }
     
     #region Nested types
@@ -4026,11 +4026,11 @@ namespace Akka.Cluster.Proto {
         }
         
         public static pbd::MessageDescriptor Descriptor {
-          get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_VectorClock_Version__Descriptor; }
+          get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_VectorClock_Version__Descriptor; }
         }
         
         protected override pb::FieldAccess.FieldAccessorTable<Version, Version.Builder> InternalFieldAccessors {
-          get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_VectorClock_Version__FieldAccessorTable; }
+          get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_VectorClock_Version__FieldAccessorTable; }
         }
         
         public const int HashIndexFieldNumber = 1;
@@ -4183,11 +4183,11 @@ namespace Akka.Cluster.Proto {
           }
           
           public override pbd::MessageDescriptor DescriptorForType {
-            get { return global::Akka.Cluster.Proto.VectorClock.Types.Version.Descriptor; }
+            get { return global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Descriptor; }
           }
           
           public override Version DefaultInstanceForType {
-            get { return global::Akka.Cluster.Proto.VectorClock.Types.Version.DefaultInstance; }
+            get { return global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version.DefaultInstance; }
           }
           
           public override Version BuildPartial() {
@@ -4208,7 +4208,7 @@ namespace Akka.Cluster.Proto {
           }
           
           public override Builder MergeFrom(Version other) {
-            if (other == global::Akka.Cluster.Proto.VectorClock.Types.Version.DefaultInstance) return this;
+            if (other == global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version.DefaultInstance) return this;
             PrepareBuilder();
             if (other.HasHashIndex) {
               HashIndex = other.HashIndex;
@@ -4318,7 +4318,7 @@ namespace Akka.Cluster.Proto {
           }
         }
         static Version() {
-          object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+          object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
         }
       }
       
@@ -4336,20 +4336,20 @@ namespace Akka.Cluster.Proto {
     }
     
     public const int VersionsFieldNumber = 2;
-    private pbc::PopsicleList<global::Akka.Cluster.Proto.VectorClock.Types.Version> versions_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.VectorClock.Types.Version>();
-    public scg::IList<global::Akka.Cluster.Proto.VectorClock.Types.Version> VersionsList {
+    private pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version> versions_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version>();
+    public scg::IList<global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version> VersionsList {
       get { return versions_; }
     }
     public int VersionsCount {
       get { return versions_.Count; }
     }
-    public global::Akka.Cluster.Proto.VectorClock.Types.Version GetVersions(int index) {
+    public global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version GetVersions(int index) {
       return versions_[index];
     }
     
     public override bool IsInitialized {
       get {
-        foreach (global::Akka.Cluster.Proto.VectorClock.Types.Version element in VersionsList) {
+        foreach (global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version element in VersionsList) {
           if (!element.IsInitialized) return false;
         }
         return true;
@@ -4378,7 +4378,7 @@ namespace Akka.Cluster.Proto {
         if (hasTimestamp) {
           size += pb::CodedOutputStream.ComputeInt64Size(1, Timestamp);
         }
-        foreach (global::Akka.Cluster.Proto.VectorClock.Types.Version element in VersionsList) {
+        foreach (global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version element in VersionsList) {
           size += pb::CodedOutputStream.ComputeMessageSize(2, element);
         }
         size += UnknownFields.SerializedSize;
@@ -4479,11 +4479,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.VectorClock.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.VectorClock.Descriptor; }
       }
       
       public override VectorClock DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.VectorClock.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.VectorClock.DefaultInstance; }
       }
       
       public override VectorClock BuildPartial() {
@@ -4504,7 +4504,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(VectorClock other) {
-        if (other == global::Akka.Cluster.Proto.VectorClock.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.VectorClock.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasTimestamp) {
           Timestamp = other.Timestamp;
@@ -4560,7 +4560,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 18: {
-              input.ReadMessageArray(tag, field_name, result.versions_, global::Akka.Cluster.Proto.VectorClock.Types.Version.DefaultInstance, extensionRegistry);
+              input.ReadMessageArray(tag, field_name, result.versions_, global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version.DefaultInstance, extensionRegistry);
               break;
             }
           }
@@ -4593,40 +4593,40 @@ namespace Akka.Cluster.Proto {
         return this;
       }
       
-      public pbc::IPopsicleList<global::Akka.Cluster.Proto.VectorClock.Types.Version> VersionsList {
+      public pbc::IPopsicleList<global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version> VersionsList {
         get { return PrepareBuilder().versions_; }
       }
       public int VersionsCount {
         get { return result.VersionsCount; }
       }
-      public global::Akka.Cluster.Proto.VectorClock.Types.Version GetVersions(int index) {
+      public global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version GetVersions(int index) {
         return result.GetVersions(index);
       }
-      public Builder SetVersions(int index, global::Akka.Cluster.Proto.VectorClock.Types.Version value) {
+      public Builder SetVersions(int index, global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.versions_[index] = value;
         return this;
       }
-      public Builder SetVersions(int index, global::Akka.Cluster.Proto.VectorClock.Types.Version.Builder builderForValue) {
+      public Builder SetVersions(int index, global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.versions_[index] = builderForValue.Build();
         return this;
       }
-      public Builder AddVersions(global::Akka.Cluster.Proto.VectorClock.Types.Version value) {
+      public Builder AddVersions(global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.versions_.Add(value);
         return this;
       }
-      public Builder AddVersions(global::Akka.Cluster.Proto.VectorClock.Types.Version.Builder builderForValue) {
+      public Builder AddVersions(global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.versions_.Add(builderForValue.Build());
         return this;
       }
-      public Builder AddRangeVersions(scg::IEnumerable<global::Akka.Cluster.Proto.VectorClock.Types.Version> values) {
+      public Builder AddRangeVersions(scg::IEnumerable<global::Akka.Cluster.Proto.Msg.VectorClock.Types.Version> values) {
         PrepareBuilder();
         result.versions_.Add(values);
         return this;
@@ -4638,7 +4638,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static VectorClock() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -4661,31 +4661,31 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_MetricsGossipEnvelope__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_MetricsGossipEnvelope__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<MetricsGossipEnvelope, MetricsGossipEnvelope.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_MetricsGossipEnvelope__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_MetricsGossipEnvelope__FieldAccessorTable; }
     }
     
     public const int FromFieldNumber = 1;
     private bool hasFrom;
-    private global::Akka.Cluster.Proto.Address from_;
+    private global::Akka.Cluster.Proto.Msg.Address from_;
     public bool HasFrom {
       get { return hasFrom; }
     }
-    public global::Akka.Cluster.Proto.Address From {
-      get { return from_ ?? global::Akka.Cluster.Proto.Address.DefaultInstance; }
+    public global::Akka.Cluster.Proto.Msg.Address From {
+      get { return from_ ?? global::Akka.Cluster.Proto.Msg.Address.DefaultInstance; }
     }
     
     public const int GossipFieldNumber = 2;
     private bool hasGossip;
-    private global::Akka.Cluster.Proto.MetricsGossip gossip_;
+    private global::Akka.Cluster.Proto.Msg.MetricsGossip gossip_;
     public bool HasGossip {
       get { return hasGossip; }
     }
-    public global::Akka.Cluster.Proto.MetricsGossip Gossip {
-      get { return gossip_ ?? global::Akka.Cluster.Proto.MetricsGossip.DefaultInstance; }
+    public global::Akka.Cluster.Proto.Msg.MetricsGossip Gossip {
+      get { return gossip_ ?? global::Akka.Cluster.Proto.Msg.MetricsGossip.DefaultInstance; }
     }
     
     public const int ReplyFieldNumber = 3;
@@ -4837,11 +4837,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.MetricsGossipEnvelope.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.Descriptor; }
       }
       
       public override MetricsGossipEnvelope DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.MetricsGossipEnvelope.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.DefaultInstance; }
       }
       
       public override MetricsGossipEnvelope BuildPartial() {
@@ -4862,7 +4862,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(MetricsGossipEnvelope other) {
-        if (other == global::Akka.Cluster.Proto.MetricsGossipEnvelope.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.MetricsGossipEnvelope.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasFrom) {
           MergeFrom(other.From);
@@ -4917,7 +4917,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 10: {
-              global::Akka.Cluster.Proto.Address.Builder subBuilder = global::Akka.Cluster.Proto.Address.CreateBuilder();
+              global::Akka.Cluster.Proto.Msg.Address.Builder subBuilder = global::Akka.Cluster.Proto.Msg.Address.CreateBuilder();
               if (result.hasFrom) {
                 subBuilder.MergeFrom(From);
               }
@@ -4926,7 +4926,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 18: {
-              global::Akka.Cluster.Proto.MetricsGossip.Builder subBuilder = global::Akka.Cluster.Proto.MetricsGossip.CreateBuilder();
+              global::Akka.Cluster.Proto.Msg.MetricsGossip.Builder subBuilder = global::Akka.Cluster.Proto.Msg.MetricsGossip.CreateBuilder();
               if (result.hasGossip) {
                 subBuilder.MergeFrom(Gossip);
               }
@@ -4951,30 +4951,30 @@ namespace Akka.Cluster.Proto {
       public bool HasFrom {
        get { return result.hasFrom; }
       }
-      public global::Akka.Cluster.Proto.Address From {
+      public global::Akka.Cluster.Proto.Msg.Address From {
         get { return result.From; }
         set { SetFrom(value); }
       }
-      public Builder SetFrom(global::Akka.Cluster.Proto.Address value) {
+      public Builder SetFrom(global::Akka.Cluster.Proto.Msg.Address value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasFrom = true;
         result.from_ = value;
         return this;
       }
-      public Builder SetFrom(global::Akka.Cluster.Proto.Address.Builder builderForValue) {
+      public Builder SetFrom(global::Akka.Cluster.Proto.Msg.Address.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasFrom = true;
         result.from_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeFrom(global::Akka.Cluster.Proto.Address value) {
+      public Builder MergeFrom(global::Akka.Cluster.Proto.Msg.Address value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasFrom &&
-            result.from_ != global::Akka.Cluster.Proto.Address.DefaultInstance) {
-            result.from_ = global::Akka.Cluster.Proto.Address.CreateBuilder(result.from_).MergeFrom(value).BuildPartial();
+            result.from_ != global::Akka.Cluster.Proto.Msg.Address.DefaultInstance) {
+            result.from_ = global::Akka.Cluster.Proto.Msg.Address.CreateBuilder(result.from_).MergeFrom(value).BuildPartial();
         } else {
           result.from_ = value;
         }
@@ -4991,30 +4991,30 @@ namespace Akka.Cluster.Proto {
       public bool HasGossip {
        get { return result.hasGossip; }
       }
-      public global::Akka.Cluster.Proto.MetricsGossip Gossip {
+      public global::Akka.Cluster.Proto.Msg.MetricsGossip Gossip {
         get { return result.Gossip; }
         set { SetGossip(value); }
       }
-      public Builder SetGossip(global::Akka.Cluster.Proto.MetricsGossip value) {
+      public Builder SetGossip(global::Akka.Cluster.Proto.Msg.MetricsGossip value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasGossip = true;
         result.gossip_ = value;
         return this;
       }
-      public Builder SetGossip(global::Akka.Cluster.Proto.MetricsGossip.Builder builderForValue) {
+      public Builder SetGossip(global::Akka.Cluster.Proto.Msg.MetricsGossip.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasGossip = true;
         result.gossip_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeGossip(global::Akka.Cluster.Proto.MetricsGossip value) {
+      public Builder MergeGossip(global::Akka.Cluster.Proto.Msg.MetricsGossip value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasGossip &&
-            result.gossip_ != global::Akka.Cluster.Proto.MetricsGossip.DefaultInstance) {
-            result.gossip_ = global::Akka.Cluster.Proto.MetricsGossip.CreateBuilder(result.gossip_).MergeFrom(value).BuildPartial();
+            result.gossip_ != global::Akka.Cluster.Proto.Msg.MetricsGossip.DefaultInstance) {
+            result.gossip_ = global::Akka.Cluster.Proto.Msg.MetricsGossip.CreateBuilder(result.gossip_).MergeFrom(value).BuildPartial();
         } else {
           result.gossip_ = value;
         }
@@ -5049,7 +5049,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static MetricsGossipEnvelope() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -5072,22 +5072,22 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_MetricsGossip__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_MetricsGossip__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<MetricsGossip, MetricsGossip.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_MetricsGossip__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_MetricsGossip__FieldAccessorTable; }
     }
     
     public const int AllAddressesFieldNumber = 1;
-    private pbc::PopsicleList<global::Akka.Cluster.Proto.Address> allAddresses_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.Address>();
-    public scg::IList<global::Akka.Cluster.Proto.Address> AllAddressesList {
+    private pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.Address> allAddresses_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.Address>();
+    public scg::IList<global::Akka.Cluster.Proto.Msg.Address> AllAddressesList {
       get { return allAddresses_; }
     }
     public int AllAddressesCount {
       get { return allAddresses_.Count; }
     }
-    public global::Akka.Cluster.Proto.Address GetAllAddresses(int index) {
+    public global::Akka.Cluster.Proto.Msg.Address GetAllAddresses(int index) {
       return allAddresses_[index];
     }
     
@@ -5104,23 +5104,23 @@ namespace Akka.Cluster.Proto {
     }
     
     public const int NodeMetricsFieldNumber = 3;
-    private pbc::PopsicleList<global::Akka.Cluster.Proto.NodeMetrics> nodeMetrics_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.NodeMetrics>();
-    public scg::IList<global::Akka.Cluster.Proto.NodeMetrics> NodeMetricsList {
+    private pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.NodeMetrics> nodeMetrics_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.NodeMetrics>();
+    public scg::IList<global::Akka.Cluster.Proto.Msg.NodeMetrics> NodeMetricsList {
       get { return nodeMetrics_; }
     }
     public int NodeMetricsCount {
       get { return nodeMetrics_.Count; }
     }
-    public global::Akka.Cluster.Proto.NodeMetrics GetNodeMetrics(int index) {
+    public global::Akka.Cluster.Proto.Msg.NodeMetrics GetNodeMetrics(int index) {
       return nodeMetrics_[index];
     }
     
     public override bool IsInitialized {
       get {
-        foreach (global::Akka.Cluster.Proto.Address element in AllAddressesList) {
+        foreach (global::Akka.Cluster.Proto.Msg.Address element in AllAddressesList) {
           if (!element.IsInitialized) return false;
         }
-        foreach (global::Akka.Cluster.Proto.NodeMetrics element in NodeMetricsList) {
+        foreach (global::Akka.Cluster.Proto.Msg.NodeMetrics element in NodeMetricsList) {
           if (!element.IsInitialized) return false;
         }
         return true;
@@ -5149,7 +5149,7 @@ namespace Akka.Cluster.Proto {
         if (size != -1) return size;
         
         size = 0;
-        foreach (global::Akka.Cluster.Proto.Address element in AllAddressesList) {
+        foreach (global::Akka.Cluster.Proto.Msg.Address element in AllAddressesList) {
           size += pb::CodedOutputStream.ComputeMessageSize(1, element);
         }
         {
@@ -5160,7 +5160,7 @@ namespace Akka.Cluster.Proto {
           size += dataSize;
           size += 1 * allMetricNames_.Count;
         }
-        foreach (global::Akka.Cluster.Proto.NodeMetrics element in NodeMetricsList) {
+        foreach (global::Akka.Cluster.Proto.Msg.NodeMetrics element in NodeMetricsList) {
           size += pb::CodedOutputStream.ComputeMessageSize(3, element);
         }
         size += UnknownFields.SerializedSize;
@@ -5263,11 +5263,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.MetricsGossip.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.MetricsGossip.Descriptor; }
       }
       
       public override MetricsGossip DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.MetricsGossip.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.MetricsGossip.DefaultInstance; }
       }
       
       public override MetricsGossip BuildPartial() {
@@ -5288,7 +5288,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(MetricsGossip other) {
-        if (other == global::Akka.Cluster.Proto.MetricsGossip.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.MetricsGossip.DefaultInstance) return this;
         PrepareBuilder();
         if (other.allAddresses_.Count != 0) {
           result.allAddresses_.Add(other.allAddresses_);
@@ -5343,7 +5343,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 10: {
-              input.ReadMessageArray(tag, field_name, result.allAddresses_, global::Akka.Cluster.Proto.Address.DefaultInstance, extensionRegistry);
+              input.ReadMessageArray(tag, field_name, result.allAddresses_, global::Akka.Cluster.Proto.Msg.Address.DefaultInstance, extensionRegistry);
               break;
             }
             case 18: {
@@ -5351,7 +5351,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 26: {
-              input.ReadMessageArray(tag, field_name, result.nodeMetrics_, global::Akka.Cluster.Proto.NodeMetrics.DefaultInstance, extensionRegistry);
+              input.ReadMessageArray(tag, field_name, result.nodeMetrics_, global::Akka.Cluster.Proto.Msg.NodeMetrics.DefaultInstance, extensionRegistry);
               break;
             }
           }
@@ -5364,40 +5364,40 @@ namespace Akka.Cluster.Proto {
       }
       
       
-      public pbc::IPopsicleList<global::Akka.Cluster.Proto.Address> AllAddressesList {
+      public pbc::IPopsicleList<global::Akka.Cluster.Proto.Msg.Address> AllAddressesList {
         get { return PrepareBuilder().allAddresses_; }
       }
       public int AllAddressesCount {
         get { return result.AllAddressesCount; }
       }
-      public global::Akka.Cluster.Proto.Address GetAllAddresses(int index) {
+      public global::Akka.Cluster.Proto.Msg.Address GetAllAddresses(int index) {
         return result.GetAllAddresses(index);
       }
-      public Builder SetAllAddresses(int index, global::Akka.Cluster.Proto.Address value) {
+      public Builder SetAllAddresses(int index, global::Akka.Cluster.Proto.Msg.Address value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.allAddresses_[index] = value;
         return this;
       }
-      public Builder SetAllAddresses(int index, global::Akka.Cluster.Proto.Address.Builder builderForValue) {
+      public Builder SetAllAddresses(int index, global::Akka.Cluster.Proto.Msg.Address.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.allAddresses_[index] = builderForValue.Build();
         return this;
       }
-      public Builder AddAllAddresses(global::Akka.Cluster.Proto.Address value) {
+      public Builder AddAllAddresses(global::Akka.Cluster.Proto.Msg.Address value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.allAddresses_.Add(value);
         return this;
       }
-      public Builder AddAllAddresses(global::Akka.Cluster.Proto.Address.Builder builderForValue) {
+      public Builder AddAllAddresses(global::Akka.Cluster.Proto.Msg.Address.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.allAddresses_.Add(builderForValue.Build());
         return this;
       }
-      public Builder AddRangeAllAddresses(scg::IEnumerable<global::Akka.Cluster.Proto.Address> values) {
+      public Builder AddRangeAllAddresses(scg::IEnumerable<global::Akka.Cluster.Proto.Msg.Address> values) {
         PrepareBuilder();
         result.allAddresses_.Add(values);
         return this;
@@ -5440,40 +5440,40 @@ namespace Akka.Cluster.Proto {
         return this;
       }
       
-      public pbc::IPopsicleList<global::Akka.Cluster.Proto.NodeMetrics> NodeMetricsList {
+      public pbc::IPopsicleList<global::Akka.Cluster.Proto.Msg.NodeMetrics> NodeMetricsList {
         get { return PrepareBuilder().nodeMetrics_; }
       }
       public int NodeMetricsCount {
         get { return result.NodeMetricsCount; }
       }
-      public global::Akka.Cluster.Proto.NodeMetrics GetNodeMetrics(int index) {
+      public global::Akka.Cluster.Proto.Msg.NodeMetrics GetNodeMetrics(int index) {
         return result.GetNodeMetrics(index);
       }
-      public Builder SetNodeMetrics(int index, global::Akka.Cluster.Proto.NodeMetrics value) {
+      public Builder SetNodeMetrics(int index, global::Akka.Cluster.Proto.Msg.NodeMetrics value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.nodeMetrics_[index] = value;
         return this;
       }
-      public Builder SetNodeMetrics(int index, global::Akka.Cluster.Proto.NodeMetrics.Builder builderForValue) {
+      public Builder SetNodeMetrics(int index, global::Akka.Cluster.Proto.Msg.NodeMetrics.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.nodeMetrics_[index] = builderForValue.Build();
         return this;
       }
-      public Builder AddNodeMetrics(global::Akka.Cluster.Proto.NodeMetrics value) {
+      public Builder AddNodeMetrics(global::Akka.Cluster.Proto.Msg.NodeMetrics value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.nodeMetrics_.Add(value);
         return this;
       }
-      public Builder AddNodeMetrics(global::Akka.Cluster.Proto.NodeMetrics.Builder builderForValue) {
+      public Builder AddNodeMetrics(global::Akka.Cluster.Proto.Msg.NodeMetrics.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.nodeMetrics_.Add(builderForValue.Build());
         return this;
       }
-      public Builder AddRangeNodeMetrics(scg::IEnumerable<global::Akka.Cluster.Proto.NodeMetrics> values) {
+      public Builder AddRangeNodeMetrics(scg::IEnumerable<global::Akka.Cluster.Proto.Msg.NodeMetrics> values) {
         PrepareBuilder();
         result.nodeMetrics_.Add(values);
         return this;
@@ -5485,7 +5485,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static MetricsGossip() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -5508,11 +5508,11 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_NodeMetrics__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_NodeMetrics__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<NodeMetrics, NodeMetrics.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_NodeMetrics__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_NodeMetrics__FieldAccessorTable; }
     }
     
     #region Nested types
@@ -5545,20 +5545,20 @@ namespace Akka.Cluster.Proto {
         }
         
         public static pbd::MessageDescriptor Descriptor {
-          get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_NodeMetrics_Number__Descriptor; }
+          get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_NodeMetrics_Number__Descriptor; }
         }
         
         protected override pb::FieldAccess.FieldAccessorTable<Number, Number.Builder> InternalFieldAccessors {
-          get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_NodeMetrics_Number__FieldAccessorTable; }
+          get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_NodeMetrics_Number__FieldAccessorTable; }
         }
         
         public const int TypeFieldNumber = 1;
         private bool hasType;
-        private global::Akka.Cluster.Proto.NodeMetrics.Types.NumberType type_ = global::Akka.Cluster.Proto.NodeMetrics.Types.NumberType.Serialized;
+        private global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.NumberType type_ = global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.NumberType.Serialized;
         public bool HasType {
           get { return hasType; }
         }
-        public global::Akka.Cluster.Proto.NodeMetrics.Types.NumberType Type {
+        public global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.NumberType Type {
           get { return type_; }
         }
         
@@ -5735,11 +5735,11 @@ namespace Akka.Cluster.Proto {
           }
           
           public override pbd::MessageDescriptor DescriptorForType {
-            get { return global::Akka.Cluster.Proto.NodeMetrics.Types.Number.Descriptor; }
+            get { return global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Descriptor; }
           }
           
           public override Number DefaultInstanceForType {
-            get { return global::Akka.Cluster.Proto.NodeMetrics.Types.Number.DefaultInstance; }
+            get { return global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.DefaultInstance; }
           }
           
           public override Number BuildPartial() {
@@ -5760,7 +5760,7 @@ namespace Akka.Cluster.Proto {
           }
           
           public override Builder MergeFrom(Number other) {
-            if (other == global::Akka.Cluster.Proto.NodeMetrics.Types.Number.DefaultInstance) return this;
+            if (other == global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.DefaultInstance) return this;
             PrepareBuilder();
             if (other.HasType) {
               Type = other.Type;
@@ -5854,11 +5854,11 @@ namespace Akka.Cluster.Proto {
           public bool HasType {
            get { return result.hasType; }
           }
-          public global::Akka.Cluster.Proto.NodeMetrics.Types.NumberType Type {
+          public global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.NumberType Type {
             get { return result.Type; }
             set { SetType(value); }
           }
-          public Builder SetType(global::Akka.Cluster.Proto.NodeMetrics.Types.NumberType value) {
+          public Builder SetType(global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.NumberType value) {
             PrepareBuilder();
             result.hasType = true;
             result.type_ = value;
@@ -5867,7 +5867,7 @@ namespace Akka.Cluster.Proto {
           public Builder ClearType() {
             PrepareBuilder();
             result.hasType = false;
-            result.type_ = global::Akka.Cluster.Proto.NodeMetrics.Types.NumberType.Serialized;
+            result.type_ = global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.NumberType.Serialized;
             return this;
           }
           
@@ -5937,7 +5937,7 @@ namespace Akka.Cluster.Proto {
           }
         }
         static Number() {
-          object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+          object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
         }
       }
       
@@ -5960,11 +5960,11 @@ namespace Akka.Cluster.Proto {
         }
         
         public static pbd::MessageDescriptor Descriptor {
-          get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_NodeMetrics_EWMA__Descriptor; }
+          get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_NodeMetrics_EWMA__Descriptor; }
         }
         
         protected override pb::FieldAccess.FieldAccessorTable<EWMA, EWMA.Builder> InternalFieldAccessors {
-          get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_NodeMetrics_EWMA__FieldAccessorTable; }
+          get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_NodeMetrics_EWMA__FieldAccessorTable; }
         }
         
         public const int ValueFieldNumber = 1;
@@ -6117,11 +6117,11 @@ namespace Akka.Cluster.Proto {
           }
           
           public override pbd::MessageDescriptor DescriptorForType {
-            get { return global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA.Descriptor; }
+            get { return global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Descriptor; }
           }
           
           public override EWMA DefaultInstanceForType {
-            get { return global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA.DefaultInstance; }
+            get { return global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.DefaultInstance; }
           }
           
           public override EWMA BuildPartial() {
@@ -6142,7 +6142,7 @@ namespace Akka.Cluster.Proto {
           }
           
           public override Builder MergeFrom(EWMA other) {
-            if (other == global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA.DefaultInstance) return this;
+            if (other == global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.DefaultInstance) return this;
             PrepareBuilder();
             if (other.HasValue) {
               Value = other.Value;
@@ -6252,7 +6252,7 @@ namespace Akka.Cluster.Proto {
           }
         }
         static EWMA() {
-          object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+          object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
         }
       }
       
@@ -6275,11 +6275,11 @@ namespace Akka.Cluster.Proto {
         }
         
         public static pbd::MessageDescriptor Descriptor {
-          get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_NodeMetrics_Metric__Descriptor; }
+          get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_NodeMetrics_Metric__Descriptor; }
         }
         
         protected override pb::FieldAccess.FieldAccessorTable<Metric, Metric.Builder> InternalFieldAccessors {
-          get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_NodeMetrics_Metric__FieldAccessorTable; }
+          get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_NodeMetrics_Metric__FieldAccessorTable; }
         }
         
         public const int NameIndexFieldNumber = 1;
@@ -6294,22 +6294,22 @@ namespace Akka.Cluster.Proto {
         
         public const int NumberFieldNumber = 2;
         private bool hasNumber;
-        private global::Akka.Cluster.Proto.NodeMetrics.Types.Number number_;
+        private global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number number_;
         public bool HasNumber {
           get { return hasNumber; }
         }
-        public global::Akka.Cluster.Proto.NodeMetrics.Types.Number Number {
-          get { return number_ ?? global::Akka.Cluster.Proto.NodeMetrics.Types.Number.DefaultInstance; }
+        public global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number Number {
+          get { return number_ ?? global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.DefaultInstance; }
         }
         
         public const int EwmaFieldNumber = 3;
         private bool hasEwma;
-        private global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA ewma_;
+        private global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA ewma_;
         public bool HasEwma {
           get { return hasEwma; }
         }
-        public global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA Ewma {
-          get { return ewma_ ?? global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA.DefaultInstance; }
+        public global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA Ewma {
+          get { return ewma_ ?? global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.DefaultInstance; }
         }
         
         public override bool IsInitialized {
@@ -6452,11 +6452,11 @@ namespace Akka.Cluster.Proto {
           }
           
           public override pbd::MessageDescriptor DescriptorForType {
-            get { return global::Akka.Cluster.Proto.NodeMetrics.Types.Metric.Descriptor; }
+            get { return global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Descriptor; }
           }
           
           public override Metric DefaultInstanceForType {
-            get { return global::Akka.Cluster.Proto.NodeMetrics.Types.Metric.DefaultInstance; }
+            get { return global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.DefaultInstance; }
           }
           
           public override Metric BuildPartial() {
@@ -6477,7 +6477,7 @@ namespace Akka.Cluster.Proto {
           }
           
           public override Builder MergeFrom(Metric other) {
-            if (other == global::Akka.Cluster.Proto.NodeMetrics.Types.Metric.DefaultInstance) return this;
+            if (other == global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.DefaultInstance) return this;
             PrepareBuilder();
             if (other.HasNameIndex) {
               NameIndex = other.NameIndex;
@@ -6536,7 +6536,7 @@ namespace Akka.Cluster.Proto {
                   break;
                 }
                 case 18: {
-                  global::Akka.Cluster.Proto.NodeMetrics.Types.Number.Builder subBuilder = global::Akka.Cluster.Proto.NodeMetrics.Types.Number.CreateBuilder();
+                  global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder subBuilder = global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.CreateBuilder();
                   if (result.hasNumber) {
                     subBuilder.MergeFrom(Number);
                   }
@@ -6545,7 +6545,7 @@ namespace Akka.Cluster.Proto {
                   break;
                 }
                 case 26: {
-                  global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA.Builder subBuilder = global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA.CreateBuilder();
+                  global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder subBuilder = global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.CreateBuilder();
                   if (result.hasEwma) {
                     subBuilder.MergeFrom(Ewma);
                   }
@@ -6586,30 +6586,30 @@ namespace Akka.Cluster.Proto {
           public bool HasNumber {
            get { return result.hasNumber; }
           }
-          public global::Akka.Cluster.Proto.NodeMetrics.Types.Number Number {
+          public global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number Number {
             get { return result.Number; }
             set { SetNumber(value); }
           }
-          public Builder SetNumber(global::Akka.Cluster.Proto.NodeMetrics.Types.Number value) {
+          public Builder SetNumber(global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number value) {
             pb::ThrowHelper.ThrowIfNull(value, "value");
             PrepareBuilder();
             result.hasNumber = true;
             result.number_ = value;
             return this;
           }
-          public Builder SetNumber(global::Akka.Cluster.Proto.NodeMetrics.Types.Number.Builder builderForValue) {
+          public Builder SetNumber(global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.Builder builderForValue) {
             pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
             PrepareBuilder();
             result.hasNumber = true;
             result.number_ = builderForValue.Build();
             return this;
           }
-          public Builder MergeNumber(global::Akka.Cluster.Proto.NodeMetrics.Types.Number value) {
+          public Builder MergeNumber(global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number value) {
             pb::ThrowHelper.ThrowIfNull(value, "value");
             PrepareBuilder();
             if (result.hasNumber &&
-                result.number_ != global::Akka.Cluster.Proto.NodeMetrics.Types.Number.DefaultInstance) {
-                result.number_ = global::Akka.Cluster.Proto.NodeMetrics.Types.Number.CreateBuilder(result.number_).MergeFrom(value).BuildPartial();
+                result.number_ != global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.DefaultInstance) {
+                result.number_ = global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Number.CreateBuilder(result.number_).MergeFrom(value).BuildPartial();
             } else {
               result.number_ = value;
             }
@@ -6626,30 +6626,30 @@ namespace Akka.Cluster.Proto {
           public bool HasEwma {
            get { return result.hasEwma; }
           }
-          public global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA Ewma {
+          public global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA Ewma {
             get { return result.Ewma; }
             set { SetEwma(value); }
           }
-          public Builder SetEwma(global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA value) {
+          public Builder SetEwma(global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA value) {
             pb::ThrowHelper.ThrowIfNull(value, "value");
             PrepareBuilder();
             result.hasEwma = true;
             result.ewma_ = value;
             return this;
           }
-          public Builder SetEwma(global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA.Builder builderForValue) {
+          public Builder SetEwma(global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.Builder builderForValue) {
             pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
             PrepareBuilder();
             result.hasEwma = true;
             result.ewma_ = builderForValue.Build();
             return this;
           }
-          public Builder MergeEwma(global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA value) {
+          public Builder MergeEwma(global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA value) {
             pb::ThrowHelper.ThrowIfNull(value, "value");
             PrepareBuilder();
             if (result.hasEwma &&
-                result.ewma_ != global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA.DefaultInstance) {
-                result.ewma_ = global::Akka.Cluster.Proto.NodeMetrics.Types.EWMA.CreateBuilder(result.ewma_).MergeFrom(value).BuildPartial();
+                result.ewma_ != global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.DefaultInstance) {
+                result.ewma_ = global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.EWMA.CreateBuilder(result.ewma_).MergeFrom(value).BuildPartial();
             } else {
               result.ewma_ = value;
             }
@@ -6664,7 +6664,7 @@ namespace Akka.Cluster.Proto {
           }
         }
         static Metric() {
-          object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+          object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
         }
       }
       
@@ -6692,14 +6692,14 @@ namespace Akka.Cluster.Proto {
     }
     
     public const int MetricsFieldNumber = 3;
-    private pbc::PopsicleList<global::Akka.Cluster.Proto.NodeMetrics.Types.Metric> metrics_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.NodeMetrics.Types.Metric>();
-    public scg::IList<global::Akka.Cluster.Proto.NodeMetrics.Types.Metric> MetricsList {
+    private pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric> metrics_ = new pbc::PopsicleList<global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric>();
+    public scg::IList<global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric> MetricsList {
       get { return metrics_; }
     }
     public int MetricsCount {
       get { return metrics_.Count; }
     }
-    public global::Akka.Cluster.Proto.NodeMetrics.Types.Metric GetMetrics(int index) {
+    public global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric GetMetrics(int index) {
       return metrics_[index];
     }
     
@@ -6707,7 +6707,7 @@ namespace Akka.Cluster.Proto {
       get {
         if (!hasAddressIndex) return false;
         if (!hasTimestamp) return false;
-        foreach (global::Akka.Cluster.Proto.NodeMetrics.Types.Metric element in MetricsList) {
+        foreach (global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric element in MetricsList) {
           if (!element.IsInitialized) return false;
         }
         return true;
@@ -6742,7 +6742,7 @@ namespace Akka.Cluster.Proto {
         if (hasTimestamp) {
           size += pb::CodedOutputStream.ComputeInt64Size(2, Timestamp);
         }
-        foreach (global::Akka.Cluster.Proto.NodeMetrics.Types.Metric element in MetricsList) {
+        foreach (global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric element in MetricsList) {
           size += pb::CodedOutputStream.ComputeMessageSize(3, element);
         }
         size += UnknownFields.SerializedSize;
@@ -6843,11 +6843,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.NodeMetrics.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.NodeMetrics.Descriptor; }
       }
       
       public override NodeMetrics DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.NodeMetrics.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.NodeMetrics.DefaultInstance; }
       }
       
       public override NodeMetrics BuildPartial() {
@@ -6868,7 +6868,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(NodeMetrics other) {
-        if (other == global::Akka.Cluster.Proto.NodeMetrics.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.NodeMetrics.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasAddressIndex) {
           AddressIndex = other.AddressIndex;
@@ -6931,7 +6931,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 26: {
-              input.ReadMessageArray(tag, field_name, result.metrics_, global::Akka.Cluster.Proto.NodeMetrics.Types.Metric.DefaultInstance, extensionRegistry);
+              input.ReadMessageArray(tag, field_name, result.metrics_, global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.DefaultInstance, extensionRegistry);
               break;
             }
           }
@@ -6984,40 +6984,40 @@ namespace Akka.Cluster.Proto {
         return this;
       }
       
-      public pbc::IPopsicleList<global::Akka.Cluster.Proto.NodeMetrics.Types.Metric> MetricsList {
+      public pbc::IPopsicleList<global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric> MetricsList {
         get { return PrepareBuilder().metrics_; }
       }
       public int MetricsCount {
         get { return result.MetricsCount; }
       }
-      public global::Akka.Cluster.Proto.NodeMetrics.Types.Metric GetMetrics(int index) {
+      public global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric GetMetrics(int index) {
         return result.GetMetrics(index);
       }
-      public Builder SetMetrics(int index, global::Akka.Cluster.Proto.NodeMetrics.Types.Metric value) {
+      public Builder SetMetrics(int index, global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.metrics_[index] = value;
         return this;
       }
-      public Builder SetMetrics(int index, global::Akka.Cluster.Proto.NodeMetrics.Types.Metric.Builder builderForValue) {
+      public Builder SetMetrics(int index, global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.metrics_[index] = builderForValue.Build();
         return this;
       }
-      public Builder AddMetrics(global::Akka.Cluster.Proto.NodeMetrics.Types.Metric value) {
+      public Builder AddMetrics(global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.metrics_.Add(value);
         return this;
       }
-      public Builder AddMetrics(global::Akka.Cluster.Proto.NodeMetrics.Types.Metric.Builder builderForValue) {
+      public Builder AddMetrics(global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.metrics_.Add(builderForValue.Build());
         return this;
       }
-      public Builder AddRangeMetrics(scg::IEnumerable<global::Akka.Cluster.Proto.NodeMetrics.Types.Metric> values) {
+      public Builder AddRangeMetrics(scg::IEnumerable<global::Akka.Cluster.Proto.Msg.NodeMetrics.Types.Metric> values) {
         PrepareBuilder();
         result.metrics_.Add(values);
         return this;
@@ -7029,7 +7029,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static NodeMetrics() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -7052,11 +7052,11 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_Empty__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_Empty__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<Empty, Empty.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_Empty__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_Empty__FieldAccessorTable; }
     }
     
     public override bool IsInitialized {
@@ -7175,11 +7175,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.Empty.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.Empty.Descriptor; }
       }
       
       public override Empty DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.Empty.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.Empty.DefaultInstance; }
       }
       
       public override Empty BuildPartial() {
@@ -7200,7 +7200,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(Empty other) {
-        if (other == global::Akka.Cluster.Proto.Empty.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.Empty.DefaultInstance) return this;
         PrepareBuilder();
         this.MergeUnknownFields(other.UnknownFields);
         return this;
@@ -7256,7 +7256,7 @@ namespace Akka.Cluster.Proto {
       
     }
     static Empty() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -7279,11 +7279,11 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_Address__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_Address__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<Address, Address.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_Address__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_Address__FieldAccessorTable; }
     }
     
     public const int SystemFieldNumber = 1;
@@ -7470,11 +7470,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.Address.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.Address.Descriptor; }
       }
       
       public override Address DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.Address.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.Address.DefaultInstance; }
       }
       
       public override Address BuildPartial() {
@@ -7495,7 +7495,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(Address other) {
-        if (other == global::Akka.Cluster.Proto.Address.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.Address.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasSystem) {
           System = other.System;
@@ -7664,7 +7664,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static Address() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
@@ -7687,21 +7687,21 @@ namespace Akka.Cluster.Proto {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_UniqueAddress__Descriptor; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_UniqueAddress__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<UniqueAddress, UniqueAddress.Builder> InternalFieldAccessors {
-      get { return global::Akka.Cluster.Proto.ClusterMessages.internal__static_UniqueAddress__FieldAccessorTable; }
+      get { return global::Akka.Cluster.Proto.Msg.ClusterMessages.internal__static_UniqueAddress__FieldAccessorTable; }
     }
     
     public const int AddressFieldNumber = 1;
     private bool hasAddress;
-    private global::Akka.Cluster.Proto.Address address_;
+    private global::Akka.Cluster.Proto.Msg.Address address_;
     public bool HasAddress {
       get { return hasAddress; }
     }
-    public global::Akka.Cluster.Proto.Address Address {
-      get { return address_ ?? global::Akka.Cluster.Proto.Address.DefaultInstance; }
+    public global::Akka.Cluster.Proto.Msg.Address Address {
+      get { return address_ ?? global::Akka.Cluster.Proto.Msg.Address.DefaultInstance; }
     }
     
     public const int UidFieldNumber = 2;
@@ -7846,11 +7846,11 @@ namespace Akka.Cluster.Proto {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Cluster.Proto.UniqueAddress.Descriptor; }
+        get { return global::Akka.Cluster.Proto.Msg.UniqueAddress.Descriptor; }
       }
       
       public override UniqueAddress DefaultInstanceForType {
-        get { return global::Akka.Cluster.Proto.UniqueAddress.DefaultInstance; }
+        get { return global::Akka.Cluster.Proto.Msg.UniqueAddress.DefaultInstance; }
       }
       
       public override UniqueAddress BuildPartial() {
@@ -7871,7 +7871,7 @@ namespace Akka.Cluster.Proto {
       }
       
       public override Builder MergeFrom(UniqueAddress other) {
-        if (other == global::Akka.Cluster.Proto.UniqueAddress.DefaultInstance) return this;
+        if (other == global::Akka.Cluster.Proto.Msg.UniqueAddress.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasAddress) {
           MergeAddress(other.Address);
@@ -7923,7 +7923,7 @@ namespace Akka.Cluster.Proto {
               break;
             }
             case 10: {
-              global::Akka.Cluster.Proto.Address.Builder subBuilder = global::Akka.Cluster.Proto.Address.CreateBuilder();
+              global::Akka.Cluster.Proto.Msg.Address.Builder subBuilder = global::Akka.Cluster.Proto.Msg.Address.CreateBuilder();
               if (result.hasAddress) {
                 subBuilder.MergeFrom(Address);
               }
@@ -7948,30 +7948,30 @@ namespace Akka.Cluster.Proto {
       public bool HasAddress {
        get { return result.hasAddress; }
       }
-      public global::Akka.Cluster.Proto.Address Address {
+      public global::Akka.Cluster.Proto.Msg.Address Address {
         get { return result.Address; }
         set { SetAddress(value); }
       }
-      public Builder SetAddress(global::Akka.Cluster.Proto.Address value) {
+      public Builder SetAddress(global::Akka.Cluster.Proto.Msg.Address value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasAddress = true;
         result.address_ = value;
         return this;
       }
-      public Builder SetAddress(global::Akka.Cluster.Proto.Address.Builder builderForValue) {
+      public Builder SetAddress(global::Akka.Cluster.Proto.Msg.Address.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasAddress = true;
         result.address_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeAddress(global::Akka.Cluster.Proto.Address value) {
+      public Builder MergeAddress(global::Akka.Cluster.Proto.Msg.Address value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasAddress &&
-            result.address_ != global::Akka.Cluster.Proto.Address.DefaultInstance) {
-            result.address_ = global::Akka.Cluster.Proto.Address.CreateBuilder(result.address_).MergeFrom(value).BuildPartial();
+            result.address_ != global::Akka.Cluster.Proto.Msg.Address.DefaultInstance) {
+            result.address_ = global::Akka.Cluster.Proto.Msg.Address.CreateBuilder(result.address_).MergeFrom(value).BuildPartial();
         } else {
           result.address_ = value;
         }
@@ -8008,7 +8008,7 @@ namespace Akka.Cluster.Proto {
       }
     }
     static UniqueAddress() {
-      object.ReferenceEquals(global::Akka.Cluster.Proto.ClusterMessages.Descriptor, null);
+      object.ReferenceEquals(global::Akka.Cluster.Proto.Msg.ClusterMessages.Descriptor, null);
     }
   }
   
