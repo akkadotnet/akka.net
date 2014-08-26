@@ -115,13 +115,6 @@
     <EmbeddedResource Include="Configuration\Remote.conf" />
     <None Include="app.config" />
     <None Include="packages.config" />
-    <None Include="protos\google\protobuf\csharp_options.proto" />
-    <None Include="protos\google\protobuf\descriptor.proto" />
-    <None Include="protos\tutorial\addressbook.proto" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="licenses\license.txt" />
-    <Content Include="licenses\protoc-license.txt" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka\Akka.csproj">
