@@ -78,7 +78,7 @@ namespace Akka.Cluster
             /// <summary>
             /// Get current member list
             /// </summary>
-            public IEnumerable<Member> Members
+            public ImmutableSortedSet<Member> Members
             {
                 get { return _members; }
             }
@@ -117,6 +117,14 @@ namespace Akka.Cluster
             }
 
             /// <summary>
+            /// Needed internally inside the <see cref="ClusterReadView"/>
+            /// </summary>
+            internal ImmutableDictionary<string, Address> RoleLeaderMap
+            {
+                get { return _roleLeaderMap; }
+            }
+
+            /// <summary>
             /// Get address of current leader, if any, within the role set
             /// </summary>
             public Address RoleLeader(string role)
@@ -124,6 +132,22 @@ namespace Akka.Cluster
                 return _roleLeaderMap.GetOrElse(role, null);
             }
 
+            /// <summary>
+            /// Creates a deep copy of the <see cref="CurrentClusterState"/> and optionally allows you
+            /// to specify different values for the outgoing objects
+            /// </summary>
+            public CurrentClusterState Copy(ImmutableSortedSet<Member> members = null,
+                ImmutableHashSet<Member> unreachable = null,
+                ImmutableHashSet<Address> seenBy = null,
+                Address leader = null,
+                ImmutableDictionary<string, Address> roleLeaderMap = null)
+            {
+                return new CurrentClusterState(members ?? _members,
+                    unreachable ?? _unreachable,
+                    seenBy ?? _seenBy,
+                    leader ?? (_leader != null ? (Address)_leader.Clone() : null),
+                    roleLeaderMap ?? _roleLeaderMap);
+            }
         }
 
         /// <summary>
@@ -395,11 +419,11 @@ namespace Akka.Cluster
         /// <summary>
         /// Current snapshot of cluster node metrics. Published to subscribers.
         /// </summary>
-        public class ClusterMetricChanged : IClusterDomainEvent
+        public class ClusterMetricsChanged : IClusterDomainEvent
         {
             private readonly ImmutableHashSet<NodeMetrics> _nodeMetrics;
 
-            public ClusterMetricChanged(ImmutableHashSet<NodeMetrics> nodeMetrics)
+            public ClusterMetricsChanged(ImmutableHashSet<NodeMetrics> nodeMetrics)
             {
                 _nodeMetrics = nodeMetrics;
             }
