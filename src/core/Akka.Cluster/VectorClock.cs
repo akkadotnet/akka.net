@@ -115,7 +115,12 @@ namespace Akka.Cluster
 
         public static VectorClock Create()
         {
-            return new VectorClock(ImmutableSortedDictionary.Create<Node, long>());
+            return Create(ImmutableSortedDictionary.Create<Node, long>());
+        }
+
+        public static VectorClock Create(ImmutableSortedDictionary<Node, long> seedValues)
+        {
+            return new VectorClock(seedValues);
         }
 
         VectorClock(ImmutableSortedDictionary<Node, long> versions)
