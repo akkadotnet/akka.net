@@ -1366,19 +1366,6 @@ namespace Akka.Cluster
         public LoggingAdapter Log { get; private set; }
     }
 
-    internal class ClusterHeartbeatSender : UntypedActor
-    {
-        public ClusterHeartbeatSender()
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override void OnReceive(object message)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
     /// <summary>
     /// INTERNAL API
     /// 
