@@ -1403,7 +1403,7 @@ namespace Akka.Cluster
     ///  4. seed2 retries the join procedure and gets an ack from seed1, and then joins to seed1
     ///  5. seed3 retries the join procedure and gets acks from seed2 first, and then joins to seed2
     /// </summary>
-    internal class JoinSeedNodeProcess : UntypedActor, IActorLogging
+    internal sealed class JoinSeedNodeProcess : UntypedActor, IActorLogging
     {
         private LoggingAdapter _log = Logging.GetLogger(Context);
         public LoggingAdapter Log { get { return _log; } }
@@ -1466,11 +1466,93 @@ namespace Akka.Cluster
         }
     }
 
-    internal class FirstSeedNodeProcess
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Used only for the first seed node.
+    /// Sends <see cref="InternalClusterAction.InitJoin"/> to all seed nodes except itself.
+    /// If other seed nodes are not part of the clsuter yet they will reply with 
+    /// <see cref="InternalClusterAction.InitJoinNack"/> or not respond at all and then the
+    /// first seed node will join itself to initialize the new cluster. When the first seed 
+    /// node is restarted, and some otehr seed node is part of the cluster it will reply with
+    /// <see cref="InternalClusterAction.InitJoinAck"/> and then the first seed node will
+    /// join that other seed node to join the existing cluster.
+    /// </summary>
+    internal sealed class FirstSeedNodeProcess : UntypedActor, IActorLogging
     {
-        public FirstSeedNodeProcess()
+        private LoggingAdapter _log = Logging.GetLogger(Context);
+        public LoggingAdapter Log { get { return _log; } }
+
+        private ImmutableHashSet<Address> _remainingSeeds;
+        private Address _selfAddress;
+        private Cluster _cluster;
+        private Deadline _timeout;
+        private Task _retryTask;
+        private CancellationTokenSource _retryTaskToken;
+
+        public FirstSeedNodeProcess(ImmutableHashSet<Address> seeds)
         {
-            throw new NotImplementedException();
+            _cluster = Cluster.Get(Context.System);
+            _selfAddress = _cluster.SelfAddress;
+
+            if (seeds.Count <= 1 || seeds.Head() != _selfAddress)
+                throw new ArgumentException("Join seed node should not be done");
+
+            _remainingSeeds = seeds.Remove(_selfAddress);
+            _timeout = Deadline.Now + _cluster.Settings.SeedNodeTimeout;
+            _retryTaskToken = new CancellationTokenSource();
+            _retryTask = _cluster.Scheduler.Schedule(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), Self,
+                new InternalClusterAction.JoinSeenNode(), _retryTaskToken.Token);
+            Self.Tell(new InternalClusterAction.JoinSeenNode());
+        }
+
+        protected override void PostStop()
+        {
+            _retryTaskToken.Cancel();
+        }
+
+        protected override void OnReceive(object message)
+        {
+            if (message is InternalClusterAction.JoinSeenNode)
+            {
+                if (_timeout.HasTimeLeft)
+                {
+                    // send InitJoin to remaining seed nodes (except myself)
+                    foreach (
+                        var seed in
+                            _remainingSeeds.Select(
+                                x => Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(x))))
+                        seed.Tell(new InternalClusterAction.InitJoin());
+                }
+                else
+                {
+                    // no InitJoinAck received, initialize new cluster by joining myself
+                    Context.Parent.Tell(new ClusterUserAction.JoinTo(_selfAddress));
+                    Context.Stop(Self);
+                }
+            }
+            else if (message is InternalClusterAction.InitJoinAck)
+            {
+                // first InitJoinAck reply, join existing cluster
+                var initJoinAck = (InternalClusterAction.InitJoinAck) message;
+                Context.Parent.Tell(new ClusterUserAction.JoinTo(initJoinAck.Address));
+                Context.Stop(Self);
+            }
+            else if (message is InternalClusterAction.InitJoinNack)
+            {
+                var initJoinNack = (InternalClusterAction.InitJoinNack) message;
+                _remainingSeeds = _remainingSeeds.Remove(initJoinNack.Address);
+                if (!_remainingSeeds.Any())
+                {
+                    // initialize new cluster by joining myself when nacks from all other seed nodes
+                    Context.Parent.Tell(new ClusterUserAction.JoinTo(_selfAddress));
+                    Context.Stop(Self);
+                }
+            }
+            else
+            {
+                Unhandled(message);
+            }
         }
     }
 
