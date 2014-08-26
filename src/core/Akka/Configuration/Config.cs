@@ -285,6 +285,24 @@ namespace Akka.Configuration
             var config = ConfigurationFactory.ParseString(str);
             return config;
         }
+
+        public IEnumerable<KeyValuePair<string, HoconValue>> AsEnumerable()
+        {
+            var used = new HashSet<string>();
+            var current = this;
+            while (current != null)
+            {
+                foreach (var kvp in current.Root.GetObject().AsEnumerable())
+                {
+                    if (!used.Contains(kvp.Key))
+                    {
+                        yield return kvp;
+                        used.Add(kvp.Key);
+                    }
+                }
+                current = current._fallback;
+            }
+        }
     }
 
     public static class ConfigExtensions

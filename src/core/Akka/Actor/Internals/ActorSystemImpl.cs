@@ -46,8 +46,8 @@ namespace Akka.Actor.Internals
             ConfigureScheduler();
             ConfigureSettings(config);
             ConfigureEventStream();
-            ConfigureSerialization();
             ConfigureProvider();
+            ConfigureSerialization();
             ConfigureMailboxes();
             ConfigureDispatchers();
         }

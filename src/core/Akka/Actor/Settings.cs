@@ -11,6 +11,27 @@ namespace Akka.Actor
     /// </summary>
     public class Settings
     {
+        private readonly Config _userConfig;
+        private Config _fallbackConfig;
+
+        /// <summary>
+        /// Combines the user config and the fallback chain of configs
+        /// </summary>
+        private void RebuildConfig()
+        {
+            this.Config = _userConfig.SafeWithFallback(_fallbackConfig);
+        }
+
+        /// <summary>
+        /// Injects a system config at the top of the fallback chain
+        /// </summary>
+        /// <param name="config"></param>
+        public void InjectTopLevelFallback(Config config)
+        {
+            _fallbackConfig = config.SafeWithFallback(_fallbackConfig);
+            RebuildConfig();
+        }
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="Settings" /> class.
         /// </summary>
@@ -18,13 +39,12 @@ namespace Akka.Actor
         /// <param name="config">The configuration.</param>
         public Settings(ActorSystem system, Config config)
         {
-            Config fallback = ConfigurationFactory.Default();
-
-            Config merged = config.SafeWithFallback(fallback);
+            _userConfig = config;
+            _fallbackConfig = ConfigurationFactory.Default();            
+            RebuildConfig();
 
             System = system;
-            Config = merged;
-
+            
             ConfigVersion = Config.GetString("akka.version");
             ProviderClass = Config.GetString("akka.actor.provider");
             var providerType = Type.GetType(ProviderClass);

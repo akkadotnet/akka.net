@@ -9,7 +9,7 @@ using Akka.TestKit;
 using Akka.Tests;
 
 
-namespace Akka.Actor
+namespace Akka.Tests.Actor
 {
     public class ReceiveTimeoutSpec : AkkaSpec
     {
