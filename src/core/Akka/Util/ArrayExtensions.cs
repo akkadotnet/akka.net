@@ -39,5 +39,23 @@ namespace Akka.Util
                 array[randomNumber] = obj;
             }
         }
+
+        /// <summary>
+        /// Implementation of Scala's ZipWithIndex method.
+        /// 
+        /// Folds a collection into a Dictionary where the original value (of type T) acts as the key
+        /// and the index of the item in the array acts as the value.
+        /// </summary>
+        public static Dictionary<T, int> ZipWithIndex<T>(this IEnumerable<T> collection)
+        {
+            var i = 0;
+            var dict = new Dictionary<T, int>();
+            foreach (var item in collection)
+            {
+                dict.Add(item, i);
+                i++;
+            }
+            return dict;
+        }
     }
 }

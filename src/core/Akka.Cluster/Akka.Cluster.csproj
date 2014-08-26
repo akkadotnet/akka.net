@@ -62,7 +62,8 @@
     <Compile Include="Gossip.cs" />
     <Compile Include="Member.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Proto\ClusterMessages.cs" />
+    <Compile Include="Proto\ClusterMessageSerializer.cs" />
+    <Compile Include="Proto\Msg\ClusterMessages.cs" />
     <Compile Include="Reachability.cs" />
     <Compile Include="temp.cs" />
     <Compile Include="Util.cs" />
@@ -80,9 +81,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="CHANGES.txt" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
