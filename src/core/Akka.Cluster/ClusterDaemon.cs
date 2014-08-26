@@ -1379,11 +1379,90 @@ namespace Akka.Cluster
         }
     }
 
-    internal class JoinSeedNodeProcess
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Sends <see cref="InternalClusterAction.InitJoin"/> to all seed nodes (except itself) and expect
+    /// <see cref="InternalClusterAction.InitJoinAck"/> reply back. The seed node that replied first
+    /// will be used and joined to. <see cref="InternalClusterAction.InitJoinAck"/> replies received after
+    /// the first one are ignored.
+    /// 
+    /// Retries if no <see cref="InternalClusterAction.InitJoinAck"/> replies are received within the 
+    /// <see cref="ClusterSettings.SeedNodeTimeout"/>. When at least one reply has been received it stops itself after
+    /// an idle <see cref="ClusterSettings.SeedNodeTimeout"/>.
+    /// 
+    /// The seed nodes can be started in any order, but they will not be "active" until they have been
+    /// able to join another seed node (seed1.)
+    /// 
+    /// They will retry the join procedure.
+    /// 
+    /// Possible scenarios:
+    ///  1. seed2 started, but doesn't get any ack from seed1 or seed3
+    ///  2. seed3 started, doesn't get any ack from seed1 or seed3 (seed2 doesn't reply)
+    ///  3. seed1 is started and joins itself
+    ///  4. seed2 retries the join procedure and gets an ack from seed1, and then joins to seed1
+    ///  5. seed3 retries the join procedure and gets acks from seed2 first, and then joins to seed2
+    /// </summary>
+    internal class JoinSeedNodeProcess : UntypedActor, IActorLogging
     {
-        public JoinSeedNodeProcess()
+        private LoggingAdapter _log = Logging.GetLogger(Context);
+        public LoggingAdapter Log { get { return _log; } }
+
+        private ImmutableHashSet<Address> _seeds;
+        private Address _selfAddress;
+
+        public JoinSeedNodeProcess(ImmutableHashSet<Address> seeds)
         {
-            throw new NotImplementedException();
+             _selfAddress = Cluster.Get(Context.System).SelfAddress;
+            _seeds = seeds;
+            if(!seeds.Any() || seeds.Head() == _selfAddress)
+                throw new ArgumentException("Join seed node should not be done");
+           Context.SetReceiveTimeout(Cluster.Get(Context.System).Settings.SeedNodeTimeout);
+        }
+
+        protected override void PreStart()
+        {
+            Self.Tell(new InternalClusterAction.JoinSeenNode());
+        }
+
+        protected override void OnReceive(object message)
+        {
+            if (message is InternalClusterAction.JoinSeenNode)
+            {
+                //send InitJoin to all seed nodes (except myself)
+                foreach (
+                    var path in
+                        _seeds.Where(x => x != _selfAddress)
+                            .Select(y => Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(y))))
+                {
+                   path.Tell(new InternalClusterAction.InitJoin()); 
+                }
+            }
+            else if (message is InternalClusterAction.InitJoinAck)
+            {
+                //first InitJoinAck reply
+                var initJoinAck = (InternalClusterAction.InitJoinAck) message;
+                Context.Parent.Tell(new ClusterUserAction.JoinTo(initJoinAck.Address));
+                Context.Become(Done);
+            }
+            else if (message is InternalClusterAction.InitJoinNack) { } //that seed was uninitialized
+            else if (message is ReceiveTimeout)
+            {
+                //no InitJoinAck received - try again
+                Self.Tell(new InternalClusterAction.JoinSeenNode());
+            }
+            else
+            {
+                Unhandled(message);
+            }
+        }
+
+        private void Done(object message)
+        {
+            if (message is InternalClusterAction.InitJoinAck)
+            {
+                //already received one, skip the rest
+            } else if(message is ReceiveTimeout) Context.Stop(Self);
         }
     }
 
@@ -1395,35 +1474,88 @@ namespace Akka.Cluster
         }
     }
 
-    internal class GossipStats
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class GossipStats
     {
-        public GossipStats()
+        public readonly long ReceivedGossipCount;
+        public readonly long MergeCount;
+        public readonly long SameCount;
+        public readonly long NewerCount;
+        public readonly long OlderCount;
+
+        public GossipStats(long receivedGossipCount = 0L, 
+            long mergeCount = 0L, 
+            long sameCount = 0L,
+            long newerCount = 0L, long olderCount = 0L)
         {
-            throw new NotImplementedException();
+            ReceivedGossipCount = receivedGossipCount;
+            MergeCount = mergeCount;
+            SameCount = sameCount;
+            NewerCount = newerCount;
+            OlderCount = olderCount;
         }
 
         public GossipStats IncrementMergeCount()
         {
-            throw new NotImplementedException();
+            return Copy(mergeCount: MergeCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
 
         public GossipStats IncrementSameCount()
         {
-            throw new NotImplementedException();
+            return Copy(sameCount: SameCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
 
         public GossipStats IncrementNewerCount()
         {
-            throw new NotImplementedException();
+            return Copy(newerCount: NewerCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
 
         public GossipStats IncrementOlderCount()
         {
-            throw new NotImplementedException();
+            return Copy(olderCount: OlderCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
+
+        public GossipStats Copy(long? receivedGossipCount = null,
+            long? mergeCount = null,
+            long? sameCount = null,
+            long? newerCount = null, long? olderCount = null)
+        {
+            return new GossipStats(receivedGossipCount ?? ReceivedGossipCount, 
+                mergeCount ?? MergeCount, 
+                newerCount ?? NewerCount, 
+                olderCount ?? OlderCount);
+        }
+
+        #region Operator overloads
+
+        public static GossipStats operator +(GossipStats a, GossipStats b)
+        {
+            return new GossipStats(a.ReceivedGossipCount + b.ReceivedGossipCount, 
+                a.MergeCount + b.MergeCount, 
+                a.SameCount + b.SameCount, 
+                a.NewerCount + b.NewerCount, 
+                a.OlderCount + b.OlderCount);
+        }
+
+        public static GossipStats operator -(GossipStats a, GossipStats b)
+        {
+            return new GossipStats(a.ReceivedGossipCount - b.ReceivedGossipCount,
+                a.MergeCount - b.MergeCount,
+                a.SameCount - b.SameCount,
+                a.NewerCount - b.NewerCount,
+                a.OlderCount - b.OlderCount);
+        }
+
+        #endregion
     }
 
-
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// The supplied callback will be run once when the current cluster member is <see cref="MemberStatus.Up"/>
+    /// </summary>
     class OnMemberUpListener : ReceiveActor, IActorLogging
     {
         private readonly Action _callback;
