@@ -50,7 +50,7 @@ namespace Akka.Cluster
         
         public Cluster(ActorSystemImpl system)
         {
-            _system = system;
+            System = system;
             _settings = new ClusterSettings(system.Settings.Config, system.Name);    
 
             var provider = system.Provider as ClusterActorRefProvider;
@@ -81,7 +81,7 @@ namespace Akka.Cluster
         /// </summary>
         private async void Init()
         {
-            var timeout = _system.Settings.CreationTimeout;
+            var timeout = System.Settings.CreationTimeout;
             try
             {
                 _clusterCore = await _clusterDaemons.Ask<ActorRef>(InternalClusterAction.GetClusterCoreRef.Instance, timeout);
@@ -90,7 +90,7 @@ namespace Akka.Cluster
             {
                 _log.Error(ex, "Failed to startup Cluster. You can try to increase 'akka.actor.creation-timeout'.");
                 Shutdown();
-                _system.DeadLetters.Tell(ex); //don't re-throw the error. Just log it.
+                System.DeadLetters.Tell(ex); //don't re-throw the error. Just log it.
                 return;
             }
 
@@ -235,11 +235,13 @@ namespace Akka.Cluster
             get { return _settings.Roles; }
         }
 
-        internal ClusterEvent.CurrentClusterState State { get { return _readView.State; } }
+        internal ClusterEvent.CurrentClusterState State { get { return _readView._state; } }
 
         readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
 
-        private readonly ActorSystemImpl _system;
+        public bool IsTerminated { get { return _isTerminated.Value; } }
+
+        internal ActorSystemImpl System { get; private set; }
 
         readonly LoggingAdapter _log;
         private readonly ClusterReadView _readView;
@@ -265,7 +267,7 @@ namespace Akka.Cluster
             if (_isTerminated.CompareAndSet(false, true))
             {
                 LogInfo("Shutting down...");
-                _system.Stop(_clusterDaemons);
+                System.Stop(_clusterDaemons);
                 LogInfo("Successfully shut down");
             }
         }

@@ -479,7 +479,8 @@ namespace Akka.Cluster
                     });
         }
 
-        public LoggingAdapter Log { get; private set; }
+        private readonly LoggingAdapter _log = Logging.GetLogger(Context);
+        public LoggingAdapter Log { get { return _log; } }
     }
 
     /// <summary>
