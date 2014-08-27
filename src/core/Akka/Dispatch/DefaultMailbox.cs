@@ -10,17 +10,17 @@ using Akka.Util;
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// Class ConcurrentQueueMailbox.
+    /// Class DefaultMailbox.
     /// </summary>
-    public class ConcurrentQueueMailbox : Mailbox
+    public class DefaultMailbox : Mailbox
     {
 #if MONO
         private readonly MonoConcurrentQueue<Envelope> _systemMessages = new MonoConcurrentQueue<Envelope>();
-        private readonly MonoConcurrentQueue<Envelope> _userMessages = new MonoConcurrentQueue<Envelope>();
 #else
         private readonly ConcurrentQueue<Envelope> _systemMessages = new ConcurrentQueue<Envelope>();
-        private readonly ConcurrentQueue<Envelope> _userMessages = new ConcurrentQueue<Envelope>();
 #endif
+        private readonly MailboxQueue _userMessages = new UnboundedMailboxQueue();
+
         private Stopwatch _deadLineTimer;
         private volatile bool _isClosed;
 

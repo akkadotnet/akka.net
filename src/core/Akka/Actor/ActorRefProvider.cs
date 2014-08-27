@@ -270,7 +270,7 @@ namespace Akka.Actor
             _system = system;
             //The following are the lazy val statements in Akka
             var defaultDispatcher = system.Dispatchers.DefaultGlobalDispatcher;
-            _defaultMailbox = () => new ConcurrentQueueMailbox(); //TODO:system.Mailboxes.FromConfig(Mailboxes.DefaultMailboxId)
+            _defaultMailbox = () => new DefaultMailbox(); //TODO:system.Mailboxes.FromConfig(Mailboxes.DefaultMailboxId)
             _rootGuardian = CreateRootGuardian(system);
             _tempContainer = new VirtualPathContainer(system.Provider, _tempNode, _rootGuardian, _log);
             _rootGuardian.SetTempContainer(_tempContainer);
