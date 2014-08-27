@@ -346,6 +346,28 @@ namespace Akka.Cluster
             _from = from;
             _version = version;
         }
+
+        protected bool Equals(GossipStatus other)
+        {
+            return _from.Equals(other._from) && _version.IsSameAs(other._version);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((GossipStatus) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (_from.GetHashCode() * 397) ^ _version.GetHashCode();
+            }
+        }
+
     }
 }
 
