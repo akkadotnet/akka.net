@@ -12,12 +12,7 @@ namespace Akka.Cluster.Tests
 {
     public class ClusterConfigSpec : AkkaSpec
     {
-        public ClusterConfigSpec() : base(GetConfig()) { }
-
-        protected static string GetConfig()
-        {
-            return File.ReadAllText("reference.conf");
-        }
+        public ClusterConfigSpec() : base(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""") { }
 
         [Fact]
         public void ClusteringMustBeAbleToPareseGenericClusterConfigElements()
@@ -28,7 +23,7 @@ namespace Akka.Cluster.Tests
             Assert.Equal(1000, settings.FailureDetectorConfig.GetInt("max-sample-size"));
             Assert.Equal(TimeSpan.FromMilliseconds(100), settings.FailureDetectorConfig.GetMillisDuration("min-std-deviation"));
             Assert.Equal(TimeSpan.FromSeconds(3), settings.FailureDetectorConfig.GetMillisDuration("acceptable-heartbeat-pause"));
-            Assert.Equal(typeof(PhiAccrualFailureDetector).FullName, settings.FailureDetectorImplementationClass);
+            Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(settings.FailureDetectorImplementationClass));
             Assert.Equal(ImmutableList.Create<Address>(), settings.SeedNodes);
             Assert.Equal(TimeSpan.FromSeconds(5), settings.SeedNodeTimeout);
             Assert.Equal(TimeSpan.FromSeconds(10), settings.RetryUnsuccessfulJoinAfter);
