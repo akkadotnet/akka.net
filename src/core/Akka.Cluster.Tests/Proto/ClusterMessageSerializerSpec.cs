@@ -65,6 +65,33 @@ namespace Akka.Cluster.Tests.Proto
             CheckSerialization(new InternalClusterAction.InitJoinNack(address));
             CheckSerialization(new ClusterHeartbeatSender.Heartbeat(address));
             CheckSerialization(new ClusterHeartbeatSender.HeartbeatRsp(uniqueAddress));
+
+            var node1 = new VectorClock.Node("node1");
+            var node2 = new VectorClock.Node("node2");
+            var node3 = new VectorClock.Node("node3");
+            var node4 = new VectorClock.Node("node4");
+            var g1 =
+                new Gossip(ImmutableSortedSet.Create(a1, b1, c1, d1)).Increment(node1)
+                    .Increment(node2)
+                    .Seen(a1.UniqueAddress)
+                    .Seen(b1.UniqueAddress);
+            var g2 = g1.Increment(node3).Increment(node4).Seen(a1.UniqueAddress).Seen(c1.UniqueAddress);
+            var reachability3 =
+                Reachability.Empty.Unreachable(a1.UniqueAddress, e1.UniqueAddress)
+                    .Unreachable(b1.UniqueAddress, e1.UniqueAddress);
+            var g3 = g2.Copy(members: ImmutableSortedSet.Create(a1, b1, c1, d1, e1),
+                overview: g2.Overview.Copy(reachability: reachability3));
+            CheckSerialization(new GossipEnvelope(a1.UniqueAddress, uniqueAddress2, g1));
+            CheckSerialization(new GossipEnvelope(a1.UniqueAddress, uniqueAddress2, g2));
+            CheckSerialization(new GossipEnvelope(a1.UniqueAddress, uniqueAddress2, g3));
+
+            CheckSerialization(new GossipStatus(a1.UniqueAddress, g1.Version));
+            CheckSerialization(new GossipStatus(a1.UniqueAddress, g2.Version));
+            CheckSerialization(new GossipStatus(a1.UniqueAddress, g3.Version));
+
+            CheckSerialization(new InternalClusterAction.Welcome(uniqueAddress, g2));
+
+            //TODO: add metricsgossip support
         }
     }
 }

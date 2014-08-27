@@ -143,6 +143,27 @@ namespace Akka.Cluster
             public UniqueAddress From { get { return _from; } }
 
             public Gossip Gossip { get { return _gossip; } }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is Welcome && Equals((Welcome) obj);
+            }
+
+            private bool Equals(Welcome other)
+            {
+                return _from.Equals(other._from) && _gossip.ToString().Equals(other._gossip.ToString());
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (_from.GetHashCode() * 397) ^ _gossip.GetHashCode();
+                }
+            }
+
         }
 
         /// <summary>
