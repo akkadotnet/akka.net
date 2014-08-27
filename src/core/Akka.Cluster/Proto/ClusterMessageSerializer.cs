@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting;
 using Akka.Util;
 using Google.ProtocolBuffers;
 using Akka.Actor;
@@ -39,12 +40,56 @@ namespace Akka.Cluster.Proto
 
         public override byte[] ToBinary(object obj)
         {
-            throw new NotImplementedException();
+            if (obj is ClusterHeartbeatSender.Heartbeat) return AddressToProtoByteArray(((ClusterHeartbeatSender.Heartbeat)obj).From);
+            if (obj is ClusterHeartbeatSender.HeartbeatRsp) return UniqueAddressToProtoByteArray(((ClusterHeartbeatSender.HeartbeatRsp)obj).From);
+            if (obj is GossipEnvelope) return GossipEnvelopeToProto((GossipEnvelope) obj).ToByteArray();
+            if (obj is GossipStatus) return GossipStatusToProto((GossipStatus) obj).ToByteArray();
+            //TODO: metrics gossip
+            if (obj is InternalClusterAction.Join)
+            {
+                var join = (InternalClusterAction.Join) obj;
+                return JoinToProto(join.Node, join.Roles).ToByteArray();
+            }
+            if (obj is InternalClusterAction.Welcome)
+            {
+                var welcome = (InternalClusterAction.Welcome) obj;
+                return Compress(WelcomeToProto(welcome.From, welcome.Gossip));
+            }
+            if (obj is ClusterUserAction.Leave) return AddressToProtoByteArray(((ClusterUserAction.Leave) obj).Address);
+            if (obj is ClusterUserAction.Down) return AddressToProtoByteArray(((ClusterUserAction.Down)obj).Address);
+            if (obj is InternalClusterAction.InitJoin) return Msg.Empty.DefaultInstance.ToByteArray();
+            if (obj is InternalClusterAction.InitJoinAck) return AddressToProtoByteArray(((InternalClusterAction.InitJoinAck)obj).Address);
+            if (obj is InternalClusterAction.InitJoinNack) return AddressToProtoByteArray(((InternalClusterAction.InitJoinNack)obj).Address);
+            throw new ArgumentException(string.Format("Can't serialize object of type {0}", obj.GetType()));
         }
 
         public override object FromBinary(byte[] bytes, Type type)
         {
-            throw new NotImplementedException();
+            if (type == typeof (InternalClusterAction.Join))
+            {
+                var m = Msg.Join.ParseFrom(bytes);
+                return new InternalClusterAction.Join(UniqueAddressFromProto(m.Node),
+                    ImmutableHashSet.Create<string>(m.RolesList.ToArray()));
+            }
+
+            if (type == typeof(InternalClusterAction.Welcome))
+            {
+                var m = Msg.Welcome.ParseFrom(Decompress(bytes));
+                return new InternalClusterAction.Welcome(UniqueAddressFromProto(m.From), GossipFromProto(m.Gossip));
+            }
+
+            if (type == typeof(ClusterUserAction.Leave)) return new ClusterUserAction.Leave(AddressFromBinary(bytes));
+            if (type == typeof(ClusterUserAction.Down)) return new ClusterUserAction.Down(AddressFromBinary(bytes));
+            if (type == typeof(InternalClusterAction.InitJoin)) return new InternalClusterAction.InitJoin();
+            if (type == typeof(InternalClusterAction.InitJoinAck)) return new InternalClusterAction.InitJoinAck(AddressFromBinary(bytes));
+            if (type == typeof(InternalClusterAction.InitJoinNack)) return new InternalClusterAction.InitJoinNack(AddressFromBinary(bytes));
+            if (type == typeof(ClusterHeartbeatSender.Heartbeat)) return new ClusterHeartbeatSender.Heartbeat(AddressFromBinary(bytes));
+            if (type == typeof(ClusterHeartbeatSender.HeartbeatRsp)) return new ClusterHeartbeatSender.HeartbeatRsp(UniqueAddressFromBinary(bytes));
+            if (type == typeof(GossipStatus)) return GossipStatusFromBinary(bytes);
+            if (type == typeof(GossipEnvelope)) return GossipEnvelopeFromBinary(bytes);
+            //TODO: need to add support for MetricsEnvelope
+
+            throw new ArgumentException("Ned a cluster message class to be able to deserialize bytes in ClusterSerializer.");
         }
 
         /// <summary>
@@ -212,7 +257,7 @@ namespace Akka.Cluster.Proto
             throw new ArgumentException(string.Format("Unknown {0} [{1}] in cluster message", unknown, value));
         }
 
-        private Msg.Join JoinToProto(UniqueAddress node, HashSet<string> roles)
+        private Msg.Join JoinToProto(UniqueAddress node, ImmutableHashSet<string> roles)
         {
             return Msg.Join.CreateBuilder().SetNode(UniqueAddressToProto(node)).AddRangeRoles(roles).Build();
         }
