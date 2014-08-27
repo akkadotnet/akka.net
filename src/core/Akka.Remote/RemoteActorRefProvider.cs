@@ -20,17 +20,14 @@ namespace Akka.Remote
     {
         private readonly LoggingAdapter _log;
 
-        public Config Config { get; private set; }
-
         public RemoteActorRefProvider(string systemName, Settings settings, EventStream eventStream)
         {
+            settings.InjectTopLevelFallback(RemoteConfigFactory.Default());            
+
             var remoteDeployer = new RemoteDeployer(settings);
             Func<ActorPath, InternalActorRef> deadLettersFactory = path => new RemoteDeadLetterActorRef(this, path, eventStream);
-            _local = new LocalActorRefProvider(systemName, settings, eventStream, remoteDeployer, deadLettersFactory);
-            var remoteConfig = RemoteConfigFactory.Default();
-            settings.InjectTopLevelFallback(remoteConfig);
-            Config = settings.Config.WithFallback(RemoteConfigFactory.Default());
-            RemoteSettings = new RemoteSettings(Config);
+            _local = new LocalActorRefProvider(systemName, settings, eventStream, remoteDeployer, deadLettersFactory);            
+            RemoteSettings = new RemoteSettings(settings.Config);
             Deployer = remoteDeployer;
             _log = _local.Log;
         }
