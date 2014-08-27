@@ -49,7 +49,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Command to leave the cluster.
         /// </summary>
-        internal sealed class Leave : BaseClusterUserAction
+        internal sealed class Leave : BaseClusterUserAction, IClusterMessage
         {
             public Leave(Address address) : base(address)
             {}
@@ -58,7 +58,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Command to mark node as temporary down.
         /// </summary>
-        internal sealed class Down : BaseClusterUserAction
+        internal sealed class Down : BaseClusterUserAction, IClusterMessage
         {
             public Down(Address address) : base(address)
             {   
@@ -91,7 +91,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Reply to Join
         /// </summary>
-        internal sealed class Welcome
+        internal sealed class Welcome : IClusterMessage
         {
             readonly UniqueAddress _from;
             readonly Gossip _gossip;

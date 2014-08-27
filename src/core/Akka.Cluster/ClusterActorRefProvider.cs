@@ -1,6 +1,7 @@
 ﻿using System;
 using Akka.Actor;
 using Akka.Actor.Internals;
+using Akka.Cluster.Configuration;
 using Akka.Event;
 using Akka.Remote;
 
@@ -17,6 +18,8 @@ namespace Akka.Cluster
     {
         public ClusterActorRefProvider(string systemName, Settings settings, EventStream eventStream /*DynamicAcccess*/) : base(systemName, settings, eventStream)
         {
+            var clusterConfig = ClusterConfigFactory.Default();
+            settings.InjectTopLevelFallback(clusterConfig);
         }
 
         public override void Init(ActorSystemImpl system)

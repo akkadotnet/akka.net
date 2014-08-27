@@ -305,7 +305,7 @@ namespace Akka.Cluster
     /// the node with same host:port. The `uid` in the `UniqueAddress` is
     /// different in that case.
     /// </summary>
-    class GossipEnvelope
+    class GossipEnvelope : IClusterMessage
     {
         //TODO: Serialization?
         //TODO: ser stuff?
@@ -333,7 +333,7 @@ namespace Akka.Cluster
     /// version it replies with a `GossipEnvelope`. If receiver has older version
     /// it replies with its `GossipStatus`. Same versions ends the chat immediately.
     /// </summary>
-    class GossipStatus
+    class GossipStatus : IClusterMessage
     {
         readonly UniqueAddress _from;
         readonly VectorClock _version;

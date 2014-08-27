@@ -277,7 +277,7 @@ namespace Akka.Cluster
 
         private void LogInfo(string message)
         {
-            _log.Info("Cluster Node [{}] - {}", SelfAddress, message);
+            _log.Info("Cluster Node [{0}] - {1}", SelfAddress, message);
         }
 
         private void LogInfo(string template, object arg1)
