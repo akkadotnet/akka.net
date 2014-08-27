@@ -59,6 +59,7 @@
     <Compile Include="ClusterReadView.cs" />
     <Compile Include="ClusterRemoteWatcher.cs" />
     <Compile Include="ClusterSettings.cs" />
+    <Compile Include="Configuration\ClusterConfigFactory.cs" />
     <Compile Include="Gossip.cs" />
     <Compile Include="Member.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -80,6 +81,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Configuration\Cluster.conf" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />
