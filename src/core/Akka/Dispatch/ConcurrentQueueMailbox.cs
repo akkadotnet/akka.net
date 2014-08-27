@@ -1,18 +1,26 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Threading;
 using Akka.Actor;
 using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
+
+#if MONO
+using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
+#else
+using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope>;
+//using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
+#endif
 
 namespace Akka.Dispatch
 {
     /// <summary>
     /// Class DefaultMailbox.
     /// </summary>
-    public class DefaultMailbox : Mailbox
+    public class ConcurrentQueueMailbox : Mailbox
     {
-        private readonly MessageQueue _systemMessages = new UnboundedMessageQueue();
-        private readonly MessageQueue _userMessages = new UnboundedMessageQueue();
+        private readonly TQueue _systemMessages = new TQueue();
+        private readonly TQueue _userMessages = new TQueue();
 
         private Stopwatch _deadLineTimer;
         private volatile bool _isClosed;
@@ -27,18 +35,18 @@ namespace Akka.Dispatch
             var throughputDeadlineTime = dispatcher.ThroughputDeadlineTime;
             ActorCell.UseThreadContext(() =>
             {
-                ////if ThroughputDeadlineTime is enabled, start a stopwatch
-                //if (throughputDeadlineTime.HasValue && throughputDeadlineTime.Value > 0)
-                //{
-                //    if (_deadLineTimer != null)
-                //    {
-                //        _deadLineTimer.Restart();
-                //    }
-                //    else
-                //    {
-                //        _deadLineTimer = Stopwatch.StartNew();
-                //    }
-                //}
+                //if ThroughputDeadlineTime is enabled, start a stopwatch
+                if (throughputDeadlineTime.HasValue && throughputDeadlineTime.Value > 0)
+                {
+                    if (_deadLineTimer != null)
+                    {
+                        _deadLineTimer.Restart();
+                    }
+                    else
+                    {
+                        _deadLineTimer = Stopwatch.StartNew();
+                    }
+                }
 
                 //we are about to process all enqueued messages
                 hasUnscheduledMessages = false;
@@ -64,25 +72,25 @@ namespace Akka.Dispatch
                     ActorCell.Invoke(envelope);
 
                     ////check if any system message have arrived while processing user messages
-                    //if (_systemMessages.TryDequeue(out envelope))
-                    //{
-                    //    //handle system message
-                    //    Mailbox.DebugPrint(ActorCell.Self + " processing system message " + envelope);
-                    //    // TODO: Add + " with " + ActorCell.GetChildren());
-                    //    ActorCell.SystemInvoke(envelope);
-                    //    break;
-                    //}
+                    if (_systemMessages.TryDequeue(out envelope))
+                    {
+                        //handle system message
+                        Mailbox.DebugPrint(ActorCell.Self + " processing system message " + envelope);
+                        // TODO: Add + " with " + ActorCell.GetChildren());
+                        ActorCell.SystemInvoke(envelope);
+                        break;
+                    }
                     left--;
                     if (_isClosed)
                         return;
 
-                    ////if deadline time have expired, stop and break
-                    //if (throughputDeadlineTime.HasValue && throughputDeadlineTime.Value > 0 &&
-                    //    _deadLineTimer.ElapsedTicks > throughputDeadlineTime.Value)
-                    //{
-                    //    _deadLineTimer.Stop();
-                    //    break;
-                    //}
+                    //if deadline time have expired, stop and break
+                    if (throughputDeadlineTime.HasValue && throughputDeadlineTime.Value > 0 &&
+                        _deadLineTimer.ElapsedTicks > throughputDeadlineTime.Value)
+                    {
+                        _deadLineTimer.Stop();
+                        break;
+                    }
 
                     //we are done processing messages for this run
                     if (left == 0)

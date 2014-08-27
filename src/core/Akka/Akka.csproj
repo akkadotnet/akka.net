@@ -131,6 +131,7 @@
     <Compile Include="Configuration\Hocon\HoconTokenizer.cs" />
     <Compile Include="Configuration\Hocon\HoconValue.cs" />
     <Compile Include="Configuration\Hocon\IHoconElement.cs" />
+    <Compile Include="Dispatch\ConcurrentQueueMailbox.cs" />
     <Compile Include="Dispatch\DefaultMailbox.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
