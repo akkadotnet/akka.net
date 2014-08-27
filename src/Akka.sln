@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30723.0
+VisualStudioVersion = 12.0.30501.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatMessages", "examples\Chat\ChatMessages\ChatMessages.csproj", "{819221CB-82B7-43D3-A4DE-E00AF17F2FDF}"
 EndProject
@@ -303,19 +303,15 @@ Global
 		{11F4D4B8-7E07-4457-ABF2-609B3E7B2649}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{11F4D4B8-7E07-4457-ABF2-609B3E7B2649}.Release|Any CPU.Build.0 = Release|Any CPU
 		{01003DAF-660B-4C39-9557-1F5E95B405BF}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
-		{01003DAF-660B-4C39-9557-1F5E95B405BF}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
 		{01003DAF-660B-4C39-9557-1F5E95B405BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{01003DAF-660B-4C39-9557-1F5E95B405BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{01003DAF-660B-4C39-9557-1F5E95B405BF}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
-		{01003DAF-660B-4C39-9557-1F5E95B405BF}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{01003DAF-660B-4C39-9557-1F5E95B405BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{01003DAF-660B-4C39-9557-1F5E95B405BF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F5697316-A1C6-4B99-84B5-1E7DEB08D669}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
-		{F5697316-A1C6-4B99-84B5-1E7DEB08D669}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
 		{F5697316-A1C6-4B99-84B5-1E7DEB08D669}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F5697316-A1C6-4B99-84B5-1E7DEB08D669}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F5697316-A1C6-4B99-84B5-1E7DEB08D669}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
-		{F5697316-A1C6-4B99-84B5-1E7DEB08D669}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{F5697316-A1C6-4B99-84B5-1E7DEB08D669}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F5697316-A1C6-4B99-84B5-1E7DEB08D669}.Release|Any CPU.Build.0 = Release|Any CPU
 		{53D9D2F0-4A35-4FCE-980C-8F7F3DCBDB2B}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU

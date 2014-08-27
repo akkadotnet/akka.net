@@ -94,6 +94,11 @@ Target "Build" <| fun _ ->
     |> MSBuildRelease "" "Rebuild"
     |> ignore
 
+Target "BuildMono" <| fun _ ->
+
+    !!"src/Akka.sln"
+    |> MSBuild "" "Rebuild" [("Configuration","Release Mono")]
+    |> ignore
 
 //--------------------------------------------------------------------------------
 // Copy the build output to bin directory
@@ -139,6 +144,17 @@ Target "RunTests" <| fun _ ->
     mkdir testOutput
 
     MSTest (fun p -> p) msTestAssemblies
+
+    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
+    printfn "Using XUnit runner: %s" xunitToolPath
+    xUnit
+        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
+        xunitTestAssemblies
+
+Target "RunTestsMono" <| fun _ ->  
+    let xunitTestAssemblies = !! "src/**/bin/Release Mono/*.Tests.dll"
+
+    mkdir testOutput
 
     let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
     printfn "Using XUnit runner: %s" xunitToolPath
