@@ -31,10 +31,11 @@ namespace Akka.Dispatch
                 return;
             }
 
+            var throughputDeadlineTime = dispatcher.ThroughputDeadlineTime;
             ActorCell.UseThreadContext(() =>
             {
                 //if ThroughputDeadlineTime is enabled, start a stopwatch
-                if (dispatcher.ThroughputDeadlineTime.HasValue && dispatcher.ThroughputDeadlineTime.Value > 0)
+                if (throughputDeadlineTime.HasValue && throughputDeadlineTime.Value > 0)
                 {
                     if (_deadLineTimer != null)
                     {
@@ -83,8 +84,8 @@ namespace Akka.Dispatch
                         return;
 
                     //if deadline time have expired, stop and break
-                    if (dispatcher.ThroughputDeadlineTime.HasValue && dispatcher.ThroughputDeadlineTime.Value > 0 &&
-                        _deadLineTimer.ElapsedTicks > dispatcher.ThroughputDeadlineTime.Value)
+                    if (throughputDeadlineTime.HasValue && throughputDeadlineTime.Value > 0 &&
+                        _deadLineTimer.ElapsedTicks > throughputDeadlineTime.Value)
                     {
                         _deadLineTimer.Stop();
                         break;

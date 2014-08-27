@@ -341,7 +341,7 @@ namespace Akka.Tests.Actor
             {
                 message.Match()
                     .With<W>(w => Context.Watch(w.Ref))
-                    .With<W>(w => Context.Unwatch(w.Ref))
+                    .With<U>(w => Context.Unwatch(w.Ref))
                     .With<Latches>(x =>
                     {
                         x.T1.CountDown();

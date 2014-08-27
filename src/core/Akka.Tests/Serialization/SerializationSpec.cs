@@ -1,4 +1,5 @@
-﻿using Akka.TestKit;
+﻿using Akka.Serialization;
+using Akka.TestKit;
 using Xunit;
 using System;
 using System.Collections.Generic;
@@ -75,5 +76,61 @@ namespace Akka.Tests.Serialization
             Assert.Same(f, deserialized.ActorRef);
         }
 
+        [Fact()]
+        public void CanGetSerializerByBinding()
+        {
+            Sys.Serialization.FindSerializerFor(null).GetType().ShouldBe(typeof(NullSerializer));
+            Sys.Serialization.FindSerializerFor(new byte[]{1,2,3}).GetType().ShouldBe(typeof(ByteArraySerializer));
+            Sys.Serialization.FindSerializerFor("dummy").GetType().ShouldBe(typeof(DummySerializer));
+            Sys.Serialization.FindSerializerFor(123).GetType().ShouldBe(typeof(NewtonSoftJsonSerializer));
+        }
+
+
+        public SerializationSpec():base(GetConfig())
+        {
+        }
+
+        private static string GetConfig()
+        {
+            return @"
+
+akka.actor {
+    serializers {
+        dummy = """ + typeof(DummySerializer).AssemblyQualifiedName + @"""
+	}
+
+    serialization-bindings {
+      ""System.String"" = dummy
+    }
+}
+";
+        }
+
+        public class DummySerializer : Serializer
+        {
+            public DummySerializer(ExtendedActorSystem system) : base(system)
+            {
+            }
+
+            public override int Identifier
+            {
+                get { return -5; }
+            }
+
+            public override bool IncludeManifest
+            {
+                get { throw new NotImplementedException(); }
+            }
+
+            public override byte[] ToBinary(object obj)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override object FromBinary(byte[] bytes, Type type)
+            {
+                throw new NotImplementedException();
+            }
+        }
     }
 }
