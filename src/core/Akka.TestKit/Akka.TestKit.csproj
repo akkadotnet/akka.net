@@ -79,6 +79,8 @@
     <Compile Include="Internals\ITestActorQueue.cs" />
     <Compile Include="Internals\BlockingQueue.cs" />
     <Compile Include="Internals\TimeSpanExtensions.cs" />
+    <Compile Include="TestActors\BlackHoleActor.cs" />
+    <Compile Include="TestActors\EchoActor.cs" />
     <Compile Include="TestKitAssertions.cs" />
     <Compile Include="MessageEnvelope.cs" />
     <Compile Include="NullMessageEnvelope.cs" />
