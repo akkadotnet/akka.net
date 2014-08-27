@@ -1,11 +1,7 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Threading;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
-#if MONO
-using Akka.Util;
-#endif
 
 namespace Akka.Dispatch
 {
@@ -14,12 +10,8 @@ namespace Akka.Dispatch
     /// </summary>
     public class DefaultMailbox : Mailbox
     {
-#if MONO
-        private readonly MonoConcurrentQueue<Envelope> _systemMessages = new MonoConcurrentQueue<Envelope>();
-#else
-        private readonly ConcurrentQueue<Envelope> _systemMessages = new ConcurrentQueue<Envelope>();
-#endif
-        private readonly MailboxQueue _userMessages = new UnboundedMailboxQueue();
+        private readonly MessageQueue _systemMessages = new UnboundedMessageQueue();
+        private readonly MessageQueue _userMessages = new UnboundedMessageQueue();
 
         private Stopwatch _deadLineTimer;
         private volatile bool _isClosed;

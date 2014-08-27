@@ -7,7 +7,7 @@ using Akka.Actor;
 
 namespace Akka.Dispatch
 {
-    public interface MailboxQueue
+    public interface MessageQueue
     {
         void Enqueue(Envelope envelope);
         bool HasMessages { get; }

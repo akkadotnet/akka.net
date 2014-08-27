@@ -8,7 +8,7 @@ using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope
 
 namespace Akka.Dispatch
 {
-    public class UnboundedMailboxQueue : MailboxQueue
+    public class UnboundedMessageQueue : MessageQueue
     {
         private readonly TQueue _queue = new TQueue();
 
