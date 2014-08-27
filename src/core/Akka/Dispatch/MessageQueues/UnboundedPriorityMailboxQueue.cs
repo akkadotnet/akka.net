@@ -1,13 +1,14 @@
 ﻿using System;
-using Akka.Actor;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Akka.Actor;
 #if MONO
 using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
 #else
 using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope>;
 #endif
 
-namespace Akka.Dispatch
+namespace Akka.Dispatch.MessageQueues
 {
 
     public class PriorityQueue

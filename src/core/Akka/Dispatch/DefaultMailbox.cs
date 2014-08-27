@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Threading;
 using Akka.Actor;
+using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
 
 namespace Akka.Dispatch
