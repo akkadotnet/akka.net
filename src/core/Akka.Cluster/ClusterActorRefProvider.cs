@@ -9,7 +9,7 @@ namespace Akka.Cluster
     /// <summary>
     /// INTERNAL API
     /// 
-    /// The `ClusterActorRefProvider` will load the [[akka.cluster.Cluster]]
+    /// The `ClusterActorRefProvider` will load the <see cref="Cluster"/>
     /// extension, i.e. the cluster will automatically be started when
     /// the `ClusterActorRefProvider` is used.
     /// </summary>
@@ -25,10 +25,7 @@ namespace Akka.Cluster
             base.Init(system);
 
             // initialize/load the Cluster extension
-            //TODO: scope is very wrong
-            var b =new Cluster(system);
+            Cluster.Get(system);
         }
-
-        public RemoteTransport Transport { get { throw new NotImplementedException(); } }
     }
 }

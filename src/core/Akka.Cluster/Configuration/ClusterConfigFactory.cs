@@ -1,14 +1,13 @@
 ﻿using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using Akka.Configuration;
 
-namespace Akka.Remote.Configuration
+namespace Akka.Cluster.Configuration
 {
     /// <summary>
-    /// Internal class used for loading remote configuration values
+    /// Internal class used for loading akka-cluster configuration values
     /// </summary>
-    internal static class RemoteConfigFactory
+    internal static class ClusterConfigFactory
     {
         /// <summary>
         /// Defaults this instance.
@@ -16,7 +15,7 @@ namespace Akka.Remote.Configuration
         /// <returns>Config.</returns>
         public static Config Default()
         {
-            return FromResource("Akka.Remote.Configuration.Remote.conf");
+            return FromResource("Akka.Cluster.Configuration.Cluster.conf");
         }
 
         /// <summary>
@@ -26,7 +25,7 @@ namespace Akka.Remote.Configuration
         /// <returns>Config.</returns>
         internal static Config FromResource(string resourceName)
         {
-            var assembly = typeof (RemoteConfigFactory).Assembly;
+            var assembly = typeof(ClusterConfigFactory).Assembly;
 
             using (var stream = assembly.GetManifestResourceStream(resourceName))
             {
