@@ -65,6 +65,12 @@ namespace Akka.Serialization
                 }
 
                 var serializer = namedSerializers[serializerName];
+                if (serializer == null)
+                {
+                    system.Log.Warn(string.Format(
+                            "Serialization binding to non existing serializer: '{0}'", serializerName));
+                    continue;
+                }
                 _serializerMap.Add(messageType,serializer);
             }
         }
