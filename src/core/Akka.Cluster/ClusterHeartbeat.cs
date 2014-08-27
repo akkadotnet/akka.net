@@ -30,6 +30,20 @@ namespace Akka.Cluster
             }
 
             public Address From { get; private set; }
+
+#pragma warning disable 659 //there might very well be multiple heartbeats from the same address. overriding GetHashCode may have uninteded side effects
+            public override bool Equals(object obj)
+#pragma warning restore 659
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is Heartbeat && Equals((Heartbeat)obj);
+            }
+
+            private bool Equals(Heartbeat other)
+            {
+                return Equals(From, other.From);
+            }
         }
 
         /// <summary>
@@ -43,6 +57,20 @@ namespace Akka.Cluster
             }
 
             public UniqueAddress From { get; private set; }
+
+#pragma warning disable 659 //there might very well be multiple heartbeats from the same address. overriding GetHashCode may have uninteded side effects
+            public override bool Equals(object obj)
+#pragma warning restore 659
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is HeartbeatRsp && Equals((HeartbeatRsp)obj);
+            }
+
+            private bool Equals(HeartbeatRsp other)
+            {
+                return Equals(From, other.From);
+            }
         }
 
         /// <summary>

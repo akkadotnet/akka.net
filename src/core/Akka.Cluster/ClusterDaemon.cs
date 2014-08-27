@@ -25,14 +25,30 @@ namespace Akka.Cluster
     {
         internal abstract class BaseClusterUserAction
         {
-            readonly Address _address;
+           readonly Address _address;
 
             public Address Address { get { return _address; } }
 
             protected BaseClusterUserAction(Address address)
             {
                 _address = address;
-            }            
+            }
+
+            public override bool Equals(object obj)
+            {
+                var baseUserAction = (BaseClusterUserAction) obj;
+                return baseUserAction != null && Equals(baseUserAction);
+            }
+
+            protected bool Equals(BaseClusterUserAction other)
+            {
+                return Equals(_address, other._address);
+            }
+
+            public override int GetHashCode()
+            {
+                return (_address != null ? _address.GetHashCode() : 0);
+            }
         }
 
         /// <summary>
@@ -86,6 +102,26 @@ namespace Akka.Cluster
 
             public UniqueAddress Node { get { return _node; } }
             public ImmutableHashSet<string> Roles { get { return _roles; } }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is Join && Equals((Join) obj);
+            }
+
+            private bool Equals(Join other)
+            {
+                return _node.Equals(other._node) && !_roles.Except(other._roles).Any();
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (_node.GetHashCode() * 397) ^ _roles.GetHashCode();
+                }
+            }
         }
 
         /// <summary>
@@ -145,6 +181,10 @@ namespace Akka.Cluster
         /// </summary>
         internal class InitJoin : IClusterMessage
         {
+            public override bool Equals(object obj)
+            {
+                return obj is InitJoin;
+            }
         }
 
         /// <summary>
@@ -163,6 +203,23 @@ namespace Akka.Cluster
             {
                 get { return _address; }
             }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is InitJoinAck && Equals((InitJoinAck)obj);
+            }
+
+            private bool Equals(InitJoinAck other)
+            {
+                return Equals(_address, other._address);
+            }
+
+            public override int GetHashCode()
+            {
+                return (_address != null ? _address.GetHashCode() : 0);
+            }
         }
 
         /// <summary>
@@ -180,6 +237,23 @@ namespace Akka.Cluster
             public Address Address
             {
                 get { return _address; }
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is InitJoinNack && Equals((InitJoinNack)obj);
+            }
+
+            private bool Equals(InitJoinNack other)
+            {
+                return Equals(_address, other._address);
+            }
+
+            public override int GetHashCode()
+            {
+                return (_address != null ? _address.GetHashCode() : 0);
             }
         }
 
