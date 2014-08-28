@@ -11,7 +11,7 @@ namespace Akka.TestKit
     public class TestProbe : TestKitBase
     {
         [Obsolete("Use TestKit.CreateTestProbe() instead!", true)]
-        public TestProbe():base(null,null)
+        public TestProbe():base(assertions: null, system: null)
         {
             throw new NotSupportedException("TestProbes must be created via Testkit.CreateTestProbe()");    
         }
