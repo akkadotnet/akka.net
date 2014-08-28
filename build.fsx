@@ -22,7 +22,7 @@ let company = "Akka.NET Team"
 let description = "Akka.NET is a port of the popular Java/Scala framework Akka to .NET"
 let tags = ["akka";"actors";"actor";"model";"Akka";"concurrency"]
 let configuration = "Release"
-
+let nugetTitleSuffix = " - BETA"
 
 // Read release notes and version
 
@@ -79,7 +79,7 @@ Target "AssemblyInfo" <| fun _ ->
             Attribute.FileVersion version ]
 
         CreateCSharpAssemblyInfoWithConfig "src/SharedAssemblyInfo.cs" [
-            Attribute.Company "Akka"
+            Attribute.Company company
             Attribute.Copyright copyright
             Attribute.Trademark ""
             Attribute.Version version
@@ -175,15 +175,6 @@ module Nuget =
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
 
-    // selected nuget description
-    let description project =
-        match project with
-        | "Akka.FSharp" -> "FSharp API support for Akka."
-        | "Akka.Remote" -> "Remote actor support for Akka."
-        | "Akka.slf4net" -> "slf4net logging adapter for Akka."
-        | "Akka.NLog" -> "NLog logging adapter for Akka."
-        | _ -> description
-
 open Nuget
 
 //--------------------------------------------------------------------------------
@@ -211,7 +202,7 @@ Target "Nuget" <| fun _ ->
             NuGetHelper.NuGet
                 (fun p ->
                     { p with
-                        Description = description project
+                        Description = description
                         Authors = authors
                         Copyright = copyright
                         Project =  project
@@ -219,6 +210,7 @@ Target "Nuget" <| fun _ ->
                         ReleaseNotes = release.Notes |> String.concat "\n"
                         Version = release.NugetVersion
                         Tags = tags |> String.concat " "
+                        Title = nugetTitleSuffix
                         OutputPath = outputDir
                         WorkingDir = workingDir
                         AccessKey = getBuildParamOrDefault "nugetkey" ""
