@@ -103,7 +103,7 @@ namespace Akka.TestKit
         protected bool LastWasNoMsg { get { return _lastWasNoMsg; } }
         protected object LastMessage { get { return _lastMessage.Message; } }
 
-        protected ActorRef TestActor { get { return _testActor; } }
+        public ActorRef TestActor { get { return _testActor; } }
 
 
 

@@ -1,4 +1,5 @@
 ﻿using Akka.TestKit;
+using Akka.TestKit.TestActors;
 using Akka.Util;
 using Xunit;
 using System;
@@ -13,14 +14,16 @@ namespace Akka.Tests.Actor
     
     public class ActorSelectionSpec : AkkaSpec
     {
+        // ReSharper disable NotAccessedField.Local
         private ActorRef _echoActor;
         private ActorRef _selectionTestActor;
+        // ReSharper restore NotAccessedField.Local
 
         public ActorSelectionSpec()
             : base("akka.test.default-timeout = 5 s")
         {
-           _echoActor = Sys.ActorOf(Props.Create(() => new EchoActor(TestActor)), "echo");
-            _selectionTestActor=CreateTestActor("test");
+            _echoActor = Sys.ActorOf(EchoActor.Props(this), "echo");
+            _selectionTestActor = CreateTestActor("test");
         }
 
         [Fact]
@@ -126,23 +129,5 @@ namespace Akka.Tests.Actor
 
         #endregion
 
-        /// <summary>
-        /// Used for testing Ask / reply behaviors
-        /// </summary>
-        public class EchoActor : UntypedActor
-        {
-            private ActorRef _testActor;
-
-            public EchoActor(ActorRef testActorRef)
-            {
-                _testActor = testActorRef;
-            }
-
-            protected override void OnReceive(object message)
-            {
-                Sender.Forward(message);
-                _testActor.Tell(message, Sender);
-            }
-        }
     }
 }
