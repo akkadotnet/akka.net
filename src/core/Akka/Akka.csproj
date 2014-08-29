@@ -177,11 +177,8 @@
     <Compile Include="Serialization\NewtonSoftJsonSerializer.cs" />
     <Compile Include="Serialization\NullSerializer.cs" />
     <Compile Include="Util\ArrayExtensions.cs" />
-    <Compile Include="Util\AtomicCounter.cs" />
-    <Compile Include="Util\AtomicCounterLong.cs" />
-    <Compile Include="Util\AtomicInteger.cs" />
-    <Compile Include="Util\AtomicLong.cs" />
-    <Compile Include="Pattern\CircuitBreaker.cs" />
+    <Compile Include="Util\Internal\AtomicCounter.cs" />
+    <Compile Include="Util\Internal\AtomicCounterLong.cs" />
     <Compile Include="Pattern\IllegalStateException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Actor\TypedActor.cs" />
@@ -206,6 +203,7 @@
     <Compile Include="Util\AtomicReference.cs" />
     <Compile Include="Util\AtomicBoolean.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
+    <Compile Include="Util\Internal\IAtomicCounter.cs" />
     <Compile Include="Util\MonoConcurrentQueue.cs" />
     <Compile Include="Util\MurmurHash.cs" />
     <Compile Include="Util\Reflection\ExpressionExtensions.cs" />
