@@ -56,6 +56,7 @@
     <Compile Include="ClusterDaemon.cs" />
     <Compile Include="ClusterEvent.cs" />
     <Compile Include="ClusterHeartbeat.cs" />
+    <Compile Include="ClusterMetricsCollector.cs" />
     <Compile Include="ClusterReadView.cs" />
     <Compile Include="ClusterRemoteWatcher.cs" />
     <Compile Include="ClusterSettings.cs" />
@@ -66,7 +67,6 @@
     <Compile Include="Proto\ClusterMessageSerializer.cs" />
     <Compile Include="Proto\Msg\ClusterMessages.cs" />
     <Compile Include="Reachability.cs" />
-    <Compile Include="temp.cs" />
     <Compile Include="Util.cs" />
     <Compile Include="VectorClock.cs" />
   </ItemGroup>
