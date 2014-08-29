@@ -35,11 +35,6 @@ namespace Akka.Util.Internal
         private long _value;
 
         /// <summary>
-        /// A spinner used during CAS loops.
-        /// </summary>
-        private SpinWait spinner = new SpinWait();
-
-        /// <summary>
         /// Retrieves the current value of the counter
         /// </summary>
         public long Current { get { return Interlocked.Read(ref _value); } }
@@ -51,7 +46,7 @@ namespace Akka.Util.Internal
         {
             get
             {
-                return AddAndGet(1);
+                return Interlocked.Increment(ref _value);
             }
         }
 
@@ -61,7 +56,8 @@ namespace Akka.Util.Internal
         /// <returns>The original value.</returns>
         public long GetAndIncrement()
         {
-            return GetAndAdd(1);
+            var nextValue = Next;
+            return nextValue - 1;
         }
 
         /// <summary>
@@ -70,7 +66,8 @@ namespace Akka.Util.Internal
         /// <returns>The new value.</returns>
         public long IncrementAndGet()
         {
-            return AddAndGet(1);
+            var nextValue = Next;
+            return nextValue;
         }
 
         /// <summary>
@@ -81,15 +78,8 @@ namespace Akka.Util.Internal
         /// <returns>The original value.</returns>
         public long GetAndAdd(long amount)
         {
-            while (true)
-            {
-                var currentValue = _value;
-                if (Interlocked.CompareExchange(ref _value, currentValue + amount, currentValue) == currentValue)
-                {
-                    return currentValue;
-                }
-                spinner.SpinOnce();
-            }
+            var newValue = Interlocked.Add(ref _value, amount);
+            return newValue - amount;
         }
 
         /// <summary>
@@ -100,15 +90,8 @@ namespace Akka.Util.Internal
         /// <returns>The new counter value.</returns>
         public long AddAndGet(long amount)
         {
-            while (true)
-            {
-                var currentValue = _value;
-                if (Interlocked.CompareExchange(ref _value, currentValue + amount, currentValue) == currentValue)
-                {
-                    return currentValue + amount;
-                }
-                spinner.SpinOnce();
-            }
+            var newValue = Interlocked.Add(ref _value, amount);
+            return newValue;
         }
 
         /// <summary>
