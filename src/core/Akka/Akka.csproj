@@ -206,8 +206,10 @@
     <Compile Include="Util\AtomicReference.cs" />
     <Compile Include="Util\AtomicBoolean.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
+    <Compile Include="Util\Matcher.cs" />
     <Compile Include="Util\MonoConcurrentQueue.cs" />
     <Compile Include="Util\MurmurHash.cs" />
+    <Compile Include="Util\PatternBuilder.cs" />
     <Compile Include="Util\Reflection\ExpressionExtensions.cs" />
     <Compile Include="PatternMatch.cs" />
     <Compile Include="Util\ThreadLocalRandom.cs" />
