@@ -215,7 +215,15 @@ namespace Akka.Remote.Transport
                     {
                         senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
                     }
-                    messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption);
+                    SeqNo seqOption = null;
+                    if (envelopeContainer.HasSeq)
+                    {
+                        unchecked
+                        {
+                            seqOption = new SeqNo((long)envelopeContainer.Seq); //proto takes a ulong
+                        }
+                    }
+                    messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption, seqOption);
                 }
             }
             
