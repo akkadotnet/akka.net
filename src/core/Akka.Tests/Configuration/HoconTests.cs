@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
@@ -521,6 +522,63 @@ foo {
             config.GetInt("foo.bar.c").ShouldBe(3);
             config.GetInt("foo.bar.zork").ShouldBe(555);
             config.GetInt("foo.bar.borkbork").ShouldBe(-1);
+        }
+
+        [Fact]
+        public void CanParseQuotedKeys()
+        {
+            var hocon = @"
+a {
+   ""some quoted, key"": 123
+}
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            config.GetInt("a.some quoted, key").ShouldBe(123);
+        }
+
+        [Fact]
+        public void CanEnumerateQuotedKeys()
+        {
+            var hocon = @"
+a {
+   ""some quoted, key"": 123
+}
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            var config2 = config.GetConfig("a");
+            var enumerable = config2.AsEnumerable();
+
+            enumerable.Select(kvp => kvp.Key).First().ShouldBe("some quoted, key");            
+        }
+
+        [Fact]
+        public void CanParseSerializersAndBindings()
+        {
+            var hocon = @"
+akka.actor {
+    serializers {
+      akka-containers = ""Akka.Remote.Serialization.MessageContainerSerializer, Akka.Remote""
+      proto = ""Akka.Remote.Serialization.ProtobufSerializer, Akka.Remote""
+      daemon-create = ""Akka.Remote.Serialization.DaemonMsgCreateSerializer, Akka.Remote""
+    }
+
+    serialization-bindings {
+      # Since com.google.protobuf.Message does not extend Serializable but
+      # GeneratedMessage does, need to use the more specific one here in order
+      # to avoid ambiguity
+      ""Akka.Actor.ActorSelectionMessage"" = akka-containers
+      ""Akka.Remote.DaemonMsgCreate, Akka.Remote"" = daemon-create
+    }
+
+}";
+
+            var config = ConfigurationFactory.ParseString(hocon);
+
+            var serializersConfig = config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
+            var serializerBindingConfig = config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
+
+            serializersConfig.Select(kvp => kvp.Value).First().GetString().ShouldBe("Akka.Remote.Serialization.MessageContainerSerializer, Akka.Remote");
+            serializerBindingConfig.Select(kvp => kvp.Key).Last().ShouldBe("Akka.Remote.DaemonMsgCreate, Akka.Remote");
         }
     }
 }

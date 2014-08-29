@@ -55,7 +55,7 @@ namespace Akka.Remote
 
             var msgLog = string.Format("RemoteMessage: {0} to {1}<+{2} from {3}", payload, recipient, originalReceiver,
                 sender);
-
+            // message is intended for the RemoteDaemon, usually a command to create a remote actor
             if (recipient == remoteDaemon)
             {
                 if (settings.UntrustedMode) log.Debug("dropping daemon message in untrusted mode");
@@ -65,7 +65,9 @@ namespace Akka.Remote
                     remoteDaemon.Tell(payload);
                 }
             }
-            else if (recipient is LocalRef && recipient.IsLocal) //TODO: update this to include support for RepointableActorRefs if they get implemented
+
+            //message is intended for a local recipient
+            else if ((recipient is LocalRef || recipient is RepointableActorRef) && recipient.IsLocal)
             {
                 if (settings.LogReceive) log.Debug("received local message [{0}]", msgLog);
                 payload.Match()
@@ -98,7 +100,9 @@ namespace Akka.Remote
                     .With<SystemMessage>(msg => { recipient.Tell(msg); })
                     .Default(msg => { recipient.Tell(msg, sender); });
             }
-            else if (recipient is RemoteRef && !recipient.IsLocal && !settings.UntrustedMode)
+
+            // message is intended for a remote-deployed recipient
+            else if ((recipient is RemoteRef || recipient is RepointableActorRef) && !recipient.IsLocal && !settings.UntrustedMode)
             {
                 if (settings.LogReceive) log.Debug("received remote-destined message {0}", msgLog);
                 if (provider.Transport.Addresses.Contains(recipientAddress))

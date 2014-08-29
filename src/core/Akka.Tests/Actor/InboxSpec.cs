@@ -13,6 +13,7 @@ namespace Akka.Tests.Actor
     {
         private Inbox _inbox;
         public InboxSpec()
+            : base("akka.actor.inbox.inbox-size=1000")  //Default is 1000 but just to make sure these tests don't fail we set it
         {
             _inbox = Inbox.Create(Sys);
         }
@@ -77,21 +78,32 @@ namespace Akka.Tests.Actor
             Sys.EventStream.Subscribe(TestActor, typeof(Warning));
             try
             {
+                //Fill the inbox (it can hold 1000) messages
                 foreach (var zero in Enumerable.Repeat(0, 1000))
                     _inbox.Receiver.Tell(zero);
 
                 ExpectNoMsg(TimeSpan.FromSeconds(1));
+
+                //The inbox is full. Sending another message should result in a Warning message
                 EventFilterLog<Warning>("dropping message", 1, () => _inbox.Receiver.Tell(42));
+
+                //The inbox is still full. But since the warning message has already been sent, no more warnings should be sent
                 _inbox.Receiver.Tell(42);
                 ExpectNoMsg(TimeSpan.FromSeconds(1));
 
+                //Receive all messages from the inbox
                 var gotit = Enumerable.Repeat(0, 1000).Select(_ => _inbox.Receive());
                 foreach (var o in gotit)
                 {
                     o.ShouldBe(0);
                 }
 
-                Assert.Throws<TimeoutException>(() => _inbox.Receive(TimeSpan.FromSeconds(1)));
+                //The inbox should be empty now, so receiving should result in a timeout                
+                Assert.Throws<TimeoutException>(() =>
+                {
+                    var received=_inbox.Receive(TimeSpan.FromSeconds(1));
+                    Log.Error("Received "+received);
+                });
             }
             finally
             {

@@ -131,7 +131,7 @@ namespace Akka.Remote
             ActorPath childPath;
             if(ActorPath.TryParse(message.Path, out childPath))
             {
-                IEnumerable<string> subPath = childPath.Elements;
+                IEnumerable<string> subPath = childPath.Elements.Drop(1); //drop the /remote
                 ActorPath path = Path/subPath;
                 var localProps = props; //.WithDeploy(new Deploy(Scope.Local));
                 InternalActorRef actor = _system.Provider.ActorOf(_system, localProps, supervisor, path, false,
