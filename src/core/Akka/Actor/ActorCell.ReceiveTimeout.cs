@@ -18,20 +18,13 @@ namespace Akka.Actor
         }
 
         public void CheckReceiveTimeout()
-        {
-            //TODO: This is expensive, ca 30% of throughput is lost here
-			if (!Mailbox.HasMessages)
+        {           
+            if (_receiveTimeoutDuration != null && !Mailbox.HasMessages)
             {
-                if (_receiveTimeoutDuration != null)
-                {
-                    CancelReceiveTimeout();
-                    _pendingReceiveTimeout = new CancellationTokenSource();
-                    System.Scheduler.ScheduleOnce(_receiveTimeoutDuration.Value, Self, ReceiveTimeout.Instance, _pendingReceiveTimeout.Token);
-                }
-                else
-                {
-                    CancelReceiveTimeout();                    
-                }
+                CancelReceiveTimeout();
+                _pendingReceiveTimeout = new CancellationTokenSource();
+                System.Scheduler.ScheduleOnce(_receiveTimeoutDuration.Value, Self, ReceiveTimeout.Instance,
+                    _pendingReceiveTimeout.Token);
             }
         }
 
