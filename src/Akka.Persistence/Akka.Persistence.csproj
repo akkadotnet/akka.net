@@ -57,7 +57,7 @@
     <Compile Include="Persistent.cs" />
     <Compile Include="Processor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Recover.cs" />
+    <Compile Include="Recovery.cs" />
     <Compile Include="Serialization\MessageSerializer.cs" />
     <Compile Include="Serialization\SnapshotSerializer.cs" />
     <Compile Include="Snapshot.cs" />
