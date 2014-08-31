@@ -10,15 +10,23 @@ namespace Akka.Dispatch
     /// Class DefaultMailbox.
     /// </summary>
     public abstract class Mailbox<TSys,TUser> : Mailbox 
-        //using generics instead of interface base in order to avoid virtual method lookup
         where TSys:MessageQueue
         where TUser:MessageQueue
     {
+        private Stopwatch _deadLineTimer;
+        private volatile bool _isClosed;
         private TSys _systemMessages;
         private TUser _userMessages;
 
-        private Stopwatch _deadLineTimer;
-        private volatile bool _isClosed;
+        protected TSys SystemMessages
+        {
+            get { return _systemMessages; }
+        }
+
+        protected TUser UserMessages
+        {
+            get { return _userMessages; }
+        }
 
         protected Mailbox()
         {
