@@ -132,7 +132,7 @@
     <Compile Include="Configuration\Hocon\HoconValue.cs" />
     <Compile Include="Configuration\Hocon\IHoconElement.cs" />
     <Compile Include="Dispatch\ConcurrentQueueMailbox.cs" />
-    <Compile Include="Dispatch\DefaultMailbox.cs" />
+    <Compile Include="Dispatch\GenericMailbox.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
     <Compile Include="Dispatch\MessageQueues\UnboundedPriorityMailboxQueue.cs" />
@@ -151,6 +151,7 @@
     <Compile Include="Dispatch\MessageQueues\MessageQueue.cs" />
     <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
     <Compile Include="Dispatch\ThreadPoolBuilder.cs" />
+    <Compile Include="Dispatch\UnboundedPriorityMailbox.cs" />
     <Compile Include="Event\ActorEventBus.cs" />
     <Compile Include="Event\AddressTerminatedTopic.cs" />
     <Compile Include="Event\BusLogging.cs" />

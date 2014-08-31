@@ -40,7 +40,7 @@ namespace Akka.Dispatch
             //TODO: this should not exist, its a temp hack because we are not serializing mailbox info when doing remote deply..
             if (string.IsNullOrEmpty(path))
             {
-                return new DefaultMailbox();
+                return new ConcurrentQueueMailbox();
             }
 
             Config config = system.Settings.Config.GetConfig(path);

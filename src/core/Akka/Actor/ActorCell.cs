@@ -151,20 +151,18 @@ namespace Akka.Actor
         }
 
 
-        private Receive _behaviorStackTop;
         public void Become(Receive receive, bool discardOld = true)
         {
             if(discardOld && behaviorStack.Count > 1) //We should never pop off the initial receiver
                 behaviorStack.Pop();
             behaviorStack.Push(receive);
-            _behaviorStackTop = receive;
         }
 
         public void Unbecome()
         {
             if (behaviorStack.Count > 1) //We should never pop off the initial receiver
             {
-                _behaviorStackTop = behaviorStack.Pop();
+                behaviorStack.Pop();                
             }
         }
 
@@ -237,7 +235,6 @@ namespace Akka.Actor
             UseThreadContext(() =>
             {
                 behaviorStack.Clear();
-                _behaviorStackTop = null;
                 instance = CreateNewActorInstance();
                 instance.supervisorStrategy = _props.SupervisorStrategy;
                 //defaults to null - won't affect lazy instantiation unless explicitly set in props
@@ -323,7 +320,6 @@ namespace Akka.Actor
             _actorHasBeenCleared = true;
             CurrentMessage = null;
             behaviorStack = null;
-            _behaviorStackTop = null;
         }
 
         public static NameAndUid SplitNameAndUid(string name)

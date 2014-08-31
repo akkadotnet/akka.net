@@ -14,11 +14,16 @@ namespace Akka.Dispatch.MessageQueues
     public class PriorityQueue
     {
         private readonly List<Envelope> _data;
-        private readonly Func<object, float> _priorityCalculator = message => 1;
+        private Func<object, int> _priorityCalculator = message => 1;
 
         public PriorityQueue()
         {
             _data = new List<Envelope>();
+        }
+
+        public void SetPriorityCalculator(Func<object, int> priorityCalculator)
+        {
+            _priorityCalculator = priorityCalculator;
         }
 
         public void Enqueue(Envelope item)
@@ -100,6 +105,11 @@ namespace Akka.Dispatch.MessageQueues
     {
         private readonly TQueue _queue = new TQueue();
         private readonly PriorityQueue _prioQueue = new PriorityQueue();
+
+        public UnboundedPriorityMessageQueue(Func<object, int> priorityCalculator)
+        {
+            _prioQueue.SetPriorityCalculator(priorityCalculator);
+        }
 
 
         public void Enqueue(Envelope envelope)
