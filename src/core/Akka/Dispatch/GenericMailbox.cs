@@ -7,7 +7,7 @@ using Akka.Dispatch.SysMsg;
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// Class DefaultMailbox.
+    /// Class Mailbox of TSys,TUser.
     /// </summary>
     public abstract class Mailbox<TSys,TUser> : Mailbox 
         where TSys:MessageQueue

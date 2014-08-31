@@ -161,13 +161,9 @@ namespace Akka.Actor
         public void Unbecome()
         {
             if (behaviorStack.Count > 1) //We should never pop off the initial receiver
-            {
                 behaviorStack.Pop();                
-            }
         }
-
-    
-
+  
         void IUntypedActorContext.Become(UntypedReceive receive, bool discardOld)
         {
             Become(m => { receive(m); return true; }, discardOld);

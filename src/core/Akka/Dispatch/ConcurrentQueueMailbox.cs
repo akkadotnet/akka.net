@@ -15,7 +15,7 @@ using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// Class DefaultMailbox.
+    /// Class ConcurrentQueueMailbox.
     /// </summary>
     public class ConcurrentQueueMailbox : Mailbox
     {
@@ -71,7 +71,7 @@ namespace Akka.Dispatch
                     //run the receive handler
                     ActorCell.Invoke(envelope);
 
-                    ////check if any system message have arrived while processing user messages
+                    //check if any system message have arrived while processing user messages
                     if (_systemMessages.TryDequeue(out envelope))
                     {
                         //handle system message
