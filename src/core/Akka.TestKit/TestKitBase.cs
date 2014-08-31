@@ -17,6 +17,7 @@ namespace Akka.TestKit
         private static readonly Config _defaultConfig = ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internals.Reference.conf");
         private static readonly Config _fullDebugConfig = ConfigurationFactory.ParseString(@"
                 akka.log-dead-letters-during-shutdown = true
+                akka.loggers = [""akka.testkit.TestEventListener""]
                 akka.actor.debug.receive = true
                 akka.actor.debug.autoreceive = true
                 akka.actor.debug.lifecycle = true
@@ -38,7 +39,7 @@ namespace Akka.TestKit
         private TimeSpan? _end;
         private bool _lastWasNoMsg; //if last assertion was expectNoMsg, disable timing failure upon within() block end.
         private readonly LoggingAdapter _log;
-
+        private readonly EventFilterFactory _eventFilterFactory;
 
         /// <summary>
         /// Create a new instance of the <see cref="TestKitBase"/> class.
@@ -80,7 +81,7 @@ namespace Akka.TestKit
             _testKitSettings = TestKitExtension.For(_system);
             _queue = new BlockingQueue<MessageEnvelope>();
             _log = Logging.GetLogger(system, GetType());
-
+            _eventFilterFactory = new EventFilterFactory(this);
 
             var testActor = CreateTestActor(system, "testActor" + _testActorId.IncrementAndGet());
             _testActor = testActor;
@@ -106,6 +107,14 @@ namespace Akka.TestKit
 
         public ActorRef TestActor { get { return _testActor; } }
 
+        /// <summary>
+        /// Filter <see cref="LogEvent"/> sent to the system's <see cref="EventStream"/>.
+        /// In order to be able to filter the log the special logger
+        /// <see cref="TestEventListener"/> must be installed using the config
+        /// <pre><code>akka.loggers = ["akka.testkit.TestEventListener"]</code></pre>
+        /// It is installed by default in testkit.
+        /// </summary>
+        protected EventFilterFactory EventFilter { get { return _eventFilterFactory; } }
 
 
         /// <summary>
@@ -257,7 +266,7 @@ namespace Akka.TestKit
         /// On failure debug output will be logged about the remaining actors in the system.
         /// If verifySystemShutdown is true, then an exception will be thrown on failure.
         /// </summary>
-        /// <param name="duration">The duration to wait for shutdown.</param>
+        /// <param name="duration">Optional. The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor".</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
         protected virtual void Shutdown(TimeSpan? duration = null, bool verifySystemShutdown = false)
         {
@@ -270,7 +279,7 @@ namespace Akka.TestKit
         /// If verifySystemShutdown is true, then an exception will be thrown on failure.
         /// </summary>
         /// <param name="system">The system to shutdown.</param>
-        /// <param name="duration">The duration to wait for shutdown.</param>
+        /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
         protected virtual void Shutdown(ActorSystem system, TimeSpan? duration=null, bool verifySystemShutdown = false)
         {
