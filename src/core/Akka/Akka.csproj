@@ -135,6 +135,7 @@
     <Compile Include="Dispatch\GenericMailbox.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
+    <Compile Include="Dispatch\MessageQueues\Semantics.cs" />
     <Compile Include="Dispatch\MessageQueues\UnboundedPriorityMailboxQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\UnboundedMailboxQueue.cs" />
     <Compile Include="Dispatch\FutureActor.cs" />

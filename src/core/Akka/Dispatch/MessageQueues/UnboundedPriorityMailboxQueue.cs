@@ -101,7 +101,7 @@ namespace Akka.Dispatch.MessageQueues
         } // IsConsistent
     } // PriorityQueue
 
-    public class UnboundedPriorityMessageQueue : MessageQueue
+    public class UnboundedPriorityMessageQueue : MessageQueue, UnboundedMessageQueueSemantics
     {
         private readonly TQueue _queue = new TQueue();
         private readonly PriorityQueue _prioQueue = new PriorityQueue();
