@@ -102,6 +102,7 @@
     <Compile Include="Actor\ReceiveActorTests_Become.cs" />
     <Compile Include="Actor\ReceiveActorTests_LifeCycle.cs" />
     <Compile Include="Configuration\HoconTests.cs" />
+    <Compile Include="Dispatch\MailboxesSpec.cs" />
     <Compile Include="Event\EventBusSpec.cs" />
     <Compile Include="Event\EventStreamSpec.cs" />
     <Compile Include="MatchHandler\CachedMatchCompilerTests.cs" />
