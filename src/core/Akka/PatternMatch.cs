@@ -13,7 +13,6 @@ namespace Akka
         /// </summary>
         /// <param name="target">The target.</param>
         /// <returns>Case.</returns>
-        [Obsolete("Use is/as checks or replace actor with ReceiveActor/TypedActor",false)]
         public static Case Match(this object target)
         {
             return new Case(target);

@@ -65,7 +65,7 @@ akka {
             var childCreatedEvent=new ManualResetEventSlim();
 
 
-            var path = (((ActorSystemImpl) Sys).Guardian.Path + "/foo").ToString();
+            var path = (((ActorSystemImpl)Sys).Guardian.Path.Address + "/remote/user/foo").ToString();
 
             //ask to create an actor MyRemoteActor, this actor has a child "child"
             daemon.Tell(new DaemonMsgCreate(Props.Create(() => new MyRemoteActor(childCreatedEvent)), null, path, supervisor));
