@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Threading;
 using Akka.Actor;
 using Akka.TestKit;
+using Akka.TestKit.TestActors;
 using Xunit;
 
 namespace Akka.Tests.Actor
 {
-    public class ActorRefSpec
+    public class ActorRefSpec : AkkaSpec
     {
         //TODO: A lot is missing in ActorRefSpec
 
@@ -59,6 +61,421 @@ namespace Akka.Tests.Actor
             (refActorRef == ref3).ShouldBeFalse();
             (refActorRef != ref3).ShouldBeTrue();
             // ReSharper restore EqualExpressionComparison
+        }
+
+        [Fact]
+        public void An_ActorRef_should_not_allow_actors_to_be_created_outside_an_ActorOf()
+        {
+            //TODO: requires EventFilters implemented
+        }
+
+        [Fact]
+        public void An_ActorRef_should_be_serializable_using_default_binary_serialization_on_local_mode()
+        {
+            //TODO: Default serializer need to be specified
+        }
+
+        [Fact]
+        public void An_ActorRef_should_throw_an_exception_on_deserialize_if_no_system_in_scope()
+        {
+            //TODO: Default serializer need to be specified
+        }
+
+        [Fact]
+        public void An_ActoRef_should_return_EmptyLocalActorRef_on_deserialize_if_not_present_in_actor_hierarchy_and_remoting_is_not_enabled()
+        {
+            //TODO: Default serializer need to be specified
+        }
+
+        [Fact]
+        public void An_ActorRef_should_support_nested_ActorOfs()
+        {
+            var a = Sys.ActorOf(Props.Create(() => new NestingActor(Sys)));
+            var t1 = a.Ask("any");
+            t1.Wait(TimeSpan.FromSeconds(3));
+            var nested = t1.Result as ActorRef;
+            
+            Assert.NotNull(a);
+            Assert.NotNull(nested);
+            Assert.True(a != nested);
+        }
+
+        [Fact]
+        public void An_ActorRef_should_support_advanced_nested_ActorOfs()
+        {
+            var i = Sys.ActorOf(Props.Create(() => new InnerActor()));
+            var a = Sys.ActorOf(Props.Create(() => new OuterActor(i)));
+
+            var t1 = a.Ask("innerself");
+            t1.Wait(TimeSpan.FromSeconds(3));
+            var inner = t1.Result as ActorRef;
+            Assert.True(inner != a);
+
+            var t2 = a.Ask(a);
+            t2.Wait(TimeSpan.FromSeconds(3));
+            var self = t2.Result as ActorRef;
+            self.ShouldBe(a);
+
+            var t3 = a.Ask("self");
+            t3.Wait(TimeSpan.FromSeconds(3));
+            var self2 = t3.Result as ActorRef;
+            self2.ShouldBe(a);
+
+            var t4 = a.Ask("msg");
+            t4.Wait(TimeSpan.FromSeconds(3));
+            var msg = t4.Result as string;
+            msg.ShouldBe("msg");
+        }
+
+        [Fact]
+        public void An_ActorRef_should_suppport_reply_via_Sender()
+        {
+            var latch = new TestLatch(Sys, 4);
+            var serverRef = Sys.ActorOf(Props.Create<ReplyActor>());
+            var clientRef = Sys.ActorOf(Props.Create(() => new SenderActor(serverRef, latch)));
+
+            clientRef.Tell("complex");
+            clientRef.Tell("simple");
+            clientRef.Tell("simple");
+            clientRef.Tell("simple");
+
+            latch.Ready(TimeSpan.FromSeconds(3));
+            latch.Reset();
+
+            clientRef.Tell("complex2");
+            clientRef.Tell("simple");
+            clientRef.Tell("simple");
+            clientRef.Tell("simple");
+
+            latch.Ready(TimeSpan.FromSeconds(3));
+            Sys.Stop(clientRef);
+            Sys.Stop(serverRef);
+        }
+
+        [Fact]
+        public void An_ActorRef_should_support_ActorOfs_where_actor_class_is_not_public()
+        {
+            var a = Sys.ActorOf(NonPublicActor.CreateProps());
+            a.Tell("pigdog", TestActor);
+            ExpectMsg("pigdog");
+            Sys.Stop(a);
+        }
+
+        [Fact]
+        public void An_ActorRef_should_stop_when_sent_a_poison_pill()
+        {
+            var timeout = TimeSpan.FromSeconds(20);
+            var actorRef = Sys.ActorOf(Props.Create(() => new PoisonPilledActor()));
+
+            var t1 = actorRef.Ask(5, timeout);
+            var t2 = actorRef.Ask(0, timeout);
+            actorRef.Tell(PoisonPill.Instance);
+
+            t1.Wait(timeout);
+            t2.Wait(timeout);
+
+            t1.Result.ShouldBe("five");
+            t2.Result.ShouldBe("zero");
+
+            VerifyActorTermination(actorRef);
+        }
+
+        [Fact]
+        public void An_ActorRef_should_restart_when_Killed()
+        {
+            //TODO: require FilterException implemented
+        }
+
+        [Fact]
+        public void An_ActorRef_should_be_able_to_check_for_existence_of_the_children()
+        {
+            var timeout = TimeSpan.FromSeconds(3);
+            var parent = Sys.ActorOf(Props.Create(() => new ChildAwareActor("child")));
+
+            var t1 = parent.Ask("child");
+            t1.Wait(timeout);
+            Assert.True((bool)t1.Result);
+
+            var t2 = parent.Ask("what");
+            t2.Wait(timeout);
+            Assert.True(!(bool)t2.Result);
+        }
+
+        private void VerifyActorTermination(ActorRef actorRef)
+        {
+            var watcher = CreateTestProbe();
+            watcher.Watch(actorRef);
+            watcher.ExpectTerminated(actorRef, TimeSpan.FromSeconds(20));
+        }
+
+        private class NestingActor : ActorBase
+        {
+            internal readonly ActorRef Nested;
+
+            public NestingActor(ActorSystem system)
+            {
+                Nested = system.ActorOf<BlackHoleActor>();
+            }
+
+            protected override bool Receive(object message)
+            {
+                Sender.Tell(Nested);
+                return true;
+            }
+        }
+
+        private struct ReplyTo
+        {
+            public ReplyTo(ActorRef sender)
+                : this()
+            {
+                Sender = sender;
+            }
+
+            public ActorRef Sender { get; set; }
+        }
+
+        private class ReplyActor : ActorBase
+        {
+            private ActorRef _replyTo;
+
+            protected override bool Receive(object message)
+            {
+                var type = message.ToString();
+                switch (type)
+                {
+                    case "complexRequest":
+                        {
+                            _replyTo = Sender;
+                            var worker = Context.ActorOf(Props.Create<WorkerActor>());
+                            worker.Tell("work");
+                            break;
+                        }
+                    case "complexRequest2":
+                        {
+                            var worker = Context.ActorOf(Props.Create<WorkerActor>());
+                            worker.Tell(new ReplyTo(Sender));
+                            break;
+                        }
+                    case "workDone":
+                        _replyTo.Tell("complexReply");
+                        break;
+                    case "simpleRequest":
+                        Sender.Tell("simpleReply");
+                        break;
+                }
+
+                return true;
+            }
+        }
+
+        private class NonPublicActor: ReceiveActor
+        {
+            internal static Props CreateProps()
+            {
+                return Props.Create<NonPublicActor>();
+            }
+
+            public NonPublicActor()
+            {
+                Receive<object>(msg => Sender.Tell(msg));
+            }
+        }
+
+        private class WorkerActor : ReceiveActor
+        {
+            public WorkerActor()
+            {
+                Receive<string>(msg =>
+                {
+                    if (msg == "work")
+                    {
+                        Work();
+                        Sender.Tell("workDone");
+                        Context.Stop(Self);
+                    }
+                });
+                Receive<ReplyTo>(msg =>
+                {
+                    Work();
+                    msg.Sender.Tell("complexReply");
+                });
+            }
+
+            private void Work()
+            {
+                Thread.Sleep(1000);
+            }
+        }
+
+        private class SenderActor : ActorBase
+        {
+            private ActorRef _replyTo;
+            private TestLatch _latch;
+
+            public SenderActor(ActorRef replyTo, TestLatch latch)
+            {
+                _latch = latch;
+                _replyTo = replyTo;
+            }
+
+            protected override bool Receive(object message)
+            {
+                var msg = message.ToString();
+                switch (msg)
+                {
+                    case "complex": _replyTo.Tell("complexRequest"); break;
+                    case "complex2": _replyTo.Tell("complexRequest2"); break;
+                    case "simple": _replyTo.Tell("simpleRequest"); break;
+                    case "complexReply": _latch.CountDown(); break;
+                    case "simpleReply": _latch.CountDown(); break;
+                }
+
+                return true;
+            }
+        }
+
+        private class InnerActor : ActorBase
+        {
+            protected override bool Receive(object message)
+            {
+                if (message.ToString() == "innerself")
+                {
+                    Sender.Tell(Self);
+                }
+                else
+                {
+                    Sender.Tell(message);
+                }
+                return true;
+            }
+        }
+        private class FailingInnerActor : ActorBase
+        {
+            protected ActorBase Fail;
+
+            public FailingInnerActor(ActorBase fail)
+            {
+                Fail = fail;
+            }
+
+            protected override bool Receive(object message)
+            {
+                if (message.ToString() == "innerself")
+                {
+                    Sender.Tell(Self);
+                }
+                else
+                {
+                    Sender.Tell(message);
+                }
+                return true;
+            }
+        }
+
+        private class FailingChildInnerActor : FailingInnerActor
+        {
+            public FailingChildInnerActor(ActorBase fail) : base(fail)
+            {
+                Fail = new InnerActor();
+            }
+        }
+
+        private class OuterActor : ActorBase
+        {
+            private readonly ActorRef _inner;
+
+            public OuterActor(ActorRef inner)
+            {
+                _inner = inner;
+            }
+
+            protected override bool Receive(object message)
+            {
+                if (message.ToString() == "self")
+                {
+                    Sender.Tell(Self);
+                }
+                else
+                {
+                    _inner.Forward(message);
+                }
+                return true;
+            }
+        }
+
+        private class FailingOuterActor : ActorBase
+        {
+            private readonly ActorRef _inner;
+            protected ActorBase Fail;
+
+            public FailingOuterActor(ActorRef inner)
+            {
+                _inner = inner;
+                Fail = new InnerActor();
+            }
+            protected override bool Receive(object message)
+            {
+                if (message.ToString() == "self")
+                {
+                    Sender.Tell(Self);
+                }
+                else
+                {
+                    _inner.Forward(message);
+                }
+                return true;
+            }
+        }
+
+        private class FailingChildOuterActor : FailingOuterActor
+        {
+            public FailingChildOuterActor(ActorRef inner) : base(inner)
+            {
+                Fail = new InnerActor();
+            }
+        }
+
+        private class PoisonPilledActor : ActorBase
+        {
+            protected override bool Receive(object message)
+            {
+                if (message is int)
+                {
+                    var i = (int)message;
+                    string msg = null;
+                    if (i == 0) msg = "zero";
+                    else if (i == 5) msg = "five";
+
+                    Sender.Tell(msg);
+
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        private class ChildAwareActor : ActorBase
+        {
+            private readonly ActorRef _child;
+
+            public ChildAwareActor(string name)
+            {
+                _child = Context.ActorOf(Props.Create(() => new BlackHoleActor()), name);
+            }
+
+            protected override bool Receive(object message)
+            {
+                if (message is string)
+                {
+                    var name = message.ToString();
+                    var child = Context.Child(name);
+                    Sender.Tell(!child.IsNobody());
+                    return true;
+                }
+
+                return false;
+            }
         }
 
         private class EqualTestActorRef : ActorRef
