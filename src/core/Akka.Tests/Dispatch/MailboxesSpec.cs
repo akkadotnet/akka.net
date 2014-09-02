@@ -1,7 +1,9 @@
 ﻿using System;
 using Akka.Actor;
 using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
+using Akka.TestKit.TestActors;
 using Xunit;
 
 namespace Akka.Tests.Dispatch
@@ -35,36 +37,26 @@ string-prio-mailbox {
         [Fact]
         public void CanUseUnboundedPriorityMailbox()
         {
-            var actor = Sys.ActorOf(Props.Create(() => new SomeActor(TestActor)).WithMailbox("string-prio-mailbox"));
+            var actor = Sys.ActorOf(EchoActor.Props(this).WithMailbox("string-prio-mailbox"), "echo");
+
+            //pause mailbox until all messages have been told
+            actor.Tell(Suspend.Instance);
             actor.Tell(1);
             actor.Tell(1);
             actor.Tell(1);
             actor.Tell("a");
             actor.Tell(1);
-            
-            //this is racy, mailbox could get to run too early and pass one of the integers before the string
-            //TODO: how do I test this better?
+            actor.Tell(new Resume(null));
 
+            //resume mailbox, this prevents the mailbox from running to early
+            //priority mailbox is best effort only
+            
             ExpectMsg("a");
             ExpectMsg(1);
             ExpectMsg(1);
             ExpectMsg(1);
             ExpectMsg(1);
             ExpectNoMsg(TimeSpan.FromSeconds(1));
-        }
-
-        public class SomeActor : UntypedActor
-        {
-            private readonly ActorRef _callback;
-            public SomeActor(ActorRef callback)
-            {
-                _callback = callback;
-            }
-
-            protected override void OnReceive(object message)
-            {
-                _callback.Tell(message);
-            }
-        }
+        }       
     }
 }
