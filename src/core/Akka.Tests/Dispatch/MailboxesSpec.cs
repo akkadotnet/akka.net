@@ -56,7 +56,7 @@ string-prio-mailbox {
             ExpectMsg(1);
             ExpectMsg(1);
             ExpectMsg(1);
-            ExpectNoMsg(TimeSpan.FromSeconds(1));
+            ExpectNoMsg(TimeSpan.FromSeconds(0.3));
         }       
     }
 }
