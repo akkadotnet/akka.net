@@ -86,7 +86,7 @@ namespace Akka.Cluster
         {
             if(Address != that.Address) throw new ArgumentException(string.Format("NodeMetrics.merge is only allowed for the same address. {0} != {1}", Address, that.Address));
             if (Timestamp >= that.Timestamp) return this; //that is older
-            return new NodeMetrics(Address, that.Timestamp, Metrics.Union(that.Metrics));
+            return new NodeMetrics(Address, that.Timestamp, that.Metrics.Union(Metrics));
         }
     }
 
