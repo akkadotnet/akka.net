@@ -466,7 +466,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Returns the number of available processors. Creates a new instance each time.
         /// </summary>
-        private Metric Processors()
+        public Metric Processors()
         {
             return Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount, null);
         }
@@ -474,7 +474,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Returns the system load average. Creates a new instance each time.
         /// </summary>
-        private Metric SystemLoadAverage()
+        public Metric SystemLoadAverage()
         {
             return Metric.Create(StandardMetrics.SystemLoadAverage, _systemLoadAverageCounter.NextValue());
         }
@@ -482,7 +482,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Gets the amount of memory used by this particular CLR process. Creates a new instance each time.
         /// </summary>
-        private Metric ClrProcessMemoryUsed()
+        public Metric ClrProcessMemoryUsed()
         {
             return Metric.Create(StandardMetrics.ClrProcessMemoryUsed, Process.GetCurrentProcess().WorkingSet64,
                 DecayFactor);
@@ -491,7 +491,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Gets the amount of system memory available. Creates a new instance each time.
         /// </summary>
-        private Metric SystemMemoryAvailable()
+        public Metric SystemMemoryAvailable()
         {
             return Metric.Create(StandardMetrics.SystemMemoryAvailable, _systemAvailableMemory.NextValue(), DecayFactor);
         }
@@ -499,7 +499,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Gets the total amount of system memory. Creates a new instance each time.
         /// </summary>
-        private Metric SystemMaxMemory()
+        public Metric SystemMaxMemory()
         {
             return Metric.Create(StandardMetrics.SystemMemoryMax,
                 new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory);

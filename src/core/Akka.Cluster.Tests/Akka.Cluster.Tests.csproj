@@ -65,8 +65,10 @@
     <Compile Include="ClusterConfigSpec.cs" />
     <Compile Include="ClusterDomainEventPublisherSpec.cs" />
     <Compile Include="ClusterDomainEventSpec.cs" />
+    <Compile Include="EMWASpec.cs" />
     <Compile Include="GossipSpec.cs" />
     <Compile Include="MemberOrderingSpec.cs" />
+    <Compile Include="MetricsCollectorSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Proto\ClusterMessageSerializerSpec.cs" />
     <Compile Include="ReachabilitySpec.cs" />
