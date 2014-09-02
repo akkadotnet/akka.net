@@ -97,7 +97,7 @@ namespace Akka.Cluster
     /// </summary>
     public sealed class Metric : MetricNumericConverter
     {
-        public Metric(string name, double value, EMWA average = null)
+        public Metric(string name, double value, EWMA average = null)
         {
             Average = average;
             Value = value;
@@ -112,7 +112,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Can be null
         /// </summary>
-        public EMWA Average { get; private set; }
+        public EWMA Average { get; private set; }
 
         /// <summary>
         /// The numerical value of the average, if defined, otherwise the latest value
@@ -181,9 +181,9 @@ namespace Akka.Cluster
         }
 
         // ReSharper disable once InconsistentNaming
-        public static EMWA CreateEWMA(double value, double? decayFactor = null)
+        public static EWMA CreateEWMA(double value, double? decayFactor = null)
         {
-            return decayFactor.HasValue ? new EMWA(value, decayFactor.Value) : null;
+            return decayFactor.HasValue ? new EWMA(value, decayFactor.Value) : null;
         }
 
         #endregion
@@ -245,9 +245,9 @@ namespace Akka.Cluster
     ///
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public sealed class EMWA
+    public sealed class EWMA
     {
-        public EMWA(double value, double alpha)
+        public EWMA(double value, double alpha)
         {
             Alpha = alpha;
             Value = value;
@@ -260,11 +260,11 @@ namespace Akka.Cluster
 
         #region Operators
 
-        public static EMWA operator +(EMWA emwa, double xn)
+        public static EWMA operator +(EWMA ewma, double xn)
         {
-            var newValue = (emwa.Alpha * xn) + (1 - emwa.Alpha) * emwa.Value;
-            if (newValue == emwa.Value) return emwa;
-            return new EMWA(newValue, emwa.Alpha);
+            var newValue = (ewma.Alpha * xn) + (1 - ewma.Alpha) * ewma.Value;
+            if (newValue == ewma.Value) return ewma;
+            return new EWMA(newValue, ewma.Alpha);
         }
 
         #endregion
@@ -278,7 +278,7 @@ namespace Akka.Cluster
 
 
         ///<summary>
-        /// Calculate the alpha (decay factor) used in <see cref="EMWA"/>
+        /// Calculate the alpha (decay factor) used in <see cref="EWMA"/>
         /// from specified half-life and interval between observations.
         /// Half-life is the interval over which the weights decrease by a factor of two.
         /// The relevance of each data sample is halved for every passing half-life duration,
@@ -429,7 +429,7 @@ namespace Akka.Cluster
         }
 
         private PerformanceCounterMetricsCollector(Cluster cluster) : this(cluster.SelfAddress,
-            EMWA.CalculateAlpha(cluster.Settings.MetricsMovingAverageHalfLife, cluster.Settings.MetricsInterval)) { }
+            EWMA.CalculateAlpha(cluster.Settings.MetricsMovingAverageHalfLife, cluster.Settings.MetricsInterval)) { }
 
         /// <summary>
         /// This constructor is used when creating an instance from configured fully-qualified name
