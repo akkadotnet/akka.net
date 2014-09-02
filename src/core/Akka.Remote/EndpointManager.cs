@@ -10,6 +10,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Remote
 {

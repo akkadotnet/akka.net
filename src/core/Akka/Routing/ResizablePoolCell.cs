@@ -8,6 +8,7 @@ using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Routing
 {

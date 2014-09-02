@@ -5,6 +5,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit.Internals;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.TestKit
 {

@@ -4,6 +4,7 @@ using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Tests.Routing
 {
