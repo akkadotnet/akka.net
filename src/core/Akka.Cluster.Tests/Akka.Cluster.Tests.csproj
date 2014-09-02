@@ -69,9 +69,11 @@
     <Compile Include="GossipSpec.cs" />
     <Compile Include="MemberOrderingSpec.cs" />
     <Compile Include="MetricsCollectorSpec.cs" />
+    <Compile Include="NodeMetricsSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Proto\ClusterMessageSerializerSpec.cs" />
     <Compile Include="ReachabilitySpec.cs" />
+    <Compile Include="SerializationChecksSpec.cs" />
     <Compile Include="TestMember.cs" />
     <Compile Include="VectorClockSpec.cs" />
   </ItemGroup>
