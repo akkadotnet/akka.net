@@ -1,8 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Configuration;
+using Akka.Event;
 
 namespace Akka.Cluster
 {
@@ -23,8 +28,66 @@ namespace Akka.Cluster
     {
     }
 
+    /// <summary>
+    /// The snapshot of current sampled health metrics for any monitored process.
+    /// Collected and gossiped at regular intervals for dynamic cluster management strategies.
+    /// 
+    /// Equality of <see cref="NodeMetrics"/> is based on its <see cref="Address"/>.
+    /// </summary>
     public class NodeMetrics
     {
+        public Address Address { get; private set; }
+
+        /// <summary>
+        /// DateTime.Ticks
+        /// </summary>
+        public long Timestamp { get; private set; }
+        public ImmutableHashSet<Metric> Metrics { get; private set; }
+
+        public NodeMetrics(Address address, long timestamp, ImmutableHashSet<Metric> metrics)
+        {
+            Address = address;
+            Timestamp = timestamp;
+            Metrics = metrics;
+        }
+
+        public NodeMetrics(Address address, long timestamp) : this(address, timestamp, ImmutableHashSet.Create<Metric>()) { }
+
+        /// <summary>
+        /// Return the metric that matches <see cref="key"/>. Returns null if not found.
+        /// </summary>
+        public Metric Metric(string key)
+        {
+            return Metrics.FirstOrDefault(metric => metric.Name.Equals(key));
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((NodeMetrics) obj);
+        }
+
+        protected bool Equals(NodeMetrics other)
+        {
+            return Address.Equals(other.Address);
+        }
+
+        public override int GetHashCode()
+        {
+            return Address.GetHashCode();
+        }
+
+        /// <summary>
+        /// Returns the most recent data
+        /// </summary>
+        public NodeMetrics Merge(NodeMetrics that)
+        {
+            if(Address != that.Address) throw new ArgumentException(string.Format("NodeMetrics.merge is only allowed for the same address. {0} != {1}", Address, that.Address));
+            if (Timestamp >= that.Timestamp) return this; //that is older
+            return new NodeMetrics(Address, that.Timestamp, Metrics.Union(that.Metrics));
+        }
     }
 
     /// <summary>
@@ -32,14 +95,14 @@ namespace Akka.Cluster
     /// 
     /// Equality of metric based on its name
     /// </summary>
-    internal sealed class Metric : MetricNumericConverter
+    public sealed class Metric : MetricNumericConverter
     {
         public Metric(string name, double value, EMWA average = null)
         {
             Average = average;
             Value = value;
             Name = name;
-            if(string.IsNullOrEmpty(Name)) throw new ArgumentNullException("name", string.Format("Invalid Metric {0} value {1}", name, value));
+            if (string.IsNullOrEmpty(Name)) throw new ArgumentNullException("name", string.Format("Invalid Metric {0} value {1}", name, value));
         }
 
         public string Name { get; private set; }
@@ -70,7 +133,7 @@ namespace Akka.Cluster
             get { return Average != null; }
         }
 
-        #region Equality 
+        #region Equality
 
         private bool Equals(Metric other)
         {
@@ -86,7 +149,7 @@ namespace Akka.Cluster
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Metric && Equals((Metric) obj);
+            return obj is Metric && Equals((Metric)obj);
         }
 
         #endregion
@@ -97,8 +160,8 @@ namespace Akka.Cluster
         {
             if (original.Equals(latest))
             {
-                if(original.Average != null) return new Metric(original.Name, latest.Value, original.Average + latest.Value);
-                if(latest.Average != null) return new Metric(original.Name, latest.Value, latest.Average);
+                if (original.Average != null) return new Metric(original.Name, latest.Value, original.Average + latest.Value);
+                if (latest.Average != null) return new Metric(original.Name, latest.Value, latest.Average);
                 return new Metric(original.Name, latest.Value);
             }
             return original;
@@ -114,10 +177,10 @@ namespace Akka.Cluster
         /// </summary>
         public static Metric Create(string name, double value, double? decayFactor = null)
         {
-            return Defined(value) ? new Metric(name, value, CreateEWMA(value,decayFactor)) : null;
+            return Defined(value) ? new Metric(name, value, CreateEWMA(value, decayFactor)) : null;
         }
 
-// ReSharper disable once InconsistentNaming
+        // ReSharper disable once InconsistentNaming
         public static EMWA CreateEWMA(double value, double? decayFactor = null)
         {
             return decayFactor.HasValue ? new EMWA(value, decayFactor.Value) : null;
@@ -132,7 +195,7 @@ namespace Akka.Cluster
     /// Encapsulates evaluation of validity of metric values, conversion of an actual metric value to
     /// an <see cref="Metric"/> for consumption by subscribed cluster entities.
     /// </summary>
-    internal abstract class MetricNumericConverter
+    public abstract class MetricNumericConverter
     {
         /// <summary>
         /// A defined value is greater than zero and not NaN / Infinity
@@ -182,7 +245,7 @@ namespace Akka.Cluster
     ///
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    internal sealed class EMWA
+    public sealed class EMWA
     {
         public EMWA(double value, double alpha)
         {
@@ -240,16 +303,248 @@ namespace Akka.Cluster
     /// The following extractors and data structures make it easy to consume the
     /// <see cref="NodeMetrics"/> in for example load balancers.
     /// </summary>
-    static class StandardMetrics
+    internal static class StandardMetrics
     {
-        // Constants for memory-related Metric names
-        public const string VirtualMemoryUsed = "virtual-memory-used";
-        public const string PhysicalMemoryUsed = "physical-memory-used";
-        public const string MaxVirtualMemory = "virtual-memory-max";
-        public const string MaxPhysicalMemory = "physical-memory-max";
+        // Constants for memory-related Metric names (accounting for differences between JVM and .NET)
+        public const string SystemMemoryMax = "system-memory-max";
+        public const string ClrProcessMemoryUsed = "clr-process-memory-used"; //memory for the individual .NET process running Akka.NET
+        public const string SystemMemoryAvailable = "system-memory-available";
 
         //Constants for cpu-related Metric names
+        public const string SystemLoadAverage = "system-load-average";
+        public const string Processors = "processors";
+        public const string CpuCombined = "cpu-combined";
+
+        public static long NewTimestamp()
+        {
+            return DateTime.Now.Ticks;
+        }
+
+        public sealed class SystemMemory
+        {
+            public Address Address { get; private set; }
+            public long Timestamp { get; private set; }
+            public long Used { get; private set; }
+            public long Available { get; private set; }
+            public long? Max { get; private set; }
+
+            public SystemMemory(Address address, long timestamp, long used, long available, long? max = null)
+            {
+                Address = address;
+                Timestamp = timestamp;
+                Used = used;
+                Available = available;
+                Max = max;
+
+                if (!(used > 0L)) throw new ArgumentOutOfRangeException("used", "CLR heap memory expected to be > 0 bytes");
+                if (Max.HasValue && !(Max.Value > 0)) throw new ArgumentOutOfRangeException("max", "system max memory expected to be > 0 bytes");
+            }
+
+            #region Static methods
+
+            public static SystemMemory ExtractSystemMemory(NodeMetrics nodeMetrics)
+            {
+                var used = nodeMetrics.Metric(ClrProcessMemoryUsed);
+                var available = nodeMetrics.Metric(SystemMemoryAvailable);
+                if (used == null || available == null) return null;
+                var max = nodeMetrics.Metric(SystemMemoryAvailable) != null ? (long?)Convert.ToInt64(nodeMetrics.Metric(SystemMemoryAvailable).SmoothValue) : null;
+                return new SystemMemory(nodeMetrics.Address, nodeMetrics.Timestamp, 
+                    Convert.ToInt64(used.SmoothValue), Convert.ToInt64(available.SmoothValue), max);
+            }
+
+            #endregion
+        }
+
+        /**
+        * @param address [[akka.actor.Address]] of the node the metrics are gathered at
+        * @param timestamp the time of sampling, in milliseconds since midnight, January 1, 1970 UTC
+        * @param systemLoadAverage OS-specific average load on the CPUs in the system, for the past 1 minute,
+        *    The system is possibly nearing a bottleneck if the system load average is nearing number of cpus/cores.
+        * @param cpuCombined combined CPU sum of User + Sys + Nice + Wait, in percentage ([0.0 - 1.0]. This
+        *   metric can describe the amount of time the CPU spent executing code during n-interval and how
+        *   much more it could theoretically.
+        * @param processors the number of available processors
+        */
+        public sealed class Cpu
+        {
+            public Address Address { get; private set; }
+            public long Timestamp { get; private set; }
+            public int Cores { get; private set; }
+            public double? SystemLoadAverageMeasurement { get; private set; }
+            public double? CpuCombinedMeasurement { get; private set; }
+
+            public Cpu(Address address, long timestamp, int cores, double? systemLoadAverage = null, double? cpuCombined = null)
+            {
+                Address = address;
+                Timestamp = timestamp;
+                Cores = cores;
+                SystemLoadAverageMeasurement = systemLoadAverage;
+                CpuCombinedMeasurement = cpuCombined;
+            }
+
+            #region Static methods
+
+            /// <summary>
+            /// Given a <see cref="NodeMetrics"/> it returns the <see cref="Cpu"/> data of the nodeMetrics
+            /// contains the necessary cpu metrics.
+            /// </summary>
+            public static Cpu ExtractCpu(NodeMetrics nodeMetrics)
+            {
+                var processors = nodeMetrics.Metric(Processors);
+                if (processors == null) return null;
+               var systemLoadAverage = nodeMetrics.Metric(SystemLoadAverage) != null ? (double?)nodeMetrics.Metric(SystemLoadAverage).SmoothValue : null;
+               var cpuCombined = nodeMetrics.Metric(CpuCombined) != null
+                    ? (double?)nodeMetrics.Metric(CpuCombined).SmoothValue
+                    : null;
+
+                return new Cpu(nodeMetrics.Address, nodeMetrics.Timestamp, Convert.ToInt32(processors.Value), systemLoadAverage, cpuCombined);
+            }
+
+            #endregion
+        }
+    }
+
+    /// <summary>
+    /// Implementations of cluster syste metrics implement this interface
+    /// </summary>
+    public interface IMetricsCollector : IDisposable
+    {
+        /// <summary>
+        /// Sample and collects new data points.
+        /// This method is invoked periodically and should return
+        /// current metrics for this node.
+        /// </summary>
+        NodeMetrics Sample();
+    }
+
+    /// <summary>
+    /// Loads Windows system metrics through Windows Performance Counters
+    /// </summary>
+    internal class PerformanceCounterMetricsCollector : IMetricsCollector
+    {
+        public PerformanceCounterMetricsCollector(Address address, double decayFactor)
+        {
+            DecayFactor = decayFactor;
+            Address = address;
+        }
+
+        private PerformanceCounterMetricsCollector(Cluster cluster) : this(cluster.SelfAddress,
+            EMWA.CalculateAlpha(cluster.Settings.MetricsMovingAverageHalfLife, cluster.Settings.MetricsInterval)) { }
+
+        /// <summary>
+        /// This constructor is used when creating an instance from configured fully-qualified name
+        /// </summary>
+        public PerformanceCounterMetricsCollector(ActorSystem system) : this(Cluster.Get(system)) { }
+
+        #region Performance counters
+
+        private PerformanceCounter _systemLoadAverageCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total", true);
+        private PerformanceCounter _systemAvailableMemory = new PerformanceCounter("Memory", "Available MBytes", true);
+
+        #endregion
+
+        public Address Address { get; private set; }
+
+        public Double DecayFactor { get; private set; }
+
+        public ImmutableHashSet<Metric> Metrics()
+        {
+            return ImmutableHashSet.Create<Metric>(new []{ Processors(), SystemLoadAverage(), SystemMaxMemory(), SystemMemoryAvailable(), ClrProcessMemoryUsed() });
+        }
+
+        /// <summary>
+        /// Samples and collects new data points.
+        /// Create a new instance each time.
+        /// </summary>
+        public NodeMetrics Sample()
+        {
+            return new NodeMetrics(Address, StandardMetrics.NewTimestamp(), Metrics());
+        }
+
+        #region Metric collection methods
+
+        /// <summary>
+        /// Returns the number of available processors. Creates a new instance each time.
+        /// </summary>
+        private Metric Processors()
+        {
+            return Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount, null);
+        }
+
+        /// <summary>
+        /// Returns the system load average. Creates a new instance each time.
+        /// </summary>
+        private Metric SystemLoadAverage()
+        {
+            return Metric.Create(StandardMetrics.SystemLoadAverage, _systemLoadAverageCounter.NextValue());
+        }
+        
+        /// <summary>
+        /// Gets the amount of memory used by this particular CLR process. Creates a new instance each time.
+        /// </summary>
+        private Metric ClrProcessMemoryUsed()
+        {
+            return Metric.Create(StandardMetrics.ClrProcessMemoryUsed, Process.GetCurrentProcess().WorkingSet64,
+                DecayFactor);
+        }
+
+        /// <summary>
+        /// Gets the amount of system memory available. Creates a new instance each time.
+        /// </summary>
+        private Metric SystemMemoryAvailable()
+        {
+            return Metric.Create(StandardMetrics.SystemMemoryAvailable, _systemAvailableMemory.NextValue(), DecayFactor);
+        }
+
+        /// <summary>
+        /// Gets the total amount of system memory. Creates a new instance each time.
+        /// </summary>
+        private Metric SystemMaxMemory()
+        {
+            return Metric.Create(StandardMetrics.SystemMemoryMax,
+                new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory);
+        }
+
+        #endregion
 
 
+        #region IDisposable members
+
+        public void Dispose()
+        {
+            _systemAvailableMemory.Dispose();
+            _systemLoadAverageCounter.Dispose();
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// Factory to create a configured <see cref="IMetricsCollector"/>.
+    /// </summary>
+    internal static class MetricsCollector
+    {
+        public static IMetricsCollector Get(ExtendedActorSystem system, ClusterSettings settings)
+        {
+            var fqcn = settings.MetricsCollectorClass;
+            if (fqcn == typeof (PerformanceCounterMetricsCollector).AssemblyQualifiedName) return new PerformanceCounterMetricsCollector(system);
+            
+            var metricsCollectorClass = Type.GetType(fqcn);
+            if (metricsCollectorClass == null)
+            {
+                throw new ConfigurationException(string.Format("Could not create custom metrics collector {0}", fqcn));
+            }
+
+            try
+            {
+                var metricsCollector = (IMetricsCollector) Activator.CreateInstance(metricsCollectorClass, system);
+                return metricsCollector;
+            }
+            catch (Exception ex)
+            {
+                throw new ConfigurationException(string.Format("Could not create custom metrics collector {0} because: {1}", fqcn, ex.Message));
+            }
+        }
     }
 }
