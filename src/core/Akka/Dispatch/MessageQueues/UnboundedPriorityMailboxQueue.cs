@@ -10,7 +10,11 @@ using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope
 
 namespace Akka.Dispatch.MessageQueues
 {
-
+    /// <summary>
+    /// Priority queue implemented using a simple list with binary search for inserts.
+    /// This specific implementation is cheap in terms of memory but weak in terms of performance.
+    /// See http://visualstudiomagazine.com/articles/2012/11/01/priority-queues-with-c.aspx for original implementation
+    /// </summary>
     public class PriorityQueue
     {
         private readonly List<Envelope> _data;
@@ -101,6 +105,10 @@ namespace Akka.Dispatch.MessageQueues
         } // IsConsistent
     } // PriorityQueue
 
+
+    /// <summary>
+    /// Base class message queue that uses a priority generator for messages
+    /// </summary>
     public class UnboundedPriorityMessageQueue : MessageQueue, UnboundedMessageQueueSemantics
     {
         private readonly TQueue _queue = new TQueue();
