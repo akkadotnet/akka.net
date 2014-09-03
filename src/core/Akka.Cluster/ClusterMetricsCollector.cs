@@ -347,7 +347,7 @@ namespace Akka.Cluster
                 var used = nodeMetrics.Metric(ClrProcessMemoryUsed);
                 var available = nodeMetrics.Metric(SystemMemoryAvailable);
                 if (used == null || available == null) return null;
-                var max = nodeMetrics.Metric(SystemMemoryAvailable) != null ? (long?)Convert.ToInt64(nodeMetrics.Metric(SystemMemoryAvailable).SmoothValue) : null;
+                var max = nodeMetrics.Metric(SystemMemoryAvailable) != null ? (long?)Convert.ToInt64(nodeMetrics.Metric(SystemMemoryMax).SmoothValue) : null;
                 return new SystemMemory(nodeMetrics.Address, nodeMetrics.Timestamp, 
                     Convert.ToInt64(used.SmoothValue), Convert.ToInt64(available.SmoothValue), max);
             }
