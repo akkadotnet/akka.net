@@ -1,4 +1,11 @@
-#### 0.6.4
+#### 0.6.4 Sep 9 2014
+* Introduced `TailChoppingRouter`
+* All `ActorSystem` extensions now take an `ExtendedActorSystem` as a dependency - all thirdy party actor system extensions will need to update accordingly.
+* Fixed numerous bugs with remote deployment of actors.
+* Fixed a live-lock issue for high-traffic connections on Akka.Remote and introduced softer heartbeat failure deadlines.
+* Changed the configuration chaining process.
+* Removed obsolete attributes from `PatternMatch` and `UntypedActor`.
+* Laying groundwork for initial Mono support.
 
 #### 0.6.3 Aug 13 2014
 * Made it so HOCON config sections chain properly
