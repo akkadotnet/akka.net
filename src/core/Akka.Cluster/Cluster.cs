@@ -275,17 +275,17 @@ namespace Akka.Cluster
         private ActorRef _clusterDaemons;
         private ActorRef _clusterCore;
 
-        private void LogInfo(string message)
+        public void LogInfo(string message)
         {
             _log.Info("Cluster Node [{0}] - {1}", SelfAddress, message);
         }
 
-        private void LogInfo(string template, object arg1)
+        public void LogInfo(string template, object arg1)
         {
             _log.Info(String.Format("Cluster Node [{0}] - " + template, SelfAddress, arg1));
         }
 
-        private void LogInfo(string template, object arg1, object arg2)
+        public void LogInfo(string template, object arg1, object arg2)
         {
             _log.Info(String.Format("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2));
         }

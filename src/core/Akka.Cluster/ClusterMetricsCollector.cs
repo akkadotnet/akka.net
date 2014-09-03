@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Util;
 
 namespace Akka.Cluster
 {
@@ -19,13 +19,268 @@ namespace Akka.Cluster
     /// and publishes the latest cluster metrics data around the node ring and local eventStream
     /// to assist in determining the need to redirect traffic to the least-loaded nodes.
     ///
-    /// Metrics sampling is delegated to the [[akka.cluster.MetricsCollector]].
+    /// Metrics sampling is delegated to the <see cref="IMetricsCollector"/>.
     ///
     /// Smoothing of the data for each monitored process is delegated to the
-    /// [[akka.cluster.EWMA]] for exponential weighted moving average.
+    /// <see cref="EWMA"/> for exponential weighted moving average.
     /// </summary>
-    internal class ClusterMetricsCollector
+    internal class ClusterMetricsCollector : ReceiveActor, IActorLogging
     {
+        private readonly LoggingAdapter _logging = Logging.GetLogger(Context);
+        public LoggingAdapter Log { get { return _logging; } }
+
+        /// <summary>
+        /// The node ring gossiped that conatins only members that are <see cref="MemberStatus.Up"/>
+        /// </summary>
+        public ImmutableHashSet<Address> Nodes { get; private set; }
+
+        /// <summary>
+        /// The metrics collector that samples data on the node.
+        /// </summary>
+        public IMetricsCollector Collector { get; private set; }
+
+        /// <summary>
+        /// The latest metric values with their statistical data
+        /// </summary>
+        public MetricsGossip LatestGossip { get; private set; }
+
+        /// <summary>
+        /// Start periodic gossip to random nodes in the cluster
+        /// </summary>
+        private CancellationTokenSource _gossipTask;
+
+        /// <summary>
+        /// Start periodic metrics collection
+        /// </summary>
+        private CancellationTokenSource _metricsTask;
+
+        private Cluster _cluster;
+
+        private readonly ActorRef _publisher;
+
+        public ClusterMetricsCollector(ActorRef publisher)
+        {
+            _publisher = publisher;
+            _cluster = Cluster.Get(Context.System);
+            Collector = MetricsCollector.Get(Context.System.AsInstanceOf<ExtendedActorSystem>(), _cluster.Settings);
+            LatestGossip = MetricsGossip.Empty;
+            Nodes = ImmutableHashSet.Create<Address>();
+
+            _metricsTask = new CancellationTokenSource();
+            Context.System.Scheduler.Schedule(_cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.MetricsInterval), 
+                _cluster.Settings.MetricsInterval, Self, InternalClusterAction.MetricsTick.Instance, _metricsTask.Token);
+
+            _gossipTask = new CancellationTokenSource();
+            Context.System.Scheduler.Schedule(_cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.GossipInterval),
+                _cluster.Settings.GossipInterval, Self, InternalClusterAction.GossipTick.Instance, _gossipTask.Token);
+
+            Receive<InternalClusterAction.GossipTick>(tick => Gossip());
+            Receive<InternalClusterAction.MetricsTick>(tick => Collect());
+            Receive<MetricsGossipEnvelope>(envelope => ReceiveGossip(envelope));
+            Receive<ClusterEvent.CurrentClusterState>(state => ReceiveState(state));
+            Receive<ClusterEvent.MemberUp>(up => AddMember(up.Member));
+            Receive<ClusterEvent.MemberRemoved>(removed => RemoveMember(removed.Member));
+            Receive<ClusterEvent.MemberExited>(exited => RemoveMember(exited.Member));
+            Receive<ClusterEvent.UnreachableMember>(member => RemoveMember(member.Member));
+            Receive<ClusterEvent.ReachableMember>(member =>
+            {
+                if (member.Member.Status == MemberStatus.Up) AddMember(member.Member);
+            });
+            Receive<ClusterEvent.IMemberEvent>()
+        }
+
+        protected override void PreStart()
+        {
+            _cluster.Subscribe(Self,new []{ typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.ReachabilityEvent) });
+            _cluster.LogInfo("Metrics collection has started successfully.");
+        }
+
+        protected override void PostStop()
+        {
+            _cluster.Unsubscribe(Self);
+            _gossipTask.Cancel();
+            _metricsTask.Cancel();
+            Collector.Dispose();
+        }
+
+        /// <summary>
+        /// Adds a member to the node ring.
+        /// </summary>
+        private void AddMember(Member member)
+        {
+            Nodes = Nodes.Add(member.Address);
+        }
+
+        /// <summary>
+        /// Removes a member from the node ring.
+        /// </summary>
+        private void RemoveMember(Member member)
+        {
+            Nodes = Nodes.Remove(member.Address);
+            LatestGossip = LatestGossip.Remove(member.Address);
+        }
+
+        /// <summary>
+        /// Update the initial node ring for those nodes that are <see cref="MemberStatus.Up"/>
+        /// </summary>
+        private void ReceiveState(ClusterEvent.CurrentClusterState state)
+        {
+            Nodes = state.Members.Where(x => x.Status == MemberStatus.Up).Select(x => x.Address).ToImmutableHashSet();
+        }
+
+        /// <summary>
+        /// Samples the latest metrics for the node, updates metrics statistics in <see cref="MetricsGossip"/>, and
+        /// publishes the changes to the event bus.
+        /// </summary>
+        private void Collect()
+        {
+            LatestGossip = LatestGossip + Collector.Sample();
+            Publish();
+        }
+
+        /// <summary>
+        /// Receives changes from peer nodes, merges remote with local gossip nodes, then publishes
+        /// changes to the event stream for load balancing router consumption, and gossip back.
+        /// </summary>
+        private void ReceiveGossip(MetricsGossipEnvelope envelope)
+        {
+            // remote node might not have same view of member nodes, this side should only care
+            // about nodes that are known here, otherwise removed nodes can come back
+            var otherGossip = envelope.Gossip.Filter(Nodes);
+            LatestGossip = LatestGossip.Merge(otherGossip);
+            // changes will be published in the period collect task
+            if (!envelope.Reply)
+                ReplyGossipTo(envelope.From);
+        }
+
+        /* GOSSIP TO PEERS */
+
+        private void Gossip()
+        {
+            var targetAddress = SelectRandomNode(Nodes.Remove(_cluster.SelfAddress).ToImmutableList());
+            if (targetAddress == null) return;
+            GossipTo(targetAddress);
+        }
+
+        private void ReplyGossipTo(Address address)
+        {
+            SendGossip(address, new MetricsGossipEnvelope(_cluster.SelfAddress, LatestGossip, true));
+        }
+
+        private void SendGossip(Address address, MetricsGossipEnvelope envelope)
+        {
+            Context.ActorSelection(Self.Path.ToStringWithAddress(address)).Tell(envelope);
+        }
+
+        private void GossipTo(Address address)
+        {
+            SendGossip(address, new MetricsGossipEnvelope(_cluster.SelfAddress, LatestGossip, false));
+        }
+
+        private Address SelectRandomNode(ImmutableList<Address> addresses)
+        {
+            if (addresses.IsEmpty) return null;
+            return addresses[ThreadLocalRandom.Current.Next(addresses.Count - 1)];
+        }
+
+        /// <summary>
+        /// Publishes to the event stream.
+        /// </summary>
+        private void Publish()
+        {
+            _publisher.Tell(new InternalClusterAction.PublishEvent(new ClusterEvent.ClusterMetricsChanged(LatestGossip.Nodes)));
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class MetricsGossip
+    {
+        public MetricsGossip(ImmutableHashSet<NodeMetrics> nodes)
+        {
+            Nodes = nodes;
+        }
+
+        public ImmutableHashSet<NodeMetrics> Nodes { get; private set; }
+
+        public MetricsGossip Copy(ImmutableHashSet<NodeMetrics> nodes = null)
+        {
+            return nodes == null ? new MetricsGossip(Nodes.ToImmutableHashSet()) : new MetricsGossip(nodes);
+        }
+
+        /// <summary>
+        /// Remove nodes if their correlating node ring members are not <see cref="MemberStatus.Up"/>
+        /// </summary>
+        public MetricsGossip Remove(Address node)
+        {
+            return Copy(Nodes.Where(n => n.Address != node).ToImmutableHashSet());
+        }
+
+        /// <summary>
+        /// Only the nodes that are in the <see cref="includeNodes"/> set.
+        /// </summary>
+        public MetricsGossip Filter(ImmutableHashSet<Address> includeNodes)
+        {
+            return Copy(Nodes.Where(x => includeNodes.Contains(x.Address)).ToImmutableHashSet());
+        }
+
+        /// <summary>
+        /// Adds new remote <see cref="NodeMetrics"/> and merges existing from a remote gossip.
+        /// </summary>
+        public MetricsGossip Merge(MetricsGossip otherGossip)
+        {
+            return otherGossip.Nodes.Aggregate(this, (gossip, metrics) => gossip + metrics);
+        }
+
+        /// <summary>
+        /// Returns <see cref="NodeMetrics"/> for a node if exists.
+        /// </summary>
+        public NodeMetrics NodeMetricsFor(Address address)
+        {
+            return Nodes.FirstOrDefault(x => x.Address == address);
+        }
+
+        #region Operators
+
+        /// <summary>
+        /// Adds new local <see cref="NodeMetrics"/> or merges an existing one.
+        /// </summary>
+        public static MetricsGossip operator +(MetricsGossip original, NodeMetrics newNode)
+        {
+            var existingNodeMetrics = original.NodeMetricsFor(newNode.Address);
+            return original.Copy(existingNodeMetrics != null ? 
+                original.Nodes.Remove(existingNodeMetrics).Add(existingNodeMetrics.Merge(newNode)) : 
+                original.Nodes.Add(newNode));
+        }
+
+        #endregion
+
+        #region Static members
+
+        public static readonly MetricsGossip Empty = new MetricsGossip(ImmutableHashSet.Create<NodeMetrics>());
+
+        #endregion
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// Envelope adding a sender address to the gossip.
+    /// </summary>
+    internal sealed class MetricsGossipEnvelope : IClusterMessage
+    {
+        public MetricsGossipEnvelope(Address @from, MetricsGossip gossip, bool reply)
+        {
+            Reply = reply;
+            Gossip = gossip;
+            From = @from;
+        }
+
+        public Address From { get; private set; }
+
+        public MetricsGossip Gossip { get; private set; }
+
+        public bool Reply { get; private set; }
     }
 
     /// <summary>
