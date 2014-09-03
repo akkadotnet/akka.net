@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Event;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Tests.Event
@@ -73,9 +74,9 @@ namespace Akka.Tests.Event
         public EventBusSpec()
         {
             _bus = new TestActorEventBus();
-            _evt = new Notification(testActor, 1);
+            _evt = new Notification(TestActor, 1);
             _classifier = typeof (Notification);
-            _subscriber = testActor;
+            _subscriber = TestActor;
         }
 
         [Fact]
@@ -117,7 +118,7 @@ namespace Akka.Tests.Event
         public void EventBus_allow_to_add_multiple_subscribers()
         {
             const int max = 10;
-            IEnumerable<ActorRef> subscribers = Enumerable.Range(0, max).Select(_ => CreateSubscriber(testActor)).ToList();
+            IEnumerable<ActorRef> subscribers = Enumerable.Range(0, max).Select(_ => CreateSubscriber(TestActor)).ToList();
             foreach (var subscriber in subscribers)
             {
                 _bus.Subscribe(subscriber, _classifier).ShouldBe(true);
@@ -141,8 +142,8 @@ namespace Akka.Tests.Event
         {
             _bus.Subscribe(_subscriber, _classifier);
             _bus.Publish(_evt);
-            expectMsg(_evt);
-            expectNoMsg(TimeSpan.FromSeconds(1));
+            ExpectMsg(_evt);
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
             _bus.Unsubscribe(_subscriber);
         }
 
@@ -154,29 +155,29 @@ namespace Akka.Tests.Event
             _bus.Publish(_evt);
             _bus.Publish(_evt);
 
-            expectMsg(_evt);
-            expectMsg(_evt);
-            expectMsg(_evt);
+            ExpectMsg(_evt);
+            ExpectMsg(_evt);
+            ExpectMsg(_evt);
 
-            expectNoMsg(TimeSpan.FromSeconds(1));
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
             _bus.Unsubscribe(_subscriber, _classifier);
         }
 
         [Fact]
         public void EventBus_not_publish_event_to_unindented_subscribers()
         {
-            var otherSubscriber = CreateSubscriber(testActor);
+            var otherSubscriber = CreateSubscriber(TestActor);
             var otherClassifier = typeof (int);
 
             _bus.Subscribe(_subscriber, _classifier);
             _bus.Subscribe(otherSubscriber, otherClassifier);
             _bus.Publish(_evt);
 
-            expectMsg(_evt);
+            ExpectMsg(_evt);
 
             _bus.Unsubscribe(_subscriber, _classifier);
             _bus.Unsubscribe(otherSubscriber, otherClassifier);
-            expectNoMsg(TimeSpan.FromSeconds(1));
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
@@ -185,7 +186,7 @@ namespace Akka.Tests.Event
             _bus.Subscribe(_subscriber, _classifier);
             _bus.Unsubscribe(_subscriber, _classifier);
             _bus.Publish(_evt);
-            expectNoMsg(TimeSpan.FromSeconds(1));
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
@@ -196,12 +197,12 @@ namespace Akka.Tests.Event
 
         protected ActorRef CreateSubscriber(ActorRef actor)
         {
-            return sys.ActorOf(Props.Create(() => new TestActorWrapperActor(actor)));
+            return Sys.ActorOf(Props.Create(() => new TestActorWrapperActor(actor)));
         }
 
         protected void DisposeSubscriber(ActorRef subscriber)
         {
-            sys.Stop(subscriber);
+            Sys.Stop(subscriber);
         }
     }
 }

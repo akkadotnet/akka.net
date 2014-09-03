@@ -8,7 +8,7 @@ namespace Akka.Remote.Serialization
 {
     public class MessageContainerSerializer : Serializer
     {
-        public MessageContainerSerializer(ActorSystem system) : base(system)
+        public MessageContainerSerializer(ExtendedActorSystem system) : base(system)
         {
         }
 

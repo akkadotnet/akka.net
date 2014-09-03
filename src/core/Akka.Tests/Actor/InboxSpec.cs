@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -12,22 +13,23 @@ namespace Akka.Tests.Actor
     {
         private Inbox _inbox;
         public InboxSpec()
+            : base("akka.actor.inbox.inbox-size=1000")  //Default is 1000 but just to make sure these tests don't fail we set it
         {
-            _inbox = Inbox.Create(sys);
+            _inbox = Inbox.Create(Sys);
         }
 
         [Fact]
         public void Inbox_support_watch()
         {
-            _inbox.Watch(testActor);
+            _inbox.Watch(TestActor);
 
             // check watch
-            testActor.Tell(PoisonPill.Instance);
+            TestActor.Tell(PoisonPill.Instance);
             var received = _inbox.Receive(TimeSpan.FromSeconds(1));
 
             received.GetType().ShouldBe(typeof(Terminated));
             var terminated = (Terminated)received;
-            terminated.ActorRef.ShouldBe(testActor);
+            terminated.ActorRef.ShouldBe(TestActor);
         }
 
         [Fact]
@@ -52,7 +54,7 @@ namespace Akka.Tests.Actor
             _inbox.Receiver.Tell("hello");
             _inbox.Receiver.Tell("world");
 
-            Task.WaitAll(tasks);
+            Task.WaitAll(tasks.Cast<Task>().ToArray());
 
             tasks[0].Result.ShouldBe(42);
             tasks[1].Result.ShouldBe("world");
@@ -73,28 +75,39 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Inbox_have_maximum_queue_size()
         {
-            sys.EventStream.Subscribe(testActor, typeof(Warning));
+            Sys.EventStream.Subscribe(TestActor, typeof(Warning));
             try
             {
+                //Fill the inbox (it can hold 1000) messages
                 foreach (var zero in Enumerable.Repeat(0, 1000))
                     _inbox.Receiver.Tell(zero);
 
-                expectNoMsg(TimeSpan.FromSeconds(1));
-                EventFilterLog<Warning>("dropping message", 1, () => _inbox.Receiver.Tell(42));
-                _inbox.Receiver.Tell(42);
-                expectNoMsg(TimeSpan.FromSeconds(1));
+                ExpectNoMsg(TimeSpan.FromSeconds(1));
 
+                //The inbox is full. Sending another message should result in a Warning message
+                EventFilterLog<Warning>("dropping message", 1, () => _inbox.Receiver.Tell(42));
+
+                //The inbox is still full. But since the warning message has already been sent, no more warnings should be sent
+                _inbox.Receiver.Tell(42);
+                ExpectNoMsg(TimeSpan.FromSeconds(1));
+
+                //Receive all messages from the inbox
                 var gotit = Enumerable.Repeat(0, 1000).Select(_ => _inbox.Receive());
                 foreach (var o in gotit)
                 {
                     o.ShouldBe(0);
                 }
 
-                intercept<TimeoutException>(() => _inbox.Receive(TimeSpan.FromSeconds(1)));
+                //The inbox should be empty now, so receiving should result in a timeout                
+                Assert.Throws<TimeoutException>(() =>
+                {
+                    var received=_inbox.Receive(TimeSpan.FromSeconds(1));
+                    Log.Error("Received "+received);
+                });
             }
             finally
             {
-                sys.EventStream.Unsubscribe(testActor, typeof(Warning));
+                Sys.EventStream.Unsubscribe(TestActor, typeof(Warning));
             }
         }
 
@@ -104,12 +117,12 @@ namespace Akka.Tests.Actor
         {
             Within(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(6), () =>
             {
-                intercept<TimeoutException>(() => _inbox.Receive());
+                Assert.Throws<TimeoutException>(() => _inbox.Receive());
                 return true;
             });
             Within(TimeSpan.FromSeconds(1), () =>
             {
-                intercept<TimeoutException>(() => _inbox.Receive(TimeSpan.FromMilliseconds(100)));
+                Assert.Throws<TimeoutException>(() => _inbox.Receive(TimeSpan.FromMilliseconds(100)));
                 return true;
             });
         }

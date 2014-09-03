@@ -1,6 +1,8 @@
 ﻿using System;
+using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Remote.Transport.Helios;
-using Akka.Tests;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Remote.Tests
@@ -8,21 +10,16 @@ namespace Akka.Remote.Tests
     
     public class RemoteConfigSpec : AkkaSpec
     {
-
-        #region Setup / Configuration
-        protected override string GetConfig()
-        {
-            return @"
+        public RemoteConfigSpec():base(@"
                 akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
                 akka.remote.helios.tcp.port = 0
-            ";
-        }
-        #endregion
+            ") {}
+        
 
         [Fact]
         public void Remoting_should_contain_correct_configuration_values_in_ReferenceConf()
         {
-            var remoteSettings = ((RemoteActorRefProvider) sys.Provider).RemoteSettings;
+            var remoteSettings = ((RemoteActorRefProvider)((ExtendedActorSystem) Sys).Provider).RemoteSettings;
 
             Assert.False(remoteSettings.LogReceive);
             Assert.False(remoteSettings.LogSend);
@@ -34,7 +31,7 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromSeconds(5), remoteSettings.RetryGateClosedFor);
             //Assert.Equal("akka.remote.default-remote-dispatcher", remoteSettings.Dispatcher); //TODO: add RemoteDispatcher support
             Assert.True(remoteSettings.UsePassiveConnections);
-            Assert.Equal(TimeSpan.FromMilliseconds(10), remoteSettings.BackoffPeriod);
+            Assert.Equal(TimeSpan.FromMilliseconds(50), remoteSettings.BackoffPeriod);
             Assert.Equal(TimeSpan.FromSeconds(0.3d), remoteSettings.SysMsgAckTimeout);
             Assert.Equal(TimeSpan.FromSeconds(2), remoteSettings.SysResendTimeout);
             Assert.Equal(1000, remoteSettings.SysMsgBufferSize);
@@ -43,29 +40,33 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromSeconds(30), remoteSettings.CommandAckTimeout);
             Assert.Equal(1, remoteSettings.Transports.Length);
             Assert.Equal(typeof(HeliosTcpTransport), Type.GetType(remoteSettings.Transports.Head().TransportClass));
+            Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(remoteSettings.WatchFailureDetectorImplementationClass));
+            Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchHeartBeatInterval);
+            Assert.Equal(TimeSpan.FromSeconds(3), remoteSettings.WatchHeartbeatExpectedResponseAfter);
+            Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchUnreachableReaperInterval);
+            Assert.Equal(10, remoteSettings.WatchFailureDetectorConfig.GetDouble("threshold"));
+            Assert.Equal(200, remoteSettings.WatchFailureDetectorConfig.GetDouble("max-sample-size"));
+            Assert.Equal(TimeSpan.FromSeconds(10), remoteSettings.WatchFailureDetectorConfig.GetMillisDuration("acceptable-heartbeat-pause"));
+            Assert.Equal(TimeSpan.FromMilliseconds(100), remoteSettings.WatchFailureDetectorConfig.GetMillisDuration("min-std-deviation"));
 
             //TODO add adapter support
-            //TODO add remote watcher support
         }
 
         [Fact]
         public void Remoting_should_be_able_to_parse_AkkaProtocol_related_config_elements()
         {
-            var settings = new AkkaProtocolSettings(((RemoteActorRefProvider) sys.Provider).RemoteSettings.Config);
+            var settings = new AkkaProtocolSettings(((RemoteActorRefProvider)((ExtendedActorSystem)Sys).Provider).RemoteSettings.Config);
 
             //TODO fill this in when we add secure cookie support
-            Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(settings.TransportFailureDetectorImplementationClass));
+            Assert.Equal(typeof(DeadlineFailureDetector), Type.GetType(settings.TransportFailureDetectorImplementationClass));
             Assert.Equal(TimeSpan.FromSeconds(4), settings.TransportHeartBeatInterval);
-            Assert.True(Math.Abs(settings.TransportFailureDetectorConfig.GetDouble("threshold") - 7.0) <= 0.0001);
-            Assert.Equal(100, settings.TransportFailureDetectorConfig.GetDouble("max-sample-size"));
-            Assert.Equal(TimeSpan.FromSeconds(10), settings.TransportFailureDetectorConfig.GetMillisDuration("acceptable-heartbeat-pause"));
-            Assert.Equal(TimeSpan.FromMilliseconds(100), settings.TransportFailureDetectorConfig.GetMillisDuration("min-std-deviation"));
+            Assert.Equal(TimeSpan.FromSeconds(20), settings.TransportFailureDetectorConfig.GetMillisDuration("acceptable-heartbeat-pause"));
         }
 
         [Fact]
         public void Remoting_should_contain_correct_heliosTCP_values_in_ReferenceConf()
         {
-            var c = ((RemoteActorRefProvider)sys.Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
+            var c = ((RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
             var s = new HeliosTransportSettings(c);
 
             Assert.Equal(TimeSpan.FromSeconds(15), s.ConnectTimeout);
@@ -86,7 +87,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_should_contain_correct_socket_worker_pool_configuration_values_in_ReferenceConf()
         {
-            var c = ((RemoteActorRefProvider)sys.Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
+            var c = ((RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider).RemoteSettings.Config.GetConfig("akka.remote.helios.tcp");
 
             // server-socket-worker-pool
             {

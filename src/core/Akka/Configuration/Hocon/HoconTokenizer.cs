@@ -6,49 +6,50 @@ using System.Text;
 namespace Akka.Configuration.Hocon
 {
     /// <summary>
-    /// Class Tokenizer.
+    ///     Class Tokenizer.
     /// </summary>
     public class Tokenizer
     {
         /// <summary>
-        /// The text
+        ///     The text
         /// </summary>
-        private readonly string text;
-        /// <summary>
-        /// The index
-        /// </summary>
-        private int index;
+        private readonly string _text;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Tokenizer"/> class.
+        ///     The index
+        /// </summary>
+        private int _index;
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="Tokenizer" /> class.
         /// </summary>
         /// <param name="text">The text.</param>
         public Tokenizer(string text)
         {
-            this.text = text;
+            this._text = text;
         }
 
         /// <summary>
-        /// Gets a value indicating whether [eo f].
+        ///     Gets a value indicating whether [eo f].
         /// </summary>
         /// <value><c>true</c> if [eo f]; otherwise, <c>false</c>.</value>
         public bool EoF
         {
-            get { return index >= text.Length; }
+            get { return _index >= _text.Length; }
         }
 
         /// <summary>
-        /// Matcheses the specified pattern.
+        ///     Matcheses the specified pattern.
         /// </summary>
         /// <param name="pattern">The pattern.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         public bool Matches(string pattern)
         {
-            if (pattern.Length + index > text.Length)
+            if (pattern.Length + _index > _text.Length)
                 return false;
 
             //Aaron: added this to make it easier to set a breakpoint to debug config issues
-            var selected = text.Substring(index, pattern.Length);
+            string selected = _text.Substring(_index, pattern.Length);
             if (selected == pattern)
                 return true;
 
@@ -56,22 +57,22 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Takes the specified length.
+        ///     Takes the specified length.
         /// </summary>
         /// <param name="length">The length.</param>
         /// <returns>System.String.</returns>
         public string Take(int length)
         {
-            if (index + length > text.Length)
+            if (_index + length > _text.Length)
                 return null;
 
-            string s = text.Substring(index, length);
-            index += length;
+            string s = _text.Substring(_index, length);
+            _index += length;
             return s;
         }
 
         /// <summary>
-        /// Matcheses the specified patterns.
+        ///     Matcheses the specified patterns.
         /// </summary>
         /// <param name="patterns">The patterns.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
@@ -79,17 +80,17 @@ namespace Akka.Configuration.Hocon
         {
             foreach (string pattern in patterns)
             {
-                if (pattern.Length + index >= text.Length)
+                if (pattern.Length + _index >= _text.Length)
                     continue;
 
-                if (text.Substring(index, pattern.Length) == pattern)
+                if (_text.Substring(_index, pattern.Length) == pattern)
                     return true;
             }
             return false;
         }
 
         /// <summary>
-        /// Peeks this instance.
+        ///     Peeks this instance.
         /// </summary>
         /// <returns>System.Char.</returns>
         public char Peek()
@@ -97,11 +98,11 @@ namespace Akka.Configuration.Hocon
             if (EoF)
                 return (char) 0;
 
-            return text[index];
+            return _text[_index];
         }
 
         /// <summary>
-        /// Takes this instance.
+        ///     Takes this instance.
         /// </summary>
         /// <returns>System.Char.</returns>
         public char Take()
@@ -109,11 +110,11 @@ namespace Akka.Configuration.Hocon
             if (EoF)
                 return (char) 0;
 
-            return text[index++];
+            return _text[_index++];
         }
 
         /// <summary>
-        /// Pulls the whitespace.
+        ///     Pulls the whitespace.
         /// </summary>
         public void PullWhitespace()
         {
@@ -126,21 +127,22 @@ namespace Akka.Configuration.Hocon
 
 
     /// <summary>
-    /// Class HoconTokenizer.
+    ///     Class HoconTokenizer.
     /// </summary>
     public class HoconTokenizer : Tokenizer
     {
         /// <summary>
-        /// The not in unquoted key
+        ///     The not in unquoted key
         /// </summary>
-        private const string notInUnquotedKey = "$\"{}[]:=,#`^?!@*&\\.";
-        /// <summary>
-        /// The not in unquoted text
-        /// </summary>
-        private const string notInUnquotedText = "$\"{}[]:=,#`^?!@*&\\";
+        private const string NotInUnquotedKey = "$\"{}[]:=,#`^?!@*&\\.";
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="HoconTokenizer"/> class.
+        ///     The not in unquoted text
+        /// </summary>
+        private const string NotInUnquotedText = "$\"{}[]:=,#`^?!@*&\\";
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="HoconTokenizer" /> class.
         /// </summary>
         /// <param name="text">The text.</param>
         public HoconTokenizer(string text)
@@ -149,7 +151,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the whitespace and comments.
+        ///     Pulls the whitespace and comments.
         /// </summary>
         public void PullWhitespaceAndComments()
         {
@@ -164,7 +166,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the rest of line.
+        ///     Pulls the rest of line.
         /// </summary>
         /// <returns>System.String.</returns>
         public string PullRestOfLine()
@@ -186,7 +188,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the next.
+        ///     Pulls the next.
         /// </summary>
         /// <returns>Token.</returns>
         /// <exception cref="System.Exception">unknown token</exception>
@@ -233,7 +235,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether [is start of quoted key].
+        ///     Determines whether [is start of quoted key].
         /// </summary>
         /// <returns><c>true</c> if [is start of quoted key]; otherwise, <c>false</c>.</returns>
         private bool IsStartOfQuotedKey()
@@ -242,7 +244,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the array end.
+        ///     Pulls the array end.
         /// </summary>
         /// <returns>Token.</returns>
         public Token PullArrayEnd()
@@ -252,7 +254,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether [is array end].
+        ///     Determines whether [is array end].
         /// </summary>
         /// <returns><c>true</c> if [is array end]; otherwise, <c>false</c>.</returns>
         public bool IsArrayEnd()
@@ -261,7 +263,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether [is array start].
+        ///     Determines whether [is array start].
         /// </summary>
         /// <returns><c>true</c> if [is array start]; otherwise, <c>false</c>.</returns>
         public bool IsArrayStart()
@@ -270,7 +272,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the array start.
+        ///     Pulls the array start.
         /// </summary>
         /// <returns>Token.</returns>
         public Token PullArrayStart()
@@ -280,7 +282,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the dot.
+        ///     Pulls the dot.
         /// </summary>
         /// <returns>Token.</returns>
         public Token PullDot()
@@ -290,7 +292,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the comma.
+        ///     Pulls the comma.
         /// </summary>
         /// <returns>Token.</returns>
         public Token PullComma()
@@ -300,7 +302,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the start of object.
+        ///     Pulls the start of object.
         /// </summary>
         /// <returns>Token.</returns>
         public Token PullStartOfObject()
@@ -310,7 +312,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the end of object.
+        ///     Pulls the end of object.
         /// </summary>
         /// <returns>Token.</returns>
         public Token PullEndOfObject()
@@ -320,7 +322,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the assignment.
+        ///     Pulls the assignment.
         /// </summary>
         /// <returns>Token.</returns>
         public Token PullAssignment()
@@ -330,7 +332,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether this instance is comma.
+        ///     Determines whether this instance is comma.
         /// </summary>
         /// <returns><c>true</c> if this instance is comma; otherwise, <c>false</c>.</returns>
         public bool IsComma()
@@ -339,7 +341,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether this instance is dot.
+        ///     Determines whether this instance is dot.
         /// </summary>
         /// <returns><c>true</c> if this instance is dot; otherwise, <c>false</c>.</returns>
         public bool IsDot()
@@ -348,7 +350,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether [is object start].
+        ///     Determines whether [is object start].
         /// </summary>
         /// <returns><c>true</c> if [is object start]; otherwise, <c>false</c>.</returns>
         public bool IsObjectStart()
@@ -357,7 +359,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether [is end of object].
+        ///     Determines whether [is end of object].
         /// </summary>
         /// <returns><c>true</c> if [is end of object]; otherwise, <c>false</c>.</returns>
         public bool IsEndOfObject()
@@ -366,7 +368,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether this instance is assignment.
+        ///     Determines whether this instance is assignment.
         /// </summary>
         /// <returns><c>true</c> if this instance is assignment; otherwise, <c>false</c>.</returns>
         public bool IsAssignment()
@@ -375,7 +377,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether [is start of quoted text].
+        ///     Determines whether [is start of quoted text].
         /// </summary>
         /// <returns><c>true</c> if [is start of quoted text]; otherwise, <c>false</c>.</returns>
         public bool IsStartOfQuotedText()
@@ -384,7 +386,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether [is start of tripple quoted text].
+        ///     Determines whether [is start of tripple quoted text].
         /// </summary>
         /// <returns><c>true</c> if [is start of tripple quoted text]; otherwise, <c>false</c>.</returns>
         public bool IsStartOfTrippleQuotedText()
@@ -393,7 +395,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the comment.
+        ///     Pulls the comment.
         /// </summary>
         /// <returns>Token.</returns>
         public Token PullComment()
@@ -403,7 +405,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the unquoted key.
+        ///     Pulls the unquoted key.
         /// </summary>
         /// <returns>Token.</returns>
         public Token PullUnquotedKey()
@@ -418,25 +420,25 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether [is unquoted key].
+        ///     Determines whether [is unquoted key].
         /// </summary>
         /// <returns><c>true</c> if [is unquoted key]; otherwise, <c>false</c>.</returns>
         public bool IsUnquotedKey()
         {
-            return (!EoF && !IsStartOfComment() && !notInUnquotedKey.Contains(Peek()));
+            return (!EoF && !IsStartOfComment() && !NotInUnquotedKey.Contains(Peek()));
         }
 
         /// <summary>
-        /// Determines whether [is unquoted key start].
+        ///     Determines whether [is unquoted key start].
         /// </summary>
         /// <returns><c>true</c> if [is unquoted key start]; otherwise, <c>false</c>.</returns>
         public bool IsUnquotedKeyStart()
         {
-            return (!EoF && !IsWhitespace() && !IsStartOfComment() && !notInUnquotedKey.Contains(Peek()));
+            return (!EoF && !IsWhitespace() && !IsStartOfComment() && !NotInUnquotedKey.Contains(Peek()));
         }
 
         /// <summary>
-        /// Determines whether this instance is whitespace.
+        ///     Determines whether this instance is whitespace.
         /// </summary>
         /// <returns><c>true</c> if this instance is whitespace; otherwise, <c>false</c>.</returns>
         private bool IsWhitespace()
@@ -445,7 +447,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the tripple quoted text.
+        ///     Pulls the tripple quoted text.
         /// </summary>
         /// <returns>Token.</returns>
         public Token PullTrippleQuotedText()
@@ -469,7 +471,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the quoted text.
+        ///     Pulls the quoted text.
         /// </summary>
         /// <returns>Token.</returns>
         public Token PullQuotedText()
@@ -493,7 +495,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the quoted key.
+        ///     Pulls the quoted key.
         /// </summary>
         /// <returns>Token.</returns>
         public Token PullQuotedKey()
@@ -517,7 +519,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the escape sequence.
+        ///     Pulls the escape sequence.
         /// </summary>
         /// <returns>System.String.</returns>
         /// <exception cref="System.NotSupportedException"></exception>
@@ -553,7 +555,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether [is start of comment].
+        ///     Determines whether [is start of comment].
         /// </summary>
         /// <returns><c>true</c> if [is start of comment]; otherwise, <c>false</c>.</returns>
         private bool IsStartOfComment()
@@ -562,10 +564,13 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the value.
+        ///     Pulls the value.
         /// </summary>
         /// <returns>Token.</returns>
-        /// <exception cref="System.Exception">Expected value: Null literal, Array, Number, Boolean, Quoted Text, Unquoted Text, Tripple quoted Text, Object or End of array</exception>
+        /// <exception cref="System.Exception">
+        ///     Expected value: Null literal, Array, Number, Boolean, Quoted Text, Unquoted Text,
+        ///     Tripple quoted Text, Object or End of array
+        /// </exception>
         public Token PullValue()
         {
             if (IsObjectStart())
@@ -605,7 +610,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether [is substitution start].
+        ///     Determines whether [is substitution start].
         /// </summary>
         /// <returns><c>true</c> if [is substitution start]; otherwise, <c>false</c>.</returns>
         public bool IsSubstitutionStart()
@@ -614,7 +619,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the substitution.
+        ///     Pulls the substitution.
         /// </summary>
         /// <returns>Token.</returns>
         public Token PullSubstitution()
@@ -636,7 +641,7 @@ namespace Akka.Configuration.Hocon
         //}
 
         /// <summary>
-        /// Determines whether [is space or tab].
+        ///     Determines whether [is space or tab].
         /// </summary>
         /// <returns><c>true</c> if [is space or tab]; otherwise, <c>false</c>.</returns>
         public bool IsSpaceOrTab()
@@ -650,7 +655,7 @@ namespace Akka.Configuration.Hocon
         // }
 
         /// <summary>
-        /// Determines whether [is start simple value].
+        ///     Determines whether [is start simple value].
         /// </summary>
         /// <returns><c>true</c> if [is start simple value]; otherwise, <c>false</c>.</returns>
         public bool IsStartSimpleValue()
@@ -665,7 +670,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the space or tab.
+        ///     Pulls the space or tab.
         /// </summary>
         /// <returns>Token.</returns>
         public Token PullSpaceOrTab()
@@ -679,7 +684,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Pulls the unquoted text.
+        ///     Pulls the unquoted text.
         /// </summary>
         /// <returns>Token.</returns>
         private Token PullUnquotedText()
@@ -694,16 +699,16 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether [is unquoted text].
+        ///     Determines whether [is unquoted text].
         /// </summary>
         /// <returns><c>true</c> if [is unquoted text]; otherwise, <c>false</c>.</returns>
         private bool IsUnquotedText()
         {
-            return (!EoF && !IsWhitespace() && !IsStartOfComment() && !notInUnquotedText.Contains(Peek()));
+            return (!EoF && !IsWhitespace() && !IsStartOfComment() && !NotInUnquotedText.Contains(Peek()));
         }
 
         /// <summary>
-        /// Pulls the simple value.
+        ///     Pulls the simple value.
         /// </summary>
         /// <returns>Token.</returns>
         /// <exception cref="System.Exception">No simple value found</exception>
@@ -718,7 +723,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether this instance is value.
+        ///     Determines whether this instance is value.
         /// </summary>
         /// <returns><c>true</c> if this instance is value; otherwise, <c>false</c>.</returns>
         internal bool IsValue()

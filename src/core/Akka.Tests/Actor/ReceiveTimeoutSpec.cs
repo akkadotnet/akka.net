@@ -9,7 +9,7 @@ using Akka.TestKit;
 using Akka.Tests;
 
 
-namespace Akka.Actor
+namespace Akka.Tests.Actor
 {
     public class ReceiveTimeoutSpec : AkkaSpec
     {
@@ -65,31 +65,31 @@ namespace Akka.Actor
         [Fact(DisplayName="An actor with receive timeout must get timeout")]
         public void GetTimeout()
         {
-            var timeoutLatch = new TestLatch(sys);
-            var timeoutActor = sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch)));
+            var timeoutLatch = new TestLatch(Sys);
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch)));
 
             timeoutLatch.Ready(TestLatch.DefaultTimeout);
-            sys.Stop(timeoutActor);
+            Sys.Stop(timeoutActor);
         }
 
         //TODO: how does this prove that there was a reschedule?? see ReceiveTimeoutSpec.scala 
         [Fact(DisplayName = "An actor with receive timeout must reschedule timeout after regular receive")]
         public void RescheduleTimeout()
         {
-            var timeoutLatch = new TestLatch(sys);
-            var timeoutActor = sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch)));
+            var timeoutLatch = new TestLatch(Sys);
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch)));
             timeoutActor.Tell(Tick);
             timeoutLatch.Ready(TestLatch.DefaultTimeout);
-            sys.Stop(timeoutActor);
+            Sys.Stop(timeoutActor);
         }
 
         [Fact(DisplayName = "An actor with receive timeout must not receive timeout message when not specified")]
         public void NotGetTimeout()
         {
-            var timeoutLatch = new TestLatch(sys);
-            var timeoutActor = sys.ActorOf(Props.Create(() => new NoTimeoutActor(timeoutLatch)));
-            intercept<TimeoutException>(() => timeoutLatch.Ready(TestLatch.DefaultTimeout));            
-            sys.Stop(timeoutActor);
+            var timeoutLatch = new TestLatch(Sys);
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new NoTimeoutActor(timeoutLatch)));
+            Assert.Throws<TimeoutException>(() => timeoutLatch.Ready(TestLatch.DefaultTimeout));
+            Sys.Stop(timeoutActor);
         }
     }
 }

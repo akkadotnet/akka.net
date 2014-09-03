@@ -5,8 +5,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -37,7 +39,7 @@ namespace Akka.Routing
         private readonly Props _routerProps;
         private Pool _pool;
 
-        public ResizablePoolCell(ActorSystem system, InternalActorRef self, Props routerProps, MessageDispatcher dispatcher, Props routeeProps, InternalActorRef supervisor, Pool pool)
+        public ResizablePoolCell(ActorSystemImpl system, InternalActorRef self, Props routerProps, MessageDispatcher dispatcher, Props routeeProps, InternalActorRef supervisor, Pool pool)
             : base(system,self, routerProps,dispatcher, routeeProps, supervisor)
         {
             if (pool.Resizer == null)

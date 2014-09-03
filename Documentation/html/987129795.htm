@@ -1,0 +1,89 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"[]>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="save" content="history" />
+    <title>HandleFailure Method </title>
+    <link rel="stylesheet" type="text/css" href="../styles/lightweight.css" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt" />
+    <link rel="stylesheet" type="text/css" href="../styles/lw-code.css" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt" />
+    <script type="text/javascript" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt" src="../scripts/languageSelector.js"> </script>
+    <meta name="container" content="Akka.Actor" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt" />
+    <meta name="file" content="987129795" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt" />
+    <meta name="guid" content="987129795" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt" />
+    <xml xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt">
+      <MSHelp:Attr Name="AssetID" Value="M:Akka.Actor.SupervisorStrategy.HandleFailure(ActorCell,ActorRef,Exception)" />
+      <MSHelp:TOCTitle Title="HandleFailure Method " />
+      <MSHelp:RLTitle Title="SupervisorStrategy.HandleFailure Method  (Akka.Actor)" />
+      <MSHelp:Keyword Index="A" Term="M:Akka.Actor.SupervisorStrategy.HandleFailure(ActorCell,ActorRef,Exception)" />
+      <MSHelp:Keyword Index="A" Term="frlrfAkkaActorSupervisorStrategyClassHandleFailureTopic" />
+      <MSHelp:Keyword Index="K" Term="HandleFailure method" />
+      <MSHelp:Keyword Index="K" Term="SupervisorStrategy.HandleFailure method" />
+      <MSHelp:Keyword Index="F" Term="Akka.Actor.SupervisorStrategy.HandleFailure" />
+      <MSHelp:Attr Name="APIType" Value="Managed" />
+      <MSHelp:Attr Name="APILocation" Value="Akka.dll" />
+      <MSHelp:Attr Name="APIName" Value="Akka.Actor.SupervisorStrategy.HandleFailure" />
+      <MSHelp:Attr Name="DevLang" Value="CSharp" />
+      <MSHelp:Attr Name="DevLang" Value="VB" />
+      <MSHelp:Attr Name="Locale" Value="en-us" />
+      <MSHelp:Attr Name="TopicType" Value="kbSyntax" />
+      <MSHelp:Attr Name="TopicType" Value="apiref" />
+      <MSHelp:Attr Name="Abstract" Value="This is the main entry point: in case of a child’s failure, this method must try to handle the failure by resuming, restarting or stopping the child (and returning `true`), or it returns `false` to escalate the failur ..." />
+      <MSHelp:Attr Name="AssemblyVersion" Value="" />
+    </xml>
+  </head>
+  <body>
+    <div class="contentPlaceHolder" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt">
+      <div class="content">
+        <div class="topicContainer">
+          <div class="topic">
+            <p class="majorTitle" />
+            <h1 class="title">SupervisorStrategy<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>HandleFailure Method </h1>
+            <div id="mainSection">
+              <div id="mainBody">
+                <div class="summary">
+       This is the main entry point: in case of a child’s failure, this method
+       must try to handle the failure by resuming, restarting or stopping the
+       child (and returning `true`), or it returns `false` to escalate the
+       failure, which will lead to this actor re-throwing the exception which
+       caused the failure. The exception will not be wrapped.
+       This method calls [[Akka.Actor.SupervisorStrategy#LogFailure]], which will
+       log the failure unless it is escalated. You can customize the logging by
+       setting [[Akka.Actor.SupervisorStrategy#LoggingEnabled]] to `false` and
+       do the logging inside the `decider` or override the `LogFailure` method.
+   </div>
+                <p />
+    <b>Namespace:</b> 
+   <a href="337057298.htm">Akka.Actor</a><br />
+    <b>Assembly:</b>
+   <span sdata="assembly">Akka</span> (in Akka.dll)<div class="LW_CollapsibleArea_Container"><div class="LW_CollapsibleArea_TitleDiv"><h2 class="LW_CollapsibleArea_Title">Syntax</h2><div class="LW_CollapsibleArea_HrDiv"><hr class="LW_CollapsibleArea_Hr" /></div></div><a id="syntaxSection"><!----></a><div class="CodeSnippetContainer"><div class="CodeSnippetContainerTabs"><div class="CodeSnippetContainerTabLeft"><!----></div><div class="CodeSnippetContainerTabFirst CSharpTab" id="CSharpTabId" style="background:white;border-bottom-color:white"><a href="javascript:setActiveTab('CodeSnippetContainerCode','CSharpCode','CSharpTabId');" title="C#">C#</a></div><div class="CodeSnippetContainerTab VisualBasicTab" id="VisualBasicTabId"><a href="javascript:setActiveTab('CodeSnippetContainerCode','VisualBasicCode','VisualBasicTabId');" title="Visual Basic">VB</a></div><div class="CodeSnippetContainerTab ManagedCPlusPlusTab" id="ManagedCPlusPlusTabId"><a href="javascript:setActiveTab('CodeSnippetContainerCode','ManagedCPlusPlusCode','ManagedCPlusPlusTabId');" title="Visual C++">C++</a></div><div class="CodeSnippetContainerTabRight"><!----></div></div><div class="CodeSnippetContainerCodeCollection"><div class="CodeSnippetToolBar"><div class="CodeSnippetToolBarText" /></div><div class="CodeSnippetContainerCode CSharpCode"><pre xml:space="preserve" class="libCScode"><span class="keyword">public</span> <a href="http://msdn.microsoft.com/en-us/library/system.boolean.aspx" target="_blank">bool</a> <span class="identifier">HandleFailure</span>(
+	<a href="1379278553.htm">ActorCell</a> <span class="parameter">actorCell</span>,
+	<a href="523296046.htm">ActorRef</a> <span class="parameter">child</span>,
+	<a href="http://msdn.microsoft.com/en-us/library/system.exception.aspx" target="_blank">Exception</a> <span class="parameter">cause</span>
+)</pre></div><div class="CodeSnippetContainerCode VisualBasicCode"><pre xml:space="preserve" class="libCScode"><span class="keyword">Public</span> <span class="keyword">Function</span> <span class="identifier">HandleFailure</span> ( _
+	<span class="parameter">actorCell</span> <span class="keyword">As</span> <a href="1379278553.htm">ActorCell</a>, _
+	<span class="parameter">child</span> <span class="keyword">As</span> <a href="523296046.htm">ActorRef</a>, _
+	<span class="parameter">cause</span> <span class="keyword">As</span> <a href="http://msdn.microsoft.com/en-us/library/system.exception.aspx" target="_blank">Exception</a> _
+) <span class="keyword">As</span> <a href="http://msdn.microsoft.com/en-us/library/system.boolean.aspx" target="_blank">Boolean</a></pre></div><div class="CodeSnippetContainerCode ManagedCPlusPlusCode"><pre xml:space="preserve" class="libCScode"><span class="keyword">public</span>:
+<a href="http://msdn.microsoft.com/en-us/library/system.boolean.aspx" target="_blank">bool</a>^ <span class="identifier">HandleFailure</span>(
+	<a href="1379278553.htm">ActorCell</a>^ <span class="parameter">actorCell</span>, 
+	<a href="523296046.htm">ActorRef</a>^ <span class="parameter">child</span>, 
+	<a href="http://msdn.microsoft.com/en-us/library/system.exception.aspx" target="_blank">Exception</a>^ <span class="parameter">cause</span>
+)</pre></div></div></div><div id="parameters"><h4 class="subHeading">Parameters</h4><dl paramName="actorCell"><dt><span class="parameterItalic">actorCell</span></dt><dd>Type: <a href="1379278553.htm">Akka.Actor<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>ActorCell</a><br />The actor cell.</dd></dl><dl paramName="child"><dt><span class="parameterItalic">child</span></dt><dd>Type: <a href="523296046.htm">Akka.Actor<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>ActorRef</a><br />The child.</dd></dl><dl paramName="cause"><dt><span class="parameterItalic">cause</span></dt><dd>Type: <a href="http://msdn.microsoft.com/en-us/library/system.exception.aspx" target="_blank">Exception</a><br />The cause.</dd></dl></div><h4 class="subHeading">Return Value</h4><span class="code">true</span> if XXXX, <span class="code">false</span> otherwise.</div><div class="LW_CollapsibleArea_Container"><div class="LW_CollapsibleArea_TitleDiv"><h2 class="LW_CollapsibleArea_Title">See Also</h2><div class="LW_CollapsibleArea_HrDiv"><hr class="LW_CollapsibleArea_Hr" /></div></div><a id="seeAlsoSection"><!----></a><div class="seeAlsoStyle"><a href="338208685.htm">SupervisorStrategy Class</a></div><div class="seeAlsoStyle"><a href="337057298.htm">Akka.Actor Namespace</a></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer">
+        <div id="footer" class="footerContainer">
+          <div class="footerLogoContainer">
+            <div style="margin-top:5px">
+              <span class="customCopyrightFooter" />
+            </div>
+            <div style="margin-top:5px" class="copyrightFooter">Help File generated with GhostDoc</div>
+            <div> </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

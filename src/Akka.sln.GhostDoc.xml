@@ -9,13 +9,13 @@
   </SpellChecker>
 <HelpConfigurations selected="HelpFile">
   <HelpConfiguration name="HelpFile">
-    <OutputPath>C:\Projects\Git\Github.com\akka.net\Help</OutputPath>
+    <OutputPath>..\Documentation</OutputPath>
     <ImageFolderPath />
     <HtmlFormats>
-      <HtmlHelp>true</HtmlHelp>
+      <HtmlHelp>false</HtmlHelp>
       <MSHelpViewer>false</MSHelpViewer>
       <MSHelp2>false</MSHelp2>
-      <Website>false</Website>
+      <Website>true</Website>
     </HtmlFormats>
     <IncludeScopes>
       <Public>true</Public>
@@ -29,7 +29,12 @@
     <ResolveCrefLinks>true</ResolveCrefLinks>
     <HeaderText />
     <FooterText />
-    <SelectedProjects />
+    <SelectedProjects>
+      <SelectedProject>Akka</SelectedProject>
+      <SelectedProject>Akka.Remote</SelectedProject>
+      <SelectedProject>Akka.TestKit</SelectedProject>
+      <SelectedProject>Akka.NLog</SelectedProject>
+    </SelectedProjects>
   </HelpConfiguration>
 </HelpConfigurations>
 </GhostDoc>

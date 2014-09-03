@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Akka.Tests;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Remote.Tests
@@ -236,7 +236,18 @@ namespace Akka.Remote.Tests
             ShouldBe(history5.Mean, 103.333333D, 0.00001D);
             ShouldBe(history5.Variance, 688.88888889D, 0.00001D);
         }
+
+        /// <summary>
+        /// Uses an epsilon value to compare between floating point numbers.
+        /// Uses a default epsilon value of 0.001d
+        /// </summary>
+        protected void ShouldBe(double actual, double expected, double epsilon = 0.001d)
+        {
+            Assert.True(Math.Abs(actual - expected) <= epsilon, string.Format("Expected {0} but received {1}", expected, actual));
+        }
+
     }
+
 
     /// <summary>
     /// Static helper class used for assisting with tests related to <see cref="FailureDetector"/>s.

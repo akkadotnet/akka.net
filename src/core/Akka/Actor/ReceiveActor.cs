@@ -1,14 +1,16 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using Akka.Actor.Internals;
 using Akka.Tools.MatchHandler;
 
 namespace Akka.Actor
 {
-    public abstract class ReceiveActor : UntypedActor
+
+    public abstract class ReceiveActor : UntypedActor, InitializableActor
     {
         private bool _shouldUnhandle = true;
-        private Stack<MatchBuilder> _matchHandlerBuilders = new Stack<MatchBuilder>();
+        private readonly Stack<MatchBuilder> _matchHandlerBuilders = new Stack<MatchBuilder>();
         private PartialAction<object> _partialReceive = _ => false;
         private bool _hasBeenInitialized;
 
@@ -17,19 +19,7 @@ namespace Akka.Actor
             PrepareConfigureMessageHandlers();
         }
 
-        protected override void PreStart()
-        {
-            base.PreStart();
-            Init();
-        }
-
-        protected override void PreRestart(Exception reason, object message)
-        {
-            base.PreRestart(reason, message);
-            Init();
-        }
-
-        internal void Init()
+        void InitializableActor.Init()
         {
             //This might be called directly after the constructor, or when the same actor instance has been returned
             //during recreate. Make sure what happens here is idempotent

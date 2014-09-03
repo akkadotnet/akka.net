@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Akka
 {
@@ -7,7 +7,7 @@ namespace Akka
     /// </summary>
     public static class PatternMatch
     {
-        //[Obsolete("This is horribly slow, should be replaced with standard 'is' checks",false)]
+        
         /// <summary>
         /// Matches the specified target.
         /// </summary>

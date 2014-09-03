@@ -6,22 +6,22 @@ namespace Akka.Event
     /// <summary>
     ///     Class DeadLetterListener.
     /// </summary>
-    public class DeadLetterListener : UntypedActor
+    public class DeadLetterListener : ActorBase
     {
         /// <summary>
         ///     The event stream
         /// </summary>
-        private readonly EventStream eventStream = Context.System.EventStream;
+        private readonly EventStream _eventStream = Context.System.EventStream;
 
         /// <summary>
         ///     The maximum count
         /// </summary>
-        private readonly int maxCount = Context.System.Settings.LogDeadLetters;
+        private readonly int _maxCount = Context.System.Settings.LogDeadLetters;
 
         /// <summary>
         ///     The count
         /// </summary>
-        private int count;
+        private int _count;
 
         protected override void PostRestart(Exception reason)
         {
@@ -29,39 +29,40 @@ namespace Akka.Event
 
         protected override void PreStart()
         {
-            eventStream.Subscribe(Self, typeof (DeadLetter));
+            _eventStream.Subscribe(Self, typeof (DeadLetter));
         }
 
         protected override void PostStop()
         {
-            eventStream.Unsubscribe(Self);
+            _eventStream.Unsubscribe(Self);
         }
 
         /// <summary>
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected override void OnReceive(object message)
+        protected override bool Receive(object message)
         {
-            var deadLetter = (DeadLetter) message;
+            var deadLetter = (DeadLetter)message;
             ActorRef snd = deadLetter.Sender;
             ActorRef rcp = deadLetter.Recipient;
-            count++;
-            bool done = maxCount != int.MaxValue && count >= maxCount;
+            _count++;
+            bool done = _maxCount != int.MaxValue && _count >= _maxCount;
             string doneMsg = done ? ", no more dead letters will be logged" : "";
             if (!done)
             {
                 var rcpPath = rcp == ActorRef.NoSender ? "NoSender" : rcp.Path.ToString();
                 var sndPath = snd == ActorRef.NoSender ? "NoSender" : snd.Path.ToString();
 
-                eventStream.Publish(new Info(rcpPath, rcp.GetType(),
+                _eventStream.Publish(new Info(rcpPath, rcp.GetType(),
                     string.Format("Message {0} from {1} to {2} was not delivered. {3} dead letters encountered.{4}",
-                        deadLetter.Message.GetType().Name, sndPath, rcpPath, count, doneMsg)));
+                        deadLetter.Message.GetType().Name, sndPath, rcpPath, _count, doneMsg)));
             }
             if (done)
             {
                 ((InternalActorRef)Self).Stop();
             }
+            return true;
         }
     }
 }

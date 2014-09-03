@@ -70,7 +70,7 @@ namespace PingPong
 
             //Warm up
             ActorSystem.Create("WarmupSystem").Shutdown();
-            Console.Write("ActorBase    first start time:");
+            Console.Write("ActorBase    first start time: ");
             await Benchmark<ClientActorBase>(1, 1, 1, PrintStats.StartTimeOnly, -1, -1);
             Console.WriteLine(" ms");
             Console.Write("ReceiveActor first start time: ");

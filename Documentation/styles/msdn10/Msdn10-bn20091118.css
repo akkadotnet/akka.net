@@ -1,0 +1,589 @@
+
+html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, font, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td {
+	border:0;
+	font-weight:inherit;
+	font-style:inherit;
+	font-family:inherit;
+	margin:0;
+	outline:0;
+	padding:0
+}
+
+table {
+	border-collapse:separate;
+	border-spacing:0
+}
+
+img {
+	border:none
+}
+
+a, a:link, a:visited {
+	color:#06d;
+	cursor:pointer;
+	text-decoration:none
+}
+
+a:hover, a:active {
+	color:#f60;
+	text-decoration:none
+}
+
+.bold, strong {
+	font-weight:bold
+}
+
+em {
+	font-style:italic
+}
+
+h1, h2, h3, h4, h5, h6 {
+	clear:both;
+	color:#3a3e43;
+	font-family:'Segoe UI Semibold', 'Segoe UI', 'Lucida Grande', Verdana, Arial, Helvetica, sans-serif;
+	font-weight:bold;
+	line-height:125%
+}
+
+h1 {
+	font-size:22px;
+	line-height:130%;
+	margin:5px 0
+}
+
+h2 {
+	font-size:20px;
+	margin:4px 0
+}
+
+h3 {
+	font-size:18px;
+	margin:3px 0
+}
+
+h4 {
+	font-size:16px;
+	margin:2px 0
+}
+
+h5 {
+	font-size:14px
+}
+
+h6 {
+	font-size:13px
+}
+
+.Clear {
+	clear:both
+}
+
+.ClearBreak {
+	clear:both;
+	padding-bottom:1px
+}
+
+.ClearLeft {
+	clear:left
+}
+
+.ClearRight {
+	clear:right
+}
+
+.ClearRightBreak {
+	clear:right;
+	height:16px
+}
+
+.Left {
+	float:left
+}
+
+.Right {
+	float:right
+}
+
+.Center {
+	text-align:center
+}
+
+.no_wrap {
+	white-space:nowrap
+}
+
+p {
+	margin:0 0 12px 0
+}
+
+.absolute {
+	position:absolute
+}
+
+ol, ul {
+	line-height:125%;
+	margin:0 0 12px 0;
+	padding-left:18px
+}
+
+li {
+	padding:0 0 3px 0
+}
+
+ul li {
+	list-style-image:url('bullet.gif')
+}
+
+ul li ol li {
+	list-style-image:none;
+	list-style-type:hebrew
+}
+
+.BulletList {
+	line-height:125%;
+	list-style-type:disc;
+	margin:12px 0 12px 18px;
+	padding-left:18px
+}
+
+.NumberList {
+	margin:12px 0 12px 24px
+}
+
+.DropDownArrow {
+	padding-bottom:2px;
+	padding-left:5px
+}
+
+a:hover .DropDownArrow {
+	text-decoration:none
+}
+
+.hidden {
+	display:none;
+	visibility:hidden
+}
+
+.pre {
+	margin:10px;
+	padding:10px
+}
+
+.code {
+	background:#ddd;
+	display:block;
+	font-family:Lucida Console, Courier New;
+	font-size:100%;
+	line-height:100%;
+	margin:10px;
+	padding:10px
+}
+
+html {
+	font-size:100.01%
+}
+
+body {
+	color:#333;
+	font-family:'Segoe UI', 'Lucida Grande', Verdana, Arial, Helvetica, sans-serif;
+	font-size:84%;
+	line-height:125%
+}
+
+#Msdn10Background {
+	background:#fff url('bg.png') repeat-x top;
+	padding:0 483px
+}
+
+#JelloSizer {
+	margin:0 auto;
+	max-width:0;
+	padding:0;
+	width:0
+}
+
+#JelloExpander {
+	margin:0 -483px;
+	min-width:966px;
+	position:relative
+}
+
+#JelloWrapper {
+	background:url('bg_msdn.png') no-repeat 200px 0;
+	width:100%
+}
+
+.topleftcorner {
+	background:transparent url('contentpane.png') 0 0 no-repeat;
+	height:17px;
+	margin-top:-2px;
+	margin-right:21px
+}
+
+.toprightcorner {
+	background:transparent url('contentpane.png') 100% 0 no-repeat;
+	float:right;
+	height:17px;
+	margin-top:-17px;
+	width:21px
+}
+
+.alley {
+	background:url('contentpaneleft.png') repeat-y left;
+	min-height:768px;
+	padding-left:19px
+}
+
+.wrapper {
+	background:url('contentpaneright.png') repeat-y right;
+	min-height:768px;
+	padding-right:21px
+}
+
+.inner {
+	background:#fff;
+	min-height:768px;
+	padding:1px
+}
+
+.bottomleftcorner {
+	background:transparent url('contentpane.png') 0 -17px no-repeat;
+	height:21px;
+	margin-right:21px
+}
+
+.bottomrightcorner {
+	background:transparent url('contentpane.png') 100% -17px no-repeat;
+	float:right;
+	height:21px;
+	margin-top:-21px;
+	width:21px
+}
+
+table.multicol {
+	border-collapse:collapse
+}
+
+.innercol {
+	padding:0 12px 0 0
+}
+
+.fullwidth {
+	width:924px;
+	overflow:hidden
+}
+
+.MainColumn, .maincolumn {
+	width:612px;
+	overflow:hidden
+}
+
+.MiddleColumn, .middlecolumn {
+	width:420px;
+	overflow:hidden
+}
+
+.leftnavigation {
+	width:180px;
+	overflow:hidden
+}
+
+.ColumnFifty, .columnfifty, .RightAdRail {
+	width:300px;
+	overflow:hidden
+}
+
+.BostonPostCard {
+	margin:0 0 12px 0;
+	overflow:hidden
+}
+
+.BostonPostCard h1, .BostonPostCard h2, .BostonPostCard h3, .BostonPostCard h4, .BostonPostCard h5, .BostonPostCard h6 {
+	background:#260859 url('headers.gif') 0 0 no-repeat;
+	color:#260859;
+	height:26px;
+	margin:0 0 10px 0;
+	overflow:hidden;
+	padding:5px 0 0 0;
+	position:relative;
+	white-space:nowrap
+}
+
+.BostonPostCard h1 a, .BostonPostCard h2 a, .BostonPostCard h3 a, .BostonPostCard h4 a, .BostonPostCard h5 a, .BostonPostCard h6 a {
+	color:#260859
+}
+
+.MainColumn .BostonPostCard, .maincolumn .BostonPostCard, .MiddleColumn .BostonPostCard, .middlecolumn .BostonPostCard {
+	margin:0 -12px 12px 0;
+	padding:0 12px 0 0
+}
+
+.fullwidth .BostonPostCard h1, .fullwidth .BostonPostCard h2, .MainColumn .BostonPostCard h1, .maincolumn .BostonPostCard h1, .MainColumn .BostonPostCard h2, .maincolumn .BostonPostCard h2, .MiddleColumn .BostonPostCard h1, .middlecolumn .BostonPostCard h1, .MiddleColumn .BostonPostCard h2, .middlecolumn .BostonPostCard h2, .leftnavigation .BostonPostCard h1, .leftnavigation .BostonPostCard h2, .ColumnFifty .BostonPostCard h1, .columnfifty .BostonPostCard h1, .ColumnFifty .BostonPostCard h2, .columnfifty .BostonPostCard h2 {
+	background:none
+}
+
+.fullwidth .BostonPostCard h3, .fullwidth .BostonPostCard h4, .fullwidth .BostonPostCard h5, .fullwidth .BostonPostCard h6 {
+	background-position:-1px -98px
+}
+
+.MainColumn .BostonPostCard h3, .maincolumn .BostonPostCard h3, .MainColumn .BostonPostCard h4, .maincolumn .BostonPostCard h4, .MainColumn .BostonPostCard h5, .maincolumn .BostonPostCard h5, .MainColumn .BostonPostCard h6, .maincolumn .BostonPostCard h6 {
+	background-position:-302px -66px
+}
+
+.MiddleColumn .BostonPostCard h3, .middlecolumn .BostonPostCard h3, .MiddleColumn .BostonPostCard h4, .middlecolumn .BostonPostCard h4, .MiddleColumn .BostonPostCard h5, .middlecolumn .BostonPostCard h5, .MiddleColumn .BostonPostCard h6, .middlecolumn .BostonPostCard h6 {
+	background-position:-483px -34px
+}
+
+.leftnavigation .BostonPostCard h3, .leftnavigation .BostonPostCard h4, .leftnavigation .BostonPostCard h5, .leftnavigation .BostonPostCard h6 {
+	background-position:-302px -34px
+}
+
+.ColumnFifty .BostonPostCard h3, .columnfifty .BostonPostCard h3, .ColumnFifty .BostonPostCard h4, .columnfifty .BostonPostCard h4, .ColumnFifty .BostonPostCard h5, .columnfifty .BostonPostCard h5, .ColumnFifty .BostonPostCard h6, .columnfifty .BostonPostCard h6 {
+	background-position:-1px -34px
+}
+
+.RightAdRail .BostonPostCard {
+	margin:0 0 12px 0
+}
+
+.RightAdRail .BostonPostCard h3 {
+	background-position:-1px -66px;
+	color:#fff;
+	padding:5px 7px 0 0;
+	text-align:right
+}
+
+.RightAdRail .BostonPostCard h4 {
+	background-position:-1px -66px;
+	color:#fff;
+	padding:7px 7px 0 0;
+	text-align:right
+}
+
+.RightAdRail .BostonPostCard h6 {
+	background-position:-1px -66px;
+	color:#fff;
+	padding:0 7px 0 0;
+	text-align:right
+}
+
+.RightAdRail .BostonPostCard h3 a, .RightAdRail .BostonPostCard h4 a, .RightAdRail .BostonPostCard h6 a {
+	color:#fff
+}
+
+.RightAdRail .BostonPostCard h1, .RightAdRail .BostonPostCard h2, .RightAdRail .BostonPostCard h5 {
+	background-position:-1px -34px;
+	color:#260859;
+	height:23px;
+	padding:8px 0 0 0
+}
+
+.RightAdRail .BostonPostCard h1 a, .RightAdRail .BostonPostCard h2 a, .RightAdRail .BostonPostCard h5 a {
+	color:#260859
+}
+
+.RightAdRail .BostonPostCard h1, .BostonPostCard h1 {
+	font-size:20px;
+	height:31px;
+	padding:0
+}
+
+.RightAdRail .BostonPostCard h2, .BostonPostCard h2 {
+	font-size:18px;
+	height:28px;
+	padding:3px 0 0 0
+}
+
+.BostonPostCard h3 {
+	font-size:16px
+}
+
+.BostonPostCard h4 {
+	font-size:14px;
+	height:24px;
+	padding:7px 0 0 0
+}
+
+.BostonPostCard h5 {
+	font-size:13px;
+	height:23px;
+	padding:8px 0 0 0
+}
+
+.BostonPostCard h6 {
+	font-size:13px;
+	height:31px;
+	line-height:100%;
+	padding:0
+}
+
+.rssfeed {
+	background:transparent url('RSS_OFF.png') 0 0 no-repeat;
+	height:17px;
+	width:17px
+}
+
+.RightAdRail .BostonPostCard h1 .rssfeed, .RightAdRail .BostonPostCard h2 .rssfeed, .BostonPostCard h3 .rssfeed, .BostonPostCard h4 .rssfeed, .BostonPostCard h5 .rssfeed, .BostonPostCard h6 .rssfeed {
+	position:absolute;
+	right:0;
+	top:4px
+}
+
+.RightAdRail .BostonPostCard h3 .rssfeed, .RightAdRail .BostonPostCard h4 .rssfeed, .RightAdRail .BostonPostCard h6 .rssfeed {
+	right:7px;
+	top:7px
+}
+
+.rssfeed:hover {
+	background:transparent url('RSS_OFF.png') 0 0 no-repeat
+}
+
+td.headlines_td_text {
+	padding:0 0 0 10px
+}
+
+td.headlines_td_text strong {
+	display:inline-block;
+	font-size:14px;
+	font-weight:normal;
+	margin-bottom:3px
+}
+
+td.headlines_td_image {
+	padding:3px 0 9px 0
+}
+
+table.headlines_table {
+	padding-bottom:12px
+}
+
+td.noimages_td {
+	padding-bottom:10px
+}
+
+.RightAdRail .linklist {
+	margin-top:-12px
+}
+
+.linklist h3 {
+	color:#3a3e43;
+	font-size:14px;
+	font-weight:bold
+}
+
+.BostonPostCard .linklist h3 {
+	background-image:none;
+	background-color:#fff;
+	color:#3a3e43;
+	font-size:14px;
+	font-weight:bold;
+	margin-bottom:0
+}
+
+.pasco_wrapper {
+	background-color:#c7eaf8;
+	margin:0 0 12px;
+	overflow:hidden;
+	width:300px
+}
+
+.RightAdRail .pasco_wrapper h3 {
+	margin:0
+}
+
+.BP_Home_Table {
+	margin:-6px 0
+}
+
+.RightAdRail .pasco_container {
+	padding:0 5px 12px 15px
+}
+
+.RightAdRail .pasco_wrapper h5 {
+	background:#260859 url('headers.gif') 0 -57px no-repeat;
+	color:#260859;
+	height:5px;
+	margin:0;
+	overflow:hidden;
+	padding:0;
+	white-space:nowrap
+}
+
+.top1 {
+	background:#260859
+}
+
+.boxheader {
+	background:#260859
+}
+
+.internav a, .internav a:link, .internav a:visited, .internav a:hover, .internav a:active {
+	color:#fff
+}
+
+* html .internav {
+	background-color:#21204a
+}
+
+.internav a:hover {
+	background:url('/platform/controls/StoTabStrip/resources/internav.png') no-repeat -237px -1px
+}
+
+* html .internav a:hover {
+	background-color:#181839;
+	background-image:none
+}
+
+.internav a.active, .internav a.active:hover {
+	background:#09a7e1 url('/platform/controls/StoTabStrip/resources/internav.png') no-repeat 0 0
+}
+
+* html .internav a.active, * html .internav a.active:hover {
+	background-image:none
+}
+
+.LocalNavigation {
+	background:url('/platform/controls/StoTabStrip/resources/subnav_msdn.png') repeat-y top right
+}
+
+* html .LocalNavigation {
+	background-color:#08a6e7;
+	background-image:none
+}
+
+.LocalNavigation .TabOff a:hover {
+	background-color:#0281bd
+}
+
+.LocalNavigation .TabOn {
+	background-color:#046ea0
+}
+
+.expressWrapper {
+	margin-left:15px;
+	margin-top:15px;
+	width:790px
+}
+
+.expressQPWrapper {
+	margin-left:645px;
+	margin-top:25px
+}
+
+.expressQPCell {
+	height:43px;
+	padding-left:20px
+}
+
+table.grid {
+	border:solid #666 1px
+}
+
+.grid td {
+	padding:5px;
+	border:solid #333 1px
+}
+
+.CollapseRegionLink, .CollapseRegionLink:link, .CollapseRegionLink:hover, .CollapseRegionLink:visited {
+	font-size:inherit!important
+}

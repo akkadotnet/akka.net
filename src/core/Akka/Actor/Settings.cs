@@ -11,6 +11,27 @@ namespace Akka.Actor
     /// </summary>
     public class Settings
     {
+        private readonly Config _userConfig;
+        private Config _fallbackConfig;
+
+        /// <summary>
+        /// Combines the user config and the fallback chain of configs
+        /// </summary>
+        private void RebuildConfig()
+        {
+            this.Config = _userConfig.SafeWithFallback(_fallbackConfig);
+        }
+
+        /// <summary>
+        /// Injects a system config at the top of the fallback chain
+        /// </summary>
+        /// <param name="config"></param>
+        public void InjectTopLevelFallback(Config config)
+        {
+            _fallbackConfig = config.SafeWithFallback(_fallbackConfig);
+            RebuildConfig();
+        }
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="Settings" /> class.
         /// </summary>
@@ -18,13 +39,12 @@ namespace Akka.Actor
         /// <param name="config">The configuration.</param>
         public Settings(ActorSystem system, Config config)
         {
-            Config fallback = ConfigurationFactory.Default();
-
-            Config merged = config == null ? fallback : config.WithFallback(fallback);
+            _userConfig = config;
+            _fallbackConfig = ConfigurationFactory.Default();            
+            RebuildConfig();
 
             System = system;
-            Config = merged;
-
+            
             ConfigVersion = Config.GetString("akka.version");
             ProviderClass = Config.GetString("akka.actor.provider");
             var providerType = Type.GetType(ProviderClass);
@@ -68,6 +88,7 @@ namespace Akka.Actor
             AddLoggingReceive = Config.GetBoolean("akka.actor.debug.receive");
             DebugAutoReceive = Config.GetBoolean("akka.actor.debug.autoreceive");
             DebugLifecycle = Config.GetBoolean("akka.actor.debug.lifecycle");
+            FsmDebugEvent = Config.GetBoolean("akka.actor.debug.fsm");
             DebugEventStream = Config.GetBoolean("akka.actor.debug.event-stream");
             DebugUnhandledMessage = Config.GetBoolean("akka.actor.debug.unhandled");
             DebugRouterMisConfiguration = Config.GetBoolean("akka.actor.debug.router-misconfiguration");
@@ -75,7 +96,6 @@ namespace Akka.Actor
 
             //TODO: dunno.. we dont have FiniteStateMachines, dont know what the rest is
             /*              
-                final val FsmDebugEvent: Boolean = getBoolean("akka.actor.debug.fsm")
                 final val SchedulerClass: String = getString("akka.scheduler.implementation")
                 final val Daemonicity: Boolean = getBoolean("akka.daemonic")                
                 final val DefaultVirtualNodesFactor: Int = getInt("akka.actor.deployment.default.virtual-nodes-factor")
@@ -225,6 +245,8 @@ namespace Akka.Actor
         /// </summary>
         /// <value><c>true</c> if [debug lifecycle]; otherwise, <c>false</c>.</value>
         public bool DebugLifecycle { get; private set; }
+
+        public bool FsmDebugEvent { get; private set; }
 
         /// <summary>
         ///     Returns a <see cref="string" /> that represents this instance.

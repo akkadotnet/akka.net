@@ -8,7 +8,7 @@ namespace Akka.Tests.Actor
     
     public class FSMTransitionSpec : AkkaSpec, ImplicitSender
     {
-        public ActorRef Self { get { return testActor; } }
+        public ActorRef Self { get { return TestActor; } }
 
         
             
@@ -16,17 +16,17 @@ namespace Akka.Tests.Actor
         public void FSMTransitionNotifier_must_notify_listeners()
         {
             //arrange
-            var fsm = sys.ActorOf(Props.Create(() => new MyFSM(testActor)));
+            var fsm = Sys.ActorOf(Props.Create(() => new MyFSM(TestActor)));
 
             //act
             Within(TimeSpan.FromSeconds(1), () =>
             {
-                fsm.Tell(new FSMBase.SubscribeTransitionCallBack(testActor));
-                expectMsg(new FSMBase.CurrentState<int>(fsm, 0), FSMSpecHelpers.CurrentStateExpector<int>());
+                fsm.Tell(new FSMBase.SubscribeTransitionCallBack(TestActor));
+                ExpectMsg(new FSMBase.CurrentState<int>(fsm, 0), FSMSpecHelpers.CurrentStateExpector<int>());
                 fsm.Tell("tick");
-                expectMsg(new FSMBase.Transition<int>(fsm, 0, 1), FSMSpecHelpers.TransitionStateExpector<int>());
+                ExpectMsg(new FSMBase.Transition<int>(fsm, 0, 1), FSMSpecHelpers.TransitionStateExpector<int>());
                 fsm.Tell("tick");
-                expectMsg(new FSMBase.Transition<int>(fsm, 1, 0), FSMSpecHelpers.TransitionStateExpector<int>());
+                ExpectMsg(new FSMBase.Transition<int>(fsm, 1, 0), FSMSpecHelpers.TransitionStateExpector<int>());
                 return true;
             });
 
@@ -37,17 +37,17 @@ namespace Akka.Tests.Actor
         public void FSMTransitionNotifier_must_not_fail_when_listener_goes_away()
         {
             //arrange
-            var forward = sys.ActorOf(Props.Create(() => new Forwarder(testActor)));
-            var fsm = sys.ActorOf(Props.Create(() => new MyFSM(testActor)));
+            var forward = Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)));
+            var fsm = Sys.ActorOf(Props.Create(() => new MyFSM(TestActor)));
 
             //act
             Within(TimeSpan.FromSeconds(1), async () =>
             {
                 fsm.Tell(new FSMBase.SubscribeTransitionCallBack(forward));
-                expectMsg(new FSMBase.CurrentState<int>(fsm, 0), FSMSpecHelpers.CurrentStateExpector<int>());
+                ExpectMsg(new FSMBase.CurrentState<int>(fsm, 0), FSMSpecHelpers.CurrentStateExpector<int>());
                 await forward.GracefulStop(TimeSpan.FromSeconds(5));
                 fsm.Tell("tick");
-                expectNoMsg(TimeSpan.FromMilliseconds(300));
+                ExpectNoMsg(TimeSpan.FromMilliseconds(300));
                 return true;
             });
 
@@ -58,13 +58,13 @@ namespace Akka.Tests.Actor
         public void FSM_must_make_previous_and_next_state_data_available_in_OnTransition()
         {
             //arrange
-            var fsm = sys.ActorOf(Props.Create(() => new OtherFSM(testActor)));
+            var fsm = Sys.ActorOf(Props.Create(() => new OtherFSM(TestActor)));
 
             //act
             Within(TimeSpan.FromSeconds(1), () =>
             {
                 fsm.Tell("tick");
-                expectMsg(new Tuple<int, int>(0, 1));
+                ExpectMsg(new Tuple<int, int>(0, 1));
                 return true;
             });
 
@@ -75,13 +75,13 @@ namespace Akka.Tests.Actor
         public void FSM_must_not_leak_memory_in_nextState()
         {
             //arrange
-            var fsmref = sys.ActorOf<LeakyFSM>();
+            var fsmref = Sys.ActorOf<LeakyFSM>();
 
             //act
             fsmref.Tell("switch", Self);
-            expectMsg(Tuple.Create(0, 1));
+            ExpectMsg(Tuple.Create(0, 1));
             fsmref.Tell("test", Self);
-            expectMsg("ok");
+            ExpectMsg("ok");
 
             //assert
         }

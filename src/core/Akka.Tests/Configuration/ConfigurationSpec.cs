@@ -1,5 +1,6 @@
 ﻿using Akka.Configuration.Hocon;
 using System.Configuration;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Tests.Configuration

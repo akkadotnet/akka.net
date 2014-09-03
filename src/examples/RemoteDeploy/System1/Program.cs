@@ -1,26 +1,21 @@
-﻿using Akka.Actor;
+﻿using System;
+using Akka.Actor;
 using Akka.Configuration;
 using Shared;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace System1
 {
     public class ReplyActor : UntypedActor
     {
-
         protected override void OnReceive(object message)
         {
-            Console.WriteLine("Message from {0} - {1}",Sender.Path, message);
+            Console.WriteLine("Message from {0} - {1}", Sender.Path, message);
         }
     }
-    class Program
+
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             var config = ConfigurationFactory.ParseString(@"
 akka {  
@@ -65,13 +60,13 @@ akka {
             {
                 var reply = system.ActorOf<ReplyActor>("reply");
                 //create a local group router (see config)
-                var local = system.ActorOf(Props.Create(() =>  new SomeActor("hello",123)),  "localactor");
+                var local = system.ActorOf(Props.Create(() => new SomeActor("hello", 123)), "localactor");
 
                 //create a remote deployed actor
                 var remote = system.ActorOf(Props.Create(() => new SomeActor(null, 123)), "remoteactor");
 
                 //these messages should reach the workers via the routed local ref
-                local.Tell("Local message 1",reply);
+                local.Tell("Local message 1", reply);
                 local.Tell("Local message 2", reply);
                 local.Tell("Local message 3", reply);
                 local.Tell("Local message 4", reply);
@@ -84,13 +79,13 @@ akka {
                 remote.Tell("Remote message 4", reply);
                 remote.Tell("Remote message 5", reply);
                 Console.ReadLine();
-                for (int i = 0; i < 10000; i++)
+                for (var i = 0; i < 10000; i++)
                 {
                     remote.Tell(i);
                 }
 
                 Console.ReadLine();
-            }            
+            }
         }
     }
 }

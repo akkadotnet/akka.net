@@ -12,26 +12,24 @@ namespace Akka.Serialization
      */
 
     /// <summary>
-    ///     Class NullSerializer.
+    /// Class NullSerializer.
     /// </summary>
     public class NullSerializer : Serializer
     {
-        /// <summary>
-        ///     The null bytes
-        /// </summary>
-        private readonly byte[] nullBytes = { };
+        private static readonly byte[] nullBytes = {};
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="NullSerializer" /> class.
+        /// Initializes a new instance of the <see cref="NullSerializer" /> class.
         /// </summary>
         /// <param name="system">The system.</param>
-        public NullSerializer(ActorSystem system)
+        public NullSerializer(ExtendedActorSystem system)
             : base(system)
         {
         }
 
         /// <summary>
-        ///     Gets the identifier.
+        /// Gets the Serializer identifier.
+        /// This is used for remote messaging envelopes.
         /// </summary>
         /// <value>The identifier.</value>
         /// Completely unique value to identify this implementation of Serializer, used to optimize network traffic
@@ -42,7 +40,7 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        ///     Gets a value indicating whether [include manifest].
+        /// Gets a value indicating whether a manifest should be included in remote messages.
         /// </summary>
         /// <value><c>true</c> if [include manifest]; otherwise, <c>false</c>.</value>
         /// Returns whether this serializer needs a manifest in the fromBinary method
@@ -52,7 +50,7 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        ///     To the binary.
+        /// Serializes an object to binary.
         /// </summary>
         /// <param name="obj">The object.</param>
         /// <returns>System.Byte[][].</returns>
@@ -63,7 +61,7 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        ///     Froms the binary.
+        /// Deserializes a binary representation to an object.
         /// </summary>
         /// <param name="bytes">The bytes.</param>
         /// <param name="type">The type.</param>
