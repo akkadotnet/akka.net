@@ -3,14 +3,13 @@
 using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
 #else
 using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope>;
+
 #endif
 
 namespace Akka.Dispatch.MessageQueues
 {
-    /// <summary>
-    /// An unbounded mailbox message queue.
-    /// </summary>
-    public class UnboundedMessageQueue : MessageQueue , UnboundedMessageQueueSemantics
+    /// <summary> An unbounded mailbox message queue. </summary>
+    public class UnboundedMessageQueue : MessageQueue, UnboundedMessageQueueSemantics
     {
         private readonly TQueue _queue = new TQueue();
 

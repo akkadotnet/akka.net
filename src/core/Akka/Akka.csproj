@@ -135,6 +135,7 @@
     <Compile Include="Dispatch\GenericMailbox.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
+    <Compile Include="Dispatch\MessageQueues\BlockingMessageQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\Semantics.cs" />
     <Compile Include="Dispatch\MessageQueues\UnboundedPriorityMailboxQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\UnboundedMailboxQueue.cs" />
@@ -210,6 +211,7 @@
     <Compile Include="Util\AtomicBoolean.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\Internal\IAtomicCounter.cs" />
+    <Compile Include="Util\ListPriorityQueue.cs" />
     <Compile Include="Util\MonoConcurrentQueue.cs" />
     <Compile Include="Util\MurmurHash.cs" />
     <Compile Include="Util\Reflection\ExpressionExtensions.cs" />
