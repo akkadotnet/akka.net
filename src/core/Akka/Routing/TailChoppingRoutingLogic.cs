@@ -7,6 +7,7 @@ using Akka.Util;
 using Akka.Actor;
 using System.Threading;
 using Akka.Configuration;
+using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -107,7 +108,7 @@ namespace Akka.Routing
         public override void Send(object message, ActorRef sender)
         {
             routees.Shuffle();
-            var routeeIndex = new AtomicInteger(0);
+            var routeeIndex = new AtomicCounter(0);
 
             var completion = new TaskCompletionSource<object>();
             var tokenSource = new CancellationTokenSource();

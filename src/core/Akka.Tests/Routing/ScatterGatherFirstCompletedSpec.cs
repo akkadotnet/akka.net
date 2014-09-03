@@ -10,6 +10,7 @@ using Akka.Tests;
 using Akka.Util;
 using Xunit;
 using System.Threading;
+using Akka.Util.Internal;
 
 namespace Akka.Tests.Routing
 {
