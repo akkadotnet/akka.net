@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Immutable;
+using System.Linq;
 using System.Runtime.Remoting;
 using Akka.Actor;
 using Akka.TestKit;
@@ -92,7 +93,44 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void MetricsGossip_must_get_the_current_NodeMetrics_if_it_exists_in_local_nodes()
         {
-            
+            var m1 = new NodeMetrics(new Address("akka.tcp", "sys", "a", 2554), StandardMetrics.NewTimestamp(),
+               _collector.Sample().Metrics);
+            var g1 = MetricsGossip.Empty + m1;
+            g1.NodeMetricsFor(m1.Address).Metrics.ShouldBe(m1.Metrics);
+        }
+
+        [Fact]
+        public void MetricsGossip_must_remove_a_node_if_it_is_no_longer_up()
+        {
+            var m1 = new NodeMetrics(new Address("akka.tcp", "sys", "a", 2554), StandardMetrics.NewTimestamp(),
+                _collector.Sample().Metrics);
+            var m2 = new NodeMetrics(new Address("akka.tcp", "sys", "a", 2555), StandardMetrics.NewTimestamp(),
+                _collector.Sample().Metrics);
+
+            var g1 = MetricsGossip.Empty + m1 + m2;
+            g1.Nodes.Count.ShouldBe(2);
+            var g2 = g1.Remove(m1.Address);
+            g2.Nodes.Count.ShouldBe(1);
+            g2.Nodes.Any(x => x.Address == m1.Address).ShouldBeFalse();
+            g2.NodeMetricsFor(m1.Address).ShouldBe(null);
+            g2.NodeMetricsFor(m2.Address).Metrics.ShouldBe(m2.Metrics);
+        }
+
+        [Fact]
+        public void MetricsGossip_must_filter_nodes()
+        {
+            var m1 = new NodeMetrics(new Address("akka.tcp", "sys", "a", 2554), StandardMetrics.NewTimestamp(),
+                _collector.Sample().Metrics);
+            var m2 = new NodeMetrics(new Address("akka.tcp", "sys", "a", 2555), StandardMetrics.NewTimestamp(),
+                _collector.Sample().Metrics);
+
+            var g1 = MetricsGossip.Empty + m1 + m2;
+            g1.Nodes.Count.ShouldBe(2);
+            var g2 = g1.Filter(ImmutableHashSet.Create<Address>(new[] {m2.Address}));
+            g2.Nodes.Count.ShouldBe(1);
+            g2.Nodes.Any(x => x.Address == m1.Address).ShouldBeFalse();
+            g2.NodeMetricsFor(m1.Address).ShouldBe(null);
+            g2.NodeMetricsFor(m2.Address).Metrics.ShouldBe(m2.Metrics);
         }
     }
 }
