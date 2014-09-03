@@ -69,6 +69,7 @@
     <Compile Include="GossipSpec.cs" />
     <Compile Include="MemberOrderingSpec.cs" />
     <Compile Include="MetricsCollectorSpec.cs" />
+    <Compile Include="MetricsGossipSpec.cs" />
     <Compile Include="MetricValuesSpec.cs" />
     <Compile Include="NodeMetricsSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

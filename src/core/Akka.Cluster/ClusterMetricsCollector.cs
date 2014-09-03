@@ -86,7 +86,7 @@ namespace Akka.Cluster
             {
                 if (member.Member.Status == MemberStatus.Up) AddMember(member.Member);
             });
-            Receive<ClusterEvent.IMemberEvent>()
+            Receive<ClusterEvent.IMemberEvent>(@event => { }); //not interested in other types of member event
         }
 
         protected override void PreStart()
@@ -342,6 +342,11 @@ namespace Akka.Cluster
             if(Address != that.Address) throw new ArgumentException(string.Format("NodeMetrics.merge is only allowed for the same address. {0} != {1}", Address, that.Address));
             if (Timestamp >= that.Timestamp) return this; //that is older
             return new NodeMetrics(Address, that.Timestamp, that.Metrics.Union(Metrics));
+        }
+
+        public NodeMetrics Copy(Address address = null, long? timestamp = null, ImmutableHashSet<Metric> metrics = null)
+        {
+            return new NodeMetrics(address ?? Address, timestamp.HasValue ? timestamp.Value : Timestamp, metrics ?? Metrics);
         }
     }
 
