@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using System;
+using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster.Proto;
 using Akka.Serialization;
@@ -91,7 +92,16 @@ namespace Akka.Cluster.Tests.Proto
 
             CheckSerialization(new InternalClusterAction.Welcome(uniqueAddress, g2));
 
-            //TODO: add metricsgossip support
+            var mg = new MetricsGossip(ImmutableHashSet.Create<NodeMetrics>(new[]
+            {
+                new NodeMetrics(a1.Address, 4711, ImmutableHashSet.Create<Metric>(new Metric("foo", 1.2, null))),
+                new NodeMetrics(b1.Address, 4712,
+                    ImmutableHashSet.Create<Metric>(new Metric("foo", 2.1, new EWMA(100.0, 0.18))
+                        , new Metric("bar1", Double.MinValue, null), new Metric("bar2", float.MaxValue, null),
+                        new Metric("bar3", int.MaxValue, null), new Metric("bar4", long.MaxValue, null), 
+                        new Metric("bar5", double.MaxValue, null)))
+            }));
+            CheckSerialization(new MetricsGossipEnvelope(a1.Address, mg, true));
         }
     }
 }

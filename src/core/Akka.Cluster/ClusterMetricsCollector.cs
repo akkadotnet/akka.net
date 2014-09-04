@@ -261,6 +261,24 @@ namespace Akka.Cluster
         public static readonly MetricsGossip Empty = new MetricsGossip(ImmutableHashSet.Create<NodeMetrics>());
 
         #endregion
+
+        private bool Equals(MetricsGossip other)
+        {
+            return Nodes.SequenceEqual(other.Nodes);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Nodes != null ? Nodes.GetHashCode() : 0);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((MetricsGossip) obj);
+        }
     }
 
     /// <summary>
@@ -281,6 +299,29 @@ namespace Akka.Cluster
         public MetricsGossip Gossip { get; private set; }
 
         public bool Reply { get; private set; }
+
+        private bool Equals(MetricsGossipEnvelope other)
+        {
+            return From.Equals(other.From) && Gossip.Equals(other.Gossip) && Reply.Equals(other.Reply);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = From.GetHashCode();
+                hashCode = (hashCode * 397) ^ Gossip.GetHashCode();
+                hashCode = (hashCode * 397) ^ Reply.GetHashCode();
+                return hashCode;
+            }
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is MetricsGossipEnvelope && Equals((MetricsGossipEnvelope) obj);
+        }
     }
 
     /// <summary>
