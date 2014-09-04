@@ -65,13 +65,13 @@ namespace Akka.Tests.Actor
             ExpectMsg(stopped);
         }
 
-        [Fact]
+        [Fact(Skip = "TODO: requires event filters")]
         public void A_ligthweight_creator_must_support_restart()
         {
             //TODO: requires event filters
         }
 
-        [Fact]
+        [Fact(Skip = "TODO: requires event filters")]
         public void A_ligthweight_creator_must_support_supervising()
         {
             //TODO: requires event filters
@@ -93,7 +93,7 @@ namespace Akka.Tests.Actor
             LastSender.ShouldBe(a);
         }
 
-        [Fact]
+        [Fact(Skip = "TODO: requires proven and tested stash implementation")]
         public void A_ligthweight_creator_must_support_stash()
         {
             //TODO: requires proven and tested stash implementation
