@@ -44,7 +44,7 @@ namespace Akka.Cluster.Proto
             if (obj is ClusterHeartbeatSender.HeartbeatRsp) return UniqueAddressToProtoByteArray(((ClusterHeartbeatSender.HeartbeatRsp)obj).From);
             if (obj is GossipEnvelope) return GossipEnvelopeToProto((GossipEnvelope) obj).ToByteArray();
             if (obj is GossipStatus) return GossipStatusToProto((GossipStatus) obj).ToByteArray();
-            //TODO: metrics gossip
+            if (obj is MetricsGossipEnvelope) return Compress(MetricsGossipEnvelopeToProto((MetricsGossipEnvelope)obj));
             if (obj is InternalClusterAction.Join)
             {
                 var join = (InternalClusterAction.Join) obj;
@@ -87,7 +87,7 @@ namespace Akka.Cluster.Proto
             if (type == typeof(ClusterHeartbeatSender.HeartbeatRsp)) return new ClusterHeartbeatSender.HeartbeatRsp(UniqueAddressFromBinary(bytes));
             if (type == typeof(GossipStatus)) return GossipStatusFromBinary(bytes);
             if (type == typeof(GossipEnvelope)) return GossipEnvelopeFromBinary(bytes);
-            //TODO: need to add support for MetricsEnvelope
+            if (type == typeof (MetricsGossipEnvelope)) return MetricsGossipEnvelopeFromBinary(bytes);
 
             throw new ArgumentException("Ned a cluster message class to be able to deserialize bytes in ClusterSerializer.");
         }
@@ -317,6 +317,76 @@ namespace Akka.Cluster.Proto
                 .AddRangeAllHashes(allHashes.Select(y => y))
                 .AddRangeMembers(membersProto.Select(x => x.Build()))
                 .SetOverview(overview).SetVersion(VectorClockToProto(gossip.Version, hashMapping));
+        }
+
+        private Msg.MetricsGossipEnvelope MetricsGossipEnvelopeToProto(MetricsGossipEnvelope envelope)
+        {
+            var mgossip = envelope.Gossip;
+            var allAddresses = mgossip.Nodes.Select(x => x.Address).ToList();
+            var addressMapping = allAddresses.ZipWithIndex();
+            var allMetricNames = mgossip.Nodes.Aggregate(ImmutableHashSet.Create<string>(),
+                (set, metrics) => set = set.Union(metrics.Metrics.Select(x => x.Name)));
+            var metricNamesMapping = allMetricNames.ZipWithIndex();
+
+            Func<Address, int> mapAddress = address => MapWithErrorMessage(addressMapping, address, "address");
+            Func<string, int> mapName = name => MapWithErrorMessage(metricNamesMapping, name, "address");
+
+            Func<EWMA, Msg.NodeMetrics.Types.EWMA.Builder> ewmaToProto = ewma => ewma == null ? null :
+                Msg.NodeMetrics.Types.EWMA.CreateBuilder().SetAlpha(ewma.Alpha).SetValue(ewma.Value);
+
+            // we set all metric types as doubles, since we don't have a convenienent Number base class like Scala
+            Func<double, Msg.NodeMetrics.Types.Number.Builder> numberToProto = d => Msg.NodeMetrics.Types.Number.CreateBuilder()
+                .SetType(Msg.NodeMetrics.Types.NumberType.Double)
+                .SetValue64((ulong) BitConverter.DoubleToInt64Bits(d));
+
+            Func<Metric, Msg.NodeMetrics.Types.Metric.Builder> metricToProto = metric =>
+            {
+                var builder =
+                    Msg.NodeMetrics.Types.Metric.CreateBuilder()
+                        .SetNameIndex(mapName(metric.Name))
+                        .SetNumber(numberToProto(metric.Value));
+                var ewmaBuilder = ewmaToProto(metric.Average);
+                return ewmaBuilder != null ? builder.SetEwma(ewmaBuilder) : builder;
+            };
+
+            Func<NodeMetrics, Msg.NodeMetrics.Builder> nodeMetricsToProto = metrics => Msg.NodeMetrics.CreateBuilder()
+                .SetAddressIndex(mapAddress(metrics.Address))
+                .SetTimestamp(metrics.Timestamp)
+                .AddRangeMetrics(metrics.Metrics.Select(x => metricToProto(x).Build()));
+
+            var nodeMetrics = mgossip.Nodes.Select(x => nodeMetricsToProto(x).Build());
+
+            return Msg.MetricsGossipEnvelope.CreateBuilder().SetFrom(AddressToProto(envelope.From)).SetGossip(
+                Msg.MetricsGossip.CreateBuilder()
+                    .AddRangeAllAddresses(allAddresses.Select(x => AddressToProto(x).Build()))
+                    .AddRangeAllMetricNames(allMetricNames).AddRangeNodeMetrics(nodeMetrics))
+                .SetReply(envelope.Reply)
+                .Build();
+        }
+
+        private MetricsGossipEnvelope MetricsGossipEnvelopeFromProto(Msg.MetricsGossipEnvelope envelope)
+        {
+            var mgossip = envelope.Gossip;
+            var addressMapping = mgossip.AllAddressesList.Select(AddressFromProto).ToList();
+            var metricNameMapping = mgossip.AllMetricNamesList;
+
+            Func<Msg.NodeMetrics.Types.EWMA, EWMA> ewmaFromProto = ewma => ewma == null ? null : new EWMA(ewma.Value, ewma.Alpha);
+            Func<Msg.NodeMetrics.Types.Number, double> numberFromProto =
+                number => BitConverter.Int64BitsToDouble((long) number.Value64);
+            Func<Msg.NodeMetrics.Types.Metric, Metric> metricFromProto =
+                metric =>
+                    new Metric(metricNameMapping[metric.NameIndex], numberFromProto(metric.Number),
+                        ewmaFromProto(metric.Ewma));
+            Func<Msg.NodeMetrics, NodeMetrics> nodeMetricsFromProto = metrics => new NodeMetrics(addressMapping[metrics.AddressIndex], metrics.Timestamp, metrics.MetricsList.Select(metricFromProto).ToImmutableHashSet());
+
+            var nodeMetrics = mgossip.NodeMetricsList.Select(nodeMetricsFromProto).ToImmutableHashSet();
+
+            return new MetricsGossipEnvelope(AddressFromProto(envelope.From), new MetricsGossip(nodeMetrics), envelope.Reply);
+        }
+
+        private MetricsGossipEnvelope MetricsGossipEnvelopeFromBinary(byte[] bytes)
+        {
+            return MetricsGossipEnvelopeFromProto(Msg.MetricsGossipEnvelope.ParseFrom(Decompress(bytes)));
         }
 
         private Msg.VectorClock.Builder VectorClockToProto(VectorClock version, Dictionary<string, int> hashMapping)
