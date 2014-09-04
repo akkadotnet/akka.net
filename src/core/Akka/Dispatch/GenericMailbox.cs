@@ -1,29 +1,48 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Threading;
 using Akka.Actor;
 using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
 
-#if MONO
-using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
-#else
-using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope>;
-//using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
-#endif
-
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// Class ConcurrentQueueMailbox.
+    /// Class Mailbox of TSys,TUser.
     /// </summary>
-    public class ConcurrentQueueMailbox : Mailbox
+    public abstract class Mailbox<TSys,TUser> : Mailbox 
+        where TSys:MessageQueue
+        where TUser:MessageQueue
     {
-        private readonly TQueue _systemMessages = new TQueue();
-        private readonly TQueue _userMessages = new TQueue();
-
         private Stopwatch _deadLineTimer;
         private volatile bool _isClosed;
+        private TSys _systemMessages;
+        private TUser _userMessages;
+
+        protected TSys SystemMessages
+        {
+            get { return _systemMessages; }
+        }
+
+        protected TUser UserMessages
+        {
+            get { return _userMessages; }
+        }
+
+        protected Mailbox()
+        {
+            InitMessageQueues();
+        }
+
+        private void InitMessageQueues()
+        {
+            _systemMessages = CreateSystemMessagesQueue();
+            _userMessages = CreateUserMessagesQueue();
+        }
+
+
+        protected abstract TSys CreateSystemMessagesQueue();
+
+        protected abstract TUser CreateUserMessagesQueue();
 
         private void Run()
         {
