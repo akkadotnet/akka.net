@@ -69,6 +69,7 @@
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Actor\ActorCell.DeathWatch.cs" />
+    <Compile Include="Actor\Dsl\Act.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
     <Compile Include="Actor\Internals\InitializableActor.cs" />
     <Compile Include="Actor\ReceiveActor.cs" />

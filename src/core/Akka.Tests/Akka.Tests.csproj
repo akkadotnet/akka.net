@@ -80,6 +80,7 @@
   <ItemGroup>
     <Compile Include="Actor\ActorBecomeTests.cs" />
     <Compile Include="Actor\ActorCellTests_SerializationOfUserMessages.cs" />
+    <Compile Include="Actor\ActorDslSpec.cs" />
     <Compile Include="Actor\ActorLifeCycleSpec.cs" />
     <Compile Include="Actor\ActorPathSpec.cs" />
     <Compile Include="Actor\ActorRefSpec.cs" />
