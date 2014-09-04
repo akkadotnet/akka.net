@@ -4,6 +4,13 @@
 src/.build/**
 
 
+
+#GitExtensions
+us.stackdump
+
+#KDiff3 and other git merge tools
+*.orig
+
 #-------------------------------------------------------------------------------
 #Based on https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 

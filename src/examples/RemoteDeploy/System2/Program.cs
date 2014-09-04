@@ -1,17 +1,12 @@
-﻿using Akka.Actor;
+﻿using System;
+using Akka.Actor;
 using Akka.Configuration;
-using Shared;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace System2
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             var config = ConfigurationFactory.ParseString(@"
 akka {  
@@ -41,7 +36,7 @@ akka {
 }
 ");
             //testing connectivity
-            using (var system = ActorSystem.Create("system2", config))
+            using (ActorSystem.Create("system2", config))
             {
                 Console.ReadLine();
             }

@@ -7,14 +7,15 @@ namespace Akka.Actor
     /// <summary>
     ///     Class EventStreamActor.
     /// </summary>
-    public class EventStreamActor : UntypedActor
+    public class EventStreamActor : ActorBase
     {
         /// <summary>
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected override void OnReceive(object message)
+        protected override bool Receive(object message)
         {
+            return true;
         }
     }
 
@@ -51,7 +52,9 @@ namespace Akka.Actor
         protected override bool Receive(object message)
         {
             //TODO need to add termination hook support
-            Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Self), Sender);
+            if(message is StopChild) Context.Stop(((StopChild)message).Child);
+            else
+                Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Self), Sender);
             return true;
         }
     }

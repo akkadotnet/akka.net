@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -13,14 +14,14 @@ namespace Akka.Actor
     {
         private volatile Cell _underlying_DoNotCallMeDirectly;
         private volatile Cell _lookup_DoNotCallMeDirectly;
-        private readonly ActorSystem _system;
+        private readonly ActorSystemImpl _system;
         private readonly Props _props;
         private readonly MessageDispatcher _dispatcher;
         private readonly Func<Mailbox> _createMailbox;
         private readonly InternalActorRef _supervisor;
         private readonly ActorPath _path;
 
-        public RepointableActorRef(ActorSystem system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, InternalActorRef supervisor, ActorPath path)
+        public RepointableActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, InternalActorRef supervisor, ActorPath path)
         {
             _system = system;
             _props = props;
@@ -206,7 +207,7 @@ namespace Akka.Actor
 
     public class UnstartedCell : Cell
     {
-        private readonly ActorSystem _system;
+        private readonly ActorSystemImpl _system;
         private readonly RepointableActorRef _self;
         private readonly Props _props;
         private readonly InternalActorRef _supervisor;
@@ -214,7 +215,7 @@ namespace Akka.Actor
         private readonly List<Envelope> _messageQueue = new List<Envelope>();
         private readonly TimeSpan _timeout;
 
-        public UnstartedCell(ActorSystem system, RepointableActorRef self, Props props, InternalActorRef supervisor)
+        public UnstartedCell(ActorSystemImpl system, RepointableActorRef self, Props props, InternalActorRef supervisor)
         {
             _system = system;
             _self = self;
@@ -242,6 +243,7 @@ namespace Akka.Actor
         }
 
         public ActorSystem System { get { return _system; } }
+        public ActorSystemImpl SystemImpl { get { return _system; } }
         public void Start()
         {
             //Akka does this. Not sure what it means. /HCanber

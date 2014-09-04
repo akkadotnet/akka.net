@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
+using Akka.Actor.Internals;
 
 namespace Akka.Actor
 {
     // ReSharper disable once InconsistentNaming
     /// <summary>
-    /// INTERNAL
+    /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
     public interface Cell
     {
@@ -13,7 +14,10 @@ namespace Akka.Actor
         ActorRef Self { get; }
 
         /// <summary>The system within which this Cell lives.</summary>
-        ActorSystem System { get; }
+        ActorSystem System { get; }        
+        
+        /// <summary>The system internals within which this Cell lives.</summary>
+        ActorSystemImpl SystemImpl{ get; }
 
         /// <summary>
         /// Start the cell: enqueued message must not be processed before this has

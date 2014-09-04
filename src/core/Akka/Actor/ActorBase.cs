@@ -35,6 +35,11 @@ namespace Akka.Actor
             {
                 Cause = cause;
             }
+
+            public override string ToString()
+            {
+                return "Failure: " + Cause.ToString();
+            }
         }
     }
 

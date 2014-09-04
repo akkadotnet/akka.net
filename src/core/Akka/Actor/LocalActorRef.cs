@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Akka.Actor.Internals;
 using Akka.Dispatch;
 
 namespace Akka.Actor
@@ -31,7 +32,7 @@ namespace Akka.Actor
         //      actorCell.init(sendSupervise = true, _mailboxType)
         //      ...
         //    }
-        public  LocalActorRef(ActorSystem system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, InternalActorRef supervisor, ActorPath path) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType      
+        public LocalActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, InternalActorRef supervisor, ActorPath path) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType      
             : this(system, props, dispatcher, createMailbox, supervisor, path, self =>
             {
                 var cell= new ActorCell(system, self, props, dispatcher, supervisor);
@@ -70,7 +71,7 @@ namespace Akka.Actor
 
         public override ActorRefProvider Provider
         {
-            get { return _cell.System.Provider; }
+            get { return _cell.SystemImpl.Provider; }
         }
 
         public override InternalActorRef Parent

@@ -5,6 +5,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
+using Akka.Actor.Internals;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -14,7 +16,6 @@ using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Actor
 {
-    // C#
     /// <summary>
     ///     An actor system is a hierarchical group of actors which share common
     ///     configuration, e.g. dispatchers, deployments, remote capabilities and
@@ -33,203 +34,45 @@ namespace Akka.Actor
     ///     </b>
     ///     This class is not meant to be extended by user code.
     /// </summary>
-    public class ActorSystem : IActorRefFactory, IDisposable
+    public abstract class ActorSystem : ActorRefFactory, IDisposable
     {
-        /// <summary>
-        ///     The extensionsBase
-        /// </summary>
-        private readonly ConcurrentDictionary<Type, object> _extensions = new ConcurrentDictionary<Type, object>();
-
-        /// <summary>
-        ///     The log
-        /// </summary>
-        public LoggingAdapter Log;
-
-        /// <summary>
-        /// A wait handle that an Akka.NET client or server can wait on until the actor system is shut down.
-        /// 
-        /// Designed to make it easy for developers to build applications that can block the main application thread
-        /// from exiting while the system runs, particularly inside console applications.
-        /// </summary>
-        private ManualResetEvent _systemWaitHandle;
-
-        /// <summary>
-        ///     The log dead letter listener
-        /// </summary>
-        private InternalActorRef _logDeadLetterListener;
-
-        public ActorSystem(string name) : this(name,ConfigurationFactory.Load())
-        {
-        }
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="ActorSystem" /> class.
-        /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="config">The configuration.</param>
-        public ActorSystem(string name, Config config)
-        {
-            if (!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
-                throw new ArgumentException(
-                    "invalid ActorSystem name [" + name +
-                    "], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')");
-            if (config == null)
-                throw new ArgumentNullException("config");
-
-            Name = name;
-            _systemWaitHandle = new ManualResetEvent(false); //unsignaled
-            ConfigureScheduler();
-            ConfigureSettings(config);
-            ConfigureEventStream();
-            ConfigureSerialization();
-            ConfigureProvider();
-            ConfigureMailboxes();
-            ConfigureDispatchers();
-            InitProvider();
-            ConfigureLoggers();
-            LoadExtensions();
-            Start();
-        }
-
-        /// <summary>
-        ///     Gets the provider.
-        /// </summary>
-        /// <value>The provider.</value>
-        public ActorRefProvider Provider { get; private set; }
-
-        /// <summary>
-        ///     Gets the settings.
-        /// </summary>
+        /// <summary>Gets the settings.</summary>
         /// <value>The settings.</value>
-        public Settings Settings { get; private set; }
+        public abstract Settings Settings { get; }
 
-        /// <summary>
-        ///     Gets the name.
-        /// </summary>
+        /// <summary>Gets the name of this system.</summary>
         /// <value>The name.</value>
-        public string Name { get; private set; }
+        public abstract string Name { get; }
 
-        /// <summary>
-        ///     Gets the serialization.
-        /// </summary>
+        /// <summary>Gets the serialization.</summary>
         /// <value>The serialization.</value>
-        public Serialization.Serialization Serialization { get; private set; }
+        public abstract Serialization.Serialization Serialization { get; }
 
-        /// <summary>
-        ///     Gets the event stream.
-        /// </summary>
+        /// <summary>Gets the event stream.</summary>
         /// <value>The event stream.</value>
-        public EventStream EventStream { get; private set; }
+        public abstract EventStream EventStream { get; }
 
         /// <summary>
         ///     Gets the dead letters.
         /// </summary>
         /// <value>The dead letters.</value>
-        public ActorRef DeadLetters
-        {
-            get { return Provider.DeadLetters; }
-        }
+        public abstract ActorRef DeadLetters { get; }
 
-        /// <summary>
-        ///     Gets the guardian.
-        /// </summary>
-        /// <value>The guardian.</value>
-        public LocalActorRef Guardian
-        {
-            get { return Provider.Guardian; }
-        }
-
-        /// <summary>
-        ///     Gets the system guardian.
-        /// </summary>
-        /// <value>The system guardian.</value>
-        public LocalActorRef SystemGuardian
-        {
-            get { return Provider.SystemGuardian; }
-        }
-
-        /// <summary>
-        ///     Gets the dispatchers.
-        /// </summary>
+        /// <summary>Gets the dispatchers.</summary>
         /// <value>The dispatchers.</value>
-        public Dispatchers Dispatchers { get; private set; }
+        public abstract Dispatchers Dispatchers { get; }
 
-        /// <summary>
-        ///     Gets the mailboxes.
-        /// </summary>
+        /// <summary>Gets the mailboxes.</summary>
         /// <value>The mailboxes.</value>
-        public Mailboxes Mailboxes { get; private set; }
+        public abstract Mailboxes Mailboxes { get; }
 
 
-        /// <summary>
-        ///     Gets the scheduler.
-        /// </summary>
+        /// <summary>Gets the scheduler.</summary>
         /// <value>The scheduler.</value>
-        public Scheduler Scheduler { get; private set; }
+        public abstract Scheduler Scheduler { get; }
 
-        /// <summary>
-        ///     Create new actor as child of this context with the given name, which must
-        ///     not start with “$”. If the given name is already in use,
-        ///     and `InvalidActorNameException` is thrown.
-        ///     See [[Akka.Actor.Props]] for details on how to obtain a `Props` object.
-        ///     @throws akka.actor.InvalidActorNameException if the given name is
-        ///     invalid or already in use
-        ///     @throws akka.ConfigurationException if deployment, dispatcher
-        ///     or mailbox configuration is wrong
-        /// </summary>
-        /// <param name="props">The props.</param>
-        /// <param name="name">The name.</param>
-        /// <returns>InternalActorRef.</returns>
-        public InternalActorRef ActorOf(Props props, string name = null)
-        {
-            return Guardian.Cell.ActorOf(props, name);
-        }
-
-        /// <summary>
-        ///     Actors the of.
-        /// </summary>
-        /// <typeparam name="TActor">The type of the t actor.</typeparam>
-        /// <param name="name">The name.</param>
-        /// <returns>InternalActorRef.</returns>
-        public InternalActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase, new()
-        {
-            return Guardian.Cell.ActorOf<TActor>(name);
-        }
-
-        /// <summary>
-        ///     Construct an  <see cref="Akka.Actor.ActorSelection"/> from the given path, which is
-        ///     parsed for wildcards (these are replaced by regular expressions
-        ///     internally). No attempt is made to verify the existence of any part of
-        ///     the supplied path, it is recommended to send a message and gather the
-        ///     replies in order to resolve the matching set of actors.
-        /// </summary>
-        /// <param name="actorPath">The actor path.</param>
-        /// <returns>ActorSelection.</returns>
-        public ActorSelection ActorSelection(ActorPath actorPath)
-        {
-            return ActorRefFactoryShared.ActorSelection(actorPath, this);
-        }
-
-        /// <summary>
-        ///     Construct an <see cref="Akka.Actor.ActorSelection"/> from the given path, which is
-        ///     parsed for wildcards (these are replaced by regular expressions
-        ///     internally). No attempt is made to verify the existence of any part of
-        ///     the supplied path, it is recommended to send a message and gather the
-        ///     replies in order to resolve the matching set of actors.
-        /// </summary>
-        /// <param name="actorPath">The actor path.</param>
-        /// <returns>ActorSelection.</returns>
-        public ActorSelection ActorSelection(string actorPath)
-        {
-            return ActorRefFactoryShared.ActorSelection(actorPath, this, Provider.RootGuardian);
-        }
-
-        /// <summary>
-        ///     Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-        /// </summary>
-        public void Dispose()
-        {
-            Shutdown();
-        }
+        /// <summary>Gets the log</summary>
+        public abstract LoggingAdapter Log { get; }
 
         /// <summary>
         ///     Creates a new ActorSystem with the specified name, and the specified Config
@@ -239,7 +82,8 @@ namespace Akka.Actor
         /// <returns>ActorSystem.</returns>
         public static ActorSystem Create(string name, Config config)
         {
-            return new ActorSystem(name, config);
+            // var withFallback = config.WithFallback(ConfigurationFactory.Default());
+            return CreateAndStartSystem(name, config);
         }
 
         /// <summary>
@@ -249,185 +93,46 @@ namespace Akka.Actor
         /// <returns>ActorSystem.</returns>
         public static ActorSystem Create(string name)
         {
-            return new ActorSystem(name);
+            return CreateAndStartSystem(name,ConfigurationFactory.Load());
         }
 
-        /// <summary>
-        ///     Configures the scheduler.
-        /// </summary>
-        private void ConfigureScheduler()
+        private static ActorSystem CreateAndStartSystem(string name, Config withFallback)
         {
-            Scheduler = new Scheduler();
-        }
-
-        /// <summary>
-        /// Load all of the extensions registered in the <see cref="ActorSystem.Settings"/>
-        /// </summary>
-        private void LoadExtensions()
-        {
-            var extensions = new List<IExtensionId>();
-            foreach (var extensionFqn in Settings.Config.GetStringList("akka.extensions"))
-            {
-                var extensionType = Type.GetType(extensionFqn);
-                if (extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.IsAbstract || !extensionType.IsClass)
-                {
-                    Log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
-                    continue;
-                }
-
-                try
-                {
-                    var extension = (IExtensionId) Activator.CreateInstance(extensionType);
-                    extensions.Add(extension);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "While trying to load extension [{0}], skipping...", extensionFqn);
-                }
-                
-            }
-
-            ConfigureExtensions(extensions);
-        }
-
-        /// <summary>
-        ///     Configures the extensionsBase.
-        /// </summary>
-        /// <param name="extensionIdProviders">The extensionsBase.</param>
-        private void ConfigureExtensions(IEnumerable<IExtensionId> extensionIdProviders)
-        {
-            foreach (var extensionId in extensionIdProviders)
-            {
-                RegisterExtension(extensionId);
-            }
-        }
-
-        /// <summary>
-        /// Registers a new extensionBase to the ActorSystem
-        /// </summary>
-        /// <param name="extensionBase">The extensionBase to register</param>
-        public object RegisterExtension(IExtensionId extensionBase)
-        {
-            if (extensionBase == null) return null;
-            if (!_extensions.ContainsKey(extensionBase.ExtensionType))
-            {
-                _extensions.TryAdd(extensionBase.ExtensionType, extensionBase.CreateExtension(this));
-            }
-
-            return extensionBase.Get(this);
+            var system = new ActorSystemImpl(name, withFallback);
+            system.Start();
+            return system;
         }
 
         /// <summary>
         /// Returns an extension registered to this ActorSystem
         /// </summary>
-        public object GetExtension(IExtensionId extensionId)
-        {
-            object extension;
-            _extensions.TryGetValue(extensionId.ExtensionType, out extension);
-            return extension;
-        }
-
-        public object GetExtension<T>()where T:IExtension
-        {
-            object extension;
-            _extensions.TryGetValue(typeof(T), out extension);
-            return extension;
-        }
-
-        public bool HasExtension(Type t)
-        {
-            if (typeof (IExtension).IsAssignableFrom(t))
-            {
-                return _extensions.ContainsKey(t);
-            }
-            return false;
-        }
-
-        public bool HasExtension<T>() where T : IExtension
-        {
-            return _extensions.ContainsKey(typeof (T));
-        }
+        public abstract object GetExtension(IExtensionId extensionId);
 
         /// <summary>
-        ///     Configures the settings.
+        /// Returns an extension registered to this ActorSystem
         /// </summary>
-        /// <param name="config">The configuration.</param>
-        private void ConfigureSettings(Config config)
-        {
-            Settings = new Settings(this, config);
-        }
+        public abstract T GetExtension<T>() where T : class, IExtension;
 
         /// <summary>
-        ///     Configures the event stream.
+        /// Determines whether this instance has the specified extension.
         /// </summary>
-        private void ConfigureEventStream()
-        {
-            EventStream = new EventStream(Settings.DebugEventStream);
-            EventStream.StartStdoutLogger(Settings);
-        }
+        public abstract bool HasExtension(Type t);
 
         /// <summary>
-        ///     Configures the serialization.
+        /// Determines whether this instance has the specified extension.
         /// </summary>
-        private void ConfigureSerialization()
-        {
-            Serialization = new Serialization.Serialization(this);
-        }
+        public abstract bool HasExtension<T>() where T : class, IExtension;
 
         /// <summary>
-        ///     Configures the mailboxes.
+        /// Tries to the get the extension of specified type.
         /// </summary>
-        private void ConfigureMailboxes()
-        {
-            Mailboxes = new Mailboxes(this);
-        }
+        public abstract bool TryGetExtension(Type extensionType, out object extension);
 
         /// <summary>
-        ///     Configures the provider.
+        /// Tries to the get the extension of specified type.
         /// </summary>
-        private void ConfigureProvider()
-        {
-            Type providerType = Type.GetType(Settings.ProviderClass);
-            Debug.Assert(providerType != null, "providerType != null");
-            var provider = (ActorRefProvider)Activator.CreateInstance(providerType,Name,Settings,EventStream);
-            Provider = provider;
-        }
+        public abstract bool TryGetExtension<T>(out T extension) where T : class, IExtension;
 
-        private void InitProvider()
-        {
-            Provider.Init(this);
-        }
-
-        /// <summary>
-        ///     Starts this instance.
-        /// </summary>
-        private void Start()
-        {
-            if (Settings.LogDeadLetters > 0)
-                _logDeadLetterListener = SystemActorOf<DeadLetterListener>("deadLetterListener");
-            
-
-            if (Settings.LogConfigOnStart)
-            {
-                Log.Warn(Settings.ToString());
-            }
-        }
-
-        /// <summary>
-        /// Extensions depends on loggers being configured before Start() is called
-        /// </summary>
-        private void ConfigureLoggers()
-        {
-            Log = new BusLogging(EventStream, "ActorSystem(" + Name + ")", GetType());
-        }
-
-        /// <summary>
-        ///     Configures the dispatchers.
-        /// </summary>
-        private void ConfigureDispatchers()
-        {
-            Dispatchers = new Dispatchers(this);
-        }
 
         /// <summary>
         ///     Stop this actor system. This will stop the guardian actor, which in turn
@@ -435,56 +140,112 @@ namespace Akka.Actor
         ///     (below which the logging actors reside) and the execute all registered
         ///     termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
         /// </summary>
-        public void Shutdown()
-        {
-            Provider.Guardian.Stop();
-            _systemWaitHandle.Set(); //signal that the actorsystem is being shut down
-        }
+        public abstract void Shutdown();
 
         /// <summary>
-        ///     Systems the actor of.
+        /// Returns a task that will be completed when the system has terminated.
         /// </summary>
-        /// <param name="props">The props.</param>
-        /// <param name="name">The name.</param>
-        /// <returns>InternalActorRef.</returns>
-        internal InternalActorRef SystemActorOf(Props props, string name = null)
-        {
-            return Provider.SystemGuardian.Cell.ActorOf(props, name);
-        }
+        public abstract Task TerminationTask { get; }
 
         /// <summary>
-        ///     Systems the actor of.
+        /// Block current thread until the system has been shutdown.
+        /// This will block until after all on termination callbacks have been run.
         /// </summary>
-        /// <typeparam name="TActor">The type of the t actor.</typeparam>
-        /// <param name="name">The name.</param>
-        /// <returns>InternalActorRef.</returns>
-        internal InternalActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase, new()
+        public abstract void AwaitTermination();
+
+        /// <summary>
+        /// Block current thread until the system has been shutdown, or the specified
+        /// timeout has elapsed. 
+        /// This will block until after all on termination callbacks have been run.
+        /// <para>Returns <c>true</c> if the system was shutdown during the specified time;
+        /// <c>false</c> if it timed out.</para>
+        /// </summary>
+        /// <param name="timeout">The timeout.</param>
+        /// <returns>Returns <c>true</c> if the system was shutdown during the specified time;
+        /// <c>false</c> if it timed out.</returns>
+        public abstract bool AwaitTermination(TimeSpan timeout);
+
+        /// <summary>
+        /// Block current thread until the system has been shutdown, or the specified
+        /// timeout has elapsed, or the cancellationToken was canceled. 
+        /// This will block until after all on termination callbacks have been run.
+        /// <para>Returns <c>true</c> if the system was shutdown during the specified time;
+        /// <c>false</c> if it timed out, or the cancellationToken was canceled. </para>
+        /// </summary>
+        /// <param name="timeout">The timeout.</param>
+        /// <param name="cancellationToken">A cancellation token that cancels the wait operation.</param>
+        /// <returns>Returns <c>true</c> if the system was shutdown during the specified time;
+        /// <c>false</c> if it timed out, or the cancellationToken was canceled. </returns>
+        public abstract bool AwaitTermination(TimeSpan timeout, CancellationToken cancellationToken);
+
+
+        public abstract void Stop(ActorRef actor);
+        private bool _isDisposed; //Automatically initialized to false;
+
+        //Destructor:
+        //~ActorSystem() 
+        //{
+        //    // Finalizer calls Dispose(false)
+        //    Dispose(false);
+        //}
+
+        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+        void IDisposable.Dispose()
         {
-            return Provider.SystemGuardian.Cell.ActorOf<TActor>(name);
+            Dispose(true);
+            //Take this object off the finalization queue and prevent finalization code for this object
+            //from executing a second time.
+            GC.SuppressFinalize(this);
         }
 
-        public void Stop(ActorRef actor)
+
+        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a 
+        /// user's code. Managed and unmanaged resources will be disposed.<br />
+        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only 
+        /// unmanaged resources can be disposed.</param>
+        private void Dispose(bool disposing)
         {
-            var path = actor.Path;
-            var parentPath = path.Parent;
-            if(parentPath==Guardian.Path)
-                Guardian.Tell(new StopChild(actor));
-            else if(parentPath == SystemGuardian.Path)
-                SystemGuardian.Tell(new StopChild(actor));
-            else
-                ((InternalActorRef) actor).Stop();            
+            // If disposing equals false, the method has been called by the
+            // runtime from inside the finalizer and you should not reference
+            // other objects. Only unmanaged resources can be disposed.
+
+            try
+            {
+                //Make sure Dispose does not get called more than once, by checking the disposed field
+                if(!_isDisposed)
+                {
+                    if(disposing)
+                    {
+                        //Clean up managed resources
+                        Shutdown();
+                    }
+                    //Clean up unmanaged resources
+                }
+                _isDisposed = true;
+            }
+            finally
+            {
+                // base.dispose(disposing);
+            }
         }
+
+
+        public abstract object RegisterExtension(IExtensionId extension);
+
+        public abstract ActorRef ActorOf(Props props, string name = null);
+        
+        public abstract ActorSelection ActorSelection(ActorPath actorPath);
+        public abstract ActorSelection ActorSelection(string actorPath);
 
         /// <summary>
         /// Block and prevent the main application thread from exiting unless
         /// the actor system is shut down.
         /// </summary>
+        [Obsolete("Use AwaitTermination instead")]
         public void WaitForShutdown()
         {
-            _systemWaitHandle.WaitOne();
+            AwaitTermination();
         }
-
-        #region Equality methods
-        #endregion
     }
 }

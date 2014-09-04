@@ -119,6 +119,7 @@ namespace Akka.Actor
             envelope.Message
                 .Match()
                 .With<Terminated>(ReceivedTerminated)
+                .With<AddressTerminated>(a => AddressTerminated(a.Address))
                 .With<Kill>(Kill)
                 .With<PoisonPill>(HandlePoisonPill)
                 .With<ActorSelectionMessage>(ReceiveSelection)
@@ -157,7 +158,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
+        /// <summary>   
         ///     Receives the selection.
         /// </summary>
         /// <param name="m">The m.</param>
@@ -271,7 +272,7 @@ namespace Akka.Actor
             _self.IsTerminated = true;
 
             UnwatchWatchedActors(_actor);
-            foreach (InternalActorRef child in GetChildren())
+            foreach (var child in GetChildren())
             {
                 child.Stop();
             }

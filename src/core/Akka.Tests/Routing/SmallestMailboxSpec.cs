@@ -48,22 +48,22 @@ namespace Akka.Tests.Routing
         public void Smallest_mailbox_router_must_deliver_messages_to_idle_actor()
         {
             var usedActors = new ConcurrentDictionary<int, string>();
-            var router = sys.ActorOf(new SmallestMailboxPool(3).Props(Props.Create(() => new SmallestMailboxActor(usedActors))));
+            var router = Sys.ActorOf(new SmallestMailboxPool(3).Props(Props.Create(() => new SmallestMailboxActor(usedActors))));
 
-            var busy = new TestLatch(sys, 1);
-            var received0 = new TestLatch(sys, 1);
+            var busy = new TestLatch(Sys, 1);
+            var received0 = new TestLatch(Sys, 1);
             router.Tell(Tuple.Create(busy, received0));
             received0.Ready(TestLatch.DefaultTimeout);
 
-            var received1 = new TestLatch(sys, 1);
+            var received1 = new TestLatch(Sys, 1);
             router.Tell(Tuple.Create(1, received1));
             received1.Ready(TestLatch.DefaultTimeout);
 
-            var received2 = new TestLatch(sys, 1);
+            var received2 = new TestLatch(Sys, 1);
             router.Tell(Tuple.Create(2, received2));
             received2.Ready(TestLatch.DefaultTimeout);
 
-            var received3 = new TestLatch(sys, 1);
+            var received3 = new TestLatch(Sys, 1);
             router.Tell(Tuple.Create(3, received3));
             received3.Ready(TestLatch.DefaultTimeout);
 

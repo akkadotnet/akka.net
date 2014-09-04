@@ -18,7 +18,9 @@ namespace Akka.Remote
         protected override Scope ParseScope(Config config)
         {
             var remote = config.GetString("remote");
-            if (remote == null)
+			//valid case for remote to be missing == null or for 
+			//remote to be nothing remote = ""
+            if (string.IsNullOrWhiteSpace(remote))
                 return Deploy.NoScopeGiven;
 
             ActorPath actorPath;

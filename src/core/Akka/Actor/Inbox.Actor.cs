@@ -121,7 +121,8 @@ namespace Akka.Actor
                         query.Client.Tell(new Status.Failure(new TimeoutException("Deadline passed")));
                     }
                     _clients.RemoveAll(q => q.Deadline < now);
-                    _clientsByTimeout.IntersectWith(_clientsByTimeout.Where(q => q.Deadline >= now));
+                    var afterDeadline = _clientsByTimeout.Where(q => q.Deadline >= now).ToList();
+                    _clientsByTimeout.IntersectWith(afterDeadline);
                 }).Default(msg =>
                 {
                     if (_clients.Count == 0)
@@ -155,15 +156,19 @@ namespace Akka.Actor
             }
             else
             {
-                var next = _clientsByTimeout.Head().Deadline;
-                if (_currentDeadline != null)
+                var next = _clientsByTimeout.FirstOrDefault();
+                if (next != null)
                 {
-                    _currentDeadline.Item2.Cancel();
-                }
-                var cancellationTokenSource = new CancellationTokenSource();
-                Context.System.Scheduler.ScheduleOnce(next - DateTime.Now, Self, new Kick(), cancellationTokenSource.Token);
+                    if (_currentDeadline != null)
+                    {
+                        _currentDeadline.Item2.Cancel();
+                    }
+                    var cancellationTokenSource = new CancellationTokenSource();
+                    Context.System.Scheduler.ScheduleOnce(next.Deadline - DateTime.Now, Self, new Kick(),
+                        cancellationTokenSource.Token);
 
-                _currentDeadline = Tuple.Create(next, cancellationTokenSource);
+                    _currentDeadline = Tuple.Create(next.Deadline, cancellationTokenSource);
+                }
             }
 
             return true;

@@ -1,6 +1,6 @@
 ﻿using System;
 using Akka.Actor;
-using Akka.Tests;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Remote.Tests
@@ -16,8 +16,8 @@ namespace Akka.Remote.Tests
 
         public  EndpointRegistrySpec()
         {
-            actorA = sys.ActorOf(Props.Empty, "actorA");
-            actorB = sys.ActorOf(Props.Empty, "actorB");
+            actorA = Sys.ActorOf(Props.Empty, "actorA");
+            actorB = Sys.ActorOf(Props.Empty, "actorB");
         }
 
         [Fact]

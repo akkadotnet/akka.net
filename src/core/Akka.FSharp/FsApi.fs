@@ -214,7 +214,7 @@ module Serialization =
         inherit Serializer(system)
         
 
-        let fsp = new FsPickler()
+        let fsp = FsPickler.CreateBinary()
         override x.Identifier = 9
         override x.IncludeManifest = true
 
@@ -271,7 +271,7 @@ module System =
     /// <param name="configStr">The configuration</param>
     let create name (config: Configuration.Config) =
         let system = ActorSystem.Create(name, config)
-        let serializer = new Serialization.ExprSerializer(system)
+        let serializer = new Serialization.ExprSerializer(system :?> ExtendedActorSystem)
         system.Serialization.AddSerializer(serializer)
         system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
         system

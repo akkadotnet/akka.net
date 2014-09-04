@@ -1,6 +1,4 @@
 ﻿using System;
-using Akka.Configuration;
-using Akka.Event;
 
 namespace Akka.Remote
 {
@@ -29,7 +27,8 @@ namespace Akka.Remote
 
         #region Static members
 
-        public static readonly Clock DefaultClock = () => Environment.TickCount;
+		//fixed: sign will no longer flip, but the tickcount will go back down to zero every 24.9 days 
+        public static readonly Clock DefaultClock = () => Environment.TickCount & Int32.MaxValue;
 
         #endregion
     }
