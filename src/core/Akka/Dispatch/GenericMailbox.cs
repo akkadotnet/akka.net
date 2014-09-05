@@ -9,7 +9,7 @@ namespace Akka.Dispatch
     /// <summary>
     /// Class Mailbox of TSys,TUser.
     /// </summary>
-    public abstract class Mailbox<TSys,TUser> : Mailbox 
+    public abstract class Mailbox<TSys,TUser> : MessageQueueMailbox 
         where TSys:MessageQueue
         where TUser:MessageQueue
     {
@@ -226,6 +226,11 @@ namespace Akka.Dispatch
             //     if (messageQueue ne null) // needed for CallingThreadDispatcher, which never calls Mailbox.run()
             //       messageQueue.cleanUp(actor.self, actor.dispatcher.mailboxes.deadLetterMailbox.messageQueue)
             //   }
+        }
+
+        public override MessageQueue MessageQueue
+        {
+            get { return _userMessages; }
         }
     }
 }

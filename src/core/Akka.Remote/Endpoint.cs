@@ -6,6 +6,8 @@ using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Dispatch;
+using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Transport;
@@ -731,7 +733,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class EndpointWriter : EndpointActor<EndpointWriter.State, bool>, WithUnboundedStash
+    internal class EndpointWriter : EndpointActor<EndpointWriter.State, bool>, WithUnboundedStash, RequiresMessageQueue<UnboundedDequeBasedMessageQueueSemantics>
     {
         public EndpointWriter(AkkaProtocolHandle handleOrActive, Address localAddress, Address remoteAddress,
             int? refuseUid, AkkaProtocolTransport transport, RemoteSettings settings,
