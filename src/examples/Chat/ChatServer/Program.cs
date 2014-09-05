@@ -1,13 +1,8 @@
 ﻿using ChatMessages;
 using Akka;
 using Akka.Actor;
-using Akka.Configuration;
-using Akka.Remote;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Event;
 
 namespace ChatServer
@@ -73,7 +68,7 @@ namespace ChatServer
 
             using (var system = ActorSystem.Create("MyServer", fluentConfig))
             {
-                var server = system.ActorOf<ChatServerActor>("ChatServer");
+                system.ActorOf<ChatServerActor>("ChatServer");
 
                 Console.ReadLine();
             }
@@ -89,7 +84,7 @@ namespace ChatServer
         ILogReceive
 
     {
-        private BroadcastActorRef clients = new BroadcastActorRef();
+        private readonly HashSet<ActorRef> _clients = new HashSet<ActorRef>();
 
         public void Handle(SayRequest message)
         {
@@ -99,13 +94,13 @@ namespace ChatServer
                 Username = message.Username,
                 Text = message.Text,
             };
-            clients.Tell(response, Self);
+            foreach (var client in _clients) client.Tell(response, Self);
         }
 
         public void Handle(ConnectRequest message)
         {
          //   Console.WriteLine("User {0} has connected", message.Username);
-            clients.TryAdd(this.Sender);
+            _clients.Add(this.Sender);
             Sender.Tell(new ConnectResponse
             {
                 Message = "Hello and welcome to Akka .NET chat example",
@@ -120,7 +115,7 @@ namespace ChatServer
                 NewUsername = message.NewUsername,
             };
 
-            clients.Tell(response, Self);
+            foreach (var client in _clients) client.Tell(response, Self);
         }
 
         public void Handle(Disconnect message)

@@ -12,6 +12,7 @@ using Akka.Remote.Transport;
 using Akka.Serialization;
 using Akka.Util;
 using Google.ProtocolBuffers;
+using Akka.Util.Internal;
 
 namespace Akka.Remote
 {
@@ -55,7 +56,7 @@ namespace Akka.Remote
 
             var msgLog = string.Format("RemoteMessage: {0} to {1}<+{2} from {3}", payload, recipient, originalReceiver,
                 sender);
-
+            // message is intended for the RemoteDaemon, usually a command to create a remote actor
             if (recipient == remoteDaemon)
             {
                 if (settings.UntrustedMode) log.Debug("dropping daemon message in untrusted mode");
@@ -65,7 +66,9 @@ namespace Akka.Remote
                     remoteDaemon.Tell(payload);
                 }
             }
-            else if (recipient is LocalRef && recipient.IsLocal) //TODO: update this to include support for RepointableActorRefs if they get implemented
+
+            //message is intended for a local recipient
+            else if ((recipient is LocalRef || recipient is RepointableActorRef) && recipient.IsLocal)
             {
                 if (settings.LogReceive) log.Debug("received local message [{0}]", msgLog);
                 payload.Match()
@@ -98,7 +101,9 @@ namespace Akka.Remote
                     .With<SystemMessage>(msg => { recipient.Tell(msg); })
                     .Default(msg => { recipient.Tell(msg, sender); });
             }
-            else if (recipient is RemoteRef && !recipient.IsLocal && !settings.UntrustedMode)
+
+            // message is intended for a remote-deployed recipient
+            else if ((recipient is RemoteRef || recipient is RepointableActorRef) && !recipient.IsLocal && !settings.UntrustedMode)
             {
                 if (settings.LogReceive) log.Debug("received remote-destined message {0}", msgLog);
                 if (provider.Transport.Addresses.Contains(recipientAddress))
@@ -488,7 +493,11 @@ namespace Akka.Remote
                     }
                 })
                 .With<EndpointWriter.FlushAndStop>(flush => Context.Stop(Self))
-                .With<EndpointWriter.StopReading>(w => Sender.Tell(new EndpointWriter.StoppedReading(w.Writer)));
+                .With<EndpointWriter.StopReading>(stop =>
+                {
+                    stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer));
+                    Sender.Tell(new EndpointWriter.StoppedReading(stop.Writer));
+                });
         }
 
         protected void Idle(object message)
@@ -508,7 +517,7 @@ namespace Akka.Remote
                     Context.Become(OnReceive);
                 })
                 .With<EndpointWriter.FlushAndStop>(stop => Context.Stop(Self))
-                .With<EndpointWriter.StopReading>(stop => Sender.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
+                .With<EndpointWriter.StopReading>(stop => stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
         }
 
 
@@ -545,14 +554,13 @@ namespace Akka.Remote
 
         protected void FlushWait(object message)
         {
-            message.Match()
-                .With<Terminated>(terminated =>
-                {
-                    //Clear buffer to prevent sending system messages to dead letters -- at this point we are shutting down and
-                    //don't know if they were properly delivered or not
-                    _resendBuffer = new AckedSendBuffer<EndpointManager.Send>(0);
-                    Context.Stop(Self);
-                });
+            if (message is Terminated)
+            {
+                //Clear buffer to prevent sending system messages to dead letters -- at this point we are shutting down and
+                //don't know if they were properly delivered or not
+                _resendBuffer = new AckedSendBuffer<EndpointManager.Send>(0);
+                Context.Stop(Self);
+            }
         }
 
         private void HandleSend(EndpointManager.Send send)
@@ -712,7 +720,7 @@ namespace Akka.Remote
             }
             catch (Exception ex)
             {
-                _log.Error(ex, "Unable to publish error event to EventStream");
+                Log.Error(ex, "Unable to publish error event to EventStream");
             }
         }
 
@@ -735,7 +743,7 @@ namespace Akka.Remote
             this.codec = codec;
             this.reliableDeliverySupervisor = reliableDeliverySupervisor;
             system = Context.System;
-            provider = (RemoteActorRefProvider)Context.System.Provider;
+            provider = (RemoteActorRefProvider)((ExtendedActorSystem) Context.System).Provider;
             _msgDispatcher = new DefaultMessageDispatcher(system, provider, Log);
             this.receiveBuffers = receiveBuffers;
             Inbound = handleOrActive != null;
@@ -802,7 +810,10 @@ namespace Akka.Remote
                         CurrentStash.Stash();
                         nextState = Stay();
                     })
-                    .With<BackoffTimer>(timer => nextState = GoTo(State.Writing))
+                    .With<BackoffTimer>(timer =>
+                    {
+                        nextState = GoTo(State.Writing);
+                    })
                     .With<FlushAndStop>(flush =>
                     {
                         CurrentStash.Stash(); //Flushing is postponed after the pending writes
@@ -882,18 +893,17 @@ namespace Akka.Remote
             When(State.Handoff, @event =>
             {
                 State<State, bool> nextState = null;
-                @event.FsmEvent.Match()
-                    .With<Terminated>(terminated =>
-                    {
-                        reader = StartReadEndpoint(_handle);
-                        CurrentStash.UnstashAll();
-                        nextState = GoTo(State.Writing);
-                    })
-                    .Default(msg =>
-                    {
-                        CurrentStash.Stash();
-                        nextState = Stay();
-                    });
+                if (@event.FsmEvent is Terminated)
+                {
+                    reader = StartReadEndpoint(_handle);
+                    CurrentStash.UnstashAll();
+                    nextState = GoTo(State.Writing);
+                }
+                else
+                {
+                    CurrentStash.Stash();
+                    nextState = Stay();
+                }
 
                 return nextState;
             });
@@ -914,7 +924,7 @@ namespace Akka.Remote
                     {
                         if (reader != null)
                         {
-                            reader.Forward(stop);
+                            reader.Tell(stop, stop.ReplyTo);
                         }
                         else
                         {
@@ -928,7 +938,7 @@ namespace Akka.Remote
                         // Shutdown old reader
                         _handle.Disassociate();
                         _handle = takeover.ProtocolHandle;
-                        Sender.Tell(new TookOver(Self, _handle));
+                        takeover.ReplyTo.Tell(new TookOver(Self, _handle));
                         nextState = GoTo(State.Handoff);
                     })
                     .With<FlushAndStop>(flush =>
@@ -1106,12 +1116,15 @@ namespace Akka.Remote
             /// Create a new TakeOver command
             /// </summary>
             /// <param name="protocolHandle">The handle of the new association</param>
-            public TakeOver(AkkaProtocolHandle protocolHandle)
+            public TakeOver(AkkaProtocolHandle protocolHandle, ActorRef replyTo)
             {
                 ProtocolHandle = protocolHandle;
+                ReplyTo = replyTo;
             }
 
             public AkkaProtocolHandle ProtocolHandle { get; private set; }
+
+            public ActorRef ReplyTo { get; private set; }
         }
 
         public sealed class TookOver : NoSerializationVerificationNeeded
@@ -1145,12 +1158,15 @@ namespace Akka.Remote
 
         public sealed class StopReading
         {
-            public StopReading(ActorRef writer)
+            public StopReading(ActorRef writer, ActorRef replyTo)
             {
                 Writer = writer;
+                ReplyTo = replyTo;
             }
 
             public ActorRef Writer { get; private set; }
+
+            public ActorRef ReplyTo { get; private set; }
         }
 
         public sealed class StoppedReading
@@ -1208,7 +1224,7 @@ namespace Akka.Remote
             _uid = uid;
             _reliableDeliverySupervisor = reliableDelvierySupervisor;
             _codec = codec;
-            _provider = (RemoteActorRefProvider)Context.System.Provider;
+            _provider = (RemoteActorRefProvider)((ExtendedActorSystem) Context.System).Provider;
         }
 
         private AkkaPduCodec _codec;
@@ -1266,7 +1282,7 @@ namespace Akka.Remote
                 {
                     SaveState();
                     Context.Become(NotReading);
-                    Sender.Tell(new EndpointWriter.StoppedReading(stop.Writer));
+                    stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer));
                 });
         }
 

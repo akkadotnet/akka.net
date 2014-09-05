@@ -46,7 +46,7 @@ namespace Akka.Util
             storage = new ConcurrentDictionary<T, byte>(concurrencyLevel, capacity, comparer);
         }
 
-        public bool IsEmptry
+        public bool IsEmpty
         {
             get { return storage.IsEmpty; }
         }

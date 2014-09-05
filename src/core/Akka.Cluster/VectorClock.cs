@@ -81,11 +81,7 @@ namespace Akka.Cluster
 
             public override string ToString()
             {
-#if DEBUG
-                return ActualValue;
-#else
                 return _value;
-#endif
             }
 
             public int CompareTo(Node other)
@@ -115,7 +111,12 @@ namespace Akka.Cluster
 
         public static VectorClock Create()
         {
-            return new VectorClock(ImmutableSortedDictionary.Create<Node, long>());
+            return Create(ImmutableSortedDictionary.Create<Node, long>());
+        }
+
+        public static VectorClock Create(ImmutableSortedDictionary<Node, long> seedValues)
+        {
+            return new VectorClock(seedValues);
         }
 
         VectorClock(ImmutableSortedDictionary<Node, long> versions)
@@ -139,7 +140,7 @@ namespace Akka.Cluster
         {
             return CompareOnlyTo(that, Ordering.Concurrent) == Ordering.Concurrent;
         }
-        
+
         /// <summary>
         /// Returns true if <code>this</code> is before <code>that</code> else false.
         /// </summary>
@@ -153,7 +154,7 @@ namespace Akka.Cluster
         /// </summary>
         public bool IsAfter(VectorClock that)
         {
-            return CompareOnlyTo(that, Ordering.After) == Ordering.After; 
+            return CompareOnlyTo(that, Ordering.After) == Ordering.After;
         }
 
         /// <summary>
@@ -230,7 +231,7 @@ namespace Akka.Cluster
                     return compareNext(nt1, NextOrElse(i2, CmpEndMarker), Ordering.Before);
                 };
 
-            return compareNext(NextOrElse(i1, CmpEndMarker), NextOrElse(i2, CmpEndMarker), Ordering.Same);       
+            return compareNext(NextOrElse(i1, CmpEndMarker), NextOrElse(i2, CmpEndMarker), Ordering.Same);
         }
 
         private static T NextOrElse<T>(IEnumerator<T> iter, T @default)

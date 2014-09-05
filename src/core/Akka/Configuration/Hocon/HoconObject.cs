@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -12,6 +13,28 @@ namespace Akka.Configuration.Hocon
         public IEnumerable<HoconValue> Children
         {
             get { return _children.Values; }
+        }
+
+        public IEnumerable<KeyValuePair<string, HoconValue>> AsEnumerable()
+        {
+            foreach (var item in _children)
+            {
+                yield return item;
+            }
+        }
+
+        public IDictionary<string, object> Unwrapped
+        {
+            get
+            {
+                return _children.ToDictionary(k => k.Key, v =>
+                {
+                    HoconObject obj = v.Value.GetObject();
+                    if (obj != null)
+                        return (object) obj.Unwrapped;
+                    return null;
+                });
+            }
         }
 
         public bool IsString()
@@ -27,17 +50,6 @@ namespace Akka.Configuration.Hocon
         public bool IsArray()
         {
             return false;
-        }
-
-        public IDictionary<string, object> Unwrapped
-        {
-            get { return _children.ToDictionary(k => k.Key, v =>
-            {
-                var obj = v.Value.GetObject();
-                if (obj != null)
-                    return (object)obj.Unwrapped;
-                return null;
-            }); }
         }
 
         public IList<HoconValue> GetArray()

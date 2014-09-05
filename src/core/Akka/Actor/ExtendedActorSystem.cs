@@ -1,150 +1,62 @@
-﻿using System;
-using System.Reflection;
-using Akka.Event;
-
-namespace Akka.Actor
+﻿namespace Akka.Actor
 {
     /// <summary>
-    /// Marker interface used to identify an object as ActorSystem extension
+    /// More powerful interface to the actor system’s implementation which is presented to 
+    /// extensions (see <see cref="IExtension"/>).
+    /// <remarks>Important Notice:<para>
+    /// This class is not meant to be extended by user code. If you want to
+    /// actually roll your own Akka, beware that you are completely on your own in
+    /// that case!</para></remarks>
     /// </summary>
-    public interface IExtension { }
-
-    /// <summary>
-    /// Non-generic version of interface, mostly to avoid issues with generic casting
-    /// </summary>
-    public interface IExtensionId
+    public abstract class ExtendedActorSystem : ActorSystem
     {
-        /// <summary>
-        /// Returns an instance of the extension identified by this ExtensionId instance
-        /// </summary>
-        object Apply(ActorSystem system);
+        /// <summary>Gets the provider.</summary>
+        /// <value>The provider.</value>
+        public abstract ActorRefProvider Provider { get; }
 
         /// <summary>
-        /// Returns an instance of the extension identified by this <see cref="IExtensionId{T}"/> instance
+        /// Gets the top-level supervisor of all user actors created using 
+        /// <see cref="ActorSystem.ActorOf">system.ActorOf(...)</see>
         /// </summary>
-        object Get(ActorSystem system);
+        public abstract InternalActorRef Guardian { get; }
+
 
         /// <summary>
-        /// Is used by Akka to instantiate the <see cref="IExtension"/> identified by this ExtensionId.
-        /// Internal use only.
+        /// Gets the top-level supervisor of all system-internal services like logging.
         /// </summary>
-        object CreateExtension(ActorSystem system);
+        public abstract InternalActorRef SystemGuardian { get; }
 
-        /// <summary>
-        /// Returns the underlying type for this extension
-        /// </summary>
-        Type ExtensionType { get; }
-    }
+        /// <summary>Creates a new system actor in the "/system" namespace. This actor 
+        /// will be shut down during system shutdown only after all user actors have
+        /// terminated.</summary>
+        public abstract ActorRef SystemActorOf(Props props, string name = null);
 
-    /// <summary>
-    /// Marker interface used to distinguish a unqiue ActorSystem extensions
-    /// </summary>
-    public interface IExtensionId<out T> : IExtensionId where T:IExtension
-    {
-        /// <summary>
-        /// Returns an instance of the extension identified by this ExtensionId instance
-        /// </summary>
-        new T Apply(ActorSystem system);
+        /// <summary>Creates a new system actor in the "/system" namespace. This actor 
+        /// will be shut down during system shutdown only after all user actors have
+        /// terminated.</summary>
+        public abstract ActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase, new();
 
-        /// <summary>
-        /// Returns an instance of the extension identified by this <see cref="IExtensionId{T}"/> instance
-        /// </summary>
-        new T Get(ActorSystem system);
 
-        /// <summary>
-        /// Is used by Akka to instantiate the <see cref="IExtension"/> identified by this ExtensionId.
-        /// Internal use only.
-        /// </summary>
-        new T CreateExtension(ActorSystem system);
-    }
-
-    /// <summary>
-    /// Static helper class used for resolving extensions
-    /// </summary>
-    public static class ExtendedActorSystem
-    {
-        /// <summary>
-        /// Loads the extension and casts it to the expected type if it's already registered
-        /// </summary>
-        public static T WithExtension<T>(this ActorSystem system) where T : IExtension
-        {
-            return (T)system.GetExtension<T>();
-        }
-
-        /// <summary>
-        /// Registers a type and returns it if one doesn't yet exist
-        /// </summary>
-        public static T WithExtension<T>(this ActorSystem system, Type extensionId) where T : IExtension
-        {
-            if (system.HasExtension<T>())
-                return (T)system.GetExtension<T>();
-            else
-            {
-                return (T)system.RegisterExtension((IExtensionId)Activator.CreateInstance(extensionId));
-            }
-        }
-
-        /// <summary>
-        /// Registers a type and returns it if one doesn't yet exist
-        /// </summary>
-        public static T WithExtension<T,TI>(this ActorSystem system) where T : IExtension
-                                                                     where TI: IExtensionId
-        {
-            if (system.HasExtension<T>())
-                return (T)system.GetExtension<T>();
-            else
-            {
-                return (T)system.RegisterExtension((IExtensionId)Activator.CreateInstance(typeof(TI)));
-            }
-            
-        }
-    }
-
-    /// <summary>
-    ///     Class ExtensionBase.
-    /// </summary>
-    public abstract class ExtensionIdProvider<T> : IExtensionId<T> where T:IExtension
-    {
-        public T Apply(ActorSystem system)
-        {
-            return (T)system.RegisterExtension(this);
-        }
-
-        object IExtensionId.Get(ActorSystem system)
-        {
-            return Get(system);
-        }
-
-        object IExtensionId.CreateExtension(ActorSystem system)
-        {
-            return CreateExtension(system);
-        }
-
-        public Type ExtensionType
-        {
-            get { return typeof (T); }
-        }
-
-        object IExtensionId.Apply(ActorSystem system)
-        {
-            return Apply(system);
-        }
-
-        public T Get(ActorSystem system)
-        {
-            return (T)system.GetExtension(this);
-        }
-
-        public abstract T CreateExtension(ActorSystem system);
-
-        public override bool Equals(object obj)
-        {
-            return obj is T;
-        }
-
-        public override int GetHashCode()
-        {
-            return typeof (T).GetHashCode();
-        }
+        //TODO: Missing threadFactory, dynamicAccess, printTree
+        //  /**
+        //  * A ThreadFactory that can be used if the transport needs to create any Threads
+        //  */
+        //  def threadFactory: ThreadFactory
+  
+        //  /**
+        //  * ClassLoader wrapper which is used for reflective accesses internally. This is set
+        //  * to use the context class loader, if one is set, or the class loader which
+        //  * loaded the ActorSystem implementation. The context class loader is also
+        //  * set on all threads created by the ActorSystem, if one was set during
+        //  * creation.
+        //  */
+        //  def dynamicAccess: DynamicAccess
+  
+        //  /**
+        //  * For debugging: traverse actor hierarchy and make string representation.
+        //  * Careful, this may OOM on large actor systems, and it is only meant for
+        //  * helping debugging in case something already went terminally wrong.
+        //  */
+        //  private[akka] def printTree: String
     }
 }

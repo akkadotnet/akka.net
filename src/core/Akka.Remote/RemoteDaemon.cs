@@ -1,15 +1,22 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Util;
 
 namespace Akka.Remote
 {
     /// <summary>
-    ///     Class DaemonMsgCreate.
+    /// INTERNAL API
     /// </summary>
-    public class DaemonMsgCreate
+    internal interface IDaemonMsg { }
+
+    /// <summary>
+    ///  INTERNAL API
+    /// </summary>
+    internal class DaemonMsgCreate : IDaemonMsg
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="DaemonMsgCreate" /> class.
@@ -52,10 +59,16 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    ///     Class RemoteDaemon.
+    ///  INTERNAL API
+    /// 
+    /// Internal system "daemon" actor for remote internal communication.
+    /// 
+    /// It acts as the brain of the remote that respons to system remote messages and executes actions accordingly.
     /// </summary>
-    public class RemoteDaemon : VirtualPathContainer
+    internal class RemoteDaemon : VirtualPathContainer
     {
+        private readonly ActorSystemImpl _system;
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="RemoteDaemon" /> class.
         /// </summary>
@@ -63,27 +76,37 @@ namespace Akka.Remote
         /// <param name="path">The path.</param>
         /// <param name="parent">The parent.</param>
         /// <param name="log"></param>
-        public RemoteDaemon(ActorSystem system, ActorPath path, InternalActorRef parent, LoggingAdapter log)
+        public RemoteDaemon(ActorSystemImpl system, ActorPath path, InternalActorRef parent, LoggingAdapter log)
             : base(system.Provider, path, parent, log)
         {
-            System = system;
+            _system = system;
+            AddressTerminatedTopic.Get(system).Subscribe(this);
         }
 
-        /// <summary>
-        ///     Gets the system.
-        /// </summary>
-        /// <value>The system.</value>
-        public ActorSystem System { get; private set; }
-
+       
         /// <summary>
         ///     Called when [receive].
         /// </summary>
         /// <param name="message">The message.</param>
         protected void OnReceive(object message)
         {
-            if (message is DaemonMsgCreate)
+            //note: RemoteDaemon does not handle ActorSelection messages - those are handled directly by the RemoteActorRefProvider.
+            if (message is IDaemonMsg)
             {
-                HandleDaemonMsgCreate((DaemonMsgCreate) message);
+                Log.Debug("Received command [{0}] to RemoteSystemDaemon on [{1}]", message, Path.Address);
+                if (message is DaemonMsgCreate) HandleDaemonMsgCreate((DaemonMsgCreate)message);
+            }
+
+            //Remote ActorSystem on another process / machine has died. 
+            //Need to clean up any references to remote deployments here.
+            else if (message is AddressTerminated)
+            {
+                var addressTerminated = (AddressTerminated) message;
+                //stop any remote actors that belong to this address
+                ForeachActorRef(@ref =>
+                {
+                    if(@ref.Parent.Path.Address == addressTerminated.Address) _system.Stop(@ref);
+                });
             }
         }
 
@@ -108,10 +131,10 @@ namespace Akka.Remote
             ActorPath childPath;
             if(ActorPath.TryParse(message.Path, out childPath))
             {
-                IEnumerable<string> subPath = childPath.Elements;
+                IEnumerable<string> subPath = childPath.Elements.Drop(1); //drop the /remote
                 ActorPath path = Path/subPath;
                 var localProps = props; //.WithDeploy(new Deploy(Scope.Local));
-                InternalActorRef actor = System.Provider.ActorOf(System, localProps, supervisor, path, false,
+                InternalActorRef actor = _system.Provider.ActorOf(_system, localProps, supervisor, path, false,
                     message.Deploy, true, false);
                 string childName = subPath.Join("/");
                 AddChild(childName, actor);

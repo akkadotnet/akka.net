@@ -21,11 +21,11 @@ type Actor()=
 
 
 
-let inline (<!) (actorRef: #ActorRef) (msg: obj) =
-    actorRef.Tell msg
+let inline (<!) (actorRef: #ICanTell) (msg: obj) =
+    actorRef.Tell(msg, ActorCell.GetCurrentSelfOrNoSender())
     ignore()
 
-let (<?) (tell:ICanTell) (msg: obj) =
+let (<?) (tell:#ICanTell) (msg: obj) =
     tell.Ask msg
     |> Async.AwaitTask
 
@@ -214,7 +214,7 @@ module Serialization =
         inherit Serializer(system)
         
 
-        let fsp = new FsPickler()
+        let fsp = FsPickler.CreateBinary()
         override x.Identifier = 9
         override x.IncludeManifest = true
 
@@ -271,7 +271,7 @@ module System =
     /// <param name="configStr">The configuration</param>
     let create name (config: Configuration.Config) =
         let system = ActorSystem.Create(name, config)
-        let serializer = new Serialization.ExprSerializer(system)
+        let serializer = new Serialization.ExprSerializer(system :?> ExtendedActorSystem)
         system.Serialization.AddSerializer(serializer)
         system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
         system
@@ -314,11 +314,25 @@ module Actors =
     // declare extension methods for Actor interface
     type Actor<'msg> with
         /// <summary>
+        /// Implementation of spawne method using actor-local context.
+        /// Actor refs returned this way are considered children of current actor.
+        /// </summary>
+        member this.spawne (system:ActorSystem) name (f: Expr<Actor<'m> -> Cont<'m,'v>>)  =
+            let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f))
+            this.Context.ActorOf(Props.Create(e), name)
+        /// <summary>
+        /// Implementation of spawns method using actor-local context.
+        /// Actor refs returned this way are considered children of current actor. 
+        /// </summary>
+        /// <param name="name">The actor instance name to be created as child of current actor</param>
+        /// <param name="strategy">Function used to generate supervisor strategy</param>
+        /// <param name="f">the actor's message handling function.</param>
+        member this.spawns name (strategy: SupervisorStrategy) (f: Actor<'m> -> Cont<'m,'v>)  =
+            let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f, strategy))
+            this.Context.ActorOf(Props.Create(e), name)
+        /// <summary>
         /// Implementation of spawn method using actor-local context.
         /// Actor refs returned this way are considered children of current actor.
         /// </summary>
-        /// <param name="name"></param>
-        /// <param name="f"></param>
         member this.spawn name (f: Actor<'m> -> Cont<'m,'v>) =
-            let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m,'v>(f))
-            this.Context.ActorOf(Props.Create(e), name)
+            this.spawns name null f

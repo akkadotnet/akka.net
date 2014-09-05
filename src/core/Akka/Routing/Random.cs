@@ -69,4 +69,55 @@ namespace Akka.Routing
             return new Router(new RandomLogic());
         }
     }
+
+    public class RandomPool : Pool
+    {
+        /// <summary>
+
+        /// </summary>
+        /// <param name="nrOfInstances">The nr of instances.</param>
+        /// <param name="resizer">The resizer.</param>
+        /// <param name="supervisorStrategy">The supervisor strategy.</param>
+        /// <param name="routerDispatcher">The router dispatcher.</param>
+        /// <param name="usePoolDispatcher">if set to <c>true</c> [use pool dispatcher].</param>
+        public RandomPool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy,
+            string routerDispatcher, bool usePoolDispatcher = false)
+            : base(nrOfInstances, resizer, supervisorStrategy, routerDispatcher, usePoolDispatcher)
+        {
+        }
+
+        public RandomPool(Config config)
+            : base(config)
+        {
+
+        }
+
+        [Obsolete("for serialization only", true)]
+        public RandomPool()
+        {
+
+        }
+
+        /// <summary>
+        /// Simple form of RandomPool constructor
+        /// </summary>
+        /// <param name="nrOfInstances">The nr of instances.</param>
+        public RandomPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null) { }
+
+        /// <summary>
+        /// Simple form of RandomPool constructor
+        /// </summary>
+        /// <param name="nrOfInstances">The nr of instances.</param>
+        /// <param name="resizer">A <see cref="Resizer"/> for specifying how to grow the pool of underlying routees based on pressure</param>
+        public RandomPool(int nrOfInstances, Resizer resizer) : base(nrOfInstances, resizer, Pool.DefaultStrategy, null) { }
+
+        /// <summary>
+        ///     Creates the router.
+        /// </summary>
+        /// <returns>Router.</returns>
+        public override Router CreateRouter(ActorSystem system)
+        {
+            return new Router(new RoundRobinRoutingLogic());
+        }
+    }
 }

@@ -1,4 +1,8 @@
-﻿using Xunit;
+﻿using Akka.Actor.Internals;
+using Akka.TestKit;
+using Akka.Util;
+using Xunit;
+using Akka.Tests.TestUtils;
 using Akka.Actor;
 using Akka.Event;
 using System;
@@ -12,7 +16,10 @@ namespace Akka.Tests.Event
     
     public class EventStreamSpec : AkkaSpec
     {
-        
+        public EventStreamSpec():base(GetConfig())
+        {
+        }
+
         public class M : Comparable
         {
             public int Value { get; set; }           
@@ -51,34 +58,34 @@ namespace Akka.Tests.Event
         public void ManageSubscriptions()
         {
             var bus = new EventStream(true);
-            bus.Subscribe(testActor, typeof(M));
+            bus.Subscribe(TestActor, typeof(M));
 
             bus.Publish(new M { Value = 42 });
-            expectMsg(new M { Value = 42 });
-            bus.Unsubscribe(testActor);
+            ExpectMsg(new M { Value = 42 });
+            bus.Unsubscribe(TestActor);
             bus.Publish(new M { Value = 43 });
-            expectNoMsg(TimeSpan.FromSeconds(1));
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
         public void NotAllowNullAsSubscriber()
         {
             var bus = new EventStream(true);
-            intercept<ArgumentNullException>(() =>
+            XAssert.Throws<ArgumentNullException>(() =>
             {
                 bus.Subscribe(null, typeof(M));
-            });            
+            });
         }
 
         [Fact]
         public void NotAllowNullAsUnsubscriber()
         {
             var bus = new EventStream(true);
-            intercept<ArgumentNullException>(() =>
+            XAssert.Throws<ArgumentNullException>(() =>
             {
                 bus.Unsubscribe(null, typeof(M));
             });
-            intercept<ArgumentNullException>(() =>
+            XAssert.Throws<ArgumentNullException>(() =>
             {
                 bus.Unsubscribe(null);
             });
@@ -92,23 +99,23 @@ namespace Akka.Tests.Event
             var b2 = new B2();
             var c = new C();
             var bus = new EventStream(false);
-            bus.Subscribe(testActor,typeof(B2));
+            bus.Subscribe(TestActor,typeof(B2));
             bus.Publish(c);
             bus.Publish(b2);
-            expectMsg(b2);
-            bus.Subscribe(testActor, typeof(A));
+            ExpectMsg(b2);
+            bus.Subscribe(TestActor, typeof(A));
             bus.Publish(c);
-            expectMsg(c);
+            ExpectMsg(c);
             bus.Publish(b1);
-            expectMsg(b1);
+            ExpectMsg(b1);
 
-            bus.Unsubscribe(testActor, typeof(B1));
+            bus.Unsubscribe(TestActor, typeof(B1));
             bus.Publish(c); //should not publish
             bus.Publish(b2); //should publish
             bus.Publish(a); //should publish
-            expectMsg(b2);
-            expectMsg(a);
-            expectNoMsg(TimeSpan.FromSeconds(1));
+            ExpectMsg(b2);
+            ExpectMsg(a);
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
 
@@ -118,26 +125,26 @@ namespace Akka.Tests.Event
             var es = new EventStream(false);
             var tm1 = new CC();
             var tm2 = new CCATBT();
-            var a1= TestProbe();
-            var a2= TestProbe();
-            var a3 = TestProbe();
-            var a4 = TestProbe();
+            var a1= CreateTestProbe();
+            var a2= CreateTestProbe();
+            var a3 = CreateTestProbe();
+            var a4 = CreateTestProbe();
 
-            es.Subscribe(a1.Ref, typeof(AT));
-            es.Subscribe(a2.Ref, typeof(BT)) ;
-            es.Subscribe(a3.Ref, typeof(CC));
-            es.Subscribe(a4.Ref, typeof(CCATBT)) ;
+            es.Subscribe(a1.Ref, typeof(AT)).ShouldBeTrue();
+            es.Subscribe(a2.Ref, typeof(BT)).ShouldBeTrue();
+            es.Subscribe(a3.Ref, typeof(CC)).ShouldBeTrue();
+            es.Subscribe(a4.Ref, typeof(CCATBT)).ShouldBeTrue();
             es.Publish(tm1);
             es.Publish(tm2);
-            a1.expectMsg(tm2);
-            a2.expectMsg(tm2);
-            a3.expectMsg(tm1);
-            a3.expectMsg(tm2); 
-            a4.expectMsg(tm2);
-            es.Unsubscribe(a1.Ref, typeof(AT)).Then(Assert.True);
-            es.Unsubscribe(a2.Ref, typeof(BT)).Then(Assert.True);
-            es.Unsubscribe(a3.Ref, typeof(CC)).Then(Assert.True);
-            es.Unsubscribe(a4.Ref, typeof(CCATBT)).Then(Assert.True);
+            a1.ExpectMsg((object) tm2);
+            a2.ExpectMsg((object) tm2);
+            a3.ExpectMsg((object) tm1);
+            a3.ExpectMsg((object) tm2);
+            a4.ExpectMsg((object) tm2);
+            es.Unsubscribe(a1.Ref, typeof(AT)).ShouldBeTrue();
+            es.Unsubscribe(a2.Ref, typeof(BT)).ShouldBeTrue();
+            es.Unsubscribe(a3.Ref, typeof(CC)).ShouldBeTrue();
+            es.Unsubscribe(a4.Ref, typeof(CCATBT)).ShouldBeTrue();
         }
 
         //"manage sub-channels using classes and traits (update on unsubscribe)"
@@ -147,10 +154,10 @@ namespace Akka.Tests.Event
             var es = new EventStream(false);
             var tm1 = new CC();
             var tm2 = new CCATBT();
-            var a1 = TestProbe();
-            var a2 = TestProbe();
-            var a3 = TestProbe();
-            var a4 = TestProbe();
+            var a1 = CreateTestProbe();
+            var a2 = CreateTestProbe();
+            var a3 = CreateTestProbe();
+            var a4 = CreateTestProbe();
 
             es.Subscribe(a1.Ref, typeof(AT));
             es.Subscribe(a2.Ref, typeof(BT));
@@ -159,14 +166,14 @@ namespace Akka.Tests.Event
             es.Unsubscribe(a3.Ref, typeof(CC));
             es.Publish(tm1);
             es.Publish(tm2);
-            a1.expectMsg(tm2);
-            a2.expectMsg(tm2);
-            a3.expectNoMsg(TimeSpan.FromSeconds(1));
-            a4.expectMsg(tm2);
-            es.Unsubscribe(a1.Ref, typeof(AT)).Then(Assert.True);
-            es.Unsubscribe(a2.Ref, typeof(BT)).Then(Assert.True);
-            es.Unsubscribe(a3.Ref, typeof(CC)).Then(Assert.False);
-            es.Unsubscribe(a4.Ref, typeof(CCATBT)).Then(Assert.True);
+            a1.ExpectMsg((object) tm2);
+            a2.ExpectMsg((object) tm2);
+            a3.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            a4.ExpectMsg((object) tm2);
+            es.Unsubscribe(a1.Ref, typeof(AT)).ShouldBeTrue();
+            es.Unsubscribe(a2.Ref, typeof(BT)).ShouldBeTrue();
+            es.Unsubscribe(a3.Ref, typeof(CC)).ShouldBeFalse();
+            es.Unsubscribe(a4.Ref, typeof(CCATBT)).ShouldBeTrue();
         }
 
         [Fact]
@@ -175,26 +182,26 @@ namespace Akka.Tests.Event
             var es = new EventStream(false);
             var tm1 = new CC();
             var tm2 = new CCATBT();
-            var a1 = TestProbe();
-            var a2 = TestProbe();
-            var a3 = TestProbe();
-            var a4 = TestProbe();
+            var a1 = CreateTestProbe();
+            var a2 = CreateTestProbe();
+            var a3 = CreateTestProbe();
+            var a4 = CreateTestProbe();
 
-            es.Subscribe(a1.Ref, typeof(AT)).Then(Assert.True);
-            es.Subscribe(a2.Ref, typeof(BT)).Then(Assert.True);
-            es.Subscribe(a3.Ref, typeof(CC)).Then(Assert.True);
-            es.Subscribe(a4.Ref, typeof(CCATBT)).Then(Assert.True);
-            es.Unsubscribe(a3.Ref).Then(Assert.True);
+            es.Subscribe(a1.Ref, typeof(AT)).ShouldBeTrue();
+            es.Subscribe(a2.Ref, typeof(BT)).ShouldBeTrue();
+            es.Subscribe(a3.Ref, typeof(CC)).ShouldBeTrue();
+            es.Subscribe(a4.Ref, typeof(CCATBT)).ShouldBeTrue();
+            es.Unsubscribe(a3.Ref).ShouldBeTrue();
             es.Publish(tm1);
             es.Publish(tm2);
-            a1.expectMsg(tm2);
-            a2.expectMsg(tm2);
-            a3.expectNoMsg(TimeSpan.FromSeconds(1));
-            a4.expectMsg(tm2);
-            es.Unsubscribe(a1.Ref, typeof(AT)).Then(Assert.True);
-            es.Unsubscribe(a2.Ref, typeof(BT)).Then(Assert.True);
-            es.Unsubscribe(a3.Ref, typeof(CC)).Then(Assert.False);
-            es.Unsubscribe(a4.Ref, typeof(CCATBT)).Then(Assert.True);
+            a1.ExpectMsg((object) tm2);
+            a2.ExpectMsg((object) tm2);
+            a3.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            a4.ExpectMsg((object) tm2);
+            es.Unsubscribe(a1.Ref, typeof(AT)).ShouldBeTrue();
+            es.Unsubscribe(a2.Ref, typeof(BT)).ShouldBeTrue();
+            es.Unsubscribe(a3.Ref, typeof(CC)).ShouldBeFalse();
+            es.Unsubscribe(a4.Ref, typeof(CCATBT)).ShouldBeTrue();
         }
 
         public class SetTarget
@@ -206,26 +213,25 @@ namespace Akka.Tests.Event
             }
         }
 
-        //TODO: this test hangs, why?
-        [Fact]
+        [Fact(Skip = "TODO: this test hangs, why?")]
         public void ManageLogLevels()
         {
-          //var bus = new EventStream(false);
-          //bus.StartDefaultLoggers(sys);
-          //bus.Publish(new SetTarget(testActor));
-          //expectMsg("OK");
+            var bus = new EventStream(false);
+            bus.StartDefaultLoggers((ActorSystemImpl) Sys);
+            bus.Publish(new SetTarget(TestActor));
+            ExpectMsg("OK",TimeSpan.FromSeconds(5));
 
-          //verifyLevel(bus, LogLevel.InfoLevel);
-          //bus.SetLogLevel(LogLevel.WarningLevel);
-          //verifyLevel(bus, LogLevel.WarningLevel);
-          //bus.SetLogLevel(LogLevel.DebugLevel);
-          //verifyLevel(bus, LogLevel.DebugLevel);
-          //bus.SetLogLevel(LogLevel.ErrorLevel);
-          //verifyLevel(bus, LogLevel.ErrorLevel);
+            verifyLevel(bus, LogLevel.InfoLevel);
+            bus.SetLogLevel(LogLevel.WarningLevel);
+            verifyLevel(bus, LogLevel.WarningLevel);
+            bus.SetLogLevel(LogLevel.DebugLevel);
+            verifyLevel(bus, LogLevel.DebugLevel);
+            bus.SetLogLevel(LogLevel.ErrorLevel);
+            verifyLevel(bus, LogLevel.ErrorLevel);
 
         }
 
-        protected override string GetConfig()
+        private static string GetConfig()
         {
             return @"
 akka {
@@ -273,7 +279,7 @@ akka {
 
             var msg = allmsg.Where(l => l.LogLevel() >= level);
             allmsg.ToList().ForEach(l => bus.Publish(l));
-            msg.ToList().ForEach(l => expectMsg(l));
+            msg.ToList().ForEach(l => ExpectMsg(l));
           }
     }
 }

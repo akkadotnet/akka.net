@@ -2,53 +2,23 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 
 namespace Akka.Configuration.Hocon
 {
     public class HoconValue : IMightBeAHoconObject
     {
-        private readonly List<IHoconElement> values = new List<IHoconElement>();
+        private readonly List<IHoconElement> _values = new List<IHoconElement>();
 
         public bool IsEmpty
         {
-            get { return values.Count == 0; }
-        }
-
-        public void AppendValue(IHoconElement value)
-        {
-            values.Add(value);
-        }
-
-        public void Clear()
-        {
-            values.Clear();
-        }
-
-        public void NewValue(IHoconElement value)
-        {
-            values.Clear();
-            values.Add(value);
-        }
-
-        public bool IsString()
-        {
-            return values.Any() && values.All(v => v.IsString());
-        }
-
-        private string ConcatString()
-        {
-            string concat = string.Join("", values.Select(l => l.GetString())).Trim();
-
-            if (concat == "null")
-                return null;
-
-            return concat;
+            get { return _values.Count == 0; }
         }
 
         public HoconObject GetObject()
         {
             //TODO: merge objects?
-            var raw = values.FirstOrDefault();
+            IHoconElement raw = _values.FirstOrDefault();
             var o = raw as HoconObject;
             var sub = raw as IMightBeAHoconObject;
             if (o != null) return o;
@@ -56,14 +26,45 @@ namespace Akka.Configuration.Hocon
             return null;
         }
 
-        public HoconValue GetChildObject(string key)
-        {
-            return GetObject().GetKey(key);
-        }
-
         public bool IsObject()
         {
             return GetObject() != null;
+        }
+
+        public void AppendValue(IHoconElement value)
+        {
+            _values.Add(value);
+        }
+
+        public void Clear()
+        {
+            _values.Clear();
+        }
+
+        public void NewValue(IHoconElement value)
+        {
+            _values.Clear();
+            _values.Add(value);
+        }
+
+        public bool IsString()
+        {
+            return _values.Any() && _values.All(v => v.IsString());
+        }
+
+        private string ConcatString()
+        {
+            string concat = string.Join("", _values.Select(l => l.GetString())).Trim();
+
+            if (concat == "null")
+                return null;
+
+            return concat;
+        }
+
+        public HoconValue GetChildObject(string key)
+        {
+            return GetObject().GetKey(key);
         }
 
         public bool GetBoolean()
@@ -165,7 +166,7 @@ namespace Akka.Configuration.Hocon
 
         public IList<HoconValue> GetArray()
         {
-            IEnumerable<HoconValue> x = from arr in values
+            IEnumerable<HoconValue> x = from arr in _values
                 where arr.IsArray()
                 from e in arr.GetArray()
                 select e;
@@ -178,34 +179,49 @@ namespace Akka.Configuration.Hocon
             return GetArray() != null;
         }
 
-        //TODO: implement this
-        public TimeSpan GetMillisDuration()
+        public TimeSpan GetMillisDuration(bool allowInfinite = true)
         {
             string res = GetString();
             if (res.EndsWith("ms"))
+            //TODO: Add support for ns, us, and non abbreviated versions (second, seconds and so on) see https://github.com/typesafehub/config/blob/master/HOCON.md#duration-format
             {
                 var v = res.Substring(0, res.Length - 2);
-                return TimeSpan.FromMilliseconds(double.Parse(v,NumberFormatInfo.InvariantInfo));
+                return TimeSpan.FromMilliseconds(ParsePositiveValue(v));
             }
             if (res.EndsWith("s"))
             {
                 var v = res.Substring(0, res.Length - 1);
-                return TimeSpan.FromSeconds(double.Parse(v, NumberFormatInfo.InvariantInfo));
+                return TimeSpan.FromSeconds(ParsePositiveValue(v));
             }
-
-            if (res.EndsWith("m"))
+            if(res.EndsWith("m"))
             {
                 var v = res.Substring(0, res.Length - 1);
-                return TimeSpan.FromMinutes(double.Parse(v, NumberFormatInfo.InvariantInfo));
+                return TimeSpan.FromMinutes(ParsePositiveValue(v));
             }
-
+            if(res.EndsWith("h"))
+            {
+                var v = res.Substring(0, res.Length - 1);
+                return TimeSpan.FromHours(ParsePositiveValue(v));
+            }
             if (res.EndsWith("d"))
             {
                 var v = res.Substring(0, res.Length - 1);
-                return TimeSpan.FromDays(double.Parse(v, NumberFormatInfo.InvariantInfo));
+                return TimeSpan.FromDays(ParsePositiveValue(v));
+            }
+            if(allowInfinite && res.Equals("infinite", StringComparison.OrdinalIgnoreCase))  //Not in Hocon spec
+            {
+                return Timeout.InfiniteTimeSpan;
             }
 
-            return TimeSpan.FromSeconds(double.Parse(res, NumberFormatInfo.InvariantInfo));
+            return TimeSpan.FromMilliseconds(ParsePositiveValue(res));
+        }
+
+        private static double ParsePositiveValue(string v)
+        {
+            var value = double.Parse(v, NumberFormatInfo.InvariantInfo);
+            if(value < 0)
+                throw new FormatException("Expected a positive value instead of " + value);
+            return value;
         }
 
         public long? GetByteSize()
@@ -246,7 +262,8 @@ namespace Akka.Configuration.Hocon
 
         private string QuoteIfNeeded(string text)
         {
-            if (text.ToCharArray().Intersect(" \t".ToCharArray()).Any())
+            if(text == null) return "";
+            if(text.ToCharArray().Intersect(" \t".ToCharArray()).Any())
             {
                 return "\"" + text + "\"";
             }

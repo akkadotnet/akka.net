@@ -2,11 +2,10 @@
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace Akka.Cluster.Tests
 {
-    [TestClass]
     public class ClusterDomainEventSpec
     {
         static readonly ImmutableHashSet<string> aRoles = ImmutableHashSet.Create("AA", "AB");
@@ -38,15 +37,15 @@ namespace Akka.Cluster.Tests
                 (t, m) => Tuple.Create(t.Item1.Seen(m.UniqueAddress), t.Item2.Add(m.UniqueAddress)));
         }
 
-        [TestMethod]
+        [Fact]
         public void DomainEventsMustBeEmptyForTheSameGossip()
         {
             var g1 = new Gossip(ImmutableSortedSet.Create(aUp));
 
-            CollectionAssert.AreEqual(ImmutableSortedSet.Create<object>(), ClusterEvent.DiffUnreachable(g1, g1));
+            Assert.Equal(ImmutableSortedSet.Create<object>(), ClusterEvent.DiffUnreachable(g1, g1));
         }
 
-        [TestMethod]
+        [Fact]
         public void DomainEventsMustBeProducedForNewMembers()
         {
             var t1 = Converge(new Gossip(ImmutableSortedSet.Create(aUp)));
@@ -56,13 +55,13 @@ namespace Akka.Cluster.Tests
             var g2 = t2.Item1;
             var s2 = t2.Item2;
 
-            CollectionAssert.AreEqual(ImmutableList.Create(new ClusterEvent.MemberUp(bUp)), ClusterEvent.DiffMemberEvents(g1, g2));
-            CollectionAssert.AreEqual(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g1, g2));
+            Assert.Equal(ImmutableList.Create(new ClusterEvent.MemberUp(bUp)), ClusterEvent.DiffMemberEvents(g1, g2));
+            Assert.Equal(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g1, g2));
 
-            CollectionAssert.AreEqual(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(s => s.Address).ToImmutableHashSet())), ClusterEvent.DiffSeen(g1, g2));
+            Assert.Equal(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(s => s.Address).ToImmutableHashSet())), ClusterEvent.DiffSeen(g1, g2));
         }
 
-        [TestMethod]
+        [Fact]
         public void DomainEventMustBeProducedForChangedStatusOfMembers()
         {
             var t1 = Converge(new Gossip(ImmutableSortedSet.Create(aJoining, bUp, cUp)));
@@ -72,12 +71,12 @@ namespace Akka.Cluster.Tests
             var g2 = t2.Item1;
             var s2 = t2.Item2;
 
-            CollectionAssert.AreEqual(ImmutableList.Create(new ClusterEvent.MemberUp(aUp)), ClusterEvent.DiffMemberEvents(g1, g2));
-            CollectionAssert.AreEqual(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g1, g2));
-            CollectionAssert.AreEqual(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(s => s.Address).ToImmutableHashSet())), ClusterEvent.DiffSeen(g1, g2));
+            Assert.Equal(ImmutableList.Create(new ClusterEvent.MemberUp(aUp)), ClusterEvent.DiffMemberEvents(g1, g2));
+            Assert.Equal(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g1, g2));
+            Assert.Equal(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(s => s.Address).ToImmutableHashSet())), ClusterEvent.DiffSeen(g1, g2));
         }
 
-        [TestMethod]
+        [Fact]
         public void DomainEventMustBeProducedForMembersInUnreachable()
         {
             var reachability1 = Reachability.Empty.
@@ -88,11 +87,11 @@ namespace Akka.Cluster.Tests
                 Unreachable(aUp.UniqueAddress, bDown.UniqueAddress);
             var g2 = new Gossip(ImmutableSortedSet.Create(aUp, cUp, bDown, eDown), new GossipOverview(reachability2));
 
-            CollectionAssert.AreEqual(ImmutableList.Create(new ClusterEvent.UnreachableMember(bDown)), ClusterEvent.DiffUnreachable(g1, g2));
-            CollectionAssert.AreEqual(ImmutableList.Create<ClusterEvent.SeenChanged>(), ClusterEvent.DiffSeen(g1, g2));
+            Assert.Equal(ImmutableList.Create(new ClusterEvent.UnreachableMember(bDown)), ClusterEvent.DiffUnreachable(g1, g2));
+            Assert.Equal(ImmutableList.Create<ClusterEvent.SeenChanged>(), ClusterEvent.DiffSeen(g1, g2));
         }
 
-        [TestMethod]
+        [Fact]
         public void DomainEventMustBeProducedForMembersBecomingReachableAfterUnreachable()
         {
             var reachability1 = Reachability.Empty.
@@ -105,11 +104,11 @@ namespace Akka.Cluster.Tests
                 Reachable(aUp.UniqueAddress, bUp.UniqueAddress);
             var g2 = new Gossip(ImmutableSortedSet.Create(aUp, cUp, bUp, eUp), new GossipOverview(reachability2));
 
-            CollectionAssert.AreEqual(ImmutableList.Create(new ClusterEvent.UnreachableMember(cUp)), ClusterEvent.DiffUnreachable(g1, g2));
-            CollectionAssert.AreEqual(ImmutableList.Create(new ClusterEvent.ReachableMember(bUp)), ClusterEvent.DiffReachable(g1,g2));
+            Assert.Equal(ImmutableList.Create(new ClusterEvent.UnreachableMember(cUp)), ClusterEvent.DiffUnreachable(g1, g2));
+            Assert.Equal(ImmutableList.Create(new ClusterEvent.ReachableMember(bUp)), ClusterEvent.DiffReachable(g1,g2));
         }
 
-        [TestMethod]
+        [Fact]
         public void DomainEventMustBeProducedForConvergenceChanges()
         {
             var g1 =
@@ -118,15 +117,15 @@ namespace Akka.Cluster.Tests
                     .Seen(eJoining.UniqueAddress);
             var g2 = new Gossip(ImmutableSortedSet.Create(aUp, bUp, eJoining)).Seen(aUp.UniqueAddress).Seen(bUp.UniqueAddress);
 
-            CollectionAssert.AreEqual(ImmutableList.Create<ClusterEvent.IMemberEvent>(), ClusterEvent.DiffMemberEvents(g1, g2));
-            CollectionAssert.AreEqual(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g1, g2));
-            CollectionAssert.AreEqual(ImmutableList.Create(new ClusterEvent.SeenChanged(true, ImmutableHashSet.Create(aUp.Address, bUp.Address))), ClusterEvent.DiffSeen(g1, g2));
-            CollectionAssert.AreEqual(ImmutableList.Create<ClusterEvent.IMemberEvent>(), ClusterEvent.DiffMemberEvents(g2, g1));
-            CollectionAssert.AreEqual(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g2, g1));
-            CollectionAssert.AreEqual(ImmutableList.Create(new ClusterEvent.SeenChanged(true, ImmutableHashSet.Create(aUp.Address, bUp.Address, eJoining.Address))), ClusterEvent.DiffSeen(g2, g1));
+            Assert.Equal(ImmutableList.Create<ClusterEvent.IMemberEvent>(), ClusterEvent.DiffMemberEvents(g1, g2));
+            Assert.Equal(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g1, g2));
+            Assert.Equal(ImmutableList.Create(new ClusterEvent.SeenChanged(true, ImmutableHashSet.Create(aUp.Address, bUp.Address))), ClusterEvent.DiffSeen(g1, g2));
+            Assert.Equal(ImmutableList.Create<ClusterEvent.IMemberEvent>(), ClusterEvent.DiffMemberEvents(g2, g1));
+            Assert.Equal(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g2, g1));
+            Assert.Equal(ImmutableList.Create(new ClusterEvent.SeenChanged(true, ImmutableHashSet.Create(aUp.Address, bUp.Address, eJoining.Address))), ClusterEvent.DiffSeen(g2, g1));
         }
 
-        [TestMethod]
+        [Fact]
         public void DomainEventMustBeProducedForLeaderChanges()
         {
             var t1 = Converge(new Gossip(ImmutableSortedSet.Create(aUp, bUp, eJoining)));
@@ -136,13 +135,13 @@ namespace Akka.Cluster.Tests
             var g2 = t2.Item1;
             var s2 = t2.Item2;
 
-            CollectionAssert.AreEqual(ImmutableList.Create(new ClusterEvent.MemberRemoved(aRemoved, MemberStatus.Up)), ClusterEvent.DiffMemberEvents(g1, g2));
-            CollectionAssert.AreEqual(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g1, g2));
-            CollectionAssert.AreEqual(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(a => a.Address).ToImmutableHashSet())), ClusterEvent.DiffSeen(g1, g2));
-            CollectionAssert.AreEqual(ImmutableList.Create(new ClusterEvent.LeaderChanged(bUp.Address)), ClusterEvent.DiffLeader(g1, g2));
+            Assert.Equal(ImmutableList.Create(new ClusterEvent.MemberRemoved(aRemoved, MemberStatus.Up)), ClusterEvent.DiffMemberEvents(g1, g2));
+            Assert.Equal(ImmutableList.Create<ClusterEvent.UnreachableMember>(), ClusterEvent.DiffUnreachable(g1, g2));
+            Assert.Equal(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(a => a.Address).ToImmutableHashSet())), ClusterEvent.DiffSeen(g1, g2));
+            Assert.Equal(ImmutableList.Create(new ClusterEvent.LeaderChanged(bUp.Address)), ClusterEvent.DiffLeader(g1, g2));
         }
 
-        [TestMethod]
+        [Fact]
         public void DomainEventMustBeProducedForRoleLeaderChanges()
         {
             var g0 = Gossip.Empty;
@@ -156,13 +155,13 @@ namespace Akka.Cluster.Tests
                 new ClusterEvent.RoleLeaderChanged("DE", dLeaving.Address),
                 new ClusterEvent.RoleLeaderChanged("EE", eUp.Address)
                 );
-            CollectionAssert.AreEqual(expected, ClusterEvent.DiffRolesLeader(g0, g1));
+            Assert.Equal(expected, ClusterEvent.DiffRolesLeader(g0, g1));
             var expected2 = ImmutableHashSet.Create(
                 new ClusterEvent.RoleLeaderChanged("AA", null),
                 new ClusterEvent.RoleLeaderChanged("AB", bUp.Address),
                 new ClusterEvent.RoleLeaderChanged("DE", eJoining.Address)
                 );
-            CollectionAssert.AreEqual(expected2, ClusterEvent.DiffRolesLeader(g1, g2));
+            Assert.Equal(expected2, ClusterEvent.DiffRolesLeader(g1, g2));
         }
     }
 }

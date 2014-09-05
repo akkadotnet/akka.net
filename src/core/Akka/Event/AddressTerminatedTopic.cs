@@ -4,6 +4,14 @@ using Akka.Util;
 
 namespace Akka.Event
 {
+    internal sealed class AddressTerminatedTopicProvider : ExtensionIdProvider<AddressTerminatedTopic>, IExtensionId<AddressTerminatedTopic>
+    {
+        public override AddressTerminatedTopic CreateExtension(ExtendedActorSystem system)
+        {
+            return new AddressTerminatedTopic();
+        }
+    }
+
     /// <summary>
     /// INTERNAL API.
     /// 
@@ -11,9 +19,14 @@ namespace Akka.Event
     /// <see cref="AddressTerminated"/> notifications. Remote and cluster death watchers
     /// publish <see cref="AddressTerminated"/> when a remote system is deemed dead.
     /// </summary>
-    internal sealed class AddressTerminatedTopic
+    internal sealed class AddressTerminatedTopic : IExtension
     {
-        private readonly AtomicReference<HashSet<ActorRef>> _subscribers = new AtomicReference<HashSet<ActorRef>>();
+        private readonly AtomicReference<HashSet<ActorRef>> _subscribers = new AtomicReference<HashSet<ActorRef>>(new HashSet<ActorRef>());
+
+        public static AddressTerminatedTopic Get(ActorSystem system)
+        {
+            return system.WithExtension<AddressTerminatedTopic>(typeof(AddressTerminatedTopicProvider));
+        }
 
         public void Subscribe(ActorRef subscriber)
         {

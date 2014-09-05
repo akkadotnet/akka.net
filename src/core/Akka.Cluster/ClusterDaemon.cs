@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
@@ -17,25 +18,37 @@ namespace Akka.Cluster
     {
     }
 
-    //TODO: Xmldoc
-    //TODO: Comment mentions JMX
     /// <summary>
-    /// Cluster commands sent by the USER via
-    /// [[akka.cluster.Cluster]] extension
-    /// or JMX.
+    /// Cluster commands sent by the USER via <see cref="Cluster"/> extension.
     /// </summary>
     internal class ClusterUserAction
     {
         internal abstract class BaseClusterUserAction
         {
-            readonly Address _address;
+           readonly Address _address;
 
             public Address Address { get { return _address; } }
 
             protected BaseClusterUserAction(Address address)
             {
                 _address = address;
-            }            
+            }
+
+            public override bool Equals(object obj)
+            {
+                var baseUserAction = (BaseClusterUserAction) obj;
+                return baseUserAction != null && Equals(baseUserAction);
+            }
+
+            protected bool Equals(BaseClusterUserAction other)
+            {
+                return Equals(_address, other._address);
+            }
+
+            public override int GetHashCode()
+            {
+                return (_address != null ? _address.GetHashCode() : 0);
+            }
         }
 
         /// <summary>
@@ -52,7 +65,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Command to leave the cluster.
         /// </summary>
-        internal sealed class Leave : BaseClusterUserAction
+        internal sealed class Leave : BaseClusterUserAction, IClusterMessage
         {
             public Leave(Address address) : base(address)
             {}
@@ -61,7 +74,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Command to mark node as temporary down.
         /// </summary>
-        internal sealed class Down : BaseClusterUserAction
+        internal sealed class Down : BaseClusterUserAction, IClusterMessage
         {
             public Down(Address address) : base(address)
             {   
@@ -89,12 +102,32 @@ namespace Akka.Cluster
 
             public UniqueAddress Node { get { return _node; } }
             public ImmutableHashSet<string> Roles { get { return _roles; } }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is Join && Equals((Join) obj);
+            }
+
+            private bool Equals(Join other)
+            {
+                return _node.Equals(other._node) && !_roles.Except(other._roles).Any();
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (_node.GetHashCode() * 397) ^ _roles.GetHashCode();
+                }
+            }
         }
 
         /// <summary>
         /// Reply to Join
         /// </summary>
-        internal sealed class Welcome
+        internal sealed class Welcome : IClusterMessage
         {
             readonly UniqueAddress _from;
             readonly Gossip _gossip;
@@ -110,6 +143,27 @@ namespace Akka.Cluster
             public UniqueAddress From { get { return _from; } }
 
             public Gossip Gossip { get { return _gossip; } }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is Welcome && Equals((Welcome) obj);
+            }
+
+            private bool Equals(Welcome other)
+            {
+                return _from.Equals(other._from) && _gossip.ToString().Equals(other._gossip.ToString());
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (_from.GetHashCode() * 397) ^ _gossip.GetHashCode();
+                }
+            }
+
         }
 
         /// <summary>
@@ -133,11 +187,11 @@ namespace Akka.Cluster
 
         /// <summary>
         /// Start message of the process to join one of the seed nodes.
-        /// The node sends `InitJoin` to all seed nodes, which replies
-        /// with `InitJoinAck`. The first reply is used others are discarded.
-        /// The node sends `Join` command to the seed node that replied first.
+        /// The node sends <see cref="InitJoin"/> to all seed nodes, which replies
+        /// with <see cref="InitJoinAck"/>. The first reply is used others are discarded.
+        /// The node sends <see cref="Join"/> command to the seed node that replied first.
         /// If a node is uninitialized it will reply to `InitJoin` with
-        /// `InitJoinNack`.
+        /// <see cref="InitJoinNack"/>.
         /// </summary>
         internal class JoinSeenNode
         {
@@ -148,6 +202,10 @@ namespace Akka.Cluster
         /// </summary>
         internal class InitJoin : IClusterMessage
         {
+            public override bool Equals(object obj)
+            {
+                return obj is InitJoin;
+            }
         }
 
         /// <summary>
@@ -166,6 +224,23 @@ namespace Akka.Cluster
             {
                 get { return _address; }
             }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is InitJoinAck && Equals((InitJoinAck)obj);
+            }
+
+            private bool Equals(InitJoinAck other)
+            {
+                return Equals(_address, other._address);
+            }
+
+            public override int GetHashCode()
+            {
+                return (_address != null ? _address.GetHashCode() : 0);
+            }
         }
 
         /// <summary>
@@ -183,6 +258,23 @@ namespace Akka.Cluster
             public Address Address
             {
                 get { return _address; }
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is InitJoinNack && Equals((InitJoinNack)obj);
+            }
+
+            private bool Equals(InitJoinNack other)
+            {
+                return Equals(_address, other._address);
+            }
+
+            public override int GetHashCode()
+            {
+                return (_address != null ? _address.GetHashCode() : 0);
             }
         }
 
@@ -449,7 +541,7 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class ClusterDaemon : UntypedActor, IActorLogging
     {
-        readonly InternalActorRef _coreSupervisor;
+        readonly ActorRef _coreSupervisor;
         readonly ClusterSettings _settings;
 
         public ClusterDaemon(ClusterSettings settings)
@@ -460,7 +552,6 @@ namespace Akka.Cluster
             _coreSupervisor =
                 Context.ActorOf(Props.Create<ClusterCoreSupervisor>().WithDispatcher(Context.Props.Dispatcher), "core");
 
-            //TODO: Scope?
             Context.ActorOf(Props.Create<ClusterHeartbeatReceiver>().WithDispatcher(Context.Props.Dispatcher), "heartbeatReceiver");
 
             _settings = settings;
@@ -472,7 +563,7 @@ namespace Akka.Cluster
                 .With<InternalClusterAction.GetClusterCoreRef>(msg => _coreSupervisor.Forward(msg))
                 .With<InternalClusterAction.AddOnMemberUpListener>(
                     msg =>
-                        Context.ActorOf(new Props(Deploy.Local, typeof (OnMemberUpListener), new object[] {msg.Callback})))
+                        Context.ActorOf(Props.Create(() => new OnMemberUpListener(msg.Callback)).WithDeploy(Deploy.Local)))
                 .With<InternalClusterAction.PublisherCreated>(
                     msg =>
                     {
@@ -483,17 +574,21 @@ namespace Akka.Cluster
                     });
         }
 
-        public LoggingAdapter Log { get; private set; }
+        private readonly LoggingAdapter _log = Logging.GetLogger(Context);
+        public LoggingAdapter Log { get { return _log; } }
     }
 
     /// <summary>
     /// ClusterCoreDaemon and ClusterDomainEventPublisher can't be restarted because the state
     /// would be obsolete. Shutdown the member if any those actors crashed.
     /// </summary>
-    class ClusterCoreSupervisor : UntypedActor, IActorLogging
+    class ClusterCoreSupervisor : ReceiveActor, IActorLogging
     {
-        readonly InternalActorRef _publisher;
-        readonly InternalActorRef _coreDaemon;
+        readonly ActorRef _publisher;
+        readonly ActorRef _coreDaemon;
+
+        private readonly LoggingAdapter _log = Logging.GetLogger(Context);
+        public LoggingAdapter Log { get { return _log; } }
 
         public ClusterCoreSupervisor()
         {
@@ -503,6 +598,8 @@ namespace Akka.Cluster
             Context.Watch(_coreDaemon);
 
             Context.Parent.Tell(new InternalClusterAction.PublisherCreated(_publisher));
+
+            Receive<InternalClusterAction.GetClusterCoreRef>(cr => Sender.Tell(_coreDaemon));
         }
 
         protected override SupervisorStrategy SupervisorStrategy()
@@ -521,19 +618,12 @@ namespace Akka.Cluster
         {
             Cluster.Get(Context.System).Shutdown();
         }
-
-        protected override void OnReceive(object message)
-        {
-            message.Match()
-                .With<InternalClusterAction.GetClusterCoreRef>(m => Sender.Tell(_coreDaemon));
-        }
-
-        public LoggingAdapter Log { get; private set; }
+        
     }
 
     class ClusterCoreDaemon : UntypedActor, IActorLogging
     {
-        readonly Cluster _cluster = new Cluster(Context.System);
+        readonly Cluster _cluster = new Cluster((ActorSystemImpl)Context.System);
         protected readonly UniqueAddress SelfUniqueAddress;
         const int NumberOfGossipsBeforeShutdownWhenLeaderExits = 3;
         readonly VectorClock.Node _vclockNode;
@@ -1371,72 +1461,319 @@ namespace Akka.Cluster
         public LoggingAdapter Log { get; private set; }
     }
 
-    internal class ClusterHeartbeatSender : UntypedActor
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Sends <see cref="InternalClusterAction.InitJoin"/> to all seed nodes (except itself) and expect
+    /// <see cref="InternalClusterAction.InitJoinAck"/> reply back. The seed node that replied first
+    /// will be used and joined to. <see cref="InternalClusterAction.InitJoinAck"/> replies received after
+    /// the first one are ignored.
+    /// 
+    /// Retries if no <see cref="InternalClusterAction.InitJoinAck"/> replies are received within the 
+    /// <see cref="ClusterSettings.SeedNodeTimeout"/>. When at least one reply has been received it stops itself after
+    /// an idle <see cref="ClusterSettings.SeedNodeTimeout"/>.
+    /// 
+    /// The seed nodes can be started in any order, but they will not be "active" until they have been
+    /// able to join another seed node (seed1.)
+    /// 
+    /// They will retry the join procedure.
+    /// 
+    /// Possible scenarios:
+    ///  1. seed2 started, but doesn't get any ack from seed1 or seed3
+    ///  2. seed3 started, doesn't get any ack from seed1 or seed3 (seed2 doesn't reply)
+    ///  3. seed1 is started and joins itself
+    ///  4. seed2 retries the join procedure and gets an ack from seed1, and then joins to seed1
+    ///  5. seed3 retries the join procedure and gets acks from seed2 first, and then joins to seed2
+    /// </summary>
+    internal sealed class JoinSeedNodeProcess : UntypedActor, IActorLogging
     {
-        public ClusterHeartbeatSender()
+        private LoggingAdapter _log = Logging.GetLogger(Context);
+        public LoggingAdapter Log { get { return _log; } }
+
+        private ImmutableHashSet<Address> _seeds;
+        private Address _selfAddress;
+
+        public JoinSeedNodeProcess(ImmutableHashSet<Address> seeds)
         {
-            throw new NotImplementedException();
+             _selfAddress = Cluster.Get(Context.System).SelfAddress;
+            _seeds = seeds;
+            if(!seeds.Any() || seeds.Head() == _selfAddress)
+                throw new ArgumentException("Join seed node should not be done");
+           Context.SetReceiveTimeout(Cluster.Get(Context.System).Settings.SeedNodeTimeout);
+        }
+
+        protected override void PreStart()
+        {
+            Self.Tell(new InternalClusterAction.JoinSeenNode());
         }
 
         protected override void OnReceive(object message)
         {
-            throw new NotImplementedException();
+            if (message is InternalClusterAction.JoinSeenNode)
+            {
+                //send InitJoin to all seed nodes (except myself)
+                foreach (
+                    var path in
+                        _seeds.Where(x => x != _selfAddress)
+                            .Select(y => Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(y))))
+                {
+                   path.Tell(new InternalClusterAction.InitJoin()); 
+                }
+            }
+            else if (message is InternalClusterAction.InitJoinAck)
+            {
+                //first InitJoinAck reply
+                var initJoinAck = (InternalClusterAction.InitJoinAck) message;
+                Context.Parent.Tell(new ClusterUserAction.JoinTo(initJoinAck.Address));
+                Context.Become(Done);
+            }
+            else if (message is InternalClusterAction.InitJoinNack) { } //that seed was uninitialized
+            else if (message is ReceiveTimeout)
+            {
+                //no InitJoinAck received - try again
+                Self.Tell(new InternalClusterAction.JoinSeenNode());
+            }
+            else
+            {
+                Unhandled(message);
+            }
+        }
+
+        private void Done(object message)
+        {
+            if (message is InternalClusterAction.InitJoinAck)
+            {
+                //already received one, skip the rest
+            } else if(message is ReceiveTimeout) Context.Stop(Self);
         }
     }
 
-    internal class JoinSeedNodeProcess
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Used only for the first seed node.
+    /// Sends <see cref="InternalClusterAction.InitJoin"/> to all seed nodes except itself.
+    /// If other seed nodes are not part of the clsuter yet they will reply with 
+    /// <see cref="InternalClusterAction.InitJoinNack"/> or not respond at all and then the
+    /// first seed node will join itself to initialize the new cluster. When the first seed 
+    /// node is restarted, and some otehr seed node is part of the cluster it will reply with
+    /// <see cref="InternalClusterAction.InitJoinAck"/> and then the first seed node will
+    /// join that other seed node to join the existing cluster.
+    /// </summary>
+    internal sealed class FirstSeedNodeProcess : UntypedActor, IActorLogging
     {
-        public JoinSeedNodeProcess()
+        private LoggingAdapter _log = Logging.GetLogger(Context);
+        public LoggingAdapter Log { get { return _log; } }
+
+        private ImmutableHashSet<Address> _remainingSeeds;
+        private Address _selfAddress;
+        private Cluster _cluster;
+        private Deadline _timeout;
+        private Task _retryTask;
+        private CancellationTokenSource _retryTaskToken;
+
+        public FirstSeedNodeProcess(ImmutableHashSet<Address> seeds)
         {
-            throw new NotImplementedException();
+            _cluster = Cluster.Get(Context.System);
+            _selfAddress = _cluster.SelfAddress;
+
+            if (seeds.Count <= 1 || seeds.Head() != _selfAddress)
+                throw new ArgumentException("Join seed node should not be done");
+
+            _remainingSeeds = seeds.Remove(_selfAddress);
+            _timeout = Deadline.Now + _cluster.Settings.SeedNodeTimeout;
+            _retryTaskToken = new CancellationTokenSource();
+            _retryTask = _cluster.Scheduler.Schedule(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), Self,
+                new InternalClusterAction.JoinSeenNode(), _retryTaskToken.Token);
+            Self.Tell(new InternalClusterAction.JoinSeenNode());
+        }
+
+        protected override void PostStop()
+        {
+            _retryTaskToken.Cancel();
+        }
+
+        protected override void OnReceive(object message)
+        {
+            if (message is InternalClusterAction.JoinSeenNode)
+            {
+                if (_timeout.HasTimeLeft)
+                {
+                    // send InitJoin to remaining seed nodes (except myself)
+                    foreach (
+                        var seed in
+                            _remainingSeeds.Select(
+                                x => Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(x))))
+                        seed.Tell(new InternalClusterAction.InitJoin());
+                }
+                else
+                {
+                    // no InitJoinAck received, initialize new cluster by joining myself
+                    Context.Parent.Tell(new ClusterUserAction.JoinTo(_selfAddress));
+                    Context.Stop(Self);
+                }
+            }
+            else if (message is InternalClusterAction.InitJoinAck)
+            {
+                // first InitJoinAck reply, join existing cluster
+                var initJoinAck = (InternalClusterAction.InitJoinAck) message;
+                Context.Parent.Tell(new ClusterUserAction.JoinTo(initJoinAck.Address));
+                Context.Stop(Self);
+            }
+            else if (message is InternalClusterAction.InitJoinNack)
+            {
+                var initJoinNack = (InternalClusterAction.InitJoinNack) message;
+                _remainingSeeds = _remainingSeeds.Remove(initJoinNack.Address);
+                if (!_remainingSeeds.Any())
+                {
+                    // initialize new cluster by joining myself when nacks from all other seed nodes
+                    Context.Parent.Tell(new ClusterUserAction.JoinTo(_selfAddress));
+                    Context.Stop(Self);
+                }
+            }
+            else
+            {
+                Unhandled(message);
+            }
         }
     }
 
-    internal class FirstSeedNodeProcess
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class GossipStats
     {
-        public FirstSeedNodeProcess()
-        {
-            throw new NotImplementedException();
-        }
-    }
+        public readonly long ReceivedGossipCount;
+        public readonly long MergeCount;
+        public readonly long SameCount;
+        public readonly long NewerCount;
+        public readonly long OlderCount;
 
-    internal class GossipStats
-    {
-        public GossipStats()
+        public GossipStats(long receivedGossipCount = 0L, 
+            long mergeCount = 0L, 
+            long sameCount = 0L,
+            long newerCount = 0L, long olderCount = 0L)
         {
-            throw new NotImplementedException();
+            ReceivedGossipCount = receivedGossipCount;
+            MergeCount = mergeCount;
+            SameCount = sameCount;
+            NewerCount = newerCount;
+            OlderCount = olderCount;
         }
 
         public GossipStats IncrementMergeCount()
         {
-            throw new NotImplementedException();
+            return Copy(mergeCount: MergeCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
 
         public GossipStats IncrementSameCount()
         {
-            throw new NotImplementedException();
+            return Copy(sameCount: SameCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
 
         public GossipStats IncrementNewerCount()
         {
-            throw new NotImplementedException();
+            return Copy(newerCount: NewerCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
 
         public GossipStats IncrementOlderCount()
         {
-            throw new NotImplementedException();
+            return Copy(olderCount: OlderCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
+
+        public GossipStats Copy(long? receivedGossipCount = null,
+            long? mergeCount = null,
+            long? sameCount = null,
+            long? newerCount = null, long? olderCount = null)
+        {
+            return new GossipStats(receivedGossipCount ?? ReceivedGossipCount, 
+                mergeCount ?? MergeCount, 
+                newerCount ?? NewerCount, 
+                olderCount ?? OlderCount);
+        }
+
+        #region Operator overloads
+
+        public static GossipStats operator +(GossipStats a, GossipStats b)
+        {
+            return new GossipStats(a.ReceivedGossipCount + b.ReceivedGossipCount, 
+                a.MergeCount + b.MergeCount, 
+                a.SameCount + b.SameCount, 
+                a.NewerCount + b.NewerCount, 
+                a.OlderCount + b.OlderCount);
+        }
+
+        public static GossipStats operator -(GossipStats a, GossipStats b)
+        {
+            return new GossipStats(a.ReceivedGossipCount - b.ReceivedGossipCount,
+                a.MergeCount - b.MergeCount,
+                a.SameCount - b.SameCount,
+                a.NewerCount - b.NewerCount,
+                a.OlderCount - b.OlderCount);
+        }
+
+        #endregion
     }
 
-
-    class OnMemberUpListener : UntypedActor, IActorLogging
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// The supplied callback will be run once when the current cluster member is <see cref="MemberStatus.Up"/>
+    /// </summary>
+    class OnMemberUpListener : ReceiveActor, IActorLogging
     {
-        protected override void OnReceive(object message)
+        private readonly Action _callback;
+        private LoggingAdapter _log = Logging.GetLogger(Context);
+        private Cluster _cluster;
+        public LoggingAdapter Log { get { return _log; } }
+
+        public OnMemberUpListener(Action callback)
         {
-            throw new NotImplementedException();
+            _callback = callback;
+            _cluster = Cluster.Get(Context.System);
+            Receive<ClusterEvent.CurrentClusterState>(state =>
+            {
+                if(state.Members.Any(IsSelfUp))
+                    Done();
+            });
+
+            Receive<ClusterEvent.MemberUp>(up =>
+            {
+                if (IsSelfUp(up.Member))
+                    Done();
+            });
         }
 
-        public LoggingAdapter Log { get; private set; }
+        protected override void PreStart()
+        {
+            _cluster.Subscribe(Self, new []{ typeof(ClusterEvent.MemberUp) });
+        }
+
+        protected override void PostStop()
+        {
+            _cluster.Unsubscribe(Self);
+        }
+
+        private void Done()
+        {
+            try
+            {
+                _callback.Invoke();
+            }
+            catch(Exception ex)
+            {
+                Log.Error(ex, "OnMemberUp callback failed with [{0}]", ex.Message);
+            }
+            finally
+            {
+                Context.Stop(Self);
+            }
+        }
+
+        private bool IsSelfUp(Member m)
+        {
+            return m.UniqueAddress == _cluster.SelfUniqueAddress && m.Status == MemberStatus.Up;
+        }
     }
 
     public class VectorClockStats

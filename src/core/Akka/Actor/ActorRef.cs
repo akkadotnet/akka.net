@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using System.Threading;
 using Akka.Event;
@@ -15,9 +16,10 @@ namespace Akka.Actor
     /// All ActorRefs have a scope which describes where they live. Since it is often
     /// necessary to distinguish between local and non-local references, this is the only
     /// method provided on the scope.
+    /// INTERNAL
     /// </summary>
-// ReSharper disable once InconsistentNaming
-    internal interface ActorRefScope
+    // ReSharper disable once InconsistentNaming
+    public interface ActorRefScope
     {
         bool IsLocal { get; }
     }
@@ -35,8 +37,9 @@ namespace Akka.Actor
     /// the feature that it starts out “not fully started” (but you can send to it),
     /// which is why <see cref="IsSt"/> features here; it is not improbable that cluster
     /// actor refs will have the same behavior.
+    /// INTERNAL
     /// </summary>
-    internal interface RepointableRef : ActorRefScope
+    public interface RepointableRef : ActorRefScope
     {
         bool IsStarted { get; }
     }
@@ -66,7 +69,7 @@ namespace Akka.Actor
             get { throw new NotImplementedException(); }
         }
 
-        
+
         private const int INITIATED = 0;
         private const int COMPLETED = 1;
         private int status = INITIATED;
@@ -78,7 +81,7 @@ namespace Akka.Actor
             }
             else
             {
-                if (Interlocked.Exchange(ref status,COMPLETED) == INITIATED)
+                if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
                 {
                     _unregister();
                     if (_sender == NoSender || message is Terminated)
@@ -90,14 +93,20 @@ namespace Akka.Actor
                         _sender.Tell(new CompleteFuture(() => _result.TrySetResult(message)));
                     }
                 }
-            }            
+            }
         }
 
         protected void SendSystemMessage(SystemMessage message, ActorRef sender)
         {
-            PatternMatch.Match(message)
-                .With<Terminate>(t => Stop())
-                .With<DeathWatchNotification>(d => Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated)));
+            var d = message as DeathWatchNotification;
+            if (message is Terminate)
+            {
+                Stop();
+            }
+            else if (d != null)
+            {
+                Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated));
+            }
         }
     }
 
@@ -116,11 +125,11 @@ namespace Akka.Actor
         public static ActorRef GetSelfOrNoSender()
         {
             var actorCell = ActorCell.Current;
-            return actorCell != null ? (ActorRef)actorCell.Self : ActorRef.NoSender;
+            return actorCell != null ? actorCell.Self : ActorRef.NoSender;
         }
     }
 
-    public abstract class ActorRef : ICanTell
+    public abstract class ActorRef : ICanTell, IEquatable<ActorRef>
     {
 
         public static readonly Nobody Nobody = Nobody.Instance;
@@ -131,7 +140,7 @@ namespace Akka.Actor
 
         public void Tell(object message, ActorRef sender)
         {
-            if(sender == null) throw new ArgumentNullException("sender", "A sender must be specified");
+            if (sender == null) throw new ArgumentNullException("sender", "A sender must be specified");
 
             TellInternal(message, sender);
         }
@@ -161,7 +170,7 @@ namespace Akka.Actor
 
         public static implicit operator ActorRefSurrogate(ActorRef @ref)
         {
-            if(@ref != null)
+            if (@ref != null)
             {
                 return new ActorRefSurrogate(Serialization.Serialization.SerializedActorPath(@ref));
             }
@@ -171,7 +180,40 @@ namespace Akka.Actor
 
         public static implicit operator ActorRef(ActorRefSurrogate surrogate)
         {
-            return Serialization.Serialization.CurrentSystem.Provider.ResolveActorRef(surrogate.Path);
+            return ((ActorSystemImpl)Serialization.Serialization.CurrentSystem).Provider.ResolveActorRef(surrogate.Path);
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as ActorRef;
+            if (other == null) return false;
+            return Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hash = 17;
+                hash = hash * 23 + Path.Uid.GetHashCode();
+                hash = hash * 23 + Path.GetHashCode();
+                return hash;
+            }
+        }
+
+        public bool Equals(ActorRef other)
+        {
+            return Path.Uid == other.Path.Uid && Path.Equals(other.Path);
+        }
+
+        public static bool operator ==(ActorRef left, ActorRef right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(ActorRef left, ActorRef right)
+        {
+            return !Equals(left, right);
         }
     }
 
@@ -209,7 +251,7 @@ namespace Akka.Actor
 
         public override ActorRef GetChild(IEnumerable<string> name)
         {
-            if(name.All(string.IsNullOrEmpty))
+            if (name.All(string.IsNullOrEmpty))
                 return this;
             return Nobody;
         }
@@ -271,6 +313,17 @@ namespace Akka.Actor
         {
             get { throw new NotSupportedException("Reserved does not provide"); }
         }
+
+        public override bool Equals(object obj)
+        {
+            if (obj == null) return false;
+            return obj == Instance;
+        }
+
+        public override int GetHashCode()
+        {
+            return 17;
+        }
     }
 
     public abstract class ActorRefWithCell : InternalActorRef
@@ -296,7 +349,7 @@ namespace Akka.Actor
         }
     }
 
-    public class VirtualPathContainer : MinimalActorRef
+    internal class VirtualPathContainer : MinimalActorRef
     {
         private readonly InternalActorRef _parent;
         private readonly LoggingAdapter _log;
@@ -351,7 +404,7 @@ namespace Akka.Actor
         public void RemoveChild(string name)
         {
             InternalActorRef tmp;
-            if(!_children.TryRemove(name, out tmp))
+            if (!_children.TryRemove(name, out tmp))
             {
                 //TODO: log.warning("{} trying to remove non-child {}", path, name)
             }
@@ -377,23 +430,23 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
         {
             //Using enumerator to avoid multiple enumerations of name.
             var enumerator = name.GetEnumerator();
-            if(!enumerator.MoveNext())
+            if (!enumerator.MoveNext())
             {
                 //name was empty
                 return this;
             }
             var firstName = enumerator.Current;
-            if(string.IsNullOrEmpty(firstName))
+            if (string.IsNullOrEmpty(firstName))
                 return this;
             InternalActorRef child;
-            if(_children.TryGetValue(firstName, out child))
+            if (_children.TryGetValue(firstName, out child))
                 return child.GetChild(new Enumerable<string>(enumerator));
             return Nobody;
         }
 
-        public void ForeachActorRef(Action<ActorRef> action)
+        public void ForeachActorRef(Action<InternalActorRef> action)
         {
-            foreach(InternalActorRef child in _children.Values)
+            foreach (InternalActorRef child in _children.Values)
             {
                 action(child);
             }

@@ -1,5 +1,6 @@
 ﻿using System;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 
@@ -7,14 +8,14 @@ namespace Akka.Routing
 {
     public class RoutedActorRef : RepointableActorRef
     {
-        private readonly ActorSystem _system;
+        private readonly ActorSystemImpl _system;
         private readonly Props _routerProps;
         private readonly MessageDispatcher _routerDispatcher;
         private readonly Func<Mailbox> _createMailbox;
         private readonly Props _routeeProps;
         private readonly InternalActorRef _supervisor;
 
-        public RoutedActorRef(ActorSystem system, Props routerProps, MessageDispatcher routerDispatcher,
+        public RoutedActorRef(ActorSystemImpl system, Props routerProps, MessageDispatcher routerDispatcher,
             Func<Mailbox> createMailbox, Props routeeProps, InternalActorRef supervisor, ActorPath path)
             : base(system, routerProps, routerDispatcher, createMailbox, supervisor, path)
         {

@@ -1,0 +1,2250 @@
+
+.clip19x19, .clip20x21 {
+	position:relative;
+	overflow:hidden
+}
+
+.clip19x19 {
+	width:19px;
+	height:19px
+}
+
+.clip20x21 {
+	width:20px;
+	height:21px
+}
+
+.clip19x19 img, .clip19x19 input, .clip20x21 img, .clip20x21 input {
+	position:absolute;
+	margin:0;
+	padding:0;
+	width:auto;
+	height:auto
+}
+
+.cl_msdn_lightweight_logo {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -3px -3px;
+	width:117px;
+	height:31px;
+	overflow:hidden
+}
+
+.cl_footer_logo {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -126px -3px;
+	width:124px;
+	height:41px;
+	overflow:hidden
+}
+
+.cl_lt_search {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -256px -3px;
+	width:2px;
+	height:23px;
+	overflow:hidden
+}
+
+.cl_rt_search {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -264px -3px;
+	width:2px;
+	height:23px;
+	overflow:hidden
+}
+
+.cl_search_icon {
+	top:-3px;
+	left:-272px
+}
+
+.cl_rss_button {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -297px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_default_avatar {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -319px -3px;
+	width:24px;
+	height:24px;
+	overflow:hidden
+}
+
+.cl_footer_feedback_icon {
+	top:-3px;
+	left:-349px
+}
+
+.cl_lw_codesnippet_lt_tab {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -375px -3px;
+	width:6px;
+	height:22px;
+	overflow:hidden
+}
+
+.cl_lw_codesnippet_rt_tab {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -387px -3px;
+	width:6px;
+	height:22px;
+	overflow:hidden
+}
+
+.cl_lw_codesnippet_lt_tab_active {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -399px -3px;
+	width:6px;
+	height:22px;
+	overflow:hidden
+}
+
+.cl_lw_codesnippet_rt_tab_active {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -411px -3px;
+	width:6px;
+	height:22px;
+	overflow:hidden
+}
+
+.cl_online_scale {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -423px -3px;
+	width:269px;
+	height:23px;
+	overflow:hidden
+}
+
+.cl_lt_cc_line_top {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -698px -3px;
+	width:280px;
+	height:1px;
+	overflow:hidden
+}
+
+.cl_rt_cc_line_top {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -984px -3px;
+	width:553px;
+	height:1px;
+	overflow:hidden
+}
+
+.cl_IC46226 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1543px -3px;
+	width:11px;
+	height:11px;
+	overflow:hidden
+}
+
+.cl_IC28506 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1560px -3px;
+	width:11px;
+	height:11px;
+	overflow:hidden
+}
+
+.cl_IC90381 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1577px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC131682 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1599px -3px;
+	width:15px;
+	height:15px;
+	overflow:hidden
+}
+
+.cl_IC160177 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1620px -3px;
+	width:10px;
+	height:10px;
+	overflow:hidden
+}
+
+.cl_IC131792 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1636px -3px;
+	width:17px;
+	height:11px;
+	overflow:hidden
+}
+
+.cl_IC128933 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1659px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC169559 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1681px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC116110 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1703px -3px;
+	width:12px;
+	height:10px;
+	overflow:hidden
+}
+
+.cl_IC101471 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1721px -3px;
+	width:10px;
+	height:10px;
+	overflow:hidden
+}
+
+.cl_IC103139 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1737px -3px;
+	width:10px;
+	height:10px;
+	overflow:hidden
+}
+
+.cl_IC6709 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1753px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC115567 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1775px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC155188 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1797px -3px;
+	width:17px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC9948 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1820px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC100399 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1842px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC166620 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1864px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC29808 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1886px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC11304 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1908px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC134134 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1930px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC90369 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1952px -3px;
+	width:10px;
+	height:12px;
+	overflow:hidden
+}
+
+.cl_IC79755 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1968px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC157541 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -1990px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC141795 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2012px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC89523 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2034px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC157062 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2056px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC34952 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2078px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC91302 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2100px -3px;
+	width:16px;
+	height:11px;
+	overflow:hidden
+}
+
+.cl_IC53205 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2122px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC148674 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2144px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC74937 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2166px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC82306 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2188px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC36774 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2210px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC169559 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2232px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC101171 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2254px -3px;
+	width:7px;
+	height:10px;
+	overflow:hidden
+}
+
+.cl_IC130242 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2267px -3px;
+	width:13px;
+	height:10px;
+	overflow:hidden
+}
+
+.cl_IC150820 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2286px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC25161 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2308px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC64394 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2330px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_IC153696 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2352px -3px;
+	width:14px;
+	height:18px;
+	overflow:hidden
+}
+
+.cl_IC37116 {
+	background:url('../images/msdn2010branding-stripe1.png') no-repeat scroll -2372px -3px;
+	width:16px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_lightweight_topnav_slice {
+	background:url('../images/msdn2010branding-stripe.png') repeat-x scroll 0 0;
+	height:29px
+}
+
+.cl_slice_Search {
+	background:url('../images/msdn2010branding-stripe.png') repeat-x scroll 0 -29px;
+	height:23px
+}
+
+.cl_nav_offline_nav_slice {
+	background:url('../images/msdn2010branding-stripe.png') repeat-x scroll 0 -52px;
+	height:4px
+}
+
+.cl_footer_slice {
+	background:url('../images/msdn2010branding-stripe.png') repeat-x scroll 0 -56px;
+	height:41px
+}
+
+.cl_lightweight_selected_tab_repeatX {
+	background:url('../images/msdn2010branding-stripe.png') no-repeat scroll 0 -97px;
+	height:16px;
+	overflow:hidden
+}
+
+.cl_lightweight_header_leftSection_wave {
+	background:url('../images/msdn2010branding-stripe.png') no-repeat scroll 0 -113px;
+	height:29px;
+	overflow:hidden
+}
+
+.cl_lightweight_header_rightSection_wave {
+	background:url('../images/msdn2010branding-stripe.png') no-repeat scroll 0 -142px;
+	height:29px;
+	overflow:hidden
+}
+
+body {
+	margin:0;
+	font-family:'Segoe UI', Verdana, Arial;
+	font-size:0.8em;
+	color:#000;
+	font-style:normal;
+	padding-right:0;
+	padding-left:0;
+	word-wrap:break-word;
+}
+
+a:link {
+	color:#1364c4;
+	text-decoration:none
+}
+
+a:hover {
+	text-decoration:underline !important
+}
+
+a:visited {
+	color:#960bb4;
+	text-decoration:none
+}
+
+img {
+	border:0
+}
+
+.h1, h1 {
+	margin:0;
+	font-family:'Segoe UI', Verdana, Arial;
+	font-size:1.5em;
+	color:#3f529c;
+	font-weight:bold
+}
+
+.h2, h2 {
+	font-family:'Segoe UI', Verdana, Arial;
+	font-size:1.3em;
+	color:#3f529c;
+	font-weight:bold
+}
+
+.h3, h3 {
+	font-family:'Segoe UI', Verdana, Arial;
+	font-size:1.1em;
+	color:#3f529c;
+	font-weight:bold
+}
+
+.title table {
+	font-family:'Segoe UI', Verdana, Arial;
+	font-size:1.1em;
+	color:#000;
+	font-style:normal
+}
+
+table {
+	border-style:solid;
+	border-width:1px;
+	border-color:#bbb;
+	border-collapse:collapse
+}
+
+table th {
+	border-style:solid;
+	border-width:1px;
+	border-color:#bbb
+}
+
+table td {
+	border-style:solid;
+	border-width:1px;
+	border-color:#bbb
+}
+
+.borderLine {
+	border-width:1px;
+	border-color:#e5e5e5
+}
+
+.orange {
+	color:#e66a38
+}
+
+.black {
+	color:#000
+}
+
+.blueLink {
+	color:#1364c4
+}
+
+.blueTitle {
+	color:#3f529c
+}
+
+.gray {
+	color:#7d7d7d
+}
+
+.header {
+}
+
+.footer {
+	float:none;
+	clear:both
+}
+
+.navigation {
+	border-right:1px Solid #bbb;
+	margin-right:-1px;
+	float:left;
+	overflow:hidden;
+	width:280px;
+	vertical-align:top;
+	text-align:left;
+	padding-bottom:96px
+}
+
+.searchBoxContainer {
+	border:none;
+	height:23px;
+	margin:13px;
+	padding:0;
+	white-space:nowrap;
+	width:256px;
+}
+
+.SearchButton {
+	margin-left:1px;
+	vertical-align:middle;
+	margin-top:2px;
+	border:solid 0 #000;
+	text-decoration:none;
+	cursor:pointer;
+	border-width:0;
+	position:relative;
+	overflow:hidden;
+	width:19px;
+	height:19px;
+	display:inline-block
+}
+
+.SearchButton img, .SearchButton input {
+	position:absolute;
+	margin:0;
+	padding:0;
+	width:auto;
+	height:auto
+}
+
+.SearchPanel {
+	float:left;
+	font-style:italic
+}
+
+.searchBox {
+	border: none;
+	width:100%;
+}
+
+.searchBox td {
+	border:none;
+	margin:0;
+	padding:0;
+}
+
+.searchBox td.searchTextBoxTd {
+	width:100%;
+}
+
+.searchBox td.searchButtonTd {
+	width:19px;
+}
+
+.searchTextBox {
+	border:1px solid white;
+	margin: 0;
+	width:100%;
+}
+
+.cl_slice_Search a {
+	display: block;
+	overflow: hidden;
+	width: 19px;
+	height: 19px;
+	position: relative;
+	padding: 0pt;
+	margin: 0pt;
+}
+.cl_search_icon {
+	left:-272px;
+	top:-3px;
+	position: relative;
+}
+
+.nav {
+	padding-top:8px;
+	padding-bottom:13px
+}
+
+.nav a {
+	text-decoration:none;
+	text-align:left;
+	white-space:nowrap;
+	overflow:hidden;
+	padding-top:4pt;
+	padding-bottom:4pt
+}
+
+.nav a:hover {
+	text-decoration:underline
+}
+
+.nav .toclevel0 {
+	padding-left:13px
+}
+
+.nav .toclevel1 {
+	padding-left:23px
+}
+
+.nav .toclevel2 {
+	padding-left:29px
+}
+
+.nav .ancestry {
+}
+
+.nav .current {
+}
+
+.nav .current a {
+	font-weight:bold;
+	color:#e66a38
+}
+
+.nav .children {
+	padding-bottom:13px
+}
+
+.nav .related {
+	padding-top:5px;
+	padding-left:13px;
+	float:left
+}
+
+.nav .related .subheader {
+	color:#3f529c;
+	font-weight:bold;
+	padding-bottom:5px
+}
+
+.nav .navSeperator {
+	height:4px;
+	width:100%;
+	float:left
+}
+
+.contentPlaceHolder {
+	border-width:1px;
+	text-align:left;
+	width:100%;
+	border-bottom-style:none;
+	overflow:hidden
+}
+
+.content {
+	padding-top:13px;
+	text-align:left;
+	border-width:1px;
+	overflow:hidden;
+	width:auto;
+	border-left:1px solid #bbb;
+	border-bottom:0
+}
+
+.content .summary {
+	color:#000
+}
+
+.logo {
+	float:right;
+	margin-right:13px;
+	margin-left:50px
+}
+
+.topicContainer {
+	padding-left:13px;
+	padding-right:13px;
+	padding-bottom:96px
+}
+
+.topicContainer .topic {
+}
+
+.topicContainer .topic #mainSection {
+	padding-top:30px
+}
+
+.topicContainer .topic .title {
+	font-family:'Segoe UI', Verdana, Arial;
+	font-size:1.65em;
+	color:#3f529c;
+	font-weight:bold
+}
+
+.topicContainer .topic .majorTitle {
+	font-weight:bold;
+	color:#5d5d5d;
+	margin: 0;
+}
+
+.topicContainer table {
+	width:100%
+}
+
+.topicContainer table th {
+	background-color:#e5e5e5;
+	padding-right:4px;
+	padding-left:4px;
+	padding-bottom:4px;
+	padding-top:4px;
+	text-align:left;
+	height:21px;
+	font-family:'Segoe UI', Verdana, Arial;
+	font-size:1.1em;
+	color:#000;
+	font-style:normal;
+	font-weight:normal
+}
+
+.topicContainer table th.iconColumn {
+	width:75px
+}
+
+.topicContainer table tr {
+	vertical-align:top
+}
+
+.topicContainer table td {
+	background-color:#fff;
+	line-height:140%;
+	padding-right:4px;
+	padding-left:4px;
+	padding-bottom:4px;
+	margin:1px;
+	padding-top:4px
+}
+
+.topicContainer table td.imageCell {
+	white-space:nowrap
+}
+
+.topicEndLine {
+	clear:both
+}
+
+.hierarchy ul li {
+	list-style-type:none
+}
+
+.hierarchy {
+	margin-left:-26px
+}
+
+.LW_CollapsibleArea_TitleDiv {
+	margin-top:19px;
+	margin-bottom:19px
+}
+
+.LW_CollapsibleArea_Title {
+	font-family:'Segoe UI', Verdana, Arial;
+	font-size:1.5em;
+	color:#3f529c;
+	font-weight:bold;
+	float:left;
+	margin: 0;
+}
+
+.LW_CollapsibleArea_HrDiv {
+	padding-top:12px
+}
+
+.LW_CollapsibleArea_Hr {
+	border-bottom:#e5e5e5 1px solid;
+	border-left:none;
+	border-top:none;
+	border-right:none;
+	color:#e5e5e5;
+	margin-left:4px
+}
+
+.paging {
+	display:inline
+}
+
+.paging .page {
+	padding-right:3px;
+	padding-left:3px;
+	color:#1364c4
+}
+
+.paging a:hover {
+	color:#e66a38
+}
+
+.paging .rangeStart, .paging .rangeEnd, .paging .totalCount {
+	font-weight:bold
+}
+
+.paging .currentPage {
+	padding-right:3px;
+	padding-left:3px;
+	border:1px solid #bbb;
+	color:#e66a38;
+	font-weight:bold;
+	background-color:#eff5ff;
+	min-height:15px;
+	min-width:15px
+}
+
+.LW_CodeSnippetContainerTabs {
+	vertical-align:middle;
+	font-family:'Segoe UI', Verdana, Arial;
+	font-size:10pt!important;
+	height:22px;
+	position:relative;
+	z-index:1
+}
+
+.LW_CodeSnippetContainerTabLeft, .LW_CodeSnippetContainerTabRight, .LW_CodeSnippetContainerTabLeftActive, .LW_CodeSnippetContainerTabRightActive {
+	width:6px;
+	height:20px;
+	float:left;
+	border-bottom:solid 2px #d0d2d2
+}
+
+.LW_CodeSnippetContainerTabLeft {
+}
+
+.LW_CodeSnippetContainerTabRight {
+}
+
+.LW_CodeSnippetContainerTabLeftActive {
+	border-bottom:none
+}
+
+.LW_CodeSnippetContainerTabRightActive {
+	border-bottom:none
+}
+
+.LW_CodeSnippetContainerTabFirst, .LW_CodeSnippetContainerTabLast, .LW_CodeSnippetContainerTab, .LW_CodeSnippetContainerTabActiveFirst, .LW_CodeSnippetContainerTabActiveLast, .LW_CodeSnippetContainerTabActive {
+	height:19px;
+	float:left;
+	width:auto;
+	border-top:solid 1px #bbb;
+	border-bottom:solid 2px #d0d2d2;
+	padding:0 8px 0 8px;
+	background:#eff5ff
+}
+
+.LW_CodeSnippetContainerTabFirst, .LW_CodeSnippetContainerTabActiveFirst {
+	padding:0 8px 0 6px
+}
+
+.LW_CodeSnippetContainerTabLast, .LW_CodeSnippetContainerTabActiveLast {
+	padding:0 6px 0 8px
+}
+
+.LW_CodeSnippetContainerTabActiveFirst, .LW_CodeSnippetContainerTabActiveLast, .LW_CodeSnippetContainerTabActive {
+	background:#fff;
+	border-bottom:solid 2px #fff
+}
+
+.LW_CodeSnippetContainerTab, .LW_CodeSnippetContainerTabActive, .LW_CodeSnippetContainerTabLast, .LW_CodeSnippetContainerTabActiveLast {
+	border-left:solid 1px #929292
+}
+
+.LW_CodeSnippetContainerTabActiveFirst a, .LW_CodeSnippetContainerTabActiveLast a, .LW_CodeSnippetContainerTabActive a {
+	color:#e66a38;
+	text-decoration:none
+}
+
+.LW_CodeSnippetContainerTab a, .LW_CodeSnippetContainerTab a:link, .LW_CodeSnippetContainerTab a:visited, .LW_CodeSnippetContainerTab a:active {
+	color:#1364c4;
+	text-decoration:none
+}
+
+.LW_CodeSnippetContainerTab a:hover {
+	color:#e66a38
+}
+
+.LW_CodeSnippetContainerTabFirst a:link, .LW_CodeSnippetContainerTabFirst a:visited, .LW_CodeSnippetContainerTabFirst a:active, .LW_CodeSnippetContainerTabLast a:link, .LW_CodeSnippetContainerTabLast a:visited, .LW_CodeSnippetContainerTabLast a:active {
+	color:#1364c4;
+	text-decoration:none
+}
+
+.LW_CodeSnippetContainerTabFirst a:hover, .LW_CodeSnippetContainerTabLast a:hover {
+	color:#e66a38
+}
+
+.LW_CodeSnippetToolBar {
+	width:auto;
+	height:auto;
+	border-top:solid 3px #e5e5e5;
+	border-left:solid 1px #bbb;
+	border-right:solid 3px #e5e5e5
+}
+
+.LW_CodeSnippetToolBarText {
+	float:right;
+	top:-10px;
+	position:relative;
+	background-color:#fff;
+	width:auto;
+	padding-left:4px;
+	padding-right:4px;
+	height:0
+}
+
+.LW_CodeSnippetToolBarText a:link, .LW_CodeSnippetToolBarText a:visited, .LW_CodeSnippetToolBarText a:active {
+	margin-left:5px;
+	margin-right:5px;
+	text-decoration:none;
+	color:#1364c4;
+	font-family:'Segoe UI', Verdana, Arial;
+	font-size:10pt;
+	background-color:White;
+	padding-left:4px;
+	padding-right:4px
+}
+
+.LW_CodeSnippetToolBarText a:hover {
+	margin-left:5px;
+	margin-right:5px;
+	text-decoration:none;
+	color:#e66a38;
+	font-family:'Segoe UI', Verdana, Arial;
+	font-size:10pt;
+	padding-left:4px;
+	padding-right:4px
+}
+
+.LW_CodeSnippetContainerCodeCollection {
+	border-left:solid 1px #bbb;
+	border-bottom:solid 3px #e5e5e5;
+	border-right:solid 1px #e5e5e5;
+	clear:both;
+	margin-bottom:12px;
+	position:relative;
+	top:-3px
+}
+
+.LW_CodeSnippetContainerCode {
+	width:auto;
+	margin:0;
+	padding-right:21px;
+	padding-left:21px
+}
+
+.LW_CodeSnippetContainerTabLinkBold {
+	font-weight:bold!important
+}
+
+.LW_CodeSnippetContainerTabLinkNormal {
+	font-weight:normal!important
+}
+
+.LW_CodeSnippetContainerCode div {
+	padding:0;
+	margin:0
+}
+
+.LW_CodeSnippetContainerCode pre {
+	padding:5px;
+	margin:0;
+	font-family:Consolas, Courier, monospace;
+	word-break:break-all;
+	word-wrap:break-word;
+	font-style:normal;
+	font-weight:normal
+}
+
+.topicContainer .alert {
+	border-style:solid;
+	border-width:1px;
+	border-color:#bbb;
+	background-color:#fcfec5
+}
+
+.topicContainer .alert table {
+	border-width:0
+}
+
+.topicContainer .alert th {
+	background-color:#fcfec5;
+	border-width:0;
+	border-collapse:collapse;
+	border-spacing:0;
+	border-style:hidden;
+	padding-top:10px;
+	padding-left:11px;
+	padding-right:11px;
+	padding-bottom:1px;
+	font-weight:bold
+}
+
+.topicContainer .alert td {
+	background-color:#fcfec5;
+	border-width:0;
+	padding-top:1px;
+	padding-bottom:10px;
+	padding-left:11px;
+	padding-right:11px
+}
+
+.topicContainer .alert img {
+	padding-right:5px
+}
+
+.topicContainer .alert p {
+	margin:0
+}
+
+.Error {
+	padding-top:13px;
+	padding-left:13px;
+	padding-bottom:96px;
+	font-family:"Segoe UI", Verdana, Arial
+}
+
+.Error .titleContainer .pageTitle {
+	line-height:34px
+}
+
+.Error .body {
+	font-size:10pt;
+	padding-right:13px;
+	padding-top:48px
+}
+
+.contentNotFound {
+	padding-top:13px;
+	padding-left:13px
+}
+
+.contentNotFound .image {
+	float:right;
+	padding-right:13px
+}
+
+.contentNotFound .sectionHeader {
+	float:left;
+	padding-bottom:18px
+}
+
+.contentNotFound .mainMessage {
+	clear:both
+}
+
+.contentNotFound .searchcontainer .Search {
+	margin:0
+}
+
+.contentNotFound .subMessage .badRequestAddress {
+	color:#7d7d7d
+}
+
+.contentNotFound .subMessage .badRequestAddress .pageIdHighlight {
+	color:#e66a38;
+	font-weight:bold
+}
+
+.searchContent {
+	padding-top:17px;
+	padding-right:13px;
+	padding-bottom:96px;
+	padding-left:13px
+}
+
+.searchContent .line {
+	border-top-style:solid;
+	border-top-width:1px;
+	border-top-color:#bfbfbf;
+	margin-top:16px;
+	margin-bottom:22px;
+	height:1px
+}
+
+.searchContent .sectionHeader {
+	padding-bottom:13px
+}
+
+.searchContent .pageTitle {
+	padding-bottom:20px
+}
+
+.searchContent .Search {
+	width:256px;
+	margin-left:0;
+	margin-right:0;
+	height:24px;
+	padding-top:0;
+	border-width:0
+}
+
+.searchContent .info {
+	padding-top:16px;
+	padding-bottom:24px
+}
+
+.searchContent .info .term {
+	color:#e66a38;
+	font-weight:bold;
+	padding-right:15px
+}
+
+.searchContent .info .invalidTerm {
+	color:#000;
+	font-weight:bold
+}
+
+.searchContent .info .page {
+	padding-right:3px;
+	padding-left:3px;
+	color:#1364c4
+}
+
+.searchContent .info a:hover {
+	color:#e66a38
+}
+
+.searchContent .info .rangeStart, .searchContent .info .rangeEnd, .searchContent .info .totalCount {
+	font-weight:bold
+}
+
+.searchContent .info .currentPage {
+	padding-right:3px;
+	padding-left:3px;
+	border:1px solid #bbb;
+	color:#e66a38;
+	font-weight:bold;
+	background-color:#eff5ff;
+	min-height:15px;
+	min-width:15px
+}
+
+.searchContent .results {
+}
+
+.searchContent .results .result {
+	padding-top:5px;
+	padding-bottom:5px
+}
+
+.searchContent .results .result a {
+	color:#1364c4;
+	font-weight:bold
+}
+
+.searchContent .results .result a:visited {
+	color:#960bb4;
+	text-decoration:none
+}
+
+.searchContent .results .result .abstract {
+}
+
+.searchContent .results .result .url {
+	color:#7d7d7d;
+	font-style:italic
+}
+
+.searchContent .tips {
+	padding-top:32px
+}
+
+.searchContent .tips .tipsHeading {
+	padding-top:26px;
+	font-weight:bold
+}
+
+.searchContent .tips ul {
+	padding-left:0;
+	list-style-type:none;
+	margin-top:0
+}
+
+.contentNotFoundNoResults {
+	padding-bottom:96px
+}
+
+.CommunityContent {
+	padding-bottom:96px
+}
+
+.CommunityContentHeader a {
+	margin-left:13px
+}
+
+.CommunityContentContainer {
+	border-top-style:solid;
+	border-top-width:1px;
+	border-top-color:#bbb;
+	border-left-color:#bbb
+}
+
+.CommunityContentHeader {
+	padding-left:13px;
+	padding-top:13px;
+	padding-bottom:13px;
+	border-bottom:1px;
+	border-bottom-color:#e5e5e5;
+	border-bottom-style:solid
+}
+
+.CommunityContentHeaderTitleContainer {
+	float:left
+}
+
+.CommunityContentHeaderTitle {
+	font-weight:bold;
+	color:#389a4c
+}
+
+.communityContentNavigation {
+	margin-left:13px
+}
+
+.communityContentNavigationSeparator {
+	padding-top:17px
+}
+
+.communityContentNavigationHeader {
+	padding-top:13px;
+	color:#389a4c;
+	font-weight:bold
+}
+
+.communityContentNavigationPost {
+	clear:both;
+	margin-top:14px;
+	padding-right:13px
+}
+
+.communityContentNavigationAvatarContainer {
+	float:left
+}
+
+.communityContentNavigationLinkAvatar img {
+	margin-right:13px;
+	margin-top:4px;
+	float:left;
+	border-top-color:#bbb;
+	border-right-color:#bbb;
+	border-bottom-color:#bbb;
+	border-left-color:#bbb;
+	border-width:1px;
+	border-top-style:solid;
+	border-right-style:solid;
+	border-bottom-style:solid;
+	border-left-style:solid;
+	overflow:hidden
+}
+
+.communityContentNavigationLinkAbstract {
+	float:none;
+	margin-left:51px;
+	color:#1364c4
+}
+
+.communityContentNavigationLinkAbstractAdvertisement {
+	float:none;
+	color:#1364c4
+}
+
+.communityContentNavigationLinkAbstractAdvertisement ul {
+	list-style-type:none;
+	margin-top:0;
+	padding-top:0
+}
+
+.communityContentNavigationLink {
+	float:none;
+	color:Black;
+	font-size:.86em
+}
+
+.communityContentNavigationLink ul {
+	list-style-type:none;
+	margin-top:0
+}
+
+.communityContentNavigationLink ul p {
+	clear:none;
+	vertical-align:top;
+	margin-top:0
+}
+
+.communityContentNavigationLink a:link {
+	font-weight:bold;
+	white-space:normal
+}
+
+.communityContentNavigationLink a:visited {
+	font-weight:bold;
+	text-decoration:none
+}
+
+.communityContentNavigationLink a:hover {
+	text-decoration:underline
+}
+
+.communityContentNavigationMoreLink {
+	float:right;
+	margin-right:4px;
+	margin-bottom:6px
+}
+
+.CommunityContentFaq {
+	float:right;
+	padding-right:13px;
+	vertical-align:bottom;
+	padding-top:4px
+}
+
+.CommunityContentFaq img {
+	vertical-align:bottom
+}
+
+.Annotation {
+}
+
+.AnnotationTitle {
+	padding-left:13px;
+	padding-top:13px;
+	padding-bottom:13px;
+	padding-right:13px
+}
+
+.AnnotationTitle a {
+}
+
+.AnnotationBody {
+	word-wrap:break-word;
+	padding-left:13px
+}
+
+.AnnotationHistory {
+	padding-right:13px;
+	text-align:right
+}
+
+.AnnotationComplete {
+	clear:both;
+	width:100%
+}
+
+.AnnotationAddedContainer {
+}
+
+.AnnotationEditedContainer {
+	float:right;
+	padding-top:9px;
+	padding-bottom:0;
+	margin-bottom:0
+}
+
+.AnnotationEditedContainer ul {
+	margin-top:8px;
+	padding-top:5px;
+	margin-right:5px;
+	margin-left:0;
+	padding-left:0
+}
+
+.AnnotationAddedContainer ul {
+	margin-top:16px;
+	padding-top:14px;
+	margin-right:5px;
+	margin-left:0;
+	padding-left:0
+}
+
+.HistoryGraphic {
+	margin-top:11px;
+	text-align:right
+}
+
+.ModificationHistory {
+	height:60px
+}
+
+.ModificationHistory ul {
+	margin-top:0;
+	list-style-type:none;
+	float:right;
+	padding-right:5px;
+	text-align:right
+}
+
+.AddedUserAvatar {
+	margin-top:9px;
+	border:1px solid #bbb;
+	float:right;
+	height:34px;
+	width:34px;
+	margin-right:13px
+}
+
+.EditedUserAvatar {
+	margin-top:9px;
+	border:1px solid #bbb;
+	height:25px;
+	width:25px;
+	float:right;
+	margin-right:26px
+}
+
+.CreateProfileWrapper {
+	margin-top:13px
+}
+
+.CreateProfileContainer {
+	color:#000;
+	margin-left:13px;
+	margin-right:13px
+}
+
+.CreateProfileContainer .image {
+	padding-top:13px
+}
+
+.CreateProfileContainer .separator {
+	border-bottom:#dedede 1px solid;
+	border-left:none;
+	border-top:none;
+	border-right:none;
+	color:#dedede
+}
+
+.CreateProfileContainer .Intro {
+	float:left;
+	display:inline
+}
+
+.CreateProfileContainer .Intro .Title {
+	display:inline
+}
+
+.CreateProfileContainer .Intro .Subtitle {
+	color:#7d7d7d;
+	display:inline
+}
+
+.CreateProfileContainer .Text {
+	clear:both;
+	padding-top:37px
+}
+
+.CreateProfileContainer .Step1 .Title {
+	color:#3f529c;
+	font-weight:bold
+}
+
+.CreateProfileContainer .Step1 .Subtitle {
+	color:#7d7d7d;
+	font-weight:bold
+}
+
+.CreateProfileContainer .Step2 .Title {
+	color:#3f529c;
+	font-weight:bold
+}
+
+.CreateProfileContainer .Step2 .Subtitle {
+	color:#7d7d7d;
+	font-weight:bold
+}
+
+.CreateProfileContainer .ButtonContainer {
+	margin-top:30px;
+	margin-bottom:96px
+}
+
+.CreateProfileContainer .Step1 .UsernameTextBox {
+	border:1px solid #bbb;
+	height:20px;
+	width:427px;
+	color:#7d7d7d;
+	font-style:italic;
+	padding-left:13px
+}
+
+.CreateProfileContainer .Step1 .NonEmptyUsernameTextBox {
+	border:1px solid #bbb;
+	height:20px;
+	width:427px;
+	padding-left:13px
+}
+
+.CreateProfileContainer .DisplayNameTextBox {
+	border:1px solid #bbb;
+	color:#7d7d7d;
+	font-style:italic;
+	height:20px;
+	width:427px;
+	padding-left:13px
+}
+
+.CreateProfileContainer .NonEmptyDisplayNameTextBox {
+	border:1px solid #bbb;
+	height:20px;
+	width:427px;
+	padding-left:13px
+}
+
+.AddCommunityContentContainer {
+	padding-top:13px;
+	padding-left:13px;
+	padding-bottom:96px
+}
+
+.AddCommunityContentContainer .image {
+	float:right;
+	padding-top:13px
+}
+
+.AddCommunityContentContainer .AddCommunityContentContainerHeader {
+}
+
+.AddCommunityContentContainer .AddCommunityContentTopicTitle {
+	color:#000;
+	margin-top:19px;
+	margin-bottom:19px
+}
+
+.AddCommunityContentContainer .TitleTextBox {
+	border:1px solid #bbb;
+	color:#7d7d7d;
+	font-style:italic;
+	height:20px;
+	width:427px;
+	padding-left:13px;
+	padding-top:3px
+}
+
+.AddCommunityContentContainer .NonEmptyTitleTextBox {
+	border:1px solid #bbb;
+	color:#000;
+	font-style:normal;
+	height:20px;
+	width:427px;
+	padding-left:13px;
+	padding-top:3px
+}
+
+.AddCommunityContentContainer .ContentTextBoxContainer {
+	margin-top:19px
+}
+
+.AddCommunityContentContainer .ButtonContainer {
+	margin-top:16px
+}
+
+.AddCommunityContentContainer .ButtonContainer #SubmitButton, .AddCommunityContentContainer .ButtonContainer #CancelButton {
+	margin-right:13px
+}
+
+.AddEditErrorContainer {
+	padding-top:22px
+}
+
+.CommunityContentHistoryContainer {
+	padding-left:13px;
+	margin-top:18px;
+	padding-bottom:96px
+}
+
+.CommunityContentHistoryContainer .HistoryPageTitle {
+	word-wrap:break-word
+}
+
+.CommunityContentHistoryContainer .HistoryPageTitle .HistoryText {
+}
+
+.CommunityContentHistoryContainer .HistoryPageTitle .HistoryPostText {
+	color:#7d7d7d;
+	padding-right:13px;
+	word-wrap:break-word
+}
+
+.CommunityContentHistoryContainer .CloseHistoryVersion {
+	padding-right:13px
+}
+
+.CommunityContentHistoryContainer .OpenHistoryVersion {
+	padding-right:13px
+}
+
+.CommunityContentHistoryContainer .HistoryTopicTitle {
+	color:#000;
+	padding-top:13px;
+	padding-bottom:13px
+}
+
+.CommunityContentHistoryContainer .HistoryVersionWrapper {
+	padding-right:13px
+}
+
+.CommunityContentHistoryContainer .HistoryVersion {
+	border-top-style:solid;
+	border-top-width:1px;
+	border-top-color:#dedede
+}
+
+.CommunityContentHistoryContainer .HistoryLastVersion {
+	border-bottom-style:solid;
+	border-bottom-width:1px;
+	border-bottom-color:#dedede;
+	height:0
+}
+
+.CommunityContentHistoryContainer .HistoryVersionExpanded {
+	background-color:#eaf4ff;
+	border-top-style:solid;
+	border-top-width:1px;
+	border-top-color:#dedede;
+	word-wrap:break-word
+}
+
+.CommunityContentHistoryContainer hr {
+	font-size:1px;
+	color:#dedede;
+	padding-right:13px
+}
+
+.CommunityContentHistoryContainer .HistoryModificationItems {
+	padding-top:13px;
+	padding-bottom:13px
+}
+
+.CommunityContentHistoryContainer .HistoryModificationOn {
+	padding-left:11px
+}
+
+.CommunityContentHistoryContainer .HistoryDiscription {
+	padding-bottom:22px;
+	word-wrap:break-word;
+	padding-right:13px
+}
+
+.CommunityContentHistoryContainer .ArrowGraphicDown {
+	background:url('/Hash/80c7c62937c18329b000793bd90f7715.gif') no-repeat;
+	height:8px;
+	width:9px;
+	padding-left:5px;
+	padding-top:3px;
+	cursor:pointer
+}
+
+.CommunityContentHistoryContainer .ArrowGraphicUp {
+	background:url('/Hash/4b6a8d71112da9e1251f9d4d0c7f4d00.gif') no-repeat;
+	height:8px;
+	width:9px;
+	padding-left:5px;
+	padding-top:3px;
+	cursor:pointer
+}
+
+.CommunityContentHistoryContainer .HistoryCollapsed {
+	display:none;
+	padding-bottom:22px
+}
+
+.CommunityContentHistoryContainer .HistoryExpanded {
+	padding-left:27px;
+	padding-top:22px;
+	padding-bottom:22px
+}
+
+.CommunityContentHistoryContainer .HistoryVersionTitle {
+	color:#7d7d7d;
+	font-weight:bold;
+	padding-left:27px;
+	word-wrap:break-word
+}
+
+.CommunityContentHistoryContainer .HistoryModifiedNormal {
+	color:#1364c4
+}
+
+.CommunityContentHistoryContainer .HistoryModifiedBold {
+	color:#1364c4;
+	font-weight:bold
+}
+
+.FeedbackButton {
+	position:relative;
+	overflow:hidden;
+	width:20px;
+	height:21px;
+	display:inline-block;
+	margin-left:5px
+}
+
+.FeedbackLink {
+	display:inline-block;
+	vertical-align:top
+}
+
+.FeedbackButton img, .FeedbackButton input {
+	position:absolute;
+	margin:0;
+	padding:0;
+	width:auto;
+	height:auto
+}
+
+.FeedbackContainer {
+	position:absolute;
+	border:1px solid #7d7d7d;
+	min-height:35em;
+	width:24.8em;
+	background-color:White;
+	display:none;
+	top:50%;
+	margin-top:-17.5em;
+	left:50%;
+	margin-left:-26em
+}
+
+.FeedbackContainer .FeedbackTitleContainer {
+	font-size:1.24em;
+	color:#646364;
+	font-weight:bold;
+	padding-left:11px;
+	background-color:#f4b432;
+	height:1.5em
+}
+
+.FeedbackContainer .FeedbackTitle {
+	float:left
+}
+
+.FeedbackContainer .FeedbackCancel {
+	float:right;
+	text-align:right;
+	padding-right:10px;
+	cursor:pointer
+}
+
+.FeedbackContainer .FeedbackCancel a:link, .FeedbackContainer .FeedbackCancel a:hover, .FeedbackContainer .FeedbackCancel a:visited {
+	color:#646364;
+	text-decoration:none
+}
+
+.FeedbackContainer .FeedbackData {
+	padding-left:10px;
+	padding-right:10px
+}
+
+.FeedbackContainer .FeedbackInfoText {
+	padding-top:11px;
+	font-size:1.08em;
+	color:#5a5a5a
+}
+
+.FeedbackContainer .QuestionText {
+	margin-top:11px;
+	font-size:1.08em;
+	color:#2d2d2d
+}
+
+.FeedbackContainer .AnswerText {
+	vertical-align:bottom
+}
+
+.FeedbackContainer .FeedbackTextArea {
+	font-family:'Segoe UI', Verdana, Arial;
+	height:5.4em;
+	width:99%;
+	background-color:#f1f1f1;
+	border:solid 1px #dcdcdc;
+	overflow:hidden
+}
+
+.FeedbackContainer .FeedbackSubmit {
+	font-family:'Segoe UI', Verdana, Arial;
+	margin-top:11px;
+	float:right;
+	font-size:1.08em
+}
+
+.FeedbackContainer .FeedbackTextAreaContainer {
+}
+
+.FeedbackContainer .FeedbackSiderGraphic {
+}
+
+.FeedbackContainer .FeedbackGraphicHolder {
+	padding-top:11px;
+	padding-bottom:11px
+}
+
+.FeedbackContainer .RateRadio {
+	margin:0;
+	padding:0;
+	padding-left:40px
+}
+
+.FeedbackContainer .RateRadioOne {
+	margin:0;
+	padding:0
+}
+
+.FeedbackContainer .RadioButton {
+	margin:0;
+	padding:0
+}
+
+.FeedbackContainer .TellUsMoreText {
+	clear:both;
+	padding-top:11px
+}
+
+.FeedbackContainer .FeedbackCollapse {
+	display:none
+}
+
+.FeedbackContainer .RadioButtonHolder {
+	height:22px
+}
+
+.localeSwitcher .titleContainer .expDescription {
+	clear:both;
+	color:#7d7d7d
+}
+
+.localeSwitcher .bodyContainer {
+	padding:0;
+	margin-top:30px
+}
+
+.localeSwitcher .bodyContainer ul {
+	margin:19px 0 30px 13px;
+	padding:0
+}
+
+.localeSwitcher .bodyContainer ul {
+	color:#3f529c
+}
+
+.switchExperience, .localeSwitcher {
+	padding-left:13px;
+	padding-bottom:96px
+}
+
+.switchExperience .bodyContainer .radioButton {
+	float:left
+}
+
+.switchExperience .bodyContainer, .localeSwitcher .bodyContainer {
+	padding-left:13px
+}
+
+.switchExperience .expTitleHeight, .localeSwitcher .expTitleHeight {
+	float:left;
+	padding-top:13px
+}
+
+.switchExperience .titleContainer .image, .localeSwitcher .titleContainer .image {
+	padding-top:13px;
+	float:right
+}
+
+.switchExperience .titleContainer .expDescription {
+	clear:both;
+	padding-top:41px;
+	padding-bottom:13px
+}
+
+.switchExperience .bodyContainer .radioButtonText {
+	font-weight:bold;
+	overflow:hidden;
+	padding-left:13px
+}
+
+.switchExperience .bodyContainer .radioButtonDesc {
+	padding-left:32px;
+	padding-top:3px;
+	padding-bottom:26px
+}
+
+.switchExperience .buttonContainer .button {
+	width:70px
+}
+
+.userPage .navigation {
+	border:none;
+	padding-left:13px;
+	padding-top:13px;
+	min-width:15.38em;
+	max-width:30em;
+	width:auto
+}
+
+.userPage .content {
+	border:none;
+	padding-left:13px
+}
+
+.userPage .userImage {
+	width:2.5em;
+	height:2.5em;
+	border:1px solid #bbb;
+	vertical-align:middle;
+	margin:0
+}
+
+.userPage .displayName {
+	margin:0;
+	padding:0;
+	padding-left:10px;
+	display:inline;
+	vertical-align:middle
+}
+
+.userPage .profileText {
+	clear:both;
+	display:block;
+	padding-top:6px;
+	padding-bottom:6px
+}
+
+.userPage .statisticsHeader {
+	color:#389a4d;
+	font-weight:bold
+}
+
+.userPage .navigation .statisticsSeprator {
+	border-top:1px solid #e5e5e5;
+	margin:10px 26px 10px 0
+}
+
+.userPage p {
+	margin:0;
+	padding:0
+}
+
+.userPage .activityTitle {
+	color:#389a4d;
+	display:block;
+	padding:0;
+	margin:0;
+	padding:0;
+	display:inline;
+	float:left
+}
+
+.userPage .userPostContainer {
+	clear:both;
+	padding-top:27px;
+	padding-right:13px
+}
+
+.userPage .lastModified {
+	color:#7d7d7d
+}
+
+.userPage .pager {
+	margin-top:27px;
+	margin-bottom:96px
+}
+
+.userPage .pager .rangeStart {
+	font-weight:bold
+}
+
+.userPage .pager .rangeEnd {
+	font-weight:bold
+}
+
+.userPage .pager .totalCount {
+	font-weight:bold
+}
+
+.multiViewDetails {
+	margin-top:15px
+}
+
+.multiViewItemHeading {
+	margin-top:15px;
+	font-style:italic;
+	margin-bottom:3px
+}
+
+.multiViewDetails .multiViewItem th {
+	font-size:.9em;
+	vertical-align:middle
+}
+
+.multiViewTableEnd {
+	clear:both
+}
+
+.multiViewTable .multiViewNavItem {
+	padding-top:2px;
+	padding-bottom:2px;
+	border-top:#69c 1px solid
+}
+
+.field-validation-error {
+	color:#900;
+	font-weight:bold
+}
+
+.lw_mt_Disclaimer {
+	clear:both;
+	border-style:solid;
+	border-width:3px;
+	border-color:#fc9;
+	margin:5px;
+	padding:5px
+}
+
+div.mtps-table {
+	display:inline-table
+}
+
+div.mtps-thead {
+	display:table-header-group
+}
+
+span.mtps-caption {
+	display:table-caption;
+	padding:4pt
+}
+
+div.mtps-row {
+	display:table-row;
+	padding:4pt
+}
+
+span.mtps-cell {
+	display:table-cell;
+	padding:4pt
+}
+
+span.mtps-th {
+	display:table-cell;
+	padding:4pt
+}
+
+.MetricsContainer {
+	display:none
+}
+
+.radeditor td {
+	border:none
+}
+
+.headerBar {
+	margin:0;
+	padding:0;
+	height:30px;
+	width:100%;
+	font-size:1.0em;
+	font-family:"Segoe UI", Verdana, Arial;
+	color:#fff;
+	border:none;
+	border-bottom:1px #445a9d solid;
+	background-color:#362b60;
+	min-width:700px
+}
+
+.headerBar td {
+	border:none!important;
+	padding-top:6px
+}
+
+.headerBar a:link, .headerBar a:visited, .headerBar a:hover, .headerBar a:active {
+	color:#fff;
+	margin:0
+}
+
+.headerBar a:hover {
+	text-decoration:underline
+}
+
+.headerBar .leftSection {
+	width:100%
+}
+
+.headerBar .leftSectionImageClusterOverride {
+	background-repeat:no-repeat;
+	background-position:100% -113px;
+	height:auto
+}
+
+.headerBar .rightSection {
+	white-space:nowrap;
+	padding-right:13px
+}
+
+.headerBar .rightSectionImageClusterOverride {
+	height:23px;
+	overflow:inherit
+}
+
+.headerBar .rightSection .tabContainer, .headerBar .leftSection .tabContainer {
+	overflow:hidden;
+	height:23px;
+	width:auto
+}
+
+.headerBar .leftSection .tabContainer .headerTab, .headerBar .leftSection .tabContainer .headerTabSelected {
+	padding-left:13px;
+	padding-right:13px;
+	float:left;
+	margin-bottom:10px;
+	height:23px
+}
+
+.headerBar .leftSection .tabContainer .headerTabSelected {
+	background-color:#09a7e1;
+	background-repeat:no-repeat
+}
+
+.headerBar .rightSection .tabContainer .pipe {
+	padding-right:6px;
+	padding-left:6px
+}
+
+.footerContainer {
+	margin:0;
+	padding-left:0;
+	padding-right:0;
+	min-width:700px;
+	border-top-width:1px;
+	border-top-color:#bbb;
+	border-top-style:solid
+}
+
+.footerContainer .footerLogoContainer {
+	margin-left:13px;
+	margin-right:13px
+}
+
+.footerContainer .footerContent {
+	float:left;
+	margin-top:5px
+}
+
+.footerContainer .footerLogo {
+	float:right
+}
+
+.footerContainer .pipe {
+	color:#7d7d7d
+}
+
+.topicMetaVersion, .curversion {
+    color: #5D5D5D;
+    font-size: 1em;
+    font-weight: bold;
+}
+span.code {
+	font-family:	Monospace, Courier New, Courier;
+	font-size: 105%;
+	color:	#000066; 
+}
+/* Applies to table titles and subsection titles. */
+.subHeading
+{
+	font-weight:	bold;
+	margin-bottom:	4;
+	color:#3f529c;
+}
+span.parameterItalic {
+	font-style: italic;
+}
+.copyrightFooter
+{
+	font-weight:	bold;
+	margin-bottom:	4;
+	/*color:#3f529c;*/
+	color:#bbbbbb;
+	font-size: 12px;
+}
+.customCopyrightFooter
+{
+	font-weight:	normal;
+	margin-bottom:	4;
+	color:black;
+	font-size: 14px;
+}

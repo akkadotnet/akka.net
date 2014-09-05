@@ -1,4 +1,6 @@
-﻿namespace Akka.Actor
+﻿using System;
+
+namespace Akka.Actor
 {
     /// <summary>
     /// Class UntypedActor.

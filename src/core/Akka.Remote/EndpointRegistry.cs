@@ -34,11 +34,11 @@ namespace Akka.Remote
         public void RegisterWritableEndpointUid(ActorRef writer, int uid)
         {
             var address = writableToAddress[writer];
-            addressToWritable[address].Match()
-                .With<EndpointManager.Pass>(pass =>
-                {
-                    addressToWritable[address] = new EndpointManager.Pass(pass.Endpoint, uid);
-                });
+            if (addressToWritable[address] is EndpointManager.Pass)
+            {
+                var pass = (EndpointManager.Pass) addressToWritable[address];
+                addressToWritable[address] = new EndpointManager.Pass(pass.Endpoint, uid);
+            }
         }
 
         public ActorRef RegisterReadOnlyEndpoint(Address address, ActorRef endpoint)
@@ -53,16 +53,16 @@ namespace Akka.Remote
             if (IsWritable(endpoint))
             {
                 var address = writableToAddress[endpoint];
-                addressToWritable[address].Match()
-                    .With<EndpointManager.EndpointPolicy>(policy =>
+                if (addressToWritable[address] is EndpointManager.EndpointPolicy)
+                {
+                    var policy = addressToWritable[address];
+                    //if there is already a tombestone directive, leave it there
+                    //otherwise, remove this address from the writeable address range
+                    if (!policy.IsTombstone)
                     {
-                        //if there is already a tombestone directive, leave it there
-                        //otherwise, remove this address from the writeable address range
-                        if (!policy.IsTombstone)
-                        {
-                            addressToWritable.Remove(address);
-                        }
-                    });
+                        addressToWritable.Remove(address);
+                    }
+                }
                 writableToAddress.Remove(endpoint);
             }
             else if(IsReadOnly(endpoint))

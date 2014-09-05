@@ -123,7 +123,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Watch.
     /// </summary>
-    public sealed class Watch : SystemMessage
+    public class Watch : SystemMessage
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="Watch" /> class.

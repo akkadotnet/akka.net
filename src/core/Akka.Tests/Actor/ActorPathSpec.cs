@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using Akka.TestKit;
+using Xunit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -159,6 +160,28 @@ namespace Akka.Tests.Actor
         public void HaveCorrectPathElements()
         {
             (new RootActorPath(new Address("akka.tcp", "mysys")) / "user" / "foo" / "bar").Elements.ShouldOnlyContainInOrder(new[] { "user", "foo", "bar" });
+        }
+
+        [Fact]
+        public void PathsWithDifferentAddressesAndSameElementsShouldNotBeEqual()
+        {
+            ActorPath path1 = null;
+            ActorPath path2 = null;
+            ActorPath.TryParse("akka.tcp://remotesystem@localhost:8080/user",out path1);
+            ActorPath.TryParse("akka://remotesystem/user", out path2);
+
+            Assert.NotEqual(path2, path1);
+        }
+
+        [Fact]
+        public void PathsWithSameAddressesAndSameElementsShouldNotBeEqual()
+        {
+            ActorPath path1 = null;
+            ActorPath path2 = null;
+            ActorPath.TryParse("akka.tcp://remotesystem@localhost:8080/user", out path1);
+            ActorPath.TryParse("akka.tcp://remotesystem@localhost:8080/user", out path2);
+
+            Assert.Equal(path2, path1);
         }
     }
 }

@@ -3,12 +3,12 @@
 namespace Akka.Configuration.Hocon
 {
     /// <summary>
-    /// HOCON Substitution, e.g. $foo.bar
+    ///     HOCON Substitution, e.g. $foo.bar
     /// </summary>
     public class HoconSubstitution : IHoconElement, IMightBeAHoconObject
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="HoconSubstitution"/> class.
+        ///     Initializes a new instance of the <see cref="HoconSubstitution" /> class.
         /// </summary>
         /// <param name="path">The path.</param>
         public HoconSubstitution(string path)
@@ -17,19 +17,19 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// The full path to the value which should substitute this instance.
+        ///     The full path to the value which should substitute this instance.
         /// </summary>
         /// <value>The path.</value>
         public string Path { get; private set; }
 
         /// <summary>
-        /// The evaluated value from the Path property
+        ///     The evaluated value from the Path property
         /// </summary>
         /// <value>The resolved value.</value>
         public HoconValue ResolvedValue { get; set; }
 
         /// <summary>
-        /// Determines whether this instance is string.
+        ///     Determines whether this instance is string.
         /// </summary>
         /// <returns><c>true</c> if this instance is string; otherwise, <c>false</c>.</returns>
         public bool IsString()
@@ -38,7 +38,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Returns the value of this instance as a string.
+        ///     Returns the value of this instance as a string.
         /// </summary>
         /// <returns>System.String.</returns>
         public string GetString()
@@ -47,7 +47,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether this instance is array.
+        ///     Determines whether this instance is array.
         /// </summary>
         /// <returns><c>true</c> if this instance is array; otherwise, <c>false</c>.</returns>
         public bool IsArray()
@@ -56,7 +56,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Returns the value of this instance as an array.
+        ///     Returns the value of this instance as an array.
         /// </summary>
         /// <returns>IList&lt;HoconValue&gt;.</returns>
         public IList<HoconValue> GetArray()
@@ -65,7 +65,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether this instance is an HOCON object.
+        ///     Determines whether this instance is an HOCON object.
         /// </summary>
         /// <returns><c>true</c> if this instance is object; otherwise, <c>false</c>.</returns>
         public bool IsObject()
@@ -74,7 +74,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Returns the value of this instance as an HOCON object.
+        ///     Returns the value of this instance as an HOCON object.
         /// </summary>
         /// <returns>HoconObject.</returns>
         public HoconObject GetObject()
@@ -85,7 +85,7 @@ namespace Akka.Configuration.Hocon
         #region Implicit operators
 
         /// <summary>
-        /// Performs an implicit conversion from <see cref="HoconSubstitution"/> to <see cref="HoconObject"/>.
+        ///     Performs an implicit conversion from <see cref="HoconSubstitution" /> to <see cref="HoconObject" />.
         /// </summary>
         /// <param name="substitution">The substitution.</param>
         /// <returns>The result of the conversion.</returns>

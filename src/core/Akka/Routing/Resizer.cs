@@ -50,13 +50,13 @@ namespace Akka.Routing
         /// <summary>
         /// The fewest number of routees the router should ever have.
         /// </summary>
-        private readonly int lowerBound = 1;
+        public readonly int LowerBound = 1;
 
         /// <summary>
         /// The most number of routees the router should ever have. 
         /// Must be greater than or equal to `lowerBound`.
         /// </summary>
-        private readonly int upperBound = 10;
+        public readonly int UpperBound = 10;
 
         /// <summary>
         /// * Threshold to evaluate if routee is considered to be busy (under pressure).
@@ -70,14 +70,14 @@ namespace Akka.Routing
         ///           default UnboundedMailbox is O(N) operation.</li>
         /// </ul>
         /// </summary>
-        private readonly int pressureThreshold = 1;
+        private readonly int _pressureThreshold = 1;
 
         /// <summary>
         /// Percentage to increase capacity whenever all routees are busy.
         /// For example, 0.2 would increase 20% (rounded up), i.e. if current
         /// capacity is 6 it will request an increase of 2 more routees.
         /// </summary>
-        private readonly double rampupRate = 0.2;
+        private readonly double _rampupRate = 0.2;
 
         /// <summary>
         /// Minimum fraction of busy routees before backing off.
@@ -88,7 +88,7 @@ namespace Akka.Routing
         ///
         /// Use 0.0 or negative to avoid removal of routees.
         /// </summary>
-        private readonly double backoffThreshold = 0.3;
+        private readonly double _backoffThreshold = 0.3;
 
         /// <summary>
         /// Fraction of routees to be removed when the resizer reaches the
@@ -96,18 +96,23 @@ namespace Akka.Routing
         /// For example, 0.1 would decrease 10% (rounded up), i.e. if current
         /// capacity is 9 it will request an decrease of 1 routee.
         /// </summary>
-        private readonly double backoffRate = 0.1;
+        private readonly double _backoffRate = 0.1;
 
         /// <summary>
         /// Number of messages between resize operation.
         /// Use 1 to resize before each message.
         /// </summary>
-        private readonly int messagesPerResize = 10;
+        private readonly int _messagesPerResize = 10;
 
-        public DefaultResizer(int lower, int upper)
+        public DefaultResizer(int lower, int upper, int pressureThreshold = 1, double rampupRate = 0.2d, double backoffThreshold = 0.3d, double backoffRate = 0.1d, int messagesPerResize = 10)
         {
-            lowerBound = lower;
-            upperBound = upper;
+            LowerBound = lower;
+            UpperBound = upper;
+            _pressureThreshold = pressureThreshold;
+            _rampupRate = rampupRate;
+            _backoffThreshold = backoffThreshold;
+            _backoffRate = backoffRate;
+            _messagesPerResize = messagesPerResize;
         }
 
         /// <summary>
@@ -116,45 +121,45 @@ namespace Akka.Routing
         /// <param name="resizerConfig"></param>
         private DefaultResizer(Config resizerConfig)
         {
-            lowerBound = resizerConfig.GetInt("lower-bound");
-            upperBound = resizerConfig.GetInt("upper-bound");
-            pressureThreshold = resizerConfig.GetInt("pressure-threshold");
-            rampupRate = resizerConfig.GetDouble("rampup-rate");
-            backoffThreshold = resizerConfig.GetDouble("backoff-threshold");
-            backoffRate = resizerConfig.GetDouble("backoff-rate");
-            messagesPerResize = resizerConfig.GetInt("messages-per-resize");
+            LowerBound = resizerConfig.GetInt("lower-bound");
+            UpperBound = resizerConfig.GetInt("upper-bound");
+            _pressureThreshold = resizerConfig.GetInt("pressure-threshold");
+            _rampupRate = resizerConfig.GetDouble("rampup-rate");
+            _backoffThreshold = resizerConfig.GetDouble("backoff-threshold");
+            _backoffRate = resizerConfig.GetDouble("backoff-rate");
+            _messagesPerResize = resizerConfig.GetInt("messages-per-resize");
 
             Validate();
         }
 
         private void Validate()
         {
-            if (lowerBound < 0)
-                throw new ArgumentException(string.Format("lowerBound must be >= 0, was: {0}", lowerBound));
+            if (LowerBound < 0)
+                throw new ArgumentException(string.Format("lowerBound must be >= 0, was: {0}", LowerBound));
 
-            if (upperBound < 0)
-                throw new ArgumentException(string.Format("upperBound must be >= 0, was: {0}", upperBound));
-            if (upperBound < lowerBound)
+            if (UpperBound < 0)
+                throw new ArgumentException(string.Format("upperBound must be >= 0, was: {0}", UpperBound));
+            if (UpperBound < LowerBound)
                 throw new ArgumentException(string.Format("upperBound must be >= lowerBound, was: {0} < {1}",
-                    upperBound, lowerBound));
-            if (rampupRate < 0.0)
-                throw new ArgumentException(string.Format("rampupRate must be >= 0.0, was {0}", rampupRate));
-            if (backoffThreshold > 1.0)
-                throw new ArgumentException(string.Format("backoffThreshold must be <= 1.0, was {0}", backoffThreshold));
-            if (backoffRate < 0.0)
-                throw new ArgumentException(string.Format("backoffRate must be >= 0.0, was {0}", backoffRate));
-            if (messagesPerResize <= 0)
-                throw new ArgumentException(string.Format("messagesPerResize must be > 0, was {0}", messagesPerResize));
+                    UpperBound, LowerBound));
+            if (_rampupRate < 0.0)
+                throw new ArgumentException(string.Format("rampupRate must be >= 0.0, was {0}", _rampupRate));
+            if (_backoffThreshold > 1.0)
+                throw new ArgumentException(string.Format("backoffThreshold must be <= 1.0, was {0}", _backoffThreshold));
+            if (_backoffRate < 0.0)
+                throw new ArgumentException(string.Format("backoffRate must be >= 0.0, was {0}", _backoffRate));
+            if (_messagesPerResize <= 0)
+                throw new ArgumentException(string.Format("messagesPerResize must be > 0, was {0}", _messagesPerResize));
         }
 
         public static DefaultResizer FromConfig(Config resizerConfig)
         {
-            return resizerConfig.GetBoolean("resizer.enabled") ? new DefaultResizer(resizerConfig) : null;
+            return resizerConfig.GetBoolean("resizer.enabled") ? new DefaultResizer(resizerConfig.GetConfig("resizer")) : null;
         }
 
         public override bool IsTimeForResize(long messageCounter)
         {
-            return messageCounter%messagesPerResize == 0;
+            return messageCounter%_messagesPerResize == 0;
         }
 
         public override int Resize(IEnumerable<Routee> currentRoutees)
@@ -169,19 +174,18 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="currentRoutees">The current actor in the resizer</param>
         /// <returns>the number of routees by which the resizer should be adjusted (positive, negative or zero)</returns>
-        private int Capacity(IEnumerable<Routee> currentRoutees)
+        public int Capacity(IEnumerable<Routee> currentRoutees)
         {
             var routees = currentRoutees as Routee[] ?? currentRoutees.ToArray();
-            var currentSize = routees.Count();
+            var currentSize = routees.Length;
             var pressure = Pressure(routees);
             var delta = Filter(pressure, currentSize);
             var proposed = currentSize + delta;
 
-
-            if (proposed < lowerBound)
-                return delta + (lowerBound - proposed);
-            if (proposed > upperBound)
-                return delta - (proposed - upperBound);
+            if (proposed < LowerBound)
+                return delta + (LowerBound - proposed);
+            if (proposed > UpperBound)
+                return delta - (proposed - UpperBound);
             return delta;
         }
 
@@ -192,7 +196,7 @@ namespace Akka.Routing
         /// <param name="pressure">pressure current number of busy routees</param>
         /// <param name="capacity">capacity current number of routees</param>
         /// <returns>proposed change in the capacity</returns>
-        private int Filter(int pressure, int capacity)
+        public int Filter(int pressure, int capacity)
         {
             return Rampup(pressure, capacity) + Backoff(pressure, capacity);
         }
@@ -204,12 +208,13 @@ namespace Akka.Routing
         /// <param name="pressure">pressure current number of busy routees</param>
         /// <param name="capacity">capacity current number of routees</param>
         /// <returns>proposed decrease in capacity (as a negative number)</returns>
-        private int Backoff(int pressure, int capacity)
+        public int Backoff(int pressure, int capacity)
         {
-            return backoffThreshold > 0.0 && backoffRate > 0.0 && capacity > 0 &&
-                   (Convert.ToDouble(pressure)/Convert.ToDouble(capacity)) < backoffThreshold
-                ? Convert.ToInt32(Math.Floor(-1.0*backoffRate*capacity))
-                : 0;
+            if (_backoffThreshold > 0.0 && _backoffRate > 0.0 && capacity > 0 && (Convert.ToDouble(pressure)/Convert.ToDouble(capacity)) < _backoffThreshold)
+            {
+                return Convert.ToInt32(Math.Floor(-1.0*_backoffRate*capacity));
+            }
+            return 0;
         }
 
         /// <summary>
@@ -219,9 +224,9 @@ namespace Akka.Routing
         /// <param name="pressure">the current number of busy routees</param>
         /// <param name="capacity">the current number of total routees</param>
         /// <returns>proposed increase in capacity</returns>
-        private int Rampup(int pressure, int capacity)
+        public int Rampup(int pressure, int capacity)
         {
-            return (pressure < capacity) ? 0 : Convert.ToInt32(Math.Ceiling(rampupRate*capacity));
+            return (pressure < capacity) ? 0 : Convert.ToInt32(Math.Ceiling(_rampupRate*capacity));
         }
 
         /// <summary>
@@ -240,7 +245,7 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="currentRoutees"></param>
         /// <returns></returns>
-        private int Pressure(IEnumerable<Routee> currentRoutees)
+        public int Pressure(IEnumerable<Routee> currentRoutees)
         {
             return currentRoutees.Count(
                 routee =>
@@ -256,22 +261,22 @@ namespace Akka.Routing
                             if(cell != null)
                             {
                                 return
-                                    pressureThreshold == 1
+                                    _pressureThreshold == 1
                                         ? cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
                                           cell.Mailbox.HasUnscheduledMessages
-                                        : (pressureThreshold < 1
+                                        : (_pressureThreshold < 1
                                             ? cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
                                               cell.CurrentMessage != null
-                                            : cell.Mailbox.NumberOfMessages > pressureThreshold);
+                                            : cell.Mailbox.NumberOfMessages >= _pressureThreshold);
                             }
                             else
                             {
                                 return
-                                    pressureThreshold == 1
+                                    _pressureThreshold == 1
                                         ? underlying.HasMessages
-                                        : (pressureThreshold < 1
+                                        : (_pressureThreshold < 1
                                             ? true // unstarted cells are always busy, for example
-                                            : underlying.NumberOfMessages >= pressureThreshold);
+                                            : underlying.NumberOfMessages >= _pressureThreshold);
                             }
                         }
                     }

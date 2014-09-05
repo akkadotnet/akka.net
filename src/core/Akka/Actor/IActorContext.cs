@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Akka.Actor
 {
-    public interface IActorContext : IActorRefFactory
+    public interface IActorContext : ActorRefFactory
     {
         ActorRef Self { get; }
         Props Props { get; }
@@ -13,8 +14,9 @@ namespace Akka.Actor
         void Unbecome();
         ActorRef Child(string name);
         IEnumerable<ActorRef> GetChildren();
-        void Watch(ActorRef subject);
-        void Unwatch(ActorRef subject);
+        ActorRef Watch(ActorRef subject);
+        ActorRef Unwatch(ActorRef subject);
+        void SetReceiveTimeout(TimeSpan? timeout);
 
         /*
   def self: ActorRef

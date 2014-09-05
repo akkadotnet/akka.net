@@ -3,5 +3,5 @@
 [<EntryPoint>]
 let main args =
     Supervisioning.main()
-    Console.ReadLine()
+    Console.ReadLine() |> ignore
     0

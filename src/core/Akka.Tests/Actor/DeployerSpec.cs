@@ -1,6 +1,8 @@
 ﻿using System.Linq;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Routing;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -8,9 +10,11 @@ namespace Akka.Tests.Actor
     
     public class DeployerSpec : AkkaSpec
     {
-        #region Setup / Teardown
+        public DeployerSpec():base(GetConfig())
+        {        
+        }
 
-        protected override string GetConfig()
+        private static string GetConfig()
         {
             return @"
                 akka.actor.deployment {
@@ -70,7 +74,6 @@ namespace Akka.Tests.Actor
 
             }
         }
-        #endregion
 
         #region Tests
 
@@ -78,7 +81,7 @@ namespace Akka.Tests.Actor
         public void Deployer_must_be_able_to_parse_akka_actor_deployment_with_all_default_values()
         {
             var service = @"/service1";
-            var deployment = sys.Provider.Deployer.Lookup(service.Split('/').Drop(1));
+            var deployment = ((ActorSystemImpl) Sys).Provider.Deployer.Lookup(service.Split('/').Drop(1));
 
             Assert.Equal(service, deployment.Path);
             Assert.IsType<NoRouter>(deployment.RouterConfig);
@@ -91,7 +94,7 @@ namespace Akka.Tests.Actor
         public void Deployer_must_use_Null_for_undefined_service()
         {
             var service = @"/undefined";
-            var deployment = sys.Provider.Deployer.Lookup(service.Split('/').Drop(1));
+            var deployment = ((ActorSystemImpl)Sys).Provider.Deployer.Lookup(service.Split('/').Drop(1));
             Assert.Null(deployment);
         }
 
@@ -99,7 +102,7 @@ namespace Akka.Tests.Actor
         public void Deployer_must_be_able_to_parse_akka_actor_deployment_with_dispatcher_config()
         {
             var service = @"/service3";
-            var deployment = sys.Provider.Deployer.Lookup(service.Split('/').Drop(1));
+            var deployment = ((ActorSystemImpl)Sys).Provider.Deployer.Lookup(service.Split('/').Drop(1));
 
             Assert.Equal(service, deployment.Path);
             Assert.IsType<NoRouter>(deployment.RouterConfig);
@@ -112,7 +115,7 @@ namespace Akka.Tests.Actor
         public void Deployer_must_be_able_to_parse_akka_actor_deployment_with_mailbox_config()
         {
             var service = @"/service4";
-            var deployment = sys.Provider.Deployer.Lookup(service.Split('/').Drop(1));
+            var deployment = ((ActorSystemImpl)Sys).Provider.Deployer.Lookup(service.Split('/').Drop(1));
 
             Assert.Equal(service, deployment.Path);
             Assert.IsType<NoRouter>(deployment.RouterConfig);

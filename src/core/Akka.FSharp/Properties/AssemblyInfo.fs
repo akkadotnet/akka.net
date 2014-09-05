@@ -4,15 +4,15 @@ open System.Reflection
 open System.Runtime.InteropServices
 
 [<assembly: AssemblyTitleAttribute("Akka.FSharp")>]
-[<assembly: AssemblyProductAttribute("Akka.net")>]
-[<assembly: AssemblyDescriptionAttribute("Akka .NET is a port of the popular Java/Scala framework Akka to .NET.")>]
-[<assembly: AssemblyCopyrightAttribute("Copyright © Roger Alsing 2013-2014")>]
-[<assembly: AssemblyCompanyAttribute("Akka.net")>]
+[<assembly: AssemblyProductAttribute("Akka.NET")>]
+[<assembly: AssemblyDescriptionAttribute("Akka.NET is a port of the popular Java/Scala framework Akka to .NET")>]
+[<assembly: AssemblyCopyrightAttribute("Copyright © 2013-2014 Akka.NET Team")>]
+[<assembly: AssemblyCompanyAttribute("Akka.NET Team")>]
 [<assembly: ComVisibleAttribute(false)>]
 [<assembly: CLSCompliantAttribute(true)>]
-[<assembly: AssemblyVersionAttribute("0.6.1.0")>]
-[<assembly: AssemblyFileVersionAttribute("0.6.1.0")>]
+[<assembly: AssemblyVersionAttribute("0.6.4.0")>]
+[<assembly: AssemblyFileVersionAttribute("0.6.4.0")>]
 do ()
 
 module internal AssemblyVersionInformation =
-    let [<Literal>] Version = "0.6.1.0"
+    let [<Literal>] Version = "0.6.4.0"

@@ -5,7 +5,7 @@ namespace Akka.Remote
 {
     public class AddressUidExtension : ExtensionIdProvider<AddressUid>
     {
-        public override AddressUid CreateExtension(ActorSystem system)
+        public override AddressUid CreateExtension(ExtendedActorSystem system)
         {
             return new AddressUid();
         }

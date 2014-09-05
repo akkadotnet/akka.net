@@ -208,7 +208,7 @@ namespace Akka.Remote.Transport.Helios
             var socketAddress = client.RemoteHost;
             client.Open();
 
-            return client.AsInstanceOf<TcpClientHandler>().StatusFuture;
+            return ((TcpClientHandler) client).StatusFuture;
         }
     }
 }

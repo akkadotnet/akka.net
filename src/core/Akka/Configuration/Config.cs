@@ -1,39 +1,64 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Akka.Configuration.Hocon;
 
 namespace Akka.Configuration
 {
     public class Config
     {
-        private readonly Config _fallback;
-        private readonly HoconValue _node;
+        private Config _fallback;
+        private HoconValue _node;
+        private IEnumerable<HoconSubstitution> _substitutions;
+
 
         public Config()
         {
         }
 
-        public Config(HoconValue node)
+        public Config(HoconRoot root)
         {
-            this._node = node;
+            if (root.Value == null)
+                throw new ArgumentNullException("root.Value");
+
+            _node = root.Value;
+            _substitutions = root.Substitutions;
         }
 
         public Config(Config source, Config fallback)
         {
+            if (source == null)
+                throw new ArgumentNullException("source");
+
             _node = source._node;
-            this._fallback = fallback;
+            _fallback = fallback;
         }
 
         /// <summary>
-        /// Lets the caller know if this root node contains any values
+        ///     Lets the caller know if this root node contains any values
         /// </summary>
-        public bool IsEmpty { get { return _node == null || _node.IsEmpty; } }
+        public bool IsEmpty
+        {
+            get { return _node == null || _node.IsEmpty; }
+        }
 
         /// <summary>
-        /// Returns the root node of this configuration section
+        ///     Returns the root node of this configuration section
         /// </summary>
-        public HoconValue Root { get { return _node; } }
+        public HoconValue Root
+        {
+            get { return _node; }
+        }
+
+        protected Config Copy()
+        {
+            //deep clone
+            return new Config
+            {
+                _fallback = _fallback != null ? _fallback.Copy() : null,
+                _node = _node,
+                _substitutions = _substitutions
+            };
+        }
 
         private HoconValue GetNode(string path)
         {
@@ -41,10 +66,7 @@ namespace Akka.Configuration
             HoconValue currentNode = _node;
             if (currentNode == null)
             {
-                if (_fallback != null)
-                    return _fallback.GetNode(path);
-
-                return null;
+                throw new Exception("Current node should not be null");
             }
             foreach (string key in elements)
             {
@@ -185,10 +207,18 @@ namespace Akka.Configuration
             if (_fallback != null)
             {
                 Config f = _fallback.GetConfig(path);
-                return new Config(new Config(value), f);
+                if (value == null && f == null)
+                    return null;
+                if (value == null)
+                    return f;
+
+                return new Config(new HoconRoot(value)).WithFallback(f);
             }
 
-            return  new Config(value);
+            if (value == null)
+                return null;
+
+            return new Config(new HoconRoot(value));
         }
 
         public HoconValue GetValue(string path)
@@ -197,30 +227,91 @@ namespace Akka.Configuration
             return value;
         }
 
-        public TimeSpan GetMillisDuration(string path, TimeSpan? @default = null)
+        public TimeSpan GetMillisDuration(string path, TimeSpan? @default = null, bool allowInfinite = true)
         {
             HoconValue value = GetNode(path);
             if (value == null)
                 return @default.GetValueOrDefault();
 
-            return value.GetMillisDuration();
+            return value.GetMillisDuration(allowInfinite);
         }
 
         public override string ToString()
         {
+            if (_node == null)
+                return "";
+
             return _node.ToString();
         }
 
         public Config WithFallback(Config fallback)
         {
-            return new Config(this, fallback);
+            if (fallback == this)
+                throw new ArgumentException("Config can not have itself as fallback", "fallback");
+
+            Config clone = Copy();
+
+            Config current = clone;
+            while (current._fallback != null)
+            {
+                current = current._fallback;
+            }
+            current._fallback = fallback;
+
+            return clone;
         }
 
 
         public bool HasPath(string path)
         {
-            var value = GetNode(path);
+            HoconValue value = GetNode(path);
             return value != null;
+        }
+
+        public static Config operator +(Config config, string fallback)
+        {
+            var fallbackConfig = ConfigurationFactory.ParseString(fallback);
+            return config.WithFallback(fallbackConfig);
+        }
+
+        public static Config operator +(string configHocon, Config fallbackConfig)
+        {
+            var config = ConfigurationFactory.ParseString(configHocon);
+            return config.WithFallback(fallbackConfig);
+        }
+
+        public static implicit operator Config(string str)
+        {
+            var config = ConfigurationFactory.ParseString(str);
+            return config;
+        }
+
+        public IEnumerable<KeyValuePair<string, HoconValue>> AsEnumerable()
+        {
+            var used = new HashSet<string>();
+            var current = this;
+            while (current != null)
+            {
+                foreach (var kvp in current.Root.GetObject().AsEnumerable())
+                {
+                    if (!used.Contains(kvp.Key))
+                    {
+                        yield return kvp;
+                        used.Add(kvp.Key);
+                    }
+                }
+                current = current._fallback;
+            }
+        }
+    }
+
+    public static class ConfigExtensions
+    {
+        public static Config SafeWithFallback(this Config config, Config fallback)
+        {
+            return config == null ? fallback 
+                : ReferenceEquals(config,fallback) ? config 
+                : config.WithFallback(fallback);
         }
     }
 }

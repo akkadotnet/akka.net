@@ -155,6 +155,8 @@ namespace Akka.Remote
         protected override void TellInternal(object message, ActorRef sender)
         {
             Remote.Send(message, sender, this);
+            var systemMessage = message as SystemMessage;
+            if (systemMessage != null) Remote.Provider.AfterSendSystemMessage(systemMessage);
         }
 
         /// <summary>

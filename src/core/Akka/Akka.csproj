@@ -34,7 +34,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release Mono|AnyCPU'">
     <OutputPath>bin\Release Mono\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;MONO</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -44,7 +44,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug Mono|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\Debug Mono\</OutputPath>
-    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;MONO</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
@@ -56,6 +56,7 @@
       <HintPath>..\..\packages\Newtonsoft.Json.6.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -67,11 +68,16 @@
     <Compile Include="..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Actor\ActorCell.DeathWatch.cs" />
+    <Compile Include="Actor\Inbox.Actor.cs" />
+    <Compile Include="Actor\Internals\InitializableActor.cs" />
+    <Compile Include="Actor\ReceiveActor.cs" />
     <Compile Include="Actor\ActorBase.cs" />
     <Compile Include="Actor\ActorCell.cs" />
     <Compile Include="Actor\ActorPath.cs" />
     <Compile Include="Actor\ActorRef.cs" />
     <Compile Include="Actor\ActorRef.Extensions.cs" />
+    <Compile Include="Actor\ActorRefFactoryExtensions.cs" />
     <Compile Include="Actor\ActorRefFactoryShared.cs" />
     <Compile Include="Actor\ActorRefProvider.cs" />
     <Compile Include="Actor\ActorSelection.cs" />
@@ -79,22 +85,25 @@
     <Compile Include="Actor\Address.cs" />
     <Compile Include="Actor\DeadLetterMailbox.cs" />
     <Compile Include="Actor\Deploy.cs" />
+    <Compile Include="Actor\ExtendedActorSystem.cs" />
     <Compile Include="Actor\Futures.cs" />
     <Compile Include="Actor\AutoReceivedMessage.cs" />
-    <Compile Include="Actor\BroadcastActorRef.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Actor\Cell.cs" />
     <Compile Include="Actor\ChildrenContainer.cs" />
     <Compile Include="Actor\EmptyLocalActorRef.cs" />
     <Compile Include="Actor\ICanTell.cs" />
+    <Compile Include="Actor\Inbox.cs" />
+    <Compile Include="Actor\Internals\ActorSystemImpl.cs" />
     <Compile Include="Actor\LocalScope.cs" />
     <Compile Include="Actor\NameAndUid.cs" />
+    <Compile Include="Actor\ReceiveTimeout.cs" />
     <Compile Include="Actor\RemoteScope.cs" />
     <Compile Include="Actor\RepointableActorRef.cs" />
     <Compile Include="Actor\RootGuardianActorRef.cs" />
     <Compile Include="Actor\RootGuardianSupervisor.cs" />
     <Compile Include="Actor\Deployer.cs" />
-    <Compile Include="Actor\ExtendedActorSystem.cs" />
+    <Compile Include="Actor\Extensions.cs" />
     <Compile Include="Actor\FSM.cs" />
     <Compile Include="Actor\GracefulStopSupport.cs" />
     <Compile Include="Actor\IUntypedActorContext.cs" />
@@ -109,10 +118,14 @@
     <Compile Include="Configuration\ConfigurationFactory.cs" />
     <Compile Include="Configuration\Config.cs" />
     <Compile Include="Configuration\FluentConfig.cs" />
+    <Compile Include="Configuration\Hocon\AkkaConfigurationSection.cs" />
+    <Compile Include="Configuration\Hocon\CDataConfigurationElement.cs" />
     <Compile Include="Configuration\Hocon\HoconArray.cs" />
+    <Compile Include="Configuration\Hocon\HoconConfigurationElement.cs" />
     <Compile Include="Configuration\Hocon\HoconLiteral.cs" />
     <Compile Include="Configuration\Hocon\HoconObject.cs" />
     <Compile Include="Configuration\Hocon\HoconParser.cs" />
+    <Compile Include="Configuration\Hocon\HoconRoot.cs" />
     <Compile Include="Configuration\Hocon\HoconSubstitution.cs" />
     <Compile Include="Configuration\Hocon\HoconToken.cs" />
     <Compile Include="Configuration\Hocon\HoconTokenizer.cs" />
@@ -123,7 +136,7 @@
     <Compile Include="Actor\Exceptions.cs" />
     <Compile Include="Dispatch\FutureActor.cs" />
     <Compile Include="Actor\IActorContext.cs" />
-    <Compile Include="Actor\IActorRefFactory.cs" />
+    <Compile Include="Actor\ActorRefFactory.cs" />
     <Compile Include="Dispatch\Mailbox.cs" />
     <Compile Include="Actor\Props.cs" />
     <Compile Include="Actor\SupervisorStrategy.cs" />
@@ -159,14 +172,13 @@
     <Compile Include="Event\Warning.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Routing\SmallestMailbox.cs" />
+    <Compile Include="Routing\TailChoppingRoutingLogic.cs" />
     <Compile Include="Serialization\ByteArraySerializer.cs" />
     <Compile Include="Serialization\NewtonSoftJsonSerializer.cs" />
     <Compile Include="Serialization\NullSerializer.cs" />
-    <Compile Include="Util\AtomicCounter.cs" />
-    <Compile Include="Util\AtomicCounterLong.cs" />
-    <Compile Include="Util\AtomicInteger.cs" />
-    <Compile Include="Util\AtomicLong.cs" />
-    <Compile Include="Pattern\CircuitBreaker.cs" />
+    <Compile Include="Util\ArrayExtensions.cs" />
+    <Compile Include="Util\Internal\AtomicCounter.cs" />
+    <Compile Include="Util\Internal\AtomicCounterLong.cs" />
     <Compile Include="Pattern\IllegalStateException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Actor\TypedActor.cs" />
@@ -191,11 +203,31 @@
     <Compile Include="Util\AtomicReference.cs" />
     <Compile Include="Util\AtomicBoolean.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
+    <Compile Include="Util\Internal\IAtomicCounter.cs" />
+    <Compile Include="Util\MonoConcurrentQueue.cs" />
     <Compile Include="Util\MurmurHash.cs" />
     <Compile Include="Util\Reflection\ExpressionExtensions.cs" />
     <Compile Include="PatternMatch.cs" />
     <Compile Include="Util\ThreadLocalRandom.cs" />
     <Compile Include="Util\WildcardTree.cs" />
+    <Compile Include="Util\MatchHandler\Argument.cs" />
+    <Compile Include="Util\MatchHandler\CachedMatchCompiler.cs" />
+    <Compile Include="Util\MatchHandler\CompiledMatchHandlerWithArguments.cs" />
+    <Compile Include="Util\MatchHandler\ILambdaExpressionCompiler.cs" />
+    <Compile Include="Util\MatchHandler\IMatchExpressionBuilder.cs" />
+    <Compile Include="Util\MatchHandler\IPartialActionBuilder.cs" />
+    <Compile Include="Util\MatchHandler\MatchExpressionBuilderResult.cs" />
+    <Compile Include="Util\MatchHandler\MatchExpressionBuilder.cs" />
+    <Compile Include="Util\MatchHandler\PartialActionBuilder.cs" />
+    <Compile Include="Util\MatchHandler\PartialHandlerArgumentsCapture.cs" />
+    <Compile Include="Util\MatchHandler\HandlerKind.cs" />
+    <Compile Include="Util\MatchHandler\IMatchCompiler.cs" />
+    <Compile Include="Util\MatchHandler\MatchBuilder.cs" />
+    <Compile Include="Util\MatchHandler\MatchBuilderSignature.cs" />
+    <Compile Include="Util\MatchHandler\PartialAction.cs" />
+    <Compile Include="Util\MatchHandler\PredicateAndHandler.cs" />
+    <Compile Include="Util\MatchHandler\LambdaExpressionCompiler.cs" />
+    <Compile Include="Util\MatchHandler\TypeHandler.cs" />
     <Compile Include="Util\Base64Encoding.cs" />
     <Compile Include="Util\StringFormat.cs" />
     <Compile Include="Util\StringLike.cs" />
@@ -209,9 +241,12 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Configuration\Pigeon.conf" />
+    <Compile Include="Actor\ActorCell.ReceiveTimeout.cs" />
     <None Include="Akka.nuspec" />
     <None Include="packages.config" />
+    <None Include="Util\MatchHandler\README.md" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

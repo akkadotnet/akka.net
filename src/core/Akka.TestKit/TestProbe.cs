@@ -1,77 +1,80 @@
-﻿using Xunit;
-using Akka.Actor;
+﻿using System.Collections.Generic;
+using System.Threading;
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using Akka.Actor;
+using Akka.Util;
 
-namespace Akka.Tests
+namespace Akka.TestKit
 {
-    public class TestProbeActorRef : ActorRef
+    /// <summary>
+    /// TestKit-based probe which allows sending, reception and reply.
+    /// </summary>
+    public class TestProbe : TestKitBase
     {
-        private readonly TestProbe _owner;
-        private readonly ActorPath _path=new RootActorPath(Address.AllSystems,"/TestProbe");
-
-        public TestProbeActorRef(TestProbe owner)
+        [Obsolete("Use TestKit.CreateTestProbe() instead!", true)]
+        public TestProbe():base(assertions: null, system: null)
         {
-            _owner = owner;
+            throw new NotSupportedException("TestProbes must be created via Testkit.CreateTestProbe()");    
         }
 
-        public override ActorPath Path
+        public TestProbe(ActorSystem system, TestKitAssertions assertions)
+            : base(assertions, system)
         {
-            get { return _path; }
         }
 
-        protected override void TellInternal(object message, ActorRef sender)
+        /// <summary>Gets the reference of this probe.</summary>
+        public ActorRef Ref { get { return TestActor; } }
+
+        /// <summary>Gets the sender of the last message</summary>
+        public ActorRef Sender { get { return LastSender; } }
+
+        /// <summary>
+        /// Send message to an actor while using the probe as the sender.
+        /// Replies will be available for inspection with all of TestKit's assertion
+        /// methods.
+        /// </summary>
+        /// <param name="actor">The actor.</param>
+        /// <param name="message">The message.</param>
+        public void Send(ActorRef actor, object message)
         {
-            _owner.Tell(message, sender);
-        }        
-    }
-    public class TestProbe
-    {
-        private BlockingCollection<object> queue = new BlockingCollection<object>();
-        public TestProbe()
-        {
-            this.Ref = new TestProbeActorRef(this);
+            actor.Tell(message, TestActor);
         }
 
-        public ActorRef Ref { get;private set; }
 
-        public void expectMsg(object expected)
+        /// <summary>
+        /// Forwards a message to the specified actor. As sender the sender of the last message is used.
+        /// </summary>
+        /// <param name="actor">The actor to forward to.</param>
+        /// <param name="message">The message.</param>
+        public void Forward(ActorRef actor, object message)
         {
-            var res = queue.Take();
-            Assert.Equal(expected, res);
+            actor.Tell(message, Sender);
         }
 
-        public void Tell(object message, ActorRef sender)
+        /// <summary>
+        /// Forwards the last received message to the specified actor as if the 
+        /// <see cref="TestKitBase.LastMessage"/> was sent directly to the actor in the first place.
+        /// </summary>
+        /// <param name="actor">The actor to forward to.</param>
+        public void Forward(ActorRef actor)
         {
-            queue.Add(message);
+            actor.Tell(LastMessage, Sender);
         }
 
-        public void expectNoMsg(TimeSpan duration)
+
+        /// <summary>
+        /// Send message to the sender of the last received message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public void Reply(object message)
         {
-            object res;
-            if (queue.TryTake(out res,duration))
-            {
-                Assert.True(false, "Did not expect a message during the duration " + duration.ToString());
-            }
+            Sender.Tell(message,TestActor);
         }
 
-        public void expectMsgType<T>()
+        [Obsolete("Cannot create a TestProbe from a TestProbe", true)]
+        protected override TestProbe CreateTestProbe()
         {
-            var res = queue.Take();
-            Assert.True(res is T);
-        }
-
-        public List<object> ReceiveN(int n)
-        {
-            var res = new List<object>();
-            for (var i = 0; i < n; i++)
-            {
-                res.Add(queue.Take());
-            }
-            return res;
+            throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
         }
     }
 }

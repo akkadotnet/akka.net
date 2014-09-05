@@ -4,12 +4,12 @@ using System.Collections.Generic;
 namespace Akka.Configuration.Hocon
 {
     /// <summary>
-    /// Class HoconArray.
+    ///     Class HoconArray.
     /// </summary>
     public class HoconArray : List<HoconValue>, IHoconElement
     {
         /// <summary>
-        /// Determines whether this instance is string.
+        ///     Determines whether this instance is string.
         /// </summary>
         /// <returns><c>true</c> if this instance is string; otherwise, <c>false</c>.</returns>
         public bool IsString()
@@ -18,7 +18,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Gets the string.
+        ///     Gets the string.
         /// </summary>
         /// <returns>System.String.</returns>
         /// <exception cref="System.NotImplementedException"></exception>
@@ -28,7 +28,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Determines whether this instance is array.
+        ///     Determines whether this instance is array.
         /// </summary>
         /// <returns><c>true</c> if this instance is array; otherwise, <c>false</c>.</returns>
         public bool IsArray()
@@ -37,7 +37,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Gets the array.
+        ///     Gets the array.
         /// </summary>
         /// <returns>IList&lt;HoconValue&gt;.</returns>
         public IList<HoconValue> GetArray()
@@ -46,7 +46,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
+        ///     Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
         /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
         public override string ToString()

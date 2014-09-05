@@ -10,7 +10,7 @@ namespace Akka.Remote.Serialization
 {
     public class DaemonMsgCreateSerializer : Serializer
     {
-        public DaemonMsgCreateSerializer(ActorSystem system) : base(system)
+        public DaemonMsgCreateSerializer(ExtendedActorSystem system) : base(system)
         {
         }
 

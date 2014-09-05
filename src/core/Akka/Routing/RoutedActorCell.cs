@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 
@@ -13,7 +14,7 @@ namespace Akka.Routing
         private readonly Props _routeeProps;
 
 
-        public RoutedActorCell(ActorSystem system, InternalActorRef self, Props routerProps, MessageDispatcher dispatcher, Props routeeProps, InternalActorRef supervisor)
+        public RoutedActorCell(ActorSystemImpl system, InternalActorRef self, Props routerProps, MessageDispatcher dispatcher, Props routeeProps, InternalActorRef supervisor)
             : base(system, self, routerProps, dispatcher, supervisor)
         {
             _routeeProps = routeeProps;
@@ -52,7 +53,7 @@ namespace Akka.Routing
                     Watch(@ref);
                 }
             }
-            _router = _router.WithRoutees(routees);
+            _router = _router.WithRoutees(_router.Routees.Concat(routees).ToArray());
         }
 
         protected override ActorBase CreateNewActorInstance()

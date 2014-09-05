@@ -1,4 +1,7 @@
-﻿using Xunit;
+﻿using Akka.TestKit;
+using Akka.TestKit.TestActors;
+using Akka.Util;
+using Xunit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,56 +14,68 @@ namespace Akka.Tests.Actor
     
     public class ActorSelectionSpec : AkkaSpec
     {
+        // ReSharper disable NotAccessedField.Local
+        private ActorRef _echoActor;
+        private ActorRef _selectionTestActor;
+        // ReSharper restore NotAccessedField.Local
+
+        public ActorSelectionSpec()
+            : base("akka.test.default-timeout = 5 s")
+        {
+            _echoActor = Sys.ActorOf(EchoActor.Props(this), "echo");
+            _selectionTestActor = CreateTestActor("test");
+        }
+
         [Fact]
         public void CanResolveChildPath()
         {
-            var selection = sys.ActorSelection("user/test");
+            var selection = Sys.ActorSelection("user/test");
             selection.Tell("hello");
-            expectMsg("hello");
+            ExpectMsg("hello");
         }
 
         [Fact]
         public void CanResolveUpAndDownPath()
         {
-            var selection = sys.ActorSelection("user/test/../../user/test");
+            var selection = Sys.ActorSelection("user/test/../../user/test");
             selection.Tell("hello");
-            expectMsg("hello");
+            ExpectMsg("hello");
         }
 
         [Fact]
         public void CanResolveWildcardPartialAsterisk()
         {
-            sys.ActorSelection("user/te*st").Tell("hello1");
-            expectMsg("hello1");
+            Sys.ActorSelection("user/te*st").Tell("hello1");
+            ExpectMsg("hello1");
         }
 
         [Fact]
         public void CanResolveWildcardFullAsterisk()
         {
-            sys.ActorSelection("user/*").Tell("hello3");
-            expectMsg("hello3");
+            Sys.ActorSelection("user/*").Tell("hello3");
+            ExpectMsg("hello3");
         }
 
         [Fact]
         public void CanResolveWildcardQuestionmark()
         {
-            sys.ActorSelection("user/t?st").Tell("hello2");
-            expectMsg("hello2");
+            Sys.ActorSelection("user/t?st").Tell("hello2");
+            ExpectMsg("hello2");
         }
 
         [Fact]
         public void CanNotResolveWildcardWhenNoMatch()
         {
-            sys.ActorSelection("user/foo*").Tell("hello3");
-            expectNoMsg(TimeSpan.FromSeconds(1));
+            Sys.ActorSelection("user/foo*").Tell("hello3");
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
         public void CanAskActorSelection()
         {
-            var selection = sys.ActorSelection("user/echo");
+            var selection = Sys.ActorSelection("user/echo");
             var task = selection.Ask("hello");
-            expectMsg("hello");
+            ExpectMsg("hello");
             task.Wait();
             Assert.Equal("hello", task.Result);
         }
@@ -68,7 +83,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task CanResolveOne()
         {
-            var selection = sys.ActorSelection("user/test");
+            var selection = Sys.ActorSelection("user/test");
             var one = await selection.ResolveOne(TimeSpan.FromSeconds(1));            
             Assert.NotNull(one);
         }
@@ -76,7 +91,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task CanNotResolveOneWhenNoMatch()
         {
-            var selection = sys.ActorSelection("user/nonexisting");
+            var selection = Sys.ActorSelection("user/nonexisting");
 
             //xUnit 2 will have Assert.ThrowsAsync<TException>();
             await AkkaSpecExtensions.ThrowsAsync<ActorNotFoundException>(async () => await selection.ResolveOne(TimeSpan.FromSeconds(1)));  
@@ -99,19 +114,20 @@ namespace Akka.Tests.Actor
         [Fact]
         public void CanResolveAbsoluteActorPathInActorContext()
         {
-            var contextActor = sys.ActorOf<ActorContextSelectionActor>();
+            var contextActor = Sys.ActorOf<ActorContextSelectionActor>();
             contextActor.Tell(new Tuple<string,string>("/user/test", "hello"));
-            expectMsg("hello");
+            ExpectMsg("hello");
         }
 
         [Fact]
         public void CanResolveRelativeActorPathInActorContext()
         {
-            var contextActor = sys.ActorOf<ActorContextSelectionActor>();
+            var contextActor = Sys.ActorOf<ActorContextSelectionActor>();
             contextActor.Tell(new Tuple<string, string>("../test/../../user/test", "hello"));
-            expectMsg("hello");
+            ExpectMsg("hello");
         }
 
         #endregion
+
     }
 }

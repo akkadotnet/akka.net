@@ -32,7 +32,7 @@ namespace Akka.Remote
     {
         private readonly LoggingAdapter log;
         private volatile IDictionary<string, HashSet<ProtocolTransportAddressPair>> _transportMapping;
-        private volatile InternalActorRef _endpointManager;
+        private volatile ActorRef _endpointManager;
 
         // This is effectively a write-once variable similar to a lazy val. The reason for not using a lazy val is exception
         // handling.
@@ -42,10 +42,10 @@ namespace Akka.Remote
         // a lazy val
         private volatile Address _defaultAddress;
 
-        private InternalActorRef _transportSupervisor;
+        private ActorRef _transportSupervisor;
         private EventPublisher _eventPublisher;
 
-        public Remoting(ActorSystem system, RemoteActorRefProvider provider)
+        public Remoting(ExtendedActorSystem system, RemoteActorRefProvider provider)
             : base(system, provider)
         {
             log = Logging.GetLogger(system, "remoting");
@@ -63,7 +63,7 @@ namespace Akka.Remote
             {
                 _endpointManager =
                 System.SystemActorOf(
-                    Props.Create(() => new EndpointManager(Provider.Config, log)).WithDeploy(Deploy.Local),
+                    Props.Create(() => new EndpointManager(System.Settings.Config, log)).WithDeploy(Deploy.Local),
                     EndpointManagerName);
 
                 try
@@ -73,7 +73,8 @@ namespace Akka.Remote
 
                     addressPromise.Task.Wait(Provider.RemoteSettings.StartupTimeout);
                     var akkaProtocolTransports = addressPromise.Task.Result;
-
+                    if(akkaProtocolTransports.Count==0)
+                        throw new Exception("No transports enabled");
                     Addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address));
                     //   this.transportMapping = akkaProtocolTransports
                     //       .ToDictionary(p => p.ProtocolTransport.Transport.SchemeIdentifier,);
@@ -86,7 +87,7 @@ namespace Akka.Remote
                         _transportMapping.Add(g.Key, set);
                     }
 
-                    _defaultAddress = akkaProtocolTransports.Head().Address;
+                    DefaultAddress = akkaProtocolTransports.Head().Address;
                     _addresses = new HashSet<Address>(akkaProtocolTransports.Select(x => x.Address));
 
                     log.Info("Remoting started; listening on addresses : [{0}]", string.Join(",", _addresses.Select(x => x.ToString())));

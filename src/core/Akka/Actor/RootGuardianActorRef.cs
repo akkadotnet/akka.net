@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Akka.Actor.Internals;
 using Akka.Dispatch;
 
 namespace Akka.Actor
@@ -8,9 +9,9 @@ namespace Akka.Actor
     {
         private InternalActorRef _tempContainer;
         private readonly InternalActorRef _deadLetters;
-        private readonly IReadOnlyDictionary<string, InternalActorRef> _extraNames; 
+        private readonly IReadOnlyDictionary<string, InternalActorRef> _extraNames;
 
-        public RootGuardianActorRef(ActorSystem system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType
+        public RootGuardianActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType
             InternalActorRef supervisor, ActorPath path, InternalActorRef deadLetters, IReadOnlyDictionary<string, InternalActorRef> extraNames)
             : base(system,props,dispatcher,createMailbox,supervisor,path)
         {

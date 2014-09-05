@@ -7,7 +7,8 @@ namespace Akka.Actor
     {
     }
 
-    public sealed class Terminated : AutoReceivedMessage, PossiblyHarmful
+    public sealed class 
+        Terminated : AutoReceivedMessage, PossiblyHarmful
     {
         public Terminated(ActorRef actorRef, bool existenceConfirmed, bool addressTerminated)
         {
@@ -41,7 +42,7 @@ namespace Akka.Actor
     }
 
     //response to the Identity message, get identity by Sender
-    public sealed class ActorIdentity : AutoReceivedMessage
+    public sealed class ActorIdentity
     {
         public ActorIdentity(object messageId, ActorRef subject)
         {
@@ -69,6 +70,7 @@ namespace Akka.Actor
     public sealed class Kill : AutoReceivedMessage
     {
         private Kill() { }
+
         private static readonly Kill _instance = new Kill();
         public static Kill Instance
         {

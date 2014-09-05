@@ -34,13 +34,13 @@ namespace Akka.Serialization
         /// <summary>
         ///     The system
         /// </summary>
-        protected readonly ActorSystem system;
+        protected readonly ExtendedActorSystem system;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Serializer" /> class.
         /// </summary>
         /// <param name="system">The system.</param>
-        public Serializer(ActorSystem system)
+        public Serializer(ExtendedActorSystem system)
         {
             this.system = system;
         }
@@ -99,7 +99,7 @@ namespace Akka.Serialization
         ///     Initializes a new instance of the <see cref="JavaSerializer" /> class.
         /// </summary>
         /// <param name="system">The system.</param>
-        public JavaSerializer(ActorSystem system) : base(system)
+        public JavaSerializer(ExtendedActorSystem system) : base(system)
         {
         }
 
