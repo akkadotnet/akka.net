@@ -15,6 +15,11 @@ namespace Akka.Actor.Dsl
         void Receive<T>(Action<T, IActorContext> handler, Predicate<T> shouldHandle);
         void ReceiveAny(Action<object, IActorContext> handler);
 
+        void DefaultPreRestart(Exception reason, object message);
+        void DefaultPostRestart(Exception reason);
+        void DefaultPreStart();
+        void DefaultPostStop();
+
         /// <summary>
         /// Become new behavior with discard of the old one. Equivalent of: Context.Become(_, discardOld: true).
         /// </summary>
@@ -63,6 +68,26 @@ namespace Akka.Actor.Dsl
         public void ReceiveAny(Action<object, IActorContext> handler)
         {
             ReceiveAny(msg => handler(msg, Context));
+        }
+
+        public void DefaultPreRestart(Exception reason, object message)
+        {
+            base.PreRestart(reason, message);
+        }
+
+        public void DefaultPostRestart(Exception reason)
+        {
+            base.PostRestart(reason);
+        }
+
+        public void DefaultPreStart()
+        {
+            base.PreStart();
+        }
+
+        public void DefaultPostStop()
+        {
+            base.PostStop();
         }
 
         public void Become(Action<object, IActorContext> handler)

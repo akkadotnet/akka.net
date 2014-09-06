@@ -1,5 +1,7 @@
-﻿using Akka.Actor;
+﻿using System;
+using Akka.Actor;
 using Akka.Actor.Dsl;
+using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
 using Xunit;
 
@@ -97,6 +99,32 @@ namespace Akka.Tests.Actor
         public void A_ligthweight_creator_must_support_stash()
         {
             //TODO: requires proven and tested stash implementation
+        }
+
+        [Fact]
+        public void A_lightweight_creator_must_support_actor_base_method_calls()
+        {
+            var a = Sys.ActorOf(act =>
+            {
+                var b = act.ActorOf(act2 =>
+                {
+                    act2.OnPostStop = _ => TestActor.Tell("stopping child");
+                    act2.Receive<string>(msg => msg == "ping", (msg, _) => TestActor.Tell("pong"));
+                }, "child");
+                act.OnPreRestart = (exc, msg, ctx) =>
+                {
+                    TestActor.Tell("restarting parent");
+                    act.DefaultPreRestart(exc, msg);
+                };
+                act.ReceiveAny((x, _) => b.Tell(x));
+            }, "parent");
+            
+            a.Tell("ping");
+            ExpectMsg("pong");
+
+            a.Tell(new Recreate(new Exception("request for restart")));
+            ExpectMsg("restarting parent");
+            ExpectMsg("stopping child");
         }
     }
 }
