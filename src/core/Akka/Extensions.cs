@@ -75,5 +75,61 @@ namespace Akka
         {
             return @this > other ? @this : other;
         }
+
+        /// <summary>
+        /// Grabs a subset of an IEnumerable based on a starting index and position
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="items">The array of items to slice</param>
+        /// <param name="startIndex">The starting position to begin the slice</param>
+        /// <param name="count">The number of items to take</param>
+        /// <returns>A slice of size <see cref="count"/> beginning from position <see cref="startIndex"/> in <see cref="items"/>.</returns>
+        public static IEnumerable<T> Slice<T>(this IEnumerable<T> items, int startIndex, int count)
+        {
+            var itemsAsList = items.ToList();
+            if(startIndex < 0 || startIndex > itemsAsList.Count) throw new ArgumentOutOfRangeException("startIndex");
+            if(startIndex + count > itemsAsList.Count) 
+                throw new ArgumentOutOfRangeException("count", 
+                    string.Format("startIndex + count has length {0} which exceeds maximum index of array ({1})", 
+                    startIndex + count, itemsAsList.Count));
+
+            var resultantList = new List<T>(count);
+            for (var i = 0; i < count; i++)
+            {
+                resultantList.Add(itemsAsList[startIndex + i]);
+            }
+            return resultantList;
+        }
+
+        /// <summary>
+        /// Select all the items in this array beginning with <see cref="startingItem"/> and up until the end of the array.
+        /// 
+        /// If <see cref="startingItem"/> is not found in the array, From will return an empty set.
+        /// If <see cref="startingItem"/> is found at the end of the array, From will return the entire original array.
+        /// </summary>
+        public static IEnumerable<T> From<T>(this IEnumerable<T> items, T startingItem)
+        {
+            var itemsAsList = items.ToList();
+            var indexOf = itemsAsList.IndexOf(startingItem);
+            if (indexOf == -1) return new List<T>();
+            if (indexOf == 0) return itemsAsList;
+            var itemCount = (itemsAsList.Count - indexOf);
+            return itemsAsList.Slice(indexOf, itemCount);
+        }
+
+        /// <summary>
+        /// Select all the items in this array from the beginning until (but not including) <see cref="startingItem"/>
+        /// 
+        /// If <see cref="startingItem"/> is not found in the array, Until will select all items.
+        /// If <see cref="startingItem"/> is the first item in the array, an empty array will be returned.
+        /// </summary>
+        public static IEnumerable<T> Until<T>(this IEnumerable<T> items, T startingItem)
+        {
+            var itemsAsList = items.ToList();
+            var indexOf = itemsAsList.IndexOf(startingItem);
+            if (indexOf == -1) return itemsAsList;
+            if (indexOf == 0) return new List<T>();
+            return itemsAsList.Slice(0, indexOf);
+        }
     }
 }

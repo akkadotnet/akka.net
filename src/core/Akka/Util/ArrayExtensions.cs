@@ -26,7 +26,7 @@ namespace Akka.Util
         /// </summary>
         /// <typeparam name="T">The type of the array to sort.</typeparam>
         /// <param name="array">The array to sort.</param>
-        public static void Shuffle<T>(this T[] array)
+        public static T[] Shuffle<T>(this T[] array)
         {
             var length = array.Length;
             var random = new Random();
@@ -38,6 +38,7 @@ namespace Akka.Util
                 array[length] = array[randomNumber];
                 array[randomNumber] = obj;
             }
+            return array;
         }
 
         /// <summary>
