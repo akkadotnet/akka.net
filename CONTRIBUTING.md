@@ -6,6 +6,7 @@ Akka.NET is a large project and contributions are more than welcome, so thank yo
 ### Checklist before creating a Pull Request
 Submit only relevant commits. We don't mind many commits in a pull request, but they must be relevant as explained below.
 
+- __Use a feature branch__ The pull request should be created from a feature branch, and not from _dev_. See below for why.
 - __No merge-commits__
 If you have commits that looks like this _"Merge branch 'my-branch' into dev"_ or _"Merge branch 'dev' of github .com/akkadotnet/akka.net into dev"_ you're probaly using merge instead of [rebase](https://help.github.com/articles/about-git-rebase) locally. See below on _Handling updates from upstream_.
 - __Squash commits__ Often we create temporary commits like _"Started implementing feature x"_ and then _"Did a bit more on feature x"_. Squash these commits together using [interactive rebase](https://help.github.com/articles/about-git-rebase). Also see [Squashing commits with rebase](http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html).
