@@ -69,6 +69,7 @@
     <Compile Include="ClusterSpecBase.cs" />
     <Compile Include="EWMASpec.cs" />
     <Compile Include="GossipSpec.cs" />
+    <Compile Include="HeartbeatNodeRingSpec.cs" />
     <Compile Include="MemberOrderingSpec.cs" />
     <Compile Include="MetricsCollectorSpec.cs" />
     <Compile Include="MetricsGossipSpec.cs" />
