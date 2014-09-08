@@ -2,7 +2,6 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
 using Akka.Actor;
 using Akka.Remote;
 using Akka.TestKit;
@@ -265,6 +264,7 @@ namespace Akka.Cluster.Tests
                         string.Join(",",state.Unreachable), 
                         string.Join(",", state.Ring.MyReceivers.Value), 
                         string.Join(",", state.Ring.NodeRing));
+                    throw;
                 }
             }
         }
