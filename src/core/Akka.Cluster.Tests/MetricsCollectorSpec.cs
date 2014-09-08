@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
 
@@ -123,7 +124,7 @@ namespace Akka.Cluster.Tests
     /// <summary>
     /// Used when testing metrics without full Cluster
     /// </summary>
-    public class MetricsCollectorFactory : AkkaSpec
+    public class MetricsCollectorFactory : AkkaSpec //TODO: if we inherit from ClusterSpecBase, tests never run - must be a config chaining problem
     {
         public MetricsCollectorFactory()
             : base(MetricsEnabledSpec.Config)

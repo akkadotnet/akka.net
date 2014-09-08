@@ -65,6 +65,8 @@
     <Compile Include="ClusterConfigSpec.cs" />
     <Compile Include="ClusterDomainEventPublisherSpec.cs" />
     <Compile Include="ClusterDomainEventSpec.cs" />
+    <Compile Include="ClusterHeartBeatSenderStateSpec.cs" />
+    <Compile Include="ClusterSpecBase.cs" />
     <Compile Include="EWMASpec.cs" />
     <Compile Include="GossipSpec.cs" />
     <Compile Include="MemberOrderingSpec.cs" />

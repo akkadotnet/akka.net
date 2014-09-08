@@ -377,7 +377,7 @@ namespace Akka.Cluster
         {
             if (_useAllAsReceivers)
                 return NodeRing.Remove(sender).ToImmutableHashSet();
-            var slice = NodeRing.From(sender).Reverse().Take(MonitoredByNumberOfNodes).ToList(); //grab members furthest from this peer
+            var slice = NodeRing.From(sender).Skip(1).Take(MonitoredByNumberOfNodes).ToList(); //grab members furthest from this peer
             if (slice.Count < MonitoredByNumberOfNodes)
             {
                 slice = slice.Concat(NodeRing.Take(MonitoredByNumberOfNodes - slice.Count)).ToList();
