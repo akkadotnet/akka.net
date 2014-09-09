@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using Akka.Configuration;
+using Akka.Remote;
 
 namespace Akka.Cluster
 {
@@ -70,6 +73,20 @@ namespace Akka.Cluster
             TimeSpan? ret = null;
             if (@this.GetString(key).ToLower() != "off") ret = @this.GetMillisDuration(key);
             return ret;
+        }
+
+        public static Tuple<ImmutableSortedSet<T>, ImmutableSortedSet<T>> Partition<T>(this ImmutableSortedSet<T> @this,
+            Func<T, bool> partitioner)
+        {
+            var @true = new List<T>();
+            var @false = new List<T>();
+
+            foreach (var item in @this)
+            {
+                (partitioner(item) ? @true : @false).Add(item);
+            }
+
+            return Tuple.Create(@true.ToImmutableSortedSet(), @false.ToImmutableSortedSet());
         }
     }
 }

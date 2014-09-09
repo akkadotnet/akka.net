@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Actor.Internals;
@@ -244,7 +243,7 @@ namespace Akka.Cluster
         internal ActorSystemImpl System { get; private set; }
 
         readonly LoggingAdapter _log;
-        private readonly ClusterReadView _readView;
+        readonly ClusterReadView _readView;
 
         readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
         public DefaultFailureDetectorRegistry<Address> FailureDetector { get { return _failureDetector; } }
@@ -268,12 +267,14 @@ namespace Akka.Cluster
             {
                 LogInfo("Shutting down...");
                 System.Stop(_clusterDaemons);
+                _readView.Dispose();
+
                 LogInfo("Successfully shut down");
             }
         }
 
-        private ActorRef _clusterDaemons;
-        private ActorRef _clusterCore;
+        readonly ActorRef _clusterDaemons;
+        ActorRef _clusterCore;
 
         public void LogInfo(string message)
         {
