@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Security.Cryptography.X509Certificates;
-using Akka.Actor.Internals;
 
 namespace Akka.Actor.Internal
 {

@@ -100,7 +100,7 @@
     <Compile Include="EventFilter\UnmutableFilter.cs" />
     <Compile Include="FSMSpecHelpers.cs" />
     <Compile Include="AutoPilots.cs" />
-    <Compile Include="ImplicitSender.cs" />
+    <Compile Include="NoImplicitSender.cs" />
     <Compile Include="Internals\BlockingCollectionTestActorQueue.cs" />
     <Compile Include="Internals\InternalTestActor.cs" />
     <Compile Include="Internals\ITestActorQueue.cs" />
