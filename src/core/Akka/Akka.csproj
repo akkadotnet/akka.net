@@ -165,6 +165,7 @@
     <Compile Include="Event\Error.cs" />
     <Compile Include="Event\EventBus.cs" />
     <Compile Include="Event\EventStream.cs" />
+    <Compile Include="Event\FormattedLogMessage.cs" />
     <Compile Include="Event\Info.cs" />
     <Compile Include="Event\InitializeLogger.cs" />
     <Compile Include="Event\LogEvent.cs" />
