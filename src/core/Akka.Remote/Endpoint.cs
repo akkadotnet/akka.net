@@ -353,7 +353,7 @@ namespace Akka.Remote
                     .With<IAssociationProblem>(problem => directive = Directive.Escalate)
                     .Default(e =>
                     {
-                        Log.Warn("Association with remote system {0} has failed; address is now gated for {1} ms. Reason is: [{2}]", remoteAddress, settings.RetryGateClosedFor.TotalMilliseconds, ex.Message);
+                        Log.Warning("Association with remote system {0} has failed; address is now gated for {1} ms. Reason is: [{2}]", remoteAddress, settings.RetryGateClosedFor.TotalMilliseconds, ex.Message);
                         UidConfirmed = false;
                         Context.Become(Gated);
                         currentHandle = null;

@@ -171,7 +171,6 @@ namespace Akka.Event
                 NotifyInfo(message);
         }
 
-
         /// <summary>
         ///     Debugs the specified format.
         /// </summary>
@@ -188,7 +187,8 @@ namespace Akka.Event
         /// </summary>
         /// <param name="format">The format.</param>
         /// <param name="args">The arguments.</param>
-        public void Warn(string format, params object[] args)     //TODO: This should probably be obsolete and removed as Debug,Info,Error corresponds to LogEvent classes with the same name, so to be consistent Warning should be used instead.
+        [Obsolete("Use Warning instead")]
+        public void Warn(string format, params object[] args)
         {
             Warning(format, args);
         }
@@ -196,7 +196,7 @@ namespace Akka.Event
         /// <summary>Logs a <see cref="Akka.Event"/> message.</summary>
         /// <param name="format">The format.</param>
         /// <param name="args">The arguments.</param>
-        public void Warning(string format, params object[] args)     //TODO: This should probably be obsolete and removed as Debug,Info,Error corresponds to LogEvent classes with the same name, so to be consistent Warning should be used instead.
+        public void Warning(string format, params object[] args)
         {
             if(isWarningEnabled)
                 NotifyWarning(string.Format(format, args));

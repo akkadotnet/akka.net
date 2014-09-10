@@ -92,7 +92,7 @@ namespace Akka.Actor.Internals
 
             if(_settings.LogConfigOnStart)
             {
-                _log.Warn(Settings.ToString());
+                _log.Warning(Settings.ToString());
             }
         }
 
