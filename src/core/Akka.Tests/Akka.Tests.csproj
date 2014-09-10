@@ -123,6 +123,7 @@
     <Compile Include="Serialization\SerializationSpec.cs" />
     <Compile Include="TestUtils\Comparable.cs" />
     <Compile Include="TestUtils\Supervisor.cs" />
+    <Compile Include="Util\CollectionExtensionsSpec.cs" />
     <Compile Include="Util\PatternSpec.cs" />
     <Compile Include="Util\SwitchTests.cs" />
     <Compile Include="Util\TypeExtensionsTests.cs" />

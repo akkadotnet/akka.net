@@ -62,11 +62,15 @@
     <Otherwise />
   </Choose>
   <ItemGroup>
+    <Compile Include="AutoDownSpec.cs" />
     <Compile Include="ClusterConfigSpec.cs" />
     <Compile Include="ClusterDomainEventPublisherSpec.cs" />
     <Compile Include="ClusterDomainEventSpec.cs" />
+    <Compile Include="ClusterHeartBeatSenderStateSpec.cs" />
+    <Compile Include="ClusterSpecBase.cs" />
     <Compile Include="EWMASpec.cs" />
     <Compile Include="GossipSpec.cs" />
+    <Compile Include="HeartbeatNodeRingSpec.cs" />
     <Compile Include="MemberOrderingSpec.cs" />
     <Compile Include="MetricsCollectorSpec.cs" />
     <Compile Include="MetricsGossipSpec.cs" />

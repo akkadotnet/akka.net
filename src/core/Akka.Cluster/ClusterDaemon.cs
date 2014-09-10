@@ -814,16 +814,6 @@ namespace Akka.Cluster
                             m.SeedNodes.Select(a => a.ToString()).Aggregate((a, b) => a + ", " + b)));
         }
 
-        private void LeaderActions()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void ReapUnreachableMembers()
-        {
-            throw new NotImplementedException();
-        }
-
         private void Removed(object message)
         {
             message.Match()
@@ -1352,7 +1342,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Runs periodic leader actions, such as member status transitions, assigning partitions etc.
         /// </summary>
-        public void LeaderAction()
+        public void LeaderActions()
         {
             if (_latestGossip.IsLeader(SelfUniqueAddress))
             {
@@ -1362,6 +1352,17 @@ namespace Akka.Cluster
             }
         }
 
+        /// Leader actions are as follows:
+        /// 1. Move JOINING     => UP                   -- When a node joins the cluster
+        /// 2. Move LEAVING     => EXITING              -- When all partition handoff has completed
+        /// 3. Non-exiting remain                       -- When all partition handoff has completed
+        /// 4. Move unreachable EXITING => REMOVED      -- When all nodes have seen the EXITING node as unreachable (convergence) -
+        ///                                                 remove the node from the node ring and seen table
+        /// 5. Move unreachable DOWN/EXITING => REMOVED -- When all nodes have seen that the node is DOWN/EXITING (convergence) -
+        ///                                                 remove the node from the node ring and seen table
+        /// 7. Updating the vclock version for the changes
+        /// 8. Updating the `seen` table
+        /// 9. Update the state with the new gossip
         public void LeaderActionsOnConvergence()
         {
             var localGossip = _latestGossip;
@@ -1372,14 +1373,157 @@ namespace Akka.Cluster
             //TODO (from JVM Akka) implement partion handoff and a check if it is completed - now just returns TRUE - e.g. has completed successfully
             var hasPartionHandoffCompletedSuccessfully = true;
 
-            Func<bool> enoughMembers = () =>
-            {
-                return localMembers.Count >= _cluster.Settings.MinNrOfMembers &&
-                       _cluster.Settings.MinNrOfMembersOfRole.All(
-                           r => localMembers.Count(m => m.HasRole(r.Key)) >= r.Value);
-            };
+            Func<bool> enoughMembers = () => localMembers.Count >= _cluster.Settings.MinNrOfMembers &&
+                                             _cluster.Settings.MinNrOfMembersOfRole.All(
+                                                 r => localMembers.Count(m => m.HasRole(r.Key)) >= r.Value);
 
-            //TODO: ***********THIS IS AS FAR AS I'VE GOT ******************
+            Func<Member, bool> isJoiningUp = m => m.Status == MemberStatus.Joining && enoughMembers();
+
+            var removedUnreachable =
+                localOverview.Reachability.AllUnreachableOrTerminated.Select(localGossip.GetMember)
+                    .Where(m => Gossip.RemoveUnreachableWithMemberStatus.Contains(m.Status))
+                    .ToImmutableHashSet();
+
+            var changedMembers = localMembers.Select(m =>
+            {
+                var upNumber = 0;
+
+                if (isJoiningUp(m))
+                {
+                    // Move JOINING => UP (once all nodes have seen that this node is JOINING, i.e. we have a convergence)
+                    // and minimum number of nodes have joined the cluster
+                    if (upNumber == 0)
+                    {
+                        // It is alright to use same upNumber as already used by a removed member, since the upNumber
+                        // is only used for comparing age of current cluster members (Member.isOlderThan)
+                        var youngest = localGossip.YoungestMember;
+                        upNumber = 1 + (youngest.UpNumber == int.MaxValue ? 0 : youngest.UpNumber);
+                    }
+                    else
+                    {
+                        upNumber += 1;
+                    }
+                    return m.CopyUp(upNumber);
+                }
+
+                if (m.Status == MemberStatus.Leaving && hasPartionHandoffCompletedSuccessfully)
+                {
+                    // Move LEAVING => EXITING (once we have a convergence on LEAVING
+                    // *and* if we have a successful partition handoff)
+                    return m.Copy(MemberStatus.Exiting);
+                }
+
+                return null;
+            }).Where(m => m != null).ToImmutableSortedSet();
+
+            if (removedUnreachable.Any() && changedMembers.Any())
+            {
+                // handle changes
+
+                // replace changed members
+                var newMembers = changedMembers
+                    .Union(localMembers)
+                    .Except(removedUnreachable);
+
+                // removing REMOVED nodes from the `seen` table
+                var removed = removedUnreachable.Select(u => u.UniqueAddress).ToImmutableHashSet();
+                var newSeen = localSeen.Except(removed);
+                // removing REMOVED nodes from the `reachability` table
+                var newReachability = localOverview.Reachability.Remove(removed);
+                var newOverview = localOverview.Copy(seen: newSeen, reachability: newReachability);
+                var newGossip = localGossip.Copy(members: newMembers, overview: newOverview);
+
+                UpdateLatestGossip(newGossip);
+
+                // log status changes
+                foreach (var m in changedMembers)
+                    Log.Info("Leader is moving node [{0}] to [{1}]", m.Address, m.Status);
+
+                Publish(_latestGossip);
+
+                if (_latestGossip.GetMember(SelfUniqueAddress).Status == MemberStatus.Exiting)
+                {
+                    // Leader is moving itself from Leaving to Exiting. Let others know (best effort)
+                    // before shutdown. Otherwise they will not see the Exiting state change
+                    // and there will not be convergence until they have detected this node as
+                    // unreachable and the required downing has finished. They will still need to detect
+                    // unreachable, but Exiting unreachable will be removed without downing, i.e.
+                    // normally the leaving of a leader will be graceful without the need
+                    // for downing. However, if those final gossip messages never arrive it is
+                    // alright to require the downing, because that is probably caused by a
+                    // network failure anyway.
+                    //TODO: Fire off a load of gossip messages in rapid succession?
+                    for (var i = 0; i < NumberOfGossipsBeforeShutdownWhenLeaderExits; i++) SendGossip();
+                    Shutdown();
+                }
+            }
+        }
+
+        public void ReapUnreachableMembers()
+        {
+            if (!IsSingletonCluster)
+            {
+                // only scrutinize if we are a non-singleton cluster
+
+                var localGossip = _latestGossip;
+                var localOverview = localGossip.Overview;
+                var localMembers = localGossip.Members;
+
+                var newlyDetectedUnreachableMembers =
+                    localMembers.Where(member => !(member.UniqueAddress.Equals(SelfUniqueAddress) ||
+                                                   localOverview.Reachability.Status(SelfUniqueAddress,
+                                                       member.UniqueAddress) ==
+                                                   Reachability.ReachabilityStatus.Unreachable ||
+                                                   localOverview.Reachability.Status(SelfUniqueAddress,
+                                                       member.UniqueAddress) ==
+                                                   Reachability.ReachabilityStatus.Terminated ||
+                                                   _cluster.FailureDetector.IsAvailable(member.Address)))
+                                                   .ToImmutableSortedSet();
+
+                var newlyDetectedReachableMembers =
+                    localOverview.Reachability.AllUnreachableFrom(SelfUniqueAddress)
+                        .Where(
+                            node =>
+                                !node.Equals(SelfUniqueAddress) && _cluster.FailureDetector.IsAvailable(node.Address))
+                        .Select(localGossip.GetMember).ToImmutableHashSet();
+
+                if (newlyDetectedUnreachableMembers.Any() || newlyDetectedReachableMembers.Any())
+                {
+                    var newReachability1 = newlyDetectedUnreachableMembers.Aggregate(
+                        localOverview.Reachability,
+                        (reachability, m) => reachability.Unreachable(SelfUniqueAddress, m.UniqueAddress));
+
+                    var newReachability2 = newlyDetectedReachableMembers.Aggregate(
+                        newReachability1,
+                        (reachability, m) => reachability.Reachable(SelfUniqueAddress, m.UniqueAddress));
+
+                    if (!newReachability2.Equals(localOverview.Reachability))
+                    {
+                        var newOverview = localOverview.Copy(reachability: newReachability2);
+                        var newGossip = localGossip.Copy(overview: newOverview);
+
+                        UpdateLatestGossip(newGossip);
+
+                        var partitioned =
+                            newlyDetectedUnreachableMembers.Partition(m => m.Status == MemberStatus.Exiting);
+                        var exiting = partitioned.Item1;
+                        var nonExiting = partitioned.Item2;
+
+                        if (nonExiting.Any())
+                            Log.Warn("Cluster Node [{0}] - Marking node(s) as UNREACHABLE [{1}]",
+                                _cluster.SelfAddress, nonExiting.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b));
+
+                        if (exiting.Any())
+                            Log.Warn("Marking exiting node(s) as UNREACHABLE [{0}]. This is expected and they will be removed.",
+                                _cluster.SelfAddress, exiting.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b));
+
+                        if (newlyDetectedReachableMembers.Any())
+                            Log.Info("Marking node(s) as REACHABLE [{0}]", newlyDetectedReachableMembers.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b));
+
+                        Publish(_latestGossip);
+                    }
+                }
+            }
         }
 
         public UniqueAddress SelectRandomNode(ImmutableList<UniqueAddress> nodes)
@@ -1487,11 +1631,11 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class JoinSeedNodeProcess : UntypedActor, IActorLogging
     {
-        private LoggingAdapter _log = Logging.GetLogger(Context);
+        readonly LoggingAdapter _log = Logging.GetLogger(Context);
         public LoggingAdapter Log { get { return _log; } }
 
-        private ImmutableHashSet<Address> _seeds;
-        private Address _selfAddress;
+        readonly ImmutableHashSet<Address> _seeds;
+        readonly Address _selfAddress;
 
         public JoinSeedNodeProcess(ImmutableHashSet<Address> seeds)
         {
@@ -1562,15 +1706,15 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class FirstSeedNodeProcess : UntypedActor, IActorLogging
     {
-        private LoggingAdapter _log = Logging.GetLogger(Context);
+        readonly LoggingAdapter _log = Logging.GetLogger(Context);
         public LoggingAdapter Log { get { return _log; } }
 
         private ImmutableHashSet<Address> _remainingSeeds;
-        private Address _selfAddress;
-        private Cluster _cluster;
-        private Deadline _timeout;
+        readonly Address _selfAddress;
+        readonly Cluster _cluster;
+        readonly Deadline _timeout;
         private Task _retryTask;
-        private CancellationTokenSource _retryTaskToken;
+        readonly CancellationTokenSource _retryTaskToken;
 
         public FirstSeedNodeProcess(ImmutableHashSet<Address> seeds)
         {
@@ -1722,9 +1866,9 @@ namespace Akka.Cluster
     /// </summary>
     class OnMemberUpListener : ReceiveActor, IActorLogging
     {
-        private readonly Action _callback;
-        private LoggingAdapter _log = Logging.GetLogger(Context);
-        private Cluster _cluster;
+        readonly Action _callback;
+        readonly LoggingAdapter _log = Logging.GetLogger(Context);
+        readonly Cluster _cluster;
         public LoggingAdapter Log { get { return _log; } }
 
         public OnMemberUpListener(Action callback)
