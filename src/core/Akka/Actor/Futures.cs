@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor.Internal;
 
 namespace Akka.Actor
 {
@@ -44,7 +45,7 @@ namespace Akka.Actor
         internal static ActorRefProvider ResolveProvider(ICanTell self)
         {
             if (ActorCell.Current != null)
-                return ActorCell.Current.SystemImpl.Provider;
+                return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
 
             if (self is InternalActorRef)
                 return self.AsInstanceOf<InternalActorRef>().Provider;
