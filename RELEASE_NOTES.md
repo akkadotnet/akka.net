@@ -1,3 +1,5 @@
+#### 0.6.5
+
 #### 0.6.4 Sep 9 2014
 * Introduced `TailChoppingRouter`
 * All `ActorSystem` extensions now take an `ExtendedActorSystem` as a dependency - all thirdy party actor system extensions will need to update accordingly.

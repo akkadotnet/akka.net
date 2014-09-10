@@ -2,9 +2,14 @@
 using System.Diagnostics;
 using System.Threading;
 using Akka.Actor;
+using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
+
 #if MONO
-using Akka.Util;
+using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
+#else
+using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope>;
+//using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
 #endif
 
 namespace Akka.Dispatch
@@ -14,13 +19,9 @@ namespace Akka.Dispatch
     /// </summary>
     public class ConcurrentQueueMailbox : Mailbox
     {
-#if MONO
-        private readonly MonoConcurrentQueue<Envelope> _systemMessages = new MonoConcurrentQueue<Envelope>();
-        private readonly MonoConcurrentQueue<Envelope> _userMessages = new MonoConcurrentQueue<Envelope>();
-#else
-        private readonly ConcurrentQueue<Envelope> _systemMessages = new ConcurrentQueue<Envelope>();
-        private readonly ConcurrentQueue<Envelope> _userMessages = new ConcurrentQueue<Envelope>();
-#endif
+        private readonly TQueue _systemMessages = new TQueue();
+        private readonly TQueue _userMessages = new TQueue();
+
         private Stopwatch _deadLineTimer;
         private volatile bool _isClosed;
 

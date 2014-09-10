@@ -14,9 +14,9 @@ namespace Akka.TestKit
             Assert.True(self.SequenceEqual(other), "Expected " + other.Select(i => string.Format("'{0}'", i)).Join(",") + " got " + self.Select(i => string.Format("'{0}'", i)).Join(","));
         }
 
-        public static void ShouldBe<T>(this T self, T other, string message = null)
+        public static void ShouldBe<T>(this T self, T expected, string message = null)
         {
-            Assert.Equal(self, other);
+            Assert.Equal(expected, self);
         }
 
         public static void ShouldBeTrue(this bool b, string message = null)
