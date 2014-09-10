@@ -140,5 +140,24 @@ namespace Akka.Event
                     throw new ArgumentException(string.Format("Unknown LogLevel: \"{0}\". Valid values are: \"{1}\", \"{2}\", \"{3}\", \"{4}\"", logLevel, debug, info, warning, error), logLevel);
             }
         }
+
+        /// <summary>
+        /// Given the type of <see cref="LogEvent"/> returns the corresponding <see cref="LogLevel"/>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns>The <see cref="LogLevel"/> that corresponds to the specified type.</returns>
+        /// <exception cref="System.ArgumentException">Thrown for unknown types, i.e. when <typeparamref name="T"/> is not
+        /// <see cref="Debug"/>, <see cref="Info"/>, <see cref="Warning"/> or<see cref="Error"/></exception>
+        public static LogLevel LogLevelFor<T>() where T:LogEvent
+        {
+            var type = typeof(T);
+            if(type == typeof(Debug)) return LogLevel.DebugLevel;
+            if(type == typeof(Info)) return LogLevel.InfoLevel;
+            if(type == typeof(Warning)) return LogLevel.WarningLevel;
+            if(type == typeof(Error)) return LogLevel.ErrorLevel;
+
+            throw new ArgumentException(string.Format("Unknown LogEvent type: \"{0}\". Valid types are: \"{1}\", \"{2}\", \"{3}\", \"{4}\"", type.FullName, typeof(Debug).FullName, typeof(Info).FullName, typeof(Warning).FullName, typeof(Error).FullName));
+            
+        }
     }
 }
