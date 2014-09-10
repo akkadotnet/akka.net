@@ -68,6 +68,7 @@
     <Compile Include="Proto\ClusterMessageSerializer.cs" />
     <Compile Include="Proto\Msg\ClusterMessages.cs" />
     <Compile Include="Reachability.cs" />
+    <Compile Include="Routing\ClusterRoutingConfig.cs" />
     <Compile Include="Util.cs" />
     <Compile Include="VectorClock.cs" />
   </ItemGroup>

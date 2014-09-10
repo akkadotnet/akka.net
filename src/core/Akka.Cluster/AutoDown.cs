@@ -3,7 +3,6 @@ using System.Collections.Immutable;
 using System.Threading;
 using Akka.Actor;
 using Akka.Event;
-using Microsoft.VisualBasic.Logging;
 
 namespace Akka.Cluster
 {

@@ -316,8 +316,9 @@ namespace Akka.Actor
 
         public override bool Equals(object obj)
         {
-            if (obj == null) return false;
-            return obj == Instance;
+            var reserveredActorRef = (ReservedActorRef) obj;
+            if (reserveredActorRef == null) return false;
+            return reserveredActorRef == Instance;
         }
 
         public override int GetHashCode()
