@@ -48,7 +48,7 @@ namespace Akka.Event
         ///     Notifies the error.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected override void NotifyError(string message)
+        protected override void NotifyError(object message)
         {
             bus.Publish(new Error(null, logSource, logClass, message));
         }
@@ -58,7 +58,7 @@ namespace Akka.Event
         /// </summary>
         /// <param name="cause">The cause.</param>
         /// <param name="message">The message.</param>
-        protected override void NotifyError(Exception cause, string message)
+        protected override void NotifyError(Exception cause, object message)
         {
             bus.Publish(new Error(cause, logSource, logClass, message));
         }
@@ -67,7 +67,7 @@ namespace Akka.Event
         ///     Notifies the warning.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected override void NotifyWarning(string message)
+        protected override void NotifyWarning(object message)
         {
             bus.Publish(new Warning(logSource, logClass, message));
         }
@@ -76,7 +76,7 @@ namespace Akka.Event
         ///     Notifies the information.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected override void NotifyInfo(string message)
+        protected override void NotifyInfo(object message)
         {
             bus.Publish(new Info(logSource, logClass, message));
         }
@@ -85,7 +85,7 @@ namespace Akka.Event
         ///     Notifies the debug.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected override void NotifyDebug(string message)
+        protected override void NotifyDebug(object message)
         {
             bus.Publish(new Debug(logSource, logClass, message));
         }
