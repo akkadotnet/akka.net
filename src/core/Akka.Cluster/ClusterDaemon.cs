@@ -607,7 +607,7 @@ namespace Akka.Cluster
             return new OneForOneStrategy(e =>
             {
                 //TODO: JVM version matches NonFatal. Can / should we do something similar? 
-                Log.Error(e, "Cluster node [{0}] crashed, [{}] - shutting down...",
+                Log.Error(e, "Cluster node [{0}] crashed, [{1}] - shutting down...",
                     Cluster.Get(Context.System).SelfAddress, e);
                 Self.Tell(PoisonPill.Instance);
                 return Directive.Stop;
@@ -623,7 +623,7 @@ namespace Akka.Cluster
 
     class ClusterCoreDaemon : UntypedActor, IActorLogging
     {
-        readonly Cluster _cluster = new Cluster((ActorSystemImpl)Context.System);
+        readonly Cluster _cluster = Cluster.Get(Context.System);
         protected readonly UniqueAddress SelfUniqueAddress;
         const int NumberOfGossipsBeforeShutdownWhenLeaderExits = 3;
         readonly VectorClock.Node _vclockNode;
@@ -793,7 +793,7 @@ namespace Akka.Cluster
         {
             message.Match()
                 .With<GossipEnvelope>(m => ReceiveGossip(m))
-                .With<GossipStatus>(m => ReceiveGossipStatus(m))
+                .With<GossipStatus>(ReceiveGossipStatus)
                 .With<InternalClusterAction.GossipTick>(m => GossipTick())
                 .With<InternalClusterAction.GossipSpeedupTick>(m => GossipSpeedupTick())
                 .With<InternalClusterAction.ReapUnreachableTick>(m => ReapUnreachableMembers())
@@ -812,12 +812,6 @@ namespace Akka.Cluster
                     m =>
                         Log.Info("Trying to join seed nodes [{0}] when already part of a cluster, ignoring",
                             m.SeedNodes.Select(a => a.ToString()).Aggregate((a, b) => a + ", " + b)));
-        }
-
-        private void Removed(object message)
-        {
-            message.Match()
-                .With<InternalClusterAction.ISubscriptionMessage>(m => _publisher.Forward(m));
         }
 
         protected override void OnReceive(object message)
@@ -960,7 +954,7 @@ namespace Akka.Cluster
                     UpdateLatestGossip(newGossip);
 
                     Log.Info("Node [{0}] is JOINING, roles [{1}]", node.Address,
-                        roles.Select(r => r.ToString()).Aggregate((a, b) => a + ", " + b));
+                        roles.Select(r => r.ToString()).Aggregate("", (a, b) => a + ", " + b));
 
                     if (!node.Equals(SelfUniqueAddress))
                     {
@@ -1416,7 +1410,7 @@ namespace Akka.Cluster
                 return null;
             }).Where(m => m != null).ToImmutableSortedSet();
 
-            if (removedUnreachable.Any() && changedMembers.Any())
+            if (removedUnreachable.Any() || changedMembers.Any())
             {
                 // handle changes
 
@@ -1602,7 +1596,8 @@ namespace Akka.Cluster
             _publisher.Tell(new ClusterEvent.CurrentInternalStats(_gossipStats, vclockStats));
         }
 
-        public LoggingAdapter Log { get; private set; }
+        readonly LoggingAdapter _log = Logging.GetLogger(Context);
+        public LoggingAdapter Log { get { return _log; } }
     }
 
     /// <summary>

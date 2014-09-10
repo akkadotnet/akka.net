@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Immutable;
-using System.IO;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Remote;
