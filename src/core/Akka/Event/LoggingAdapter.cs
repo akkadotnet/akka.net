@@ -133,7 +133,7 @@ namespace Akka.Event
 
         /// <summary>Logs a <see cref="Akka.Event"/> message.</summary>
         /// <param name="message">The message.</param>
-        public void Warning(string message)
+        public void Warning(FormattedLogMessage message)
         {
             if(isWarningEnabled)
                 NotifyWarning(message);
