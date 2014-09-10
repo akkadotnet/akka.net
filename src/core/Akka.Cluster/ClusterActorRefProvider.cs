@@ -1,5 +1,4 @@
-﻿using System;
-using Akka.Actor;
+﻿using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Cluster.Configuration;
 using Akka.Event;
@@ -30,5 +29,20 @@ namespace Akka.Cluster
             // initialize/load the Cluster extension
             Cluster.Get(system);
         }
+
+        protected override ActorRef CreateRemoteWatcher(ActorSystem system)
+        {
+            // make sure Cluster extension is initialized/loaded from init thread
+            Cluster.Get(system);
+
+            var failureDetector = CreateRemoteWatcherFailureDetector(system);
+            return system.ActorOf(ClusterRemoteWatcher.Props(
+                failureDetector,
+                RemoteSettings.WatchHeartBeatInterval,
+                RemoteSettings.WatchUnreachableReaperInterval,
+                RemoteSettings.WatchHeartbeatExpectedResponseAfter), "remote-watcher");
+        }
+
+        //TODO: Deployment stuff
     }
 }

@@ -13,7 +13,7 @@ namespace Akka.Cluster
     /// Read view of the cluster's state, updated via subscription of
     /// clsuter events published on the <see cref="EventBus{TEvent,TClassifier,TSubscriber}"/>.
     /// </summary>
-    internal class ClusterReadView : IDisposable
+    public class ClusterReadView : IDisposable
     {
         public ClusterEvent.CurrentClusterState State { get { return _state; } }
 

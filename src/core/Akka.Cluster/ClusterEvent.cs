@@ -44,7 +44,7 @@ namespace Akka.Cluster
         /// </summary>
         public interface IClusterDomainEvent { }
 
-        internal sealed class CurrentClusterState
+        public sealed class CurrentClusterState
         {
             private readonly ImmutableSortedSet<Member> _members;
             private readonly ImmutableHashSet<Member> _unreachable;
@@ -681,7 +681,7 @@ namespace Akka.Cluster
                 _latestGossip.Overview.Reachability.AllUnreachableOrTerminated.Select(_latestGossip.GetMember)
                     .ToImmutableHashSet(),
                 _latestGossip.SeenBy.Select(s => s.Address).ToImmutableHashSet(),
-                _latestGossip.Leader.Address,
+                _latestGossip.Leader == null ? null : _latestGossip.Leader.Address,
                 _latestGossip.AllRoles.ToImmutableDictionary(r => r, r => _latestGossip.RoleLeader(r).Address)
                 );
             receiver.Tell(state);
