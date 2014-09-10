@@ -126,7 +126,8 @@ namespace Akka.Event
         ///    Logs a <see cref="Warning"/> message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Warn(string message)    //TODO: This should probably be obsolete and removed as Debug,Info,Error corresponds to LogEvent classes with the same name, so to be consistent Warning should be used instead.
+        [Obsolete("Use Warning instead")]
+        public void Warn(string message)
         {
            Warning(message);
         }
