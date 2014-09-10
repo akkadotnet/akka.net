@@ -123,12 +123,19 @@ namespace Akka.Event
         }
 
         /// <summary>
-        ///     Warns the specified message.
+        ///    Logs a <see cref="Warning"/> message.
         /// </summary>
         /// <param name="message">The message.</param>
         public void Warn(FormattedLogMessage message)
         {
-            if (isWarningEnabled)
+           Warning(message);
+        }
+
+        /// <summary>Logs a <see cref="Akka.Event"/> message.</summary>
+        /// <param name="message">The message.</param>
+        public void Warning(string message)
+        {
+            if(isWarningEnabled)
                 NotifyWarning(message);
         }
 
@@ -180,9 +187,17 @@ namespace Akka.Event
         /// </summary>
         /// <param name="format">The format.</param>
         /// <param name="args">The arguments.</param>
-        public void Warn(string format, params object[] args)
+        public void Warn(string format, params object[] args)     //TODO: This should probably be obsolete and removed as Debug,Info,Error corresponds to LogEvent classes with the same name, so to be consistent Warning should be used instead.
         {
-            if (isWarningEnabled)
+            Warning(format, args);
+        }
+
+        /// <summary>Logs a <see cref="Akka.Event"/> message.</summary>
+        /// <param name="format">The format.</param>
+        /// <param name="args">The arguments.</param>
+        public void Warning(string format, params object[] args)     //TODO: This should probably be obsolete and removed as Debug,Info,Error corresponds to LogEvent classes with the same name, so to be consistent Warning should be used instead.
+        {
+            if(isWarningEnabled)
                 NotifyWarning(new FormattedLogMessage(format, args));
         }
 

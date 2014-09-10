@@ -30,7 +30,7 @@ namespace Akka.TestKit
             _assertions.AssertEqual(expected,actual,format,args);
         }
 
-        public static void Throws<T>(Action action) where T : Exception
+        public static T Throws<T>(Action action) where T : Exception
         {
             Exception exception = null;
             try
@@ -39,14 +39,15 @@ namespace Akka.TestKit
             }
             catch(AggregateException ex) //need to flatten AggregateExceptions
             {
-                if(ex.Flatten().InnerExceptions.Any(x => x is T)) return;
+                var any = ex.Flatten().InnerExceptions.FirstOrDefault(x => x is T);
+                if(any!=null) return (T) any;
                 exception = ex;
             }
             catch(Exception ex)
             {
                 if(ex is T)
                 {
-                    return;
+                    return (T) ex;
                 }
                 exception = ex;
             }
@@ -54,6 +55,7 @@ namespace Akka.TestKit
                 Fail("Expected exception of type " + typeof(T).FullName + ". Received " + exception);
             else
                 Fail("Expected exception of type " + typeof(T).Name + " but no exceptions was thrown.");
+            return null;    //We'll never reach this line, since calling Fail will throw an exception.
         }
     }
 }
