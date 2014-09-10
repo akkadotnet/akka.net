@@ -13,6 +13,7 @@ If you have commits that looks like this _"Merge branch 'my-branch' into dev"_ o
 - __Descriptive commit messages__ If a commit's message isn't descriptive, change it using [interactive rebase](https://help.github.com/articles/about-git-rebase). Refer to issues using `#issue`. Example of a bad message ~~"Small cleanup"~~. Example of good message: _"Removed Security.Claims header from FSM, which broke Mono build per #62"_. Don't be afraid to write long messages, if needed. Try to explain _why_ you've done the changes. The Erlang repo has some info on [writing good commit messages](https://github.com/erlang/otp/wiki/Writing-good-commit-messages).
 - __No one-commit-to-rule-them-all__ Large commits that changes too many things at the same time are very hard to review. Split large commits into smaller. See this [StackOverflow question](http://stackoverflow.com/questions/6217156/break-a-previous-commit-into-multiple-commits) for informatin on how to do this.
 - __Tests__ Add relevant tests and make sure all existing ones still passes. Tests can be run using the command
+- __No Warnings__ Make sure your code do not produce any build warnings.
 
 After reviewing a Pull request, we might ask you to fix some commits. After you've done that you need to force push to update your branch in your local fork.
 
