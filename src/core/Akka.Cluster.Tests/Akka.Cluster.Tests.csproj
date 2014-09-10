@@ -67,8 +67,10 @@
     <Compile Include="ClusterDomainEventPublisherSpec.cs" />
     <Compile Include="ClusterDomainEventSpec.cs" />
     <Compile Include="ClusterHeartBeatSenderStateSpec.cs" />
+    <Compile Include="ClusterSpec.cs" />
     <Compile Include="ClusterSpecBase.cs" />
     <Compile Include="EWMASpec.cs" />
+    <Compile Include="FailureDetectorPuppet.cs" />
     <Compile Include="GossipSpec.cs" />
     <Compile Include="HeartbeatNodeRingSpec.cs" />
     <Compile Include="MemberOrderingSpec.cs" />

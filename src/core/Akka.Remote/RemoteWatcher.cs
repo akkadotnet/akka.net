@@ -259,8 +259,10 @@ namespace Akka.Remote
         readonly RemoteActorRefProvider _remoteProvider;
         readonly HeartbeatRsp _selfHeartbeatRspMsg = new HeartbeatRsp(AddressUidExtension.Uid(Context.System));
         readonly HashSet<Tuple<ActorRef, ActorRef>> _watching = new HashSet<Tuple<ActorRef, ActorRef>>();
+        protected HashSet<Tuple<ActorRef, ActorRef>> Watching { get { return _watching; } }
         readonly HashSet<Address> _watchingNodes = new HashSet<Address>();
         readonly HashSet<Address> _unreachable = new HashSet<Address>();
+        protected HashSet<Address> Unreachable { get { return _unreachable; } }
         readonly Dictionary<Address, int> _addressUids = new Dictionary<Address, int>();
 
         readonly CancellationTokenSource _heartbeatCancellable;
@@ -405,7 +407,7 @@ namespace Akka.Remote
             _watchingNodes.Add(watcheeAddress);
         }
 
-        private void ProcessUnwatchRemote(ActorRef watchee, ActorRef watcher)
+        protected void ProcessUnwatchRemote(ActorRef watchee, ActorRef watcher)
         {
             //TODO: What to do about this. Remote actors seem to get 0 uid
             // as ActorPathSurrogate doesn't contain the uid
