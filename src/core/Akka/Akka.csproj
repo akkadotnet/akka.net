@@ -177,6 +177,7 @@
     <Compile Include="Serialization\NewtonSoftJsonSerializer.cs" />
     <Compile Include="Serialization\NullSerializer.cs" />
     <Compile Include="Util\ArrayExtensions.cs" />
+    <Compile Include="Util\Either.cs" />
     <Compile Include="Util\Internal\AtomicCounter.cs" />
     <Compile Include="Util\Internal\AtomicCounterLong.cs" />
     <Compile Include="Pattern\IllegalStateException.cs" />
