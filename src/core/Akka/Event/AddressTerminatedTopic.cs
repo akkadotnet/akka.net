@@ -4,7 +4,7 @@ using Akka.Util;
 
 namespace Akka.Event
 {
-    internal sealed class AddressTerminatedTopicProvider : ExtensionIdProvider<AddressTerminatedTopic>, IExtensionId<AddressTerminatedTopic>
+    internal sealed class AddressTerminatedTopicProvider : ExtensionIdProvider<AddressTerminatedTopic>
     {
         public override AddressTerminatedTopic CreateExtension(ExtendedActorSystem system)
         {
