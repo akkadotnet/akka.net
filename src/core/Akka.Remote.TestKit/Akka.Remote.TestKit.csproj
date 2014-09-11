@@ -5,10 +5,6 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{E5957C3E-2B1E-469F-A680-7953B4DEA31B}</ProjectGuid>
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{DACD8518-3C49-496D-95EB-3BF90AA6B612}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Akka.Remote.TestKit</RootNamespace>
@@ -54,7 +50,6 @@
     <Compile Include="Conductor.cs" />
     <Compile Include="DataTypes.cs" />
     <Compile Include="Extension.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Reference Include="Google.ProtocolBuffers">
       <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.dll</HintPath>
     </Reference>
@@ -85,7 +80,6 @@
     <Compile Include="MultiNodeSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Proto\TestConductorProtocol.cs" />
-    <Compile Include="TestConductor\DataTypes.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj">
@@ -104,14 +98,6 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="protos\google\protobuf\csharp_options.proto" />
-    <None Include="protos\google\protobuf\descriptor.proto" />
-    <None Include="protos\tutorial\addressbook.proto" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="CHANGES.txt" />
-    <Content Include="licenses\license.txt" />
-    <Content Include="licenses\protoc-license.txt" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
