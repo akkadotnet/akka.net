@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Linq.Expressions;
 using Akka.Actor;
 using Akka.Cluster.Routing;
 using Akka.Routing;
 using Akka.TestKit;
-using Google.ProtocolBuffers;
 using Xunit;
 
 namespace Akka.Cluster.Tests.Routing

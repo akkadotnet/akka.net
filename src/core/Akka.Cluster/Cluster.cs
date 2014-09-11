@@ -240,8 +240,6 @@ namespace Akka.Cluster
 
         internal ClusterEvent.CurrentClusterState State { get { return _readView._state; } }
 
-        internal ClusterReadView ReadView { get { return _readView; } }
-
         readonly AtomicBoolean _isTerminated = new AtomicBoolean(false);
 
         public bool IsTerminated { get { return _isTerminated.Value; } }
