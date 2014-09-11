@@ -75,6 +75,8 @@ namespace Akka.Cluster.Tests
         {
             try
             {
+                _cluster.Join(_selfAddress);
+                LeaderActions(); // Joining -> Up
                 _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsEvents, new[] { typeof(ClusterEvent.IMemberEvent) });
                 ExpectMsg<ClusterEvent.MemberUp>();
             }
@@ -95,6 +97,8 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void AClusterMustPublishMemberRemovedWhenShutdown()
         {
+            _cluster.Join(_selfAddress);
+            LeaderActions(); // Joining -> Up
             _cluster.Subscribe(TestActor, new []{typeof(ClusterEvent.MemberRemoved)});
             // first, is in response to the subscription
             ExpectMsg<ClusterEvent.CurrentClusterState>();
