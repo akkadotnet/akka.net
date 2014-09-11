@@ -2,6 +2,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.30110.0
+VisualStudioVersion = 12.0.30324.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatMessages", "examples\Chat\ChatMessages\ChatMessages.csproj", "{819221CB-82B7-43D3-A4DE-E00AF17F2FDF}"
 EndProject
@@ -106,6 +107,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Tests", "core\Akka.Cluster.Tests\Akka.Cluster.Tests.csproj", "{C8D6A95C-50BF-4416-A212-86B18B87220D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote.TestKit", "core\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj", "{E5957C3E-2B1E-469F-A680-7953B4DEA31B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote.TestKit", "core\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj", "{DACD8518-3C49-496D-95EB-3BF90AA6B612}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -352,6 +354,14 @@ Global
 		{E5957C3E-2B1E-469F-A680-7953B4DEA31B}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{E5957C3E-2B1E-469F-A680-7953B4DEA31B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E5957C3E-2B1E-469F-A680-7953B4DEA31B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DACD8518-3C49-496D-95EB-3BF90AA6B612}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{DACD8518-3C49-496D-95EB-3BF90AA6B612}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{DACD8518-3C49-496D-95EB-3BF90AA6B612}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DACD8518-3C49-496D-95EB-3BF90AA6B612}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DACD8518-3C49-496D-95EB-3BF90AA6B612}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{DACD8518-3C49-496D-95EB-3BF90AA6B612}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{DACD8518-3C49-496D-95EB-3BF90AA6B612}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DACD8518-3C49-496D-95EB-3BF90AA6B612}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -395,5 +405,7 @@ Global
 		{11F4D4B8-7E07-4457-ABF2-609B3E7B2649} = {7625FD95-4B2C-4A5B-BDD5-94B1493FAC8E}
 		{01003DAF-660B-4C39-9557-1F5E95B405BF} = {7625FD95-4B2C-4A5B-BDD5-94B1493FAC8E}
 		{F5697316-A1C6-4B99-84B5-1E7DEB08D669} = {7625FD95-4B2C-4A5B-BDD5-94B1493FAC8E}
+		{53D9D2F0-4A35-4FCE-980C-8F7F3DCBDB2B} = {FFEC736B-EDA3-433C-8564-7C14676601A1}
+		{DACD8518-3C49-496D-95EB-3BF90AA6B612} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 	EndGlobalSection
 EndGlobal
