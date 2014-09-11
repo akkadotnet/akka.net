@@ -35,6 +35,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Akka.TestKit.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release Mono|AnyCPU'">
     <OutputPath>bin\Release Mono\</OutputPath>
@@ -71,6 +72,32 @@
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="CallingThreadDispatcher.cs" />
+    <Compile Include="EventFilter\IEventFilterApplier.cs" />
+    <Compile Include="EventFilter\Internal\CustomEventFilter.cs" />
+    <Compile Include="EventFilter\DeadLettersFilter.cs" />
+    <Compile Include="EventFilter\Internal\DebugFilter.cs" />
+    <Compile Include="EventFilter\Internal\ErrorFilter.cs" />
+    <Compile Include="EventFilter\EventFilter.cs" />
+    <Compile Include="EventFilter\Internal\EventFilterApplier.cs" />
+    <Compile Include="EventFilter\Internal\StringMatcher\ContainsString.cs" />
+    <Compile Include="EventFilter\Internal\StringMatcher\EqualsString.cs" />
+    <Compile Include="EventFilter\Internal\EventFilterBase.cs" />
+    <Compile Include="EventFilter\EventFilterFactory_Generated.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>EventFilterFactory_Generated.tt</DependentUpon>
+    </Compile>
+    <Compile Include="EventFilter\EventFilterFactory.cs" />
+    <Compile Include="EventFilter\Internal\InfoFilter.cs" />
+    <Compile Include="EventFilter\Internal\StringMatcher\IStringMatcher.cs" />
+    <Compile Include="EventFilter\Internal\StringMatcher\MatchesAll.cs" />
+    <Compile Include="EventFilter\Internal\StringMatcher\PredicateMatcher.cs" />
+    <Compile Include="EventFilter\Internal\StringMatcher\RegexMatcher.cs" />
+    <Compile Include="EventFilter\Internal\StringMatcher\StartsWithString.cs" />
+    <Compile Include="EventFilter\Internal\WarningFilter.cs" />
+    <Compile Include="EventFilter\TestEvent\Mute.cs" />
+    <Compile Include="EventFilter\TestEvent\Unmute.cs" />
+    <Compile Include="EventFilter\UnmutableFilter.cs" />
     <Compile Include="FSMSpecHelpers.cs" />
     <Compile Include="AutoPilots.cs" />
     <Compile Include="ImplicitSender.cs" />
@@ -81,6 +108,7 @@
     <Compile Include="Internals\TimeSpanExtensions.cs" />
     <Compile Include="TestActors\BlackHoleActor.cs" />
     <Compile Include="TestActors\EchoActor.cs" />
+    <Compile Include="TestBarrier.cs" />
     <Compile Include="TestKitAssertions.cs" />
     <Compile Include="MessageEnvelope.cs" />
     <Compile Include="NullMessageEnvelope.cs" />
@@ -88,7 +116,7 @@
     <Compile Include="RealMessageEnvelope.cs" />
     <Compile Include="TestActor.cs" />
     <Compile Include="TestActorRef.cs" />
-    <Compile Include="TestEvents.cs" />
+    <Compile Include="EventFilter\TestEventListener.cs" />
     <Compile Include="TestKitAssertionsExtension.cs" />
     <Compile Include="TestKitAssertionsProvider.cs" />
     <Compile Include="TestKitBase.cs" />
@@ -111,6 +139,16 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Internals\Reference.conf" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <None Include="EventFilter\EventFilterFactory_Generated.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>EventFilterFactory_Generated.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

@@ -30,7 +30,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Release\Akka.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\Akka.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release Mono|AnyCPU'">
     <OutputPath>bin\Release Mono\</OutputPath>
@@ -69,6 +69,7 @@
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Actor\ActorCell.DeathWatch.cs" />
+    <Compile Include="Actor\Dsl\Act.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
     <Compile Include="Actor\Internals\InitializableActor.cs" />
     <Compile Include="Actor\ReceiveActor.cs" />
@@ -132,8 +133,13 @@
     <Compile Include="Configuration\Hocon\HoconValue.cs" />
     <Compile Include="Configuration\Hocon\IHoconElement.cs" />
     <Compile Include="Dispatch\ConcurrentQueueMailbox.cs" />
+    <Compile Include="Dispatch\GenericMailbox.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
+    <Compile Include="Dispatch\MessageQueues\BlockingMessageQueue.cs" />
+    <Compile Include="Dispatch\MessageQueues\Semantics.cs" />
+    <Compile Include="Dispatch\MessageQueues\UnboundedPriorityMailboxQueue.cs" />
+    <Compile Include="Dispatch\MessageQueues\UnboundedMailboxQueue.cs" />
     <Compile Include="Dispatch\FutureActor.cs" />
     <Compile Include="Actor\IActorContext.cs" />
     <Compile Include="Actor\ActorRefFactory.cs" />
@@ -145,8 +151,10 @@
     <Compile Include="Actor\Message.cs" />
     <Compile Include="Actor\UntypedReceive.cs" />
     <Compile Include="Dispatch\Mailboxes.cs" />
+    <Compile Include="Dispatch\MessageQueues\MessageQueue.cs" />
     <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
     <Compile Include="Dispatch\ThreadPoolBuilder.cs" />
+    <Compile Include="Dispatch\UnboundedPriorityMailbox.cs" />
     <Compile Include="Event\ActorEventBus.cs" />
     <Compile Include="Event\AddressTerminatedTopic.cs" />
     <Compile Include="Event\BusLogging.cs" />
@@ -177,6 +185,7 @@
     <Compile Include="Serialization\NewtonSoftJsonSerializer.cs" />
     <Compile Include="Serialization\NullSerializer.cs" />
     <Compile Include="Util\ArrayExtensions.cs" />
+    <Compile Include="Util\Either.cs" />
     <Compile Include="Util\Internal\AtomicCounter.cs" />
     <Compile Include="Util\Internal\AtomicCounterLong.cs" />
     <Compile Include="Pattern\IllegalStateException.cs" />
@@ -204,6 +213,7 @@
     <Compile Include="Util\AtomicBoolean.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\Internal\IAtomicCounter.cs" />
+    <Compile Include="Util\ListPriorityQueue.cs" />
     <Compile Include="Util\MonoConcurrentQueue.cs" />
     <Compile Include="Util\MurmurHash.cs" />
     <Compile Include="Util\Reflection\ExpressionExtensions.cs" />

@@ -11,20 +11,31 @@ namespace Akka.Event
     /// <summary>
     ///     Class DefaultLogger.
     /// </summary>
-    public class DefaultLogger : UntypedActor
+    public class DefaultLogger : ActorBase
     {
         /// <summary>
         ///     Processor for user defined messages.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected override void OnReceive(object message)
+        protected override bool Receive(object message)
         {
-            message
-                .Match()
-                .With<InitializeLogger>(m => Sender.Tell(new LoggerInitialized()))
-                .With<LogEvent>(m =>
-                    Console.WriteLine(m))
-                .Default(Unhandled);
+            if(message is InitializeLogger)
+            {
+                Sender.Tell(new LoggerInitialized());
+                return true;
+            }
+            var logEvent = message as LogEvent;
+            if(logEvent != null)
+            {
+                Print(logEvent);
+                return true;
+            }
+            return false;            
+        }
+
+        protected virtual void Print(LogEvent m)
+        {
+            Console.WriteLine(m);
         }
     }
 }

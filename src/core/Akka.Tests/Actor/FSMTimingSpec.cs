@@ -260,7 +260,7 @@ namespace Akka.Tests.Actor
 
         public static void StaticAwaitCond(Func<bool> evaluator, TimeSpan max, TimeSpan? interval)
         {
-            InternalAwaitCondition(evaluator, max, interval, null,(format,args)=> XAssert.Fail(string.Format(format,args)));
+            InternalAwaitCondition(evaluator, max, interval,(format,args)=> XAssert.Fail(string.Format(format,args)));
         }
 
 

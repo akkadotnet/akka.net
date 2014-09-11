@@ -79,8 +79,8 @@ namespace Akka.Cluster
             _metricsGossipInterval = cc.GetMillisDuration("metrics.gossip-interval");
             _metricsMovingAverageHalfLife = cc.GetMillisDuration("metrics.moving-average-half-life");
 
-
-            //TODO: _minNrOfMembersOfRole;
+            _minNrOfMembersOfRole = cc.GetConfig("role").Root.GetObject().AsEnumerable()
+                .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetKey("min-nr-of-members").GetInt());
         }
 
         public bool LogInfo

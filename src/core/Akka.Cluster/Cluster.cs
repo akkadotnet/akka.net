@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Configuration;
+using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
@@ -68,33 +70,34 @@ namespace Akka.Cluster
                 system));
 
             _scheduler = CreateScheduler(system);
-            _readView = new ClusterReadView(this);
 
             //create supervisor for daemons under path "/system/cluster"
-            _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(_settings)).WithDeploy(Deploy.Local),"cluster");
-            Init();    
+            _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(_settings)).WithDeploy(Deploy.Local), "cluster");
+
+            //TODO: Pretty sure this is bad and will at least throw aggregateexception possibly worse. 
+            _clusterCore = GetClusterCoreRef().Result;
+
+            _readView = new ClusterReadView(this);
         }
 
         /// <summary>
         /// Handles initialization logic for the <see cref="Cluster"/>
         /// </summary>
-        private async void Init()
+        private async Task<ActorRef> GetClusterCoreRef()
         {
             var timeout = System.Settings.CreationTimeout;
             try
             {
-                _clusterCore = await _clusterDaemons.Ask<ActorRef>(InternalClusterAction.GetClusterCoreRef.Instance, timeout);
+                return await _clusterDaemons.Ask<ActorRef>(InternalClusterAction.GetClusterCoreRef.Instance, timeout).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 _log.Error(ex, "Failed to startup Cluster. You can try to increase 'akka.actor.creation-timeout'.");
                 Shutdown();
                 System.DeadLetters.Tell(ex); //don't re-throw the error. Just log it.
-                return;
+                return System.DeadLetters;
             }
-
             //TODO: add system.terminationCallback support
-            LogInfo("Started up successfully");
         }
 
         /// <summary>
@@ -121,6 +124,7 @@ namespace Akka.Cluster
         /// <param name="to"><see cref="ClusterEvent.IClusterDomainEvent"/> subclasses</param>
         public void Subscribe(ActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initialStateMode, Type[] to)
         {
+            var val = _clusterCore;
             _clusterCore.Tell(new InternalClusterAction.Subscribe(subscriber, initialStateMode, ImmutableHashSet.Create<Type>(to)));
         }
 
@@ -246,6 +250,7 @@ namespace Akka.Cluster
 
         readonly LoggingAdapter _log;
         readonly ClusterReadView _readView;
+        public ClusterReadView ReadView {get { return _readView; }}
 
         readonly DefaultFailureDetectorRegistry<Address> _failureDetector;
         public DefaultFailureDetectorRegistry<Address> FailureDetector { get { return _failureDetector; } }
@@ -277,6 +282,7 @@ namespace Akka.Cluster
 
         readonly ActorRef _clusterDaemons;
         ActorRef _clusterCore;
+        public ActorRef ClusterCore { get { return _clusterCore; } }
 
         public void LogInfo(string message)
         {

@@ -30,8 +30,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>
-    </DocumentationFile>
+    <DocumentationFile>bin\Release\Akka.Remote.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release Mono|AnyCPU'">
     <OutputPath>bin\Release Mono\</OutputPath>
@@ -104,6 +103,7 @@
     <Compile Include="Transport\AkkaPduCodec.cs" />
     <Compile Include="Transport\Helios\HeliosHelpers.cs" />
     <Compile Include="Transport\Helios\HeliosTcpTransport.cs" />
+    <Compile Include="Transport\ThrottleTransportAdapter.cs" />
     <Compile Include="Transport\TransportAdapters.cs" />
     <Compile Include="Transport\AkkaProtocolTransport.cs" />
     <Compile Include="Transport\Helios\HeliosTransport.cs" />
