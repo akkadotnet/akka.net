@@ -37,7 +37,7 @@ namespace Akka.Routing
             if (terminated != null)
             {
                 var t = terminated;
-                Cell.RemoveRoutee(t.ActorRef, false);
+                Cell.RemoveRoutee(new ActorRefRoutee(t.ActorRef), false);
                 StopIfAllRouteesRemoved();
             }
                 //if (message is AdjustPoolSize)
