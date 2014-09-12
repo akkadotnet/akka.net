@@ -302,10 +302,10 @@ namespace Akka.Remote.TestKit
                 foreach (var arrived in data.Arrived)
                 {
                     arrived.Tell(new ToClient<BarrierResult>(new BarrierResult(data.Barrier, true)));
-                    return
-                        GoTo(State.Idle)
-                            .Using(data.Copy(barrier: string.Empty, arrived: ImmutableHashSet.Create<ActorRef>()));
                 }
+                return
+                    GoTo(State.Idle)
+                        .Using(data.Copy(barrier: string.Empty, arrived: ImmutableHashSet.Create<ActorRef>()));
             }
             else
             {
