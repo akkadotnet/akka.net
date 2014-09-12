@@ -1,11 +1,16 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
 using Akka.Util;
+using Helios.Exceptions;
+using Helios.Net;
+using Helios.Topology;
 
 namespace Akka.Remote.TestKit
 {
@@ -200,12 +205,57 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    //TODO: Remoting here? Not sure this is right
-    class ConductorHandler
+    /// <summary>
+    /// This handler is what's used to process events which occur on <see cref="RemoteConnection"/>.
+    /// 
+    /// It's only purpose is to dispatch incoming messages to the right <see cref="ServerFSM"/> actor. There is
+    /// one shared instance fo this class for all <see cref="IConnection"/>s accepted by one <see cref="Controller"/>.
+    /// </summary>
+    internal class ConductorHandler : IHeliosConnectionHandler
     {
-        public ConductorHandler()
+        private readonly LoggingAdapter _log;
+        private readonly ActorRef _controller;
+        private readonly ConcurrentDictionary<IConnection, ActorRef> _clients = new ConcurrentDictionary<IConnection, ActorRef>();
+
+        public ConductorHandler(ActorRef controller, LoggingAdapter log)
         {
-            throw new NotImplementedException();
+            _controller = controller;
+            _log = log;
+        }
+
+        public async void OnConnect(INode remoteAddress, IConnection responseChannel)
+        {
+            _log.Debug("connection from {0}", responseChannel.RemoteHost);
+            var fsm = await _controller.Ask<ActorRef>(new Controller.CreateServerFSM(responseChannel), TimeSpan.MaxValue);
+            _clients.AddOrUpdate(responseChannel, fsm, (connection, @ref) => fsm);
+        }
+
+        public void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
+        {
+            _log.Debug("disconnect from {0}", closedChannel.RemoteHost);
+            var fsm = _clients[closedChannel];
+            fsm.Tell(new Controller.ClientDisconnected(new RoleName(null)));
+            ActorRef removedActor;
+            _clients.TryRemove(closedChannel, out removedActor);
+        }
+
+        public void OnMessage(object message, IConnection responseChannel)
+        {
+            _log.Debug(string.Format("message from {0}: {1}", responseChannel.RemoteHost, message));
+            if (message is INetworkOp)
+            {
+                _clients[responseChannel].Tell(message);
+            }
+            else
+            {
+                _log.Debug(string.Format("client {0} sent garbage `{1}`, disconnecting", responseChannel.RemoteHost, message));
+                responseChannel.Close();
+            }
+        }
+
+        public void OnException(Exception ex, IConnection erroredChannel)
+        {
+            _log.Warn(string.Format("handled network error from {0}: {1}", erroredChannel.RemoteHost, ex.Message));
         }
     }
 

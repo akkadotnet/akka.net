@@ -1,5 +1,6 @@
 ﻿using System;
 using Akka.Actor;
+using Helios.Net;
 
 namespace Akka.Remote.TestKit
 {
@@ -156,6 +157,16 @@ namespace Akka.Remote.TestKit
             {
                 return !Equals(left, right);
             }
+        }
+
+        public sealed class CreateServerFSM : NoSerializationVerificationNeeded
+        {
+            public CreateServerFSM(IConnection channel)
+            {
+                Channel = channel;
+            }
+
+            public IConnection Channel { get; private set; }
         }
 
         readonly TestConductorSettings _settings = TestConductor.Get(Context.System).Settings;

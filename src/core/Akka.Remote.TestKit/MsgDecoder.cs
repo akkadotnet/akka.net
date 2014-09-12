@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
 using Akka.Remote.Transport;
 using Akka.Util;
-using Helios.Net;
 using TCP;
 using Address = Akka.Actor.Address;
 
