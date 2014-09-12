@@ -48,6 +48,11 @@ namespace Akka.Remote.TestKit
         {
             get { return _name; }
         }
+
+        public override string ToString()
+        {
+            return string.Format("RoleName({0})", _name);
+        }
     }
 
     class ToClient<T> where T : IClientOp, INetworkOp

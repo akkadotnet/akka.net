@@ -103,8 +103,8 @@ namespace Akka.Remote.TestKit
             _barrierTimeout = config.GetMillisDuration("barrier-timeout");
             _queryTimeout = config.GetMillisDuration("query-timeout");
             _packetSplitThreshold = config.GetMillisDuration("packet-split-threshold");
-            _serverSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.server-socket-worker-pool"));
-            _clientSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.client-socket-worker-pool"));
+            //_serverSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.tcp.server-socket-worker-pool"));
+            //_clientSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.tcp.client-socket-worker-pool"));
         }
 
         public int ComputeWps(Config config)

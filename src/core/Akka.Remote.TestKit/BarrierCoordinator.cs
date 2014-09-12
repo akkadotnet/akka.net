@@ -168,12 +168,14 @@ namespace Akka.Remote.TestKit
 
         protected void InitFSM()
         {
+            StartWith(State.Idle, new Data(ImmutableHashSet.Create<Controller.NodeInfo>(), "",null, null));
+
             WhenUnhandled(@event =>
             {
-                var nextState = Stay();
+                State<State, Data> nextState = null;
                 var clients = @event.StateData.Clients;
                 var arrived = @event.StateData.Arrived;
-                @event.Match()
+                @event.FsmEvent.Match()
                     .With<Controller.NodeInfo>(node =>
                     {
                         if (clients.Any(x => x.Name == node.Name)) throw new DuplicateNode(@event.StateData, node);
@@ -202,9 +204,9 @@ namespace Akka.Remote.TestKit
 
             When(State.Idle, @event =>
             {
-                var nextState = Stay();
+                State<State, Data> nextState = null;
                 var clients = @event.StateData.Clients;
-                @event.Match()
+                @event.FsmEvent.Match()
                     .With<EnterBarrier>(barrier =>
                     {
                         if (_failed)
@@ -239,11 +241,11 @@ namespace Akka.Remote.TestKit
 
             When(State.Waiting, @event =>
             {
-                var nextState = Stay();
+                State<State, Data> nextState = null;
                 var currentBarrier = @event.StateData.Barrier;
                 var clients = @event.StateData.Clients;
                 var arrived = @event.StateData.Arrived;
-                @event.Match()
+                @event.FsmEvent.Match()
                     .With<EnterBarrier>(barrier =>
                     {
                         if (barrier.Name != currentBarrier)
