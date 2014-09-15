@@ -10,7 +10,7 @@ namespace Akka.Serilog.Event.Serilog
     public class SerilogLogMessageFormatter : ILogMessageFormatter
     {
         private readonly MessageTemplateCache _templateCache;
-
+            
         public SerilogLogMessageFormatter()
         {
             _templateCache = new MessageTemplateCache(new MessageTemplateParser());
@@ -22,14 +22,13 @@ namespace Akka.Serilog.Event.Serilog
             var propertyTokens = template.Tokens.OfType<PropertyToken>().ToArray();
             var properties = new Dictionary<string, LogEventPropertyValue>();
 
-            if (propertyTokens.Length != args.Length)
-                throw new FormatException("Invalid number or arguments provided.");
-
-            for (var i = 0; i < propertyTokens.Length; i++)
+            for (var i = 0; i < args.Length; i++)
             {
-                var arg = args[i];
+                var propertyToken = propertyTokens.ElementAtOrDefault(i);
+                if (propertyToken == null)
+                    break;
 
-                properties.Add(propertyTokens[i].PropertyName, new ScalarValue(arg));
+                properties.Add(propertyToken.PropertyName, new ScalarValue(args[i]));
             }
 
             return template.Render(properties);
