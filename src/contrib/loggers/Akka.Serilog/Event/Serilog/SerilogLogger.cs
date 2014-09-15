@@ -27,12 +27,12 @@ namespace Akka.Serilog.Event.Serilog
             return logger;
         }
 
-        protected SerilogLogger()
+        public SerilogLogger()
         {
-            Receive<Error>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Error(m.Cause, GetFormat(m), GetArgs(m))));
-            Receive<Warning>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Warning(GetFormat(m), GetArgs(m))));
-            Receive<Info>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Information(GetFormat(m), GetArgs(m))));
-            Receive<Debug>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Debug(GetFormat(m), GetArgs(m))));
+            Receive<Error>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Error(m.Cause, GetFormat(m.Message), GetArgs(m.Message))));
+            Receive<Warning>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Warning(GetFormat(m.Message), GetArgs(m.Message))));
+            Receive<Info>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Information(GetFormat(m.Message), GetArgs(m.Message))));
+            Receive<Debug>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Debug(GetFormat(m.Message), GetArgs(m.Message))));
             Receive<InitializeLogger>(m =>
             {
                 _log.Info("SerilogLogger started");
@@ -49,13 +49,13 @@ namespace Akka.Serilog.Event.Serilog
                 : "{Message}";
         }
 
-        private static object GetArgs(object message)
+        private static object[] GetArgs(object message)
         {
             var logMessage = message as LogMessage;
 
             return logMessage != null
                 ? logMessage.Args
-                : message;
+                : new[] { message };
         }
     }
 }
