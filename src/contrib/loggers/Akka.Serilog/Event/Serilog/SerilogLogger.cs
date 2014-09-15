@@ -9,9 +9,9 @@ using Serilog;
 
 namespace Akka.Serilog.Event.Serilog
 {
-    public class SerilogLogger:ReceiveActor
+    public class SerilogLogger : ReceiveActor
     {
-        private readonly LoggingAdapter log = Logging.GetLogger(Context);
+        private readonly LoggingAdapter _log = Logging.GetLogger(Context);
 
         private void WithSerilog(Action<ILogger> logStatement)
         {
@@ -29,15 +29,33 @@ namespace Akka.Serilog.Event.Serilog
 
         protected SerilogLogger()
         {
-            Receive<Error>(m => WithSerilog(logger => SetContextFromLogEvent(logger,m).Error(m.Cause,"{Message}", m.Message)));
-            Receive<Warning>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Warning("{Message}", m.Message)));
-            Receive<Info>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Information("{Message}", m.Message)));
-            Receive<Debug>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Debug("{Message}", m.Message)));
+            Receive<Error>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Error(m.Cause, GetFormat(m), GetArgs(m))));
+            Receive<Warning>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Warning(GetFormat(m), GetArgs(m))));
+            Receive<Info>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Information(GetFormat(m), GetArgs(m))));
+            Receive<Debug>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Debug(GetFormat(m), GetArgs(m))));
             Receive<InitializeLogger>(m =>
             {
-                log.Info("SerilogLogger started");
+                _log.Info("SerilogLogger started");
                 Sender.Tell(new LoggerInitialized());
             });
+        }
+
+        private static string GetFormat(object message)
+        {
+            var logMessage = message as LogMessage;
+
+            return logMessage != null
+                ? logMessage.Format
+                : "{Message}";
+        }
+
+        private static object GetArgs(object message)
+        {
+            var logMessage = message as LogMessage;
+
+            return logMessage != null
+                ? logMessage.Args
+                : message;
         }
     }
 }

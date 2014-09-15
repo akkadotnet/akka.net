@@ -48,7 +48,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Event\Serilog\MessageTemplateCache.cs" />
     <Compile Include="Event\Serilog\SerilogLogger.cs" />
+    <Compile Include="Event\Serilog\SerilogLogMessageFormatter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

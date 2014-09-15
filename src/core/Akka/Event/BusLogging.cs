@@ -32,7 +32,9 @@ namespace Akka.Event
         /// <param name="bus">The bus.</param>
         /// <param name="logSource">The log source.</param>
         /// <param name="logClass">The log class.</param>
-        public BusLogging(LoggingBus bus, string logSource, Type logClass)
+        /// <param name="logMessageFormatter">The log message formatter.</param>
+        public BusLogging(LoggingBus bus, string logSource, Type logClass, ILogMessageFormatter logMessageFormatter)
+            : base(logMessageFormatter)
         {
             this.bus = bus;
             this.logSource = logSource;

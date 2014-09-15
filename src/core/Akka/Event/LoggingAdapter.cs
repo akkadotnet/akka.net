@@ -11,6 +11,8 @@ namespace Akka.Event
     /// </summary>
     public abstract class LoggingAdapter
     {
+        private readonly ILogMessageFormatter _logMessageFormatter;
+
         /// <summary>
         ///     The is debug enabled
         /// </summary>
@@ -61,6 +63,14 @@ namespace Akka.Event
         /// </summary>
         /// <param name="message">The message.</param>
         protected abstract void NotifyDebug(object message);
+
+        protected LoggingAdapter(ILogMessageFormatter logMessageFormatter)
+        {
+            if (logMessageFormatter == null)
+                throw new ArgumentException("logMessageFormatter");
+
+            _logMessageFormatter = logMessageFormatter;
+        }
 
         /// <summary>
         ///     Determines whether the specified log level is enabled.
@@ -179,7 +189,7 @@ namespace Akka.Event
         public void Debug(string format, params object[] args)
         {
             if (isDebugEnabled)
-                NotifyDebug(new LogMessage(format, args));
+                NotifyDebug(new LogMessage(_logMessageFormatter, format, args));
         }
 
         /// <summary>
@@ -199,7 +209,7 @@ namespace Akka.Event
         public void Warning(string format, params object[] args)
         {
             if(isWarningEnabled)
-                NotifyWarning(new LogMessage(format, args));
+                NotifyWarning(new LogMessage(_logMessageFormatter, format, args));
         }
 
         /// <summary>
@@ -211,7 +221,7 @@ namespace Akka.Event
         public void Error(Exception cause, string format, params object[] args)
         {
             if (isErrorEnabled)
-                NotifyError(cause, new LogMessage(format, args));
+                NotifyError(cause, new LogMessage(_logMessageFormatter, format, args));
         }
 
         /// <summary>
@@ -222,7 +232,7 @@ namespace Akka.Event
         public void Error(string format, params object[] args)
         {
             if (isErrorEnabled)
-                NotifyError(new LogMessage(format, args));
+                NotifyError(new LogMessage(_logMessageFormatter, format, args));
         }
 
         /// <summary>
@@ -233,7 +243,7 @@ namespace Akka.Event
         public void Info(string format, params object[] args)
         {
             if (isInfoEnabled)
-                NotifyInfo(new LogMessage(format, args));
+                NotifyInfo(new LogMessage(_logMessageFormatter, format, args));
         }
 
         /// <summary>
@@ -254,7 +264,7 @@ namespace Akka.Event
         /// <param name="args">The arguments.</param>
         public void Log(LogLevel logLevel, string format, params object[] args)
         {
-            NotifyLog(logLevel, new LogMessage(format, args));
+            NotifyLog(logLevel, new LogMessage(_logMessageFormatter, format, args));
         }
     }
 }
