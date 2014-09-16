@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Helios.Serialization;
 using Akka.Remote.Transport;
 using Akka.Util;
 using Address = Akka.Actor.Address;
