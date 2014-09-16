@@ -849,11 +849,11 @@ namespace Akka.Cluster
                     _seedNodeProcessCounter += 1;
                     if (seedNodes.Head().Equals(_cluster.SelfAddress))
                     {
-                        _seedNodeProcess = Context.ActorOf(new Props(typeof (FirstSeedNodeProcess), new object[] {seedNodes}),"firstSeedNodeProcess-" + _seedNodeProcessCounter);
+                        _seedNodeProcess = Context.ActorOf(Props.Create(() => new FirstSeedNodeProcess(seedNodes)),"firstSeedNodeProcess-" + _seedNodeProcessCounter);
                     }
                     else
                     {
-                        _seedNodeProcess = Context.ActorOf(new Props(typeof (JoinSeedNodeProcess), new object[] {seedNodes}).WithDispatcher(_cluster.Settings.UseDispatcher), "joinSeedNodeProcess-" + _seedNodeProcessCounter);
+                        _seedNodeProcess = Context.ActorOf(Props.Create(() => new JoinSeedNodeProcess(seedNodes)).WithDispatcher(_cluster.Settings.UseDispatcher), "joinSeedNodeProcess-" + _seedNodeProcessCounter);
                     }
                 }
             }
@@ -1629,10 +1629,10 @@ namespace Akka.Cluster
         readonly LoggingAdapter _log = Logging.GetLogger(Context);
         public LoggingAdapter Log { get { return _log; } }
 
-        readonly ImmutableHashSet<Address> _seeds;
+        readonly ImmutableList<Address> _seeds;
         readonly Address _selfAddress;
 
-        public JoinSeedNodeProcess(ImmutableHashSet<Address> seeds)
+        public JoinSeedNodeProcess(ImmutableList<Address> seeds)
         {
              _selfAddress = Cluster.Get(Context.System).SelfAddress;
             _seeds = seeds;
@@ -1704,14 +1704,14 @@ namespace Akka.Cluster
         readonly LoggingAdapter _log = Logging.GetLogger(Context);
         public LoggingAdapter Log { get { return _log; } }
 
-        private ImmutableHashSet<Address> _remainingSeeds;
+        private ImmutableList<Address> _remainingSeeds;
         readonly Address _selfAddress;
         readonly Cluster _cluster;
         readonly Deadline _timeout;
         private Task _retryTask;
         readonly CancellationTokenSource _retryTaskToken;
 
-        public FirstSeedNodeProcess(ImmutableHashSet<Address> seeds)
+        public FirstSeedNodeProcess(ImmutableList<Address> seeds)
         {
             _cluster = Cluster.Get(Context.System);
             _selfAddress = _cluster.SelfAddress;
