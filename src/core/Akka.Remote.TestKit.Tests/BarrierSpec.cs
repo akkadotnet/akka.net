@@ -81,10 +81,9 @@ namespace Akka.Remote.TestKit.Tests
         {
             var b = GetBarrier();
             b.Tell(new Controller.NodeInfo(A, Address.Parse("akka://sys"), Sys.DeadLetters));
-            b.Tell(new Controller.ClientDisconnected(B));
-            b.Tell(new Controller.ClientDisconnected(A));
-            //TODO: ErrorFilter?
-            b.Tell(new BarrierCoordinator.RemoveClient(A));
+            b.Tell(new Controller.ClientDisconnected(B), TestActor);
+            b.Tell(new Controller.ClientDisconnected(A), TestActor);
+            EventFilter<BarrierCoordinator.BarrierEmpty>(1, () => b.Tell(new BarrierCoordinator.RemoveClient(A), TestActor)); //appears to be a bug in the testfilter
             ExpectMsg(new Failed(b,
                 new BarrierCoordinator.BarrierEmpty(
                     new BarrierCoordinator.Data(ImmutableHashSet.Create<Controller.NodeInfo>(), "", null, null),

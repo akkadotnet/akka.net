@@ -183,7 +183,7 @@ namespace Akka.Remote.TestKit
                     })
                     .With<Controller.ClientDisconnected>(disconnected =>
                     {
-                        if (arrived.Count == 0)
+                        if (arrived == null || arrived.Count == 0)
                             nextState =
                                 Stay()
                                     .Using(
