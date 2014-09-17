@@ -259,7 +259,7 @@ namespace Akka.Remote
         readonly RemoteActorRefProvider _remoteProvider;
         readonly HeartbeatRsp _selfHeartbeatRspMsg = new HeartbeatRsp(AddressUidExtension.Uid(Context.System));
         readonly HashSet<Tuple<ActorRef, ActorRef>> _watching = new HashSet<Tuple<ActorRef, ActorRef>>();
-        protected HashSet<Tuple<ActorRef, ActorRef>> Watching { get { return _watching; } }
+        protected HashSet<Tuple<ActorRef, ActorRef>> Watching { get { return _watching; } } //TODO: this needs to be immutable
         readonly HashSet<Address> _watchingNodes = new HashSet<Address>();
         readonly HashSet<Address> _unreachable = new HashSet<Address>();
         protected HashSet<Address> Unreachable { get { return _unreachable; } }

@@ -113,6 +113,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Cluster", "Cluster", "{DCE4
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Cluster.Simple", "examples\Cluster\Samples.Cluster.Simple\Samples.Cluster.Simple.csproj", "{B428311F-AD87-461D-9573-9004A2596ABA}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Roles", "Roles", "{D23C0D51-7E21-454B-9C3E-1154A744FF81}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Cluster.Transformation", "examples\Cluster\Roles\Samples.Cluster.Transformation\Samples.Cluster.Transformation.csproj", "{E5EB3DF5-D017-4B50-B5AA-2B0440DB773D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug Mono|Any CPU = Debug Mono|Any CPU
@@ -374,6 +378,14 @@ Global
 		{B428311F-AD87-461D-9573-9004A2596ABA}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{B428311F-AD87-461D-9573-9004A2596ABA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B428311F-AD87-461D-9573-9004A2596ABA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E5EB3DF5-D017-4B50-B5AA-2B0440DB773D}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{E5EB3DF5-D017-4B50-B5AA-2B0440DB773D}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{E5EB3DF5-D017-4B50-B5AA-2B0440DB773D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E5EB3DF5-D017-4B50-B5AA-2B0440DB773D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E5EB3DF5-D017-4B50-B5AA-2B0440DB773D}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{E5EB3DF5-D017-4B50-B5AA-2B0440DB773D}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{E5EB3DF5-D017-4B50-B5AA-2B0440DB773D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E5EB3DF5-D017-4B50-B5AA-2B0440DB773D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -420,5 +432,7 @@ Global
 		{F338508B-FE01-4132-AC4A-FC00071EA4EB} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 		{DCE4B11E-6A5F-4AC8-A089-037F0B14BFAB} = {69279534-1DBA-4115-BF8B-03F77FC8125E}
 		{B428311F-AD87-461D-9573-9004A2596ABA} = {DCE4B11E-6A5F-4AC8-A089-037F0B14BFAB}
+		{D23C0D51-7E21-454B-9C3E-1154A744FF81} = {DCE4B11E-6A5F-4AC8-A089-037F0B14BFAB}
+		{E5EB3DF5-D017-4B50-B5AA-2B0440DB773D} = {D23C0D51-7E21-454B-9C3E-1154A744FF81}
 	EndGlobalSection
 EndGlobal
