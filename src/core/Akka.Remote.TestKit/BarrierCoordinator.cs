@@ -73,6 +73,43 @@ namespace Akka.Remote.TestKit
                     arrived ?? Arrived,
                     deadline ?? Deadline);
             }
+
+            private bool Equals(Data other)
+            {
+                return (ReferenceEquals(Clients, other.Clients) || Clients.SequenceEqual(other.Clients))
+                    && string.Equals(Barrier, other.Barrier)
+                    && (ReferenceEquals(Arrived, other.Arrived) || Arrived.SequenceEqual(other.Arrived))
+                    && Equals(Deadline, other.Deadline);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is Data && Equals((Data) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hashCode = (Clients != null ? Clients.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (Barrier != null ? Barrier.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (Arrived != null ? Arrived.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (Deadline != null ? Deadline.GetHashCode() : 0);
+                    return hashCode;
+                }
+            }
+
+            public static bool operator ==(Data left, Data right)
+            {
+                return Equals(left, right);
+            }
+
+            public static bool operator !=(Data left, Data right)
+            {
+                return !Equals(left, right);
+            }
         }
 
         public sealed class BarrierTimeout : Exception
@@ -84,6 +121,33 @@ namespace Akka.Remote.TestKit
             }
 
             public Data BarrierData { get; private set; }
+
+            private bool Equals(BarrierTimeout other)
+            {
+                return Equals(BarrierData, other.BarrierData);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is BarrierTimeout && Equals((BarrierTimeout) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return (BarrierData != null ? BarrierData.GetHashCode() : 0);
+            }
+
+            public static bool operator ==(BarrierTimeout left, BarrierTimeout right)
+            {
+                return Equals(left, right);
+            }
+
+            public static bool operator !=(BarrierTimeout left, BarrierTimeout right)
+            {
+                return !Equals(left, right);
+            }
         }
 
         public sealed class FailedBarrier : Exception
@@ -95,6 +159,33 @@ namespace Akka.Remote.TestKit
             }
 
             public Data BarrierData { get; private set; }
+
+            private bool Equals(FailedBarrier other)
+            {
+                return Equals(BarrierData, other.BarrierData);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is FailedBarrier && Equals((FailedBarrier) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return (BarrierData != null ? BarrierData.GetHashCode() : 0);
+            }
+
+            public static bool operator ==(FailedBarrier left, FailedBarrier right)
+            {
+                return Equals(left, right);
+            }
+
+            public static bool operator !=(FailedBarrier left, FailedBarrier right)
+            {
+                return !Equals(left, right);
+            }
         }
 
         public sealed class DuplicateNode : Exception
@@ -109,6 +200,36 @@ namespace Akka.Remote.TestKit
             public Data BarrierData { get; private set; }
 
             public Controller.NodeInfo Node { get; private set; }
+
+            private bool Equals(DuplicateNode other)
+            {
+                return Equals(BarrierData, other.BarrierData) && Equals(Node, other.Node);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is DuplicateNode && Equals((DuplicateNode) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return ((BarrierData != null ? BarrierData.GetHashCode() : 0)*397) ^ (Node != null ? Node.GetHashCode() : 0);
+                }
+            }
+
+            public static bool operator ==(DuplicateNode left, DuplicateNode right)
+            {
+                return Equals(left, right);
+            }
+
+            public static bool operator !=(DuplicateNode left, DuplicateNode right)
+            {
+                return !Equals(left, right);
+            }
         }
 
         public sealed class WrongBarrier : Exception
@@ -126,6 +247,39 @@ namespace Akka.Remote.TestKit
             public ActorRef Client { get; private set; }
 
             public Data BarrierData { get; private set; }
+
+            private bool Equals(WrongBarrier other)
+            {
+                return string.Equals(Barrier, other.Barrier) && Equals(Client, other.Client) && Equals(BarrierData, other.BarrierData);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is WrongBarrier && Equals((WrongBarrier) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hashCode = (Barrier != null ? Barrier.GetHashCode() : 0);
+                    hashCode = (hashCode*397) ^ (Client != null ? Client.GetHashCode() : 0);
+                    hashCode = (hashCode*397) ^ (BarrierData != null ? BarrierData.GetHashCode() : 0);
+                    return hashCode;
+                }
+            }
+
+            public static bool operator ==(WrongBarrier left, WrongBarrier right)
+            {
+                return Equals(left, right);
+            }
+
+            public static bool operator !=(WrongBarrier left, WrongBarrier right)
+            {
+                return !Equals(left, right);
+            }
         }
 
         public sealed class BarrierEmpty : Exception
@@ -137,6 +291,33 @@ namespace Akka.Remote.TestKit
             }
 
             public Data BarrierData { get; private set; }
+
+            private bool Equals(BarrierEmpty other)
+            {
+                return Equals(BarrierData, other.BarrierData);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is BarrierEmpty && Equals((BarrierEmpty) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return (BarrierData != null ? BarrierData.GetHashCode() : 0);
+            }
+
+            public static bool operator ==(BarrierEmpty left, BarrierEmpty right)
+            {
+                return Equals(left, right);
+            }
+
+            public static bool operator !=(BarrierEmpty left, BarrierEmpty right)
+            {
+                return !Equals(left, right);
+            }
         }
 
         public sealed class ClientLost : Exception
@@ -151,6 +332,37 @@ namespace Akka.Remote.TestKit
             public Data BarrierData { get; private set; }
 
             public RoleName Client { get; private set; }
+
+            private bool Equals(ClientLost other)
+            {
+                return Equals(BarrierData, other.BarrierData) && Equals(Client, other.Client);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj is ClientLost && Equals((ClientLost) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return ((BarrierData != null ? BarrierData.GetHashCode() : 0) * 397) 
+                        ^ (Client != null ? Client.GetHashCode() : 0);
+                }
+            }
+
+            public static bool operator ==(ClientLost left, ClientLost right)
+            {
+                return Equals(left, right);
+            }
+
+            public static bool operator !=(ClientLost left, ClientLost right)
+            {
+                return !Equals(left, right);
+            }
         }
 
         #endregion
@@ -164,11 +376,14 @@ namespace Akka.Remote.TestKit
         private bool _failed = false;
 
         protected override void PreRestart(Exception reason, object message) { }
-        protected override void PostRestart(Exception reason) { }
+        protected override void PostRestart(Exception reason)
+        {
+            _failed = true;
+        }
 
         protected void InitFSM()
         {
-            StartWith(State.Idle, new Data(ImmutableHashSet.Create<Controller.NodeInfo>(), "",null, null));
+            StartWith(State.Idle, new Data(ImmutableHashSet.Create<Controller.NodeInfo>(), "", ImmutableHashSet.Create<ActorRef>(), null));
 
             WhenUnhandled(@event =>
             {
