@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -31,7 +32,23 @@ namespace Akka.Persistence.Tests
         [Fact]
         public void AtLeastOnceDelivery_must_tolerate_and_recover_from_random_failures()
         {
-            
+            var chaos = Sys.ActorOf(Props.Create(() => new ChaosApp(TestActor)), "chaosApp");
+            chaos.Tell(Start.Instance);
+            ExpectDone();   // by sender
+            ExpectDone();   // by destination
+
+            // recovery of the new instance should have same outcome
+            var chaos2 = Sys.ActorOf(Props.Create(() => new ChaosApp(TestActor)), "chaosApp2");
+            ExpectDone();   // by sender
+
+            // destination won't receive message again, beacuse all of the has already been confirmed
+        }
+
+        private void ExpectDone()
+        {
+            Within(TimeSpan.FromSeconds(NumberOfMessages), () => 
+                ExpectMsg<Done>().Vector.OrderBy(x => x)
+                .ShouldOnlyContainInOrder(Enumerable.Range(1, NumberOfMessages).ToArray()));
         }
     }
 
@@ -42,7 +59,8 @@ namespace Akka.Persistence.Tests
 
     struct Done
     {
-        public Done(int[] vector) : this()
+        public Done(int[] vector)
+            : this()
         {
             Vector = vector;
         }
@@ -52,12 +70,13 @@ namespace Akka.Persistence.Tests
 
     struct ProcessingFailure
     {
-        public ProcessingFailure(int x) : this()
+        public ProcessingFailure(int x)
+            : this()
         {
             I = x;
         }
 
-        public int I { get; private set; } 
+        public int I { get; private set; }
     }
     struct JournalingFailure
     {
@@ -72,7 +91,8 @@ namespace Akka.Persistence.Tests
 
     struct Msg
     {
-        public Msg(long deliveryId, int x) : this()
+        public Msg(long deliveryId, int x)
+            : this()
         {
             I = x;
             DeliveryId = deliveryId;
@@ -95,17 +115,18 @@ namespace Akka.Persistence.Tests
     }
 
     interface IEvt
-    { 
+    {
     }
 
-    struct MsgSent: IEvt
+    struct MsgSent : IEvt
     {
-        public MsgSent(int x) : this()
+        public MsgSent(int x)
+            : this()
         {
             I = x;
         }
 
-        public int I { get; private set; } 
+        public int I { get; private set; }
     }
     struct MsgConfirmed : IEvt
     {
@@ -165,12 +186,12 @@ namespace Akka.Persistence.Tests
         }
 
         public string PersistenceId { get; set; }
-        
+
         public ActorRef Probe { get; private set; }
         public List<int> State { get; set; }
     }
 
-    class ChaosDestination: ReceiveActor, IChaosSupport
+    class ChaosDestination : ReceiveActor, IChaosSupport
     {
         private readonly Config _config;
         private readonly double _confirmFailureRate;
