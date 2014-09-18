@@ -348,7 +348,7 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    sealed class Throttle
+    sealed class Throttle : ICommandOp
     {
         readonly RoleName _node;
         readonly RoleName _target;
@@ -418,7 +418,7 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    sealed class ThrottleMsg
+    sealed class ThrottleMsg : IConfirmedClientOp, INetworkOp
     {
         readonly Address _target;
         readonly ThrottleTransportAdapter.Direction _direction;
@@ -796,7 +796,7 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    sealed class Remove
+    sealed class Remove : ICommandOp
     {
         readonly RoleName _node;
 

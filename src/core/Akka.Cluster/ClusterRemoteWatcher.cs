@@ -107,7 +107,7 @@ namespace Akka.Cluster
         /// responsibility for watchees on that node already handled
         /// by base RemoteWatcher.
         /// </summary>
-        public void TakeOverResponsibility(Address address)
+        private void TakeOverResponsibility(Address address)
         {
             foreach (var watching in Watching)
             {
