@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit.Internals;
@@ -84,13 +85,19 @@ namespace Akka.TestKit
             _eventFilterFactory = new EventFilterFactory(this);
 
             var testActor = CreateTestActor(system, "testActor" + _testActorId.IncrementAndGet());
-            _testActor = testActor;
             //Wait for the testactor to start
             AwaitCondition(() =>
             {
                 var repRef = _testActor as RepointableRef;
                 return repRef == null || repRef.IsStarted;
             }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(10));
+            
+            if(!(this is NoImplicitSender))
+            {
+                InternalCurrentActorCellKeeper.Current = ((LocalActorRef) testActor).Cell;
+            }
+            _testActor = testActor;
+
         }
 
         private TimeSpan SingleExpectDefaultTimeout { get { return _testKitSettings.SingleExpectDefault; } }
@@ -105,6 +112,14 @@ namespace Akka.TestKit
         protected bool LastWasNoMsg { get { return _lastWasNoMsg; } }
         protected object LastMessage { get { return _lastMessage.Message; } }
 
+        /// <summary>
+        /// The default TestActor. The actor can be controlled by sending it 
+        /// special control messages, see <see cref="TestKit.TestActor.SetIgnore"/>, 
+        /// <see cref="TestKit.TestActor.Watch"/>, <see cref="TestKit.TestActor.Unwatch"/>.
+        /// You can also install an <see cref="AutoPilot" /> to drive the actor, see
+        /// <see cref="SetAutoPilot"/>. All other messages are forwarded to the queue
+        /// and can be retrieved with Receive and the ExpectMsg overloads.
+        /// </summary>
         public ActorRef TestActor { get { return _testActor; } }
 
         /// <summary>

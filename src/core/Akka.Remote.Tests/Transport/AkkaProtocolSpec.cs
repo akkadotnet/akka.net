@@ -13,7 +13,7 @@ using Xunit;
 namespace Akka.Remote.Tests.Transport
 {
     
-    public class AkkaProtocolSpec : AkkaSpec, ImplicitSender
+    public class AkkaProtocolSpec : AkkaSpec
     {
         #region Setup / Config
 
