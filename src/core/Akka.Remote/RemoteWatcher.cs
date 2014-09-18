@@ -340,7 +340,7 @@ namespace Akka.Remote
             {
                 if (!_unreachable.Contains(a) && !_failureDetector.IsAvailable(a))
                 {
-                    Log.Warn("Detected unreachable: [{0}]", a);
+                    Log.Warning("Detected unreachable: [{0}]", a);
                     int addressUid;
                     var nullableAddressUid =
                         _addressUids.TryGetValue(a, out addressUid) ? new int?(addressUid) : null;

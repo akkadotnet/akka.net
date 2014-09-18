@@ -114,7 +114,7 @@ namespace Akka.Remote
             }
             else
             {
-                log.Warn("Remoting was already started. Ignoring start attempt.");
+                log.Warning("Remoting was already started. Ignoring start attempt.");
             }
         }
 
@@ -122,7 +122,7 @@ namespace Akka.Remote
         {
             if (_endpointManager == null)
             {
-                log.Warn("Remoting is not running. Ignoring shutdown attempt");
+                log.Warning("Remoting is not running. Ignoring shutdown attempt");
                 return Task.Run(() => { });
             }
             else
@@ -145,7 +145,7 @@ namespace Akka.Remote
                     {
                         if (!result.Result)
                         {
-                            log.Warn(
+                            log.Warning(
                                 "Shutdown finished, but flushing might not have been successful and some messages might have been dropped. " +
                                 "Increase akka.remote.flush-wait-on-shutdown to a larger value to avoid this.");
                         }

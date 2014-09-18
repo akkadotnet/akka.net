@@ -73,13 +73,14 @@ namespace Akka.Event
         ///     Gets the logger.
         /// </summary>
         /// <param name="cell">The cell.</param>
+        /// <param name="logMessageFormatter">The log message formatter.</param>
         /// <returns>LoggingAdapter.</returns>
-        public static LoggingAdapter GetLogger(IActorContext cell)
+        public static LoggingAdapter GetLogger(IActorContext cell, ILogMessageFormatter logMessageFormatter = null)
         {
-            string logSource = cell.Self.ToString();
-            Type logClass = cell.Props.Type;
+            var logSource = cell.Self.ToString();
+            var logClass = cell.Props.Type;
 
-            return new BusLogging(cell.System.EventStream, logSource, logClass);
+            return new BusLogging(cell.System.EventStream, logSource, logClass, logMessageFormatter ?? new DefaultLogMessageFormatter());
         }
 
         /// <summary>
@@ -87,13 +88,14 @@ namespace Akka.Event
         /// </summary>
         /// <param name="system">The system.</param>
         /// <param name="logSourceObj">The log source object.</param>
+        /// <param name="logMessageFormatter">The log message formatter.</param>
         /// <returns>LoggingAdapter.</returns>
-        public static LoggingAdapter GetLogger(ActorSystem system, object logSourceObj)
+        public static LoggingAdapter GetLogger(ActorSystem system, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
         {
-            return GetLogger(system.EventStream, logSourceObj);
+            return GetLogger(system.EventStream, logSourceObj, logMessageFormatter);
         }
 
-        public static LoggingAdapter GetLogger(LoggingBus loggingBus, object logSourceObj)
+        public static LoggingAdapter GetLogger(LoggingBus loggingBus, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
         {
             //TODO: refine this
             string logSource;
@@ -111,7 +113,7 @@ namespace Akka.Event
                 else
                     logClass = logSourceObj.GetType();
             }
-            return new BusLogging(loggingBus, logSource, logClass);
+            return new BusLogging(loggingBus, logSource, logClass, logMessageFormatter ?? new DefaultLogMessageFormatter());
         }
 
         /// <summary>

@@ -162,9 +162,11 @@
     <Compile Include="Event\DeadLetterListener.cs" />
     <Compile Include="Event\Debug.cs" />
     <Compile Include="Event\DefaultLogger.cs" />
+    <Compile Include="Event\DefaultLogMessageFormatter.cs" />
     <Compile Include="Event\Error.cs" />
     <Compile Include="Event\EventBus.cs" />
     <Compile Include="Event\EventStream.cs" />
+    <Compile Include="Event\ILogMessageFormatter.cs" />
     <Compile Include="Event\Info.cs" />
     <Compile Include="Event\InitializeLogger.cs" />
     <Compile Include="Event\LogEvent.cs" />
@@ -173,6 +175,7 @@
     <Compile Include="Event\LoggingAdapter.cs" />
     <Compile Include="Event\LoggingBus.cs" />
     <Compile Include="Event\LogLevel.cs" />
+    <Compile Include="Event\LogMessage.cs" />
     <Compile Include="Event\StandardOutLogger.cs" />
     <Compile Include="Event\Subscription.cs" />
     <Compile Include="Event\TraceLogger.cs" />

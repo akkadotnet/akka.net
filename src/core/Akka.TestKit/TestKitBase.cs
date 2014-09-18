@@ -294,7 +294,7 @@ namespace Akka.TestKit
                 if(verifySystemShutdown)
                     throw new Exception(string.Format(msg, system.Name, durationValue, ""));
                         //TODO: replace "" with system.PrintTree()
-                system.Log.Warn(msg, system.Name, durationValue, ""); //TODO: replace "" with system.PrintTree()
+                system.Log.Warning(msg, system.Name, durationValue, ""); //TODO: replace "" with system.PrintTree()
             }
         }
 
