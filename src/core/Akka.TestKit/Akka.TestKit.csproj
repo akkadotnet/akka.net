@@ -103,9 +103,11 @@
     <Compile Include="NoImplicitSender.cs" />
     <Compile Include="Internals\BlockingCollectionTestActorQueue.cs" />
     <Compile Include="Internals\InternalTestActor.cs" />
+    <Compile Include="Internals\InternalTestActorRef.cs" />
     <Compile Include="Internals\ITestActorQueue.cs" />
     <Compile Include="Internals\BlockingQueue.cs" />
     <Compile Include="Internals\TimeSpanExtensions.cs" />
+    <Compile Include="TestActorRefBase.cs" />
     <Compile Include="TestActors\BlackHoleActor.cs" />
     <Compile Include="TestActors\EchoActor.cs" />
     <Compile Include="TestBarrier.cs" />

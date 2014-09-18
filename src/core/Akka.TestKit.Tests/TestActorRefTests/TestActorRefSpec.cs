@@ -3,6 +3,8 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.TestKit.Internal;
+using Akka.TestKit.Internals;
 using Akka.Util;
 using Xunit;
 
@@ -100,7 +102,8 @@ namespace Akka.TestKit.Tests.TestActorRefTests
             var forwarder = Sys.ActorOf(Props.Create(() => new WatchAndForwardActor(a, TestActor)), "forwarder");
             a.Tell(PoisonPill.Instance);
             ExpectMsg<WrappedTerminated>(TimeSpan.FromSeconds(10), string.Format("that the terminated actor was the one killed, i.e. {0}", a.Path), w => w.Terminated.ActorRef == a);
-            a.IsTerminated.ShouldBe(true);
+            var actorRef = (InternalTestActorRef)a.Ref;
+            actorRef.IsTerminated.ShouldBe(true);
             AssertThread();
         }
 
@@ -146,14 +149,16 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         public void TestActorRef_must_set_CallingThreadDispatcher()
         {
             var a = TestActorRef.Create<WorkerActor>(Sys);
-            Assert.IsType<CallingThreadDispatcher>(a.Cell.Dispatcher);
+            var actorRef = (InternalTestActorRef)a.Ref;
+            Assert.IsType<CallingThreadDispatcher>(actorRef.Cell.Dispatcher);
         }
 
         [Fact]
         public void TestActorRef_must_allow_override_of_dispatcher()
         {
             var a = TestActorRef.Create<WorkerActor>(Sys, Props.Create<WorkerActor>().WithDispatcher("test-dispatcher1"));
-            Assert.IsType<TaskDispatcher>(a.Cell.Dispatcher);
+            var actorRef = (InternalTestActorRef)a.Ref;
+            Assert.IsType<TaskDispatcher>(actorRef.Cell.Dispatcher);
         }
 
         [Fact]
@@ -161,7 +166,8 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         {
             var a = TestActorRef.Create<WorkerActor>(Sys);
             a.Receive("work");
-            Assert.True(a.IsTerminated);
+            var actorRef = (InternalTestActorRef)a.Ref;
+            Assert.True(actorRef.IsTerminated);
         }
 
         [Fact]
@@ -169,7 +175,8 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         {
             var a = TestActorRef.Create<WorkerActor>(Sys);
             a.Receive("work", TestActor);
-            Assert.True(a.IsTerminated);
+            var actorRef = (InternalTestActorRef)a.Ref;
+            Assert.True(actorRef.IsTerminated);
             ExpectMsg("workDone");
         }
 
