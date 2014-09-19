@@ -385,9 +385,8 @@ namespace Akka.Actor
 
                 props = props.WithDeploy(deploy);
                 var dispatcher = system.Dispatchers.FromConfig(props.Dispatcher);
-                var mailbox = _system.Mailboxes.FromConfig(props.Mailbox);
+                var mailbox = _system.Mailboxes.CreateMailbox(props, null /*dispatcher.Configurator.Config*/);
                     //TODO: Should be: system.mailboxes.getMailboxType(props2, dispatcher.configurator.config)
-
                 if (async)
                 {
                     var reActorRef=new RepointableActorRef(system, props, dispatcher, () => mailbox, supervisor, path);
@@ -404,7 +403,7 @@ namespace Akka.Actor
                     deploy = deploy.WithRouterConfig(props.RouterConfig);
                 }
                 var routerDispatcher = system.Dispatchers.FromConfig(props.RouterConfig.RouterDispatcher);
-                var routerMailbox = _system.Mailboxes.FromConfig(props.Mailbox);
+                var routerMailbox = _system.Mailboxes.CreateMailbox(props, null);             
                     //TODO: Should be val routerMailbox = system.mailboxes.getMailboxType(routerProps, routerDispatcher.configurator.config)
 
                 // routers use context.actorOf() to create the routees, which does not allow us to pass
