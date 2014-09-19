@@ -4,6 +4,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Cluster.Tests

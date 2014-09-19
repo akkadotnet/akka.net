@@ -30,7 +30,7 @@ namespace Akka.TestKit
         public void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max = null, string message = null)
         {
             var maxDur = RemainingOrDilated(max);
-            var interval = TimeSpan.FromMilliseconds(800);
+            var interval = new TimeSpan(max.GetValueOrDefault().Ticks / 10);
             InternalAwaitCondition(conditionIsFulfilled, maxDur, interval, (format, args) => AssertionsFail(format, args, message));
         }
 

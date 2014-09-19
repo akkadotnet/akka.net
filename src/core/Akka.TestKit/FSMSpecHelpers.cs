@@ -1,5 +1,6 @@
 using System;
 using Akka.Actor;
+using Akka.Util.Internal;
 
 namespace Akka.TestKit
 {

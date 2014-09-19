@@ -5,6 +5,7 @@ using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Remote
 {

@@ -2,6 +2,7 @@
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Util.Internal;
 
 namespace Akka.Remote.TestKit
 {

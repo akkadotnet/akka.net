@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Remoting;
 using Akka.Util;
+using Akka.Util.Internal;
 using Google.ProtocolBuffers;
 using Akka.Actor;
 using Akka.Serialization;

@@ -2,6 +2,7 @@
 using System.Linq;
 using Akka.Actor;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Cluster.Tests

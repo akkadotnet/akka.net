@@ -6,6 +6,7 @@ using Akka.Actor;
 using Akka.Remote;
 using Akka.TestKit;
 using Akka.Util;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Cluster.Tests

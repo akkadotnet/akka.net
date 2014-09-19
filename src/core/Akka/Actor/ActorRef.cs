@@ -8,6 +8,7 @@ using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using System.Threading;
 using Akka.Event;
+using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
@@ -316,7 +317,7 @@ namespace Akka.Actor
 
         public override bool Equals(object obj)
         {
-            var reserveredActorRef = (ReservedActorRef) obj;
+            var reserveredActorRef = obj as ReservedActorRef;
             if (reserveredActorRef == null) return false;
             return reserveredActorRef == Instance;
         }

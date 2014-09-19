@@ -8,6 +8,7 @@ using Akka.Actor.Internals;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Cluster
 {

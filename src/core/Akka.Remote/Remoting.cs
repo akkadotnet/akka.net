@@ -7,6 +7,7 @@ using System.Web;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Remote.Transport;
+using Akka.Util.Internal;
 
 namespace Akka.Remote
 {

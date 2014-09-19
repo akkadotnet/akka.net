@@ -3,6 +3,7 @@ using Akka.Actor;
 using System;
 using System.Threading.Tasks;
 using System.Linq;
+using Akka.Util.Internal;
 
 namespace Akka.Routing
 {

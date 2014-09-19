@@ -6,6 +6,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Remote;
+using Akka.Util.Internal;
 
 namespace Akka.Cluster
 {
