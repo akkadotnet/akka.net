@@ -18,7 +18,7 @@ namespace Akka.Actor.Internals
     public class ActorSystemImpl : ExtendedActorSystem
     {
         private ActorRef _logDeadLetterListener;
-        private readonly ConcurrentDictionary<Type, object> _extensions = new ConcurrentDictionary<Type, object>();
+        private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
 
         private LoggingAdapter _log;
         private ActorRefProvider _provider;
@@ -160,7 +160,7 @@ namespace Akka.Actor.Internals
             if(extension == null) return null;
             if(!_extensions.ContainsKey(extension.ExtensionType))
             {
-                _extensions.TryAdd(extension.ExtensionType, extension.CreateExtension(this));
+                _extensions.TryAdd(extension.ExtensionType, new Lazy<object>(() => extension.CreateExtension(this)));
             }
 
             return extension.Get(this);
@@ -175,15 +175,17 @@ namespace Akka.Actor.Internals
 
         public override bool TryGetExtension(Type extensionType, out object extension)
         {
-            var wasFound = _extensions.TryGetValue(extensionType, out extension);
+            Lazy<object> lazyExtension;
+            var wasFound = _extensions.TryGetValue(extensionType, out lazyExtension);
+            extension = wasFound ? lazyExtension.Value : null;
             return wasFound;
         }
 
         public override bool TryGetExtension<T>(out T extension)
         {
-            object item;
-            var wasFound = _extensions.TryGetValue(typeof(T), out item);
-            extension = item as T;
+            Lazy<object> lazyExtension;
+            var wasFound = _extensions.TryGetValue(typeof(T), out lazyExtension);
+            extension = wasFound ? lazyExtension.Value as T : null;
             return wasFound;
         }
 

@@ -7,6 +7,7 @@ using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Routing;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Actor
 {

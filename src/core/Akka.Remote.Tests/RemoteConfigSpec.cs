@@ -3,6 +3,7 @@ using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Remote.Transport.Helios;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Remote.Tests

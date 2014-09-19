@@ -8,6 +8,7 @@ using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using System.Threading;
 using Akka.Event;
+using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
@@ -316,8 +317,9 @@ namespace Akka.Actor
 
         public override bool Equals(object obj)
         {
-            if (obj == null) return false;
-            return obj == Instance;
+            var reserveredActorRef = obj as ReservedActorRef;
+            if (reserveredActorRef == null) return false;
+            return reserveredActorRef == Instance;
         }
 
         public override int GetHashCode()

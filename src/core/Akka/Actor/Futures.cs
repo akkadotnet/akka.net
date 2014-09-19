@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
+using Akka.Util.Internal;
 
 namespace Akka.Actor
 {

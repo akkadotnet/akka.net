@@ -108,6 +108,7 @@
     <Compile Include="Internals\TimeSpanExtensions.cs" />
     <Compile Include="TestActors\BlackHoleActor.cs" />
     <Compile Include="TestActors\EchoActor.cs" />
+    <Compile Include="TestBarrier.cs" />
     <Compile Include="TestKitAssertions.cs" />
     <Compile Include="MessageEnvelope.cs" />
     <Compile Include="NullMessageEnvelope.cs" />

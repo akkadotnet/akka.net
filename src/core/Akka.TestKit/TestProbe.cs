@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Threading;
 using System;
 using Akka.Actor;
 using Akka.Util;
@@ -75,6 +76,5 @@ namespace Akka.TestKit
         {
             throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
         }
-
     }
 }

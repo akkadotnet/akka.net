@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Akka.Dispatch;
+using Akka.Util.Internal;
 using Akka.Util.Reflection;
 using Akka.Routing;
 using Akka.Util;
@@ -47,7 +48,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="type">The type.</param>
         /// <param name="args">The arguments.</param>
-        protected Props(Type type, object[] args)
+        public Props(Type type, object[] args)
         {
             Type = type;
             Arguments = args;

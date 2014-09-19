@@ -10,13 +10,14 @@ using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Routing;
 using Akka.Serialization;
+using Akka.Util.Internal;
 
 namespace Akka.Remote
 {
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    class RemoteActorRefProvider : ActorRefProvider
+    public class RemoteActorRefProvider : ActorRefProvider
     {
         private readonly LoggingAdapter _log;
 
@@ -48,7 +49,7 @@ namespace Akka.Remote
         }
 
         public InternalActorRef RemoteDaemon { get { return RemoteInternals.RemoteDaemon; } }
-        internal RemoteTransport Transport { get { return RemoteInternals.Transport; } }
+        public RemoteTransport Transport { get { return RemoteInternals.Transport; } }
 
         internal RemoteSettings RemoteSettings { get; private set; }
 
@@ -89,7 +90,7 @@ namespace Akka.Remote
         //TODO: Why volatile?
         private ActorRef _remoteWatcher;
 
-        public void Init(ActorSystemImpl system)
+        public virtual void Init(ActorSystemImpl system)
         {
             _system = system;
 
@@ -101,7 +102,7 @@ namespace Akka.Remote
             _remoteWatcher = CreateRemoteWatcher(system);
         }
 
-        ActorRef CreateRemoteWatcher(ActorSystem system)
+        protected virtual ActorRef CreateRemoteWatcher(ActorSystem system)
         {
             var failureDetector = CreateRemoteWatcherFailureDetector(system);
             return
@@ -114,7 +115,7 @@ namespace Akka.Remote
                             RemoteSettings.WatchHeartbeatExpectedResponseAfter)), "remote-watcher");
         }
 
-        DefaultFailureDetectorRegistry<Address> CreateRemoteWatcherFailureDetector(ActorSystem system)
+        protected DefaultFailureDetectorRegistry<Address> CreateRemoteWatcherFailureDetector(ActorSystem system)
         {
             return new DefaultFailureDetectorRegistry<Address>(() => 
                 FailureDetectorLoader.Load(RemoteSettings.WatchFailureDetectorImplementationClass,

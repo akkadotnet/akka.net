@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Google.ProtocolBuffers;
+using Helios;
 using Helios.Buffers;
 using Helios.Exceptions;
 using Helios.Net;
@@ -153,10 +154,49 @@ namespace Akka.Remote.Transport.Helios
         public int Available { get { return UnderlyingConnection.Available; } }
         public int MessagesInSendQueue { get { return UnderlyingConnection.MessagesInSendQueue; } }
 
+        #region Helios event hooks (not used by Akka.Remote, but still part of IConnection interface)
+
         public event ReceivedDataCallback Receive;
         public event ConnectionEstablishedCallback OnConnection;
         public event ConnectionTerminatedCallback OnDisconnection;
         public event ExceptionCallback OnError;
+
+        protected void InvokeReceiveIfNotNull(NetworkData data)
+        {
+            if (Receive != null)
+            {
+                Receive(data, this);
+            }
+        }
+
+        protected void InvokeConnectIfNotNull(INode remoteHost, IConnection responseChannel)
+        {
+            if (OnConnection != null)
+            {
+                OnConnection(remoteHost, responseChannel);
+            }
+        }
+
+        protected void InvokeDisconnectIfNotNull(INode remoteHost, HeliosConnectionException ex)
+        {
+            if (OnDisconnection != null)
+            {
+                OnDisconnection(ex, this);
+            }
+        }
+
+        protected void InvokeErrorIfNotNull(Exception ex, IConnection erroredChannel)
+        {
+            if (OnError != null)
+            {
+                OnError(ex, erroredChannel);
+            }
+            else
+            {
+                throw new HeliosException("Unhandled exception on a connection with no error handler", ex);
+            }
+        }
+        #endregion
 
         #endregion
     }

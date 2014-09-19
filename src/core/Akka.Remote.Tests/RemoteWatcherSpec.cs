@@ -1,6 +1,7 @@
 ﻿using System;
 using Akka.Actor;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Remote.Tests

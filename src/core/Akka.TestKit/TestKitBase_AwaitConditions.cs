@@ -27,7 +27,7 @@ namespace Akka.TestKit
         /// The value is <see cref="Dilated(TimeSpan)">dilated</see>, i.e. scaled by the factor 
         /// specified in config value "akka.test.timefactor".</param>
         /// <param name="message">The message used if the timeout expires.</param>
-        public void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max, string message = null)
+        public void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max = null, string message = null)
         {
             var maxDur = RemainingOrDilated(max);
             var interval = new TimeSpan(max.GetValueOrDefault().Ticks / 10);

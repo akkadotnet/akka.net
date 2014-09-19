@@ -3,7 +3,7 @@ using Akka.Util;
 
 namespace Akka.Remote
 {
-    internal class AddressUidExtension : ExtensionIdProvider<AddressUid>
+    public class AddressUidExtension : ExtensionIdProvider<AddressUid>
     {
         public override AddressUid CreateExtension(ExtendedActorSystem system)
         {
@@ -26,7 +26,7 @@ namespace Akka.Remote
     /// The UID is intended to be used together with an <see cref="Address"/> to be
     /// able to distinguish restarted actor system using the same host and port.
     /// </summary>
-    internal class AddressUid : IExtension
+    public class AddressUid : IExtension
     {
         public int Uid
         {

@@ -57,9 +57,9 @@
     <Reference Include="Google.ProtocolBuffers.Serialization">
       <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
     </Reference>
-    <Reference Include="Helios">
+    <Reference Include="Helios, Version=1.3.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Helios.1.3.5.0\lib\net45\Helios.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -103,6 +103,7 @@
     <Compile Include="Transport\AkkaPduCodec.cs" />
     <Compile Include="Transport\Helios\HeliosHelpers.cs" />
     <Compile Include="Transport\Helios\HeliosTcpTransport.cs" />
+    <Compile Include="Transport\ThrottleTransportAdapter.cs" />
     <Compile Include="Transport\TransportAdapters.cs" />
     <Compile Include="Transport\AkkaProtocolTransport.cs" />
     <Compile Include="Transport\Helios\HeliosTransport.cs" />
@@ -114,13 +115,6 @@
     <EmbeddedResource Include="Configuration\Remote.conf" />
     <None Include="app.config" />
     <None Include="packages.config" />
-    <None Include="protos\google\protobuf\csharp_options.proto" />
-    <None Include="protos\google\protobuf\descriptor.proto" />
-    <None Include="protos\tutorial\addressbook.proto" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="licenses\license.txt" />
-    <Content Include="licenses\protoc-license.txt" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka\Akka.csproj">

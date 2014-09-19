@@ -182,13 +182,14 @@
     <Compile Include="Event\TraceLogger.cs" />
     <Compile Include="Event\UnhandledMessage.cs" />
     <Compile Include="Event\Warning.cs" />
-    <Compile Include="Extensions.cs" />
+    <Compile Include="Util\Internal\Extensions.cs" />
     <Compile Include="Routing\SmallestMailbox.cs" />
     <Compile Include="Routing\TailChoppingRoutingLogic.cs" />
     <Compile Include="Serialization\ByteArraySerializer.cs" />
     <Compile Include="Serialization\NewtonSoftJsonSerializer.cs" />
     <Compile Include="Serialization\NullSerializer.cs" />
-    <Compile Include="Util\ArrayExtensions.cs" />
+    <Compile Include="Util\Internal\ArrayExtensions.cs" />
+    <Compile Include="Util\Either.cs" />
     <Compile Include="Util\Internal\AtomicCounter.cs" />
     <Compile Include="Util\Internal\AtomicCounterLong.cs" />
     <Compile Include="Pattern\IllegalStateException.cs" />

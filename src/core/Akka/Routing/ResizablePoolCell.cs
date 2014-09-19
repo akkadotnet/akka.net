@@ -94,10 +94,7 @@ namespace Akka.Routing
                         var currentRoutees = Router.Routees;
                         var enumerable = currentRoutees as Routee[] ?? currentRoutees.ToArray();
                         var routeesToAbandon = enumerable.Drop(enumerable.Count() + requestedCapacity);
-                        foreach (var routee in routeesToAbandon.OfType<ActorRefRoutee>())
-                        {
-                            RemoveRoutee(routee.Actor, true);
-                        }
+                        RemoveRoutees(routeesToAbandon, true);
                     }
                 }
                 finally

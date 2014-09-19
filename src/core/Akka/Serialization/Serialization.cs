@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util.Internal;
 
 namespace Akka.Serialization
 {
@@ -101,15 +102,23 @@ namespace Akka.Serialization
             return FindSerializerForType(type);
         }
 
+        //cache to eliminate lots of typeof operator calls
+        private readonly Type _objectType = typeof (object);
         public Serializer FindSerializerForType(Type objectType)
         {
             Type type = objectType;
-            while (type != null)
+            //TODO: see if we can do a better job with proper type sorting here - most specific to least specific (object serializer goes last)
+            foreach (var serializerType in _serializerMap)
             {
-                if (_serializerMap.ContainsKey(type))
-                    return _serializerMap[type];
-                type = type.BaseType;
+                //force deferral of the base "object" serializer until all other higher-level types have been evaluated
+                if (serializerType.Key.IsAssignableFrom(type) && serializerType.Key != _objectType)
+                    return serializerType.Value;
             }
+
+            //do a final check for the "object" serializer
+            if (_serializerMap.ContainsKey(_objectType) && _objectType.IsAssignableFrom(type))
+                return _serializerMap[_objectType];
+
             throw new Exception("Serializer not found for type " + objectType.Name);
         }
 
