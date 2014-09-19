@@ -180,7 +180,7 @@ namespace Akka.Actor
     /// with unrestricted storage capacity
     /// </summary>
 // ReSharper disable once InconsistentNaming
-    public interface WithUnboundedStash : IActorStash
+    public interface WithUnboundedStash : IActorStash, RequiresMessageQueue<UnboundedDequeBasedMessageQueueSemantics>
     {
         IStash CurrentStash { get; set; }
     }
@@ -190,7 +190,8 @@ namespace Akka.Actor
     /// with restricted storage capacity
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public interface WithBoundedStash : IActorStash { }
+    public interface WithBoundedStash : IActorStash, RequiresMessageQueue<BoundedDequeBasedMessageQueueSemantics>
+    { }
 
     /// <summary>
     /// Marker interface for adding stash support
