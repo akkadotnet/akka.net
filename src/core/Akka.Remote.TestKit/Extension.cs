@@ -61,11 +61,14 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public Address Address { get { return _address; } }
 
+        readonly ExtendedActorSystem _system;
+
         public TestConductor(ExtendedActorSystem system)
         {
             _settings = new TestConductorSettings(system.Settings.Config.GetConfig("akka.testconductor"));
             _transport = system.Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
             _address = _transport.DefaultAddress;
+            _system = system;
         }
     }
 

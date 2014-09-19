@@ -35,11 +35,21 @@ namespace Akka.Remote.TestKit
             }
         }
 
-
-        public void StartController()
+        //TODO: INode should probably be IPEndPoint
+        public async Task<INode> StartController(int participants, RoleName name, INode controllerPort)
         {
-            //TODO: This will be different if using app domains and remoting. Need to have more of a look at the code to work out if that is the right direction
-            throw new NotImplementedException();
+            if(_controller != null) throw new Exception("TestConductorServer was already started");
+            _controller = _system.ActorOf(new Props(typeof (Controller), new object[] {participants, controllerPort}),
+                "controller");
+            //TODO: Need to review this async stuff
+            var node = await _controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance).ConfigureAwait(false);
+            await StartClient(name, node).ConfigureAwait(false);
+            return node;
+        }
+
+        public Task<INode> SockAddr()
+        {
+            return _controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance);
         }
 
         /// <summary>
@@ -259,9 +269,14 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    class ServerFSM
+    class ServerFSM : UntypedActor
     {
         public ServerFSM()
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void OnReceive(object message)
         {
             throw new NotImplementedException();
         }

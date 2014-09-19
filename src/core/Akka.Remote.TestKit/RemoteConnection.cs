@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using Akka.Actor;
 using Akka.Remote.TestKit.Proto;
 using Akka.Remote.Transport.Helios;
 using Helios.Buffers;
@@ -111,6 +112,12 @@ namespace Akka.Remote.TestKit
                 remoteConnection.Open();
                 return remoteConnection;
             }
+        }
+
+        public static void Shutdown(RemoteConnection connection)
+        {
+            //TODO: Correct?
+            connection.Close();
         }
 
         #endregion
