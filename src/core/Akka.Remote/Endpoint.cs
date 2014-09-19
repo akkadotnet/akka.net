@@ -733,7 +733,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class EndpointWriter : EndpointActor<EndpointWriter.State, bool>, WithUnboundedStash, RequiresMessageQueue<UnboundedDequeBasedMessageQueueSemantics>
+    internal class EndpointWriter : EndpointActor<EndpointWriter.State, bool>, WithUnboundedStash
     {
         public EndpointWriter(AkkaProtocolHandle handleOrActive, Address localAddress, Address remoteAddress,
             int? refuseUid, AkkaProtocolTransport transport, RemoteSettings settings,
