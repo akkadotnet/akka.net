@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Akka.Dispatch;
 using Akka.Util;
 
 namespace Akka.Actor
@@ -178,7 +179,7 @@ namespace Akka.Actor
     /// with unrestricted storage capacity
     /// </summary>
 // ReSharper disable once InconsistentNaming
-    public interface WithUnboundedStash : IActorStash
+    public interface WithUnboundedStash : IActorStash, RequiresMessageQueue<UnboundedDequeBasedMessageQueueSemantics>
     {
         IStash CurrentStash { get; set; }
     }
@@ -188,7 +189,8 @@ namespace Akka.Actor
     /// with restricted storage capacity
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public interface WithBoundedStash : IActorStash { }
+    public interface WithBoundedStash : IActorStash, RequiresMessageQueue<BoundedDequeBasedMessageQueueSemantics>
+    { }
 
     /// <summary>
     /// Marker interface for adding stash support
@@ -286,13 +288,26 @@ namespace Akka.Actor
         protected ActorRef Self;
         protected LinkedList<Envelope> TheStash;
         protected ActorCell ActorCell;
+        protected DequeBasedMailbox Mailbox;
 
         protected AbstractStash(IActorContext context, int capacity = 100)
         {
+            var actorCell = context.AsInstanceOf<ActorCell>();
+            var mailbox = actorCell.Mailbox as DequeBasedMailbox;
+            if (mailbox == null)
+            {
+                string message = @"DequeBasedMailbox required, got: " + actorCell.Mailbox.GetType().Name +  @"
+An (unbounded) deque-based mailbox can be configured as follows:
+    my-custom-mailbox {
+        mailbox-type = ""Akka.Dispatch.UnboundedDequeBasedMailbox""
+    }";
+                throw new NotSupportedException(message);
+            }
+            Mailbox = mailbox;
             Context = context;
             Self = Context.Self;
             TheStash = new LinkedList<Envelope>();
-            ActorCell = context.AsInstanceOf<ActorCell>();
+            ActorCell = actorCell;
             Capacity = capacity;
         }
 
@@ -389,8 +404,7 @@ namespace Akka.Actor
 
         public virtual void EnqueueFirst(Envelope msg)
         {
-            //TODO: need to add double-ended queue semantics for this to work
-            ActorCell.Mailbox.Post(msg);
+            Mailbox.EnqueueFirst(msg);
         }
     }
 

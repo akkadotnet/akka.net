@@ -6,6 +6,8 @@ using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Dispatch;
+using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Transport;
