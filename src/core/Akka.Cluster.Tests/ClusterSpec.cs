@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Akka.Cluster.Tests
 {
-    public class ClusterSpec : AkkaSpec, ImplicitSender
+    public class ClusterSpec : AkkaSpec
     {
         const string Config = @"    
         akka.cluster {

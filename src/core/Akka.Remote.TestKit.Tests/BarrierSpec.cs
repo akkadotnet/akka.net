@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Akka.Remote.TestKit.Tests
 {
-    public class BarrierSpec : AkkaSpec, ImplicitSender
+    public class BarrierSpec : AkkaSpec
     {
         private sealed class Failed
         {

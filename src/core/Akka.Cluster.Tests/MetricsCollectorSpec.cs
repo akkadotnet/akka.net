@@ -18,7 +18,7 @@ namespace Akka.Cluster.Tests
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""";
     }
 
-    public class MetricsCollectorSpec : MetricsCollectorFactory, ImplicitSender, IDisposable
+    public class MetricsCollectorSpec : MetricsCollectorFactory, IDisposable
     {
         public ActorRef Self { get { return TestActor; } }
 

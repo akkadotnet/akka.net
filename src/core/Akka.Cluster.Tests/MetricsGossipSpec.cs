@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Akka.Cluster.Tests
 {
-    public class MetricsGossipSpec : MetricsCollectorFactory, ImplicitSender
+    public class MetricsGossipSpec : MetricsCollectorFactory
     {
         public ActorRef Self { get { return TestActor; } }
 
