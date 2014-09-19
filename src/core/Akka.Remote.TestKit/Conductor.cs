@@ -269,16 +269,126 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    class ServerFSM : UntypedActor
+    /// <summary>
+    /// The server part of each client connection is represented by a ServerFSM.
+    /// The Initial state handles reception of the new client’s
+    /// <see cref="Hello"/> message (which is needed for all subsequent
+    /// node name translations).
+    /// 
+    /// In the Ready state, messages from the client are forwarded to the controller
+    /// and <see cref="EndpointManager.Send"/> requests are sent, but the latter is
+    /// treated specially: all client operations are to be confirmed by a
+    /// <see cref="Done"/> message, and there can be only one such
+    /// request outstanding at a given time (i.e. a Send fails if the previous has
+    /// not yet been acknowledged).
+    /// 
+    /// INTERNAL API.
+    /// </summary>
+    class ServerFSM : FSM<ServerFSM.State, ActorRef>, LoggingFSM
     {
-        public ServerFSM()
+        readonly RemoteConnection _channel;
+        readonly ActorRef _controller;
+        RoleName _roleName;
+
+        public enum State
         {
-            throw new NotImplementedException();
+            Initial,
+            Ready
         }
 
-        protected override void OnReceive(object message)
+        public ServerFSM(ActorRef controller, RemoteConnection channel)
         {
-            throw new NotImplementedException();
+            _controller = controller;
+            _channel = channel;
+        }
+
+        protected void InitFSM()
+        {
+            StartWith(State.Initial, null);
+
+            WhenUnhandled(@event =>
+            {
+                var clientDisconnected = @event.FsmEvent as Controller.ClientDisconnected;
+                if (clientDisconnected != null)
+                {
+                    if(@event.StateData != null)
+                        @event.StateData.Tell(new Failure(new Controller.ClientDisconnectedException("client disconnected in state " + StateName + ": " + _channel)));                   
+                    return Stop();
+                }
+                return null;
+            });
+
+            OnTermination(@event =>
+            {
+                _controller.Tell(new Controller.ClientDisconnected(_roleName));
+                _channel.Close();
+            });
+
+            When(State.Initial, @event =>
+            {
+                var hello = @event.FsmEvent as Hello;
+                if (hello != null)
+                {
+                    _roleName = new RoleName(hello.Name);
+                    _controller.Tell(new Controller.NodeInfo(_roleName, hello.Address, Self));
+                    return GoTo(State.Ready);
+                }
+                if (@event.FsmEvent is INetworkOp)
+                {
+                    Log.Warning("client {0}, sent not Hello in first message (instead {1}), disconnecting", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
+                    _channel.Close();
+                    return Stop();
+                }
+                if (@event.FsmEvent is IToClient)
+                {
+                    Log.Warning("cannot send {0} in state Initial", @event.FsmEvent);
+                    return Stay();
+                }
+                if (@event.FsmEvent is StateTimeout)
+                {
+                    Log.Info("closing channel to {0} because of Hello timeout", _channel.RemoteHost.ToEndPoint());
+                    _channel.Close();
+                    return Stop();
+                }
+                return null;
+            }, TimeSpan.FromSeconds(10));
+
+            When(State.Ready, @event =>
+            {
+                if (@event.FsmEvent is Done && @event.StateData != null)
+                {
+                    @event.StateData.Tell(@event.FsmEvent);
+                    return Stay().Using(null);
+                }
+                if (@event.FsmEvent is IServerOp)
+                {
+                    _controller.Tell(@event.FsmEvent);
+                    return Stay();
+                }
+                if (@event.FsmEvent is INetworkOp)
+                {
+                    Log.Warn("client {0} sent unsupported message {1}", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
+                    return Stop();
+                }
+                if (@event.FsmEvent is IToClient && @event.FsmEvent is IUnconfirmedClientOp)
+                {
+                    _channel.Write(@event.FsmEvent);
+                    return Stay();
+                }
+                if (@event.FsmEvent is IToClient && @event.StateData == null)
+                {
+                    _channel.Write(@event.FsmEvent);
+                    return Stay().Using(Sender);
+                }
+                if (@event.FsmEvent is IToClient)
+                {
+                    Log.Warning("cannot send {0} while waiting for previous ACK", @event.FsmEvent);
+                    return Stay();
+                }
+                return null;
+            });
+
+            Initialize();
         }
     }
 }
