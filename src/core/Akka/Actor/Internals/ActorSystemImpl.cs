@@ -92,7 +92,7 @@ namespace Akka.Actor.Internals
 
             if(_settings.LogConfigOnStart)
             {
-                _log.Warn(Settings.ToString());
+                _log.Warning(Settings.ToString());
             }
         }
 
@@ -260,7 +260,7 @@ namespace Akka.Actor.Internals
         /// </summary>
         private void ConfigureLoggers()
         {
-            _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType());
+            _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), new DefaultLogMessageFormatter());
         }
 
         /// <summary>

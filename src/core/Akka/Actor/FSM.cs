@@ -672,7 +672,7 @@ namespace Akka.Actor
             {
                 return delegate(Event<TData> @event)
                 {
-                    _logAdapter.Warn(String.Format("unhandled event {0} in state {1}", @event.FsmEvent, StateName));
+                    _logAdapter.Warning(String.Format("unhandled event {0} in state {1}", @event.FsmEvent, StateName));
                     return Stay();
                 };
             }

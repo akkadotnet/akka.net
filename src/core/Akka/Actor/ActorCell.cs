@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Akka.Actor.Internal;
 using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -19,7 +20,6 @@ namespace Akka.Actor
         public const int UndefinedUid = 0;
         private Props _props;
         private static readonly Props terminatedProps=new TerminatedProps();
-        [ThreadStatic] private static ActorCell current;
 
         protected ConcurrentDictionary<string, InternalActorRef> children =
             new ConcurrentDictionary<string, InternalActorRef>();
@@ -50,7 +50,7 @@ namespace Akka.Actor
 
         internal static ActorCell Current
         {
-            get { return current; }
+            get { return InternalCurrentActorCellKeeper.Current; }
         }
 
         public ActorSystem System { get { return _systemImpl; } }
@@ -252,8 +252,8 @@ namespace Akka.Actor
 
         public void UseThreadContext(Action action)
         {
-            ActorCell tmp = Current;
-            current = this;
+            var tmp = InternalCurrentActorCellKeeper.Current;
+            InternalCurrentActorCellKeeper.Current = this;
             try
             {
                 action();
@@ -261,7 +261,7 @@ namespace Akka.Actor
             finally
             {
                 //ensure we set back the old context
-                current = tmp;
+                InternalCurrentActorCellKeeper.Current = tmp;
             }
         }
 

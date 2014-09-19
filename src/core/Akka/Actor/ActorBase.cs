@@ -1,4 +1,5 @@
 ﻿using System;
+using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
@@ -132,8 +133,8 @@ namespace Akka.Actor
         protected static IActorContext Context
         {
             get
-            {                
-                var context = ActorCell.Current;
+            {
+                var context = InternalCurrentActorCellKeeper.Current;
                 if (context == null)
                     throw new NotSupportedException(
                         "There is no active ActorContext, this is most likely due to use of async operations from within this actor.");

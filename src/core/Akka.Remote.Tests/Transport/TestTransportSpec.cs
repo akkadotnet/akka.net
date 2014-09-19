@@ -10,7 +10,7 @@ using Xunit;
 namespace Akka.Remote.Tests.Transport{
 
     
-    public class TestTransportSpec : AkkaSpec, ImplicitSender
+    public class TestTransportSpec : AkkaSpec
     {
         #region Setup / Teardown
 

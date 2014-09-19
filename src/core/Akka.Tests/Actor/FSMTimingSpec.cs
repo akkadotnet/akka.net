@@ -10,7 +10,7 @@ using Xunit;
 namespace Akka.Tests.Actor
 {
 
-    public class FSMTimingSpec : AkkaSpec, ImplicitSender
+    public class FSMTimingSpec : AkkaSpec
     {
         public ActorRef Self { get { return TestActor; } }
 

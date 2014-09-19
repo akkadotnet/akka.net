@@ -55,7 +55,7 @@
     <Compile Include="..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="ImplicitSenderSpec.cs" />
+    <Compile Include="NoImplicitSenderSpec.cs" />
     <Compile Include="TestActorRefTests\BossActor.cs" />
     <Compile Include="TestActorRefTests\WatchAndForwardActor.cs" />
     <Compile Include="TestActorRefTests\Logger.cs" />
