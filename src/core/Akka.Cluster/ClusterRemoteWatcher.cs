@@ -109,12 +109,11 @@ namespace Akka.Cluster
         /// </summary>
         private void TakeOverResponsibility(Address address)
         {
-            foreach (var watching in Watching)
+            foreach (var watching in Watching.Where(x => x.Item1.Path.Address.Equals(address)).ToList())
             {
                 var watchee = watching.Item1;
                 var watcher = watching.Item2;
-                if (watchee.Path.Address.Equals(address))
-                    ProcessUnwatchRemote(watchee, watcher);
+                ProcessUnwatchRemote(watchee, watcher);
             }
         }
     }
