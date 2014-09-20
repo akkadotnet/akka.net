@@ -40,16 +40,5 @@ namespace Akka.TestKit.Xunit
                 throw new AkkaEqualException(expected, actual, format, args);
         }
 
-        /// <summary>
-        /// Assert passes if two sequences are equal, regardless of the ordering of the items.
-        /// 
-        /// Equivalent of http://msdn.microsoft.com/en-us/library/microsoft.visualstudio.testtools.unittesting.collectionassert.areequivalent.aspx
-        /// 
-        /// Used largely inside Akka.Cluster.Tests for verifying the correctness of gossip protocol
-        /// </summary>
-        public static void Equivalent<T>(IEnumerable<T> expected, IEnumerable<T> actual)
-        {
-            Assert.True(expected.All(x => actual.Contains(x)) && actual.All(y => expected.Contains(y)));
-        }
     }
 }
