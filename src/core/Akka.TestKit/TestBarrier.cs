@@ -5,12 +5,13 @@ namespace Akka.TestKit
 {
 
     /// <summary>
-    /// A barrier wrapper for use in testing.
-    /// It always uses a timeout when waiting and timeouts are specified as <see cref="TimeSpan"/>s.
+    /// Wraps a <see cref="Barrier"/> for use in testing.
+    /// It always uses a timeout when waiting.
     /// Timeouts will always throw an exception. The default timeout is 5 seconds.
     /// </summary>
     public class TestBarrier
     {
+        private readonly TestKitBase _testKit;
         private readonly int _count;
         private readonly Barrier _barrier;
 
@@ -20,8 +21,9 @@ namespace Akka.TestKit
 
         #endregion
 
-        public TestBarrier(int count)
+        public TestBarrier(TestKitBase testKit, int count)
         {
+            _testKit = testKit;
             _count = count;
             _barrier = new Barrier(count);
         }
@@ -33,7 +35,7 @@ namespace Akka.TestKit
 
         public void Await(TimeSpan timeout)
         {
-            _barrier.SignalAndWait(timeout);
+            _barrier.SignalAndWait(_testKit.Dilated(timeout));
 
         }
 

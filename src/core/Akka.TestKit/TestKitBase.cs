@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
@@ -91,10 +92,10 @@ namespace Akka.TestKit
                 var repRef = _testActor as RepointableRef;
                 return repRef == null || repRef.IsStarted;
             }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(10));
-            
+
             if(!(this is NoImplicitSender))
             {
-                InternalCurrentActorCellKeeper.Current = ((LocalActorRef) testActor).Cell;
+                InternalCurrentActorCellKeeper.Current = ((LocalActorRef)testActor).Cell;
             }
             _testActor = testActor;
 
@@ -261,7 +262,7 @@ namespace Akka.TestKit
         public TimeSpan Dilated(TimeSpan duration)
         {
             if(duration.IsPositiveFinite())
-                return new TimeSpan((long) (duration.Ticks * _testKitSettings.TestTimeFactor));
+                return new TimeSpan((long)(duration.Ticks * _testKitSettings.TestTimeFactor));
             //Else: 0 or infinite (negative)
             return duration;
         }
@@ -285,7 +286,7 @@ namespace Akka.TestKit
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
         protected virtual void Shutdown(TimeSpan? duration = null, bool verifySystemShutdown = false)
         {
-           Shutdown(_system,duration,verifySystemShutdown);
+            Shutdown(_system, duration, verifySystemShutdown);
         }
 
         /// <summary>
@@ -296,7 +297,7 @@ namespace Akka.TestKit
         /// <param name="system">The system to shutdown.</param>
         /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        protected virtual void Shutdown(ActorSystem system, TimeSpan? duration=null, bool verifySystemShutdown = false)
+        protected virtual void Shutdown(ActorSystem system, TimeSpan? duration = null, bool verifySystemShutdown = false)
         {
             if(system == null) system = _system;
 
@@ -308,7 +309,7 @@ namespace Akka.TestKit
                 const string msg = "Failed to stop [{0}] within [{1}] \n{2}";
                 if(verifySystemShutdown)
                     throw new Exception(string.Format(msg, system.Name, durationValue, ""));
-                        //TODO: replace "" with system.PrintTree()
+                //TODO: replace "" with system.PrintTree()
                 system.Log.Warning(msg, system.Name, durationValue, ""); //TODO: replace "" with system.PrintTree()
             }
         }
@@ -331,7 +332,7 @@ namespace Akka.TestKit
         private ActorRef CreateTestActor(ActorSystem system, string name)
         {
             var testActorProps = Props.Create(() => new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_queue)))
-                .WithDispatcher("akka.test.test-actor.dispatcher");  
+                .WithDispatcher("akka.test.test-actor.dispatcher");
             var testActor = system.ActorOf(testActorProps, name);
             return testActor;
         }
@@ -342,7 +343,16 @@ namespace Akka.TestKit
             return new TestProbe(Sys, _assertions);
         }
 
+        /// <summary>
+        /// Wraps a <see cref="Barrier"/> for use in testing.
+        /// It always uses a timeout when waiting.
+        /// Timeouts will always throw an exception. The default timeout is 5 seconds.
+        /// </summary>
+        public TestBarrier CreateTestBarrier(int count)
+        {
+            return new TestBarrier(this, count);
+        }
 
     }
-    
+
 }
