@@ -4,46 +4,6 @@ using Akka.Actor;
 
 namespace Akka.TestKit
 {
-    public static class TestActorRef
-    {
-        public static TestActorRef<T> Create<T>(ActorSystem system, Props props, ActorRef supervisor = null, string name = null) where T : ActorBase
-        {
-            return new TestActorRef<T>(system, props, supervisor, name);
-        }
-
-        public static TestActorRef<T> Create<T>(ActorSystem system, Props props, string name) where T : ActorBase
-        {
-            return Create<T>(system, props, null, name);
-        }
-
-        public static TestActorRef<T> Create<T>(ActorSystem system, Expression<Func<T>> factory, string name = null) where T : ActorBase
-        {
-            return Create<T>(system, Props.Create(factory), null, name);
-        }
-
-        public static TestActorRef<T> Create<T>(ActorSystem system, Expression<Func<T>> factory, ActorRef supervisor, string name = null) where T : ActorBase
-        {
-            return Create<T>(system, Props.Create(factory), supervisor, name);
-        }
-
-        public static TestActorRef<T> Create<T>(ActorSystem system, ActorRef supervisor, string name = null) where T : ActorBase, new()
-        {
-            return Create<T>(system, Props.Create<T>(), supervisor, name);
-        }
-
-        public static TestActorRef<T> Create<T>(ActorSystem system, string name = null) where T : ActorBase, new()
-        {
-            return Create<T>(system, Props.Create<T>(), null, name);
-        }
-
-
-        public class InternalGetActor : AutoReceivedMessage, PossiblyHarmful
-        {
-            public static InternalGetActor Instance = new InternalGetActor();
-            private InternalGetActor() { }
-        }
-    }
-
     /// <summary>
     /// This special ActorRef is exclusively for use during unit testing in a single-threaded environment. Therefore, it
     /// overrides the dispatcher to <see cref="CallingThreadDispatcher"/> and sets the receiveTimeout to None. Otherwise,
@@ -59,8 +19,8 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="system">The system.</param>
         /// <param name="actorProps">The actor props.</param>
-        /// <param name="supervisor">The supervisor.</param>
-        /// <param name="name">The name.</param>
+        /// <param name="supervisor">Optional: The supervisor.</param>
+        /// <param name="name">Optional: The name.</param>
         public TestActorRef(ActorSystem system, Props actorProps, ActorRef supervisor = null, string name = null) : base(system, actorProps, supervisor, name)
         {
         }

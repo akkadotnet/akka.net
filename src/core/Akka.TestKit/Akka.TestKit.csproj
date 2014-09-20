@@ -122,6 +122,7 @@
     <Compile Include="TestKitAssertionsExtension.cs" />
     <Compile Include="TestKitAssertionsProvider.cs" />
     <Compile Include="TestKitBase.cs" />
+    <Compile Include="TestKitBase_ActorOf.cs" />
     <Compile Include="TestKitBase_Obsolete.cs" />
     <Compile Include="TestKitBase_AwaitAssert.cs" />
     <Compile Include="TestKitBase_Expect.cs" />

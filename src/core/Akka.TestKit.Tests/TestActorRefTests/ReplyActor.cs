@@ -13,11 +13,11 @@ namespace Akka.TestKit.Tests.TestActorRefTests
             {
                 case "complexRequest":
                     _replyTo = Sender;
-                    var worker = TestActorRef.Create<WorkerActor>(System);
+                    var worker = new TestActorRef<WorkerActor>(System, Props.Create<WorkerActor>());
                     worker.Tell("work");
                     return true;
                 case "complexRequest2":
-                    var worker2 = TestActorRef.Create<WorkerActor>(System);
+                    var worker2 = new TestActorRef<WorkerActor>(System, Props.Create<WorkerActor>());
                     worker2.Tell(Sender, Self);
                     return true;
                 case "workDone":

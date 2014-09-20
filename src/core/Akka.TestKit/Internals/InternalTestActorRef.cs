@@ -65,7 +65,7 @@ namespace Akka.TestKit.Internal
         {
             var cell = Cell;
             sender = sender.IsNobody() ? cell.System.DeadLetters : sender;
-            var envelope = new Envelope() { Message = message, Sender = sender };
+            var envelope = new Envelope { Message = message, Sender = sender };
             cell.UseThreadContext(() => cell.ReceiveMessageForTest(envelope));
         }
 
@@ -79,7 +79,7 @@ namespace Akka.TestKit.Internal
                 if(actor == null)
                 {
                     var timeout = TestKitExtension.For(System).DefaultTimeout;
-                    actor = this.Ask(TestActorRef.InternalGetActor.Instance, timeout).Result;
+                    actor = this.Ask(InternalGetActor.Instance, timeout).Result;
                 }
                 return actor;
             }
@@ -122,7 +122,7 @@ namespace Akka.TestKit.Internal
         public static InternalTestActorRef Create(ActorSystem system, Props props, ActorRef supervisor = null, string name = null)
         {
             if(name == null)
-                name = InternalTestActorRef.CreateUniqueName();
+                name = CreateUniqueName();
 
             if(supervisor == null)
             {
@@ -183,12 +183,19 @@ namespace Akka.TestKit.Internal
 
             protected override void AutoReceiveMessage(Envelope envelope)
             {
-                if(envelope.Message is TestActorRef.InternalGetActor)
+                if(envelope.Message is InternalGetActor)
                     Sender.Tell(Actor, Self);
                 else
                     base.AutoReceiveMessage(envelope);
             }
             public new object Actor { get { return base.Actor; } }
+        }
+
+
+        public class InternalGetActor : AutoReceivedMessage, PossiblyHarmful
+        {
+            public static readonly InternalGetActor Instance = new InternalGetActor();
+            private InternalGetActor() { }
         }
     }
 }

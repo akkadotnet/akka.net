@@ -14,7 +14,7 @@ namespace Akka.TestKit
     /// <summary>
     /// <remarks>Unless you're creating a TestKit for a specific test framework, you should probably not inherit directly from this class.</remarks>
     /// </summary>
-    public abstract partial class TestKitBase
+    public abstract partial class TestKitBase : ActorRefFactory
     {
         private static readonly Config _defaultConfig = ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internals.Reference.conf");
         private static readonly Config _fullDebugConfig = ConfigurationFactory.ParseString(@"
