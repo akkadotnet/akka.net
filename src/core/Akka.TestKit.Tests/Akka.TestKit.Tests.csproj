@@ -70,6 +70,7 @@
     <Compile Include="TestActorRefTests\WrappedTerminated.cs" />
     <Compile Include="TestEventListenerTests\AllTestForEventFilterBase.cs" />
     <Compile Include="TestEventListenerTests\AllTestForEventFilterBase_Instances.cs" />
+    <Compile Include="TestEventListenerTests\ConfigTests.cs" />
     <Compile Include="TestEventListenerTests\CustomEventFilterTests.cs" />
     <Compile Include="TestEventListenerTests\DeadLettersEventFilterTests.cs" />
     <Compile Include="TestEventListenerTests\EventFilterTestBase.cs" />
