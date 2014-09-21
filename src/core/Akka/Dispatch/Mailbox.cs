@@ -48,8 +48,9 @@ namespace Akka.Dispatch
         /// <summary>
         ///     Posts the specified envelope to the mailbox.
         /// </summary>
+        /// <param name="receiver"></param>
         /// <param name="envelope">The envelope.</param>
-        public abstract void Post(Envelope envelope);   //TODO: Refactor to Enqueue(ActorRef receiver, Envelope envelope)
+        public abstract void Post(ActorRef receiver, Envelope envelope);
 
         /// <summary>
         ///     Stops this instance.

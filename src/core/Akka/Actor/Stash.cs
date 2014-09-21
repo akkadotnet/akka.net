@@ -391,7 +391,7 @@ namespace Akka.Actor
         public virtual void EnqueueFirst(Envelope msg)
         {
             //TODO: need to add double-ended queue semantics for this to work
-            ActorCell.Mailbox.Post(msg);
+            ActorCell.Mailbox.Post(Self, msg);
         }
     }
 

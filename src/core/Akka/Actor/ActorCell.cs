@@ -98,11 +98,12 @@ namespace Akka.Actor
 
             //// ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅
             //mailbox.systemEnqueue(self, createMessage)
-            mailbox.Post(new Envelope {Message = createMessage, Sender = Self});
+            var self = Self;
+            mailbox.Post(self, new Envelope {Message = createMessage, Sender = self});
 
             if(sendSupervise)
             {
-                Parent.Tell(new Supervise(Self, async: false));
+                Parent.Tell(new Supervise(self, async: false));
             }
         }
 
@@ -299,7 +300,7 @@ namespace Akka.Actor
                 Message = message,
             };
 
-            Mailbox.Post(m);
+            Mailbox.Post(Self, m);
         }
 
         protected void ClearActorCell()
