@@ -130,5 +130,111 @@ namespace Akka.TestKit
             return new TestActorRef<TActor>(Sys, Props.Create<TActor>(), NoSupervisor, name);
         }
 
+
+
+
+
+
+        /// <summary>
+        /// Create a new <see cref="FSM{TState,TData}"/> as child of the specified supervisor
+        /// and returns it as <see cref="TestFSMRef{TActor,TState,TData}"/> to enable inspecting and modifying the FSM directly.
+        /// </summary>
+        /// <typeparam name="TFsmActor">The type of the actor. It must be a <see cref="FSM{TState,TData}"/></typeparam>
+        /// <typeparam name="TState">The type of state name</typeparam>
+        /// <typeparam name="TData">The type of state data</typeparam>
+        /// <param name="props">The <see cref="Props"/> object</param>
+        /// <param name="supervisor">The supervisor</param>
+        /// <param name="name">Optional: The name.</param>
+        /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
+        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Props props, ActorRef supervisor, string name = null, bool withLogging = false)
+            where TFsmActor : FSM<TState, TData>
+        {
+            return new TestFSMRef<TFsmActor, TState, TData>(Sys, props, supervisor, name, withLogging);
+        }
+
+        /// <summary>
+        /// Create a new <see cref="FSM{TState,TData}"/> as child of <see cref="Sys"/>
+        /// and returns it as <see cref="TestFSMRef{TActor,TState,TData}"/> to enable inspecting and modifying the FSM directly.
+        /// </summary>
+        /// <typeparam name="TFsmActor">The type of the actor. It must be a <see cref="FSM{TState,TData}"/> and have a public parameterless constructor</typeparam>
+        /// <typeparam name="TState">The type of state name</typeparam>
+        /// <typeparam name="TData">The type of state data</typeparam>
+        /// <param name="props">The <see cref="Props"/> object</param>
+        /// <param name="name">Optional: The name.</param>
+        /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
+        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Props props, string name = null, bool withLogging = false)
+            where TFsmActor : FSM<TState, TData>
+        {
+            return new TestFSMRef<TFsmActor, TState, TData>(Sys, props,NoSupervisor, name, withLogging);
+        }
+
+
+        /// <summary>
+        /// Create a new <see cref="FSM{TState,TData}"/> as child of the specified supervisor
+        /// and returns it as <see cref="TestFSMRef{TActor,TState,TData}"/> to enable inspecting and modifying the FSM directly.
+        /// <typeparamref name="TFsmActor"/> must have a public parameterless constructor.
+        /// </summary>
+        /// <typeparam name="TFsmActor">The type of the actor. It must have a parameterless public constructor</typeparam>
+        /// <typeparam name="TState">The type of state name</typeparam>
+        /// <typeparam name="TData">The type of state data</typeparam>
+        /// <param name="supervisor">The supervisor</param>
+        /// <param name="name">Optional: The name.</param>
+        /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
+        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(ActorRef supervisor, string name = null, bool withLogging = false)
+            where TFsmActor : FSM<TState, TData>, new()
+        {
+            return new TestFSMRef<TFsmActor, TState, TData>(Sys,Props.Create<TFsmActor>(), supervisor, name, withLogging);
+        }
+
+        /// <summary>
+        /// Create a new <see cref="FSM{TState,TData}"/> as child of <see cref="Sys"/>
+        /// and returns it as <see cref="TestFSMRef{TActor,TState,TData}"/> to enable inspecting and modifying the FSM directly.
+        /// <typeparamref name="TFsmActor"/> must have a public parameterless constructor.
+        /// </summary>
+        /// <typeparam name="TFsmActor">The type of the actor. It must have a parameterless public constructor</typeparam>
+        /// <typeparam name="TState">The type of state name</typeparam>
+        /// <typeparam name="TData">The type of state data</typeparam>
+        /// <param name="name">Optional: The name.</param>
+        /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
+        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(string name = null, bool withLogging = false)
+            where TFsmActor : FSM<TState, TData>, new()
+        {
+            return new TestFSMRef<TFsmActor, TState, TData>(Sys, Props.Create<TFsmActor>(), NoSupervisor, name, withLogging);
+        }
+
+        /// <summary>
+        /// Create a new <see cref="FSM{TState,TData}"/> as child of the specified supervisor
+        /// and returns it as <see cref="TestFSMRef{TActor,TState,TData}"/> to enable inspecting and modifying the FSM directly.
+        /// Uses an expression that calls the constructor of <typeparamref name="TFsmActor"/>.
+        /// </summary>
+        /// <typeparam name="TFsmActor">The type of the actor.</typeparam>
+        /// <typeparam name="TState">The type of state name</typeparam>
+        /// <typeparam name="TData">The type of state data</typeparam>
+        /// <param name="factory">An expression that calls the constructor of <typeparamref name="TFsmActor"/></param>
+        /// <param name="supervisor">The supervisor</param>
+        /// <param name="name">Optional: The name.</param>
+        /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
+        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Expression<Func<TFsmActor>> factory, ActorRef supervisor, string name = null, bool withLogging = false)
+            where TFsmActor : FSM<TState, TData>
+        {
+            return new TestFSMRef<TFsmActor, TState, TData>(Sys, Props.Create(factory), supervisor, name, withLogging);
+        }
+
+        /// <summary>
+        /// Create a new <see cref="FSM{TState,TData}"/> as child of <see cref="Sys"/>
+        /// and returns it as <see cref="TestFSMRef{TActor,TState,TData}"/> to enable inspecting and modifying the FSM directly.
+        /// Uses an expression that calls the constructor of <typeparamref name="TFsmActor"/>.
+        /// </summary>
+        /// <typeparam name="TFsmActor">The type of the actor.</typeparam>
+        /// <typeparam name="TState">The type of state name</typeparam>
+        /// <typeparam name="TData">The type of state data</typeparam>
+        /// <param name="factory">An expression that calls the constructor of <typeparamref name="TFsmActor"/></param>
+        /// <param name="name">Optional: The name.</param>
+        /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
+        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Expression<Func<TFsmActor>> factory, string name = null, bool withLogging = false)
+            where TFsmActor : FSM<TState, TData>
+        {
+            return new TestFSMRef<TFsmActor, TState, TData>(Sys, Props.Create(factory), NoSupervisor, name, withLogging);
+        }
     }
 }

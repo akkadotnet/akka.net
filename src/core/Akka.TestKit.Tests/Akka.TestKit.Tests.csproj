@@ -76,6 +76,7 @@
     <Compile Include="TestEventListenerTests\EventFilterTestBase.cs" />
     <Compile Include="TestEventListenerTests\ExceptionEventFilterTests.cs" />
     <Compile Include="TestEventListenerTests\ForwardAllEventsTestEventListener.cs" />
+    <Compile Include="TestFSMRefTests\TestFSMRefSpec.cs" />
     <Compile Include="TestKitBaseTests\AwaitAssertTests.cs" />
     <Compile Include="TestKitBaseTests\DilatedTests.cs" />
     <Compile Include="TestKitBaseTests\ExpectTests.cs" />
