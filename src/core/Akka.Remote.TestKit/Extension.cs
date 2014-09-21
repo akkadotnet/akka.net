@@ -101,12 +101,12 @@ namespace Akka.Remote.TestKit
 
         public TestConductorSettings(Config config)
         {
-            _connectTimeout = config.GetMillisDuration("connect-timeout");
+            _connectTimeout = config.GetTimeSpan("connect-timeout");
             _clientReconnects = config.GetInt("client-reconnects");
-            _reconnectBackoff = config.GetMillisDuration("reconnect-backoff");
-            _barrierTimeout = config.GetMillisDuration("barrier-timeout");
-            _queryTimeout = config.GetMillisDuration("query-timeout");
-            _packetSplitThreshold = config.GetMillisDuration("packet-split-threshold");
+            _reconnectBackoff = config.GetTimeSpan("reconnect-backoff");
+            _barrierTimeout = config.GetTimeSpan("barrier-timeout");
+            _queryTimeout = config.GetTimeSpan("query-timeout");
+            _packetSplitThreshold = config.GetTimeSpan("packet-split-threshold");
             //_serverSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.tcp.server-socket-worker-pool"));
             //_clientSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.tcp.client-socket-worker-pool"));
         }

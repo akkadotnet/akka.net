@@ -20,8 +20,8 @@ namespace Akka.Cluster.Tests
             Assert.True(settings.LogInfo);
             Assert.Equal(8, settings.FailureDetectorConfig.GetDouble("threshold"));
             Assert.Equal(1000, settings.FailureDetectorConfig.GetInt("max-sample-size"));
-            Assert.Equal(TimeSpan.FromMilliseconds(100), settings.FailureDetectorConfig.GetMillisDuration("min-std-deviation"));
-            Assert.Equal(TimeSpan.FromSeconds(3), settings.FailureDetectorConfig.GetMillisDuration("acceptable-heartbeat-pause"));
+            Assert.Equal(TimeSpan.FromMilliseconds(100), settings.FailureDetectorConfig.GetTimeSpan("min-std-deviation"));
+            Assert.Equal(TimeSpan.FromSeconds(3), settings.FailureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause"));
             Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(settings.FailureDetectorImplementationClass));
             Assert.Equal(ImmutableList.Create<Address>(), settings.SeedNodes);
             Assert.Equal(TimeSpan.FromSeconds(5), settings.SeedNodeTimeout);
