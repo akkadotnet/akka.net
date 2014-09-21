@@ -7,6 +7,54 @@ namespace Akka.TestKit
 {
     public abstract partial class TestKitBase
     {
+        /// <summary>
+        /// <para>Await until the given condition evaluates to <c>true</c> or until a timeout</para>
+        /// <para>The timeout is taken from the innermost enclosing `within`
+        /// block (if inside a `within` block) or the value specified in config value "akka.test.single-expect-default". 
+        /// The value is <see cref="Dilated(TimeSpan)">dilated</see>, i.e. scaled by the factor 
+        /// specified in config value "akka.test.timefactor"..</para>
+        /// <para>A call to <paramref name="conditionIsFulfilled"/> is done immediately, then the threads sleep
+        /// for about a tenth of the timeout value, before it checks the condition again. This is repeated until
+        /// timeout or the condition evaluates to <c>true</c>. To specify another interval, use the overload
+        /// <see cref="AwaitCondition(System.Func{bool},System.Nullable{System.TimeSpan},System.Nullable{System.TimeSpan},string)"/>
+        /// </para>
+        /// </summary>
+        /// <param name="conditionIsFulfilled">The condition that must be fulfilled within the duration.</param>
+        /// <param name="max">The maximum duration. If undefined, uses the remaining time 
+        /// (if inside a `within` block) or the value specified in config value "akka.test.single-expect-default". 
+        /// The value is <see cref="Dilated(TimeSpan)">dilated</see>, i.e. scaled by the factor 
+        /// specified in config value "akka.test.timefactor".</param>
+        public void AwaitCondition(Func<bool> conditionIsFulfilled)
+        {
+            var maxDur = RemainingOrDefault;
+            var interval = new TimeSpan(maxDur.Ticks / 10);
+            InternalAwaitCondition(conditionIsFulfilled, maxDur, interval, (format, args) => _assertions.Fail(format, args));
+        }
+
+        /// <summary>
+        /// <para>Await until the given condition evaluates to <c>true</c> or the timeout
+        /// expires, whichever comes first.</para>
+        /// <para>If no timeout is given, take it from the innermost enclosing `within`
+        /// block (if inside a `within` block) or the value specified in config value "akka.test.single-expect-default". 
+        /// The value is <see cref="Dilated(TimeSpan)">dilated</see>, i.e. scaled by the factor 
+        /// specified in config value "akka.test.timefactor"..</para>
+        /// <para>A call to <paramref name="conditionIsFulfilled"/> is done immediately, then the threads sleep
+        /// for about a tenth of the timeout value, before it checks the condition again. This is repeated until
+        /// timeout or the condition evaluates to <c>true</c>. To specify another interval, use the overload
+        /// <see cref="AwaitCondition(System.Func{bool},System.Nullable{System.TimeSpan},System.Nullable{System.TimeSpan},string)"/>
+        /// </para>
+        /// </summary>
+        /// <param name="conditionIsFulfilled">The condition that must be fulfilled within the duration.</param>
+        /// <param name="max">The maximum duration. If undefined, uses the remaining time 
+        /// (if inside a `within` block) or the value specified in config value "akka.test.single-expect-default". 
+        /// The value is <see cref="Dilated(TimeSpan)">dilated</see>, i.e. scaled by the factor 
+        /// specified in config value "akka.test.timefactor".</param>
+        public void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max)
+        {
+            var maxDur = RemainingOrDilated(max);
+            var interval = new TimeSpan(maxDur.Ticks / 10);
+            InternalAwaitCondition(conditionIsFulfilled, maxDur, interval, (format, args) => _assertions.Fail(format, args));
+        }
 
         /// <summary>
         /// <para>Await until the given condition evaluates to <c>true</c> or the timeout
@@ -27,10 +75,10 @@ namespace Akka.TestKit
         /// The value is <see cref="Dilated(TimeSpan)">dilated</see>, i.e. scaled by the factor 
         /// specified in config value "akka.test.timefactor".</param>
         /// <param name="message">The message used if the timeout expires.</param>
-        public void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max = null, string message = null)
+        public void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max, string message)
         {
             var maxDur = RemainingOrDilated(max);
-            var interval = new TimeSpan(max.GetValueOrDefault().Ticks / 10);
+            var interval = new TimeSpan(maxDur.Ticks / 10);
             InternalAwaitCondition(conditionIsFulfilled, maxDur, interval, (format, args) => AssertionsFail(format, args, message));
         }
 
