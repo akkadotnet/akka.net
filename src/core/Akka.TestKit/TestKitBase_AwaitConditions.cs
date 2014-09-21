@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Threading;
-using Akka.TestKit.Internals;
+using Akka.TestKit.Internal;
 
 namespace Akka.TestKit
 {

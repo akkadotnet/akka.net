@@ -5,7 +5,7 @@ using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.TestKit.Internals;
+using Akka.TestKit.Internal;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -16,7 +16,7 @@ namespace Akka.TestKit
     /// </summary>
     public abstract partial class TestKitBase : ActorRefFactory
     {
-        private static readonly Config _defaultConfig = ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internals.Reference.conf");
+        private static readonly Config _defaultConfig = ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internal.Reference.conf");
         private static readonly Config _fullDebugConfig = ConfigurationFactory.ParseString(@"
                 akka.log-dead-letters-during-shutdown = true
                 akka.loggers = [""akka.testkit.TestEventListener""]

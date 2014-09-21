@@ -4,7 +4,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.TestKit.Internals;
+using Akka.TestKit.Internal;
 
 namespace Akka.TestKit
 {

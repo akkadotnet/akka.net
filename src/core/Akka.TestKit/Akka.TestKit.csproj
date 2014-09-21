@@ -101,12 +101,12 @@
     <Compile Include="FSMSpecHelpers.cs" />
     <Compile Include="AutoPilots.cs" />
     <Compile Include="NoImplicitSender.cs" />
-    <Compile Include="Internals\BlockingCollectionTestActorQueue.cs" />
-    <Compile Include="Internals\InternalTestActor.cs" />
-    <Compile Include="Internals\InternalTestActorRef.cs" />
-    <Compile Include="Internals\ITestActorQueue.cs" />
-    <Compile Include="Internals\BlockingQueue.cs" />
-    <Compile Include="Internals\TimeSpanExtensions.cs" />
+    <Compile Include="Internal\BlockingCollectionTestActorQueue.cs" />
+    <Compile Include="Internal\InternalTestActor.cs" />
+    <Compile Include="Internal\InternalTestActorRef.cs" />
+    <Compile Include="Internal\ITestActorQueue.cs" />
+    <Compile Include="Internal\BlockingQueue.cs" />
+    <Compile Include="Internal\TimeSpanExtensions.cs" />
     <Compile Include="TestActorRefBase.cs" />
     <Compile Include="TestActors\BlackHoleActor.cs" />
     <Compile Include="TestActors\EchoActor.cs" />
@@ -140,7 +140,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Internals\Reference.conf" />
+    <EmbeddedResource Include="Internal\Reference.conf" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
