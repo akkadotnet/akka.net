@@ -61,15 +61,14 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     When supervisorStrategy is not specified for an actor this
-        ///     [[Decider]] is used by default in the supervisor strategy.
-        ///     The child will be stopped when [[Akka.Actor.ActorInitializationException]],
-        ///     [[Akka.Actor.ActorKilledException]], or [[Akka.Actor.DeathPactException]] is
-        ///     thrown. It will be restarted for other `Exception` types.
-        ///     The error is escalated if it's a `Exception`, i.e. `Error`.
+        /// When supervisorStrategy is not specified for an actor this
+        /// decider is used by default in the supervisor strategy.
+        /// The child will be stopped when <see cref="ActorInitializationException"/>,
+        /// <see cref="ActorKilledException"/>, or <see cref="DeathPactException"/> is
+        /// thrown. It will be restarted for other <see cref="Exception"/> types.
         /// </summary>
         /// <param name="exception">The exception.</param>
-        /// <returns>Directive.</returns>
+        /// <returns>A <see cref="Directive"/> that instructs the supervisor how to handle the failure.</returns>
         public static Directive DefaultDecider(Exception exception)
         {
             if (exception is ActorInitializationException)
