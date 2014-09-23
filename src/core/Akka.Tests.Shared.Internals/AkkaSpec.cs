@@ -18,7 +18,6 @@ namespace Akka.TestKit
         private static Regex _nameReplaceRegex = new Regex("[^a-zA-Z0-9]", RegexOptions.Compiled);
         private static readonly Config _akkaSpecConfig = ConfigurationFactory.ParseString(@"
           akka {
-            #loggers = [""akka.testkit.TestEventListener""]
             loglevel = WARNING
             stdout-loglevel = WARNING
             serialize-messages = on
