@@ -47,8 +47,8 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchUnreachableReaperInterval);
             Assert.Equal(10, remoteSettings.WatchFailureDetectorConfig.GetDouble("threshold"));
             Assert.Equal(200, remoteSettings.WatchFailureDetectorConfig.GetDouble("max-sample-size"));
-            Assert.Equal(TimeSpan.FromSeconds(10), remoteSettings.WatchFailureDetectorConfig.GetMillisDuration("acceptable-heartbeat-pause"));
-            Assert.Equal(TimeSpan.FromMilliseconds(100), remoteSettings.WatchFailureDetectorConfig.GetMillisDuration("min-std-deviation"));
+            Assert.Equal(TimeSpan.FromSeconds(10), remoteSettings.WatchFailureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause"));
+            Assert.Equal(TimeSpan.FromMilliseconds(100), remoteSettings.WatchFailureDetectorConfig.GetTimeSpan("min-std-deviation"));
 
             //TODO add adapter support
         }
@@ -61,7 +61,7 @@ namespace Akka.Remote.Tests
             //TODO fill this in when we add secure cookie support
             Assert.Equal(typeof(DeadlineFailureDetector), Type.GetType(settings.TransportFailureDetectorImplementationClass));
             Assert.Equal(TimeSpan.FromSeconds(4), settings.TransportHeartBeatInterval);
-            Assert.Equal(TimeSpan.FromSeconds(20), settings.TransportFailureDetectorConfig.GetMillisDuration("acceptable-heartbeat-pause"));
+            Assert.Equal(TimeSpan.FromSeconds(20), settings.TransportFailureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause"));
         }
 
         [Fact]

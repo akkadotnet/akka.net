@@ -46,21 +46,21 @@ namespace Akka.Cluster
             _logInfo = cc.GetBoolean("log-info");
             _failureDetectorConfig = cc.GetConfig("failure-detector");
             _failureDetectorImplementationClass = _failureDetectorConfig.GetString("implementation-class");
-            _heartbeatInterval = _failureDetectorConfig.GetMillisDuration("heartbeat-interval");
-            _heartbeatExpectedResponseAfter = _failureDetectorConfig.GetMillisDuration("expected-response-after");
+            _heartbeatInterval = _failureDetectorConfig.GetTimeSpan("heartbeat-interval");
+            _heartbeatExpectedResponseAfter = _failureDetectorConfig.GetTimeSpan("expected-response-after");
             _monitoredByNrOfMembers = _failureDetectorConfig.GetInt("monitored-by-nr-of-members");
 
             _seedNodes = cc.GetStringList("seed-nodes").Select(Address.Parse).ToImmutableList();
-            _seedNodeTimeout = cc.GetMillisDuration("seed-node-timeout");
-            _retryUnsuccessfulJoinAfter = cc.GetMillisDurationWithOffSwitch("retry-unsuccessful-join-after");
-            _periodicTasksInitialDelay = cc.GetMillisDuration("periodic-tasks-initial-delay");
-            _gossipInterval = cc.GetMillisDuration("gossip-interval");
-            _gossipTimeToLive = cc.GetMillisDuration("gossip-time-to-live");
-            _leaderActionsInterval = cc.GetMillisDuration("leader-actions-interval");
-            _unreachableNodesReaperInterval = cc.GetMillisDuration("unreachable-nodes-reaper-interval");
-            _publishStatsInterval = cc.GetMillisDurationWithOffSwitch("publish-stats-interval");
+            _seedNodeTimeout = cc.GetTimeSpan("seed-node-timeout");
+            _retryUnsuccessfulJoinAfter = cc.GetTimeSpanWithOffSwitch("retry-unsuccessful-join-after");
+            _periodicTasksInitialDelay = cc.GetTimeSpan("periodic-tasks-initial-delay");
+            _gossipInterval = cc.GetTimeSpan("gossip-interval");
+            _gossipTimeToLive = cc.GetTimeSpan("gossip-time-to-live");
+            _leaderActionsInterval = cc.GetTimeSpan("leader-actions-interval");
+            _unreachableNodesReaperInterval = cc.GetTimeSpan("unreachable-nodes-reaper-interval");
+            _publishStatsInterval = cc.GetTimeSpanWithOffSwitch("publish-stats-interval");
 
-            _autoDownUnreachableAfter = cc.GetMillisDurationWithOffSwitch("auto-down-unreachable-after");
+            _autoDownUnreachableAfter = cc.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
 
             _roles = cc.GetStringList("roles").ToImmutableHashSet();
             _minNrOfMembers = cc.GetInt("min-nr-of-members");
@@ -71,13 +71,13 @@ namespace Akka.Cluster
             if (String.IsNullOrEmpty(_useDispatcher)) _useDispatcher = Dispatchers.DefaultDispatcherId;
             _gossipDifferentViewProbability = cc.GetDouble("gossip-different-view-probability");
             _reduceGossipDifferentViewProbability = cc.GetInt("reduce-gossip-different-view-probability");
-            _schedulerTickDuration = cc.GetMillisDuration("scheduler.tick-duration");
+            _schedulerTickDuration = cc.GetTimeSpan("scheduler.tick-duration");
             _schedulerTicksPerWheel = cc.GetInt("scheduler.ticks-per-wheel");
             _metricsEnabled = cc.GetBoolean("metrics.enabled");
             _metricsCollectorClass = cc.GetString("metrics.collector-class");
-            _metricsInterval = cc.GetMillisDuration("metrics.collect-interval");
-            _metricsGossipInterval = cc.GetMillisDuration("metrics.gossip-interval");
-            _metricsMovingAverageHalfLife = cc.GetMillisDuration("metrics.moving-average-half-life");
+            _metricsInterval = cc.GetTimeSpan("metrics.collect-interval");
+            _metricsGossipInterval = cc.GetTimeSpan("metrics.gossip-interval");
+            _metricsMovingAverageHalfLife = cc.GetTimeSpan("metrics.moving-average-half-life");
 
             _minNrOfMembersOfRole = cc.GetConfig("role").Root.GetObject().AsEnumerable()
                 .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetKey("min-nr-of-members").GetInt());
