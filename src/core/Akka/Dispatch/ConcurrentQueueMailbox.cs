@@ -132,8 +132,9 @@ namespace Akka.Dispatch
         /// <summary>
         /// Posts the specified envelope.
         /// </summary>
+        /// <param name="receiver"></param>
         /// <param name="envelope"> The envelope. </param>
-        public override void Post(Envelope envelope)
+        public override void Post(ActorRef receiver, Envelope envelope)
         {
             if (_isClosed)
                 return;
@@ -141,12 +142,12 @@ namespace Akka.Dispatch
             hasUnscheduledMessages = true;
             if (envelope.Message is SystemMessage)
             {
-                Mailbox.DebugPrint(ActorCell.Self + " enqueued system message " + envelope);
+                Mailbox.DebugPrint("{0} enqueued system message {1}{2}", ActorCell.Self, envelope, ActorCell.Self.Equals(receiver) ? "" : " to " + receiver);
                 _systemMessages.Enqueue(envelope);
             }
             else
             {
-                Mailbox.DebugPrint(ActorCell.Self + " enqueued message " + envelope);
+                Mailbox.DebugPrint("{0} enqueued message {1}{2}", ActorCell.Self, envelope, ActorCell.Self.Equals(receiver) ? "" : " to " + receiver);
                 _userMessages.Enqueue(envelope);
             }
 
@@ -184,11 +185,11 @@ namespace Akka.Dispatch
                 Envelope envelope;
                 while (_systemMessages.TryDequeue(out envelope))
                 {
-                    deadLetterMailbox.Post(envelope);
+                    deadLetterMailbox.Post(actorCell.Self, envelope);
                 }
                 while (_userMessages.TryDequeue(out envelope))
                 {
-                    deadLetterMailbox.Post(envelope);
+                    deadLetterMailbox.Post(actorCell.Self, envelope);
                 }
             }
 
