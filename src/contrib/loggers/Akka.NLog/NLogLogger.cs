@@ -24,7 +24,7 @@ namespace Akka.NLog
             Receive<InitializeLogger>(m =>
             {
                 _log.Info("NLogLogger started");
-                Sender.Tell<LoggerInitialized>();
+                Sender.Tell(new LoggerInitialized());
             });
         }
     }
