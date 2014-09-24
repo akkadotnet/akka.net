@@ -4,6 +4,9 @@ using NLog;
 
 namespace Akka.NLog
 {
+    /// <summary>
+    /// The NLogBusLogger consumes the Akka.Event.LogEvent(s) from the logging bus.
+    /// </summary>
     public class NLogBusLogger : ReceiveActor
     {
         private readonly Logger _logger;
@@ -26,27 +29,5 @@ namespace Akka.NLog
             Receive<LogEvent>(msg => _logger.Log(msg.ToLogEventInfo()));
             Receive<UnhandledMessage>(msg => _dst.Tell(msg));
         }
-
-        //protected override void OnReceive(object message)
-        //{
-        //    message.Match()
-        //    .With<InitializeLogger>(m =>
-        //    {
-        //        var bus = m.LoggingBus;
-
-        //        bus.Subscribe(Self, typeof(LogEvent));
-        //        bus.Subscribe(Self, typeof(SetTarget));
-        //        bus.Subscribe(Self, typeof(UnhandledMessage));
-
-        //        Sender.Tell(new LoggerInitialized());
-        //    })
-        //        //.With<SetTarget>(m =>
-        //        //{
-        //        //    _dst = m.Ref;
-        //        //    _dst.Tell("OK");
-        //        //})
-        //    .With<LogEvent>(m => _logger.Log(m.ToLogEventInfo()))
-        //    .With<UnhandledMessage>(m => _dst.Tell(m));
-        //}
     }
 }
