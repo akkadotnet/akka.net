@@ -19,6 +19,11 @@ namespace Akka.Event
     /// </summary>
     public static class Logging
     {
+        private const string Debug = "DEBUG";
+        private const string Info = "INFO";
+        private const string Warning = "WARNING";
+        private const string Error = "ERROR";
+
         /// <summary>
         ///     The standard out logger
         /// </summary>
@@ -49,21 +54,17 @@ namespace Akka.Event
 
         public static string StringFor(this LogLevel logLevel)
         {
-            const string debug = "DEBUG";
-            const string info = "INFO";
-            const string warning = "WARNING";
-            const string error = "ERROR";
 
             switch (logLevel)
             {
                 case LogLevel.DebugLevel:
-                    return debug;
+                    return Debug;
                 case LogLevel.InfoLevel:
-                    return info;
+                    return Info;
                 case LogLevel.WarningLevel:
-                    return warning;
+                    return Warning;
                 case LogLevel.ErrorLevel:
-                    return error;
+                    return Error;
                 default:
                     throw new ArgumentException("Unknown LogLevel", "logLevel");
             }
@@ -72,15 +73,15 @@ namespace Akka.Event
         /// <summary>
         ///     Gets the logger.
         /// </summary>
-        /// <param name="cell">The cell.</param>
+        /// <param name="context">The cell.</param>
         /// <param name="logMessageFormatter">The log message formatter.</param>
         /// <returns>LoggingAdapter.</returns>
-        public static LoggingAdapter GetLogger(IActorContext cell, ILogMessageFormatter logMessageFormatter = null)
+        public static LoggingAdapter GetLogger(IActorContext context, ILogMessageFormatter logMessageFormatter = null)
         {
-            var logSource = cell.Self.ToString();
-            var logClass = cell.Props.Type;
+            var logSource = context.Self.ToString();
+            var logClass = context.Props.Type;
 
-            return new BusLogging(cell.System.EventStream, logSource, logClass, logMessageFormatter ?? new DefaultLogMessageFormatter());
+            return new BusLogging(context.System.EventStream, logSource, logClass, logMessageFormatter ?? new DefaultLogMessageFormatter());
         }
 
         /// <summary>
@@ -124,22 +125,18 @@ namespace Akka.Event
         /// <exception cref="System.ArgumentException">Unknown LogLevel;logLevel</exception>
         public static LogLevel LogLevelFor(string logLevel)
         {
-            const string debug = "DEBUG";
-            const string info = "INFO";
-            const string warning = "WARNING";
-            const string error = "ERROR";
             switch (logLevel)
             {
-                case debug:
+                case Debug:
                     return LogLevel.DebugLevel;
-                case info:
+                case Info:
                     return LogLevel.InfoLevel;
-                case warning:
+                case Warning:
                     return LogLevel.WarningLevel;
-                case error:
+                case Error:
                     return LogLevel.ErrorLevel;
                 default:
-                    throw new ArgumentException(string.Format("Unknown LogLevel: \"{0}\". Valid values are: \"{1}\", \"{2}\", \"{3}\", \"{4}\"", logLevel, debug, info, warning, error), logLevel);
+                    throw new ArgumentException(string.Format("Unknown LogLevel: \"{0}\". Valid values are: \"{1}\", \"{2}\", \"{3}\", \"{4}\"", logLevel, Debug, Info, Warning, Error), logLevel);
             }
         }
 
@@ -149,7 +146,7 @@ namespace Akka.Event
         /// <typeparam name="T"></typeparam>
         /// <returns>The <see cref="LogLevel"/> that corresponds to the specified type.</returns>
         /// <exception cref="System.ArgumentException">Thrown for unknown types, i.e. when <typeparamref name="T"/> is not
-        /// <see cref="Debug"/>, <see cref="Info"/>, <see cref="Warning"/> or<see cref="Error"/></exception>
+        /// <see cref="Event.Debug"/>, <see cref="Event.Info"/>, <see cref="Event.Warning"/> or<see cref="Event.Error"/></exception>
         public static LogLevel LogLevelFor<T>() where T:LogEvent
         {
             var type = typeof(T);
