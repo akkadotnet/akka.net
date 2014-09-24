@@ -56,7 +56,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public void DeciderBuilder_should_fallback_to_defaultValue_when_no_mapping_match()
         {
-            var decider = new DeciderBuilder(fallback:Directive.Escalate)
+            var decider = new DeciderBuilder(fallback: Directive.Escalate)
             {
                 {typeof(ExceptionA), Directive.Restart},
             }.Build();
@@ -117,6 +117,25 @@ namespace Akka.Tests.Actor
 
             decider(new Exception()).ShouldBe(Directive.Escalate);           
         }
+
+        [Fact]
+        public void DeciderBuilder_should_support_fluent_interfaces()
+        {
+            var decider = new DeciderBuilder()
+                .Add<ExceptionA>(Directive.Restart)
+                .Add<ExceptionASub>(e => Directive.Resume)
+                .Add(typeof(ExceptionB),Directive.Escalate)
+                .Add(typeof(ExceptionBSub),Directive.Stop)
+                .Build();
+
+            decider(new ExceptionASubSub()).ShouldBe(Directive.Resume);
+            decider(new ExceptionASub()).ShouldBe(Directive.Resume);
+            decider(new ExceptionA()).ShouldBe(Directive.Restart);
+            decider(new ExceptionB()).ShouldBe(Directive.Escalate);
+            decider(new ExceptionBSub()).ShouldBe(Directive.Stop);
+            decider(new ActorInitializationException()).ShouldBe(Directive.Stop);    //Use DefaultDecider
+            decider(new Exception()).ShouldBe(Directive.Restart);                    //Use DefaultDecider
+	    }
 
         //  Exception
         //     |

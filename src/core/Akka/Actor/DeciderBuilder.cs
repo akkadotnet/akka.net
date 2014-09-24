@@ -7,10 +7,25 @@ using Akka.Actor.Internal;
 namespace Akka.Actor
 {
     /// <summary>
+    /// <para>
     /// Creates a builder that given a set of Exception-type to <see cref="Directive"/> mappings builds a Decider.
-    /// The builder supports collection initialization, both  <see cref="Directive"/> and a 
+    /// </para>
+    /// <para>
+    /// You can create a decider using a fluent style or using a collection initializer. 
+    /// </para>
+    /// <example>
+    /// Using the fluent style.
+    /// <pre><code>var decider = new DeciderBuilder()
+    ///  .Add&lt;SomeException&gt;(Directive.Restart)
+    ///  .Add&lt;SomeOtherException&gt;(Directive.Stop)
+    ///  .Add&lt;SomeThirdException&gt;(e => e.SomeValue ? Directive.Restart : Directive.Escalate)
+    ///  .Build();
+    /// </code></pre>
+    /// </example>
+    /// <para>The builder supports collection initialization, both  <see cref="Directive"/> and a 
     /// Func&lt;<see cref="Exception"/>,<see cref="Directive"/>&gt; that given the matched exception returns the 
     /// <see cref="Directive"/>
+    /// </para>
     /// <example>
     /// <pre><code>var decider = new DeciderBuilder {
     ///   { typeof(SomeException), Directive.Restart },
@@ -19,7 +34,8 @@ namespace Akka.Actor
     /// }.Build();
     /// </code></pre>
     /// </example>
-    /// As a DeciderBuilder can be implicitly casted to a decider function, it can be used directly when creating a <see cref="SupervisorStrategy"/>.
+    /// <para>As a DeciderBuilder can be implicitly casted to a decider function, it can be used directly when creating a <see cref="SupervisorStrategy"/>.
+    /// </para>
     /// <example>
     /// <pre><code>var strategy = new OneForOneStrategy(new DeciderBuilder {
     ///   { typeof(SomeException), Directive.Restart },
@@ -117,7 +133,7 @@ namespace Akka.Actor
 
         /// <summary>Creates a new builder that will fallback to <see cref="SupervisorStrategy.DefaultDecider"/> 
         /// if no matching mapping is found.</summary>
-        public DeciderBuilder(IEnumerable<Tuple<Type, Func<Exception,Directive>>> mappings)
+        public DeciderBuilder(IEnumerable<Tuple<Type, Func<Exception, Directive>>> mappings)
         {
             _mappings = new List<Tuple<Type, Func<Exception, Directive>>>(mappings);
         }
@@ -144,7 +160,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// Adds a new mapping from a type of exception to a <see cref="Directive"/>.
-        /// Typically you would use a collection initializer instead of calling this manually.
+        /// You can also use a collection initializer when creating a <see cref="DeciderBuilder"/> instead of calling this manually.
         /// <example>
         /// <pre><code>var decider = new DeciderBuilder {
         ///   { typeof(SomeException), Directive.Restart },
@@ -167,7 +183,7 @@ namespace Akka.Actor
         /// <summary>
         /// Adds a new mapping from a type of exception to a <see cref="Directive"/>. 
         /// The <see cref="Directive"/> is created by calling <paramref name="getDirective"/>.
-        /// Typically you would use a constructor initializer instead of calling this manually.
+        /// You can also use a collection initializer when creating a <see cref="DeciderBuilder"/> instead of calling this manually.
         /// <example>
         /// <pre><code>var decider = new DeciderBuilder {
         ///   { typeof(SomeException), Directive.Restart },
@@ -180,7 +196,7 @@ namespace Akka.Actor
         /// <param name="exceptionType">Type of exception.</param>
         /// <param name="getDirective">A function that given the matched exception returns a <see cref="Directive"/>.</param>
         /// <returns>Returns this instance. Note that the instance is modified AND returned to allow for chaining.</returns>
-        public DeciderBuilder Add(Type exceptionType, Func<Exception,Directive> getDirective)
+        public DeciderBuilder Add(Type exceptionType, Func<Exception, Directive> getDirective)
         {
             _mappings.Add(Tuple.Create(exceptionType, getDirective));
             return this;
@@ -188,7 +204,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// Adds a new mapping from a type of exception to a <see cref="Directive"/>.
-        /// Typically you would use a constructor initializer instead of calling this manually.
+        /// You can also use a collection initializer when creating a <see cref="DeciderBuilder"/> instead of calling this manually.
         /// <example>
         /// <pre><code>var decider = new DeciderBuilder {
         ///   { typeof(SomeException), Directive.Restart },
@@ -201,11 +217,31 @@ namespace Akka.Actor
         /// <param name="directive">The directive.</param>
         public DeciderBuilder Add<TException>(Directive directive) where TException : Exception
         {
-            _mappings.Add(new Tuple<Type, Func<Exception, Directive>>(typeof(TException), e=>directive));
+            _mappings.Add(new Tuple<Type, Func<Exception, Directive>>(typeof(TException), e => directive));
             return this;
         }
 
-       
+        /// <summary>
+        /// Adds a new mapping from a type of exception to a <see cref="Directive"/>.
+        /// The <see cref="Directive"/> is created by calling <paramref name="getDirective"/>.
+        /// You can also use a collection initializer when creating a <see cref="DeciderBuilder"/> instead of calling this manually.
+        /// <example>
+        /// <pre><code>var decider = new DeciderBuilder {
+        ///   { typeof(SomeException), Directive.Restart },
+        ///   { typeof(SomeOtherException), Directive.Stop },
+        /// }.Build();
+        /// </code></pre>
+        /// </example>
+        /// </summary>
+        /// <typeparam name="TException">Type of exception.</typeparam>        
+        /// <param name="getDirective">A function that given the matched exception returns a <see cref="Directive"/>.</param>
+        public DeciderBuilder Add<TException>(Func<Exception, Directive> getDirective) where TException : Exception
+        {
+            _mappings.Add(new Tuple<Type, Func<Exception, Directive>>(typeof(TException), getDirective));
+            return this;
+        }
+
+
         IEnumerator IEnumerable.GetEnumerator()
         {
             return _mappings.GetEnumerator();
