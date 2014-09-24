@@ -75,7 +75,6 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Inbox_have_maximum_queue_size()
         {
-            Sys.EventStream.Subscribe(TestActor, typeof(Warning));
             try
             {
                 //Fill the inbox (it can hold 1000) messages
@@ -85,7 +84,7 @@ namespace Akka.Tests.Actor
                 ExpectNoMsg(TimeSpan.FromSeconds(1));
 
                 //The inbox is full. Sending another message should result in a Warning message
-                EventFilterLog<Warning>("dropping message", 1, () => _inbox.Receiver.Tell(42));
+                EventFilter.Warning(start:"Dropping message").ExpectOne(() => _inbox.Receiver.Tell(42));
 
                 //The inbox is still full. But since the warning message has already been sent, no more warnings should be sent
                 _inbox.Receiver.Tell(42);
