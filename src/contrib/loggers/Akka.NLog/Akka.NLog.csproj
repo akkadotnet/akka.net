@@ -44,7 +44,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Event\NLog\NLogLogger.cs" />
+    <Compile Include="ActorRefExtensions.cs" />
+    <Compile Include="LogEventExtensions.cs" />
+    <Compile Include="NLogBusLogger.cs" />
+    <Compile Include="NLogLogger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
