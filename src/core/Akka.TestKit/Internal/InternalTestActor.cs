@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using Akka.Actor;
 using Akka.Event;
 
-namespace Akka.TestKit.Internals
+namespace Akka.TestKit.Internal
 {
     /// <summary>
     /// An actor that enqueues received messages to a <see cref="BlockingCollection{T}"/>.

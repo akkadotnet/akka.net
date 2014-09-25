@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-namespace Akka.TestKit.Internals
+namespace Akka.TestKit.Internal
 {
     /// <summary>
     /// This behaves exactly like a <see cref="BlockingCollection{T}"/> with a queue as the underlying storage

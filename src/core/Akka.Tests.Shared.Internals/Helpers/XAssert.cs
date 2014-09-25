@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Akka.TestKit.Xunit;
 using Xunit;
@@ -56,6 +57,17 @@ namespace Akka.TestKit
             else
                 Fail("Expected exception of type " + typeof(T).Name + " but no exceptions was thrown.");
             return null;    //We'll never reach this line, since calling Fail will throw an exception.
+        }
+
+
+        /// <summary>
+        /// Assert passes if two sequences are equal, regardless of the ordering of the items.
+        /// 
+        /// Equivalent of http://msdn.microsoft.com/en-us/library/microsoft.visualstudio.testtools.unittesting.collectionassert.areequivalent.aspx
+        /// </summary>
+        public static void Equivalent<T>(IEnumerable<T> expected, IEnumerable<T> actual)
+        {
+            Assert.True(expected.All(x => actual.Contains(x)) && actual.All(y => expected.Contains(y)));
         }
     }
 }

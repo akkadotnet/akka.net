@@ -50,7 +50,7 @@
     </Compile>
     <Compile Include="AkkaSpec.cs" />
     <Compile Include="AkkaSpecExtensions.cs" />
-    <Compile Include="Helpers\XUnitHelpers.cs" />
+    <Compile Include="Helpers\XAssert.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

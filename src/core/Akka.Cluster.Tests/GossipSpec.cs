@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.TestKit;
 using Akka.TestKit.Xunit;
 using Xunit;
 
@@ -53,11 +54,11 @@ namespace Akka.Cluster.Tests
 
             var merged1 = g1.Merge(g2);
             
-            XunitAssertions.Equivalent(ImmutableHashSet.Create(a1.UniqueAddress, c1.UniqueAddress, d1.UniqueAddress),
+            XAssert.Equivalent(ImmutableHashSet.Create(a1.UniqueAddress, c1.UniqueAddress, d1.UniqueAddress),
                 merged1.Overview.Reachability.AllUnreachable);
 
             var merged2 = g2.Merge(g1);
-            XunitAssertions.Equivalent(merged1.Overview.Reachability.AllUnreachable,
+            XAssert.Equivalent(merged1.Overview.Reachability.AllUnreachable,
                 merged2.Overview.Reachability.AllUnreachable
                 );
         }

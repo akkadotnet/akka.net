@@ -1,9 +1,6 @@
-using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.Remoting.Contexts;
-using Akka.Event;
 
-namespace Akka.TestKit.Internals
+namespace Akka.TestKit.Internal
 {
     /// <summary>
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>

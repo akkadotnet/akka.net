@@ -72,7 +72,7 @@ namespace Akka.TestKit
         }
 
         [Obsolete("Cannot create a TestProbe from a TestProbe", true)]
-        protected override TestProbe CreateTestProbe()
+        public override TestProbe CreateTestProbe()
         {
             throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
         }

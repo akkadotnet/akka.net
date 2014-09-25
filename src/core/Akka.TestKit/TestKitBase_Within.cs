@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading;
-using Akka.TestKit.Internals;
+using Akka.TestKit.Internal;
 
 namespace Akka.TestKit
 {

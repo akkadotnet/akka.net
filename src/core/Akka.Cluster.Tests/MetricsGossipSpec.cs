@@ -81,7 +81,7 @@ namespace Akka.Cluster.Tests
 
             //should contain nodes 1,3 and the most recent version of 2
             var mergedGossip = g1.Merge(g2);
-            XunitAssertions.Equivalent(mergedGossip.Nodes.Select(x => x.Address),
+            XAssert.Equivalent(mergedGossip.Nodes.Select(x => x.Address),
                 new[] {m1.Address, m2.Address, m3.Address});
             mergedGossip.NodeMetricsFor(m1.Address).Metrics.ShouldBe(m1.Metrics);
             mergedGossip.NodeMetricsFor(m2.Address).Metrics.ShouldBe(m2Updated.Metrics);

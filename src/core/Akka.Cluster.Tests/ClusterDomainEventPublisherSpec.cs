@@ -129,7 +129,7 @@ namespace Akka.Cluster.Tests
             _publisher.Tell(new InternalClusterAction.PublishChanges(g8));
             _publisher.Tell(new InternalClusterAction.Subscribe(subscriber.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, ImmutableHashSet.Create(typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.ReachabilityEvent))));
             var received = subscriber.ReceiveN(4);
-            XunitAssertions.Equivalent(
+            XAssert.Equivalent(
                 new object[]
                 {
                     new ClusterEvent.MemberUp(aUp), new ClusterEvent.MemberUp(cUp), new ClusterEvent.MemberUp(dUp),
