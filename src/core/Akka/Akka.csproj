@@ -135,11 +135,15 @@
     <Compile Include="Configuration\Hocon\HoconValue.cs" />
     <Compile Include="Configuration\Hocon\IHoconElement.cs" />
     <Compile Include="Dispatch\ConcurrentQueueMailbox.cs" />
+    <Compile Include="Dispatch\DequeBasedMailbox.cs" />
     <Compile Include="Dispatch\GenericMailbox.cs" />
     <Compile Include="Dispatch\Dispatchers.cs" />
     <Compile Include="Actor\Exceptions.cs" />
+    <Compile Include="Dispatch\MessageQueueMailbox.cs" />
     <Compile Include="Dispatch\MessageQueues\BlockingMessageQueue.cs" />
-    <Compile Include="Dispatch\MessageQueues\Semantics.cs" />
+    <Compile Include="Dispatch\MessageQueues\DequeWrapperMessageQueue.cs" />
+    <Compile Include="Dispatch\Semantics.cs" />
+    <Compile Include="Dispatch\MessageQueues\UnboundedDequeMessageQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\UnboundedPriorityMailboxQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\UnboundedMailboxQueue.cs" />
     <Compile Include="Dispatch\FutureActor.cs" />
@@ -156,6 +160,8 @@
     <Compile Include="Dispatch\MessageQueues\MessageQueue.cs" />
     <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
     <Compile Include="Dispatch\ThreadPoolBuilder.cs" />
+    <Compile Include="Dispatch\UnboundedDequeBasedMailbox.cs" />
+    <Compile Include="Dispatch\UnboundedMailbox.cs" />
     <Compile Include="Dispatch\UnboundedPriorityMailbox.cs" />
     <Compile Include="Event\ActorEventBus.cs" />
     <Compile Include="Event\AddressTerminatedTopic.cs" />
@@ -184,6 +190,8 @@
     <Compile Include="Event\UnhandledMessage.cs" />
     <Compile Include="Event\Warning.cs" />
     <Compile Include="Util\Internal\Extensions.cs" />
+    <Compile Include="Extensions.cs" />
+    <Compile Include="Dispatch\RequiresMessageQueue.cs" />
     <Compile Include="Routing\SmallestMailbox.cs" />
     <Compile Include="Routing\TailChoppingRoutingLogic.cs" />
     <Compile Include="Serialization\ByteArraySerializer.cs" />
