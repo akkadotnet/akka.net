@@ -13,6 +13,7 @@ using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.TestEvent;
+using Akka.Util.Internal;
 using Helios.Topology;
 using Newtonsoft.Json.Serialization;
 
