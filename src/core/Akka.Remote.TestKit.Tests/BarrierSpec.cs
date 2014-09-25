@@ -289,20 +289,21 @@ namespace Akka.Remote.TestKit.Tests
             var a = CreateTestProbe();
             var b = CreateTestProbe();
             var nodeA = new Controller.NodeInfo(A, Address.Parse("akka://sys"), a.Ref);
-            var nodeB = new Controller.NodeInfo(A, Address.Parse("akka://sys"), b.Ref);
+            var nodeB = new Controller.NodeInfo(B, Address.Parse("akka://sys"), b.Ref);
             barrier.Tell(nodeA);
             barrier.Tell(nodeB);
             a.Send(barrier, new EnterBarrier("bar10", null));
-            //TODO: EventFilter
-            //ExpectMsg<BarrierCoordinator.DuplicateNode>();
-            var msg = ExpectMsg<Failed>(TimeSpan.FromSeconds(7));
-            Assert.Equal(new BarrierCoordinator.BarrierTimeout(
-                new BarrierCoordinator.Data(
-                    ImmutableHashSet.Create(nodeA, nodeB),
-                    "bar10",
-                    ImmutableHashSet.Create(a.Ref),
-                    ((BarrierCoordinator.BarrierTimeout)msg.Exception).BarrierData.Deadline)
-                ), msg.Exception);
+            EventFilter.Exception<BarrierCoordinator.BarrierTimeout>().ExpectOne(() =>
+            {
+                var msg = ExpectMsg<Failed>(TimeSpan.FromSeconds(7));
+                Assert.Equal(new BarrierCoordinator.BarrierTimeout(
+                    new BarrierCoordinator.Data(
+                        ImmutableHashSet.Create(nodeA, nodeB),
+                        "bar10",
+                        ImmutableHashSet.Create(a.Ref),
+                        ((BarrierCoordinator.BarrierTimeout)msg.Exception).BarrierData.Deadline)
+                    ), msg.Exception);
+            });
         }
 
         [Fact]
