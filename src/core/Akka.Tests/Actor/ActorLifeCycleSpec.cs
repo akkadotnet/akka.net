@@ -200,7 +200,7 @@ namespace Akka.Tests
         public void LogFailutresInPostStop()
         {
             var a = Sys.ActorOf<EmptyActor>();
-            EventFilter<Exception>(message: "hurrah",occurances: 1, intercept: () =>
+            EventFilter.Exception<Exception>(message: "hurrah").ExpectOne(() =>
                 {
                     a.Tell(PoisonPill.Instance);
                 });            
@@ -263,7 +263,8 @@ namespace Akka.Tests
             ExpectMsg("ok");
             a.Tell("hello");
             ExpectMsg(43);
-            EventFilter<Exception>("buh", 1, () => a.Tell("fail"));
+
+            EventFilter.Exception<Exception>("buh").ExpectOne(() => a.Tell("fail"));
             a.Tell("hello");
             ExpectMsg(42);
         }

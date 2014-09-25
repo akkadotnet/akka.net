@@ -13,13 +13,13 @@ namespace Akka.Actor
             _deadLetters = deadLetters;
         }
 
-        public override void Post(Envelope envelope)
+        public override void Post(ActorRef receiver, Envelope envelope)
         {
             var message = envelope.Message;
             if(message is SystemMessage)
             {
                 Mailbox.DebugPrint("DeadLetterMailbox forwarded system message " + envelope+ " as a DeadLetter");
-                _deadLetters.Tell(new DeadLetter(message, _deadLetters, _deadLetters), _deadLetters);//TODO: When we have refactored Post to SystemEnqueue(ActorRef receiver, Envelope envelope), replace _deadLetters with receiver               
+                _deadLetters.Tell(new DeadLetter(message, receiver, receiver), receiver);
             }
             else if(message is DeadLetter)
             {
@@ -30,7 +30,7 @@ namespace Akka.Actor
             {
                 Mailbox.DebugPrint("DeadLetterMailbox forwarded message " + envelope + " as a DeadLetter");
                 var sender = envelope.Sender;
-                _deadLetters.Tell(new DeadLetter(message,sender,_deadLetters),sender);//TODO: When we have refactored Post to Enqueue(ActorRef receiver, Envelope envelope), replace _deadLetters with receiver
+                _deadLetters.Tell(new DeadLetter(message, sender, receiver),sender);
             }
         }
 
