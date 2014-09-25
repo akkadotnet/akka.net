@@ -5,7 +5,7 @@ namespace Akka.Dispatch.MessageQueues
 {
     public class DequeWrapperMessageQueue : MessageQueue, DequeBasedMessageQueueSemantics
     {
-        private readonly Stack<Envelope> _prependBuffer = new Stack<Envelope>();
+        private readonly Queue<Envelope> _prependBuffer = new Queue<Envelope>();
         private readonly MessageQueue _messageQueue;
         public DequeWrapperMessageQueue(MessageQueue messageQueue)
         {
@@ -31,7 +31,7 @@ namespace Akka.Dispatch.MessageQueues
         {
             if (_prependBuffer.Count > 0)
             {
-                envelope = _prependBuffer.Pop();
+                envelope = _prependBuffer.Dequeue();
                 return true;
             }
 
@@ -40,7 +40,7 @@ namespace Akka.Dispatch.MessageQueues
 
         public void EnqueueFirst(Envelope envelope)
         {
-            _prependBuffer.Push(envelope);
+            _prependBuffer.Enqueue(envelope);
         }
     }
 }
