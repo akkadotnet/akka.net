@@ -173,7 +173,7 @@ namespace Akka.Remote.TestKit
 
         int _initialParticipants;
         readonly TestConductorSettings _settings = TestConductor.Get(Context.System).Settings;
-        readonly RemoteConnection _connection;
+        readonly IConnection _connection;
         readonly ActorRef _barrier;
         ImmutableDictionary<RoleName, NodeInfo> _nodes =
             ImmutableDictionary.Create<RoleName, NodeInfo>();
@@ -184,7 +184,7 @@ namespace Akka.Remote.TestKit
 
         public Controller(int initialParticipants, INode controllerPort)
         {
-            _connection = RemoteConnection.Create(Role.Server, controllerPort, _settings.ServerSocketWorkerPoolSize,
+            _connection = RemoteConnection.CreateConnection(Role.Server, controllerPort, _settings.ServerSocketWorkerPoolSize,
                 new ConductorHandler(Self, Logging.GetLogger(Context.System, typeof (ConductorHandler))));
             _barrier = Context.ActorOf(Props.Create<BarrierCoordinator>(), "barriers");
             _initialParticipants = initialParticipants;
@@ -259,7 +259,7 @@ namespace Akka.Remote.TestKit
                 else
                 {
                     _nodes = _nodes.Add(nodeInfo.Name, nodeInfo);
-                    if(_initialParticipants < 0) nodeInfo.FSM.Tell(new ToClient<Done>(Done.Instance));
+                    if(_initialParticipants <= 0) nodeInfo.FSM.Tell(new ToClient<Done>(Done.Instance));
                     else if (_nodes.Count == _initialParticipants)
                     {
                         foreach (var ni in _nodes.Values) ni.FSM.Tell(new ToClient<Done>(Done.Instance));

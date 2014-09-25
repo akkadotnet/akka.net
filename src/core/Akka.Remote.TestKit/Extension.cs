@@ -2,6 +2,7 @@
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Remote.TestKit.Internals;
 using Akka.Util.Internal;
 
 namespace Akka.Remote.TestKit
@@ -66,7 +67,8 @@ namespace Akka.Remote.TestKit
 
         public TestConductor(ExtendedActorSystem system)
         {
-            _settings = new TestConductorSettings(system.Settings.Config.GetConfig("akka.testconductor"));
+            _settings = new TestConductorSettings(system.Settings.Config.WithFallback(TestConductorConfigFactory.Default())
+                .GetConfig("akka.testconductor"));
             _transport = system.Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
             _address = _transport.DefaultAddress;
             _system = system;
@@ -107,8 +109,8 @@ namespace Akka.Remote.TestKit
             _barrierTimeout = config.GetTimeSpan("barrier-timeout");
             _queryTimeout = config.GetTimeSpan("query-timeout");
             _packetSplitThreshold = config.GetTimeSpan("packet-split-threshold");
-            //_serverSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.tcp.server-socket-worker-pool"));
-            //_clientSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.tcp.client-socket-worker-pool"));
+            _serverSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.server-socket-worker-pool"));
+            _clientSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.client-socket-worker-pool"));
         }
 
         public int ComputeWps(Config config)

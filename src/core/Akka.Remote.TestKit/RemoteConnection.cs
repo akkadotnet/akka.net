@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
-using Akka.Actor;
 using Akka.Remote.TestKit.Proto;
 using Akka.Remote.Transport.Helios;
 using Helios.Buffers;
@@ -88,7 +87,7 @@ namespace Akka.Remote.TestKit
 
         #region Static methods
 
-        public static RemoteConnection Create(Role role, INode socketAddress, int poolSize, IHeliosConnectionHandler upstreamHandler)
+        public static IConnection CreateConnection(Role role, INode socketAddress, int poolSize, IHeliosConnectionHandler upstreamHandler)
         {
             if (role == Role.Client)
             {
@@ -97,9 +96,8 @@ namespace Akka.Remote.TestKit
                     .SetEncoder(Encoders.DefaultEncoder) //LengthFieldPrepender
                     .SetDecoder(Encoders.DefaultDecoder) //LengthFieldFrameBasedDecoder
                     .WorkerThreads(poolSize).Build().NewConnection(socketAddress);
-                var remoteConnection = new RemoteConnection(connection, upstreamHandler);
-                remoteConnection.Open();
-                return remoteConnection;
+                connection.Open();
+                return connection;
             }
             else //server
             {
@@ -108,13 +106,12 @@ namespace Akka.Remote.TestKit
                     .SetEncoder(Encoders.DefaultEncoder) //LengthFieldPrepender
                     .SetDecoder(Encoders.DefaultDecoder) //LengthFieldFrameBasedDecoder
                     .WorkerThreads(poolSize).Build().NewConnection(socketAddress);
-                var remoteConnection = new RemoteConnection(connection, upstreamHandler);
-                remoteConnection.Open();
-                return remoteConnection;
+                connection.Open();
+                return connection;
             }
         }
 
-        public static void Shutdown(RemoteConnection connection)
+        public static void Shutdown(IConnection connection)
         {
             //TODO: Correct?
             connection.Close();

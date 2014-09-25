@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Akka.Util
+﻿namespace Akka.Util
 {
     public abstract class Either<TA,TB>
     {
