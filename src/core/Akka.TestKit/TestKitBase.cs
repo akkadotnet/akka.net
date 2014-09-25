@@ -94,8 +94,7 @@ namespace Akka.TestKit
 
             if(!(this is NoImplicitSender))
             {
-                if(InternalCurrentActorCellKeeper.Current==null)
-                    InternalCurrentActorCellKeeper.Current = ((LocalActorRef)testActor).Cell;
+                InternalCurrentActorCellKeeper.Current = ((LocalActorRef)testActor).Cell;
             }
             _testActor = testActor;
 
