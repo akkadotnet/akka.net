@@ -34,7 +34,7 @@ namespace Akka.Remote.TestKit.Tests
             c.Tell(new Controller.NodeInfo(B, Address.Parse("akka://sys"), TestActor));
             ExpectMsg<ToClient<Done>>();
             c.Tell(Controller.GetNodes.Instance);
-            ExpectMsg<IEnumerable<RoleName>>(names => XunitAssertions.Equivalent(names, new[] {A, B}));
+            ExpectMsg<IEnumerable<RoleName>>(names => XAssert.Equivalent(names, new[] {A, B}));
             c.Tell(PoisonPill.Instance);
         }
     }

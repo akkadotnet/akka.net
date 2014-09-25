@@ -165,7 +165,7 @@ namespace Akka.TestKit.Internal
                 }
             }
             //TODO: Should be: Func<Mailbox> mailbox = () => system.Mailboxes.FromConfig(dispatcher.Configurator.Config);
-            Func<Mailbox> mailbox = () => system.Mailboxes.FromConfig(props.Mailbox);
+            Func<Mailbox> mailbox = () => system.Mailboxes.CreateMailbox(props, null);
             var testActorRef = new InternalTestActorRef(system, props, dispatcher, mailbox, (InternalActorRef)supervisor, supervisor.Path / name);
 
             // we need to start ourselves since the creation of an actor has been split into initialization and starting
