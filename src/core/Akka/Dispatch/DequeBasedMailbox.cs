@@ -6,6 +6,6 @@ namespace Akka.Dispatch
     {
         void EnqueueFirst(Envelope envelope);
 
-        void Post(Envelope envelope);
+        void Post(ActorRef receiver, Envelope envelope);
     }
 }
