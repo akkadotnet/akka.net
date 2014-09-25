@@ -505,6 +505,12 @@ namespace Akka.Remote.TestKit
                 return nextState;
             });
 
+            OnTransition((state, nextState) =>
+            {
+                if (state == State.Idle && nextState == State.Waiting) SetTimer("Timeout", new StateTimeout(), NextStateData.Deadline.TimeLeft, false);
+                else if(state == State.Waiting && nextState == State.Idle) CancelTimer("Timeout");
+            });
+
             Initialize();
         }
 

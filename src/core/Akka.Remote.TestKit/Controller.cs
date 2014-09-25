@@ -259,7 +259,7 @@ namespace Akka.Remote.TestKit
                 else
                 {
                     _nodes = _nodes.Add(nodeInfo.Name, nodeInfo);
-                    if(_initialParticipants < 0) nodeInfo.FSM.Tell(new ToClient<Done>(Done.Instance));
+                    if(_initialParticipants <= 0) nodeInfo.FSM.Tell(new ToClient<Done>(Done.Instance));
                     else if (_nodes.Count == _initialParticipants)
                     {
                         foreach (var ni in _nodes.Values) ni.FSM.Tell(new ToClient<Done>(Done.Instance));
