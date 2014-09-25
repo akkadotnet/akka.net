@@ -35,6 +35,11 @@ namespace Akka.TestKit
             get { return _internalRef; }
         }
 
+        public InternalTestActorRef InternalRef
+        {
+            get { return _internalRef; }
+        }
+
         public TActor UnderlyingActor
         {
             get { return (TActor) _internalRef.UnderlyingActor; }

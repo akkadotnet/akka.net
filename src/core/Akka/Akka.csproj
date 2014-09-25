@@ -72,6 +72,7 @@
     <Compile Include="Actor\Dsl\Act.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
     <Compile Include="Actor\Internals\InternalCurrentActorCellKeeper.cs" />
+    <Compile Include="Actor\Internals\InternalSupportsTestFSMRef.cs" />
     <Compile Include="Actor\Internals\InitializableActor.cs" />
     <Compile Include="Actor\ReceiveActor.cs" />
     <Compile Include="Actor\ActorBase.cs" />
