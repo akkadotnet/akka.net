@@ -19,7 +19,6 @@ namespace Akka.TestKit
         private static readonly Config _defaultConfig = ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internal.Reference.conf");
         private static readonly Config _fullDebugConfig = ConfigurationFactory.ParseString(@"
                 akka.log-dead-letters-during-shutdown = true
-                akka.loggers = [""akka.testkit.TestEventListener""]
                 akka.actor.debug.receive = true
                 akka.actor.debug.autoreceive = true
                 akka.actor.debug.lifecycle = true
@@ -95,8 +94,7 @@ namespace Akka.TestKit
 
             if(!(this is NoImplicitSender))
             {
-                if(InternalCurrentActorCellKeeper.Current==null)
-                    InternalCurrentActorCellKeeper.Current = ((LocalActorRef)testActor).Cell;
+                InternalCurrentActorCellKeeper.Current = ((LocalActorRef)testActor).Cell;
             }
             _testActor = testActor;
 
@@ -128,7 +126,7 @@ namespace Akka.TestKit
         /// Filter <see cref="LogEvent"/> sent to the system's <see cref="EventStream"/>.
         /// In order to be able to filter the log the special logger
         /// <see cref="TestEventListener"/> must be installed using the config
-        /// <pre><code>akka.loggers = ["akka.testkit.TestEventListener"]</code></pre>
+        /// <pre><code>akka.loggers = ["Akka.TestKit.TestEventListener, Akka.TestKit"]</code></pre>
         /// It is installed by default in testkit.
         /// </summary>
         public EventFilterFactory EventFilter { get { return _eventFilterFactory; } }
