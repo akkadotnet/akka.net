@@ -279,6 +279,7 @@ namespace Akka.Actor.Internals
         /// </summary>
         public override void Shutdown()
         {
+            Log.Debug("System shutdown initiated");
             _provider.Guardian.Stop();
         }
 

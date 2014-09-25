@@ -217,7 +217,7 @@ namespace Akka.Actor
                 {
                     if(disposing)
                     {
-                        //Clean up managed resources
+                        Log.Debug("Disposing system");
                         Shutdown();
                     }
                     //Clean up unmanaged resources
