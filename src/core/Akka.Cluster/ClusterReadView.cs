@@ -132,7 +132,7 @@ namespace Akka.Cluster
                         })
                         .With<ClusterEvent.RoleLeaderChanged>(changed =>
                         {
-                            State = State.Copy(roleLeaderMap: State.RoleLeaderMap.Add(changed.Role, changed.Leader));
+                            State = State.Copy(roleLeaderMap: State.RoleLeaderMap.SetItem(changed.Role, changed.Leader));
                         })
                         .With<ClusterEvent.CurrentInternalStats>(stats =>
                         {
