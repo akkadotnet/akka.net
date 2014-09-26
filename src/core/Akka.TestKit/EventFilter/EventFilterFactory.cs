@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Akka.Event;
 using Akka.TestKit.Internal;
@@ -213,12 +214,24 @@ namespace Akka.TestKit
         /// <returns></returns>
         public EventFilterApplier DeadLetter<TMessage>(string source = null)
         {
-            var sourceMatcher = source == null ? null : new EqualsString(source);
-            var filter = new DeadLettersFilter(null, sourceMatcher, deadLetter => deadLetter.Message is TMessage);
-            return CreateApplier(filter);
+            return DeadLetter(deadLetter => deadLetter.Message is TMessage, source);
         }
 
+        /// <summary>
+        /// Creates a filter that catches dead letters of the specified type and, optionally from the specified source.
+        /// </summary>
+        /// <returns></returns>
+        public EventFilterApplier DeadLetter(Type type, string source = null)
+        {
+            return DeadLetter(deadLetter => deadLetter.Message.GetType().IsInstanceOfType(type), source);
+        }
 
+        private EventFilterApplier DeadLetter(Predicate<DeadLetter> isMatch, string source = null)
+        {
+            var sourceMatcher = source == null ? null : new EqualsString(source);
+            var filter = new DeadLettersFilter(null, sourceMatcher, isMatch);
+            return CreateApplier(filter);
+        }
 
         protected static IStringMatcher CreateMessageMatcher(string message, string start, string contains)
         {

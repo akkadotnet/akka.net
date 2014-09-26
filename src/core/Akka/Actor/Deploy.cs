@@ -1,4 +1,5 @@
 ﻿using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Routing;
 using System;
 using System.Collections.Generic;
@@ -97,7 +98,7 @@ namespace Akka.Actor
             };
         }
 
-        public Deploy Copy()
+        public Deploy Copy(Scope scope = null)
         {
             return new Deploy
             {
@@ -106,7 +107,7 @@ namespace Akka.Actor
                 Mailbox = Mailbox,
                 Path = Path,
                 RouterConfig = RouterConfig,
-                Scope = Scope,
+                Scope = scope ?? Scope
             };
         }
 
