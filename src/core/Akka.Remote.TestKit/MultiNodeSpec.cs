@@ -3,19 +3,13 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
-using System.Runtime.InteropServices;
-using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.TestKit;
-using Akka.TestKit.Internal;
-using Akka.TestKit.TestEvent;
 using Akka.Util.Internal;
 using Helios.Topology;
-using Newtonsoft.Json.Serialization;
 
 namespace Akka.Remote.TestKit
 {
@@ -112,7 +106,7 @@ namespace Akka.Remote.TestKit
             });
         }
 
-        internal RoleName MySelf
+        public RoleName Myself
         {
             get { return _myself.Value; }
         }
@@ -126,7 +120,7 @@ namespace Akka.Remote.TestKit
                     ConfigurationFactory.ParseString("akka.remote.netty.tcp.applied-adapters = [trttl, gremlin]")
                         :  ConfigurationFactory.Empty;
 
-                var configs = ImmutableList.Create(_nodeConf[MySelf], _commonConf, transportConfig,
+                var configs = ImmutableList.Create(_nodeConf[Myself], _commonConf, transportConfig,
                     MultiNodeSpec.NodeConfig, MultiNodeSpec.BaseConfig);
 
                 return configs.Aggregate((a, b) => a.WithFallback(b));
@@ -268,6 +262,7 @@ namespace Akka.Remote.TestKit
         }
 
         readonly RoleName _myself;
+        public RoleName Myself { get { return _myself; } }
         readonly LoggingAdapter _log;
         readonly ImmutableList<RoleName> _roles;
         readonly Func<RoleName, ImmutableList<string>> _deployments;
@@ -275,7 +270,7 @@ namespace Akka.Remote.TestKit
         readonly Address _myAddress;
 
         public MultiNodeSpec(TestKitAssertions assertions, MultiNodeConfig config) :
-            this(assertions, config.MySelf, ActorSystem.Create(GetCallerName(), config.Config), config.Roles, config.Deployments)
+            this(assertions, config.Myself, ActorSystem.Create(GetCallerName(), config.Config), config.Roles, config.Deployments)
         {   
         }
 
@@ -348,7 +343,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public ImmutableList<RoleName> Roles { get { return _roles; } }
 
-        public int InitialParticipants { get { throw new NotImplementedException();} }
+        public virtual int InitialParticipants { get { throw new NotImplementedException();} }
 
         //TODO: require(initialParticipants > 0, "initialParticipants must be a 'def' or early initializer, and it must be greater zero")
         //TODO: require(initialParticipants <= maxNodes, "not enough nodes to run this test")
