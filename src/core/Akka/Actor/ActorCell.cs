@@ -103,7 +103,7 @@ namespace Akka.Actor
 
             if(sendSupervise)
             {
-                Parent.Tell(new Supervise(self, async: false));
+                Parent.Tell(new Supervise(self, async: false), self);
             }
         }
 
