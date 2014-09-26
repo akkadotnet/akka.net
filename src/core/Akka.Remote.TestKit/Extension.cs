@@ -68,6 +68,7 @@ namespace Akka.Remote.TestKit
         public TestConductor(ActorSystem system)
         {
             _settings = new TestConductorSettings(system.Settings.Config.WithFallback(TestConductorConfigFactory.Default())
+                      .GetConfig("akka.testconductor"));
             _transport = system.AsInstanceOf<ExtendedActorSystem>().Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
             _address = _transport.DefaultAddress;
             _system = system;

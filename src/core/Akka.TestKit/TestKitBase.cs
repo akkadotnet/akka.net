@@ -227,7 +227,7 @@ namespace Akka.TestKit
         /// If inside a `within` block obtain time remaining for execution of the innermost enclosing `within`
         /// block; otherwise returns the given duration.
         /// </summary>
-        public TimeSpan RemainingOr(TimeSpan duration)
+        protected TimeSpan RemainingOr(TimeSpan duration)
         {
             if(!_end.HasValue) return duration;
             if(_end.IsInfinite())
