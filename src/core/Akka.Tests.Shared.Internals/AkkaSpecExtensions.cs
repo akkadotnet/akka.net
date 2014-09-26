@@ -15,6 +15,12 @@ namespace Akka.TestKit
             Assert.True(self.SequenceEqual(other), "Expected " + other.Select(i => string.Format("'{0}'", i)).Join(",") + " got " + self.Select(i => string.Format("'{0}'", i)).Join(","));
         }
 
+
+        public static void ShouldBeLessThan<T>(this T self, T expected, string message = null)
+        {
+            Assert.True(Comparer<T>.Default.Compare(self, expected) < 0, string.Format("Expected {0} < {1}", self, expected));
+        }
+
         public static void ShouldBe<T>(this T self, T expected, string message = null)
         {
             Assert.Equal(expected, self);

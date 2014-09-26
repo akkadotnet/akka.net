@@ -74,6 +74,7 @@
     <Compile Include="Actor\Internals\InternalCurrentActorCellKeeper.cs" />
     <Compile Include="Actor\Internals\InternalSupportsTestFSMRef.cs" />
     <Compile Include="Actor\Internals\InitializableActor.cs" />
+    <Compile Include="Actor\Internals\TypeListSorter.cs" />
     <Compile Include="Actor\ReceiveActor.cs" />
     <Compile Include="Actor\ActorBase.cs" />
     <Compile Include="Actor\ActorCell.cs" />
@@ -117,6 +118,7 @@
     <Compile Include="Actor\Scope.cs" />
     <Compile Include="Actor\Settings.cs" />
     <Compile Include="Actor\Stash.cs" />
+    <Compile Include="Actor\DeciderBuilder.cs" />
     <Compile Include="Configuration\ConfigurationException.cs" />
     <Compile Include="Configuration\ConfigurationFactory.cs" />
     <Compile Include="Configuration\Config.cs" />
