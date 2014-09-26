@@ -16,10 +16,8 @@ namespace Akka.Dispatch
         [Conditional("MAILBOXDEBUG")]
         public static void DebugPrint(string message, params object[] args)
         {
-            if(args.Length == 0)
-                Console.WriteLine("{0}", message);
-            else
-                Console.WriteLine(message, args);
+          var formattedMessage = args.Length == 0 ? message : string.Format(message, args);
+          Console.WriteLine("[MAILBOX][{0}][Thread {1:0000}] {2}", DateTime.Now.ToString("o"), Thread.CurrentThread.ManagedThreadId, formattedMessage);
         }
 
         private volatile ActorCell _actorCell;
