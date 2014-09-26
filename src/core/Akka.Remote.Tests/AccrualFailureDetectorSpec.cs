@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Remote.Tests

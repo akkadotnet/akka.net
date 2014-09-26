@@ -11,56 +11,66 @@ namespace Akka.Event
     /// </summary>
     public abstract class LoggingAdapter
     {
+        private readonly ILogMessageFormatter _logMessageFormatter;
+
         /// <summary>
         ///     The is debug enabled
         /// </summary>
-        protected bool isDebugEnabled;
+        public bool IsDebugEnabled;
 
         /// <summary>
         ///     The is error enabled
         /// </summary>
-        protected bool isErrorEnabled;
+        public bool IsErrorEnabled;
 
         /// <summary>
         ///     The is information enabled
         /// </summary>
-        protected bool isInfoEnabled;
+        public bool IsInfoEnabled;
 
         /// <summary>
         ///     The is warning enabled
         /// </summary>
-        protected bool isWarningEnabled;
+        public bool IsWarningEnabled;
 
         /// <summary>
         ///     Notifies the error.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected abstract void NotifyError(string message);
+        protected abstract void NotifyError(object message);
 
         /// <summary>
         ///     Notifies the error.
         /// </summary>
         /// <param name="cause">The cause.</param>
         /// <param name="message">The message.</param>
-        protected abstract void NotifyError(Exception cause, string message);
+        protected abstract void NotifyError(Exception cause, object message);
 
         /// <summary>
         ///     Notifies the warning.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected abstract void NotifyWarning(string message);
+        protected abstract void NotifyWarning(object message);
 
         /// <summary>
         ///     Notifies the information.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected abstract void NotifyInfo(string message);
+        protected abstract void NotifyInfo(object message);
 
         /// <summary>
         ///     Notifies the debug.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected abstract void NotifyDebug(string message);
+        protected abstract void NotifyDebug(object message);
+
+        protected LoggingAdapter(ILogMessageFormatter logMessageFormatter)
+        {
+            if (logMessageFormatter == null)
+                throw new ArgumentException("logMessageFormatter");
+
+            _logMessageFormatter = logMessageFormatter;
+        }
 
         /// <summary>
         ///     Determines whether the specified log level is enabled.
@@ -73,13 +83,13 @@ namespace Akka.Event
             switch (logLevel)
             {
                 case LogLevel.DebugLevel:
-                    return isDebugEnabled;
+                    return IsDebugEnabled;
                 case LogLevel.InfoLevel:
-                    return isInfoEnabled;
+                    return IsInfoEnabled;
                 case LogLevel.WarningLevel:
-                    return isWarningEnabled;
+                    return IsWarningEnabled;
                 case LogLevel.ErrorLevel:
-                    return isErrorEnabled;
+                    return IsErrorEnabled;
                 default:
                     throw new NotSupportedException("Unknown LogLevel " + logLevel);
             }
@@ -91,21 +101,21 @@ namespace Akka.Event
         /// <param name="logLevel">The log level.</param>
         /// <param name="message">The message.</param>
         /// <exception cref="System.NotSupportedException">Unknown LogLevel  + logLevel</exception>
-        protected void NotifyLog(LogLevel logLevel, string message)
+        protected void NotifyLog(LogLevel logLevel, object message)
         {
             switch (logLevel)
             {
                 case LogLevel.DebugLevel:
-                    if (isDebugEnabled) NotifyDebug(message);
+                    if (IsDebugEnabled) NotifyDebug(message);
                     break;
                 case LogLevel.InfoLevel:
-                    if (isInfoEnabled) NotifyInfo(message);
+                    if (IsInfoEnabled) NotifyInfo(message);
                     break;
                 case LogLevel.WarningLevel:
-                    if (isWarningEnabled) NotifyWarning(message);
+                    if (IsWarningEnabled) NotifyWarning(message);
                     break;
                 case LogLevel.ErrorLevel:
-                    if (isErrorEnabled) NotifyError(message);
+                    if (IsErrorEnabled) NotifyError(message);
                     break;
                 default:
                     throw new NotSupportedException("Unknown LogLevel " + logLevel);
@@ -118,7 +128,7 @@ namespace Akka.Event
         /// <param name="message">The message.</param>
         public void Debug(string message)
         {
-            if (isDebugEnabled)
+            if (IsDebugEnabled)
                 NotifyDebug(message);
         }
 
@@ -126,7 +136,8 @@ namespace Akka.Event
         ///    Logs a <see cref="Warning"/> message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Warn(string message)    //TODO: This should probably be obsolete and removed as Debug,Info,Error corresponds to LogEvent classes with the same name, so to be consistent Warning should be used instead.
+        [Obsolete("Use Warning instead")]
+        public void Warn(string message)
         {
            Warning(message);
         }
@@ -135,7 +146,7 @@ namespace Akka.Event
         /// <param name="message">The message.</param>
         public void Warning(string message)
         {
-            if(isWarningEnabled)
+            if(IsWarningEnabled)
                 NotifyWarning(message);
         }
 
@@ -146,7 +157,7 @@ namespace Akka.Event
         /// <param name="message">The message.</param>
         public void Error(Exception cause, string message)
         {
-            if (isErrorEnabled)
+            if (IsErrorEnabled)
                 NotifyError(cause, message);
         }
 
@@ -156,7 +167,7 @@ namespace Akka.Event
         /// <param name="message">The message.</param>
         public void Error(string message)
         {
-            if (isErrorEnabled)
+            if (IsErrorEnabled)
                 NotifyError(message);
         }
 
@@ -166,10 +177,9 @@ namespace Akka.Event
         /// <param name="message">The message.</param>
         public void Info(string message)
         {
-            if (isInfoEnabled)
+            if (IsInfoEnabled)
                 NotifyInfo(message);
         }
-
 
         /// <summary>
         ///     Debugs the specified format.
@@ -178,8 +188,8 @@ namespace Akka.Event
         /// <param name="args">The arguments.</param>
         public void Debug(string format, params object[] args)
         {
-            if (isDebugEnabled)
-                NotifyDebug(string.Format(format, args));
+            if (IsDebugEnabled)
+                NotifyDebug(new LogMessage(_logMessageFormatter, format, args));
         }
 
         /// <summary>
@@ -187,7 +197,8 @@ namespace Akka.Event
         /// </summary>
         /// <param name="format">The format.</param>
         /// <param name="args">The arguments.</param>
-        public void Warn(string format, params object[] args)     //TODO: This should probably be obsolete and removed as Debug,Info,Error corresponds to LogEvent classes with the same name, so to be consistent Warning should be used instead.
+        [Obsolete("Use Warning instead")]
+        public void Warn(string format, params object[] args)
         {
             Warning(format, args);
         }
@@ -195,10 +206,10 @@ namespace Akka.Event
         /// <summary>Logs a <see cref="Akka.Event"/> message.</summary>
         /// <param name="format">The format.</param>
         /// <param name="args">The arguments.</param>
-        public void Warning(string format, params object[] args)     //TODO: This should probably be obsolete and removed as Debug,Info,Error corresponds to LogEvent classes with the same name, so to be consistent Warning should be used instead.
+        public void Warning(string format, params object[] args)
         {
-            if(isWarningEnabled)
-                NotifyWarning(string.Format(format, args));
+            if(IsWarningEnabled)
+                NotifyWarning(new LogMessage(_logMessageFormatter, format, args));
         }
 
         /// <summary>
@@ -209,8 +220,8 @@ namespace Akka.Event
         /// <param name="args">The arguments.</param>
         public void Error(Exception cause, string format, params object[] args)
         {
-            if (isErrorEnabled)
-                NotifyError(cause, string.Format(format, args));
+            if (IsErrorEnabled)
+                NotifyError(cause, new LogMessage(_logMessageFormatter, format, args));
         }
 
         /// <summary>
@@ -220,8 +231,8 @@ namespace Akka.Event
         /// <param name="args">The arguments.</param>
         public void Error(string format, params object[] args)
         {
-            if (isErrorEnabled)
-                NotifyError(string.Format(format, args));
+            if (IsErrorEnabled)
+                NotifyError(new LogMessage(_logMessageFormatter, format, args));
         }
 
         /// <summary>
@@ -231,8 +242,8 @@ namespace Akka.Event
         /// <param name="args">The arguments.</param>
         public void Info(string format, params object[] args)
         {
-            if (isInfoEnabled)
-                NotifyInfo(string.Format(format, args));
+            if (IsInfoEnabled)
+                NotifyInfo(new LogMessage(_logMessageFormatter, format, args));
         }
 
         /// <summary>
@@ -253,7 +264,7 @@ namespace Akka.Event
         /// <param name="args">The arguments.</param>
         public void Log(LogLevel logLevel, string format, params object[] args)
         {
-            NotifyLog(logLevel, string.Format(format, args));
+            NotifyLog(logLevel, new LogMessage(_logMessageFormatter, format, args));
         }
     }
 }

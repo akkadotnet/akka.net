@@ -4,12 +4,13 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.Util;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Actor
 {
 
-    public class FSMTimingSpec : AkkaSpec, ImplicitSender
+    public class FSMTimingSpec : AkkaSpec
     {
         public ActorRef Self { get { return TestActor; } }
 

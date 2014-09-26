@@ -1,17 +1,22 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
 using Akka.Util;
+using Helios.Exceptions;
+using Helios.Net;
+using Helios.Topology;
 
 namespace Akka.Remote.TestKit
 {
     /// <summary>
     /// The conductor is the one orchestrating the test: it governs the
-    /// <see cref="Akka.Remote.TestKit.Controller">'s ports to whic all
+    /// <see cref="Akka.Remote.TestKit.Controller">'s ports to which all
     /// Players connect, it issues commands to their
     /// <see cref="Akka.Remote.TestKit.NetworkFailureInjector"></see> and provides support
     /// for barriers using the <see cref="Akka.Remote.TestKit.BarrierCoordinator"></see>.
@@ -30,11 +35,21 @@ namespace Akka.Remote.TestKit
             }
         }
 
-
-        public void StartController()
+        //TODO: INode should probably be IPEndPoint
+        public async Task<INode> StartController(int participants, RoleName name, INode controllerPort)
         {
-            //TODO: This will be different if using app domains and remoting. Need to have more of a look at the code to work out if that is the right direction
-            throw new NotImplementedException();
+            if(_controller != null) throw new Exception("TestConductorServer was already started");
+            _controller = _system.ActorOf(new Props(typeof (Controller), new object[] {participants, controllerPort}),
+                "controller");
+            //TODO: Need to review this async stuff
+            var node = await _controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance).ConfigureAwait(false);
+            await StartClient(name, node).ConfigureAwait(false);
+            return node;
+        }
+
+        public Task<INode> SockAddr()
+        {
+            return _controller.Ask<INode>(TestKit.Controller.GetSockAddr.Instance);
         }
 
         /// <summary>
@@ -200,176 +215,180 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    //TODO: Remoting here? Not sure this is right
-    class ConductorHandler
+    /// <summary>
+    /// This handler is what's used to process events which occur on <see cref="RemoteConnection"/>.
+    /// 
+    /// It's only purpose is to dispatch incoming messages to the right <see cref="ServerFSM"/> actor. There is
+    /// one shared instance fo this class for all <see cref="IConnection"/>s accepted by one <see cref="Controller"/>.
+    /// </summary>
+    internal class ConductorHandler : IHeliosConnectionHandler
     {
-        public ConductorHandler()
+        private readonly LoggingAdapter _log;
+        private readonly ActorRef _controller;
+        private readonly ConcurrentDictionary<IConnection, ActorRef> _clients = new ConcurrentDictionary<IConnection, ActorRef>();
+
+        public ConductorHandler(ActorRef controller, LoggingAdapter log)
         {
-            throw new NotImplementedException();
+            _controller = controller;
+            _log = log;
+        }
+
+        public async void OnConnect(INode remoteAddress, IConnection responseChannel)
+        {
+            _log.Debug("connection from {0}", responseChannel.RemoteHost);
+            var fsm = await _controller.Ask<ActorRef>(new Controller.CreateServerFSM(responseChannel), TimeSpan.MaxValue);
+            _clients.AddOrUpdate(responseChannel, fsm, (connection, @ref) => fsm);
+        }
+
+        public void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
+        {
+            _log.Debug("disconnect from {0}", closedChannel.RemoteHost);
+            var fsm = _clients[closedChannel];
+            fsm.Tell(new Controller.ClientDisconnected(new RoleName(null)));
+            ActorRef removedActor;
+            _clients.TryRemove(closedChannel, out removedActor);
+        }
+
+        public void OnMessage(object message, IConnection responseChannel)
+        {
+            _log.Debug(string.Format("message from {0}: {1}", responseChannel.RemoteHost, message));
+            if (message is INetworkOp)
+            {
+                _clients[responseChannel].Tell(message);
+            }
+            else
+            {
+                _log.Debug(string.Format("client {0} sent garbage `{1}`, disconnecting", responseChannel.RemoteHost, message));
+                responseChannel.Close();
+            }
+        }
+
+        public void OnException(Exception ex, IConnection erroredChannel)
+        {
+            _log.Warn(string.Format("handled network error from {0}: {1}", erroredChannel.RemoteHost, ex.Message));
         }
     }
-
-    class ServerFSM
-    {
-        public ServerFSM()
-        {
-            throw new NotImplementedException();
-        }
-    }
-
 
     /// <summary>
-    /// This controls test execution by managing barriers (delegated to
-    /// <see cref="TestConductorExtension.BarrierCoordinator"/>, its child) and allowing
-    /// network and other failures to be injected at the test nodes.
+    /// The server part of each client connection is represented by a ServerFSM.
+    /// The Initial state handles reception of the new client’s
+    /// <see cref="Hello"/> message (which is needed for all subsequent
+    /// node name translations).
+    /// 
+    /// In the Ready state, messages from the client are forwarded to the controller
+    /// and <see cref="EndpointManager.Send"/> requests are sent, but the latter is
+    /// treated specially: all client operations are to be confirmed by a
+    /// <see cref="Done"/> message, and there can be only one such
+    /// request outstanding at a given time (i.e. a Send fails if the previous has
+    /// not yet been acknowledged).
     /// 
     /// INTERNAL API.
     /// </summary>
-    class Controller : UntypedActor
+    class ServerFSM : FSM<ServerFSM.State, ActorRef>, LoggingFSM
     {
-        sealed class ClientDisconnected
+        readonly RemoteConnection _channel;
+        readonly ActorRef _controller;
+        RoleName _roleName;
+
+        public enum State
         {
-            private readonly RoleName _name;
-
-            public ClientDisconnected(RoleName name)
-            {
-                _name = name;
-            }
-
-            public RoleName Name
-            {
-                get { return _name; }
-            }
-
-            private bool Equals(ClientDisconnected other)
-            {
-                return Equals(_name, other._name);
-            }
-
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                return obj is ClientDisconnected && Equals((ClientDisconnected) obj);
-            }
-
-            public override int GetHashCode()
-            {
-                return (_name != null ? _name.GetHashCode() : 0);
-            }
-
-            public static bool operator ==(ClientDisconnected left, ClientDisconnected right)
-            {
-                return Equals(left, right);
-            }
-
-            public static bool operator !=(ClientDisconnected left, ClientDisconnected right)
-            {
-                return !Equals(left, right);
-            }
+            Initial,
+            Ready
         }
 
-        public class ClientDisconnectedException : AkkaException
+        public ServerFSM(ActorRef controller, RemoteConnection channel)
         {
-            public ClientDisconnectedException(string msg) : base(msg){}
+            _controller = controller;
+            _channel = channel;
         }
 
-        public class GetNodes
+        protected void InitFSM()
         {
-            private GetNodes() { }
-            private static readonly GetNodes _instance = new GetNodes();
+            StartWith(State.Initial, null);
 
-            public static GetNodes Instance
+            WhenUnhandled(@event =>
             {
-                get
+                var clientDisconnected = @event.FsmEvent as Controller.ClientDisconnected;
+                if (clientDisconnected != null)
                 {
-                    return _instance;
+                    if(@event.StateData != null)
+                        @event.StateData.Tell(new Failure(new Controller.ClientDisconnectedException("client disconnected in state " + StateName + ": " + _channel)));                   
+                    return Stop();
                 }
-            }
-        }
+                return null;
+            });
 
-        //TODO: Necessary?
-        public class GetSockAddr
-        {
-            private GetSockAddr() { }
-            private static readonly GetSockAddr _instance = new GetSockAddr();
-
-            public static GetSockAddr Instance
+            OnTermination(@event =>
             {
-                get
+                _controller.Tell(new Controller.ClientDisconnected(_roleName));
+                _channel.Close();
+            });
+
+            When(State.Initial, @event =>
+            {
+                var hello = @event.FsmEvent as Hello;
+                if (hello != null)
                 {
-                    return _instance;
+                    _roleName = new RoleName(hello.Name);
+                    _controller.Tell(new Controller.NodeInfo(_roleName, hello.Address, Self));
+                    return GoTo(State.Ready);
                 }
-            }
-        }
-
-        sealed class NodeInfo
-        {
-            readonly RoleName _name;
-            readonly Address _addr;
-            readonly ActorRef _fsm;
-
-            public NodeInfo(RoleName name, Address addr, ActorRef fsm)
-            {
-                _name = name;
-                _addr = addr;
-                _fsm = fsm;
-            }
-
-            public RoleName Name
-            {
-                get { return _name; }
-            }
-
-            public Address Addr
-            {
-                get { return _addr; }
-            }
-
-            public ActorRef FSM
-            {
-                get { return _fsm; }
-            }
-
-            bool Equals(NodeInfo other)
-            {
-                return Equals(_name, other._name) && Equals(_addr, other._addr) && Equals(_fsm, other._fsm);
-            }
-
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                return obj is NodeInfo && Equals((NodeInfo) obj);
-            }
-
-            public override int GetHashCode()
-            {
-                unchecked
+                if (@event.FsmEvent is INetworkOp)
                 {
-                    int hashCode = (_name != null ? _name.GetHashCode() : 0);
-                    hashCode = (hashCode*397) ^ (_addr != null ? _addr.GetHashCode() : 0);
-                    hashCode = (hashCode*397) ^ (_fsm != null ? _fsm.GetHashCode() : 0);
-                    return hashCode;
+                    Log.Warning("client {0}, sent not Hello in first message (instead {1}), disconnecting", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
+                    _channel.Close();
+                    return Stop();
                 }
-            }
+                if (@event.FsmEvent is IToClient)
+                {
+                    Log.Warning("cannot send {0} in state Initial", @event.FsmEvent);
+                    return Stay();
+                }
+                if (@event.FsmEvent is StateTimeout)
+                {
+                    Log.Info("closing channel to {0} because of Hello timeout", _channel.RemoteHost.ToEndPoint());
+                    _channel.Close();
+                    return Stop();
+                }
+                return null;
+            }, TimeSpan.FromSeconds(10));
 
-            public static bool operator ==(NodeInfo left, NodeInfo right)
+            When(State.Ready, @event =>
             {
-                return Equals(left, right);
-            }
+                if (@event.FsmEvent is Done && @event.StateData != null)
+                {
+                    @event.StateData.Tell(@event.FsmEvent);
+                    return Stay().Using(null);
+                }
+                if (@event.FsmEvent is IServerOp)
+                {
+                    _controller.Tell(@event.FsmEvent);
+                    return Stay();
+                }
+                if (@event.FsmEvent is INetworkOp)
+                {
+                    Log.Warn("client {0} sent unsupported message {1}", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
+                    return Stop();
+                }
+                if (@event.FsmEvent is IToClient && @event.FsmEvent is IUnconfirmedClientOp)
+                {
+                    _channel.Write(@event.FsmEvent);
+                    return Stay();
+                }
+                if (@event.FsmEvent is IToClient && @event.StateData == null)
+                {
+                    _channel.Write(@event.FsmEvent);
+                    return Stay().Using(Sender);
+                }
+                if (@event.FsmEvent is IToClient)
+                {
+                    Log.Warning("cannot send {0} while waiting for previous ACK", @event.FsmEvent);
+                    return Stay();
+                }
+                return null;
+            });
 
-            public static bool operator !=(NodeInfo left, NodeInfo right)
-            {
-                return !Equals(left, right);
-            }
-        }
-
-        readonly TestConductorSettings _settings = TestConductor.Get(Context.System).Settings;
-
-        protected override void OnReceive(object message)
-        {
-            throw new NotImplementedException();
+            Initialize();
         }
     }
 }

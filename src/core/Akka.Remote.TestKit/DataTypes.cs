@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using Akka.Actor;
 using Akka.Remote.Transport;
 using Akka.Util;
+using Address = Akka.Actor.Address;
 
 namespace Akka.Remote.TestKit
 {
@@ -25,7 +25,7 @@ namespace Akka.Remote.TestKit
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((RoleName) obj);
+            return Equals((RoleName)obj);
         }
 
         public override int GetHashCode()
@@ -47,9 +47,19 @@ namespace Akka.Remote.TestKit
         {
             get { return _name; }
         }
+
+        public override string ToString()
+        {
+            return string.Format("RoleName({0})", _name);
+        }
     }
 
-    class ToClient<T> where T : IClientOp, INetworkOp
+    //TODO: This is messy, better way to do this?
+    //Marker interface to avoid using reflection to work out if message
+    //is derived from generic type
+    interface IToClient{}
+
+    class ToClient<T> : IToClient where T : IClientOp, INetworkOp
     {
         private readonly T _msg;
 
@@ -73,7 +83,7 @@ namespace Akka.Remote.TestKit
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((ToClient<T>) obj);
+            return Equals((ToClient<T>)obj);
         }
 
         public override int GetHashCode()
@@ -92,7 +102,12 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    class ToServer<T> where T : IServerOp, INetworkOp
+    //TODO: This is messy, better way to do this?
+    //Marker interface to avoid using reflection to work out if message
+    //is derived from generic type
+    interface IToServer{}
+
+    class ToServer<T> : IToServer where T : IServerOp, INetworkOp
     {
         readonly T _msg;
 
@@ -132,7 +147,7 @@ namespace Akka.Remote.TestKit
         public static bool operator !=(ToServer<T> left, ToServer<T> right)
         {
             return !Equals(left, right);
-        }        
+        }
     }
 
     interface IClientOp { } // messages sent to from Conductor to Player
@@ -159,14 +174,14 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Hello && Equals((Hello) obj);
+            return obj is Hello && Equals((Hello)obj);
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return ((_name != null ? _name.GetHashCode() : 0)*397) ^ (_address != null ? _address.GetHashCode() : 0);
+                return ((_name != null ? _name.GetHashCode() : 0) * 397) ^ (_address != null ? _address.GetHashCode() : 0);
             }
         }
 
@@ -217,14 +232,14 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is EnterBarrier && Equals((EnterBarrier) obj);
+            return obj is EnterBarrier && Equals((EnterBarrier)obj);
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return ((_name != null ? _name.GetHashCode() : 0)*397) ^ _timeout.GetHashCode();
+                return ((_name != null ? _name.GetHashCode() : 0) * 397) ^ _timeout.GetHashCode();
             }
         }
 
@@ -272,7 +287,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is FailBarrier && Equals((FailBarrier) obj);
+            return obj is FailBarrier && Equals((FailBarrier)obj);
         }
 
         public override int GetHashCode()
@@ -321,14 +336,14 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is BarrierResult && Equals((BarrierResult) obj);
+            return obj is BarrierResult && Equals((BarrierResult)obj);
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return ((_name != null ? _name.GetHashCode() : 0)*397) ^ _success.GetHashCode();
+                return ((_name != null ? _name.GetHashCode() : 0) * 397) ^ _success.GetHashCode();
             }
         }
 
@@ -343,7 +358,7 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    sealed class Throttle
+    sealed class Throttle : ICommandOp
     {
         readonly RoleName _node;
         readonly RoleName _target;
@@ -387,7 +402,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Throttle && Equals((Throttle) obj);
+            return obj is Throttle && Equals((Throttle)obj);
         }
 
         public override int GetHashCode()
@@ -395,9 +410,9 @@ namespace Akka.Remote.TestKit
             unchecked
             {
                 int hashCode = (_node != null ? _node.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (_target != null ? _target.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (_direction != null ? _direction.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ _rateMBit.GetHashCode();
+                hashCode = (hashCode * 397) ^ (_target != null ? _target.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (_direction != null ? _direction.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ _rateMBit.GetHashCode();
                 return hashCode;
             }
         }
@@ -413,7 +428,7 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    sealed class ThrottleMsg
+    sealed class ThrottleMsg : IConfirmedClientOp, INetworkOp
     {
         readonly Address _target;
         readonly ThrottleTransportAdapter.Direction _direction;
@@ -450,7 +465,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is ThrottleMsg && Equals((ThrottleMsg) obj);
+            return obj is ThrottleMsg && Equals((ThrottleMsg)obj);
         }
 
         public override int GetHashCode()
@@ -458,8 +473,8 @@ namespace Akka.Remote.TestKit
             unchecked
             {
                 var hashCode = (_target != null ? _target.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (_direction != null ? _direction.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ _rateMBit.GetHashCode();
+                hashCode = (hashCode * 397) ^ (_direction != null ? _direction.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ _rateMBit.GetHashCode();
                 return hashCode;
             }
         }
@@ -512,7 +527,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Disconnect && Equals((Disconnect) obj);
+            return obj is Disconnect && Equals((Disconnect)obj);
         }
 
         public override int GetHashCode()
@@ -520,8 +535,8 @@ namespace Akka.Remote.TestKit
             unchecked
             {
                 int hashCode = (_node != null ? _node.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (_target != null ? _target.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ _abort.GetHashCode();
+                hashCode = (hashCode * 397) ^ (_target != null ? _target.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ _abort.GetHashCode();
                 return hashCode;
             }
         }
@@ -537,7 +552,7 @@ namespace Akka.Remote.TestKit
         }
     }
 
-    sealed class DisconnectMsg : IConfirmedClientOp , INetworkOp
+    sealed class DisconnectMsg : IConfirmedClientOp, INetworkOp
     {
         readonly Address _target;
         readonly bool _abort;
@@ -567,14 +582,14 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is DisconnectMsg && Equals((DisconnectMsg) obj);
+            return obj is DisconnectMsg && Equals((DisconnectMsg)obj);
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return ((_target != null ? _target.GetHashCode() : 0)*397) ^ _abort.GetHashCode();
+                return ((_target != null ? _target.GetHashCode() : 0) * 397) ^ _abort.GetHashCode();
             }
         }
 
@@ -619,14 +634,14 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Terminate && Equals((Terminate) obj);
+            return obj is Terminate && Equals((Terminate)obj);
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return ((_node != null ? _node.GetHashCode() : 0)*397) ^ (_shutdownOrExit != null ? _shutdownOrExit.GetHashCode() : 0);
+                return ((_node != null ? _node.GetHashCode() : 0) * 397) ^ (_shutdownOrExit != null ? _shutdownOrExit.GetHashCode() : 0);
             }
         }
 
@@ -664,7 +679,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is TerminateMsg && Equals((TerminateMsg) obj);
+            return obj is TerminateMsg && Equals((TerminateMsg)obj);
         }
 
         public override int GetHashCode()
@@ -706,7 +721,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is GetAddress && Equals((GetAddress) obj);
+            return obj is GetAddress && Equals((GetAddress)obj);
         }
 
         public override int GetHashCode()
@@ -755,14 +770,14 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is AddressReply && Equals((AddressReply) obj);
+            return obj is AddressReply && Equals((AddressReply)obj);
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return ((_node != null ? _node.GetHashCode() : 0)*397) ^ (_addr != null ? _addr.GetHashCode() : 0);
+                return ((_node != null ? _node.GetHashCode() : 0) * 397) ^ (_addr != null ? _addr.GetHashCode() : 0);
             }
         }
 
@@ -788,10 +803,10 @@ namespace Akka.Remote.TestKit
             {
                 return _instance;
             }
-        }         
+        }
     }
 
-    sealed class Remove
+    sealed class Remove : ICommandOp
     {
         readonly RoleName _node;
 
@@ -814,7 +829,7 @@ namespace Akka.Remote.TestKit
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is Remove && Equals((Remove) obj);
+            return obj is Remove && Equals((Remove)obj);
         }
 
         public override int GetHashCode()
@@ -832,6 +847,4 @@ namespace Akka.Remote.TestKit
             return !Equals(left, right);
         }
     }
-
-    //TODO: MsgEncode stuff. Might be able to avoid needing this
 }

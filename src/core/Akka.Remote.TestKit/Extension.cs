@@ -2,6 +2,8 @@
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Remote.TestKit.Internals;
+using Akka.Util.Internal;
 
 namespace Akka.Remote.TestKit
 {
@@ -61,11 +63,14 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public Address Address { get { return _address; } }
 
-        public TestConductor(ExtendedActorSystem system)
+        readonly ActorSystem _system;
+
+        public TestConductor(ActorSystem system)
         {
-            _settings = new TestConductorSettings(system.Settings.Config.GetConfig("akka.testconductor"));
-            _transport = system.Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
+            _settings = new TestConductorSettings(system.Settings.Config.WithFallback(TestConductorConfigFactory.Default())
+            _transport = system.AsInstanceOf<ExtendedActorSystem>().Provider.AsInstanceOf<RemoteActorRefProvider>().Transport;
             _address = _transport.DefaultAddress;
+            _system = system;
         }
     }
 
@@ -97,12 +102,12 @@ namespace Akka.Remote.TestKit
 
         public TestConductorSettings(Config config)
         {
-            _connectTimeout = config.GetMillisDuration("connect-timeout");
+            _connectTimeout = config.GetTimeSpan("connect-timeout");
             _clientReconnects = config.GetInt("client-reconnects");
-            _reconnectBackoff = config.GetMillisDuration("reconnect-backoff");
-            _barrierTimeout = config.GetMillisDuration("barrier-timeout");
-            _queryTimeout = config.GetMillisDuration("query-timeout");
-            _packetSplitThreshold = config.GetMillisDuration("packet-split-threshold");
+            _reconnectBackoff = config.GetTimeSpan("reconnect-backoff");
+            _barrierTimeout = config.GetTimeSpan("barrier-timeout");
+            _queryTimeout = config.GetTimeSpan("query-timeout");
+            _packetSplitThreshold = config.GetTimeSpan("packet-split-threshold");
             _serverSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.server-socket-worker-pool"));
             _clientSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.client-socket-worker-pool"));
         }

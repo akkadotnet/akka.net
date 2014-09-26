@@ -15,7 +15,7 @@ namespace Akka.Remote
         {
             TransportFailureDetectorConfig = config.GetConfig("akka.remote.transport-failure-detector");
             TransportFailureDetectorImplementationClass = TransportFailureDetectorConfig.GetString("implementation-class");
-            TransportHeartBeatInterval = TransportFailureDetectorConfig.GetMillisDuration("heartbeat-interval");
+            TransportHeartBeatInterval = TransportFailureDetectorConfig.GetTimeSpan("heartbeat-interval");
         }
     }
 }

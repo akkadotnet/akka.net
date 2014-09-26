@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Akka.Dispatch;
+using Akka.Util.Internal;
 using Akka.Util.Reflection;
 using Akka.Routing;
 using Akka.Util;

@@ -221,7 +221,7 @@ namespace Akka.Dispatch
             Config config = _system.Settings.Config.GetConfig(path);
             string type = config.GetString("type");
             int throughput = config.GetInt("throughput");
-            long throughputDeadlineTime = config.GetMillisDuration("throughput-deadline-time").Ticks;
+            long throughputDeadlineTime = config.GetTimeSpan("throughput-deadline-time").Ticks;
             //shutdown-timeout
             //throughput-deadline-time
             //attempt-teamwork

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Util

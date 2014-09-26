@@ -9,7 +9,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
         public BossActor()
         {
-            _child = TestActorRef.Create<InternalActor>(Context.System, Self, "child");
+            _child = new TestActorRef<InternalActor>(Context.System, Props.Create<InternalActor>(), Self, "child");
         }
 
         protected override SupervisorStrategy SupervisorStrategy()

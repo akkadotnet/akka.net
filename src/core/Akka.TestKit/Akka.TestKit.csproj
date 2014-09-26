@@ -100,15 +100,18 @@
     <Compile Include="EventFilter\UnmutableFilter.cs" />
     <Compile Include="FSMSpecHelpers.cs" />
     <Compile Include="AutoPilots.cs" />
-    <Compile Include="ImplicitSender.cs" />
-    <Compile Include="Internals\BlockingCollectionTestActorQueue.cs" />
-    <Compile Include="Internals\InternalTestActor.cs" />
-    <Compile Include="Internals\ITestActorQueue.cs" />
-    <Compile Include="Internals\BlockingQueue.cs" />
-    <Compile Include="Internals\TimeSpanExtensions.cs" />
+    <Compile Include="NoImplicitSender.cs" />
+    <Compile Include="Internal\BlockingCollectionTestActorQueue.cs" />
+    <Compile Include="Internal\InternalTestActor.cs" />
+    <Compile Include="Internal\InternalTestActorRef.cs" />
+    <Compile Include="Internal\ITestActorQueue.cs" />
+    <Compile Include="Internal\BlockingQueue.cs" />
+    <Compile Include="Internal\TimeSpanExtensions.cs" />
+    <Compile Include="TestActorRefBase.cs" />
     <Compile Include="TestActors\BlackHoleActor.cs" />
     <Compile Include="TestActors\EchoActor.cs" />
     <Compile Include="TestBarrier.cs" />
+    <Compile Include="TestFSMRef.cs" />
     <Compile Include="TestKitAssertions.cs" />
     <Compile Include="MessageEnvelope.cs" />
     <Compile Include="NullMessageEnvelope.cs" />
@@ -120,7 +123,7 @@
     <Compile Include="TestKitAssertionsExtension.cs" />
     <Compile Include="TestKitAssertionsProvider.cs" />
     <Compile Include="TestKitBase.cs" />
-    <Compile Include="TestKitBase_Obsolete.cs" />
+    <Compile Include="TestKitBase_ActorOf.cs" />
     <Compile Include="TestKitBase_AwaitAssert.cs" />
     <Compile Include="TestKitBase_Expect.cs" />
     <Compile Include="TestKitBase_Within.cs" />
@@ -138,7 +141,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Internals\Reference.conf" />
+    <EmbeddedResource Include="Internal\Reference.conf" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

@@ -18,7 +18,6 @@ namespace Akka.TestKit
         private static Regex _nameReplaceRegex = new Regex("[^a-zA-Z0-9]", RegexOptions.Compiled);
         private static readonly Config _akkaSpecConfig = ConfigurationFactory.ParseString(@"
           akka {
-            #loggers = [""akka.testkit.TestEventListener""]
             loglevel = WARNING
             stdout-loglevel = WARNING
             serialize-messages = on
@@ -61,32 +60,7 @@ namespace Akka.TestKit
 
         protected static Config AkkaSpecConfig { get { return _akkaSpecConfig; } }
 
-        protected void EventFilter<T>(string message, int occurances, Action intercept) where T : Exception  //TODO: Replace when EventFilter class in akka-testkit\src\main\scala\akka\testkit\TestEventListener.scala has been implemented
-        {
-            Sys.EventStream.Subscribe(TestActor, typeof(Error));
-            intercept();
-            for(int i = 0; i < occurances; i++)
-            {
-                var error = ExpectMsg<Error>();
 
-                Assertions.AssertEqual(typeof(T), error.Cause.GetType());
-                Assertions.AssertEqual(message, error.Message);
-            }
-        }
-
-        protected void EventFilterLog<T>(string message, int occurences, Action intercept) where T : LogEvent
-        {
-            Sys.EventStream.Subscribe(TestActor, typeof(T));
-            intercept();
-            for(int i = 0; i < occurences; i++)
-            {
-                var error = ExpectMsg<LogEvent>();
-
-                Assertions.AssertEqual(typeof(T), error.GetType());
-                var match = -1 != error.Message.ToString().IndexOf(message, StringComparison.CurrentCultureIgnoreCase);
-                Assertions.AssertTrue(match);
-            }
-        }
 
         protected T ExpectMsgPf<T>(TimeSpan? timeout, string hint, Func<object, T> function)
         {

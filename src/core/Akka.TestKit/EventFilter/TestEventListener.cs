@@ -11,7 +11,7 @@ namespace Akka.TestKit
     /// EventListener for running tests, which allows selectively filtering out
     /// expected messages. To use it, include something like this in
     /// the configuration:
-    /// <pre><code>akka.loggers = ["akka.testkit.TestEventListener"]</code></pre>
+    /// <pre><code>akka.loggers = ["Akka.TestKit.TestEventListener, Akka.TestKit"]</code></pre>
     /// </summary>
     public class TestEventListener : DefaultLogger
     {

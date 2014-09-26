@@ -6,6 +6,8 @@ using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Dispatch;
+using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Transport;
@@ -353,7 +355,7 @@ namespace Akka.Remote
                     .With<IAssociationProblem>(problem => directive = Directive.Escalate)
                     .Default(e =>
                     {
-                        Log.Warn("Association with remote system {0} has failed; address is now gated for {1} ms. Reason is: [{2}]", remoteAddress, settings.RetryGateClosedFor.TotalMilliseconds, ex.Message);
+                        Log.Warning("Association with remote system {0} has failed; address is now gated for {1} ms. Reason is: [{2}]", remoteAddress, settings.RetryGateClosedFor.TotalMilliseconds, ex.Message);
                         UidConfirmed = false;
                         Context.Become(Gated);
                         currentHandle = null;

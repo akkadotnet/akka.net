@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Threading;
 using Akka.Actor;
-using Akka.Dispatch.SysMsg;
 
 namespace Akka.Dispatch
 {
@@ -29,7 +24,7 @@ namespace Akka.Dispatch
 
         private volatile ActorCell _actorCell;
         protected MessageDispatcher dispatcher;
-        protected ActorCell ActorCell { get { return _actorCell; } }
+        protected ActorCell ActorCell { get { return _actorCell; } }        
 
         /// <summary>
         ///     Attaches an ActorCell to the Mailbox.
@@ -48,8 +43,9 @@ namespace Akka.Dispatch
         /// <summary>
         ///     Posts the specified envelope to the mailbox.
         /// </summary>
+        /// <param name="receiver"></param>
         /// <param name="envelope">The envelope.</param>
-        public abstract void Post(Envelope envelope);   //TODO: Refactor to Enqueue(ActorRef receiver, Envelope envelope)
+        public abstract void Post(ActorRef receiver, Envelope envelope);
 
         /// <summary>
         ///     Stops this instance.

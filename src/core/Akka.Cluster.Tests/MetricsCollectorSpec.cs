@@ -4,6 +4,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Cluster.Tests
@@ -17,7 +18,7 @@ namespace Akka.Cluster.Tests
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""";
     }
 
-    public class MetricsCollectorSpec : MetricsCollectorFactory, ImplicitSender, IDisposable
+    public class MetricsCollectorSpec : MetricsCollectorFactory, IDisposable
     {
         public ActorRef Self { get { return TestActor; } }
 

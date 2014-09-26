@@ -10,6 +10,7 @@ using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Routing;
 using Akka.Serialization;
+using Akka.Util.Internal;
 
 namespace Akka.Remote
 {

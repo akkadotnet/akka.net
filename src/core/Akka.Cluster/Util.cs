@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using Akka.Configuration;
-using Akka.Remote;
 
 namespace Akka.Cluster
 {
@@ -68,10 +66,17 @@ namespace Akka.Cluster
             }
         }
 
+
+        [Obsolete("Use GetTimeSpanWithOffSwitch instead")]
         public static TimeSpan? GetMillisDurationWithOffSwitch(this Config @this, string key)
         {
+            return GetTimeSpanWithOffSwitch(@this, key);
+        }
+
+        public static TimeSpan? GetTimeSpanWithOffSwitch(this Config @this, string key)
+        {
             TimeSpan? ret = null;
-            if (@this.GetString(key).ToLower() != "off") ret = @this.GetMillisDuration(key);
+            if (@this.GetString(key).ToLower() != "off") ret = @this.GetTimeSpan(key);
             return ret;
         }
 

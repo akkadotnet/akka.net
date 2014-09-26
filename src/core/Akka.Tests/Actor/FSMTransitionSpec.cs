@@ -6,7 +6,7 @@ using Xunit;
 namespace Akka.Tests.Actor
 {
     
-    public class FSMTransitionSpec : AkkaSpec, ImplicitSender
+    public class FSMTransitionSpec : AkkaSpec
     {
         public ActorRef Self { get { return TestActor; } }
 

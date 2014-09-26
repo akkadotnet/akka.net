@@ -1,18 +1,16 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Akka.Configuration;
-using Akka.Configuration.Hocon;
 using Akka.Routing;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
     public class Deployer
     {
-        private readonly Config _deployment;
         private readonly Config _default;
         private readonly Settings _settings;
         private readonly AtomicReference<WildcardTree<Deploy>> _deployments = new AtomicReference<WildcardTree<Deploy>>(new WildcardTree<Deploy>());
@@ -20,17 +18,13 @@ namespace Akka.Actor
         public Deployer(Settings settings)
         {
             _settings = settings;
-            _deployment = settings.Config.GetConfig("akka.actor.deployment");
-            _default = _deployment.GetConfig("default");
-            Init();
-        }
+            var config = settings.Config.GetConfig("akka.actor.deployment");
+            _default = config.GetConfig("default");
 
-        private void Init()
-        {
-            var rootObj = _deployment.Root.GetObject();
+            var rootObj = config.Root.GetObject();
             if (rootObj == null) return;
             var unwrapped = rootObj.Unwrapped.Where(d => !d.Key.Equals("default")).ToArray();
-            foreach (var d in unwrapped.Select(x => ParseConfig(x.Key)))
+            foreach (var d in unwrapped.Select(x => ParseConfig(x.Key, config.GetConfig(x.Key))))
             {
                 SetDeploy(d);
             }
@@ -80,24 +74,18 @@ namespace Akka.Actor
             add(elements, deploy);
         }
 
-        protected virtual Deploy ParseConfig(string key)
+        public virtual Deploy ParseConfig(string key, Config config)
         {
-            Config config = _deployment.GetConfig(key).WithFallback(_default);
-            var routerType = config.GetString("router");
-            var router = CreateRouterConfig(routerType, key, config, _deployment);
-            var dispatcher = config.GetString("dispatcher");
-            var mailbox = config.GetString("mailbox");
-            var scope = ParseScope(config);
-            var deploy = new Deploy(key, config, router, scope, dispatcher, mailbox);
+            var deployment = config.WithFallback(_default);
+            var routerType = deployment.GetString("router");
+            var router = CreateRouterConfig(routerType, deployment);
+            var dispatcher = deployment.GetString("dispatcher");
+            var mailbox = deployment.GetString("mailbox");
+            var deploy = new Deploy(key, deployment, router, Deploy.NoScopeGiven, dispatcher, mailbox);
             return deploy;
         }
 
-        protected virtual Scope ParseScope(Config config)
-        {
-            return Deploy.NoScopeGiven;
-        }
-
-        private RouterConfig CreateRouterConfig(string routerTypeAlias, string key, Config config, Config deployment)
+        private RouterConfig CreateRouterConfig(string routerTypeAlias, Config deployment)
         {
             if (routerTypeAlias == "from-code")
                 return RouterConfig.NoRouter;
@@ -106,7 +94,7 @@ namespace Akka.Actor
             var routerTypeName = _settings.Config.GetString(path);
             var routerType = Type.GetType(routerTypeName);
             Debug.Assert(routerType != null, "routerType != null");
-            var routerConfig = (RouterConfig)Activator.CreateInstance(routerType, config);
+            var routerConfig = (RouterConfig)Activator.CreateInstance(routerType, deployment);
 
             return routerConfig;
         }

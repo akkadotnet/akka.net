@@ -55,8 +55,8 @@ namespace Akka.Actor
             
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy");
 
-            CreationTimeout = Config.GetMillisDuration("akka.actor.creation-timeout");
-            UnstartedPushTimeout = Config.GetMillisDuration("akka.actor.unstarted-push-timeout");
+            CreationTimeout = Config.GetTimeSpan("akka.actor.creation-timeout");
+            UnstartedPushTimeout = Config.GetTimeSpan("akka.actor.unstarted-push-timeout");
 
             SerializeAllMessages = Config.GetBoolean("akka.actor.serialize-messages");
             SerializeAllCreators = Config.GetBoolean("akka.actor.serialize-creators");
@@ -65,7 +65,7 @@ namespace Akka.Actor
             StdoutLogLevel = Config.GetString("akka.stdout-loglevel");
             Loggers = Config.GetStringList("akka.loggers");
 
-            LoggerStartTimeout = Config.GetMillisDuration("akka.logger-startup-timeout");
+            LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout");
 
             //handled
             LogConfigOnStart = Config.GetBoolean("akka.log-config-on-start");

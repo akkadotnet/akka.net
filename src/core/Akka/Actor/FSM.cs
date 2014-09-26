@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Routing;
-using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Actor
@@ -370,7 +370,7 @@ namespace Akka.Actor
     /// </summary>
     /// <typeparam name="TState">The state name type</typeparam>
     /// <typeparam name="TData">The state data type</typeparam>
-    public abstract class FSM<TState, TData> : FSMBase, IActorLogging, IListeners
+    public abstract class FSM<TState, TData> : FSMBase, IActorLogging, IListeners, InternalSupportsTestFSMRef<TState,TData>
     {
         private readonly LoggingAdapter _logAdapter = Logging.GetLogger(Context);
         protected FSM()
@@ -378,6 +378,7 @@ namespace Akka.Actor
             if(this is LoggingFSM)
                 DebugEvent = Context.System.Settings.FsmDebugEvent;
         }
+        
         public delegate State<TState, TData> StateFunction(Event<TData> fsmEvent);
 
         public delegate void TransitionHandler(TState initialState, TState nextState);
@@ -424,6 +425,18 @@ namespace Akka.Actor
         public State<TState, TData> GoTo(TState nextStateName)
         {
             return new State<TState, TData>(nextStateName, _currentState.StateData);
+        }
+
+        /// <summary>
+        /// Produce transition to other state. Return this from a state function
+        /// in order to effect the transition.
+        /// </summary>
+        /// <param name="nextStateName">State designator for the next state</param>
+        /// <param name="stateData">Data for next state</param>
+        /// <returns>State transition descriptor</returns>
+        public State<TState, TData> GoTo(TState nextStateName, TData stateData)
+        {
+            return new State<TState, TData>(nextStateName, stateData);
         }
 
         /// <summary>
@@ -537,10 +550,8 @@ namespace Akka.Actor
                 _stateTimeouts[state] = timeout;
         }
 
-        /// <summary>
-        /// INTERNAL API. Used for testing.
-        /// </summary>
-        internal bool IsStateTimerActive
+        //Internal API
+        bool InternalSupportsTestFSMRef<TState, TData>.IsStateTimerActive
         {
             get
             {
@@ -567,7 +578,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Set handler which i called upon reception of unhandled FSM messages. Calling
+        /// Set handler which is called upon reception of unhandled FSM messages. Calling
         /// this method again will overwrite the previous contents.
         /// </summary>
         /// <param name="stateFunction"></param>
@@ -672,7 +683,7 @@ namespace Akka.Actor
             {
                 return delegate(Event<TData> @event)
                 {
-                    _logAdapter.Warn(String.Format("unhandled event {0} in state {1}", @event.FsmEvent, StateName));
+                    _logAdapter.Warning(String.Format("unhandled event {0} in state {1}", @event.FsmEvent, StateName));
                     return Stay();
                 };
             }
@@ -783,6 +794,7 @@ namespace Akka.Actor
                     Context.Unwatch(d.Listener);
                     Listeners.Remove(d.Listener);
                 })
+                .With<InternalActivateFsmLogging>(_=> { DebugEvent = true; })
                 .Default(msg =>
                 {
                     if (_timeoutFuture != null)
@@ -839,6 +851,12 @@ namespace Akka.Actor
             var actorRef = source as ActorRef;
             if(actorRef != null) return actorRef.ToString();
             return "unknown";
+        }
+
+        //Internal API
+        void InternalSupportsTestFSMRef<TState, TData>.ApplyState(State<TState, TData> upcomingState)
+        {
+            ApplyState(upcomingState);
         }
 
         private void ApplyState(State<TState, TData> upcomingState)

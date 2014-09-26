@@ -3,6 +3,7 @@ using System.Text;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.Util.Internal;
 
 // ReSharper disable once CheckNamespace
 namespace Akka

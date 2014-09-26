@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.TestKit.Internals;
+using Akka.TestKit.Internal;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -12,12 +14,11 @@ namespace Akka.TestKit
     /// <summary>
     /// <remarks>Unless you're creating a TestKit for a specific test framework, you should probably not inherit directly from this class.</remarks>
     /// </summary>
-    public abstract partial class TestKitBase
+    public abstract partial class TestKitBase : ActorRefFactory
     {
-        private static readonly Config _defaultConfig = ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internals.Reference.conf");
+        private static readonly Config _defaultConfig = ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internal.Reference.conf");
         private static readonly Config _fullDebugConfig = ConfigurationFactory.ParseString(@"
                 akka.log-dead-letters-during-shutdown = true
-                akka.loggers = [""akka.testkit.TestEventListener""]
                 akka.actor.debug.receive = true
                 akka.actor.debug.autoreceive = true
                 akka.actor.debug.lifecycle = true
@@ -84,37 +85,51 @@ namespace Akka.TestKit
             _eventFilterFactory = new EventFilterFactory(this);
 
             var testActor = CreateTestActor(system, "testActor" + _testActorId.IncrementAndGet());
-            _testActor = testActor;
             //Wait for the testactor to start
             AwaitCondition(() =>
             {
                 var repRef = _testActor as RepointableRef;
                 return repRef == null || repRef.IsStarted;
             }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(10));
+
+            if(!(this is NoImplicitSender))
+            {
+                InternalCurrentActorCellKeeper.Current = ((LocalActorRef)testActor).Cell;
+            }
+            _testActor = testActor;
+
         }
 
         private TimeSpan SingleExpectDefaultTimeout { get { return _testKitSettings.SingleExpectDefault; } }
 
         public ActorSystem Sys { get { return _system; } }
         public TestKitSettings TestKitSettings { get { return _testKitSettings; } }
-        protected ActorRef LastSender { get { return _lastMessage.Sender; } }
+        public ActorRef LastSender { get { return _lastMessage.Sender; } }
         public static Config DefaultConfig { get { return _defaultConfig; } }
         public static Config FullDebugConfig { get { return _fullDebugConfig; } }
-        protected static TimeSpan Now { get { return TimeSpan.FromTicks(DateTime.UtcNow.Ticks); } }
+        public static TimeSpan Now { get { return TimeSpan.FromTicks(DateTime.UtcNow.Ticks); } }
         public LoggingAdapter Log { get { return _log; } }
-        protected bool LastWasNoMsg { get { return _lastWasNoMsg; } }
-        protected object LastMessage { get { return _lastMessage.Message; } }
+        public bool LastWasNoMsg { get { return _lastWasNoMsg; } }
+        public object LastMessage { get { return _lastMessage.Message; } }
 
+        /// <summary>
+        /// The default TestActor. The actor can be controlled by sending it 
+        /// special control messages, see <see cref="TestKit.TestActor.SetIgnore"/>, 
+        /// <see cref="TestKit.TestActor.Watch"/>, <see cref="TestKit.TestActor.Unwatch"/>.
+        /// You can also install an <see cref="AutoPilot" /> to drive the actor, see
+        /// <see cref="SetAutoPilot"/>. All other messages are forwarded to the queue
+        /// and can be retrieved with Receive and the ExpectMsg overloads.
+        /// </summary>
         public ActorRef TestActor { get { return _testActor; } }
 
         /// <summary>
         /// Filter <see cref="LogEvent"/> sent to the system's <see cref="EventStream"/>.
         /// In order to be able to filter the log the special logger
         /// <see cref="TestEventListener"/> must be installed using the config
-        /// <pre><code>akka.loggers = ["akka.testkit.TestEventListener"]</code></pre>
+        /// <pre><code>akka.loggers = ["Akka.TestKit.TestEventListener, Akka.TestKit"]</code></pre>
         /// It is installed by default in testkit.
         /// </summary>
-        protected EventFilterFactory EventFilter { get { return _eventFilterFactory; } }
+        public EventFilterFactory EventFilter { get { return _eventFilterFactory; } }
 
 
         /// <summary>
@@ -186,7 +201,7 @@ namespace Akka.TestKit
         /// block or missing that it returns the properly dilated default for this
         /// case from settings (key "akka.test.single-expect-default"). <remarks>The returned value is always finite.</remarks>
         /// </summary>
-        private TimeSpan RemainingOrDefault
+        public TimeSpan RemainingOrDefault
         {
             get { return RemainingOr(Dilated(SingleExpectDefaultTimeout)); }
         }
@@ -212,7 +227,7 @@ namespace Akka.TestKit
         /// If inside a `within` block obtain time remaining for execution of the innermost enclosing `within`
         /// block; otherwise returns the given duration.
         /// </summary>
-        private TimeSpan RemainingOr(TimeSpan duration)
+        public TimeSpan RemainingOr(TimeSpan duration)
         {
             if(!_end.HasValue) return duration;
             if(_end.IsInfinite())
@@ -231,7 +246,7 @@ namespace Akka.TestKit
         /// <param name="duration">The maximum.</param>
         /// <returns>A finite <see cref="TimeSpan"/> properly dilated</returns>
         /// <exception cref="System.ArgumentException">Thrown if <paramref name="duration"/> is infinite</exception>
-        private TimeSpan RemainingOrDilated(TimeSpan? duration)
+        public TimeSpan RemainingOrDilated(TimeSpan? duration)
         {
             if(!duration.HasValue) return RemainingOrDefault;
             if(duration.IsInfinite()) throw new ArgumentException("max duration cannot be infinite");
@@ -246,7 +261,7 @@ namespace Akka.TestKit
         public TimeSpan Dilated(TimeSpan duration)
         {
             if(duration.IsPositiveFinite())
-                return new TimeSpan((long) (duration.Ticks * _testKitSettings.TestTimeFactor));
+                return new TimeSpan((long)(duration.Ticks * _testKitSettings.TestTimeFactor));
             //Else: 0 or infinite (negative)
             return duration;
         }
@@ -256,7 +271,7 @@ namespace Akka.TestKit
         /// If <paramref name="timeout"/> is defined it is returned; otherwise
         /// the config value "akka.test.single-expect-default" is returned.
         /// </summary>
-        protected TimeSpan GetTimeoutOrDefault(TimeSpan? timeout)
+        public TimeSpan GetTimeoutOrDefault(TimeSpan? timeout)
         {
             return timeout.GetValueOrDefault(SingleExpectDefaultTimeout);
         }
@@ -268,9 +283,9 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="duration">Optional. The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor".</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        protected virtual void Shutdown(TimeSpan? duration = null, bool verifySystemShutdown = false)
+        public virtual void Shutdown(TimeSpan? duration = null, bool verifySystemShutdown = false)
         {
-           Shutdown(_system,duration,verifySystemShutdown);
+            Shutdown(_system, duration, verifySystemShutdown);
         }
 
         /// <summary>
@@ -281,7 +296,7 @@ namespace Akka.TestKit
         /// <param name="system">The system to shutdown.</param>
         /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
         /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
-        protected virtual void Shutdown(ActorSystem system, TimeSpan? duration=null, bool verifySystemShutdown = false)
+        protected virtual void Shutdown(ActorSystem system, TimeSpan? duration = null, bool verifySystemShutdown = false)
         {
             if(system == null) system = _system;
 
@@ -293,8 +308,8 @@ namespace Akka.TestKit
                 const string msg = "Failed to stop [{0}] within [{1}] \n{2}";
                 if(verifySystemShutdown)
                     throw new Exception(string.Format(msg, system.Name, durationValue, ""));
-                        //TODO: replace "" with system.PrintTree()
-                system.Log.Warn(msg, system.Name, durationValue, ""); //TODO: replace "" with system.PrintTree()
+                //TODO: replace "" with system.PrintTree()
+                system.Log.Warning(msg, system.Name, durationValue, ""); //TODO: replace "" with system.PrintTree()
             }
         }
 
@@ -308,7 +323,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="name">The name of the new actor.</param>
         /// <returns></returns>
-        protected ActorRef CreateTestActor(string name)
+        public ActorRef CreateTestActor(string name)
         {
             return CreateTestActor(_system, name);
         }
@@ -316,18 +331,27 @@ namespace Akka.TestKit
         private ActorRef CreateTestActor(ActorSystem system, string name)
         {
             var testActorProps = Props.Create(() => new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_queue)))
-                .WithDispatcher("akka.test.test-actor.dispatcher");  
+                .WithDispatcher("akka.test.test-actor.dispatcher");
             var testActor = system.ActorOf(testActorProps, name);
             return testActor;
         }
 
 
-        protected virtual TestProbe CreateTestProbe()
+        public virtual TestProbe CreateTestProbe()
         {
             return new TestProbe(Sys, _assertions);
         }
 
+        /// <summary>
+        /// Wraps a <see cref="Barrier"/> for use in testing.
+        /// It always uses a timeout when waiting.
+        /// Timeouts will always throw an exception. The default timeout is 5 seconds.
+        /// </summary>
+        public TestBarrier CreateTestBarrier(int count)
+        {
+            return new TestBarrier(this, count);
+        }
 
     }
-    
+
 }

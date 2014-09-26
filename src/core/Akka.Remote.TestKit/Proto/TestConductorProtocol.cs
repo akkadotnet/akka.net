@@ -6,7 +6,7 @@ using pb = global::Google.ProtocolBuffers;
 using pbc = global::Google.ProtocolBuffers.Collections;
 using pbd = global::Google.ProtocolBuffers.Descriptors;
 using scg = global::System.Collections.Generic;
-namespace Akka.Remote.TestConductor {
+namespace TCP {
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
   public static partial class TestConductorProtocol {
@@ -17,17 +17,17 @@ namespace Akka.Remote.TestConductor {
     #endregion
     #region Static variables
     internal static pbd::MessageDescriptor internal__static_Wrapper__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Remote.TestConductor.Wrapper, global::Akka.Remote.TestConductor.Wrapper.Builder> internal__static_Wrapper__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::TCP.Wrapper, global::TCP.Wrapper.Builder> internal__static_Wrapper__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_Hello__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Remote.TestConductor.Hello, global::Akka.Remote.TestConductor.Hello.Builder> internal__static_Hello__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::TCP.Hello, global::TCP.Hello.Builder> internal__static_Hello__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_EnterBarrier__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Remote.TestConductor.EnterBarrier, global::Akka.Remote.TestConductor.EnterBarrier.Builder> internal__static_EnterBarrier__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::TCP.EnterBarrier, global::TCP.EnterBarrier.Builder> internal__static_EnterBarrier__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_AddressRequest__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Remote.TestConductor.AddressRequest, global::Akka.Remote.TestConductor.AddressRequest.Builder> internal__static_AddressRequest__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::TCP.AddressRequest, global::TCP.AddressRequest.Builder> internal__static_AddressRequest__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_Address__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Remote.TestConductor.Address, global::Akka.Remote.TestConductor.Address.Builder> internal__static_Address__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::TCP.Address, global::TCP.Address.Builder> internal__static_Address__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_InjectFailure__Descriptor;
-    internal static pb::FieldAccess.FieldAccessorTable<global::Akka.Remote.TestConductor.InjectFailure, global::Akka.Remote.TestConductor.InjectFailure.Builder> internal__static_InjectFailure__FieldAccessorTable;
+    internal static pb::FieldAccess.FieldAccessorTable<global::TCP.InjectFailure, global::TCP.InjectFailure.Builder> internal__static_InjectFailure__FieldAccessorTable;
     #endregion
     #region Descriptor
     public static pbd::FileDescriptor Descriptor {
@@ -59,27 +59,27 @@ namespace Akka.Remote.TestConductor {
         descriptor = root;
         internal__static_Wrapper__Descriptor = Descriptor.MessageTypes[0];
         internal__static_Wrapper__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Remote.TestConductor.Wrapper, global::Akka.Remote.TestConductor.Wrapper.Builder>(internal__static_Wrapper__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::TCP.Wrapper, global::TCP.Wrapper.Builder>(internal__static_Wrapper__Descriptor,
                 new string[] { "Hello", "Barrier", "Failure", "Done", "Addr", });
         internal__static_Hello__Descriptor = Descriptor.MessageTypes[1];
         internal__static_Hello__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Remote.TestConductor.Hello, global::Akka.Remote.TestConductor.Hello.Builder>(internal__static_Hello__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::TCP.Hello, global::TCP.Hello.Builder>(internal__static_Hello__Descriptor,
                 new string[] { "Name", "Address", });
         internal__static_EnterBarrier__Descriptor = Descriptor.MessageTypes[2];
         internal__static_EnterBarrier__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Remote.TestConductor.EnterBarrier, global::Akka.Remote.TestConductor.EnterBarrier.Builder>(internal__static_EnterBarrier__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::TCP.EnterBarrier, global::TCP.EnterBarrier.Builder>(internal__static_EnterBarrier__Descriptor,
                 new string[] { "Name", "Op", "Timeout", });
         internal__static_AddressRequest__Descriptor = Descriptor.MessageTypes[3];
         internal__static_AddressRequest__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Remote.TestConductor.AddressRequest, global::Akka.Remote.TestConductor.AddressRequest.Builder>(internal__static_AddressRequest__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::TCP.AddressRequest, global::TCP.AddressRequest.Builder>(internal__static_AddressRequest__Descriptor,
                 new string[] { "Node", "Addr", });
         internal__static_Address__Descriptor = Descriptor.MessageTypes[4];
         internal__static_Address__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Remote.TestConductor.Address, global::Akka.Remote.TestConductor.Address.Builder>(internal__static_Address__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::TCP.Address, global::TCP.Address.Builder>(internal__static_Address__Descriptor,
                 new string[] { "Protocol", "System", "Host", "Port", });
         internal__static_InjectFailure__Descriptor = Descriptor.MessageTypes[5];
         internal__static_InjectFailure__FieldAccessorTable = 
-            new pb::FieldAccess.FieldAccessorTable<global::Akka.Remote.TestConductor.InjectFailure, global::Akka.Remote.TestConductor.InjectFailure.Builder>(internal__static_InjectFailure__Descriptor,
+            new pb::FieldAccess.FieldAccessorTable<global::TCP.InjectFailure, global::TCP.InjectFailure.Builder>(internal__static_InjectFailure__Descriptor,
                 new string[] { "Failure", "Direction", "Address", "RateMBit", "ExitValue", });
         return null;
       };
@@ -135,41 +135,41 @@ namespace Akka.Remote.TestConductor {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.TestConductor.TestConductorProtocol.internal__static_Wrapper__Descriptor; }
+      get { return global::TCP.TestConductorProtocol.internal__static_Wrapper__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<Wrapper, Wrapper.Builder> InternalFieldAccessors {
-      get { return global::Akka.Remote.TestConductor.TestConductorProtocol.internal__static_Wrapper__FieldAccessorTable; }
+      get { return global::TCP.TestConductorProtocol.internal__static_Wrapper__FieldAccessorTable; }
     }
     
     public const int HelloFieldNumber = 1;
     private bool hasHello;
-    private global::Akka.Remote.TestConductor.Hello hello_;
+    private global::TCP.Hello hello_;
     public bool HasHello {
       get { return hasHello; }
     }
-    public global::Akka.Remote.TestConductor.Hello Hello {
-      get { return hello_ ?? global::Akka.Remote.TestConductor.Hello.DefaultInstance; }
+    public global::TCP.Hello Hello {
+      get { return hello_ ?? global::TCP.Hello.DefaultInstance; }
     }
     
     public const int BarrierFieldNumber = 2;
     private bool hasBarrier;
-    private global::Akka.Remote.TestConductor.EnterBarrier barrier_;
+    private global::TCP.EnterBarrier barrier_;
     public bool HasBarrier {
       get { return hasBarrier; }
     }
-    public global::Akka.Remote.TestConductor.EnterBarrier Barrier {
-      get { return barrier_ ?? global::Akka.Remote.TestConductor.EnterBarrier.DefaultInstance; }
+    public global::TCP.EnterBarrier Barrier {
+      get { return barrier_ ?? global::TCP.EnterBarrier.DefaultInstance; }
     }
     
     public const int FailureFieldNumber = 3;
     private bool hasFailure;
-    private global::Akka.Remote.TestConductor.InjectFailure failure_;
+    private global::TCP.InjectFailure failure_;
     public bool HasFailure {
       get { return hasFailure; }
     }
-    public global::Akka.Remote.TestConductor.InjectFailure Failure {
-      get { return failure_ ?? global::Akka.Remote.TestConductor.InjectFailure.DefaultInstance; }
+    public global::TCP.InjectFailure Failure {
+      get { return failure_ ?? global::TCP.InjectFailure.DefaultInstance; }
     }
     
     public const int DoneFieldNumber = 4;
@@ -184,12 +184,12 @@ namespace Akka.Remote.TestConductor {
     
     public const int AddrFieldNumber = 5;
     private bool hasAddr;
-    private global::Akka.Remote.TestConductor.AddressRequest addr_;
+    private global::TCP.AddressRequest addr_;
     public bool HasAddr {
       get { return hasAddr; }
     }
-    public global::Akka.Remote.TestConductor.AddressRequest Addr {
-      get { return addr_ ?? global::Akka.Remote.TestConductor.AddressRequest.DefaultInstance; }
+    public global::TCP.AddressRequest Addr {
+      get { return addr_ ?? global::TCP.AddressRequest.DefaultInstance; }
     }
     
     public override bool IsInitialized {
@@ -350,11 +350,11 @@ namespace Akka.Remote.TestConductor {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Remote.TestConductor.Wrapper.Descriptor; }
+        get { return global::TCP.Wrapper.Descriptor; }
       }
       
       public override Wrapper DefaultInstanceForType {
-        get { return global::Akka.Remote.TestConductor.Wrapper.DefaultInstance; }
+        get { return global::TCP.Wrapper.DefaultInstance; }
       }
       
       public override Wrapper BuildPartial() {
@@ -375,7 +375,7 @@ namespace Akka.Remote.TestConductor {
       }
       
       public override Builder MergeFrom(Wrapper other) {
-        if (other == global::Akka.Remote.TestConductor.Wrapper.DefaultInstance) return this;
+        if (other == global::TCP.Wrapper.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasHello) {
           MergeHello(other.Hello);
@@ -436,7 +436,7 @@ namespace Akka.Remote.TestConductor {
               break;
             }
             case 10: {
-              global::Akka.Remote.TestConductor.Hello.Builder subBuilder = global::Akka.Remote.TestConductor.Hello.CreateBuilder();
+              global::TCP.Hello.Builder subBuilder = global::TCP.Hello.CreateBuilder();
               if (result.hasHello) {
                 subBuilder.MergeFrom(Hello);
               }
@@ -445,7 +445,7 @@ namespace Akka.Remote.TestConductor {
               break;
             }
             case 18: {
-              global::Akka.Remote.TestConductor.EnterBarrier.Builder subBuilder = global::Akka.Remote.TestConductor.EnterBarrier.CreateBuilder();
+              global::TCP.EnterBarrier.Builder subBuilder = global::TCP.EnterBarrier.CreateBuilder();
               if (result.hasBarrier) {
                 subBuilder.MergeFrom(Barrier);
               }
@@ -454,7 +454,7 @@ namespace Akka.Remote.TestConductor {
               break;
             }
             case 26: {
-              global::Akka.Remote.TestConductor.InjectFailure.Builder subBuilder = global::Akka.Remote.TestConductor.InjectFailure.CreateBuilder();
+              global::TCP.InjectFailure.Builder subBuilder = global::TCP.InjectFailure.CreateBuilder();
               if (result.hasFailure) {
                 subBuilder.MergeFrom(Failure);
               }
@@ -467,7 +467,7 @@ namespace Akka.Remote.TestConductor {
               break;
             }
             case 42: {
-              global::Akka.Remote.TestConductor.AddressRequest.Builder subBuilder = global::Akka.Remote.TestConductor.AddressRequest.CreateBuilder();
+              global::TCP.AddressRequest.Builder subBuilder = global::TCP.AddressRequest.CreateBuilder();
               if (result.hasAddr) {
                 subBuilder.MergeFrom(Addr);
               }
@@ -488,30 +488,30 @@ namespace Akka.Remote.TestConductor {
       public bool HasHello {
        get { return result.hasHello; }
       }
-      public global::Akka.Remote.TestConductor.Hello Hello {
+      public global::TCP.Hello Hello {
         get { return result.Hello; }
         set { SetHello(value); }
       }
-      public Builder SetHello(global::Akka.Remote.TestConductor.Hello value) {
+      public Builder SetHello(global::TCP.Hello value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasHello = true;
         result.hello_ = value;
         return this;
       }
-      public Builder SetHello(global::Akka.Remote.TestConductor.Hello.Builder builderForValue) {
+      public Builder SetHello(global::TCP.Hello.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasHello = true;
         result.hello_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeHello(global::Akka.Remote.TestConductor.Hello value) {
+      public Builder MergeHello(global::TCP.Hello value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasHello &&
-            result.hello_ != global::Akka.Remote.TestConductor.Hello.DefaultInstance) {
-            result.hello_ = global::Akka.Remote.TestConductor.Hello.CreateBuilder(result.hello_).MergeFrom(value).BuildPartial();
+            result.hello_ != global::TCP.Hello.DefaultInstance) {
+            result.hello_ = global::TCP.Hello.CreateBuilder(result.hello_).MergeFrom(value).BuildPartial();
         } else {
           result.hello_ = value;
         }
@@ -528,30 +528,30 @@ namespace Akka.Remote.TestConductor {
       public bool HasBarrier {
        get { return result.hasBarrier; }
       }
-      public global::Akka.Remote.TestConductor.EnterBarrier Barrier {
+      public global::TCP.EnterBarrier Barrier {
         get { return result.Barrier; }
         set { SetBarrier(value); }
       }
-      public Builder SetBarrier(global::Akka.Remote.TestConductor.EnterBarrier value) {
+      public Builder SetBarrier(global::TCP.EnterBarrier value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasBarrier = true;
         result.barrier_ = value;
         return this;
       }
-      public Builder SetBarrier(global::Akka.Remote.TestConductor.EnterBarrier.Builder builderForValue) {
+      public Builder SetBarrier(global::TCP.EnterBarrier.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasBarrier = true;
         result.barrier_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeBarrier(global::Akka.Remote.TestConductor.EnterBarrier value) {
+      public Builder MergeBarrier(global::TCP.EnterBarrier value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasBarrier &&
-            result.barrier_ != global::Akka.Remote.TestConductor.EnterBarrier.DefaultInstance) {
-            result.barrier_ = global::Akka.Remote.TestConductor.EnterBarrier.CreateBuilder(result.barrier_).MergeFrom(value).BuildPartial();
+            result.barrier_ != global::TCP.EnterBarrier.DefaultInstance) {
+            result.barrier_ = global::TCP.EnterBarrier.CreateBuilder(result.barrier_).MergeFrom(value).BuildPartial();
         } else {
           result.barrier_ = value;
         }
@@ -568,30 +568,30 @@ namespace Akka.Remote.TestConductor {
       public bool HasFailure {
        get { return result.hasFailure; }
       }
-      public global::Akka.Remote.TestConductor.InjectFailure Failure {
+      public global::TCP.InjectFailure Failure {
         get { return result.Failure; }
         set { SetFailure(value); }
       }
-      public Builder SetFailure(global::Akka.Remote.TestConductor.InjectFailure value) {
+      public Builder SetFailure(global::TCP.InjectFailure value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasFailure = true;
         result.failure_ = value;
         return this;
       }
-      public Builder SetFailure(global::Akka.Remote.TestConductor.InjectFailure.Builder builderForValue) {
+      public Builder SetFailure(global::TCP.InjectFailure.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasFailure = true;
         result.failure_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeFailure(global::Akka.Remote.TestConductor.InjectFailure value) {
+      public Builder MergeFailure(global::TCP.InjectFailure value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasFailure &&
-            result.failure_ != global::Akka.Remote.TestConductor.InjectFailure.DefaultInstance) {
-            result.failure_ = global::Akka.Remote.TestConductor.InjectFailure.CreateBuilder(result.failure_).MergeFrom(value).BuildPartial();
+            result.failure_ != global::TCP.InjectFailure.DefaultInstance) {
+            result.failure_ = global::TCP.InjectFailure.CreateBuilder(result.failure_).MergeFrom(value).BuildPartial();
         } else {
           result.failure_ = value;
         }
@@ -629,30 +629,30 @@ namespace Akka.Remote.TestConductor {
       public bool HasAddr {
        get { return result.hasAddr; }
       }
-      public global::Akka.Remote.TestConductor.AddressRequest Addr {
+      public global::TCP.AddressRequest Addr {
         get { return result.Addr; }
         set { SetAddr(value); }
       }
-      public Builder SetAddr(global::Akka.Remote.TestConductor.AddressRequest value) {
+      public Builder SetAddr(global::TCP.AddressRequest value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasAddr = true;
         result.addr_ = value;
         return this;
       }
-      public Builder SetAddr(global::Akka.Remote.TestConductor.AddressRequest.Builder builderForValue) {
+      public Builder SetAddr(global::TCP.AddressRequest.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasAddr = true;
         result.addr_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeAddr(global::Akka.Remote.TestConductor.AddressRequest value) {
+      public Builder MergeAddr(global::TCP.AddressRequest value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasAddr &&
-            result.addr_ != global::Akka.Remote.TestConductor.AddressRequest.DefaultInstance) {
-            result.addr_ = global::Akka.Remote.TestConductor.AddressRequest.CreateBuilder(result.addr_).MergeFrom(value).BuildPartial();
+            result.addr_ != global::TCP.AddressRequest.DefaultInstance) {
+            result.addr_ = global::TCP.AddressRequest.CreateBuilder(result.addr_).MergeFrom(value).BuildPartial();
         } else {
           result.addr_ = value;
         }
@@ -667,7 +667,7 @@ namespace Akka.Remote.TestConductor {
       }
     }
     static Wrapper() {
-      object.ReferenceEquals(global::Akka.Remote.TestConductor.TestConductorProtocol.Descriptor, null);
+      object.ReferenceEquals(global::TCP.TestConductorProtocol.Descriptor, null);
     }
   }
   
@@ -690,11 +690,11 @@ namespace Akka.Remote.TestConductor {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.TestConductor.TestConductorProtocol.internal__static_Hello__Descriptor; }
+      get { return global::TCP.TestConductorProtocol.internal__static_Hello__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<Hello, Hello.Builder> InternalFieldAccessors {
-      get { return global::Akka.Remote.TestConductor.TestConductorProtocol.internal__static_Hello__FieldAccessorTable; }
+      get { return global::TCP.TestConductorProtocol.internal__static_Hello__FieldAccessorTable; }
     }
     
     public const int NameFieldNumber = 1;
@@ -709,12 +709,12 @@ namespace Akka.Remote.TestConductor {
     
     public const int AddressFieldNumber = 2;
     private bool hasAddress;
-    private global::Akka.Remote.TestConductor.Address address_;
+    private global::TCP.Address address_;
     public bool HasAddress {
       get { return hasAddress; }
     }
-    public global::Akka.Remote.TestConductor.Address Address {
-      get { return address_ ?? global::Akka.Remote.TestConductor.Address.DefaultInstance; }
+    public global::TCP.Address Address {
+      get { return address_ ?? global::TCP.Address.DefaultInstance; }
     }
     
     public override bool IsInitialized {
@@ -848,11 +848,11 @@ namespace Akka.Remote.TestConductor {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Remote.TestConductor.Hello.Descriptor; }
+        get { return global::TCP.Hello.Descriptor; }
       }
       
       public override Hello DefaultInstanceForType {
-        get { return global::Akka.Remote.TestConductor.Hello.DefaultInstance; }
+        get { return global::TCP.Hello.DefaultInstance; }
       }
       
       public override Hello BuildPartial() {
@@ -873,7 +873,7 @@ namespace Akka.Remote.TestConductor {
       }
       
       public override Builder MergeFrom(Hello other) {
-        if (other == global::Akka.Remote.TestConductor.Hello.DefaultInstance) return this;
+        if (other == global::TCP.Hello.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasName) {
           Name = other.Name;
@@ -929,7 +929,7 @@ namespace Akka.Remote.TestConductor {
               break;
             }
             case 18: {
-              global::Akka.Remote.TestConductor.Address.Builder subBuilder = global::Akka.Remote.TestConductor.Address.CreateBuilder();
+              global::TCP.Address.Builder subBuilder = global::TCP.Address.CreateBuilder();
               if (result.hasAddress) {
                 subBuilder.MergeFrom(Address);
               }
@@ -971,30 +971,30 @@ namespace Akka.Remote.TestConductor {
       public bool HasAddress {
        get { return result.hasAddress; }
       }
-      public global::Akka.Remote.TestConductor.Address Address {
+      public global::TCP.Address Address {
         get { return result.Address; }
         set { SetAddress(value); }
       }
-      public Builder SetAddress(global::Akka.Remote.TestConductor.Address value) {
+      public Builder SetAddress(global::TCP.Address value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasAddress = true;
         result.address_ = value;
         return this;
       }
-      public Builder SetAddress(global::Akka.Remote.TestConductor.Address.Builder builderForValue) {
+      public Builder SetAddress(global::TCP.Address.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasAddress = true;
         result.address_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeAddress(global::Akka.Remote.TestConductor.Address value) {
+      public Builder MergeAddress(global::TCP.Address value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasAddress &&
-            result.address_ != global::Akka.Remote.TestConductor.Address.DefaultInstance) {
-            result.address_ = global::Akka.Remote.TestConductor.Address.CreateBuilder(result.address_).MergeFrom(value).BuildPartial();
+            result.address_ != global::TCP.Address.DefaultInstance) {
+            result.address_ = global::TCP.Address.CreateBuilder(result.address_).MergeFrom(value).BuildPartial();
         } else {
           result.address_ = value;
         }
@@ -1009,7 +1009,7 @@ namespace Akka.Remote.TestConductor {
       }
     }
     static Hello() {
-      object.ReferenceEquals(global::Akka.Remote.TestConductor.TestConductorProtocol.Descriptor, null);
+      object.ReferenceEquals(global::TCP.TestConductorProtocol.Descriptor, null);
     }
   }
   
@@ -1032,11 +1032,11 @@ namespace Akka.Remote.TestConductor {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.TestConductor.TestConductorProtocol.internal__static_EnterBarrier__Descriptor; }
+      get { return global::TCP.TestConductorProtocol.internal__static_EnterBarrier__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<EnterBarrier, EnterBarrier.Builder> InternalFieldAccessors {
-      get { return global::Akka.Remote.TestConductor.TestConductorProtocol.internal__static_EnterBarrier__FieldAccessorTable; }
+      get { return global::TCP.TestConductorProtocol.internal__static_EnterBarrier__FieldAccessorTable; }
     }
     
     public const int NameFieldNumber = 1;
@@ -1051,11 +1051,11 @@ namespace Akka.Remote.TestConductor {
     
     public const int OpFieldNumber = 2;
     private bool hasOp;
-    private global::Akka.Remote.TestConductor.BarrierOp op_ = global::Akka.Remote.TestConductor.BarrierOp.Enter;
+    private global::TCP.BarrierOp op_ = global::TCP.BarrierOp.Enter;
     public bool HasOp {
       get { return hasOp; }
     }
-    public global::Akka.Remote.TestConductor.BarrierOp Op {
+    public global::TCP.BarrierOp Op {
       get { return op_; }
     }
     
@@ -1205,11 +1205,11 @@ namespace Akka.Remote.TestConductor {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Remote.TestConductor.EnterBarrier.Descriptor; }
+        get { return global::TCP.EnterBarrier.Descriptor; }
       }
       
       public override EnterBarrier DefaultInstanceForType {
-        get { return global::Akka.Remote.TestConductor.EnterBarrier.DefaultInstance; }
+        get { return global::TCP.EnterBarrier.DefaultInstance; }
       }
       
       public override EnterBarrier BuildPartial() {
@@ -1230,7 +1230,7 @@ namespace Akka.Remote.TestConductor {
       }
       
       public override Builder MergeFrom(EnterBarrier other) {
-        if (other == global::Akka.Remote.TestConductor.EnterBarrier.DefaultInstance) return this;
+        if (other == global::TCP.EnterBarrier.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasName) {
           Name = other.Name;
@@ -1338,11 +1338,11 @@ namespace Akka.Remote.TestConductor {
       public bool HasOp {
        get { return result.hasOp; }
       }
-      public global::Akka.Remote.TestConductor.BarrierOp Op {
+      public global::TCP.BarrierOp Op {
         get { return result.Op; }
         set { SetOp(value); }
       }
-      public Builder SetOp(global::Akka.Remote.TestConductor.BarrierOp value) {
+      public Builder SetOp(global::TCP.BarrierOp value) {
         PrepareBuilder();
         result.hasOp = true;
         result.op_ = value;
@@ -1351,7 +1351,7 @@ namespace Akka.Remote.TestConductor {
       public Builder ClearOp() {
         PrepareBuilder();
         result.hasOp = false;
-        result.op_ = global::Akka.Remote.TestConductor.BarrierOp.Enter;
+        result.op_ = global::TCP.BarrierOp.Enter;
         return this;
       }
       
@@ -1376,7 +1376,7 @@ namespace Akka.Remote.TestConductor {
       }
     }
     static EnterBarrier() {
-      object.ReferenceEquals(global::Akka.Remote.TestConductor.TestConductorProtocol.Descriptor, null);
+      object.ReferenceEquals(global::TCP.TestConductorProtocol.Descriptor, null);
     }
   }
   
@@ -1399,11 +1399,11 @@ namespace Akka.Remote.TestConductor {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.TestConductor.TestConductorProtocol.internal__static_AddressRequest__Descriptor; }
+      get { return global::TCP.TestConductorProtocol.internal__static_AddressRequest__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<AddressRequest, AddressRequest.Builder> InternalFieldAccessors {
-      get { return global::Akka.Remote.TestConductor.TestConductorProtocol.internal__static_AddressRequest__FieldAccessorTable; }
+      get { return global::TCP.TestConductorProtocol.internal__static_AddressRequest__FieldAccessorTable; }
     }
     
     public const int NodeFieldNumber = 1;
@@ -1418,12 +1418,12 @@ namespace Akka.Remote.TestConductor {
     
     public const int AddrFieldNumber = 2;
     private bool hasAddr;
-    private global::Akka.Remote.TestConductor.Address addr_;
+    private global::TCP.Address addr_;
     public bool HasAddr {
       get { return hasAddr; }
     }
-    public global::Akka.Remote.TestConductor.Address Addr {
-      get { return addr_ ?? global::Akka.Remote.TestConductor.Address.DefaultInstance; }
+    public global::TCP.Address Addr {
+      get { return addr_ ?? global::TCP.Address.DefaultInstance; }
     }
     
     public override bool IsInitialized {
@@ -1558,11 +1558,11 @@ namespace Akka.Remote.TestConductor {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Remote.TestConductor.AddressRequest.Descriptor; }
+        get { return global::TCP.AddressRequest.Descriptor; }
       }
       
       public override AddressRequest DefaultInstanceForType {
-        get { return global::Akka.Remote.TestConductor.AddressRequest.DefaultInstance; }
+        get { return global::TCP.AddressRequest.DefaultInstance; }
       }
       
       public override AddressRequest BuildPartial() {
@@ -1583,7 +1583,7 @@ namespace Akka.Remote.TestConductor {
       }
       
       public override Builder MergeFrom(AddressRequest other) {
-        if (other == global::Akka.Remote.TestConductor.AddressRequest.DefaultInstance) return this;
+        if (other == global::TCP.AddressRequest.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasNode) {
           Node = other.Node;
@@ -1639,7 +1639,7 @@ namespace Akka.Remote.TestConductor {
               break;
             }
             case 18: {
-              global::Akka.Remote.TestConductor.Address.Builder subBuilder = global::Akka.Remote.TestConductor.Address.CreateBuilder();
+              global::TCP.Address.Builder subBuilder = global::TCP.Address.CreateBuilder();
               if (result.hasAddr) {
                 subBuilder.MergeFrom(Addr);
               }
@@ -1681,30 +1681,30 @@ namespace Akka.Remote.TestConductor {
       public bool HasAddr {
        get { return result.hasAddr; }
       }
-      public global::Akka.Remote.TestConductor.Address Addr {
+      public global::TCP.Address Addr {
         get { return result.Addr; }
         set { SetAddr(value); }
       }
-      public Builder SetAddr(global::Akka.Remote.TestConductor.Address value) {
+      public Builder SetAddr(global::TCP.Address value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasAddr = true;
         result.addr_ = value;
         return this;
       }
-      public Builder SetAddr(global::Akka.Remote.TestConductor.Address.Builder builderForValue) {
+      public Builder SetAddr(global::TCP.Address.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasAddr = true;
         result.addr_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeAddr(global::Akka.Remote.TestConductor.Address value) {
+      public Builder MergeAddr(global::TCP.Address value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasAddr &&
-            result.addr_ != global::Akka.Remote.TestConductor.Address.DefaultInstance) {
-            result.addr_ = global::Akka.Remote.TestConductor.Address.CreateBuilder(result.addr_).MergeFrom(value).BuildPartial();
+            result.addr_ != global::TCP.Address.DefaultInstance) {
+            result.addr_ = global::TCP.Address.CreateBuilder(result.addr_).MergeFrom(value).BuildPartial();
         } else {
           result.addr_ = value;
         }
@@ -1719,7 +1719,7 @@ namespace Akka.Remote.TestConductor {
       }
     }
     static AddressRequest() {
-      object.ReferenceEquals(global::Akka.Remote.TestConductor.TestConductorProtocol.Descriptor, null);
+      object.ReferenceEquals(global::TCP.TestConductorProtocol.Descriptor, null);
     }
   }
   
@@ -1742,11 +1742,11 @@ namespace Akka.Remote.TestConductor {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.TestConductor.TestConductorProtocol.internal__static_Address__Descriptor; }
+      get { return global::TCP.TestConductorProtocol.internal__static_Address__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<Address, Address.Builder> InternalFieldAccessors {
-      get { return global::Akka.Remote.TestConductor.TestConductorProtocol.internal__static_Address__FieldAccessorTable; }
+      get { return global::TCP.TestConductorProtocol.internal__static_Address__FieldAccessorTable; }
     }
     
     public const int ProtocolFieldNumber = 1;
@@ -1933,11 +1933,11 @@ namespace Akka.Remote.TestConductor {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Remote.TestConductor.Address.Descriptor; }
+        get { return global::TCP.Address.Descriptor; }
       }
       
       public override Address DefaultInstanceForType {
-        get { return global::Akka.Remote.TestConductor.Address.DefaultInstance; }
+        get { return global::TCP.Address.DefaultInstance; }
       }
       
       public override Address BuildPartial() {
@@ -1958,7 +1958,7 @@ namespace Akka.Remote.TestConductor {
       }
       
       public override Builder MergeFrom(Address other) {
-        if (other == global::Akka.Remote.TestConductor.Address.DefaultInstance) return this;
+        if (other == global::TCP.Address.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasProtocol) {
           Protocol = other.Protocol;
@@ -2125,7 +2125,7 @@ namespace Akka.Remote.TestConductor {
       }
     }
     static Address() {
-      object.ReferenceEquals(global::Akka.Remote.TestConductor.TestConductorProtocol.Descriptor, null);
+      object.ReferenceEquals(global::TCP.TestConductorProtocol.Descriptor, null);
     }
   }
   
@@ -2148,41 +2148,41 @@ namespace Akka.Remote.TestConductor {
     }
     
     public static pbd::MessageDescriptor Descriptor {
-      get { return global::Akka.Remote.TestConductor.TestConductorProtocol.internal__static_InjectFailure__Descriptor; }
+      get { return global::TCP.TestConductorProtocol.internal__static_InjectFailure__Descriptor; }
     }
     
     protected override pb::FieldAccess.FieldAccessorTable<InjectFailure, InjectFailure.Builder> InternalFieldAccessors {
-      get { return global::Akka.Remote.TestConductor.TestConductorProtocol.internal__static_InjectFailure__FieldAccessorTable; }
+      get { return global::TCP.TestConductorProtocol.internal__static_InjectFailure__FieldAccessorTable; }
     }
     
     public const int FailureFieldNumber = 1;
     private bool hasFailure;
-    private global::Akka.Remote.TestConductor.FailType failure_ = global::Akka.Remote.TestConductor.FailType.Throttle;
+    private global::TCP.FailType failure_ = global::TCP.FailType.Throttle;
     public bool HasFailure {
       get { return hasFailure; }
     }
-    public global::Akka.Remote.TestConductor.FailType Failure {
+    public global::TCP.FailType Failure {
       get { return failure_; }
     }
     
     public const int DirectionFieldNumber = 2;
     private bool hasDirection;
-    private global::Akka.Remote.TestConductor.Direction direction_ = global::Akka.Remote.TestConductor.Direction.Send;
+    private global::TCP.Direction direction_ = global::TCP.Direction.Send;
     public bool HasDirection {
       get { return hasDirection; }
     }
-    public global::Akka.Remote.TestConductor.Direction Direction {
+    public global::TCP.Direction Direction {
       get { return direction_; }
     }
     
     public const int AddressFieldNumber = 3;
     private bool hasAddress;
-    private global::Akka.Remote.TestConductor.Address address_;
+    private global::TCP.Address address_;
     public bool HasAddress {
       get { return hasAddress; }
     }
-    public global::Akka.Remote.TestConductor.Address Address {
-      get { return address_ ?? global::Akka.Remote.TestConductor.Address.DefaultInstance; }
+    public global::TCP.Address Address {
+      get { return address_ ?? global::TCP.Address.DefaultInstance; }
     }
     
     public const int RateMBitFieldNumber = 6;
@@ -2355,11 +2355,11 @@ namespace Akka.Remote.TestConductor {
       }
       
       public override pbd::MessageDescriptor DescriptorForType {
-        get { return global::Akka.Remote.TestConductor.InjectFailure.Descriptor; }
+        get { return global::TCP.InjectFailure.Descriptor; }
       }
       
       public override InjectFailure DefaultInstanceForType {
-        get { return global::Akka.Remote.TestConductor.InjectFailure.DefaultInstance; }
+        get { return global::TCP.InjectFailure.DefaultInstance; }
       }
       
       public override InjectFailure BuildPartial() {
@@ -2380,7 +2380,7 @@ namespace Akka.Remote.TestConductor {
       }
       
       public override Builder MergeFrom(InjectFailure other) {
-        if (other == global::Akka.Remote.TestConductor.InjectFailure.DefaultInstance) return this;
+        if (other == global::TCP.InjectFailure.DefaultInstance) return this;
         PrepareBuilder();
         if (other.HasFailure) {
           Failure = other.Failure;
@@ -2465,7 +2465,7 @@ namespace Akka.Remote.TestConductor {
               break;
             }
             case 26: {
-              global::Akka.Remote.TestConductor.Address.Builder subBuilder = global::Akka.Remote.TestConductor.Address.CreateBuilder();
+              global::TCP.Address.Builder subBuilder = global::TCP.Address.CreateBuilder();
               if (result.hasAddress) {
                 subBuilder.MergeFrom(Address);
               }
@@ -2494,11 +2494,11 @@ namespace Akka.Remote.TestConductor {
       public bool HasFailure {
        get { return result.hasFailure; }
       }
-      public global::Akka.Remote.TestConductor.FailType Failure {
+      public global::TCP.FailType Failure {
         get { return result.Failure; }
         set { SetFailure(value); }
       }
-      public Builder SetFailure(global::Akka.Remote.TestConductor.FailType value) {
+      public Builder SetFailure(global::TCP.FailType value) {
         PrepareBuilder();
         result.hasFailure = true;
         result.failure_ = value;
@@ -2507,18 +2507,18 @@ namespace Akka.Remote.TestConductor {
       public Builder ClearFailure() {
         PrepareBuilder();
         result.hasFailure = false;
-        result.failure_ = global::Akka.Remote.TestConductor.FailType.Throttle;
+        result.failure_ = global::TCP.FailType.Throttle;
         return this;
       }
       
       public bool HasDirection {
        get { return result.hasDirection; }
       }
-      public global::Akka.Remote.TestConductor.Direction Direction {
+      public global::TCP.Direction Direction {
         get { return result.Direction; }
         set { SetDirection(value); }
       }
-      public Builder SetDirection(global::Akka.Remote.TestConductor.Direction value) {
+      public Builder SetDirection(global::TCP.Direction value) {
         PrepareBuilder();
         result.hasDirection = true;
         result.direction_ = value;
@@ -2527,37 +2527,37 @@ namespace Akka.Remote.TestConductor {
       public Builder ClearDirection() {
         PrepareBuilder();
         result.hasDirection = false;
-        result.direction_ = global::Akka.Remote.TestConductor.Direction.Send;
+        result.direction_ = global::TCP.Direction.Send;
         return this;
       }
       
       public bool HasAddress {
        get { return result.hasAddress; }
       }
-      public global::Akka.Remote.TestConductor.Address Address {
+      public global::TCP.Address Address {
         get { return result.Address; }
         set { SetAddress(value); }
       }
-      public Builder SetAddress(global::Akka.Remote.TestConductor.Address value) {
+      public Builder SetAddress(global::TCP.Address value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.hasAddress = true;
         result.address_ = value;
         return this;
       }
-      public Builder SetAddress(global::Akka.Remote.TestConductor.Address.Builder builderForValue) {
+      public Builder SetAddress(global::TCP.Address.Builder builderForValue) {
         pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
         PrepareBuilder();
         result.hasAddress = true;
         result.address_ = builderForValue.Build();
         return this;
       }
-      public Builder MergeAddress(global::Akka.Remote.TestConductor.Address value) {
+      public Builder MergeAddress(global::TCP.Address value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         if (result.hasAddress &&
-            result.address_ != global::Akka.Remote.TestConductor.Address.DefaultInstance) {
-            result.address_ = global::Akka.Remote.TestConductor.Address.CreateBuilder(result.address_).MergeFrom(value).BuildPartial();
+            result.address_ != global::TCP.Address.DefaultInstance) {
+            result.address_ = global::TCP.Address.CreateBuilder(result.address_).MergeFrom(value).BuildPartial();
         } else {
           result.address_ = value;
         }
@@ -2612,7 +2612,7 @@ namespace Akka.Remote.TestConductor {
       }
     }
     static InjectFailure() {
-      object.ReferenceEquals(global::Akka.Remote.TestConductor.TestConductorProtocol.Descriptor, null);
+      object.ReferenceEquals(global::TCP.TestConductorProtocol.Descriptor, null);
     }
   }
   
