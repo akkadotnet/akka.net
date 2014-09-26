@@ -47,7 +47,7 @@ namespace Akka.Actor
         public ActorRef Client { get; private set; }
         public IQuery WithClient(ActorRef client)
         {
-            return new Select();
+            return new Select(Deadline, Predicate, client);
         }
     }
 
