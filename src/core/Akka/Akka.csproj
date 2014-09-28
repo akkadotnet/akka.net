@@ -116,7 +116,7 @@
     <Compile Include="Actor\Scheduler.cs" />
     <Compile Include="Actor\Scope.cs" />
     <Compile Include="Actor\Settings.cs" />
-    <Compile Include="Actor\Stash.cs" />
+    <Compile Include="Actor\Stash\Stash.cs" />
     <Compile Include="Configuration\ConfigurationException.cs" />
     <Compile Include="Configuration\ConfigurationFactory.cs" />
     <Compile Include="Configuration\Config.cs" />
