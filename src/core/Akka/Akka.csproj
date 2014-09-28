@@ -117,14 +117,14 @@
     <Compile Include="Actor\Scope.cs" />
     <Compile Include="Actor\Settings.cs" />
     <Compile Include="Actor\Stash\Internal\AbstractStash.cs" />
-    <Compile Include="Actor\Stash\BoundedStashImpl.cs" />
+    <Compile Include="Actor\Stash\Internal\BoundedStashImpl.cs" />
     <Compile Include="Actor\Stash\IActorStash.cs" />
     <Compile Include="Actor\Stash\IStash.cs" />
     <Compile Include="Actor\Stash\IStashSupport.cs" />
     <Compile Include="Actor\Stash\UntypedActorWithBoundedStash.cs" />
     <Compile Include="Actor\Stash\StashFactory.cs" />
     <Compile Include="Actor\Stash\StashOverflowException.cs" />
-    <Compile Include="Actor\Stash\UnboundedStashImpl.cs" />
+    <Compile Include="Actor\Stash\Internal\UnboundedStashImpl.cs" />
     <Compile Include="Actor\Stash\UntypedActorWithUnboundedStash.cs" />
     <Compile Include="Actor\Stash\WithBoundedStash.cs" />
     <Compile Include="Actor\Stash\WithUnboundedStash.cs" />
