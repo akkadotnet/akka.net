@@ -3,13 +3,13 @@ using Akka.Event;
 using NLog;
 using System;
 
-namespace Akka.NLog
+namespace Akka.Logger.NLog
 {
     public class NLogLogger : ReceiveActor
     {
         private readonly LoggingAdapter _log = Logging.GetLogger(Context);
 
-        private static void WithNLog(Action<Logger> logStatement)
+        private static void WithNLog(Action<global::NLog.Logger> logStatement)
         {
             var logger = LogManager.GetCurrentClassLogger();
             logStatement(logger);

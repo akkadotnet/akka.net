@@ -3,7 +3,7 @@ using Akka.Event;
 using slf4net;
 using System;
 
-namespace Akka.slf4net
+namespace Akka.Logger.slf4net
 {
     public class Slf4NetLogger : UntypedActor
     {
