@@ -116,7 +116,7 @@
     <Compile Include="Actor\Scheduler.cs" />
     <Compile Include="Actor\Scope.cs" />
     <Compile Include="Actor\Settings.cs" />
-    <Compile Include="Actor\Stash\AbstractStash.cs" />
+    <Compile Include="Actor\Stash\Internal\AbstractStash.cs" />
     <Compile Include="Actor\Stash\BoundedStashImpl.cs" />
     <Compile Include="Actor\Stash\IActorStash.cs" />
     <Compile Include="Actor\Stash\IStash.cs" />

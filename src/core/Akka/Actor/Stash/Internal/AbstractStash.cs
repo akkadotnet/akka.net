@@ -4,7 +4,7 @@ using System.Linq;
 using Akka.Dispatch;
 using Akka.Util.Internal;
 
-namespace Akka.Actor
+namespace Akka.Actor.Internal
 {
     /// <summary>
     /// Abstract base class for stash support

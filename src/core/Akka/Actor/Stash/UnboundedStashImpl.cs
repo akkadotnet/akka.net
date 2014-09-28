@@ -1,3 +1,5 @@
+using Akka.Actor.Internal;
+
 namespace Akka.Actor
 {
     /// <summary>
