@@ -116,8 +116,7 @@ namespace Akka.Actor
         {
             get
             {
-                var mailbox = Deploy.Mailbox;
-                return mailbox == Deploy.NoMailboxGiven ? Mailboxes.DefaultMailboxId: mailbox;
+                return Deploy.Mailbox;
             }
         }
 
