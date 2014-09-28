@@ -9,7 +9,7 @@ namespace Akka.Actor.Internal
     /// <summary>
     /// Abstract base class for stash support
     /// </summary>
-    internal abstract class AbstractStash : IStash, IStashSupport
+    public abstract class AbstractStash : IStash, IStashSupport
     {
         protected IActorContext Context;
         protected ActorRef Self;

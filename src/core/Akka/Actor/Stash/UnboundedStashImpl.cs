@@ -1,12 +1,15 @@
-using Akka.Actor.Internal;
-
-namespace Akka.Actor
+namespace Akka.Actor.Internal
 {
-    /// <summary>
+    /// <summary>INTERNAL
     /// A stash implementation that is unbounded
+    /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    internal class UnboundedStashImpl : AbstractStash
+    public class UnboundedStashImpl : AbstractStash
     {
+        /// <summary>INTERNAL
+        /// A stash implementation that is bounded
+        /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+        /// </summary>
         public UnboundedStashImpl(IActorContext context)
             : base(context, int.MaxValue)
         {
