@@ -42,8 +42,18 @@ namespace Akka.Routing
 
         public Props RouteeProps { get { return _routeeProps; } }
 
+        public RouterConfig RouterConfig
+        {
+            get { return _routerConfig; }
+        }
 
-        protected void AddRoutees(Routee[] routees)
+
+        internal void AddRoutee(Routee routee)
+        {
+            AddRoutees(new []{routee});
+        }
+
+        internal void AddRoutees(Routee[] routees)
         {
             foreach(var routee in routees)
             {
@@ -62,25 +72,28 @@ namespace Akka.Routing
             return instance;
         }
 
-
-
-        internal void RemoveRoutee(ActorRef actorRef, bool stopChild)
+        internal void RemoveRoutees(IEnumerable<Routee> affectedRoutees, bool stopChild)
         {
             var routees = _router.Routees.ToList();
             routees.RemoveAll(r =>
             {
                 var routee = r as ActorRefRoutee;
-                if(routee != null)
+                if (routee != null)
                 {
-                    return routee.Actor == actorRef;
+                    return affectedRoutees.Contains(routee);
                 }
                 return false;
             });
             _router = _router.WithRoutees(routees.ToArray());
-            if(stopChild)
+            if (stopChild)
             {
-
+                //todo add stopchild support
             }
+        }
+
+        internal void RemoveRoutee(Routee routee, bool stopChild)
+        {
+            RemoveRoutees(new List<Routee>() { routee }, stopChild);
         }
 
         public override void Post(ActorRef sender, object message)

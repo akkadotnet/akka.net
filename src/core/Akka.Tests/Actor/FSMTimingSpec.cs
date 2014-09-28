@@ -4,12 +4,13 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.Util;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Actor
 {
 
-    public class FSMTimingSpec : AkkaSpec, ImplicitSender
+    public class FSMTimingSpec : AkkaSpec
     {
         public ActorRef Self { get { return TestActor; } }
 
@@ -260,7 +261,7 @@ namespace Akka.Tests.Actor
 
         public static void StaticAwaitCond(Func<bool> evaluator, TimeSpan max, TimeSpan? interval)
         {
-            InternalAwaitCondition(evaluator, max, interval, null,(format,args)=> XAssert.Fail(string.Format(format,args)));
+            InternalAwaitCondition(evaluator, max, interval,(format,args)=> XAssert.Fail(string.Format(format,args)));
         }
 
 

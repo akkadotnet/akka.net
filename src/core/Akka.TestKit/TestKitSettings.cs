@@ -16,9 +16,9 @@ namespace Akka.TestKit
 
         public TestKitSettings(Config config)
         {
-            _defaultTimeout = config.GetMillisDuration("akka.test.default-timeout", allowInfinite:false);
-            _singleExpectDefault = config.GetMillisDuration("akka.test.single-expect-default", allowInfinite: false);
-            _testEventFilterLeeway = config.GetMillisDuration("akka.test.filter-leeway", allowInfinite: false);
+            _defaultTimeout = config.GetTimeSpan("akka.test.default-timeout", allowInfinite:false);
+            _singleExpectDefault = config.GetTimeSpan("akka.test.single-expect-default", allowInfinite: false);
+            _testEventFilterLeeway = config.GetTimeSpan("akka.test.filter-leeway", allowInfinite: false);
             _timefactor = config.GetDouble("akka.test.timefactor");
             if(_timefactor <= 0)
                 throw new Exception(@"Expected a positive value for ""akka.test.timefactor"" but found "+_timefactor);

@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
-using Akka.TestKit.Internals;
 using Akka.Tests;
 using Xunit;
 using Akka.Util;

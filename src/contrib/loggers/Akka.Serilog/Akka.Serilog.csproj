@@ -30,6 +30,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Akka.Serilog.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Serilog">
@@ -48,6 +49,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="SerilogLogger.cs" />
+    <Compile Include="Event\Serilog\MessageTemplateCache.cs" />
+    <Compile Include="Event\Serilog\SerilogLogger.cs" />
+    <Compile Include="Event\Serilog\SerilogLogMessageFormatter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

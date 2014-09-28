@@ -4,7 +4,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.TestKit.Internals;
+using Akka.TestKit.Internal;
 
 namespace Akka.TestKit
 {
@@ -92,7 +92,7 @@ namespace Akka.TestKit
         {
             if(isMessage == null)
                 return InternalExpectMsg<T>(RemainingOrDilated(timeout), null, hint);
-            return InternalExpectMsg<T>(RemainingOrDilated(timeout), m => _assertions.AssertTrue(isMessage(m), "expected {0} but got {1} instead", hint ?? "", m), hint);
+            return InternalExpectMsg<T>(RemainingOrDilated(timeout), m => AssertPredicateIsTrueForMessage(isMessage, m, hint), hint);
         }
 
         /// <summary>
@@ -104,7 +104,12 @@ namespace Akka.TestKit
         {
             if(isMessage == null)
                 return InternalExpectMsg<T>(RemainingOrDilated(timeout), null, hint);
-            return InternalExpectMsg<T>(RemainingOrDilated(timeout), m => _assertions.AssertTrue(isMessage(m), "expected {0} but got {1} instead", hint ?? "", m), hint);
+            return InternalExpectMsg<T>(RemainingOrDilated(timeout), m => AssertPredicateIsTrueForMessage(isMessage, m, hint), hint);
+        }
+
+        private void AssertPredicateIsTrueForMessage<T>(Predicate<T> isMessage, T m, string hint)
+        {
+            _assertions.AssertTrue(isMessage(m), "Got a message of the expected type <{2}>. Also expected {0} but the message {{{1}}} of type <{3}> did not match", hint ?? "the predicate to return true", m, typeof(T).FullName, m.GetType().FullName);
         }
 
 

@@ -45,7 +45,7 @@ namespace Akka.Remote
     /// 
     /// Utility class to create <see cref="FailureDetector"/> instances via reflection.
     /// </summary>
-    internal static class FailureDetectorLoader
+    public static class FailureDetectorLoader
     {
         /// <summary>
         /// Loads an instantiates a given <see cref="FailureDetector"/> implementation. The class to be loaded must have a constructor

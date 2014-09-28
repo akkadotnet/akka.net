@@ -7,6 +7,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Util.Internal;
 
 namespace Akka.Remote
 {
@@ -259,8 +260,10 @@ namespace Akka.Remote
         readonly RemoteActorRefProvider _remoteProvider;
         readonly HeartbeatRsp _selfHeartbeatRspMsg = new HeartbeatRsp(AddressUidExtension.Uid(Context.System));
         readonly HashSet<Tuple<ActorRef, ActorRef>> _watching = new HashSet<Tuple<ActorRef, ActorRef>>();
+        protected HashSet<Tuple<ActorRef, ActorRef>> Watching { get { return _watching; } } //TODO: this needs to be immutable
         readonly HashSet<Address> _watchingNodes = new HashSet<Address>();
         readonly HashSet<Address> _unreachable = new HashSet<Address>();
+        protected HashSet<Address> Unreachable { get { return _unreachable; } }
         readonly Dictionary<Address, int> _addressUids = new Dictionary<Address, int>();
 
         readonly CancellationTokenSource _heartbeatCancellable;
@@ -340,7 +343,7 @@ namespace Akka.Remote
             {
                 if (!_unreachable.Contains(a) && !_failureDetector.IsAvailable(a))
                 {
-                    Log.Warn("Detected unreachable: [{0}]", a);
+                    Log.Warning("Detected unreachable: [{0}]", a);
                     int addressUid;
                     var nullableAddressUid =
                         _addressUids.TryGetValue(a, out addressUid) ? new int?(addressUid) : null;
@@ -405,7 +408,7 @@ namespace Akka.Remote
             _watchingNodes.Add(watcheeAddress);
         }
 
-        private void ProcessUnwatchRemote(ActorRef watchee, ActorRef watcher)
+        protected void ProcessUnwatchRemote(ActorRef watchee, ActorRef watcher)
         {
             //TODO: What to do about this. Remote actors seem to get 0 uid
             // as ActorPathSurrogate doesn't contain the uid

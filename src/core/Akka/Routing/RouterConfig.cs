@@ -4,6 +4,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Dispatch;
+using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -75,6 +76,14 @@ namespace Akka.Routing
             paths = routees.Select(x => x.Path.ToStringWithAddress()).ToArray();
         }
 
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal Routee RouteeFor(string path, IActorContext context)
+        {
+            return new ActorSelectionRoutee(context.ActorSelection(path));
+        }
+
         public Props Props()
         {
             return Akka.Actor.Props.Empty.WithRouter(this);
@@ -141,13 +150,13 @@ namespace Akka.Routing
         /// </summary>
         public SupervisorStrategy SupervisorStrategy { get; set; }
 
-        public Routee NewRoutee(Props routeeProps, IActorContext context)
+        public virtual Routee NewRoutee(Props routeeProps, IActorContext context)
         {
             var routee = new ActorRefRoutee(context.ActorOf(EnrichWithPoolDispatcher(routeeProps, context)));
             return routee;
         }
 
-        private Props EnrichWithPoolDispatcher(Props routeeProps, IActorContext context)
+        protected Props EnrichWithPoolDispatcher(Props routeeProps, IActorContext context)
         {
             //        if (usePoolDispatcher && routeeProps.dispatcher == Dispatchers.DefaultDispatcherId)
             //  routeeProps.withDispatcher("akka.actor.deployment." + context.self.path.elements.drop(1).mkString("/", "/", "")

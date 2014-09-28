@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Threading;
 using System;
 using Akka.Actor;
 using Akka.Util;
@@ -71,10 +72,9 @@ namespace Akka.TestKit
         }
 
         [Obsolete("Cannot create a TestProbe from a TestProbe", true)]
-        protected override TestProbe CreateTestProbe()
+        public override TestProbe CreateTestProbe()
         {
             throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
         }
-
     }
 }

@@ -3,6 +3,7 @@ using Akka.Actor;
 using System;
 using System.Threading.Tasks;
 using System.Linq;
+using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -49,25 +50,63 @@ namespace Akka.Routing
         {
             return Actor.Ask(message, timeout);
         }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((ActorRefRoutee)obj);
+        }
+
+        protected bool Equals(ActorRefRoutee other)
+        {
+            return Equals(Actor, other.Actor);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Actor != null ? Actor.GetHashCode() : 0);
+        }
     }
 
     public class ActorSelectionRoutee : Routee
     {
-        private readonly ActorSelection actor;
+        private readonly ActorSelection _actor;
+
+        public ActorSelection Selection { get { return _actor; } }
 
         public ActorSelectionRoutee(ActorSelection actor)
         {
-            this.actor = actor;
+            _actor = actor;
         }
 
         public override void Send(object message, ActorRef sender)
         {
-            actor.Tell(message, sender);
+            _actor.Tell(message, sender);
         }
 
         public override Task Ask(object message, TimeSpan? timeout)
         {
-            return actor.Ask(message, timeout);
+            return _actor.Ask(message, timeout);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((ActorSelectionRoutee)obj);
+        }
+
+        protected bool Equals(ActorSelectionRoutee other)
+        {
+            return Equals(_actor, other._actor);
+        }
+
+        public override int GetHashCode()
+        {
+            return (_actor != null ? _actor.GetHashCode() : 0);
         }
     }
 

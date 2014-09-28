@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Actor
 {      
@@ -163,6 +164,28 @@ namespace Akka.Actor
         {
             var actorSelection = new ActorSelection(anchor, sel.Elements);
             actorSelection.Tell(sel.Message, sender);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((ActorSelection) obj);
+        }
+
+        protected bool Equals(ActorSelection other)
+        {
+            return Equals(Anchor, other.Anchor) && Equals(Elements, other.Elements);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = Anchor != null ? Anchor.GetHashCode() : 0 * 397;
+                return Elements.Aggregate(hashCode, (current, element) => current ^ element.GetHashCode() * 17);
+            }
         }
     }
 

@@ -39,7 +39,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="config"></param>
         /// <param name="ev"></param>
-        public DeadlineFailureDetector(Config config, EventStream ev) : this(config.GetMillisDuration("acceptable-heartbeat-pause")) { }
+        public DeadlineFailureDetector(Config config, EventStream ev) : this(config.GetTimeSpan("acceptable-heartbeat-pause")) { }
 
         protected DeadlineFailureDetector(Clock clock)
         {

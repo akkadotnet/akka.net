@@ -179,7 +179,14 @@ namespace Akka.Configuration.Hocon
             return GetArray() != null;
         }
 
+
+        [Obsolete("Use GetTimeSpan instead")]
         public TimeSpan GetMillisDuration(bool allowInfinite = true)
+        {
+            return GetTimeSpan(allowInfinite);
+        }
+
+        public TimeSpan GetTimeSpan(bool allowInfinite = true)
         {
             string res = GetString();
             if (res.EndsWith("ms"))

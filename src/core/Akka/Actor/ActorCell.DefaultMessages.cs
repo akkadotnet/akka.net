@@ -330,6 +330,7 @@ namespace Akka.Actor
 
         public void SwapMailbox(DeadLetterMailbox mailbox)
         {
+            Mailbox.DebugPrint("{0} Swapping mailbox to DeadLetterMailbox",Self);
             Interlocked.Exchange(ref _mailbox, mailbox);
         }
 

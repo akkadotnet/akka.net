@@ -59,6 +59,11 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <value><c>true</c> if [address terminated]; otherwise, <c>false</c>.</value>
         public bool AddressTerminated { get; private set; }
+
+        public override string ToString()
+        {
+            return "<DeathWatchNotification>: " + Actor + ", ExistenceConfirmed=" + ExistenceConfirmed + ", AddressTerminated=" + AddressTerminated;
+        }
     }
 
     /// <summary>
@@ -88,6 +93,11 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <value>The cause.</value>
         public Exception Cause { get; private set; }
+
+        public override string ToString()
+        {
+            return "<Failed>: " + Child + (Cause!=null ? ", Cause=" + Cause:"");
+        }
     }
 
     /// <summary>
@@ -117,6 +127,11 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <value>The child.</value>
         public ActorRef Child { get; private set; }
+
+        public override string ToString()
+        {
+            return "<Supervise>: " + Child + ", Async=" + Async;
+        }
     }
 
     //used to start watching another actor (deathwatch)
@@ -147,6 +162,11 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <value>The watcher.</value>
         public ActorRef Watcher { get; private set; }
+
+        public override string ToString()
+        {
+            return "<Watch>: " + Watcher + " wants to watch " + Watchee;
+        }
     }
 
     //used to unsubscribe to deathwatch
@@ -177,6 +197,11 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <value>The watcher.</value>
         public ActorRef Watcher { get; private set; }
+
+        public override string ToString()
+        {
+            return "<Unwatch>: " + Watcher + " wants to unwatch " + Watchee;
+        }
     }
 
     /// <summary>
@@ -256,6 +281,11 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <value>The cause.</value>
         public Exception Cause { get; private set; }
+
+        public override string ToString()
+        {
+            return "<Recreate>" + (Cause==null? "":" Cause: " + Cause);
+        }
     }
 
     /// <summary>
@@ -277,6 +307,11 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <value>The caused by failure.</value>
         public Exception CausedByFailure { get; set; }
+
+        public override string ToString()
+        {
+            return "<Resume>" + (CausedByFailure == null ? "" : " CausedByFailure: " + CausedByFailure);
+        }
     }
 
     /// <summary>
@@ -330,6 +365,12 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <value>The child.</value>
         public ActorRef Child { get; private set; }
+
+
+        public override string ToString()
+        {
+            return "<StopChild> " + Child;
+        }
     }
 
     /// <summary>
@@ -351,6 +392,12 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <value>The reason.</value>
         public Exception Reason { get; private set; }
+
+
+        public override string ToString()
+        {
+            return "<Escalate>" + (Reason == null ? "" : " Reason: " + Reason);
+        }
     }
 
 
@@ -382,6 +429,11 @@ namespace Akka.Dispatch.SysMsg
         public ActorInitializationException Failure
         {
             get { return _failure; }
+        }
+
+        public override string ToString()
+        {
+            return "<Create>" + (_failure == null ? "" : " Failure: " + _failure);
         }
     }
 }

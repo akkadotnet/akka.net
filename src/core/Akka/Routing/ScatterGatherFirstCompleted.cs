@@ -63,7 +63,7 @@ namespace Akka.Routing
         public ScatterGatherFirstCompletedGroup(Config config)
             : base(config.GetStringList("routees.paths"))
         {
-            _within = config.GetMillisDuration("within");
+            _within = config.GetTimeSpan("within");
         }
 
         /// <summary>
@@ -126,7 +126,7 @@ namespace Akka.Routing
 
         public ScatterGatherFirstCompletedPool(Config config) : base(config)
         {
-            _within = config.GetMillisDuration("within");
+            _within = config.GetTimeSpan("within");
         }
 
         [Obsolete("for serialization only",true)]

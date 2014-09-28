@@ -30,6 +30,11 @@ namespace Akka.Actor
     /// </summary>
     public class ActorInitializationException : AkkaException
     {
+        public ActorInitializationException() : base(){}
+
+        public ActorInitializationException(string message) : base(message) { }
+
+        public ActorInitializationException(string message, Exception cause = null) : base(message, cause) { }
     }
 
     /// <summary>

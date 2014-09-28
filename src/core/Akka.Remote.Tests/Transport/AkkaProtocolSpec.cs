@@ -7,13 +7,14 @@ using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.Util;
+using Akka.Util.Internal;
 using Google.ProtocolBuffers;
 using Xunit;
 
 namespace Akka.Remote.Tests.Transport
 {
     
-    public class AkkaProtocolSpec : AkkaSpec, ImplicitSender
+    public class AkkaProtocolSpec : AkkaSpec
     {
         #region Setup / Config
 

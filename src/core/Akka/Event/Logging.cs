@@ -19,6 +19,11 @@ namespace Akka.Event
     /// </summary>
     public static class Logging
     {
+        private const string Debug = "DEBUG";
+        private const string Info = "INFO";
+        private const string Warning = "WARNING";
+        private const string Error = "ERROR";
+
         /// <summary>
         ///     The standard out logger
         /// </summary>
@@ -49,21 +54,17 @@ namespace Akka.Event
 
         public static string StringFor(this LogLevel logLevel)
         {
-            const string debug = "DEBUG";
-            const string info = "INFO";
-            const string warning = "WARNING";
-            const string error = "ERROR";
 
             switch (logLevel)
             {
                 case LogLevel.DebugLevel:
-                    return debug;
+                    return Debug;
                 case LogLevel.InfoLevel:
-                    return info;
+                    return Info;
                 case LogLevel.WarningLevel:
-                    return warning;
+                    return Warning;
                 case LogLevel.ErrorLevel:
-                    return error;
+                    return Error;
                 default:
                     throw new ArgumentException("Unknown LogLevel", "logLevel");
             }
@@ -72,14 +73,15 @@ namespace Akka.Event
         /// <summary>
         ///     Gets the logger.
         /// </summary>
-        /// <param name="cell">The cell.</param>
+        /// <param name="context">The cell.</param>
+        /// <param name="logMessageFormatter">The log message formatter.</param>
         /// <returns>LoggingAdapter.</returns>
-        public static LoggingAdapter GetLogger(IActorContext cell)
+        public static LoggingAdapter GetLogger(IActorContext context, ILogMessageFormatter logMessageFormatter = null)
         {
-            string logSource = cell.Self.ToString();
-            Type logClass = cell.Props.Type;
+            var logSource = context.Self.ToString();
+            var logClass = context.Props.Type;
 
-            return new BusLogging(cell.System.EventStream, logSource, logClass);
+            return new BusLogging(context.System.EventStream, logSource, logClass, logMessageFormatter ?? new DefaultLogMessageFormatter());
         }
 
         /// <summary>
@@ -87,13 +89,14 @@ namespace Akka.Event
         /// </summary>
         /// <param name="system">The system.</param>
         /// <param name="logSourceObj">The log source object.</param>
+        /// <param name="logMessageFormatter">The log message formatter.</param>
         /// <returns>LoggingAdapter.</returns>
-        public static LoggingAdapter GetLogger(ActorSystem system, object logSourceObj)
+        public static LoggingAdapter GetLogger(ActorSystem system, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
         {
-            return GetLogger(system.EventStream, logSourceObj);
+            return GetLogger(system.EventStream, logSourceObj, logMessageFormatter);
         }
 
-        public static LoggingAdapter GetLogger(LoggingBus loggingBus, object logSourceObj)
+        public static LoggingAdapter GetLogger(LoggingBus loggingBus, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
         {
             //TODO: refine this
             string logSource;
@@ -111,7 +114,7 @@ namespace Akka.Event
                 else
                     logClass = logSourceObj.GetType();
             }
-            return new BusLogging(loggingBus, logSource, logClass);
+            return new BusLogging(loggingBus, logSource, logClass, logMessageFormatter ?? new DefaultLogMessageFormatter());
         }
 
         /// <summary>
@@ -122,23 +125,38 @@ namespace Akka.Event
         /// <exception cref="System.ArgumentException">Unknown LogLevel;logLevel</exception>
         public static LogLevel LogLevelFor(string logLevel)
         {
-            const string debug = "DEBUG";
-            const string info = "INFO";
-            const string warning = "WARNING";
-            const string error = "ERROR";
             switch (logLevel)
             {
-                case debug:
+                case Debug:
                     return LogLevel.DebugLevel;
-                case info:
+                case Info:
                     return LogLevel.InfoLevel;
-                case warning:
+                case Warning:
                     return LogLevel.WarningLevel;
-                case error:
+                case Error:
                     return LogLevel.ErrorLevel;
                 default:
-                    throw new ArgumentException(string.Format("Unknown LogLevel: \"{0}\". Valid values are: \"{1}\", \"{2}\", \"{3}\", \"{4}\"", logLevel, debug, info, warning, error), logLevel);
+                    throw new ArgumentException(string.Format("Unknown LogLevel: \"{0}\". Valid values are: \"{1}\", \"{2}\", \"{3}\", \"{4}\"", logLevel, Debug, Info, Warning, Error), logLevel);
             }
+        }
+
+        /// <summary>
+        /// Given the type of <see cref="LogEvent"/> returns the corresponding <see cref="LogLevel"/>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns>The <see cref="LogLevel"/> that corresponds to the specified type.</returns>
+        /// <exception cref="System.ArgumentException">Thrown for unknown types, i.e. when <typeparamref name="T"/> is not
+        /// <see cref="Event.Debug"/>, <see cref="Event.Info"/>, <see cref="Event.Warning"/> or<see cref="Event.Error"/></exception>
+        public static LogLevel LogLevelFor<T>() where T:LogEvent
+        {
+            var type = typeof(T);
+            if(type == typeof(Debug)) return LogLevel.DebugLevel;
+            if(type == typeof(Info)) return LogLevel.InfoLevel;
+            if(type == typeof(Warning)) return LogLevel.WarningLevel;
+            if(type == typeof(Error)) return LogLevel.ErrorLevel;
+
+            throw new ArgumentException(string.Format("Unknown LogEvent type: \"{0}\". Valid types are: \"{1}\", \"{2}\", \"{3}\", \"{4}\"", type.FullName, typeof(Debug).FullName, typeof(Info).FullName, typeof(Warning).FullName, typeof(Error).FullName));
+            
         }
     }
 }
