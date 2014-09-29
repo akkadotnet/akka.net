@@ -264,8 +264,8 @@ namespace Akka.Tests.Routing
             var blackHole = ActorOf<BlackHoleActor>();
             var updatedRouter = router.AddRoutee(blackHole);
             updatedRouter.Routees.Count().ShouldBe(2);
-            updatedRouter.Routees.Cast<ActorRefRoutee>().FirstOrDefault(r => ReferenceEquals(r.Actor, TestActor)).ShouldNotBeSame(null);
-            updatedRouter.Routees.Cast<ActorRefRoutee>().FirstOrDefault(r => ReferenceEquals(r.Actor, blackHole)).ShouldNotBeSame(null);
+            updatedRouter.Routees.Cast<ActorRefRoutee>().Any(r => ReferenceEquals(r.Actor, TestActor)).ShouldBe(true);
+            updatedRouter.Routees.Cast<ActorRefRoutee>().Any(r => ReferenceEquals(r.Actor, blackHole)).ShouldBe(true);
         }
 
 
@@ -278,8 +278,8 @@ namespace Akka.Tests.Routing
 
             var updatedRouter = router.RemoveRoutee(TestActor);
             updatedRouter.Routees.Count().ShouldBe(2);
-            updatedRouter.Routees.Cast<ActorRefRoutee>().FirstOrDefault(r => ReferenceEquals(r.Actor, blackHole1)).ShouldNotBeSame(null);
-            updatedRouter.Routees.Cast<ActorRefRoutee>().FirstOrDefault(r => ReferenceEquals(r.Actor, blackHole2)).ShouldNotBeSame(null);
+            updatedRouter.Routees.Cast<ActorRefRoutee>().Any(r => ReferenceEquals(r.Actor, blackHole1)).ShouldBe(true);
+            updatedRouter.Routees.Cast<ActorRefRoutee>().Any(r => ReferenceEquals(r.Actor, blackHole2)).ShouldBe(true);
         }
     }
 }
