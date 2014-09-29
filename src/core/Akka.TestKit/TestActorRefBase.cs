@@ -35,7 +35,7 @@ namespace Akka.TestKit
             get { return _internalRef; }
         }
 
-        public InternalTestActorRef InternalRef
+        protected InternalTestActorRef InternalRef
         {
             get { return _internalRef; }
         }
