@@ -39,16 +39,6 @@ type ActorPath with
         let mutable address : Address = null
         if ActorPath.TryParseAddress(path, &address) then (true, address)
         else (false, address)
-    
-    static member Parse(path : string) = 
-        let mutable actorPath : ActorPath = null
-        if ActorPath.TryParse(path, &actorPath) then Some actorPath
-        else None
-    
-    static member ParseAddress(path : string) = 
-        let mutable address : Address = null
-        if ActorPath.TryParseAddress(path, &address) then Some address
-        else None
 
 /// <summary>
 /// Gives access to the next message throu let! binding in
