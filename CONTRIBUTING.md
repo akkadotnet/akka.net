@@ -108,6 +108,7 @@ If all commits are on _dev_ you need to move them to a new feature branch.
 
 You can rebase your local _dev_ on _upstream/dev_ (to remove any merge commits), rename it, and recreate _dev_
 ```
+git checkout dev
 git rebase upstream/dev
 git branch -m my-new-branch-123
 git branch dev upstream/dev
