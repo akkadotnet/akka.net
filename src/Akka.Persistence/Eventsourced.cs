@@ -52,6 +52,14 @@ namespace Akka.Persistence
 
     public class PersistentActorBase : ActorBase, IEventsourced
     {
+        public PersistentActorBase()
+        {
+        }
+
+        public PersistentActorBase(string name)
+        {
+        }
+
         protected override bool Receive(object message)
         {
             throw new System.NotImplementedException();

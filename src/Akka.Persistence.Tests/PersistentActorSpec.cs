@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Persistence.Tests
@@ -7,43 +9,68 @@ namespace Akka.Persistence.Tests
     {
         public PersistentActorSpec()
         {
-
+            PrepareTestCase();
         }
 
         [Fact]
         public void PersistentActor_must_recover_from_persisted_events()
         {
-            throw new NotImplementedException();
+            var processor = NamedProcessor(() => new Behavior1Processor(Name));
+            processor.Tell(GetState.Instance);
+            ExpectMsg<List<object>>().ShouldOnlyContainInOrder("a-1", "a-2");
         }
 
         [Fact]
         public void PersistentActor_must_handle_multiple_emitted_events_in_correct_order_for_a_single_persist_call()
         {
-            throw new NotImplementedException();
+            var processor = NamedProcessor(() => new Behavior1Processor(Name));
+            processor.Tell(new Cmd("b"));
+            processor.Tell(GetState.Instance);
+            ExpectMsg<List<object>>().ShouldOnlyContainInOrder("a-1", "a-2", "b-1", "b-2");
         }
 
         [Fact]
         public void PersistentActor_must_handle_multiple_emitted_events_in_correct_order_for_a_multiple_persist_calls()
         {
-            throw new NotImplementedException();
+            var processor = NamedProcessor(() => new Behavior2Processor(Name));
+            processor.Tell(new Cmd("b"));
+            processor.Tell(GetState.Instance);
+            ExpectMsg<List<object>>().ShouldOnlyContainInOrder("a-1", "a-2", "b-1", "b-2", "b-3", "b-4");
         }
 
         [Fact]
         public void PersistentActor_must_receive_emitted_events_immediately_after_command()
         {
-            throw new NotImplementedException();
+            var processor = NamedProcessor(() => new Behavior3Processor(Name));
+            processor.Tell(new Cmd("b"));
+            processor.Tell(new Cmd("c"));
+            processor.Tell(GetState.Instance);
+            ExpectMsg<List<object>>().ShouldOnlyContainInOrder("a-1", "a-2", "b-10", "b-11", "b-12", "c-10", "c-11", "c-12");
         }
 
         [Fact]
         public void PersistentActor_must_recover_on_command_failures()
         {
-            throw new NotImplementedException();
+            var processor = NamedProcessor(() => new Behavior3Processor(Name));
+            processor.Tell(new Cmd("b"));
+            processor.Tell("boom");
+            processor.Tell(new Cmd("c"));
+            processor.Tell(GetState.Instance);
+
+            // command that was added to state before failure (b-10) should not be replayed
+            ExpectMsg<List<object>>().ShouldOnlyContainInOrder("a-1", "a-2", "b-11", "b-12", "c-10", "c-11", "c-12");
         }
 
         [Fact]
         public void PersistentActor_must_allow_behavior_changes_in_event_handler_when_handling_first_event()
         {
-            throw new NotImplementedException();
+            var processor = NamedProcessor(() => new ChangeBehaviorInFirstEventHandlerProcessor(Name));
+            processor.Tell(new Cmd("b"));
+            processor.Tell(new Cmd("c"));
+            processor.Tell(new Cmd("e"));
+            processor.Tell(new Cmd("e"));
+            processor.Tell(GetState.Instance);
+            ExpectMsg<List<object>>().ShouldOnlyContainInOrder("a-1", "a-2", "b-0", "c-21", "c-22", "d-0", "e-21", "e-22");
         }
 
         [Fact]
@@ -55,7 +82,13 @@ namespace Akka.Persistence.Tests
         [Fact]
         public void PersistentActor_must_allow_behavior_changes_in_command_handler_as_first_action()
         {
-            throw new NotImplementedException();
+            var processor = NamedProcessor(() => new ChangeBehaviorInCommandHandlerFirstProcessor(Name));
+            processor.Tell(new Cmd("b"));
+            processor.Tell(new Cmd("c"));
+            processor.Tell(new Cmd("e"));
+            processor.Tell(new Cmd("e"));
+            processor.Tell(GetState.Instance);
+            ExpectMsg<List<object>>().ShouldOnlyContainInOrder("a-1", "a-2", "b-0", "c-30", "c-31", "c-32", "d-0", "e-30", "e-31", "e-32");
         }
 
         [Fact]
@@ -186,6 +219,14 @@ namespace Akka.Persistence.Tests
         public void PersistentActor_must_receive_RecoveryFinished_if_it_is_handled_after_all_events_have_been_replayed()
         {
             throw new NotImplementedException();
+        }
+
+        private void PrepareTestCase()
+        {
+            var processor = NamedProcessor(() => new Behavior1Processor(Name));
+            processor.Tell(new Cmd("a"));
+            processor.Tell(GetState.Instance);
+            ExpectMsg<List<object>>().ShouldOnlyContainInOrder("a-1", "a-2");
         }
     }
 }
