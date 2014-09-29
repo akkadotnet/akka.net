@@ -86,7 +86,7 @@ namespace Akka.Dispatch
             }
 
 
-            return FromConfig("");
+            return FromConfig(DefaultMailboxId);
         }
 
         /// <summary>
