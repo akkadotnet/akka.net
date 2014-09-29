@@ -20,6 +20,21 @@ namespace Akka.TestKit
             Assert.Equal(expected, self);
         }
 
+        public static void ShouldNotBe<T>(this T self, T expected, string message = null)
+        {
+            Assert.NotEqual(expected, self);
+        }
+
+        public static void ShouldBeSame<T>(this T self, T expected, string message = null)
+        {
+            Assert.Same(expected, self);
+        }
+
+        public static void ShouldNotBeSame<T>(this T self, T expected, string message = null)
+        {
+            Assert.NotSame(expected, self);
+        }
+
         public static void ShouldBeTrue(this bool b, string message = null)
         {
             Assert.True(b);
