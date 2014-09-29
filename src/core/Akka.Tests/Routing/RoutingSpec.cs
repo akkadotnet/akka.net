@@ -247,10 +247,9 @@ namespace Akka.Tests.Routing
         }             
 
         [Fact]
-        public void Router_AddRoute_should_not_add_same_router()
+        public void Router_AddRoute_should_not_add_same_routee()
         {
-            Routee[] routees = { new ActorRefRoutee(TestActor) };
-            var router = new Router(new RoundRobinRoutingLogic(), routees);
+            var router = new Router(new RoundRobinRoutingLogic(), TestActor);
 
             var updatedRouter = router.AddRoutee(TestActor);
             updatedRouter.Routees.Count().ShouldBe(1);
@@ -259,15 +258,28 @@ namespace Akka.Tests.Routing
 
 
         [Fact]
-        public void Router_AddRoute_should_add_new_router()
+        public void Router_AddRoute_should_add_new_routee()
         {
-            Routee[] routees = { new ActorRefRoutee(TestActor) };
-            var router = new Router(new RoundRobinRoutingLogic(), routees);
+            var router = new Router(new RoundRobinRoutingLogic(), TestActor);
             var blackHole = ActorOf<BlackHoleActor>();
             var updatedRouter = router.AddRoutee(blackHole);
             updatedRouter.Routees.Count().ShouldBe(2);
             updatedRouter.Routees.Cast<ActorRefRoutee>().FirstOrDefault(r => ReferenceEquals(r.Actor, TestActor)).ShouldNotBeSame(null);
             updatedRouter.Routees.Cast<ActorRefRoutee>().FirstOrDefault(r => ReferenceEquals(r.Actor, blackHole)).ShouldNotBeSame(null);
+        }
+
+
+        [Fact]
+        public void Router_RemoveRoute_should_remove_existing_routee_and_leave_the_rest()
+        {
+            var blackHole1 = ActorOf<BlackHoleActor>();
+            var blackHole2 = ActorOf<BlackHoleActor>();
+            var router = new Router(new RoundRobinRoutingLogic(), TestActor, blackHole1, blackHole2);
+
+            var updatedRouter = router.RemoveRoutee(TestActor);
+            updatedRouter.Routees.Count().ShouldBe(2);
+            updatedRouter.Routees.Cast<ActorRefRoutee>().FirstOrDefault(r => ReferenceEquals(r.Actor, blackHole1)).ShouldNotBeSame(null);
+            updatedRouter.Routees.Cast<ActorRefRoutee>().FirstOrDefault(r => ReferenceEquals(r.Actor, blackHole2)).ShouldNotBeSame(null);
         }
     }
 }
