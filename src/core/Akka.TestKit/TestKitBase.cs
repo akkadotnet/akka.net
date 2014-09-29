@@ -343,6 +343,20 @@ namespace Akka.TestKit
         }
 
         /// <summary>
+        /// Creates a Countdown latch wrapper for use in testing.
+        /// 
+        /// It uses a timeout when waiting and timeouts are specified as durations.
+        /// There's a default timeout of 5 seconds and the default count is 1.
+        /// Timeouts will always throw an exception.
+        /// </summary>
+        /// <param name="count">Optional. The count. Default: 1</param>
+        /// <returns>A new <see cref="TestLatch"/></returns>
+        public virtual TestLatch CreateTestLatch(int count=1)
+        {
+            return new TestLatch(Sys, count);
+        }
+
+        /// <summary>
         /// Wraps a <see cref="Barrier"/> for use in testing.
         /// It always uses a timeout when waiting.
         /// Timeouts will always throw an exception. The default timeout is 5 seconds.
