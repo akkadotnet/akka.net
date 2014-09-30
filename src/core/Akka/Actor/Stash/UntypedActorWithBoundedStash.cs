@@ -6,6 +6,7 @@ namespace Akka.Actor
     /// <summary>
     /// An UntypedActor with bounded Stash capabilites
     /// </summary>
+    [Obsolete("Inherit from UntypedActor and WithBoundedStash instead. This class will be removed in a future release.")]
     public abstract class UntypedActorWithBoundedStash : UntypedActor, WithBoundedStash
     {
 
@@ -15,6 +16,7 @@ namespace Akka.Actor
         /// The stash implementation available for this actor
         /// </summary>
         public IStash CurrentStash { get { return _stash; } set { _stash = value; } }
+        IStash IActorStash.Stash { get { return _stash; } set { _stash = value; } }
 
         /// <summary>
         /// Stashes the current message
@@ -47,6 +49,7 @@ namespace Akka.Actor
         {
             CurrentStash.UnstashAll(predicate);
         }
+
 
         #region ActorBase overrides
 

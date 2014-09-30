@@ -6,13 +6,16 @@ namespace Akka.Actor
     /// <summary>
     /// An UntypedActor with Unbounded Stash capabilites
     /// </summary>
-    public abstract class UntypedActorWithUnboundedStash : UntypedActor, WithUnboundedStash {
+    [Obsolete("Inherit from UntypedActor and WithBoundedStash instead. This class will be removed in a future release.")]
+    public abstract class UntypedActorWithUnboundedStash : UntypedActor, WithUnboundedStash
+    {
 
         private IStash _stash = new UnboundedStashImpl(Context);
         /// <summary>
         /// The stash implementation available for this actor
         /// </summary>
         public IStash CurrentStash { get { return _stash; } set { _stash = value; } }
+        IStash IActorStash.Stash { get { return _stash; } set { _stash = value; } }
 
         /// <summary>
         /// Stashes the current message

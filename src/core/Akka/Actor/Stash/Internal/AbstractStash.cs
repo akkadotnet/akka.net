@@ -98,6 +98,9 @@ An (unbounded) deque-based mailbox can be configured as follows:
      
         public IEnumerable<Envelope> ClearStash()
         {
+            if(_theStash.Count == 0)
+                return Enumerable.Empty<Envelope>();
+
             var stashed = _theStash;
             _theStash = new LinkedList<Envelope>();
             return stashed;

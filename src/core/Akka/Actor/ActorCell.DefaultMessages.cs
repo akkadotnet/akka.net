@@ -293,12 +293,20 @@ namespace Akka.Actor
                 return;
             }
 
-            ActorBase a = _actor;
-            if (a != null)
+            if (_actor != null)
             {
                 try
                 {
                     _actor.AroundPostStop();
+
+                    //Check if the actor uses a stash. If it does we must Unstash all messages. 
+                    //If the user do not want this behavior, the stash should be cleared in PostStop
+                    //either by calling ClearStash or by calling UnstashAll.
+                    var actorStash = _actor as IActorStash;
+                    if(actorStash != null)
+                    {
+                        actorStash.Stash.UnstashAll();
+                    }
                 }
                 catch (Exception x)
                 {
@@ -319,7 +327,7 @@ namespace Akka.Actor
             }
             Parent.Tell(new DeathWatchNotification(Self, true, false));
             TellWatchersWeDied();
-            UnwatchWatchedActors(a);
+            UnwatchWatchedActors(_actor);
             if(System.Settings.DebugLifecycle)
                 Publish(new Debug(Self.Path.ToString(), ActorType, "stopped"));
 
@@ -464,6 +472,15 @@ namespace Akka.Actor
             try
             {
                 failedActor.AroundPreRestart(m.Cause, optionalMessage);
+
+                //Check if the actor uses a stash. If it does we must Unstash all messages. 
+                //If the user do not want this behavior, the stash should be cleared in PreRestart
+                //either by calling ClearStash or by calling UnstashAll.
+                var actorStash = failedActor as IActorStash;
+                if(actorStash != null)
+                {
+                    actorStash.Stash.UnstashAll();
+                }
             }
             catch (Exception e)
             {

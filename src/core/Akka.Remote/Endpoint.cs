@@ -751,7 +751,7 @@ namespace Akka.Remote
             Inbound = handleOrActive != null;
             _ackDeadline = NewAckDeadline();
             _handle = handleOrActive;
-            CurrentStash = Context.CreateStash(this);
+            Stash = Context.CreateStash(this);
             InitFSM();
         }
 
@@ -772,7 +772,7 @@ namespace Akka.Remote
         private Deadline _ackDeadline;
         private AkkaProtocolHandle _handle;
 
-        public IStash CurrentStash { get; set; }
+        public IStash Stash { get; set; }
 
 
         #region FSM definitions
@@ -785,7 +785,7 @@ namespace Akka.Remote
                 @event.FsmEvent.Match()
                     .With<EndpointManager.Send>(send =>
                     {
-                        CurrentStash.Stash();
+                        Stash.Stash();
                         nextState = Stay();
                     })
                     .With<Status.Failure>(failure => failure.Cause.Match()
@@ -809,7 +809,7 @@ namespace Akka.Remote
                 @event.FsmEvent.Match()
                     .With<EndpointManager.Send>(send =>
                     {
-                        CurrentStash.Stash();
+                        Stash.Stash();
                         nextState = Stay();
                     })
                     .With<BackoffTimer>(timer =>
@@ -818,7 +818,7 @@ namespace Akka.Remote
                     })
                     .With<FlushAndStop>(flush =>
                     {
-                        CurrentStash.Stash(); //Flushing is postponed after the pending writes
+                        Stash.Stash(); //Flushing is postponed after the pending writes
                         nextState = Stay();
                     });
 
@@ -855,7 +855,7 @@ namespace Akka.Remote
                             }
                             else
                             {
-                                if (send.Seq == null) CurrentStash.Stash();
+                                if (send.Seq == null) Stash.Stash();
                                 nextState = GoTo(State.Buffering);
                             }
                         }
@@ -898,12 +898,12 @@ namespace Akka.Remote
                 if (@event.FsmEvent is Terminated)
                 {
                     reader = StartReadEndpoint(_handle);
-                    CurrentStash.UnstashAll();
+                    Stash.UnstashAll();
                     nextState = GoTo(State.Writing);
                 }
                 else
                 {
-                    CurrentStash.Stash();
+                    Stash.Stash();
                     nextState = Stay();
                 }
 
@@ -930,7 +930,7 @@ namespace Akka.Remote
                         }
                         else
                         {
-                            CurrentStash.Stash();
+                            Stash.Stash();
                         }
 
                         nextState = Stay();
@@ -962,7 +962,7 @@ namespace Akka.Remote
             {
                 if (initialState == State.Initializing && nextState == State.Writing)
                 {
-                    CurrentStash.UnstashAll();
+                    Stash.UnstashAll();
                     EventPublisher.NotifyListeners(new AssociatedEvent(LocalAddress, RemoteAddress, Inbound));
                 }
                 else if (initialState == State.Writing && nextState == State.Buffering)
@@ -971,7 +971,7 @@ namespace Akka.Remote
                 }
                 else if (initialState == State.Buffering && nextState == State.Writing)
                 {
-                    CurrentStash.UnstashAll();
+                    Stash.UnstashAll();
                     CancelTimer("backoff-timer");
                 }
             });
@@ -983,7 +983,7 @@ namespace Akka.Remote
                 CancelTimer(AckIdleTimerName);
                 //It is important to call UnstashAll for the stash to work properly and maintain messages during restart.
                 //As the FSM trait does not call base.PostStop, this call is needed
-                CurrentStash.UnstashAll();
+                Stash.UnstashAll();
                 if(_handle != null) //if something went wrong during the association process, the handle might be null
                     _handle.Disassociate(stopReason);
                 EventPublisher.NotifyListeners(new DisassociatedEvent(LocalAddress, RemoteAddress, Inbound));
