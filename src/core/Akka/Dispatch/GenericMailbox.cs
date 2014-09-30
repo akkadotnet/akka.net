@@ -118,20 +118,24 @@ namespace Akka.Dispatch
                     }
                 }
 
+                Interlocked.Exchange(ref status, MailboxStatus.Idle);
+
                 //there are still messages that needs to be processed
                 if (_systemMessages.Count > 0 || (!_isSuspended && _userMessages.Count > 0))
                 {
+                    //we still need has unscheduled messages for external info.
+                    //e.g. repointable actor ref uses it
+                    //TODO: will this be enough for external parties to work?
                     hasUnscheduledMessages = true;
-                }
 
-                if (hasUnscheduledMessages)
-                {
-                    dispatcher.Schedule(Run);
-                }
-                else
-                {
-                    Interlocked.Exchange(ref status, MailboxStatus.Idle);
-                }
+                    //this is subject of a race condition
+                    //but that doesn't matter, since if the above "if" misses
+                    //the "Post" that adds the new message will still schedule
+                    //this specific call is just to deal with existing messages
+                    //that wasn't scheduled due to dispatcher throughput beeing reached
+                    //or system messages arriving during user message processing
+                    Schedule();
+                }             
             });
         }
 
