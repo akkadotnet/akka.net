@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Akka.Actor;
+﻿using Akka.Actor;
 using Akka.Event;
 using Serilog;
+using System;
 
-namespace Akka.Serilog.Event.Serilog
+namespace Akka.Logger.Serilog
 {
     public class SerilogLogger : ReceiveActor
     {

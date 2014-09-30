@@ -1,9 +1,9 @@
-﻿using System;
-using Akka.Actor;
+﻿using Akka.Actor;
 using Akka.Event;
 using slf4net;
+using System;
 
-namespace Akka.slf4net.Event.slf4net
+namespace Akka.Logger.slf4net
 {
     public class Slf4NetLogger : UntypedActor
     {
@@ -11,7 +11,7 @@ namespace Akka.slf4net.Event.slf4net
         //private string mdcAkkaSourceAttributeName = "akkaSource";
         //private string mdcAkkaTimestamp = "akkaTimestamp";
 
-        private readonly LoggingAdapter log = Logging.GetLogger(Context);
+        private readonly LoggingAdapter _log = Logging.GetLogger(Context);
 
         private void WithMDC(Action<ILogger> logStatement)
         {
@@ -29,7 +29,7 @@ namespace Akka.slf4net.Event.slf4net
                 .With<Debug>(m => WithMDC(logger => logger.Debug("{0}", m.Message)))
                 .With<InitializeLogger>(m =>
                 {
-                    log.Info("Slf4jLogger started");
+                    _log.Info("Slf4jLogger started");
                     Sender.Tell(new LoggerInitialized());
                 });
         }
