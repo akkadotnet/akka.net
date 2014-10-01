@@ -29,16 +29,16 @@ module ActorSelection =
     let inline (<?) (actorPath : string) (msg : obj) = (select actorPath) <? msg
 
 type ActorPath with
-    
+
     static member TryParse(path : string) = 
         let mutable actorPath : ActorPath = null
-        if ActorPath.TryParse(path, &actorPath) then Some actorPath
-        else None
+        if ActorPath.TryParse(path, &actorPath) then (true, actorPath)
+        else (false, actorPath)
     
     static member TryParseAddress(path : string) = 
         let mutable address : Address = null
-        if ActorPath.TryParseAddress(path, &address) then Some address
-        else None
+        if ActorPath.TryParseAddress(path, &address) then (true, address)
+        else (false, address)
 
 /// <summary>
 /// Gives access to the next message throu let! binding in
