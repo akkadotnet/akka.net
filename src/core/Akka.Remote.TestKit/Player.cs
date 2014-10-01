@@ -135,6 +135,11 @@ namespace Akka.Remote.TestKit
                 _system.Log.Debug("passed barrer {0}", name);
             }
         }
+
+        public Task<Address> GetAddressFor(RoleName name)
+        {
+            return _client.Ask<Address>(new ToServer<GetAddress>(new GetAddress(name)));
+        }
     }
 
     /// <summary>
