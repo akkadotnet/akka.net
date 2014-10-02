@@ -47,7 +47,7 @@ namespace Akka.Event
         }
 
         private readonly bool _isDebugEnabled;
-        public bool IsDebugEnabled { get { return _isDebugEnabled; }}
+        public override bool IsDebugEnabled { get { return _isDebugEnabled; }}
 
         private readonly bool _isErrorEnabled;
         public override bool IsErrorEnabled { get { return _isErrorEnabled; }}
