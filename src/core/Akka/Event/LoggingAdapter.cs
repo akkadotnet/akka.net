@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Akka.Event
 {
@@ -16,22 +12,22 @@ namespace Akka.Event
         /// <summary>
         ///     The is debug enabled
         /// </summary>
-        public bool IsDebugEnabled;
+        public abstract bool IsDebugEnabled { get; }
 
         /// <summary>
         ///     The is error enabled
         /// </summary>
-        public bool IsErrorEnabled;
+        public abstract bool IsErrorEnabled { get; }
 
         /// <summary>
         ///     The is information enabled
         /// </summary>
-        public bool IsInfoEnabled;
+        public abstract bool IsInfoEnabled { get; }
 
         /// <summary>
         ///     The is warning enabled
         /// </summary>
-        public bool IsWarningEnabled;
+        public abstract bool IsWarningEnabled { get; }
 
         /// <summary>
         ///     Notifies the error.
