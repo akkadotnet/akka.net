@@ -1,10 +1,10 @@
 ﻿using Akka.Actor;
+using Akka.Actor.Internals;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Akka.Actor.Internals;
 
 namespace Akka.Event
 {
@@ -29,7 +29,7 @@ namespace Akka.Event
         ///     Gets the log level.
         /// </summary>
         /// <value>The log level.</value>
-        public LogLevel LogLevel { get { return _logLevel; }}
+        public LogLevel LogLevel { get { return _logLevel; } }
 
         /// <summary>
         ///     Determines whether [is sub classification] [the specified parent].
@@ -93,16 +93,16 @@ namespace Akka.Event
                 if (loggerType == null)
                 {
                     //TODO: create real exceptions and refine error messages
-                    throw new Exception("Logger specified in config cannot be found: \"" + strLoggerType+"\"");
+                    throw new Exception("Logger specified in config cannot be found: \"" + strLoggerType + "\"");
                 }
-                if(loggerType == typeof(StandardOutLogger))
+                if (loggerType == typeof(StandardOutLogger))
                 {
                     shouldRemoveStandardOutLogger = false;
                     continue;
                 }
                 var addLoggerTask = AddLogger(system, loggerType, logLevel, logName);
 
-                if(!addLoggerTask.Wait(timeout))
+                if (!addLoggerTask.Wait(timeout))
                 {
                     Publish(new Warning(logName, GetType(),
                         "Logger " + logName + " did not respond within " + timeout + " to InitializeLogger(bus)"));
@@ -116,13 +116,19 @@ namespace Akka.Event
                 }
             }
             _logLevel = logLevel;
-            if(shouldRemoveStandardOutLogger)
+
+            if (system.Settings.DebugUnhandledMessage)
+            {
+                var forwarder = system.SystemActorOf(Props.Create(typeof(UnhandledMessageForwarder)), "UnhandledMessageForwarder");
+                Subscribe(forwarder, typeof(UnhandledMessage));
+            }
+
+            if (shouldRemoveStandardOutLogger)
             {
                 Publish(new Debug(logName, GetType(), "StandardOutLogger being removed"));
                 Unsubscribe(Logging.StandardOutLogger);
             }
             Publish(new Debug(logName, GetType(), "Default Loggers started"));
-
         }
 
         /// <summary>
@@ -197,9 +203,33 @@ namespace Akka.Event
         private void SubscribeLogLevelAndAbove(LogLevel logLevel, ActorRef logger)
         {
             //subscribe to given log level and above
-            foreach(LogLevel level in _allLogLevels.Where(l => l >= logLevel))
+            foreach (LogLevel level in _allLogLevels.Where(l => l >= logLevel))
             {
                 Subscribe(logger, Logging.ClassFor(level));
+            }
+        }
+
+        private class UnhandledMessageForwarder : ActorBase
+        {
+            protected override bool Receive(object message)
+            {
+                var msg = message as UnhandledMessage;
+                if (msg != null)
+                {
+                    Context.System.EventStream.Publish(ToDebug(msg));
+                    return true;
+                }
+
+                return false;
+            }
+
+            private static Debug ToDebug(UnhandledMessage message)
+            {
+                var msg = string.Format(CultureInfo.InvariantCulture, "Unhandled message from {0} : {1}",
+                    message.Sender.Path, message.Message);
+
+                return new Debug(message.Recipient.Path.ToString(), message.Recipient.GetType(),
+                    msg);
             }
         }
     }
