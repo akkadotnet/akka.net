@@ -103,9 +103,19 @@ An (unbounded) deque-based mailbox can be configured as follows:
             return stashed;
         }
 
+        /// <summary>
+        /// Enqueues <paramref name="msg"/> at the first position in the mailbox. If the message contained in
+        /// the envelope is a <see cref="Terminated"/> message, it will be ensured that it can be re-received
+        /// by the actor.
+        /// </summary>
         private void EnqueueFirst(Envelope msg)
         {
             Mailbox.EnqueueFirst(msg);
+            var terminatedMessage = msg.Message as Terminated;
+            if(terminatedMessage != null)
+            {
+                _actorCell.TerminatedQueuedFor(terminatedMessage.ActorRef);
+            }
         }
     }
 }
