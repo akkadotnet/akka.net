@@ -228,7 +228,6 @@ namespace Akka.Remote.TestKit
             {
                 return ConfigurationFactory.ParseString(
                       @"akka {
-                        loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
                         loglevel = ""WARNING""
                         stdout-loglevel = ""WARNING""
                         actor {
@@ -241,7 +240,7 @@ namespace Akka.Remote.TestKit
                             }
                           }
                         }
-                      }");
+                      }").WithFallback(TestKitBase.DefaultConfig);
             }
         }
 
@@ -252,7 +251,7 @@ namespace Akka.Remote.TestKit
             var frames = trace.GetFrames();
             if (frames != null)
             {
-                for (var i = 1; i < frames.Count(); i++)
+                for (var i = 1; i < frames.Length; i++)
                 {
                     var t = frames[i].GetMethod().DeclaringType;
                     if (t != null && t.Name != @this) return t.Name;

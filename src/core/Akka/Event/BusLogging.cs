@@ -40,11 +40,23 @@ namespace Akka.Event
             this.logSource = logSource;
             this.logClass = logClass;
 
-            IsErrorEnabled = bus.LogLevel <= LogLevel.ErrorLevel;
-            IsWarningEnabled = bus.LogLevel <= LogLevel.WarningLevel;
-            IsInfoEnabled = bus.LogLevel <= LogLevel.InfoLevel;
-            IsDebugEnabled = bus.LogLevel <= LogLevel.DebugLevel;
+            _isErrorEnabled = bus.LogLevel <= LogLevel.ErrorLevel;
+            _isWarningEnabled = bus.LogLevel <= LogLevel.WarningLevel;
+            _isInfoEnabled = bus.LogLevel <= LogLevel.InfoLevel;
+            _isDebugEnabled = bus.LogLevel <= LogLevel.DebugLevel;
         }
+
+        private readonly bool _isDebugEnabled;
+        public bool IsDebugEnabled { get { return _isDebugEnabled; }}
+
+        private readonly bool _isErrorEnabled;
+        public override bool IsErrorEnabled { get { return _isErrorEnabled; }}
+
+        private readonly bool _isInfoEnabled;
+        public override bool IsInfoEnabled{ get { return _isInfoEnabled; }}
+
+        private readonly bool _isWarningEnabled;
+        public override bool IsWarningEnabled { get { return _isWarningEnabled; }}
 
         /// <summary>
         ///     Notifies the error.
