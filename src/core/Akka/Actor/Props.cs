@@ -25,6 +25,16 @@ namespace Akka.Actor
     public class Props
     {
         /// <summary>
+        ///     The default deploy
+        /// </summary>
+        private static readonly Deploy defaultDeploy = new Deploy();
+
+        /// <summary>
+        ///     No args
+        /// </summary>
+        private static readonly Object[] noArgs = new Object[] { };
+
+        /// <summary>
         ///     A Props instance whose creator will create an actor that doesn't respond to any message
         /// </summary>
         private static readonly Props empty = Props.Create<EmptyActor>();
@@ -37,10 +47,9 @@ namespace Akka.Actor
         /// <summary>
         ///     Initializes a new instance of the <see cref="Props" /> class.
         /// </summary>
-        public Props()
+        protected Props()
+            : this(defaultDeploy, null, noArgs)
         {
-            Arguments = new object[] {};
-            Deploy = new Deploy();
         }
 
         /// <summary>
@@ -49,44 +58,65 @@ namespace Akka.Actor
         /// <param name="type">The type.</param>
         /// <param name="args">The arguments.</param>
         public Props(Type type, object[] args)
+            : this(defaultDeploy, type, args)
         {
-            Type = type;
-            Arguments = args;
-            Deploy = new Deploy();
         }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Props" /> class.
         /// </summary>
         /// <param name="type">The type.</param>
-        protected Props(Type type)
+        public Props(Type type)
+            : this(defaultDeploy, type, noArgs)
         {
-            Type = type;
-            Arguments = new object[] {};
-            Deploy = new Deploy();
         }
 
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <param name="supervisorStrategy">The supervisor strategy.</param>
+        /// <param name="args">The arguments.</param>
         public Props(Type type, SupervisorStrategy supervisorStrategy, IEnumerable<object> args)
+            : this(defaultDeploy, type, args.ToArray())
         {
-            Type = type;
-            Arguments = args.ToArray();
-            Deploy = new Deploy();
             SupervisorStrategy = supervisorStrategy;
         }
 
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <param name="supervisorStrategy">The supervisor strategy.</param>
+        /// <param name="args">The arguments.</param>
         public Props(Type type, SupervisorStrategy supervisorStrategy, params object[] args)
+            : this(defaultDeploy, type, args)
         {
-            Type = type;
-            Arguments = args;
-            Deploy = new Deploy();
             SupervisorStrategy = supervisorStrategy;
         }
 
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// </summary>
+        /// <param name="deploy">The deploy.</param>
+        /// <param name="type">The type.</param>
+        /// <param name="args">The arguments.</param>
         public Props(Deploy deploy, Type type, IEnumerable<object> args)
+            : this(deploy, type, args.ToArray())
+        {
+        }
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// </summary>
+        /// <param name="deploy">The deploy.</param>
+        /// <param name="type">The type.</param>
+        /// <param name="args">The arguments.</param>
+        public Props(Deploy deploy, Type type, params object[] args)
         {
             Deploy = deploy;
             Type = type;
-            Arguments = args.ToArray();
+            Arguments = args;
         }
 
         /// <summary>
@@ -175,7 +205,7 @@ namespace Akka.Actor
 
             object[] args = newExpression.GetArguments().ToArray();
 
-            return new Props(typeof (TActor),supervisorStrategy, args);
+            return new Props(typeof (TActor), args);
         }
 
         /// <summary>
@@ -194,7 +224,7 @@ namespace Akka.Actor
         /// </summary>
         /// <typeparam name="TActor">The type of the t actor.</typeparam>
         /// <returns>Props.</returns>
-        public static Props Create<TActor>(SupervisorStrategy supervisorStrategy) where TActor : ActorBase
+        public static Props Create<TActor>(SupervisorStrategy supervisorStrategy) where TActor : ActorBase, new()
         {
             return new Props(typeof(TActor), supervisorStrategy);
         }
@@ -298,14 +328,7 @@ namespace Akka.Actor
         /// <returns>Props.</returns>
         protected virtual Props Copy()
         {
-            return new Props
-            {
-                Arguments = Arguments,
-                Type = Type,
-                Deploy = Deploy,
-                SupervisorStrategy = SupervisorStrategy,
-                
-            };
+            return new Props(Deploy, Type, Arguments) { SupervisorStrategy = SupervisorStrategy };
         }
 
         #region INTERNAL API
