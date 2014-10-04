@@ -114,9 +114,9 @@ namespace Akka.TestKit
         /// <returns>The new filter</returns>
         public EventFilterApplier Exception(Type exceptionType, string message = null, string start = null, string contains = null, string source = null)
         {
-            var messageMathcer = CreateMessageMatcher(message, start, contains);
+            var messageMatcher = CreateMessageMatcher(message, start, contains);
             var sourceMatcher = source == null ? null : new EqualsString(source);
-            return Exception(exceptionType, messageMathcer, sourceMatcher);
+            return Exception(exceptionType, messageMatcher, sourceMatcher);
         }
 
         /// <summary>
@@ -217,6 +217,16 @@ namespace Akka.TestKit
             return DeadLetter(deadLetter => deadLetter.Message is TMessage, source);
         }
 
+
+        /// <summary>
+        /// Creates a filter that catches dead letters of the specified type and matches the predicate, and optionally from the specified source.
+        /// </summary>
+        /// <returns></returns>
+        public EventFilterApplier DeadLetter<TMessage>(Func<TMessage, bool> isMatch, string source = null)
+        {
+            return DeadLetter(deadLetter => deadLetter.Message is TMessage && isMatch((TMessage)deadLetter.Message), source);
+        }
+
         /// <summary>
         /// Creates a filter that catches dead letters of the specified type and, optionally from the specified source.
         /// </summary>
@@ -224,6 +234,15 @@ namespace Akka.TestKit
         public EventFilterApplier DeadLetter(Type type, string source = null)
         {
             return DeadLetter(deadLetter => deadLetter.Message.GetType().IsInstanceOfType(type), source);
+        }
+
+        /// <summary>
+        /// Creates a filter that catches dead letters of the specified type and matches the predicate, and optionally from the specified source.
+        /// </summary>
+        /// <returns></returns>
+        public EventFilterApplier DeadLetter(Type type, Func<object, bool> isMatch, string source = null)
+        {
+            return DeadLetter(deadLetter => deadLetter.Message.GetType().IsInstanceOfType(type) && isMatch(deadLetter.Message), source);
         }
 
         private EventFilterApplier DeadLetter(Predicate<DeadLetter> isMatch, string source = null)
