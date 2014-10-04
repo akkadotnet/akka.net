@@ -146,7 +146,7 @@ namespace Akka.Persistence.Journal
                         Context.System.EventStream.Publish(msg);
                     }
 
-                    msg.PersistentActor.Tell(ReplayMessageSuccess.Instance);
+                    msg.PersistentActor.Tell(ReplayMessagesSuccess.Instance);
                 }
                 catch (Exception e)
                 {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Akka.Actor;
 
 namespace Akka.Persistence
@@ -30,7 +31,9 @@ namespace Akka.Persistence
         private Exception _recoveryFailureCause;
         private Envelope _recoveryFailureMessage;
         private long _lastSequenceNr = 0L;
-        private Persistent _currentPersistent;
+        private IPersistentRepresentation _currentPersistent;
+
+        protected internal List<IResequencable> ProcessorBatch;
 
         protected Recovery()
         {
@@ -42,12 +45,16 @@ namespace Akka.Persistence
             }
 
             PersistenceId = persistenceExt.PersistenceId(Self);
+            ProcessorBatch = new List<IResequencable>();
         }
 
         public string SnapshoterId { get; private set; }
         public string PersistenceId { get; private set; }
         public long LastSequenceNr { get { return _lastSequenceNr; } }
         public long SnapshotSequenceNr { get { return _lastSequenceNr; }}
+
+        internal ActorRef Journal { get; private set; }
+
         public void LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
         {
             throw new NotImplementedException();
@@ -88,13 +95,13 @@ namespace Akka.Persistence
             throw new NotImplementedException();
         }
 
-        protected void WithCurrentPersistent(Persistent persistent, Action<Persistent> body)
+        protected internal void WithCurrentPersistent(IPersistentRepresentation persistent, Action<Receive, IPersistentRepresentation> body)
         {
             try
             {
                 _currentPersistent = persistent;
                 UpdateLastSequenceNr(persistent);
-                body(persistent);
+                body(Receive, persistent);
             }
             finally
             {
@@ -102,60 +109,29 @@ namespace Akka.Persistence
             }
         }
 
-        private void UpdateLastSequenceNr(Persistent persistent)
+        internal void InternalUnhandled(object message)
+        {
+            Unhandled(message);
+        }
+
+        internal void UpdateLastSequenceNr(IPersistentRepresentation persistent)
+        {
+            throw new NotImplementedException();
+        }
+        internal void UpdateLastSequenceNr(long sequenceNumber)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal void OnReplayFailure(Receive receive, bool shouldAwait, Exception cause)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal void OnReplaySuccess(Receive receive, bool shouldAwait)
         {
             throw new NotImplementedException();
         }
     }
 
-    internal abstract class State
-    {
-        private readonly Action<object> _unhandled;
-        private readonly Action<Persistent, Action<Persistent>> _withCurrentPersistent;
-
-        protected State(Action<object> unhandled, Action<Persistent, Action<Persistent>> withCurrentPersistent)
-        {
-            _unhandled = unhandled;
-            _withCurrentPersistent = withCurrentPersistent;
-        }
-
-        public abstract void AroundReceive(Receive receive, object message);
-
-        protected void Process(Receive receive, object message)
-        {
-            var handled = receive(message);
-            if (!handled)
-            {
-                _unhandled(message);
-            }
-        }
-
-        protected void ProcessPersistent(Receive receive, Persistent persistent)
-        {
-            _withCurrentPersistent(persistent, p => Process(receive, persistent));
-        }
-
-        protected void RecordFailure(Exception cause)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    internal class RecoveryPendingState : State
-    {
-        public RecoveryPendingState(Action<object> unhandled, Action<Persistent, Action<Persistent>> withCurrentPersistent) 
-            : base(unhandled, withCurrentPersistent)
-        {
-        }
-
-        public override void AroundReceive(Receive receive, object message)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override string ToString()
-        {
-            return "recovery pending";
-        }
-    }
 }

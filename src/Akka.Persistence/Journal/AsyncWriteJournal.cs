@@ -120,7 +120,7 @@ namespace Akka.Persistence.Journal
                     {
                         message.PersistentActor.Tell(new ReplayedMessage(p), p.Sender);
                     }
-                    message.PersistentActor.Tell(ReplayMessageSuccess.Instance);
+                    message.PersistentActor.Tell(ReplayMessagesSuccess.Instance);
                 }
                 catch (Exception e)
                 {

@@ -50,7 +50,7 @@ namespace Akka.Persistence
         public Action<object> Handler { get; private set; }
     }
 
-    public class PersistentActorBase : ActorBase, IEventsourced
+    public class PersistentActorBase : Recovery, IEventsourced
     {
         public PersistentActorBase()
         {
@@ -64,6 +64,9 @@ namespace Akka.Persistence
         {
             throw new System.NotImplementedException();
         }
+
+        internal IState CurrentState { get; set; }
+        internal IGuaranteedDeliverer Deliverer { get; private set; }
 
         public Receive ReceiveRecover { get; private set; }
         public Receive ReceiveCommand { get; private set; }
@@ -97,9 +100,5 @@ namespace Akka.Persistence
             throw new NotImplementedException();
         }
 
-        public void UnstashAll()
-        {
-            throw new NotImplementedException();
-        }
     }
 }

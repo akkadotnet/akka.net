@@ -44,7 +44,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AtLeastOnceDelivery.cs" />
+    <Compile Include="GuaranteedDelivery.cs" />
     <Compile Include="Eventsourced.cs" />
     <Compile Include="JournalProtocol.cs" />
     <Compile Include="Journal\AsyncRecovery.cs" />
@@ -63,6 +63,7 @@
     <Compile Include="Snapshot.cs" />
     <Compile Include="Snapshot\LocalSnapshotStore.cs" />
     <Compile Include="Snapshot\SnapshotStore.cs" />
+    <Compile Include="State.cs" />
     <Compile Include="Views.cs" />
   </ItemGroup>
   <ItemGroup>

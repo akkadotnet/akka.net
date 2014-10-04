@@ -194,18 +194,18 @@ namespace Akka.Persistence
 
     internal struct ReplayedMessage
     {
-        public ReplayedMessage(IPersistentRepresentation persitent) : this()
+        public ReplayedMessage(IPersistentRepresentation persistent) : this()
         {
-            Persitent = persitent;
+            Persistent = persistent;
         }
 
-        public IPersistentRepresentation Persitent { get; private set; }
+        public IPersistentRepresentation Persistent { get; private set; }
     }
 
-    internal class ReplayMessageSuccess
+    internal class ReplayMessagesSuccess
     {
-        public static readonly ReplayMessageSuccess Instance = new ReplayMessageSuccess();
-        private ReplayMessageSuccess()
+        public static readonly ReplayMessagesSuccess Instance = new ReplayMessagesSuccess();
+        private ReplayMessagesSuccess()
         {
         }
     }
