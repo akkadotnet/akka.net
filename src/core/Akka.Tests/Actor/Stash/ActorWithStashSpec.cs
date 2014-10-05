@@ -28,6 +28,14 @@ namespace Akka.Tests.Actor.Stash
         }
 
         [Fact]
+        public void An_actor_with_bounded_stash_must_have_a_stash_assigned_to_it()
+        {
+            var actor = ActorOfAsTestActorRef<BoundedStashActor>();
+            Assert.NotNull(actor.UnderlyingActor.Stash);
+            Assert.IsAssignableFrom<BoundedStashImpl>(actor.UnderlyingActor.Stash);
+        }
+
+        [Fact]
         public void An_actor_with_Stash_Must_stash_and_unstash_messages()
         {
             var stasher = ActorOf<StashingActor>("stashing-actor");
@@ -126,6 +134,11 @@ namespace Akka.Tests.Actor.Stash
         }
 
         private class UnboundedStashActor : BlackHoleActor, WithUnboundedStash
+        {
+            public IStash Stash { get; set; }
+        }
+
+        private class BoundedStashActor : BlackHoleActor, WithBoundedStash
         {
             public IStash Stash { get; set; }
         }

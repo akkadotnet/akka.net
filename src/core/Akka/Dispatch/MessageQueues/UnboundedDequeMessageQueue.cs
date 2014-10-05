@@ -12,4 +12,11 @@ namespace Akka.Dispatch.MessageQueues
         {
         }
     }
+    public class BoundedDequeMessageQueue : DequeWrapperMessageQueue, BoundedDequeBasedMessageQueueSemantics
+    {
+        public BoundedDequeMessageQueue()
+            : base(new BoundedMessageQueue())
+        {
+        }
+    }
 }
