@@ -244,6 +244,7 @@
     <Compile Include="Util\MurmurHash.cs" />
     <Compile Include="Util\Reflection\ExpressionExtensions.cs" />
     <Compile Include="PatternMatch.cs" />
+    <Compile Include="Util\Resolver.cs" />
     <Compile Include="Util\ThreadLocalRandom.cs" />
     <Compile Include="Util\WildcardTree.cs" />
     <Compile Include="Util\MatchHandler\Argument.cs" />
