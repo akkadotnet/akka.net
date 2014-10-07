@@ -49,8 +49,9 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="assertions"></param>
         /// <param name="system">Optional: The actor system.</param>
-        protected TestKitBase(TestKitAssertions assertions, ActorSystem system = null)
-            : this(assertions, system, _defaultConfig)
+        /// <param name="testActorName">Optional: The name of the TestActor.</param>
+        protected TestKitBase(TestKitAssertions assertions, ActorSystem system = null, string testActorName=null)
+            : this(assertions, system, _defaultConfig, null, testActorName)
         {
         }
 
@@ -59,14 +60,15 @@ namespace Akka.TestKit
         /// A new system with the specified configuration will be created.
         /// </summary>
         /// <param name="config">The configuration to use for the system.</param>
+        /// <param name="testActorName">Optional: The name of the TestActor.</param>
         /// <param name="assertions"></param>
         /// <param name="actorSystemName"></param>
-        protected TestKitBase(TestKitAssertions assertions, Config config, string actorSystemName = null)
-            : this(assertions, null, config ?? ConfigurationFactory.Empty, actorSystemName)
+        protected TestKitBase(TestKitAssertions assertions, Config config, string actorSystemName = null, string testActorName = null)
+            : this(assertions, null, config ?? ConfigurationFactory.Empty, actorSystemName, testActorName)
         {
         }
 
-        private TestKitBase(TestKitAssertions assertions, ActorSystem system, Config config, string actorSystemName = null)
+        private TestKitBase(TestKitAssertions assertions, ActorSystem system, Config config, string actorSystemName, string testActorName)
         {
             if(assertions == null) throw new ArgumentNullException("assertions");
             if(system == null)
@@ -83,8 +85,10 @@ namespace Akka.TestKit
             _queue = new BlockingQueue<MessageEnvelope>();
             _log = Logging.GetLogger(system, GetType());
             _eventFilterFactory = new EventFilterFactory(this);
+            if (string.IsNullOrEmpty(testActorName))
+                testActorName = "testActor" + _testActorId.IncrementAndGet();
 
-            var testActor = CreateTestActor(system, "testActor" + _testActorId.IncrementAndGet());
+            var testActor = CreateTestActor(system, testActorName);
             //Wait for the testactor to start
             AwaitCondition(() =>
             {
@@ -337,9 +341,14 @@ namespace Akka.TestKit
         }
 
 
-        public virtual TestProbe CreateTestProbe()
+        /// <summary>
+        /// Creates a new <see cref="TestProbe" />.
+        /// </summary>
+        /// <param name="name">Optional: The name of the probe.</param>
+        /// <returns></returns>
+        public virtual TestProbe CreateTestProbe(string name=null)
         {
-            return new TestProbe(Sys, _assertions);
+            return new TestProbe(Sys, _assertions, name);
         }
 
         /// <summary>
