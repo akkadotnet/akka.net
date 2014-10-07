@@ -102,6 +102,7 @@
     <Compile Include="Actor\ReceiveTimeoutSpec.cs" />
     <Compile Include="Actor\RootGuardianActorRef_Tests.cs" />
     <Compile Include="Actor\StashMailboxSpec.cs" />
+    <Compile Include="Actor\Stash\ActorWithStashSpec.cs" />
     <Compile Include="Configuration\ConfigurationSpec.cs" />
     <Compile Include="Actor\ReceiveActorTests_Become.cs" />
     <Compile Include="Actor\ReceiveActorTests_LifeCycle.cs" />

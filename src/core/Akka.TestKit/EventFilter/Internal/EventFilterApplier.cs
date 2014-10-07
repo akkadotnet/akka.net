@@ -116,11 +116,11 @@ namespace Akka.TestKit.Internal
                     {
                         var expectedNumberOfEvents = expectedOccurrences.Value;
                         if(actualNumberOfEvents < expectedNumberOfEvents)
-                            msg = string.Format("Timeout ({0}) while waiting for messages. Only received {1}/{2} messages that matched filter [{3}]", timeoutValue, actualNumberOfEvents, expectedNumberOfEvents, _filters);
+                            msg = string.Format("Timeout ({0}) while waiting for messages. Only received {1}/{2} messages that matched filter [{3}]", timeoutValue, actualNumberOfEvents, expectedNumberOfEvents, string.Join(",", _filters));
                         else
                         {
                             var tooMany = actualNumberOfEvents - expectedNumberOfEvents;
-                            msg = string.Format("Received {0} {1} too many. Expected {2} {3} but recieved {4} that matched filter [{5}]", tooMany, GetMessageString(tooMany), expectedNumberOfEvents, GetMessageString(expectedNumberOfEvents), actualNumberOfEvents, _filters);
+                            msg = string.Format("Received {0} {1} too many. Expected {2} {3} but recieved {4} that matched filter [{5}]", tooMany, GetMessageString(tooMany), expectedNumberOfEvents, GetMessageString(expectedNumberOfEvents), actualNumberOfEvents, string.Join(",", _filters));
                         }
                     }
                     else

@@ -243,6 +243,15 @@ namespace Akka.Actor
         protected virtual ActorBase CreateNewActorInstance()
         {
             var actor = _props.NewActor();
+
+            //Check if the actor needs a stash
+            var actorStash = actor as IActorStash;
+            if(actorStash != null && actorStash.Stash==null)
+            {
+                //Only assign a new stash if one hasn't been created by the actor already
+                actorStash.Stash = StashFactory.CreateStash(this, actorStash);
+            }
+
             var initializableActor = actor as InitializableActor;
             if(initializableActor != null)
             {

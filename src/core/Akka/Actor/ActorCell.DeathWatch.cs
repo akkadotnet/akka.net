@@ -75,7 +75,7 @@ namespace Akka.Actor
             }
         }
 
-        private void TerminatedQueuedFor(ActorRef subject)
+        public void TerminatedQueuedFor(ActorRef subject)
         {
             _terminatedQueue.Add(subject);
         }

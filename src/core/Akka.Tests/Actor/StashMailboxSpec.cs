@@ -37,11 +37,11 @@ namespace Akka.Tests.Actor
 
         private class UnboundedStashActor : BlackHoleActor, WithUnboundedStash
         {
-            public IStash CurrentStash { get; set; }
+            public IStash Stash { get; set; }
         }
         private class BoundedStashActor : BlackHoleActor, WithBoundedStash
         {
-            public IStash CurrentStash { get; set; }
+            public IStash Stash { get; set; }
         }
     }
 }
