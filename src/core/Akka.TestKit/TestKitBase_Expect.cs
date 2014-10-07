@@ -56,7 +56,7 @@ namespace Akka.TestKit
 
 
         /// <summary>
-        /// Receive one message of the specified type from the test actor and calls the optional 
+        /// Receive one message of the specified type from the test actor and calls the 
         /// action that performs extra assertions.
         /// Use this variant to implement more complicated or conditional processing.
         /// 
@@ -68,6 +68,39 @@ namespace Akka.TestKit
         public T ExpectMsg<T>(Action<T> assert, TimeSpan? timeout = null, string hint = null)
         {
             return InternalExpectMsg(RemainingOrDilated(timeout), assert, hint);
+        }
+
+        /// <summary>
+        /// Receive one message of the specified type from the test actor and assert that the given
+        /// predicate accepts it.
+        /// Use this variant to implement more complicated or conditional processing.
+        /// 
+        /// Wait time is bounded by the given duration, if specified; otherwise
+        /// wait time is bounded by remaining time for execution of the innermost enclosing 'within'
+        /// block, if inside a 'within' block; otherwise by the config value 
+        /// "akka.test.single-expect-default".
+        /// </summary>
+        public T ExpectMsg<T>(Func<T, ActorRef, bool> isMessageAndSender, TimeSpan? timeout = null, string hint = null)
+        {
+            return InternalExpectMsg<T>(RemainingOrDilated(RemainingOrDilated(timeout)), (m, sender) =>
+            {
+                _assertions.AssertTrue(isMessageAndSender(m, sender), "Got a message of the expected type <{2}> from {4}. Also expected {0} but the message {{{1}}} of type <{3}> did not match", hint ?? "the predicate to return true", m, typeof(T).FullName, m.GetType().FullName, sender);
+            }, hint);
+        }
+
+        /// <summary>
+        /// Receive one message of the specified type from the test actor calls the 
+        /// action that performs extra assertions.
+        /// Use this variant to implement more complicated or conditional processing.
+        /// 
+        /// Wait time is bounded by the given duration, if specified; otherwise
+        /// wait time is bounded by remaining time for execution of the innermost enclosing 'within'
+        /// block, if inside a 'within' block; otherwise by the config value 
+        /// "akka.test.single-expect-default".
+        /// </summary>
+        public T ExpectMsg<T>(Action<T, ActorRef> assertMessageAndSender, TimeSpan? timeout = null, string hint = null)
+        {
+            return InternalExpectMsg<T>(RemainingOrDilated(RemainingOrDilated(timeout)), assertMessageAndSender, hint);
         }
 
 
