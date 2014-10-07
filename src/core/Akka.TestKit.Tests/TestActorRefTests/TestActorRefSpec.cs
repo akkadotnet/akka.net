@@ -99,7 +99,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
             var a = new TestActorRef<WorkerActor>(Sys, Props.Create<WorkerActor>(), null, "will-be-killed");
             Sys.ActorOf(Props.Create(() => new WatchAndForwardActor(a, TestActor)), "forwarder");
             a.Tell(PoisonPill.Instance);
-            ExpectMsg<WrappedTerminated>(TimeSpan.FromSeconds(10), string.Format("that the terminated actor was the one killed, i.e. {0}", a.Path), w => w.Terminated.ActorRef == a);
+            ExpectMsg<WrappedTerminated>(w => w.Terminated.ActorRef == a, TimeSpan.FromSeconds(10), string.Format("that the terminated actor was the one killed, i.e. {0}", a.Path));
             var actorRef = (InternalTestActorRef)a.Ref;
             actorRef.IsTerminated.ShouldBe(true);
             AssertThread();
