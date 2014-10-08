@@ -54,12 +54,6 @@ namespace Akka.TestKit.Xunit
         protected static XunitAssertions Assertions { get { return _assertions; } }
 
 
-        public override TestProbe CreateTestProbe()
-        {
-            return new TestProbe(Sys, Assertions);
-        }
-
-
         /// <summary>
         /// This method is called when a test ends. 
         /// <remarks>If you override this, make sure you either call 

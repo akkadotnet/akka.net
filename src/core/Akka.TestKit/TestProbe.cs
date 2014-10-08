@@ -13,8 +13,8 @@ namespace Akka.TestKit
     /// </summary>
     public class TestProbe : TestKitBase, NoImplicitSender
     {      
-        public TestProbe(ActorSystem system, TestKitAssertions assertions)
-            : base(assertions, system)
+        public TestProbe(ActorSystem system, TestKitAssertions assertions, string testProbeName=null)
+            : base(assertions, system, testProbeName)
         {
         }
 
@@ -68,7 +68,7 @@ namespace Akka.TestKit
         }
 
         [Obsolete("Cannot create a TestProbe from a TestProbe", true)]
-        public override TestProbe CreateTestProbe()
+        public override TestProbe CreateTestProbe(string name=null)
         {
             throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
         }
