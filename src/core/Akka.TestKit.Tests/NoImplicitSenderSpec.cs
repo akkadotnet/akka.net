@@ -15,6 +15,7 @@ namespace Akka.Testkit.Tests
             echoActor.Tell("message");
             ExpectMsg<ActorRef>(actorRef => actorRef == DeadLetterActorRef.NoSender);
         }
+
     }
 
     public class ImplicitSenderSpec : AkkaSpec
@@ -33,6 +34,24 @@ namespace Akka.Testkit.Tests
         }
 
 
+        [Fact]
+        public void ImplicitSender_should_not_change_when_creating_Testprobes()
+        {
+            //Verifies that bug #459 has been fixed
+            var testProbe = CreateTestProbe();
+            TestActor.Tell("message");
+            ReceiveOne();
+            LastSender.ShouldBe(TestActor);
+        }
+
+        [Fact]
+        public void ImplicitSender_should_not_change_when_creating_TestActors()
+        {
+            var testActor2 = CreateTestActor("test2");
+            TestActor.Tell("message");
+            ReceiveOne();
+            LastSender.ShouldBe(TestActor);
+        }
     }
 
 }
