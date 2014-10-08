@@ -531,7 +531,7 @@ namespace Akka.Remote
             }
         }
 
-        private LoggingAdapter _log = Logging.GetLogger(Context);
+        private readonly LoggingAdapter _log = Context.GetLogger();
         public LoggingAdapter Log { get { return _log; } }
     }
 

@@ -372,7 +372,7 @@ namespace Akka.Actor
     /// <typeparam name="TData">The state data type</typeparam>
     public abstract class FSM<TState, TData> : FSMBase, IActorLogging, IListeners, InternalSupportsTestFSMRef<TState,TData>
     {
-        private readonly LoggingAdapter _logAdapter = Logging.GetLogger(Context);
+        private readonly LoggingAdapter _logAdapter = Context.GetLogger();
         protected FSM()
         {
             if(this is LoggingFSM)

@@ -76,7 +76,7 @@ namespace Akka.Event
         /// <param name="context">The cell.</param>
         /// <param name="logMessageFormatter">The log message formatter.</param>
         /// <returns>LoggingAdapter.</returns>
-        public static LoggingAdapter GetLogger(IActorContext context, ILogMessageFormatter logMessageFormatter = null)
+        public static LoggingAdapter GetLogger(this IActorContext context, ILogMessageFormatter logMessageFormatter = null)
         {
             var logSource = context.Self.ToString();
             var logClass = context.Props.Type;

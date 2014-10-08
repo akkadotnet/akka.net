@@ -71,7 +71,7 @@ akka {
 
         public class TimeServerActor : TypedActor, IHandle<string>, IActorLogging
         {
-            private LoggingAdapter _log = Logging.GetLogger(Context);
+            private readonly LoggingAdapter _log = Context.GetLogger();
             public LoggingAdapter Log { get { return _log; } }
 
             public void Handle(string message)
