@@ -33,9 +33,9 @@ namespace Akka.Event
             return false;            
         }
 
-        protected virtual void Print(LogEvent m)
+        protected virtual void Print(LogEvent logEvent)
         {
-            Console.WriteLine(m);
+            StandardOutLogger.PrintLogEvent(logEvent);
         }
     }
 }
