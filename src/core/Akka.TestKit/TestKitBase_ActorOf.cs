@@ -9,7 +9,21 @@ namespace Akka.TestKit
     {
         private const ActorRef NoSupervisor = null;
 
-        public ActorRef ActorOf(Props props, string name = null)
+        /// <summary>
+        /// Create a new actor as child of <see cref="Sys" />.
+        /// </summary>
+        /// <param name="props">The props configuration object</param>
+        public ActorRef ActorOf(Props props)
+        {
+            return Sys.ActorOf(props, null);
+        }
+
+        /// <summary>
+        /// Create a new actor as child of <see cref="Sys" />.
+        /// </summary>
+        /// <param name="props">The props configuration object</param>
+        /// <param name="name">The name of the actor.</param>
+        public ActorRef ActorOf(Props props, string name)
         {
             return Sys.ActorOf(props, name);
         }
@@ -18,10 +32,33 @@ namespace Akka.TestKit
         /// Create a new actor as child of <see cref="Sys" />.
         /// </summary>
         /// <typeparam name="TActor">The type of the actor. It must have a parameterless public constructor</typeparam>
-        /// <param name="name">Optional: The name of the actor.</param>
-        public ActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase, new()
+        public ActorRef ActorOf<TActor>() where TActor : ActorBase, new()
+        {
+            return Sys.ActorOf(Props.Create<TActor>(), null);
+        }
+
+        /// <summary>
+        /// Create a new actor as child of <see cref="Sys" />.
+        /// </summary>
+        /// <typeparam name="TActor">The type of the actor. It must have a parameterless public constructor</typeparam>
+        /// <param name="name">The name of the actor.</param>
+        public ActorRef ActorOf<TActor>(string name) where TActor : ActorBase, new()
         {
             return Sys.ActorOf(Props.Create<TActor>(), name);
+        }
+
+        /// <summary>
+        /// Create a new actor as child of <see cref="Sys" /> using an expression that calls the constructor
+        /// of <typeparamref name="TActor"/>.
+        /// <example>
+        /// <code>ActorOf&lt;MyActor&gt;(()=>new MyActor("value", 4711))</code>
+        /// </example>
+        /// </summary>
+        /// <typeparam name="TActor">The type of the actor.</typeparam>
+        /// <param name="factory">An expression that calls the constructor of <typeparamref name="TActor"/></param>
+        public ActorRef ActorOf<TActor>(Expression<Func<TActor>> factory) where TActor : ActorBase
+        {
+            return Sys.ActorOf(Props.Create(factory), null);
         }
 
         /// <summary>
@@ -33,8 +70,8 @@ namespace Akka.TestKit
         /// </summary>
         /// <typeparam name="TActor">The type of the actor.</typeparam>
         /// <param name="factory">An expression that calls the constructor of <typeparamref name="TActor"/></param>
-        /// <param name="name">Optional: The name of the actor.</param>
-        public ActorRef ActorOf<TActor>(Expression<Func<TActor>> factory, string name = null) where TActor : ActorBase
+        /// <param name="name">The name of the actor.</param>
+        public ActorRef ActorOf<TActor>(Expression<Func<TActor>> factory, string name) where TActor : ActorBase
         {
             return Sys.ActorOf(Props.Create(factory), name);
         }
