@@ -113,7 +113,6 @@ namespace Akka.TestKit
         public static Config FullDebugConfig { get { return _fullDebugConfig; } }
         public static TimeSpan Now { get { return TimeSpan.FromTicks(DateTime.UtcNow.Ticks); } }
         public LoggingAdapter Log { get { return _log; } }
-        public bool LastWasNoMsg { get { return _lastWasNoMsg; } }
         public object LastMessage { get { return _lastMessage.Message; } }
 
         /// <summary>
