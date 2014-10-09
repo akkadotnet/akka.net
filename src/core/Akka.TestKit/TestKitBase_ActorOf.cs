@@ -1,6 +1,7 @@
 using System;
 using System.Linq.Expressions;
 using Akka.Actor;
+using Akka.Actor.Dsl;
 
 namespace Akka.TestKit
 {
@@ -17,7 +18,7 @@ namespace Akka.TestKit
         /// Create a new actor as child of <see cref="Sys" />.
         /// </summary>
         /// <typeparam name="TActor">The type of the actor. It must have a parameterless public constructor</typeparam>
-        /// <param name="name">The name.</param>
+        /// <param name="name">Optional: The name of the actor.</param>
         public ActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase, new()
         {
             return Sys.ActorOf(Props.Create<TActor>(), name);
@@ -32,11 +33,30 @@ namespace Akka.TestKit
         /// </summary>
         /// <typeparam name="TActor">The type of the actor.</typeparam>
         /// <param name="factory">An expression that calls the constructor of <typeparamref name="TActor"/></param>
-        /// <param name="name">The name.</param>
+        /// <param name="name">Optional: The name of the actor.</param>
         public ActorRef ActorOf<TActor>(Expression<Func<TActor>> factory, string name = null) where TActor : ActorBase
         {
             return Sys.ActorOf(Props.Create(factory), name);
         }
+
+        /// <summary>
+        /// Creates a new actor by defining the behavior inside the <paramref name="configure"/> action.
+        /// <example>
+        /// <pre><code>
+        /// ActorOf(c =>
+        /// {
+        ///     c.Receive&lt;string&gt;((msg, ctx) => ctx.Sender.Tell("Hello " + msg));
+        /// });
+        /// </code></pre>
+        /// </example>
+        /// </summary>
+        /// <param name="configure">An action that configures the actor's behavior.</param>
+        /// <param name="name">Optional: The name of the actor.</param>
+        public ActorRef ActorOf(Action<IActorDsl> configure, string name = null)
+        {
+            return ActExtensions.ActorOf(this, configure, name);
+        }
+
 
         public ActorSelection ActorSelection(ActorPath actorPath)
         {
