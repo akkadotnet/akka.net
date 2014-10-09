@@ -166,10 +166,10 @@ namespace Akka.Remote.Tests.Transport
             AwaitCondition(() => LastActivityIsHeartbeat(collaborators.Registry), DefaultTimeout);
 
             reader.Tell(testPayload, Self);
-            ExpectMsg<InboundPayload>("expected InboundPayload", inbound =>
+            ExpectMsg<InboundPayload>(inbound =>
             {
                 Assert.Equal(testEnvelope, inbound.Payload);
-            });
+            }, hint: "expected InboundPayload");
         }
 
         [Fact]

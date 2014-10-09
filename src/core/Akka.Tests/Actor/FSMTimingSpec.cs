@@ -28,7 +28,7 @@ namespace Akka.Tests.Actor
         {
             //initializes the Finite State Machine, so it doesn't affect any of the time-sensitive tests below
             fsm.Tell(new FSMBase.SubscribeTransitionCallBack(Self));
-            ExpectMsg(new FSMBase.CurrentState<State>(fsm, State.Initial), TimeSpan.FromSeconds(1), FSMSpecHelpers.CurrentStateExpector<State>());
+            ExpectMsg(new FSMBase.CurrentState<State>(fsm, State.Initial), FSMSpecHelpers.CurrentStateExpector<State>(), TimeSpan.FromSeconds(1));
         }
 
         [Fact]
@@ -164,7 +164,7 @@ namespace Akka.Tests.Actor
                 return true;
             });
             fsm.Tell(new Cancel(), Self);
-            ExpectMsg(new FSMBase.Transition<State>(fsm, State.TestCancelTimer, State.Initial), TimeSpan.FromSeconds(1), FSMSpecHelpers.TransitionStateExpector<State>());
+            ExpectMsg(new FSMBase.Transition<State>(fsm, State.TestCancelTimer, State.Initial), FSMSpecHelpers.TransitionStateExpector<State>(), TimeSpan.FromSeconds(1));
         }
 
         [Fact]
@@ -176,7 +176,7 @@ namespace Akka.Tests.Actor
             ExpectMsg<Tick>(TimeSpan.FromMilliseconds(500));
             Task.Delay(TimeSpan.FromMilliseconds(200));
             Resume(fsm);
-            ExpectMsg(new FSMBase.Transition<State>(fsm, State.TestCancelStateTimerInNamedTimerMessage, State.TestCancelStateTimerInNamedTimerMessage2), TimeSpan.FromMilliseconds(500), FSMSpecHelpers.TransitionStateExpector<State>());
+            ExpectMsg(new FSMBase.Transition<State>(fsm, State.TestCancelStateTimerInNamedTimerMessage, State.TestCancelStateTimerInNamedTimerMessage2), FSMSpecHelpers.TransitionStateExpector<State>(), TimeSpan.FromMilliseconds(500));
             fsm.Tell(new Cancel(), Self);
             Within(TimeSpan.FromMilliseconds(500), () =>
             {

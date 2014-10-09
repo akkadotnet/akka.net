@@ -43,7 +43,7 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
             //If we receive something else it means another message was logged, and ExpectMsg will fail
             const string message = "<<Finished>>";
             SendRawLogEventMessage(message);
-            ExpectMsg<LogEvent>(err => (string) err.Message == message, "message to be \"" + message + "\"");
+            ExpectMsg<LogEvent>(err => (string) err.Message == message,hint: "message to be \"" + message + "\"");
         }
 
     }
