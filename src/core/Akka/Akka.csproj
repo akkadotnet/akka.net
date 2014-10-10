@@ -193,6 +193,7 @@
     <Compile Include="Event\LoggerInitialized.cs" />
     <Compile Include="Event\Logging.cs" />
     <Compile Include="Event\LoggingAdapter.cs" />
+    <Compile Include="Event\LoggingAdapterBase.cs" />
     <Compile Include="Event\LoggingBus.cs" />
     <Compile Include="Event\LogLevel.cs" />
     <Compile Include="Event\LogMessage.cs" />

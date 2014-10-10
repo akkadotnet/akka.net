@@ -575,7 +575,7 @@ namespace Akka.Cluster
                     });
         }
 
-        private readonly LoggingAdapter _log = Logging.GetLogger(Context);
+        private readonly LoggingAdapter _log = Context.GetLogger();
         public LoggingAdapter Log { get { return _log; } }
     }
 
@@ -588,7 +588,7 @@ namespace Akka.Cluster
         readonly ActorRef _publisher;
         readonly ActorRef _coreDaemon;
 
-        private readonly LoggingAdapter _log = Logging.GetLogger(Context);
+        private readonly LoggingAdapter _log = Context.GetLogger();
         public LoggingAdapter Log { get { return _log; } }
 
         public ClusterCoreSupervisor()
@@ -1597,7 +1597,7 @@ namespace Akka.Cluster
             _publisher.Tell(new ClusterEvent.CurrentInternalStats(_gossipStats, vclockStats));
         }
 
-        readonly LoggingAdapter _log = Logging.GetLogger(Context);
+        readonly LoggingAdapter _log = Context.GetLogger();
         public LoggingAdapter Log { get { return _log; } }
     }
 
@@ -1627,7 +1627,7 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class JoinSeedNodeProcess : UntypedActor, IActorLogging
     {
-        readonly LoggingAdapter _log = Logging.GetLogger(Context);
+        readonly LoggingAdapter _log = Context.GetLogger();
         public LoggingAdapter Log { get { return _log; } }
 
         readonly ImmutableList<Address> _seeds;
@@ -1702,7 +1702,7 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class FirstSeedNodeProcess : UntypedActor, IActorLogging
     {
-        readonly LoggingAdapter _log = Logging.GetLogger(Context);
+        readonly LoggingAdapter _log = Context.GetLogger();
         public LoggingAdapter Log { get { return _log; } }
 
         private ImmutableList<Address> _remainingSeeds;
@@ -1863,7 +1863,7 @@ namespace Akka.Cluster
     class OnMemberUpListener : ReceiveActor, IActorLogging
     {
         readonly Action _callback;
-        readonly LoggingAdapter _log = Logging.GetLogger(Context);
+        readonly LoggingAdapter _log = Context.GetLogger();
         readonly Cluster _cluster;
         public LoggingAdapter Log { get { return _log; } }
 
