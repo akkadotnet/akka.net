@@ -268,6 +268,9 @@ namespace Akka.Actor
             if (isTerminating)
                 return;
 
+            SetReceiveTimeout(null);
+            CancelReceiveTimeout();
+
             isTerminating = true;
             _self.IsTerminated = true;
 

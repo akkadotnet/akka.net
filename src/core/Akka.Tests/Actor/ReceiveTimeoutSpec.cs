@@ -103,6 +103,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Cancel_ReceiveTimeout_When_terminated()
         {
+            //This test verifies that bug #469 "ReceiveTimeout isn't cancelled when actor terminates" has been fixed
             var timeoutLatch = CreateTestLatch();
             Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
             var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch, TimeSpan.FromMilliseconds(500))));
@@ -119,7 +120,7 @@ namespace Akka.Tests.Actor
 
             //We should not get any messages now. If we get a message now, 
             //it's a DeadLetter with ReceiveTimeout, meaning the receivetimeout wasn't cancelled.
-            ExpectNoMsg(TimeSpan.FromSeconds(2));
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
     }
 }
