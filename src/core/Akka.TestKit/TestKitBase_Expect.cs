@@ -183,7 +183,7 @@ namespace Akka.TestKit
 
             var message = envelope.Message;
             var sender = envelope.Sender;
-            _assertions.AssertTrue(message is T, "expected a message of type {0}, but received {2} (type {1}) instead {3} from {4}", typeof (T), message.GetType(), message, hint ?? "", sender);
+            _assertions.AssertTrue(message is T, "expected a message of type {0}, but received {{{2}}} (type: {1}) instead. {3} from {4}", typeof (T), message.GetType(), message, hint ?? "", sender);
             var tMessage = (T) message;
             if (assert != null)
                 assert(tMessage, sender);
