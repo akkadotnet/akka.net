@@ -18,10 +18,10 @@ namespace Akka.Actor
         }
 
         public void CheckReceiveTimeout()
-        {           
+        {
+            CancelReceiveTimeout();
             if (_receiveTimeoutDuration != null && !Mailbox.HasMessages)
             {
-                CancelReceiveTimeout();
                 _pendingReceiveTimeout = new CancellationTokenSource();
                 System.Scheduler.ScheduleOnce(_receiveTimeoutDuration.Value, Self, ReceiveTimeout.Instance,
                     _pendingReceiveTimeout.Token);
