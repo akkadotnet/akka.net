@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit.Internal;
@@ -17,9 +18,9 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        public T ExpectMsg<T>(TimeSpan? duration=null, string hint = null)
+        public T ExpectMsg<T>(TimeSpan? duration = null, string hint = null)
         {
-            return InternalExpectMsg<T>(RemainingOrDilated(duration), (Action<T>) null, hint);
+            return InternalExpectMsg<T>(RemainingOrDilated(duration), (Action<T>)null, hint);
         }
 
         /// <summary>
@@ -30,7 +31,7 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        public T ExpectMsg<T>(T message, TimeSpan? timeout=null, string hint = null)
+        public T ExpectMsg<T>(T message, TimeSpan? timeout = null, string hint = null)
         {
             return InternalExpectMsg<T>(RemainingOrDilated(timeout), m => _assertions.AssertEqual(message, m), hint);
         }
@@ -49,7 +50,7 @@ namespace Akka.TestKit
         {
             return InternalExpectMsg<T>(RemainingOrDilated(RemainingOrDilated(timeout)), (m, sender) =>
             {
-                if(isMessage != null)
+                if (isMessage != null)
                     AssertPredicateIsTrueForMessage(isMessage, m, hint);
             }, hint);
         }
@@ -145,7 +146,7 @@ namespace Akka.TestKit
         private T InternalExpectMsg<T>(TimeSpan? timeout, Action<T> msgAssert, string hint)
         {
             var envelope = InternalExpectMsgEnvelope<T>(timeout, msgAssert, null, hint);
-            return (T) envelope.Message;
+            return (T)envelope.Message;
         }
 
         private T InternalExpectMsg<T>(TimeSpan? timeout, Action<T> msgAssert, Action<ActorRef> senderAssert, string hint)
@@ -162,8 +163,8 @@ namespace Akka.TestKit
 
         private MessageEnvelope InternalExpectMsgEnvelope<T>(TimeSpan? timeout, Action<T> msgAssert, Action<ActorRef> senderAssert, string hint)
         {
-            msgAssert=msgAssert ?? (m=>{});
-            senderAssert=senderAssert ?? (sender=>{});
+            msgAssert = msgAssert ?? (m => { });
+            senderAssert = senderAssert ?? (sender => { });
             Action<T, ActorRef> combinedAssert = (m, sender) =>
             {
                 senderAssert(sender);
@@ -173,18 +174,29 @@ namespace Akka.TestKit
             return envelope;
         }
 
-        private MessageEnvelope InternalExpectMsgEnvelope<T>(TimeSpan? timeout, Action<T, ActorRef> assert, string hint)
+        private MessageEnvelope InternalExpectMsgEnvelope<T>(TimeSpan? timeout, Action<T, ActorRef> assert, string hint, bool shouldLog=false)
         {
             MessageEnvelope envelope;
+            ConditionalLog(shouldLog, "Expecting message of type {0}. {1}", typeof(T), hint);
             var success = TryReceiveOne(out envelope, timeout);
 
             if (!success)
-                _assertions.Fail("Timeout {0} while waiting for a message of type {1} {2}", GetTimeoutOrDefault(timeout), typeof (T), hint ?? "");
+            {
+                const string failMessage = "Failed: Timeout {0} while waiting for a message of type {1} {2}";
+                ConditionalLog(shouldLog, failMessage, GetTimeoutOrDefault(timeout), typeof(T), hint ?? "");
+                _assertions.Fail(failMessage, GetTimeoutOrDefault(timeout), typeof(T), hint ?? "");
+            }
 
             var message = envelope.Message;
             var sender = envelope.Sender;
-            _assertions.AssertTrue(message is T, "expected a message of type {0}, but received {{{2}}} (type: {1}) instead. {3} from {4}", typeof (T), message.GetType(), message, hint ?? "", sender);
-            var tMessage = (T) message;
+            var messageIsT = message is T;
+            if(!messageIsT)
+            {
+                const string failMessage2 = "Failed: Expected a message of type {0}, but received {{{2}}} (type {1}) instead {3} from {4}";
+                _assertions.Fail(failMessage2, typeof(T), message.GetType(), message, hint ?? "", sender);
+                ConditionalLog(shouldLog, failMessage2, typeof(T), message.GetType(), message, hint ?? "", sender);
+            }
+            var tMessage = (T)message;
             if (assert != null)
                 assert(tMessage, sender);
             return envelope;
@@ -214,8 +226,17 @@ namespace Akka.TestKit
         private void InternalExpectNoMsg(TimeSpan duration)
         {
             MessageEnvelope t;
-            bool success = TryReceiveOne(out t, duration);
-            _assertions.AssertFalse(success, string.Format("Expected no messages during the duration, instead we received {0}", t));
+            var start = Now;
+            ConditionalLog("Expecting no messages during {0}", duration);
+
+            bool didReceiveMessage = InternalTryReceiveOne(out t, duration, CancellationToken.None, false);
+            if (didReceiveMessage)
+            {
+                const string failMessage = "Failed: Expected no messages during {0}, instead we received {1} after {2}";
+                var elapsed = Now - start;
+                ConditionalLog(failMessage, duration,t, elapsed);
+                _assertions.Fail(failMessage,duration, t, elapsed);
+            }
         }
 
         /// <summary>
@@ -265,25 +286,45 @@ namespace Akka.TestKit
             return InternalExpectMsgAllOf(dilated, messages);
         }
 
-        private IReadOnlyCollection<T> InternalExpectMsgAllOf<T>(TimeSpan max, IReadOnlyCollection<T> messages, Func<T, T, bool> areEqual = null)
+        private IReadOnlyCollection<T> InternalExpectMsgAllOf<T>(TimeSpan max, IReadOnlyCollection<T> messages, Func<T, T, bool> areEqual = null, bool shouldLog=false)
         {
+            ConditionalLog(shouldLog, "Expecting {0} messages during {1}", messages.Count, max);
             areEqual = areEqual ?? ((x, y) => Equals(x, y));
-            var receivedMessages = InternalReceiveN(messages.Count, max).ToList();
+            var start = Now;
+            var receivedMessages = InternalReceiveN(messages.Count, max, shouldLog).ToList();
             var missing = messages.Where(m => !receivedMessages.Any(r => r is T && areEqual((T)r, m))).ToList();
             var unexpected = receivedMessages.Where(r => !messages.Any(m => r is T && areEqual((T)r, m))).ToList();
-            CheckMissingAndUnexpected(missing, unexpected, "not found", "found unexpected");
+            CheckMissingAndUnexpected(missing, unexpected, "not found", "found unexpected", shouldLog, string.Format("Expected {0} messages during {1}. Failed after {2}. ", messages.Count, max, Now-start));
             return receivedMessages.Cast<T>().ToList();
         }
 
 
-        private void CheckMissingAndUnexpected<TMissing, TUnexpected>(IReadOnlyCollection<TMissing> missing, IReadOnlyCollection<TUnexpected> unexpected, string missingMessage, string unexpectedMessage)
+        private void CheckMissingAndUnexpected<TMissing, TUnexpected>(IReadOnlyCollection<TMissing> missing, IReadOnlyCollection<TUnexpected> unexpected, string missingMessage, string unexpectedMessage, bool shouldLog, string hint)
         {
             var missingIsEmpty = missing.Count == 0;
             var unexpectedIsEmpty = unexpected.Count == 0;
-            _assertions.AssertTrue(missingIsEmpty && unexpectedIsEmpty,
-                (missingIsEmpty ? "" : missingMessage + " [" + string.Join(", ", missing) + "] ") +
-            (unexpectedIsEmpty ? "" : unexpectedMessage + " [" + string.Join(", ", unexpected) + "]"));
+            var bothEmpty = missingIsEmpty && unexpectedIsEmpty;
+            if(!bothEmpty)
+            {
+                var msg = (missingIsEmpty ? "" : missingMessage + " [" + string.Join(", ", missing) + "] ") +
+                             (unexpectedIsEmpty ? "" : unexpectedMessage + " [" + string.Join(", ", unexpected) + "]");
+                ConditionalLog(shouldLog, "{0} {1}", hint,msg);
+                _assertions.Fail(msg);
+            }
+        }
 
+        private void ConditionalLog(bool shouldLog, string format, params object[] args)
+        {
+            if (shouldLog)
+                ConditionalLog(format, args);
+        }
+
+        private void ConditionalLog(string format, params object[] args)
+        {
+            if (_testKitSettings.LogTestKitCalls)
+            {
+                _log.Debug(format, args);
+            }
         }
     }
 }
