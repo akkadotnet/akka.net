@@ -198,6 +198,14 @@
     <Compile Include="Event\LogLevel.cs" />
     <Compile Include="Event\LogMessage.cs" />
     <Compile Include="Event\StandardOutLogger.cs" />
+    <Compile Include="Util\Internal\Collections\IBinaryTreeNode.cs" />
+    <Compile Include="Util\Internal\Collections\IImmutableMap.cs" />
+    <Compile Include="Util\Internal\Collections\IImmutableSet.cs" />
+    <Compile Include="Util\Internal\Collections\IKeyValuePair.cs" />
+    <Compile Include="Util\Internal\Collections\ImmutableAvlTree.cs" />
+    <Compile Include="Util\Internal\Collections\ImmutableAvlTreeBase.cs" />
+    <Compile Include="Util\Internal\Collections\ImmutableAvlTreeMap.cs" />
+    <Compile Include="Util\Internal\Collections\ImmutableTreeSet.cs" />
     <Compile Include="Util\StandardOutWriter.cs" />
     <Compile Include="Event\Subscription.cs" />
     <Compile Include="Event\TraceLogger.cs" />
