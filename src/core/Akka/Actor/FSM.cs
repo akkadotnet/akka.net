@@ -52,6 +52,11 @@ namespace Akka.Actor
             public TS From { get; private set; }
 
             public TS To { get; private set; }
+
+            public override string ToString()
+            {
+                return String.Format("Transition({0}, {1})", From, To);
+            }
         }
 
         /// <summary>
