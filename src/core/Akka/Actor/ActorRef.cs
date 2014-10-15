@@ -130,7 +130,7 @@ namespace Akka.Actor
         }
     }
 
-    public abstract class ActorRef : ICanTell, IEquatable<ActorRef>
+    public abstract class ActorRef : ICanTell, IEquatable<ActorRef>, IComparable<ActorRef>
     {
 
         public static readonly Nobody Nobody = Nobody.Instance;
@@ -215,6 +215,14 @@ namespace Akka.Actor
         public static bool operator !=(ActorRef left, ActorRef right)
         {
             return !Equals(left, right);
+        }
+
+        public int CompareTo(ActorRef other)
+        {
+            var pathComparisonResult = this.Path.CompareTo(other.Path);
+            if (pathComparisonResult != 0) return pathComparisonResult;
+            if (Path.Uid < other.Path.Uid) return -1;
+            return Path.Uid == other.Path.Uid ? 0 : 1;
         }
     }
 

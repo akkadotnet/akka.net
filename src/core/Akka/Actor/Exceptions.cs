@@ -26,6 +26,25 @@ namespace Akka.Actor
     }
 
     /// <summary>
+    /// An InvalidActorNameException is thrown when you try to convert something, usually a String, to an Actor name
+    /// which doesn't validate.
+    /// </summary>
+    public class InvalidActorNameException : AkkaException
+    {
+        public InvalidActorNameException(string message)
+            : base(message)
+        {
+            //Intentionally left blank
+        }
+
+        public InvalidActorNameException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+            //Intentionally left blank
+        }
+    }
+
+    /// <summary>
     ///     Class ActorInitializationException.
     /// </summary>
     public class ActorInitializationException : AkkaException
