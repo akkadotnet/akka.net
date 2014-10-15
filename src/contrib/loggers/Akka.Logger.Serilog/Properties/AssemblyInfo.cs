@@ -5,9 +5,9 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Akka.slf4net")]
+[assembly: AssemblyTitle("Akka.Logger.Serilog")]
 [assembly: AssemblyDescription("")]
-[assembly: AssemblyProduct("Akka.slf4net")]
+[assembly: AssemblyProduct("Akka.Logger.Serilog")]
 [assembly: AssemblyCulture("")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
@@ -16,4 +16,4 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("c86383ae-bba9-4478-8d20-1e54d67d7731")]
+[assembly: Guid("bf98d438-d2b2-45b7-9326-a2d0170e7a2b")]

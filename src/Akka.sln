@@ -1,7 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30324.0
 VisualStudioVersion = 12.0.30723.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatMessages", "examples\Chat\ChatMessages\ChatMessages.csproj", "{819221CB-82B7-43D3-A4DE-E00AF17F2FDF}"
@@ -51,7 +50,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "System1", "examples\RemoteD
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "System2", "examples\RemoteDeploy\System2\System2.csproj", "{56B7C019-AA7A-4194-AFA5-3D3F1A4B6393}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.slf4net", "contrib\loggers\Akka.slf4net\Akka.slf4net.csproj", "{104D8378-117D-411F-B921-BFBFBC55B46B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Logger.slf4net", "contrib\loggers\Akka.Logger.slf4net\Akka.Logger.slf4net.csproj", "{104D8378-117D-411F-B921-BFBFBC55B46B}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Akka.FSharp.Tests", "core\Akka.FSharp.Tests\Akka.FSharp.Tests.fsproj", "{D0AC89AC-E6AB-4B16-BFBA-64C675D17ABD}"
 EndProject
@@ -84,7 +83,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeClient", "examples\Time
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Contrib", "Contrib", "{588C1513-FAB6-42C3-B6FC-3485F13620CF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.NLog", "contrib\loggers\Akka.NLog\Akka.NLog.csproj", "{A8AA2D7E-3D35-44DF-AF92-80A2C39C1F4D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Logger.NLog", "contrib\loggers\Akka.Logger.NLog\Akka.Logger.NLog.csproj", "{A8AA2D7E-3D35-44DF-AF92-80A2C39C1F4D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Loggers", "Loggers", "{FFEC736B-EDA3-433C-8564-7C14676601A1}"
 EndProject
@@ -100,7 +99,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.VsTest", "cont
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.VsTest.Tests", "contrib\testkits\Akka.TestKit.VsTest.Tests\Akka.TestKit.VsTest.Tests.csproj", "{F5697316-A1C6-4B99-84B5-1E7DEB08D669}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serilog", "contrib\loggers\Akka.Serilog\Akka.Serilog.csproj", "{53D9D2F0-4A35-4FCE-980C-8F7F3DCBDB2B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Logger.Serilog", "contrib\loggers\Akka.Logger.Serilog\Akka.Logger.Serilog.csproj", "{53D9D2F0-4A35-4FCE-980C-8F7F3DCBDB2B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster", "core\Akka.Cluster\Akka.Cluster.csproj", "{6AB00F61-269A-4501-B06A-026707F000A7}"
 EndProject
