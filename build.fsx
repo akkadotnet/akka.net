@@ -119,8 +119,9 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.FSharp"
       "core/Akka.TestKit"
       "core/Akka.Remote"
-      "contrib/loggers/Akka.slf4net"
-      "contrib/loggers/Akka.NLog" 
+      "contrib/loggers/Akka.Logger.slf4net"
+      "contrib/loggers/Akka.Logger.NLog" 
+      "contrib/loggers/Akka.Logger.Serilog" 
       "contrib/testkits/Akka.TestKit.Xunit" 
       ]
     |> List.iter copyOutput
