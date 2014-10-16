@@ -119,6 +119,7 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.FSharp"
       "core/Akka.TestKit"
       "core/Akka.Remote"
+      "core/Akka.Cluster"
       "contrib/loggers/Akka.Logger.slf4net"
       "contrib/loggers/Akka.Logger.NLog" 
       "contrib/loggers/Akka.Logger.Serilog" 
@@ -181,6 +182,12 @@ module Nuget =
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
 
+    // used to add -pre suffix to pre-release packages
+    let getProjectVersion project =
+      match project with
+      | "Akka.Cluster" -> release.NugetVersion + "-pre"
+      | _ -> release.NugetVersion
+
 open Nuget
 
 //--------------------------------------------------------------------------------
@@ -213,6 +220,7 @@ let createNugetPackages _ =
         let packages = projectDir @@ "packages.config"        
         let packageDependencies = if (fileExists packages) then (getDependencies packages) else []
         let dependencies = packageDependencies @ getAkkaDependency project
+        let releaseVersion = getProjectVersion project
 
         let pack outputDir symbolPackage =
             NuGetHelper.NuGet
@@ -224,7 +232,7 @@ let createNugetPackages _ =
                         Project =  project
                         Properties = ["Configuration", "Release"]
                         ReleaseNotes = release.Notes |> String.concat "\n"
-                        Version = release.NugetVersion
+                        Version = releaseVersion
                         Tags = tags |> String.concat " "
                         Title = nugetTitleSuffix
                         OutputPath = outputDir
