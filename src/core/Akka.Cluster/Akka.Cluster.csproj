@@ -85,6 +85,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Configuration\Cluster.conf" />
+    <None Include="Akka.Cluster.nuspec" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />
