@@ -1,3 +1,84 @@
+#### 0.7.0 Oct 16 2014
+Major new changes and additions in this release, including some breaking changes...
+
+__Akka.Cluster__ Support (pre-release) - Akka.Cluster is now available on NuGet as a pre-release package (has a `-pre` suffix) and is available for testing. After installing the the Akka.Cluster module you can add take advantage of clustering via configuration, like so:
+
+    akka {
+        actor {
+          provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+        }
+        
+        remote {
+          log-remote-lifecycle-events = DEBUG
+          helios.tcp {
+        hostname = "127.0.0.1"
+        port = 0
+          }
+        }
+        
+        cluster {
+          seed-nodes = [
+        "akka.tcp://ClusterSystem@127.0.0.1:2551",
+        "akka.tcp://ClusterSystem@127.0.0.1:2552"]
+        
+          auto-down-unreachable-after = 10s
+        }
+      }
+
+
+And then use cluster-enabled routing on individual, named routers:
+
+    /myAppRouter {
+     router = consistent-hashing-pool
+      nr-of-instances = 100
+      cluster {
+        enabled = on
+        max-nr-of-instances-per-node = 3
+        allow-local-routees = off
+        use-role = backend
+      }
+    }
+
+For more information on how clustering works, please see https://github.com/akkadotnet/akka.net/pull/400
+
+__Breaking Changes: Improved Stashing__ - The old `WithUnboundedStash` and `WithBoundedStash` interfaces have been slightly changed and the `CurrentStash` property has been renamed to `Stash`. Any old stashing code can be replaced with the following in order to continue working:
+
+    public IStash CurrentStash { get { return Stash; } set { Stash=value; } }
+
+The `Stash` field is now automatically populated with an appropriate stash during the actor creation process and there is no need to set this field at all yourself.
+
+__Breaking Changes: Renamed Logger Namespaces__ - The namespaces, DLL names, and NuGet packages for all logger add-ons have been changed to `Akka.Loggers.Xyz`. Please install the latest NuGet package (and uninstall the old ones) and update your Akka HOCON configurations accordingly.
+
+__Serilog Support__ - Akka.NET now has an official (Serilog)[http://serilog.net/] logger that you can install via the `Akka.Logger.Serilog` package. You can register the serilog logger via your HOCON configuration like this:
+
+     loggers=["Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog"]
+
+__New Feature: Priority Mailbox__ - The `PriorityMailbox` allows you to define the priority of messages handled by your actors, and this is done by creating your own subclass of either the `UnboundedPriorityMailbox` or `BoundedPriorityMailbox` class and implementing the `PriorityGenerator` method like so:
+
+    public class ReplayMailbox : UnboundedPriorityMailbox
+    {
+        protected override int PriorityGenerator(object message)
+        {
+            if (message is HttpResponseMessage) return 1;
+            if (!(message is LoggedHttpRequest)) return 2;
+            return 3;
+        }
+    }
+
+The smaller the return value from the `PriorityGenerator`, the higher the priority of the message. You can then configure your actors to use this mailbox via configuration, using a fully-qualified name:
+
+
+    replay-mailbox {
+     mailbox-type: "TrafficSimulator.PlaybackApp.Actors.ReplayMailbox,TrafficSimulator.PlaybackApp"
+    }
+
+And from this point onward, any actor can be configured to use this mailbox via `Props`:
+
+    Context.ActorOf(Props.Create<ReplayActor>()
+                        .WithRouter(new RoundRobinPool(3))
+                        .WithMailbox("replay-mailbox"));
+
+
 #### 0.6.5
 * Logging to Standard Out is now done in color. To disable it set `StandardOutLogger.UseColors = false;`.
 Colors can be customized: `StandardOutLogger.DebugColor = ConsoleColor.Green;`.
