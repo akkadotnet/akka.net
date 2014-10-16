@@ -36,7 +36,9 @@ let parsedRelease =
 //This means we cannot append the full date yyyMMddHHmmss to prerelease. 
 //See https://github.com/fsharp/FAKE/issues/522
 //TODO: When this has been fixed, switch to DateTime.UtcNow.ToString("yyyyMMddHHmmss")
-let release = if hasBuildParam "nugetprerelease" then ReleaseNotesHelper.ReleaseNotes.New(parsedRelease.AssemblyVersion, parsedRelease.AssemblyVersion + "-" + (getBuildParam "nugetprerelease") + DateTime.UtcNow.ToString("yyMMddHHmm"), parsedRelease.Notes) else parsedRelease
+let preReleaseVersion = parsedRelease.AssemblyVersion + "-" + (getBuildParamOrDefault "nugetprerelease" "pre") + DateTime.UtcNow.ToString("yyMMddHHmm")
+let isPreRelease = hasBuildParam "nugetprerelease"
+let release = if isPreRelease then ReleaseNotesHelper.ReleaseNotes.New(parsedRelease.AssemblyVersion, preReleaseVersion, parsedRelease.Notes) else parsedRelease
 
 printfn "Assembly version: %s\nNuget version; %s\n" release.AssemblyVersion release.NugetVersion
 //--------------------------------------------------------------------------------
@@ -185,7 +187,7 @@ module Nuget =
     // used to add -pre suffix to pre-release packages
     let getProjectVersion project =
       match project with
-      | "Akka.Cluster" -> release.NugetVersion + "-pre"
+      | "Akka.Cluster" -> preReleaseVersion
       | _ -> release.NugetVersion
 
 open Nuget
