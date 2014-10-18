@@ -174,8 +174,9 @@ namespace Akka.Actor
         /// <param name="envelope">The envelope.</param>
         public void SystemInvoke(Envelope envelope)
         {
-            CurrentMessage = envelope.Message;
-            Sender = envelope.Sender;
+            //CurrentMessage = envelope.Message;
+            //Sender = envelope.Sender;
+
             //set the current context
 
                 try
@@ -286,14 +287,6 @@ namespace Akka.Actor
         private void HandlePoisonPill()
         {
             _self.Stop();
-        }
-
-        /// <summary>
-        ///     Async restart this actor
-        /// </summary>
-        public void Restart()
-        {
-            Self.Tell(new Recreate(null));
         }
 
         /// <summary>
