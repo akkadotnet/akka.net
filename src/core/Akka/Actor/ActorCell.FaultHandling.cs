@@ -1,4 +1,5 @@
 ﻿using System;
+using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
@@ -179,9 +180,29 @@ namespace Akka.Actor
         /// <param name="m">The m.</param>
         private void HandleFailed(Failed m)	//Is called handleFailure in Akka JVM
         {
-            bool handled = _actor.SupervisorStrategyLazy().HandleFailure(this, m.Child, m.Cause);
-            if (!handled)
-                throw m.Cause;
+            CurrentMessage = m;
+            var failedChild = m.Child;
+            var failedChildIsNobody = failedChild.IsNobody();
+            Sender = failedChildIsNobody ? _systemImpl.DeadLetters : failedChild;
+            ChildRestartStats childStats;
+            if (!TryGetChildStatsByRef(failedChild, out childStats))
+            {
+                Publish(new Debug(Self.Path.ToString(), _actor.GetType(), "Dropping Failed(" + m.Cause + ") from unknown child " + failedChild));
+            }
+            else
+            {
+                var statsUid = childStats.Child.Path.Uid;
+                if (statsUid == m.Uid)
+                {
+                    var handled = _actor.SupervisorStrategyLazy().HandleFailure(this, failedChild, m.Cause);
+                    if (!handled)
+                        throw m.Cause;
+                }
+                else
+                {
+                    Publish(new Debug(Self.Path.ToString(), _actor.GetType(), "Dropping Failed(" + m.Cause + ") from old child " + m.Child + " (uid=" + statsUid + " != " + m.Uid + ")"));
+                }
+            }
         }
 
         /// <summary>

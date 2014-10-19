@@ -60,7 +60,7 @@ namespace Akka.Actor
             catch(Exception cause)
             {
                 Mailbox.Suspend();
-                Parent.Tell(new Failed(Self, cause));
+                Parent.Tell(new Failed(Self, cause, Self.Path.Uid));
             }
             finally
             {
@@ -180,7 +180,7 @@ namespace Akka.Actor
                 }
                 catch (Exception cause)
                 {
-                    Parent.Tell(new Failed(Self, cause));
+                    Parent.Tell(new Failed(Self, cause, Self.Path.Uid));
                 }
 
         }
