@@ -179,8 +179,8 @@ namespace Akka.Routing
         public TailChoppingPool(Config config)
         {
             NrOfInstances = config.GetInt("nr-of-instances");
-            within = config.GetMillisDuration("within");
-            interval = config.GetMillisDuration("tail-chopping-router.interval");
+            within = config.GetTimeSpan("within");
+            interval = config.GetTimeSpan("tail-chopping-router.interval");
             Resizer = DefaultResizer.FromConfig(config);
             UsePoolDispatcher = config.HasPath("pool-dispatcher");
         }
@@ -265,8 +265,8 @@ namespace Akka.Routing
         public TailChoppingGroup(Config config)
         {
             Paths = config.GetStringList("routees.paths").ToArray();
-            within = config.GetMillisDuration("within");
-            interval = config.GetMillisDuration("tail-chopping-router.interval");
+            within = config.GetTimeSpan("within");
+            interval = config.GetTimeSpan("tail-chopping-router.interval");
         }
 
         /// <summary>

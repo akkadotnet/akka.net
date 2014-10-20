@@ -2,9 +2,14 @@
 using System.Diagnostics;
 using System.Threading;
 using Akka.Actor;
+using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
+
 #if MONO
-using Akka.Util;
+using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
+#else
+using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope>;
+//using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
 #endif
 
 namespace Akka.Dispatch
@@ -14,13 +19,9 @@ namespace Akka.Dispatch
     /// </summary>
     public class ConcurrentQueueMailbox : Mailbox
     {
-#if MONO
-        private readonly MonoConcurrentQueue<Envelope> _systemMessages = new MonoConcurrentQueue<Envelope>();
-        private readonly MonoConcurrentQueue<Envelope> _userMessages = new MonoConcurrentQueue<Envelope>();
-#else
-        private readonly ConcurrentQueue<Envelope> _systemMessages = new ConcurrentQueue<Envelope>();
-        private readonly ConcurrentQueue<Envelope> _userMessages = new ConcurrentQueue<Envelope>();
-#endif
+        private readonly TQueue _systemMessages = new TQueue();
+        private readonly TQueue _userMessages = new TQueue();
+
         private Stopwatch _deadLineTimer;
         private volatile bool _isClosed;
 
@@ -98,20 +99,24 @@ namespace Akka.Dispatch
                     }
                 }
 
+                Interlocked.Exchange(ref status, MailboxStatus.Idle);
+
                 //there are still messages that needs to be processed
                 if (_systemMessages.Count > 0 || (!_isSuspended && _userMessages.Count > 0))
                 {
+                    //we still need has unscheduled messages for external info.
+                    //e.g. repointable actor ref uses it
+                    //TODO: will this be enough for external parties to work?
                     hasUnscheduledMessages = true;
-                }
 
-                if (hasUnscheduledMessages)
-                {
-                    dispatcher.Schedule(Run);
-                }
-                else
-                {
-                    Interlocked.Exchange(ref status, MailboxStatus.Idle);
-                }
+                    //this is subject of a race condition
+                    //but that doesn't matter, since if the above "if" misses
+                    //the "Post" that adds the new message will still schedule
+                    //this specific call is just to deal with existing messages
+                    //that wasn't scheduled due to dispatcher throughput beeing reached
+                    //or system messages arriving during user message processing
+                    Schedule();
+                }                
             });
         }
 
@@ -131,8 +136,9 @@ namespace Akka.Dispatch
         /// <summary>
         /// Posts the specified envelope.
         /// </summary>
+        /// <param name="receiver"></param>
         /// <param name="envelope"> The envelope. </param>
-        public override void Post(Envelope envelope)
+        public override void Post(ActorRef receiver, Envelope envelope)
         {
             if (_isClosed)
                 return;
@@ -140,12 +146,12 @@ namespace Akka.Dispatch
             hasUnscheduledMessages = true;
             if (envelope.Message is SystemMessage)
             {
-                Mailbox.DebugPrint(ActorCell.Self + " enqueued system message " + envelope);
+                Mailbox.DebugPrint("{0} enqueued system message {1} to {2}", ActorCell.Self, envelope, ActorCell.Self.Equals(receiver) ? "itself" : receiver.ToString());
                 _systemMessages.Enqueue(envelope);
             }
             else
             {
-                Mailbox.DebugPrint(ActorCell.Self + " enqueued message " + envelope);
+                Mailbox.DebugPrint("{0} enqueued message {1} to {2}", ActorCell.Self, envelope, ActorCell.Self.Equals(receiver) ? "itself" : receiver.ToString());
                 _userMessages.Enqueue(envelope);
             }
 
@@ -183,11 +189,11 @@ namespace Akka.Dispatch
                 Envelope envelope;
                 while (_systemMessages.TryDequeue(out envelope))
                 {
-                    deadLetterMailbox.Post(envelope);
+                    deadLetterMailbox.Post(actorCell.Self, envelope);
                 }
                 while (_userMessages.TryDequeue(out envelope))
                 {
-                    deadLetterMailbox.Post(envelope);
+                    deadLetterMailbox.Post(actorCell.Self, envelope);
                 }
             }
 

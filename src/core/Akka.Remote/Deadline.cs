@@ -24,6 +24,11 @@ namespace Akka.Remote
 
         public DateTime When { get; private set; }
 
+        /// <summary>
+        /// Warning: creates a new <see cref="TimeSpan"/> instance each time it's used
+        /// </summary>
+        public TimeSpan TimeLeft { get { return When - DateTime.Now; } }
+
         #region Overrides
 
         public override bool Equals(object obj)

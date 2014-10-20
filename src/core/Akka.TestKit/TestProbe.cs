@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Threading;
 using System;
 using Akka.Actor;
 using Akka.Util;
@@ -7,17 +8,13 @@ namespace Akka.TestKit
 {
     /// <summary>
     /// TestKit-based probe which allows sending, reception and reply.
+    /// User <see cref="TestKitBase.CreateTestProbe">CreateTestProbe()</see> inside your test 
+    /// to create new instances.
     /// </summary>
-    public class TestProbe : TestKitBase
-    {
-        [Obsolete("Use TestKit.CreateTestProbe() instead!", true)]
-        public TestProbe():base(assertions: null, system: null)
-        {
-            throw new NotSupportedException("TestProbes must be created via Testkit.CreateTestProbe()");    
-        }
-
-        public TestProbe(ActorSystem system, TestKitAssertions assertions)
-            : base(assertions, system)
+    public class TestProbe : TestKitBase, NoImplicitSender
+    {      
+        public TestProbe(ActorSystem system, TestKitAssertions assertions, string testProbeName=null)
+            : base(assertions, system, testProbeName)
         {
         }
 
@@ -71,10 +68,9 @@ namespace Akka.TestKit
         }
 
         [Obsolete("Cannot create a TestProbe from a TestProbe", true)]
-        protected override TestProbe CreateTestProbe()
+        public override TestProbe CreateTestProbe(string name=null)
         {
             throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
         }
-
     }
 }

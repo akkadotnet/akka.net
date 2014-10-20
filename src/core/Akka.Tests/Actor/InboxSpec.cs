@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
@@ -75,7 +77,6 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Inbox_have_maximum_queue_size()
         {
-            Sys.EventStream.Subscribe(TestActor, typeof(Warning));
             try
             {
                 //Fill the inbox (it can hold 1000) messages
@@ -85,7 +86,7 @@ namespace Akka.Tests.Actor
                 ExpectNoMsg(TimeSpan.FromSeconds(1));
 
                 //The inbox is full. Sending another message should result in a Warning message
-                EventFilterLog<Warning>("dropping message", 1, () => _inbox.Receiver.Tell(42));
+                EventFilter.Warning(start:"Dropping message").ExpectOne(() => _inbox.Receiver.Tell(42));
 
                 //The inbox is still full. But since the warning message has already been sent, no more warnings should be sent
                 _inbox.Receiver.Tell(42);
@@ -126,5 +127,22 @@ namespace Akka.Tests.Actor
                 return true;
             });
         }
+
+        [Fact]
+        public void Select_WithClient_should_update_Client_and_copy_the_rest_of_the_properties_BUG_427()
+        {
+            var deadline = new DateTime(1919, 5, 24);
+            Predicate<object> predicate = o => true;
+            var actorRef = new EmptyLocalActorRef(((ActorSystemImpl)Sys).Provider, new RootActorPath(new Address("akka", "test")), Sys.EventStream);
+            var select = new Select(deadline, predicate, actorRef);
+
+            var updatedActorRef = new EmptyLocalActorRef(((ActorSystemImpl)Sys).Provider, new RootActorPath(new Address("akka2", "test2")), Sys.EventStream);
+
+            var updatedSelect = (Select)select.WithClient(updatedActorRef);
+            updatedSelect.Deadline.ShouldBe(deadline);
+            updatedSelect.Predicate.ShouldBe(predicate);
+            updatedSelect.Client.ShouldBe(updatedActorRef);
+        }
+
     }
 }

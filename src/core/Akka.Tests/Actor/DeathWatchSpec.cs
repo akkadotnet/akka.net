@@ -58,14 +58,14 @@ namespace Akka.Tests.Actor
 
             //Suspend the mailbox and post Terminate and a user message
             mailbox.Suspend();
-            mailbox.Post(new Envelope() { Message = Terminate.Instance, Sender = TestActor });
-            mailbox.Post(new Envelope() { Message = "SomeUserMessage", Sender = TestActor });
+            mailbox.Post(actor, new Envelope() { Message = Terminate.Instance, Sender = TestActor });
+            mailbox.Post(actor, new Envelope() { Message = "SomeUserMessage", Sender = TestActor });
 
             //Resume the mailbox, which will also schedule
             mailbox.Resume();
 
             //The actor should Terminate, exchange the mailbox to a DeadLetterMailbox and forward the user message to the DeadLetterMailbox
-            ExpectMsg<DeadLetter>(TimeSpan.FromSeconds(1), d => (string)d.Message == "SomeUserMessage");
+            ExpectMsg<DeadLetter>(d => (string)d.Message == "SomeUserMessage", TimeSpan.FromSeconds(1));
             actor.Cell.Mailbox.ShouldBe(Sys.Mailboxes.DeadLetterMailbox);
         }
 

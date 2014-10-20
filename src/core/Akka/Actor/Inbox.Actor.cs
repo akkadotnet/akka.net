@@ -19,7 +19,7 @@ namespace Akka.Actor
         private Tuple<DateTime, CancellationTokenSource> _currentDeadline;
 
         private int size;
-        private LoggingAdapter log = Logging.GetLogger(Context);
+        private LoggingAdapter log = Context.GetLogger();
         public LoggingAdapter Log { get { return log; } }
 
         public InboxActor(int size)
@@ -44,7 +44,7 @@ namespace Akka.Actor
             {
                 if (!_printedWarning)
                 {
-                    Log.Warn("Dropping message: Inbox size has been exceeded, use akka.actor.inbox.inbox-size to increase maximum allowed inbox size. Current is " + size);
+                    Log.Warning("Dropping message: Inbox size has been exceeded, use akka.actor.inbox.inbox-size to increase maximum allowed inbox size. Current is " + size);
                     _printedWarning = true;
                 }
             }

@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Threading;
 using Akka.Actor;
-using Akka.Dispatch.SysMsg;
 
 namespace Akka.Dispatch
 {
@@ -21,15 +17,13 @@ namespace Akka.Dispatch
         [Conditional("MAILBOXDEBUG")]
         public static void DebugPrint(string message, params object[] args)
         {
-            if(args.Length == 0)
-                Console.WriteLine("{0}", message);
-            else
-                Console.WriteLine(message, args);
+          var formattedMessage = args.Length == 0 ? message : string.Format(message, args);
+          Console.WriteLine("[MAILBOX][{0}][Thread {1:0000}] {2}", DateTime.Now.ToString("o"), Thread.CurrentThread.ManagedThreadId, formattedMessage);
         }
 
         private volatile ActorCell _actorCell;
         protected MessageDispatcher dispatcher;
-        protected ActorCell ActorCell { get { return _actorCell; } }
+        protected ActorCell ActorCell { get { return _actorCell; } }        
 
         /// <summary>
         ///     Attaches an ActorCell to the Mailbox.
@@ -48,8 +42,9 @@ namespace Akka.Dispatch
         /// <summary>
         ///     Posts the specified envelope to the mailbox.
         /// </summary>
+        /// <param name="receiver"></param>
         /// <param name="envelope">The envelope.</param>
-        public abstract void Post(Envelope envelope);   //TODO: Refactor to Enqueue(ActorRef receiver, Envelope envelope)
+        public abstract void Post(ActorRef receiver, Envelope envelope);
 
         /// <summary>
         ///     Stops this instance.

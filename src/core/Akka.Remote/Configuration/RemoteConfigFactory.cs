@@ -26,14 +26,14 @@ namespace Akka.Remote.Configuration
         /// <returns>Config.</returns>
         internal static Config FromResource(string resourceName)
         {
-            Assembly assembly = typeof (RemoteConfigFactory).Assembly;
+            var assembly = typeof (RemoteConfigFactory).Assembly;
 
-            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+            using (var stream = assembly.GetManifestResourceStream(resourceName))
             {
                 Debug.Assert(stream != null, "stream != null");
                 using (var reader = new StreamReader(stream))
                 {
-                    string result = reader.ReadToEnd();
+                    var result = reader.ReadToEnd();
 
                     return ConfigurationFactory.ParseString(result);
                 }

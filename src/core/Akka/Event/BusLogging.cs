@@ -9,7 +9,7 @@ namespace Akka.Event
     /// <summary>
     ///     Class BusLogging.
     /// </summary>
-    public class BusLogging : LoggingAdapter
+    public class BusLogging : LoggingAdapterBase
     {
         /// <summary>
         ///     The bus
@@ -32,23 +32,37 @@ namespace Akka.Event
         /// <param name="bus">The bus.</param>
         /// <param name="logSource">The log source.</param>
         /// <param name="logClass">The log class.</param>
-        public BusLogging(LoggingBus bus, string logSource, Type logClass)
+        /// <param name="logMessageFormatter">The log message formatter.</param>
+        public BusLogging(LoggingBus bus, string logSource, Type logClass, ILogMessageFormatter logMessageFormatter)
+            : base(logMessageFormatter)
         {
             this.bus = bus;
             this.logSource = logSource;
             this.logClass = logClass;
 
-            isErrorEnabled = bus.LogLevel <= LogLevel.ErrorLevel;
-            isWarningEnabled = bus.LogLevel <= LogLevel.WarningLevel;
-            isInfoEnabled = bus.LogLevel <= LogLevel.InfoLevel;
-            isDebugEnabled = bus.LogLevel <= LogLevel.DebugLevel;
+            _isErrorEnabled = bus.LogLevel <= LogLevel.ErrorLevel;
+            _isWarningEnabled = bus.LogLevel <= LogLevel.WarningLevel;
+            _isInfoEnabled = bus.LogLevel <= LogLevel.InfoLevel;
+            _isDebugEnabled = bus.LogLevel <= LogLevel.DebugLevel;
         }
+
+        private readonly bool _isDebugEnabled;
+        public override bool IsDebugEnabled { get { return _isDebugEnabled; }}
+
+        private readonly bool _isErrorEnabled;
+        public override bool IsErrorEnabled { get { return _isErrorEnabled; }}
+
+        private readonly bool _isInfoEnabled;
+        public override bool IsInfoEnabled{ get { return _isInfoEnabled; }}
+
+        private readonly bool _isWarningEnabled;
+        public override bool IsWarningEnabled { get { return _isWarningEnabled; }}
 
         /// <summary>
         ///     Notifies the error.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected override void NotifyError(string message)
+        protected override void NotifyError(object message)
         {
             bus.Publish(new Error(null, logSource, logClass, message));
         }
@@ -58,7 +72,7 @@ namespace Akka.Event
         /// </summary>
         /// <param name="cause">The cause.</param>
         /// <param name="message">The message.</param>
-        protected override void NotifyError(Exception cause, string message)
+        protected override void NotifyError(Exception cause, object message)
         {
             bus.Publish(new Error(cause, logSource, logClass, message));
         }
@@ -67,7 +81,7 @@ namespace Akka.Event
         ///     Notifies the warning.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected override void NotifyWarning(string message)
+        protected override void NotifyWarning(object message)
         {
             bus.Publish(new Warning(logSource, logClass, message));
         }
@@ -76,7 +90,7 @@ namespace Akka.Event
         ///     Notifies the information.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected override void NotifyInfo(string message)
+        protected override void NotifyInfo(object message)
         {
             bus.Publish(new Info(logSource, logClass, message));
         }
@@ -85,7 +99,7 @@ namespace Akka.Event
         ///     Notifies the debug.
         /// </summary>
         /// <param name="message">The message.</param>
-        protected override void NotifyDebug(string message)
+        protected override void NotifyDebug(object message)
         {
             bus.Publish(new Debug(logSource, logClass, message));
         }

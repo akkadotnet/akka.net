@@ -3,13 +3,14 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Remote.Transport;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Google.ProtocolBuffers;
 using Xunit;
 
 namespace Akka.Remote.Tests.Transport{
 
     
-    public class TestTransportSpec : AkkaSpec, ImplicitSender
+    public class TestTransportSpec : AkkaSpec
     {
         #region Setup / Teardown
 

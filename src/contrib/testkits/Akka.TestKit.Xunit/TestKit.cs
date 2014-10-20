@@ -8,7 +8,7 @@ namespace Akka.TestKit.Xunit
     /// <summary>
     /// TestKit for xUnit.
     /// </summary>
-    public abstract class TestKit : TestKitBase , IDisposable
+    public class TestKit : TestKitBase , IDisposable
     {
         private static readonly XunitAssertions _assertions=new XunitAssertions();
         private bool _isDisposed; //Automatically initialized to false;
@@ -52,12 +52,6 @@ namespace Akka.TestKit.Xunit
         public new static Config FullDebugConfig { get { return TestKitBase.FullDebugConfig; } }
 
         protected static XunitAssertions Assertions { get { return _assertions; } }
-
-
-        protected override TestProbe CreateTestProbe()
-        {
-            return new TestProbe(Sys, Assertions);
-        }
 
 
         /// <summary>

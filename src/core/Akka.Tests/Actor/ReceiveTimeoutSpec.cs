@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
+using System.Runtime.Remoting.Contexts;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Xunit;
 using Akka.TestKit;
 using Akka.Tests;
@@ -20,12 +23,17 @@ namespace Akka.Tests.Actor
             private TestLatch _timeoutLatch;
 
             public TimeoutActor(TestLatch timeoutLatch)
+                : this(timeoutLatch, TimeSpan.FromMilliseconds(500))
+            {
+            }
+
+            public TimeoutActor(TestLatch timeoutLatch, TimeSpan? timeout)
             {
                 _timeoutLatch = timeoutLatch;
-                Context.SetReceiveTimeout(TimeSpan.FromMilliseconds(500));
+                Context.SetReceiveTimeout(timeout.GetValueOrDefault());
             }
             protected override bool Receive(object message)
-            {                
+            {
                 if (message is ReceiveTimeout)
                 {
                     _timeoutLatch.Open();
@@ -90,6 +98,29 @@ namespace Akka.Tests.Actor
             var timeoutActor = Sys.ActorOf(Props.Create(() => new NoTimeoutActor(timeoutLatch)));
             Assert.Throws<TimeoutException>(() => timeoutLatch.Ready(TestLatch.DefaultTimeout));
             Sys.Stop(timeoutActor);
+        }
+
+        [Fact]
+        public void Cancel_ReceiveTimeout_When_terminated()
+        {
+            //This test verifies that bug #469 "ReceiveTimeout isn't cancelled when actor terminates" has been fixed
+            var timeoutLatch = CreateTestLatch();
+            Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch, TimeSpan.FromMilliseconds(500))));
+
+            //make sure TestActor gets a notification when timeoutActor terminates
+            Watch(timeoutActor);
+
+            // wait for first ReceiveTimeout message, in which the latch is opened
+            timeoutLatch.Ready(TimeSpan.FromSeconds(2));
+
+            //Stop and wait for the actor to terminate
+            Sys.Stop(timeoutActor);
+            ExpectTerminated(timeoutActor);
+
+            //We should not get any messages now. If we get a message now, 
+            //it's a DeadLetter with ReceiveTimeout, meaning the receivetimeout wasn't cancelled.
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
     }
 }

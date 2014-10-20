@@ -28,7 +28,7 @@ namespace Akka.TestKit.VsTest
     ///     }
     /// </code>
     /// </summary>
-    public abstract class TestKit : TestKitBase
+    public class TestKit : TestKitBase
     {
         private static readonly VsTestAssertions _assertions = new VsTestAssertions();
 

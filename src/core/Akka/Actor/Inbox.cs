@@ -47,7 +47,7 @@ namespace Akka.Actor
         public ActorRef Client { get; private set; }
         public IQuery WithClient(ActorRef client)
         {
-            return new Select();
+            return new Select(Deadline, Predicate, client);
         }
     }
 
@@ -236,7 +236,7 @@ namespace Akka.Actor
         {
             var config = system.Settings.Config.GetConfig("akka").GetConfig("actor").GetConfig("inbox");
             var inboxSize = config.GetInt("inbox-size");
-            var timeout = config.GetMillisDuration("default-timeout");
+            var timeout = config.GetTimeSpan("default-timeout");
 
             var receiver =((ActorSystemImpl) system).SystemActorOf(Props.Create(() => new InboxActor(inboxSize)), "inbox-" + Interlocked.Increment(ref inboxNr));
 

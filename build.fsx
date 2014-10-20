@@ -7,6 +7,8 @@ open System.IO
 open Fake
 open Fake.FileUtils
 open Fake.MSTest
+open Fake.TaskRunnerHelper
+open Fake.ProcessHelper
 
 cd __SOURCE_DIRECTORY__
 
@@ -34,8 +36,11 @@ let parsedRelease =
 //This means we cannot append the full date yyyMMddHHmmss to prerelease. 
 //See https://github.com/fsharp/FAKE/issues/522
 //TODO: When this has been fixed, switch to DateTime.UtcNow.ToString("yyyyMMddHHmmss")
-let release = if hasBuildParam "nugetprerelease" then ReleaseNotesHelper.ReleaseNotes.New(parsedRelease.AssemblyVersion, parsedRelease.AssemblyVersion + "-" + (getBuildParam "nugetprerelease") + DateTime.UtcNow.ToString("yyMMddHHmm"), parsedRelease.Notes) else parsedRelease
+let preReleaseVersion = parsedRelease.AssemblyVersion + "-" + (getBuildParamOrDefault "nugetprerelease" "pre") + DateTime.UtcNow.ToString("yyMMddHHmm")
+let isPreRelease = hasBuildParam "nugetprerelease"
+let release = if isPreRelease then ReleaseNotesHelper.ReleaseNotes.New(parsedRelease.AssemblyVersion, preReleaseVersion, parsedRelease.Notes) else parsedRelease
 
+printfn "Assembly version: %s\nNuget version; %s\n" release.AssemblyVersion release.NugetVersion
 //--------------------------------------------------------------------------------
 // Directories
 
@@ -45,6 +50,8 @@ let testOutput = "TestResults"
 let nugetDir = binDir @@ "nuget"
 let workingDir = binDir @@ "build"
 let libDir = workingDir @@ @"lib\net45\"
+let nugetExe = FullName @"src\.nuget\NuGet.exe"
+
 
 //--------------------------------------------------------------------------------
 // Clean build results
@@ -83,7 +90,7 @@ Target "AssemblyInfo" <| fun _ ->
             Attribute.Copyright copyright
             Attribute.Trademark ""
             Attribute.Version version
-            Attribute.FileVersion version ] { GenerateClass = false; UseNamespace = "System" }
+            Attribute.FileVersion version ]
 
 //--------------------------------------------------------------------------------
 // Build the solution
@@ -114,8 +121,10 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.FSharp"
       "core/Akka.TestKit"
       "core/Akka.Remote"
-      "contrib/loggers/Akka.slf4net"
-      "contrib/loggers/Akka.NLog" 
+      "core/Akka.Cluster"
+      "contrib/loggers/Akka.Logger.slf4net"
+      "contrib/loggers/Akka.Logger.NLog" 
+      "contrib/loggers/Akka.Logger.Serilog" 
       "contrib/testkits/Akka.TestKit.Xunit" 
       ]
     |> List.iter copyOutput
@@ -175,6 +184,12 @@ module Nuget =
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
 
+    // used to add -pre suffix to pre-release packages
+    let getProjectVersion project =
+      match project with
+      | "Akka.Cluster" -> preReleaseVersion
+      | _ -> release.NugetVersion
+
 open Nuget
 
 //--------------------------------------------------------------------------------
@@ -187,18 +202,29 @@ Target "CleanNuget" <| fun _ ->
 // Pack nuget for all projects
 // Publish to nuget.org if nugetkey is specified
 
-Target "Nuget" <| fun _ ->
+let createNugetPackages _ =
+    let removeDir dir = 
+        let del _ = 
+            DeleteDir dir
+            not (directoryExists dir)
+        runWithRetries del 3 |> ignore
+
+    ensureDirectory nugetDir
     for nuspec in !! "src/**/*.nuspec" do
+        printfn "Creating nuget packages for %s" nuspec
+        
         CleanDir workingDir
 
         let project = Path.GetFileNameWithoutExtension nuspec 
         let projectDir = Path.GetDirectoryName nuspec
+        let projectFile = (!! (projectDir @@ project + ".*sproj")) |> Seq.head
         let releaseDir = projectDir @@ @"bin\Release"
         let packages = projectDir @@ "packages.config"        
         let packageDependencies = if (fileExists packages) then (getDependencies packages) else []
         let dependencies = packageDependencies @ getAkkaDependency project
+        let releaseVersion = getProjectVersion project
 
-        let pack outputDir =
+        let pack outputDir symbolPackage =
             NuGetHelper.NuGet
                 (fun p ->
                     { p with
@@ -208,54 +234,87 @@ Target "Nuget" <| fun _ ->
                         Project =  project
                         Properties = ["Configuration", "Release"]
                         ReleaseNotes = release.Notes |> String.concat "\n"
-                        Version = release.NugetVersion
+                        Version = releaseVersion
                         Tags = tags |> String.concat " "
                         Title = nugetTitleSuffix
                         OutputPath = outputDir
                         WorkingDir = workingDir
-                        AccessKey = getBuildParamOrDefault "nugetkey" ""
-                        Publish = hasBuildParam "nugetkey"
-                        PublishUrl = getBuildParamOrDefault "nugetpublishurl" ""
+                        SymbolPackage = symbolPackage
                         Dependencies = dependencies })
                 nuspec
-        // pack nuget (with only dll and xml files)
 
+        // Copy dll, pdb and xml to libdir = workingDir/lib/net45/
         ensureDirectory libDir
         !! (releaseDir @@ project + ".dll")
+        ++ (releaseDir @@ project + ".pdb")
         ++ (releaseDir @@ project + ".xml")
         |> CopyFiles libDir
 
-        pack nugetDir
-
-        // pack symbol packages (adds .pdb and sources)
-
-        !! (releaseDir @@ project + ".pdb")
-        |> CopyFiles libDir
-
+        // Copy all src-files (.cs and .fs files) to workingDir/src
         let nugetSrcDir = workingDir @@ @"src/"
-        CreateDir nugetSrcDir
+        // CreateDir nugetSrcDir
 
         let isCs = hasExt ".cs"
         let isFs = hasExt ".fs"
         let isAssemblyInfo f = (filename f).Contains("AssemblyInfo")
         let isSrc f = (isCs f || isFs f) && not (isAssemblyInfo f) 
-
         CopyDir nugetSrcDir projectDir isSrc
-        DeleteDir (nugetSrcDir @@ "obj")
-        DeleteDir (nugetSrcDir @@ "bin")
-
-        // pack in working dir
-        pack workingDir
         
-        // copy to nuget directory with .symbols.nupkg extension
-        let pkg = (!! (workingDir @@ "*.nupkg")) |> Seq.head
+        //Remove workingDir/src/obj and workingDir/src/bin
+        removeDir (nugetSrcDir @@ "obj")
+        removeDir (nugetSrcDir @@ "bin")
 
-        let destFile = pkg |> filename |> changeExt ".symbols.nupkg" 
-        let dest = nugetDir @@ destFile
+        // Create both normal nuget package and symbols nuget package. 
+        // Uses the files we copied to workingDir and outputs to nugetdir
+        pack nugetDir NugetSymbolPackage.Nuspec
         
-        CopyFile dest pkg
+        removeDir workingDir
 
-    DeleteDir workingDir
+let publishNugetPackages _ = 
+    let rec publishPackage url accessKey trialsLeft packageFile =
+        let tracing = enableProcessTracing
+        enableProcessTracing <- false
+        let args = sprintf "push -source %s \"%s\" %s" url packageFile accessKey
+
+        tracefn "Pushing %s Attempts left: %d" (FullName packageFile) trialsLeft
+        try 
+            let result = ExecProcess (fun info -> 
+                    info.FileName <- nugetExe
+                    info.WorkingDirectory <- (Path.GetDirectoryName (FullName packageFile))
+                    info.Arguments <- args) (System.TimeSpan.FromMinutes 1.0)
+            enableProcessTracing <- tracing
+            if result <> 0 then failwithf "Error during NuGet symbol push. %s %s" nugetExe args
+        with exn -> 
+            if (trialsLeft > 0) then (publishPackage url accessKey (trialsLeft-1) packageFile)
+            else raise exn
+    let shouldPushNugetPackages = hasBuildParam "nugetkey"
+    let shouldPushSymbolsPackages = (hasBuildParam "symbolspublishurl") && (hasBuildParam "symbolskey")
+    
+    if (shouldPushNugetPackages || shouldPushSymbolsPackages) then
+        printfn "Pushing nuget packages"
+        if shouldPushNugetPackages then
+            let normalPackages= 
+                !! (nugetDir @@ "*.nupkg") 
+                -- (nugetDir @@ "*.symbols.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
+            for package in normalPackages do
+                publishPackage (getBuildParamOrDefault "nugetpublishurl" "") (getBuildParam "nugetkey") 3 package
+
+        if shouldPushSymbolsPackages then
+            let symbolPackages= !! (nugetDir @@ "*.symbols.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
+            for package in symbolPackages do
+                publishPackage (getBuildParam "symbolspublishurl") (getBuildParam "symbolskey") 3 package
+
+
+Target "Nuget" <| fun _ -> 
+    createNugetPackages()
+    publishNugetPackages()
+
+Target "CreateNuget" <| fun _ -> 
+    createNugetPackages()
+
+Target "PublishNuget" <| fun _ -> 
+    publishNugetPackages()
+
 
 
 //--------------------------------------------------------------------------------
@@ -268,21 +327,55 @@ Target "Help" <| fun _ ->
       "build [target]"
       ""
       " Targets for building:"
-      " * Build    Builds"
-      " * Nuget    Create nugets packages"
-      " * RunTests Runs tests"
-      " * All      Builds, run tests and creates nuget packages"
-      ""
-      " Targets for publishing:"
-      " * Nuget nugetkey=<key>                       publish packages to nuget.org"
-      " * Nuget nugetkey=<key> nugetpublishurl=<url> publish packages to url"
-      " * Nuget nugetprerelease=<prefix>             creates a pre-release package."
-      "             Can be combined with nugetkey and nugetpublishurl"
-      "             The version will be version-prefix<date>"
-      "             Example: nugetprerelease=dev =>  0.6.3-dev1408191917"
+      " * Build      Builds"
+      " * Nuget      Create and optionally publish nugets packages"
+      " * RunTests   Runs tests"
+      " * All        Builds, run tests, creates and optionally publish nuget packages"
       ""
       " Other Targets"
-      " * Help - Display this help" ]
+      " * Help       Display this help" 
+      " * HelpNuget  Display help about creating and pushing nuget packages" 
+      ""]
+
+Target "HelpNuget" <| fun _ ->
+    List.iter printfn [
+      "usage: "
+      "build Nuget [nugetkey=<key> [nugetpublishurl=<url>]] "
+      "            [symbolskey=<key> symbolspublishurl=<url>] "
+      "            [nugetprerelease=<prefix>]"
+      ""
+      "Arguments for Nuget target:"
+      "   nugetprerelease=<prefix>   Creates a pre-release package."
+      "                              The version will be version-prefix<date>"
+      "                              Example: nugetprerelease=dev =>"
+      "                                       0.6.3-dev1408191917"
+      ""
+      "In order to publish a nuget package, keys must be specified."
+      "If a key is not specified the nuget packages will only be created on disk"
+      "After a build you can find them in bin/nuget"
+      ""
+      "For pushing nuget packages to nuget.org and symbols to symbolsource.org"
+      "you need to specify nugetkey=<key>"
+      "   build Nuget nugetKey=<key for nuget.org>"
+      ""
+      "For pushing the ordinary nuget packages to another place than nuget.org specify the url"
+      "  nugetkey=<key>  nugetpublishurl=<url>  "
+      ""
+      "For pushing symbols packages specify:"
+      "  symbolskey=<key>  symbolspublishurl=<url> "
+      ""
+      "Examples:"
+      "  build Nuget                      Build nuget packages to the bin/nuget folder"
+      ""
+      "  build Nuget nugetprerelease=dev  Build pre-release nuget packages"
+      ""
+      "  build Nuget nugetkey=123         Build and publish to nuget.org and symbolsource.org"
+      ""
+      "  build Nuget nugetprerelease=dev nugetkey=123 nugetpublishurl=http://abc"
+      "              symbolskey=456 symbolspublishurl=http://xyz"
+      "                                   Build and publish pre-release nuget packages to http://abc"
+      "                                   and symbols packages to http://xyz"
+      ""]
 
 //--------------------------------------------------------------------------------
 //  Target dependencies
@@ -295,6 +388,7 @@ Target "Help" <| fun _ ->
 "CleanTests" ==> "RunTests"
 
 // nuget dependencies
+"CleanNuget" ==> "CreateNuget"
 "CleanNuget" ==> "BuildRelease" ==> "Nuget"
 
 Target "All" DoNothing

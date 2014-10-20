@@ -227,13 +227,19 @@ namespace Akka.Configuration
             return value;
         }
 
+        [Obsolete("Use GetTimeSpan instead")]
         public TimeSpan GetMillisDuration(string path, TimeSpan? @default = null, bool allowInfinite = true)
+        {
+            return GetTimeSpan(path, @default, allowInfinite);
+        }
+
+        public TimeSpan GetTimeSpan(string path, TimeSpan? @default = null, bool allowInfinite = true)
         {
             HoconValue value = GetNode(path);
             if (value == null)
                 return @default.GetValueOrDefault();
 
-            return value.GetMillisDuration(allowInfinite);
+            return value.GetTimeSpan(allowInfinite);
         }
 
         public override string ToString()

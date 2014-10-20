@@ -174,8 +174,9 @@ namespace Akka.Actor
         /// <param name="envelope">The envelope.</param>
         public void SystemInvoke(Envelope envelope)
         {
-            CurrentMessage = envelope.Message;
-            Sender = envelope.Sender;
+            //CurrentMessage = envelope.Message;
+            //Sender = envelope.Sender;
+
             //set the current context
 
                 try
@@ -206,25 +207,6 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Faults the resume.
-        /// </summary>
-        /// <param name="obj">The object.</param>
-        private void FaultResume(Resume obj)
-        {
-            Mailbox.Resume();
-        }
-
-        /// <summary>
-        ///     Faults the suspend.
-        /// </summary>
-        /// <param name="obj">The object.</param>
-        private void FaultSuspend(Suspend obj)
-        {
-            SuspendNonRecursive();
-            SuspendChildren();
-        }
-
-        /// <summary>
         ///     Suspends the children.
         /// </summary>
         private void SuspendChildren()
@@ -235,118 +217,15 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
-        ///     Suspends the non recursive.
-        /// </summary>
-        private void SuspendNonRecursive()
-        {
-            Mailbox.Suspend();
-        }
-
         private void TerminatedQueueFor(ActorRef actorRef)
         {
             terminatedQueue.Add(actorRef);
         }
 
-        /// <summary>
-        ///     Handles the child terminated.
-        /// </summary>
-        /// <param name="actor">The actor.</param>
-        private void HandleChildTerminated(ActorRef actor)
-        {
-            InternalActorRef tmp;
-            children.TryRemove(actor.Path.Name, out tmp);
-            //global::System.Diagnostics.Debug.WriteLine("removed child " + actor.Path.Name);
-            //global::System.Diagnostics.Debug.WriteLine("count " + Children.Count());
-        }
-
-        /// <summary>
-        ///     Terminates this instance.
-        /// </summary>
-        private void Terminate()
-        {
-            if (isTerminating)
-                return;
-
-            isTerminating = true;
-            _self.IsTerminated = true;
-
-            UnwatchWatchedActors(_actor);
-            foreach (var child in GetChildren())
-            {
-                child.Stop();
-            }
-
-            if (System.Settings.DebugLifecycle)
-                Publish(new Debug(Self.Path.ToString(), ActorType, "stopping"));
-            FinishTerminate();
-        }
-
-        /// <summary>
-        ///     Finishes the terminate.
-        /// </summary>
-        private void FinishTerminate()
-        {
-            if (_actor == null)
-            {
-                //TODO: this is the root actor, do something....
-                return;
-            }
-
-            ActorBase a = _actor;
-            if (a != null)
-            {
-                try
-                {
-                    _actor.AroundPostStop();
-                }
-                catch (Exception x)
-                {
-                    HandleNonFatalOrInterruptedException(
-                        () => Publish(new Error(x, Self.Path.ToString(), ActorType, x.Message)));
-                }
-            }
-            //TODO: Akka Jvm: this is done in a call to dispatcher.detach()
-            {
-                //TODO: Akka Jvm: this is done in a call to MessageDispatcher.detach()
-                {
-                    var mailbox = Mailbox;
-                    var deadLetterMailbox = System.Mailboxes.DeadLetterMailbox;
-                    SwapMailbox(deadLetterMailbox);
-                    mailbox.BecomeClosed();
-                    mailbox.CleanUp();
-                }
-            }
-            Parent.Tell(new DeathWatchNotification(Self, true, false));
-            TellWatchersWeDied();
-            UnwatchWatchedActors(a);
-            if(System.Settings.DebugLifecycle)
-                Publish(new Debug(Self.Path.ToString(), ActorType, "stopped"));
-
-            ClearActor();
-            ClearActorCell();
-            _actor = null;
-        }
-
         public void SwapMailbox(DeadLetterMailbox mailbox)
         {
+            Mailbox.DebugPrint("{0} Swapping mailbox to DeadLetterMailbox",Self);
             Interlocked.Exchange(ref _mailbox, mailbox);
-        }
-
-        /// <summary>
-        ///     Handles the non fatal or interrupted exception.
-        /// </summary>
-        /// <param name="action">The action.</param>
-        private void HandleNonFatalOrInterruptedException(Action action)
-        {
-            try
-            {
-                action();
-            }
-            catch
-            {
-                //TODO: Hmmm?
-            }
         }
 
         /// <summary>
@@ -411,14 +290,6 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Async restart this actor
-        /// </summary>
-        public void Restart()
-        {
-            Self.Tell(new Recreate(null));
-        }
-
-        /// <summary>
         ///     Restarts the specified cause.
         /// </summary>
         /// <param name="cause">The cause.</param>
@@ -444,44 +315,6 @@ namespace Akka.Actor
             {                
                 throw;
             }
-        }
-
-        /// <summary>
-        ///     Faults the recreate.
-        /// </summary>
-        /// <param name="m">The m.</param>
-        private void FaultRecreate(Recreate m)
-        {
-            isTerminating = false;
-            ActorBase failedActor = _actor;
-
-            object optionalMessage = CurrentMessage;
-
-            if (System.Settings.DebugLifecycle)
-                Publish(new Debug(Self.Path.ToString(), failedActor.GetType(), "restarting"));
-
-            try
-            {
-                failedActor.AroundPreRestart(m.Cause, optionalMessage);
-            }
-            catch (Exception e)
-            {
-                HandleNonFatalOrInterruptedException(() =>
-                {
-                    var ex = new PreRestartException(_self, e, m.Cause, optionalMessage);
-                    Publish(new Error(ex, Self.Path.ToString(), failedActor.GetType(), e.Message));
-                });
-            }
-
-            var freshActor = NewActor();
-            _actor = freshActor;
-            UseThreadContext(() =>
-            {
-                Mailbox.Resume();
-                freshActor.AroundPostRestart(m.Cause, null);
-            });
-            if(System.Settings.DebugLifecycle)
-                Publish(new Debug(Self.Path.ToString(), freshActor.GetType(), "restarted (" + freshActor + ")"));
         }
 
         /// <summary>
@@ -547,17 +380,6 @@ namespace Akka.Actor
         private void Kill()
         {
             throw new ActorKilledException("Kill");
-        }
-
-        /// <summary>
-        ///     Handles the failed.
-        /// </summary>
-        /// <param name="m">The m.</param>
-        private void HandleFailed(Failed m)
-        {
-            bool handled = _actor.SupervisorStrategyLazy().HandleFailure(this, m.Child, m.Cause);
-            if (!handled)
-                throw m.Cause;
         }
 
         /// <summary>

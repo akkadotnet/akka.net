@@ -200,7 +200,7 @@ namespace Akka.Tests
         public void LogFailutresInPostStop()
         {
             var a = Sys.ActorOf<EmptyActor>();
-            EventFilter<Exception>(message: "hurrah",occurances: 1, intercept: () =>
+            EventFilter.Exception<Exception>(message: "hurrah").ExpectOne(() =>
                 {
                     a.Tell(PoisonPill.Instance);
                 });            
@@ -263,7 +263,8 @@ namespace Akka.Tests
             ExpectMsg("ok");
             a.Tell("hello");
             ExpectMsg(43);
-            EventFilter<Exception>("buh", 1, () => a.Tell("fail"));
+
+            EventFilter.Exception<Exception>("buh").ExpectOne(() => a.Tell("fail"));
             a.Tell("hello");
             ExpectMsg(42);
         }
@@ -370,6 +371,36 @@ namespace Akka.Tests
             Task.Delay(100).Wait();
             supervisor.Tell(new SupervisorTestActor.Count());
             ExpectMsg(0);
+        }
+
+
+        class MyCustomException : Exception {}
+
+        [Fact(DisplayName="PreRestart should receive correct cause, message and sender")]
+        public void CallPreStartWithCorrectMessageAndSender()
+        {
+            var broken = ActorOf(c =>
+            {
+                c.Receive<string>((m, context) =>
+                {
+                    throw new MyCustomException();
+                });
+
+                c.OnPreRestart = (ex, mess, context) =>
+                {
+                    TestActor.Tell(ex);
+                    TestActor.Tell(mess);
+                    TestActor.Tell(context.Sender);
+                };
+            });
+
+            const string message = "hello";
+
+            broken.Tell(message);
+
+            ExpectMsg<MyCustomException>();
+            ExpectMsg(message);
+            ExpectMsg(TestActor);
         }
     }
 }

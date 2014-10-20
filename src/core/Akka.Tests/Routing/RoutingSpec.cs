@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
-using Akka.TestKit.Internals;
+using Akka.TestKit.TestActors;
 using Akka.Tests;
+using Akka.Util.Internal;
 using Xunit;
 using Akka.Util;
 
@@ -244,5 +245,41 @@ namespace Akka.Tests.Routing
             Sys.Stop(router);
 
         }             
+
+        [Fact]
+        public void Router_AddRoute_should_not_add_same_routee()
+        {
+            var router = new Router(new RoundRobinRoutingLogic(), TestActor);
+
+            var updatedRouter = router.AddRoutee(TestActor);
+            updatedRouter.Routees.Count().ShouldBe(1);
+            updatedRouter.Routees.First().AsInstanceOf<ActorRefRoutee>().Actor.ShouldBe(TestActor);
+        }
+
+
+        [Fact]
+        public void Router_AddRoute_should_add_new_routee()
+        {
+            var router = new Router(new RoundRobinRoutingLogic(), TestActor);
+            var blackHole = ActorOf<BlackHoleActor>();
+            var updatedRouter = router.AddRoutee(blackHole);
+            updatedRouter.Routees.Count().ShouldBe(2);
+            updatedRouter.Routees.Cast<ActorRefRoutee>().Any(r => ReferenceEquals(r.Actor, TestActor)).ShouldBe(true);
+            updatedRouter.Routees.Cast<ActorRefRoutee>().Any(r => ReferenceEquals(r.Actor, blackHole)).ShouldBe(true);
+        }
+
+
+        [Fact]
+        public void Router_RemoveRoute_should_remove_existing_routee_and_leave_the_rest()
+        {
+            var blackHole1 = ActorOf<BlackHoleActor>();
+            var blackHole2 = ActorOf<BlackHoleActor>();
+            var router = new Router(new RoundRobinRoutingLogic(), TestActor, blackHole1, blackHole2);
+
+            var updatedRouter = router.RemoveRoutee(TestActor);
+            updatedRouter.Routees.Count().ShouldBe(2);
+            updatedRouter.Routees.Cast<ActorRefRoutee>().Any(r => ReferenceEquals(r.Actor, blackHole1)).ShouldBe(true);
+            updatedRouter.Routees.Cast<ActorRefRoutee>().Any(r => ReferenceEquals(r.Actor, blackHole2)).ShouldBe(true);
+        }
     }
 }

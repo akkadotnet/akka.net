@@ -3,11 +3,13 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Akka.Actor.Internal;
 using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Serialization;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
@@ -18,7 +20,6 @@ namespace Akka.Actor
         public const int UndefinedUid = 0;
         private Props _props;
         private static readonly Props terminatedProps=new TerminatedProps();
-        [ThreadStatic] private static ActorCell current;
 
         protected ConcurrentDictionary<string, InternalActorRef> children =
             new ConcurrentDictionary<string, InternalActorRef>();
@@ -49,7 +50,7 @@ namespace Akka.Actor
 
         internal static ActorCell Current
         {
-            get { return current; }
+            get { return InternalCurrentActorCellKeeper.Current; }
         }
 
         public ActorSystem System { get { return _systemImpl; } }
@@ -97,11 +98,12 @@ namespace Akka.Actor
 
             //// ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅
             //mailbox.systemEnqueue(self, createMessage)
-            mailbox.Post(new Envelope {Message = createMessage, Sender = Self});
+            var self = Self;
+            mailbox.Post(self, new Envelope {Message = createMessage, Sender = self});
 
             if(sendSupervise)
             {
-                Parent.Tell(new Supervise(Self, async: false));
+                Parent.Tell(new Supervise(self, async: false), self);
             }
         }
 
@@ -160,10 +162,10 @@ namespace Akka.Actor
 
         public void Unbecome()
         {
-            if(behaviorStack.Count>1)   //We should never pop off the initial receiver
-                behaviorStack.Pop();
+            if (behaviorStack.Count > 1) //We should never pop off the initial receiver
+                behaviorStack.Pop();                
         }
-
+  
         void IUntypedActorContext.Become(UntypedReceive receive, bool discardOld)
         {
             Become(m => { receive(m); return true; }, discardOld);
@@ -241,6 +243,15 @@ namespace Akka.Actor
         protected virtual ActorBase CreateNewActorInstance()
         {
             var actor = _props.NewActor();
+
+            //Check if the actor needs a stash
+            var actorStash = actor as IActorStash;
+            if(actorStash != null && actorStash.Stash==null)
+            {
+                //Only assign a new stash if one hasn't been created by the actor already
+                actorStash.Stash = StashFactory.CreateStash(this, actorStash);
+            }
+
             var initializableActor = actor as InitializableActor;
             if(initializableActor != null)
             {
@@ -251,8 +262,8 @@ namespace Akka.Actor
 
         public void UseThreadContext(Action action)
         {
-            ActorCell tmp = Current;
-            current = this;
+            var tmp = InternalCurrentActorCellKeeper.Current;
+            InternalCurrentActorCellKeeper.Current = this;
             try
             {
                 action();
@@ -260,7 +271,7 @@ namespace Akka.Actor
             finally
             {
                 //ensure we set back the old context
-                current = tmp;
+                InternalCurrentActorCellKeeper.Current = tmp;
             }
         }
 
@@ -298,7 +309,7 @@ namespace Akka.Actor
                 Message = message,
             };
 
-            Mailbox.Post(m);
+            Mailbox.Post(Self, m);
         }
 
         protected void ClearActorCell()

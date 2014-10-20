@@ -55,7 +55,7 @@
     <Compile Include="..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="ImplicitSenderSpec.cs" />
+    <Compile Include="NoImplicitSenderSpec.cs" />
     <Compile Include="TestActorRefTests\BossActor.cs" />
     <Compile Include="TestActorRefTests\WatchAndForwardActor.cs" />
     <Compile Include="TestActorRefTests\Logger.cs" />
@@ -68,6 +68,15 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestActorRefTests\WorkerActor.cs" />
     <Compile Include="TestActorRefTests\WrappedTerminated.cs" />
+    <Compile Include="TestEventListenerTests\AllTestForEventFilterBase.cs" />
+    <Compile Include="TestEventListenerTests\AllTestForEventFilterBase_Instances.cs" />
+    <Compile Include="TestEventListenerTests\ConfigTests.cs" />
+    <Compile Include="TestEventListenerTests\CustomEventFilterTests.cs" />
+    <Compile Include="TestEventListenerTests\DeadLettersEventFilterTests.cs" />
+    <Compile Include="TestEventListenerTests\EventFilterTestBase.cs" />
+    <Compile Include="TestEventListenerTests\ExceptionEventFilterTests.cs" />
+    <Compile Include="TestEventListenerTests\ForwardAllEventsTestEventListener.cs" />
+    <Compile Include="TestFSMRefTests\TestFSMRefSpec.cs" />
     <Compile Include="TestKitBaseTests\AwaitAssertTests.cs" />
     <Compile Include="TestKitBaseTests\DilatedTests.cs" />
     <Compile Include="TestKitBaseTests\ExpectTests.cs" />

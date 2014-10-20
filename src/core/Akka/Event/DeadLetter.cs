@@ -37,5 +37,10 @@ namespace Akka.Event
         /// </summary>
         /// <value>The sender.</value>
         public ActorRef Sender { get; private set; }
+
+        public override string ToString()
+        {
+            return "DeadLetter from " + Sender + " to " + Recipient + ": <" + Message + ">";
+        }
     }
 }

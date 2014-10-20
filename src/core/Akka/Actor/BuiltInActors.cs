@@ -71,6 +71,8 @@ namespace Akka.Actor
             _eventStream = eventStream;
         }
 
+        //TODO: Since this isn't overriding SendUserMessage it doesn't handle all messages as Akka JVM does
+
         protected override void HandleDeadLetter(DeadLetter deadLetter)
         {
             if(!SpecialHandle(deadLetter.Message,deadLetter.Sender))

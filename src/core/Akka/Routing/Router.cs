@@ -3,6 +3,7 @@ using Akka.Actor;
 using System;
 using System.Threading.Tasks;
 using System.Linq;
+using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -29,6 +30,12 @@ namespace Akka.Routing
         {
             return null;
         }
+
+
+        public static implicit operator Routee(ActorRef actorRef)
+        {
+            return new ActorRefRoutee(actorRef);
+        }
     }
 
     public class ActorRefRoutee : Routee
@@ -49,25 +56,63 @@ namespace Akka.Routing
         {
             return Actor.Ask(message, timeout);
         }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((ActorRefRoutee)obj);
+        }
+
+        protected bool Equals(ActorRefRoutee other)
+        {
+            return Equals(Actor, other.Actor);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Actor != null ? Actor.GetHashCode() : 0);
+        }
     }
 
     public class ActorSelectionRoutee : Routee
     {
-        private readonly ActorSelection actor;
+        private readonly ActorSelection _actor;
+
+        public ActorSelection Selection { get { return _actor; } }
 
         public ActorSelectionRoutee(ActorSelection actor)
         {
-            this.actor = actor;
+            _actor = actor;
         }
 
         public override void Send(object message, ActorRef sender)
         {
-            actor.Tell(message, sender);
+            _actor.Tell(message, sender);
         }
 
         public override Task Ask(object message, TimeSpan? timeout)
         {
-            return actor.Ask(message, timeout);
+            return _actor.Ask(message, timeout);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((ActorSelectionRoutee)obj);
+        }
+
+        protected bool Equals(ActorSelectionRoutee other)
+        {
+            return Equals(_actor, other._actor);
+        }
+
+        public override int GetHashCode()
+        {
+            return (_actor != null ? _actor.GetHashCode() : 0);
         }
     }
 
@@ -114,23 +159,28 @@ namespace Akka.Routing
 
     public class Router
     {
-        private readonly RoutingLogic logic;
-        private readonly Routee[] routees;
-
+        private readonly RoutingLogic _logic;
+        private readonly Routee[] _routees;
+       
         public Router(RoutingLogic logic, params Routee[] routees)
         {
-            if (routees == null)
+            if(routees == null)
             {
                 routees = new Routee[0];
             }
-            this.routees = routees;
-            this.logic = logic;
+            _routees = routees;
+            _logic = logic;
         }
-
         public IEnumerable<Routee> Routees
         {
-            get { return routees; }
+            get { return _routees; }
         }
+
+        public RoutingLogic RoutingLogic
+        {
+            get { return _logic; }
+        }
+
 
         private object UnWrap(object message)
         {
@@ -146,42 +196,74 @@ namespace Akka.Routing
         {
             if (message is Broadcast)
             {
-                new SeveralRoutees(routees).Send(UnWrap(message), sender);
+                new SeveralRoutees(_routees).Send(UnWrap(message), sender);
             }
             else
             {
-                Send(logic.Select(message, routees), message, sender);
+                Send(_logic.Select(message, _routees), message, sender);
             }
         }
 
-        public virtual void Send(Routee routee, object message, ActorRef sender)
+        protected virtual void Send(Routee routee, object message, ActorRef sender)
         {
             routee.Send(UnWrap(message), sender);
         }
 
+        /// <summary>
+        /// Create a new instance with the specified routees and the same <see cref="RoutingLogic"/>.
+        /// </summary>
         public Router WithRoutees(params Routee[] routees)
         {
-            return new Router(logic, routees);
+            return new Router(_logic, routees);
         }
 
+        /// <summary>
+        /// Create a new instance with one more routee and the same <see cref="RoutingLogic"/>.
+        /// </summary>
         public Router AddRoutee(Routee routee)
         {
-            return new Router(logic, Include(routee));
+            return new Router(_logic, _routees.Union(new[]{routee}).ToArray());
         }
 
+        /// <summary>
+        /// Create a new instance with one more routee and the same <see cref="RoutingLogic"/>.
+        /// </summary>
         public Router AddRoutee(ActorRef routee)
         {
-            return new Router(logic, Include(new ActorRefRoutee(routee)));
+            return AddRoutee(new ActorRefRoutee(routee));
         }
 
+        /// <summary>
+        /// Create a new instance with one more routee and the same <see cref="RoutingLogic"/>.
+        /// </summary>  
         public Router AddRoutee(ActorSelection routee)
         {
-            return new Router(logic, Include(new ActorSelectionRoutee(routee)));
+           return AddRoutee(new ActorSelectionRoutee(routee));
         }
 
-        private Routee[] Include(Routee routee)
+        /// <summary>
+        /// Create a new instance without the specified routee.
+        /// </summary>
+        public Router RemoveRoutee(Routee routee)
         {
-            return routees.Union(Enumerable.Repeat(routee, 1)).ToArray();
+            var routees = _routees.Where(r => !r.Equals(routee)).ToArray();
+            return new Router(_logic, routees);
+        }
+
+        /// <summary>
+        /// Create a new instance without the specified routee.
+        /// </summary>
+        public Router RemoveRoutee(ActorRef routee)
+        {
+            return RemoveRoutee(new ActorRefRoutee(routee));
+        }
+
+        /// <summary>
+        /// Create a new instance without the specified routee.
+        /// </summary>
+        public Router RemoveRoutee(ActorSelection routee)
+        {
+            return RemoveRoutee(new ActorSelectionRoutee(routee));
         }
     }
 }

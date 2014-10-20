@@ -35,6 +35,8 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>
+    </DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release Mono|AnyCPU'">
     <OutputPath>bin\Release Mono\</OutputPath>
@@ -80,6 +82,7 @@
   <ItemGroup>
     <Compile Include="Actor\ActorBecomeTests.cs" />
     <Compile Include="Actor\ActorCellTests_SerializationOfUserMessages.cs" />
+    <Compile Include="Actor\ActorDslSpec.cs" />
     <Compile Include="Actor\ActorLifeCycleSpec.cs" />
     <Compile Include="Actor\ActorPathSpec.cs" />
     <Compile Include="Actor\ActorRefSpec.cs" />
@@ -98,10 +101,13 @@
     <Compile Include="Actor\PatternSpec.cs" />
     <Compile Include="Actor\ReceiveTimeoutSpec.cs" />
     <Compile Include="Actor\RootGuardianActorRef_Tests.cs" />
+    <Compile Include="Actor\StashMailboxSpec.cs" />
+    <Compile Include="Actor\Stash\ActorWithStashSpec.cs" />
     <Compile Include="Configuration\ConfigurationSpec.cs" />
     <Compile Include="Actor\ReceiveActorTests_Become.cs" />
     <Compile Include="Actor\ReceiveActorTests_LifeCycle.cs" />
     <Compile Include="Configuration\HoconTests.cs" />
+    <Compile Include="Dispatch\MailboxesSpec.cs" />
     <Compile Include="Event\EventBusSpec.cs" />
     <Compile Include="Event\EventStreamSpec.cs" />
     <Compile Include="MatchHandler\CachedMatchCompilerTests.cs" />
@@ -123,6 +129,7 @@
     <Compile Include="Serialization\SerializationSpec.cs" />
     <Compile Include="TestUtils\Comparable.cs" />
     <Compile Include="TestUtils\Supervisor.cs" />
+    <Compile Include="Util\CollectionExtensionsSpec.cs" />
     <Compile Include="Util\PatternSpec.cs" />
     <Compile Include="Util\SwitchTests.cs" />
     <Compile Include="Util\TypeExtensionsTests.cs" />
