@@ -49,7 +49,7 @@ The `Stash` field is now automatically populated with an appropriate stash durin
 
 __Breaking Changes: Renamed Logger Namespaces__ - The namespaces, DLL names, and NuGet packages for all logger add-ons have been changed to `Akka.Loggers.Xyz`. Please install the latest NuGet package (and uninstall the old ones) and update your Akka HOCON configurations accordingly.
 
-__Serilog Support__ - Akka.NET now has an official (Serilog)[http://serilog.net/] logger that you can install via the `Akka.Logger.Serilog` package. You can register the serilog logger via your HOCON configuration like this:
+__Serilog Support__ - Akka.NET now has an official [Serilog](http://serilog.net/) logger that you can install via the `Akka.Logger.Serilog` package. You can register the serilog logger via your HOCON configuration like this:
 
      loggers=["Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog"]
 
@@ -78,6 +78,17 @@ And from this point onward, any actor can be configured to use this mailbox via 
                         .WithRouter(new RoundRobinPool(3))
                         .WithMailbox("replay-mailbox"));
 
+__New Feature: Test Your Akka.NET Apps Using Akka.TestKit__ - We've refactored the testing framework used for testing Akka.NET's internals into a test-framework-agnostic NuGet package you can use for unit and integration testing your own Akka.NET apps. Right now we're scarce on documentation so you'll want to take a look at the tests inside the Akka.NET source for reference.
+
+Right now we have Akka.TestKit adapters for both MSTest and XUnit, which you can install to your own project via the following:
+
+MSTest:
+
+    install-package Akka.TestKit.VsTest
+
+XUnit:
+
+    install-package Akka.TestKit.Xunit
 
 #### 0.6.5
 * Logging to Standard Out is now done in color. To disable it set `StandardOutLogger.UseColors = false;`.
