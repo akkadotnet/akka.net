@@ -65,6 +65,7 @@
   <ItemGroup>
     <Compile Include="AutoDownSpec.cs" />
     <Compile Include="ClusterConfigSpec.cs" />
+    <Compile Include="ClusterDeployerSpec.cs" />
     <Compile Include="ClusterDomainEventPublisherSpec.cs" />
     <Compile Include="ClusterDomainEventSpec.cs" />
     <Compile Include="ClusterHeartBeatSenderStateSpec.cs" />

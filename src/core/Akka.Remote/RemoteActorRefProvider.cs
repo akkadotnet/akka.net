@@ -66,7 +66,7 @@ namespace Akka.Remote
         public LocalActorRef SystemGuardian { get { return _local.SystemGuardian; } }
         public InternalActorRef TempContainer { get { return _local.TempContainer; } }
         public ActorRef DeadLetters { get { return _local.DeadLetters; } }
-        public Deployer Deployer { get; private set; }
+        public Deployer Deployer { get; protected set; }
         public Address DefaultAddress { get { return Transport.DefaultAddress; } }
         public Settings Settings { get { return _local.Settings; } }
         public Task TerminationTask { get { return _local.TerminationTask; } }
