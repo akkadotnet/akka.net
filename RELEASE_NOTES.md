@@ -1,3 +1,7 @@
+#### 0.7.1 NEXTVERSION
+_This is a placeholder for the next released version. Add new stuff that will go into the next version below. It might be 0.7.1 or 0.8._
+
+
 #### 0.7.0 Oct 16 2014
 Major new changes and additions in this release, including some breaking changes...
 
