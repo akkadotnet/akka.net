@@ -90,10 +90,9 @@ XUnit:
 
     install-package Akka.TestKit.Xunit
 
-#### 0.6.5
-* Logging to Standard Out is now done in color. To disable it set `StandardOutLogger.UseColors = false;`.
+__New Feature: Logging to Standard Out is now done in color__ - This new feature can be disabled by setting `StandardOutLogger.UseColors = false;`.
 Colors can be customized: `StandardOutLogger.DebugColor = ConsoleColor.Green;`.
-If you need to print to stdout use `Akka.Util.StandardOutWriter.Write()` instead of `Console.WriteLine`, otherwise your messages might get printed in the wrong color.
+If you need to print to stdout directly use `Akka.Util.StandardOutWriter.Write()` instead of `Console.WriteLine`, otherwise your messages might get printed in the wrong color.
 
 #### 0.6.4 Sep 9 2014
 * Introduced `TailChoppingRouter`
