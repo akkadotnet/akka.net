@@ -207,6 +207,11 @@ namespace Akka.Cluster.Routing
         ClusterRouterSettingsBase Settings { get; }
     }
 
+    /// <summary>
+    /// INTERNAL API
+    /// The router actor, subscribes to cluster events and
+    /// adjusts the routees.
+    /// </summary>
     internal abstract class ClusterRouterActor : RouterActor
     {
         protected ClusterRouterActor(ClusterRouterSettingsBase settings)
@@ -342,6 +347,7 @@ namespace Akka.Cluster.Routing
     {
         public ClusterRouterGroupActor(ClusterRouterGroupSettings settings) : base(settings)
         {
+            Settings = settings;
             var groupConfig = Cell.RouterConfig as Group;
             if (groupConfig != null)
             {
@@ -355,7 +361,6 @@ namespace Akka.Cluster.Routing
                 ? ImmutableDictionary<Address, ImmutableHashSet<string>>.Empty.Add(Cluster.SelfAddress,
                     settings.RouteesPaths)
                 : ImmutableDictionary<Address, ImmutableHashSet<string>>.Empty;
-            Settings = settings;
         }
 
         public new ClusterRouterGroupSettings Settings { get; private set; }
