@@ -112,7 +112,7 @@ namespace Akka.Cluster.Routing
 
         public override bool IsManagementMessage(object message)
         {
-            return message is IClusterMessage || message is ClusterEvent.CurrentClusterState || base.IsManagementMessage(message);
+            return message is ClusterEvent.IClusterDomainEvent || message is ClusterEvent.CurrentClusterState || base.IsManagementMessage(message);
         }
 
         public override RouterConfig WithFallback(RouterConfig routerConfig)
@@ -336,7 +336,10 @@ namespace Akka.Cluster.Routing
                 {
                     if (IsAvailable(member.Member)) AddMember(member.Member);
                 })
-                .Default(msg => base.OnReceive(msg));
+                .Default(msg =>
+                {
+                    base.OnReceive(msg);
+                });
         }
     }
 
