@@ -65,7 +65,7 @@ namespace Samples.Cluster.ConsistentHashRouting
             }
             else if(message is CommandComplete)
             {
-                Console.WriteLine("Frontend [{0}]: Received CommandComplete from {1}", Self, Sender);
+                Console.WriteLine("Frontend [{0}]: Received CommandComplete from {1}", Cluster.SelfAddress, Sender);
             }
         }
 
