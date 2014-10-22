@@ -112,7 +112,7 @@ namespace Akka.Cluster.Routing
 
         public override bool IsManagementMessage(object message)
         {
-            return message is IClusterMessage || message is ClusterEvent.CurrentClusterState || base.IsManagementMessage(message);
+            return message is ClusterEvent.IClusterDomainEvent || message is ClusterEvent.CurrentClusterState || base.IsManagementMessage(message);
         }
 
         public override RouterConfig WithFallback(RouterConfig routerConfig)
@@ -207,6 +207,11 @@ namespace Akka.Cluster.Routing
         ClusterRouterSettingsBase Settings { get; }
     }
 
+    /// <summary>
+    /// INTERNAL API
+    /// The router actor, subscribes to cluster events and
+    /// adjusts the routees.
+    /// </summary>
     internal abstract class ClusterRouterActor : RouterActor
     {
         protected ClusterRouterActor(ClusterRouterSettingsBase settings)
@@ -331,7 +336,10 @@ namespace Akka.Cluster.Routing
                 {
                     if (IsAvailable(member.Member)) AddMember(member.Member);
                 })
-                .Default(msg => base.OnReceive(msg));
+                .Default(msg =>
+                {
+                    base.OnReceive(msg);
+                });
         }
     }
 
@@ -342,6 +350,7 @@ namespace Akka.Cluster.Routing
     {
         public ClusterRouterGroupActor(ClusterRouterGroupSettings settings) : base(settings)
         {
+            Settings = settings;
             var groupConfig = Cell.RouterConfig as Group;
             if (groupConfig != null)
             {
@@ -355,7 +364,6 @@ namespace Akka.Cluster.Routing
                 ? ImmutableDictionary<Address, ImmutableHashSet<string>>.Empty.Add(Cluster.SelfAddress,
                     settings.RouteesPaths)
                 : ImmutableDictionary<Address, ImmutableHashSet<string>>.Empty;
-            Settings = settings;
         }
 
         public new ClusterRouterGroupSettings Settings { get; private set; }

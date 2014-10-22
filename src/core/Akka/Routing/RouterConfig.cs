@@ -101,6 +101,7 @@ namespace Akka.Routing
 
         public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
         {
+            if (paths == null) return new Routee[0];
             return paths.Select(((ActorSystemImpl) routedActorCell.System).ActorSelection).Select(actor => new ActorSelectionRoutee(actor));
         }
     }
