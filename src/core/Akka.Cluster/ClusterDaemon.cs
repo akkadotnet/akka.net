@@ -868,13 +868,13 @@ namespace Akka.Cluster
         {
             if (address.Protocol != _cluster.SelfAddress.Protocol)
             {
-                Log.Warn("Trying to join member with wrong protocol, but was ignored, expected [{0}] but was [{1}]",
+                Log.Warning("Trying to join member with wrong protocol, but was ignored, expected [{0}] but was [{1}]",
                     _cluster.SelfAddress.Protocol, address.Protocol);
             }
             else if (address.System != _cluster.SelfAddress.System)
             {
-                Log.Warn(
-                    "Trying to join member with wrong ActorSystem name, but was ignored, expected [{0}] but was [{}]",
+                Log.Warning(
+                    "Trying to join member with wrong ActorSystem name, but was ignored, expected [{0}] but was [{1}]",
                     _cluster.SelfAddress.System, address.System);
             }
             else
@@ -919,12 +919,12 @@ namespace Akka.Cluster
         {
             if(node.Address.Protocol != _cluster.SelfAddress.Protocol)
             {
-                Log.Warn("Member with wrong protocol tried to join, but was ignored, expected [{0}] but was [{1}]",
+                Log.Warning("Member with wrong protocol tried to join, but was ignored, expected [{0}] but was [{1}]",
                     _cluster.SelfAddress.Protocol, node.Address.Protocol);
             }
             else if (node.Address.System != _cluster.SelfAddress.System)
             {
-                Log.Warn(
+                Log.Warning(
                     "Member with wrong ActorSystem name tried to join, but was ignored, expected [{0}] but was [{1}]",
                     _cluster.SelfAddress.System, node.Address.System);
             }
@@ -1145,12 +1145,12 @@ namespace Akka.Cluster
             }
             if(localGossip.Members.All(m => !m.UniqueAddress.Equals(from)))
             {
-                Log.Debug("Cluster Node [{}] - Ignoring received gossip from unknown [{}]", _cluster.SelfAddress, from);
+                Log.Debug("Cluster Node [{0}] - Ignoring received gossip from unknown [{1}]", _cluster.SelfAddress, from);
                 return ReceiveGossipType.Ignored;
             }
             if(remoteGossip.Members.All(m => !m.UniqueAddress.Equals(SelfUniqueAddress)))
             {
-                Log.Debug("Ignoring received gossip that does not contain myself, from [{}]", from);
+                Log.Debug("Ignoring received gossip that does not contain myself, from [{0}]", from);
                 return ReceiveGossipType.Ignored;
             }
 
