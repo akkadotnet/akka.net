@@ -5,7 +5,12 @@ using Akka.Routing;
 
 namespace Akka.Remote
 {
-    public class RemoteDeployer : Deployer
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Used for deployment of actors on remote systems
+    /// </summary>
+    internal class RemoteDeployer : Deployer
     {
         public RemoteDeployer(Settings settings) : base(settings)
         {

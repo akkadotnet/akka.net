@@ -17,7 +17,7 @@ namespace Akka.Cluster.Tests
             failure-detector.implementation-class = ""Akka.Cluster.Tests.FailureDetectorPuppet, Akka.Cluster.Tests""
         }
         akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-        akka.remote.netty.tcp.port = 0";
+        akka.remote.helios.tcp.port = 0";
 
         public ActorRef Self { get { return TestActor; } }
 
