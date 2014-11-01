@@ -50,17 +50,8 @@ namespace Akka.Tests.Routing
     ";
         }
 
-        public class NoOpActor : UntypedActor
-        {
-            protected override void OnReceive(object message)
-            {
-               
-            }
-        }
-
         public class Echo : UntypedActor
         {
-
             protected override void OnReceive(object message)
             {
                Sender.Tell(Self);
@@ -114,7 +105,7 @@ namespace Akka.Tests.Routing
             var latch = new TestLatch(Sys,1);
             var resizer = new TestResizer(latch);
             var router =
-                Sys.ActorOf(new RoundRobinPool( 0, resizer,SupervisorStrategy.DefaultStrategy,"").Props(Props.Create<NoOpActor>()));
+                Sys.ActorOf(new RoundRobinPool( 0, resizer,SupervisorStrategy.DefaultStrategy,"").Props(Props.Create<BlackHoleActor>()));
 
             Watch(router);
 
@@ -182,13 +173,22 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Router_in_general_must_use_configured_nr_of_instances_when_FromConfig()
         {
-            var router = Sys.ActorOf(Props.Create<NoOpActor>().WithRouter(new FromConfig()), "router1");
+            var router = Sys.ActorOf(Props.Create<BlackHoleActor>().WithRouter(new FromConfig()), "router1");
 
             router.Tell(new GetRoutees(),TestActor);
             ExpectMsg<Routees>().Members.Count().ShouldBe(3);
             Watch(router);
             Sys.Stop(router);
             ExpectTerminated(router);
+        }
+
+        [Fact]
+        public void Router_in_general_must_not_use_configured_nr_of_instances_when_not_FromConfig()
+        {
+            var router = Sys.ActorOf(Props.Create<BlackHoleActor>(), "router1");
+
+            router.Tell(new GetRoutees(), TestActor);
+            ExpectNoMsg();
         }
 
         /*
@@ -203,7 +203,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Router_in_general_must_use_configured_nr_of_instances_when_router_is_specified()
         {
-            var router = Sys.ActorOf(Props.Create<NoOpActor>().WithRouter(new RoundRobinPool(3)), "router1");
+            var router = Sys.ActorOf(Props.Create<BlackHoleActor>().WithRouter(new RoundRobinPool(3)), "router1");
             router.Tell(new GetRoutees(), TestActor);
             ExpectMsg<Routees>().Members.Count().ShouldBe(3);
             Watch(router);
@@ -237,7 +237,7 @@ namespace Akka.Tests.Routing
             var resizer = new TestResizer(latch);
             var router =
                 Sys.ActorOf(
-                    Props.Create<NoOpActor>()
+                    Props.Create<BlackHoleActor>()
                         .WithRouter(new RoundRobinPool(0, resizer, SupervisorStrategy.DefaultStrategy, "")));
             latch.Open();
             router.Tell(new GetRoutees(),TestActor);
