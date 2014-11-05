@@ -146,6 +146,9 @@ namespace Akka.Remote
 
         private InternalActorRef CreateNoRouter(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, Deploy deploy, bool async)
         {
+            //remove the router config from the deploy since props does not contain FromConfig / nor any other router info
+            deploy = deploy.WithRouterConfig(props.RouterConfig);
+            //apply other information, e.g. remote deploy
             var deployProps = props.WithDeploy(deploy);
 
             if (deployProps.Deploy != null && deployProps.Deploy.Scope is RemoteScope)
@@ -165,8 +168,10 @@ namespace Akka.Remote
 
         private InternalActorRef CreateWithRouter(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, Deploy deploy, bool async)
         {
+            //if no router info is in the deployment
             if (deploy.RouterConfig.NoRouter())
             {
+                //apply the props router to the deploy
                 deploy = deploy.WithRouterConfig(props.RouterConfig);
             }
 

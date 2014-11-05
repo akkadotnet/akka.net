@@ -218,10 +218,18 @@ namespace Akka.Routing
 
     public class FromConfig : RouterConfig
     {
+        private static readonly FromConfig _instance = new FromConfig();
+
+        public static FromConfig Instance
+        {
+            get { return _instance; }
+        }
+
         public FromConfig() : base()
         {
             
         }
+
         public override Router CreateRouter(ActorSystem system)
         {
             throw new NotSupportedException();

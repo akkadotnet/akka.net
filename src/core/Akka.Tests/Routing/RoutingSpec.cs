@@ -173,7 +173,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Router_in_general_must_use_configured_nr_of_instances_when_FromConfig()
         {
-            var router = Sys.ActorOf(Props.Create<BlackHoleActor>().WithRouter(new FromConfig()), "router1");
+            var router = Sys.ActorOf(Props.Create<BlackHoleActor>().WithRouter(FromConfig.Instance), "router1");
 
             router.Tell(new GetRoutees(),TestActor);
             ExpectMsg<Routees>().Members.Count().ShouldBe(3);
