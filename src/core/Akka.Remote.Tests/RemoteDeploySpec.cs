@@ -22,7 +22,7 @@ namespace Akka.Remote.Tests
             akka {
                 loglevel = INFO 
                 log-dead-letters-during-shutdown = false
-                actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
+              //  actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
                 remote.helios.tcp = {
                     hostname = localhost
                     port = 0
@@ -66,7 +66,7 @@ namespace Akka.Remote.Tests
         }
 
 
-        [Fact(Skip = "Verifies FromConfigBug")]
+        [Fact]
         public void Router_in_general_must_not_use_configured_nr_of_instances_when_not_FromConfig()
         {
             var router = Sys.ActorOf(Props.Create<BlackHoleActor>(), "router1");

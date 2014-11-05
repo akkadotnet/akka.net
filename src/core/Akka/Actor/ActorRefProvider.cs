@@ -354,67 +354,58 @@ namespace Akka.Actor
                 props = props.WithMailbox(deploy.Mailbox);
             if(deploy.Dispatcher != null)
                 props = props.WithDispatcher(deploy.Dispatcher);
-            if(deploy.Scope is RemoteScope)
-            {
-
-            }
-
-            if(string.IsNullOrEmpty(props.Mailbox))
-            {
-                //   throw new NotSupportedException("Mailbox can not be configured as null or empty");
-            }
-            if(string.IsNullOrEmpty(props.Dispatcher))
-            {
-                //TODO: fix this..
-                //    throw new NotSupportedException("Dispatcher can not be configured as null or empty");
-            }
-
 
             //TODO: how should this be dealt with?
             //akka simply passes the "deploy" var from remote daemon to ActorOf
             //so it atleast seems like they ignore if remote scope is provided here.
             //leaving this for now since it does work
 
-            //if (props.Deploy != null && props.Deploy.Scope is RemoteScope)
-            //{
-            //    throw new NotSupportedException("LocalActorRefProvider can not deploy remote");
-            //}
-
-            if(props.RouterConfig is NoRouter || props.RouterConfig == null)
+            if(props.RouterConfig.NoRouter())
             {
-
-                props = props.WithDeploy(deploy);
-                var dispatcher = system.Dispatchers.FromConfig(props.Dispatcher);
-                var mailbox = _system.Mailboxes.CreateMailbox(props, null /*dispatcher.Configurator.Config*/);
-                    //TODO: Should be: system.mailboxes.getMailboxType(props2, dispatcher.configurator.config)
-                if (async)
-                {
-                    var reActorRef=new RepointableActorRef(system, props, dispatcher, () => mailbox, supervisor, path);
-                    reActorRef.Initialize(async:true);
-                    return reActorRef;
-                }
-                return new LocalActorRef(system, props, dispatcher, () => mailbox, supervisor, path);
+                return CreateNoRouter(system, props, supervisor, path, deploy, async);
             }
-            else
+
+            return CreateWithRouter(system, props, supervisor, path, deploy, async);
+        }
+
+        private InternalActorRef CreateWithRouter(ActorSystemImpl system, Props props, InternalActorRef supervisor,
+            ActorPath path, Deploy deploy, bool async)
+        {
+            //if no Router config value was specified, override with procedural input
+            if (deploy.RouterConfig.NoRouter())
             {
-                //if no Router config value was specified, override with procedural input
-                if(deploy.RouterConfig is NoRouter)
-                {
-                    deploy = deploy.WithRouterConfig(props.RouterConfig);
-                }
-                var routerDispatcher = system.Dispatchers.FromConfig(props.RouterConfig.RouterDispatcher);
-                var routerMailbox = _system.Mailboxes.CreateMailbox(props, null);             
-                    //TODO: Should be val routerMailbox = system.mailboxes.getMailboxType(routerProps, routerDispatcher.configurator.config)
-
-                // routers use context.actorOf() to create the routees, which does not allow us to pass
-                // these through, but obtain them here for early verification
-                var routerProps = Props.Empty.WithDeploy(deploy);
-                var routeeProps = props.WithRouter(RouterConfig.NoRouter);
-
-                var routedActorRef = new RoutedActorRef(system, routerProps, routerDispatcher, () => routerMailbox, routeeProps,supervisor, path);
-                routedActorRef.Initialize(async);
-                return routedActorRef;
+                deploy = deploy.WithRouterConfig(props.RouterConfig);
             }
+
+            var routerDispatcher = system.Dispatchers.FromConfig(props.RouterConfig.RouterDispatcher);
+            var routerMailbox = _system.Mailboxes.CreateMailbox(props, null);
+            //TODO: Should be val routerMailbox = system.mailboxes.getMailboxType(routerProps, routerDispatcher.configurator.config)
+
+            // routers use context.actorOf() to create the routees, which does not allow us to pass
+            // these through, but obtain them here for early verification
+            var routerProps = Props.Empty.WithDeploy(deploy);
+            var routeeProps = props.WithRouter(RouterConfig.NoRouter);
+
+            var routedActorRef = new RoutedActorRef(system, routerProps, routerDispatcher, () => routerMailbox, routeeProps,
+                supervisor, path);
+            routedActorRef.Initialize(async);
+            return routedActorRef;
+        }
+
+        private InternalActorRef CreateNoRouter(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path,
+            Deploy deploy, bool async)
+        {
+            props = props.WithDeploy(deploy);
+            var dispatcher = system.Dispatchers.FromConfig(props.Dispatcher);
+            var mailbox = _system.Mailboxes.CreateMailbox(props, null /*dispatcher.Configurator.Config*/);
+            //TODO: Should be: system.mailboxes.getMailboxType(props2, dispatcher.configurator.config)
+            if (async)
+            {
+                var reActorRef = new RepointableActorRef(system, props, dispatcher, () => mailbox, supervisor, path);
+                reActorRef.Initialize(async: true);
+                return reActorRef;
+            }
+            return new LocalActorRef(system, props, dispatcher, () => mailbox, supervisor, path);
         }
 
         public Address GetExternalAddressFor(Address address)
