@@ -131,6 +131,7 @@
     <Compile Include="TestUtils\Comparable.cs" />
     <Compile Include="TestUtils\Supervisor.cs" />
     <Compile Include="Util\CollectionExtensionsSpec.cs" />
+    <Compile Include="Util\Internal\InterlockedSpinTests.cs" />
     <Compile Include="Util\Internal\Collections\ImmutableAvlTreeMapTests.cs" />
     <Compile Include="Util\Internal\Collections\ImmutableAvlTreeTests.cs" />
     <Compile Include="Util\PatternSpec.cs" />
