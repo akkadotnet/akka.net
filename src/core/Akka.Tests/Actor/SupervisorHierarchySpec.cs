@@ -1,12 +1,48 @@
 ﻿using System;
+using System.Threading;
 using Akka.Actor;
+using Akka.Actor.Dsl;
+using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
+using Akka.TestKit.TestActors;
+using Akka.Tests.TestUtils;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Actor
 {
     public class SupervisorHierarchySpec : AkkaSpec
     {
+        private class CountDownActor : ReceiveActor
+        {
+            private readonly CountdownEvent _restartsCountdown;
+            private readonly SupervisorStrategy _supervisorStrategy;
+
+            public CountDownActor(CountdownEvent restartsCountdown, SupervisorStrategy supervisorStrategy)
+            {
+                _restartsCountdown = restartsCountdown;
+                _supervisorStrategy = supervisorStrategy;
+                Receive<Props>(p => Sender.Tell(Context.ActorOf(p)));
+                Receive<PropsWithName>(p => Sender.Tell(Context.ActorOf(p.Props, p.Name)));
+            }
+
+            protected override void PreRestart(Exception reason, object message)
+            {
+                //Test relies on keeping children around during restart so we will not call base, 
+                //which by default it disposes of all children and then calls postStop()
+            }
+
+            protected override void PostRestart(Exception reason)
+            {
+                _restartsCountdown.Signal();
+            }
+
+            protected override SupervisorStrategy SupervisorStrategy()
+            {
+                return _supervisorStrategy;
+            }
+        }
+
         private class Resumer : TestReceiveActor
         {
             public Resumer()
@@ -23,13 +59,131 @@ namespace Akka.Tests.Actor
             }
         }
 
+        private class Failure : Exception
+        {
+            public Directive Directive { get; set; }
+            public bool Stop { get; set; }
+            public int Depth { get; set; }
+            public int FailPre { get; set; }
+            public int FailPost { get; set; }
+            public int FailConstr { get; set; }
+            public int StopKids { get; set; }
+
+            public Failure(Directive directive, bool stop, int depth, int failPre, int failPost, int failConstr, int stopKids)
+                : base("failure")
+            {
+                Directive = directive;
+                Stop = stop;
+                Depth = depth;
+                FailPre = failPre;
+                FailPost = failPost;
+                FailConstr = failConstr;
+                StopKids = stopKids;
+            }
+        }
+
+
         public SupervisorHierarchySpec()
             : base(FullDebugConfig)
         {
 
         }
+
         [Fact]
-        public void Suspend_children_while_failing()
+        public void A_supervisor_hierarchy_must_Restart_Manager_And_Workers_In_AllForOne()
+        {
+            var countDown = new CountdownEvent(4);
+            SupervisorStrategy strategy = new OneForOneStrategy(_ => Directive.Restart);
+            var boss = ActorOf(Props.Create(() => new Supervisor(strategy)), "boss");
+
+            Func<Exception, Directive> decider = _ => { return Directive.Escalate; };
+            var managerProps = new PropsWithName(Props.Create(() => new CountDownActor(countDown, new AllForOneStrategy(decider))), "manager");
+            var manager = boss.Ask<ActorRef>(managerProps, TestKitSettings.DefaultTimeout).Result;
+
+            var workerProps = Props.Create(() => new CountDownActor(countDown, SupervisorStrategy.DefaultStrategy));
+            var worker1 = manager.Ask<ActorRef>(new PropsWithName(workerProps, "worker1"), TestKitSettings.DefaultTimeout).Result;
+            var worker2 = manager.Ask<ActorRef>(new PropsWithName(workerProps, "worker2"), TestKitSettings.DefaultTimeout).Result;
+            var worker3 = manager.Ask<ActorRef>(new PropsWithName(workerProps, "worker3"), TestKitSettings.DefaultTimeout).Result;
+
+            EventFilter.Exception<ActorKilledException>().ExpectOne(() =>
+            {
+                worker1.Tell(Kill.Instance);
+                // manager + all workers should be restarted by only killing a worker
+                // manager doesn't trap exits, so boss will restart manager
+
+                countDown.Wait(TimeSpan.FromSeconds(5)).ShouldBe(true);
+
+            });
+
+        }
+
+        [Fact]
+        public void A_supervisor_must_send_notifications_to_supervisor_when_permanent_failure()
+        {
+            var countDownMessages = new CountdownEvent(1);
+            var countDownMax = new CountdownEvent(1);
+            var boss = ActorOf((cfg, ctx) =>
+            {
+                var crasher = ctx.ActorOf(Props.Create(() => new CountDownActor(countDownMessages, SupervisorStrategy.DefaultStrategy)), "crasher");
+                cfg.Receive("killCrasher", (s, context) => crasher.Tell(Kill.Instance));
+                cfg.Receive<Terminated>((terminated, context) => countDownMax.Signal());
+                cfg.Strategy = new OneForOneStrategy(1, TimeSpan.FromSeconds(5), e => Directive.Restart);
+                ctx.Watch(crasher);
+            }, "boss");
+
+            //We have built this hiearchy:
+            //     boss
+            //      |
+            //    crasher
+
+            //We send "killCrasher" to boss, which in turn will send Kill to crasher making it crash.
+            //Crasher will be restarted, and during PostRestart countDownMessages will count down.
+            //We then send another "killCrasher", which again will send Kill to crasher. It crashes,
+            //decider says it should be restarted but since we specified maximum 1 restart/5seconds it will be 
+            //permantely stopped. Boss, which watches crasher, recieves Terminated, and counts down countDownMax
+            EventFilter.Exception<ActorKilledException>().Expect(2, () =>
+            {
+                boss.Tell("killCrasher");
+                boss.Tell("killCrasher");
+            });
+            countDownMessages.Wait(TimeSpan.FromSeconds(2)).ShouldBeTrue();
+            countDownMax.Wait(TimeSpan.FromSeconds(2)).ShouldBeTrue();
+        }
+
+        [Fact]
+        public void A_supervisor_hierarchy_must_resume_children_after_Resume()
+        {
+            //Build this hiearchy:
+            //     boss
+            //      |
+            //    middle
+            //      |
+            //    worker
+            var boss = ActorOf<Resumer>("resumer");
+            boss.Tell("spawn:middle");
+            var middle = ExpectMsg<ActorRef>();
+            middle.Tell("spawn:worker");
+            var worker = ExpectMsg<ActorRef>();
+
+            //Check everything is in place by sending ping to worker and expect it to respond with pong
+            worker.Tell("ping");
+            ExpectMsg("pong");
+            EventFilter.Warning("expected").ExpectOne(() => //expected exception is thrown by the boss when it crashes
+            {
+                middle.Tell("fail");    //Throws an exception, and then it's resumed
+            });
+
+            //verify that middle answers
+            middle.Tell("ping");
+            ExpectMsg("pong");
+
+            //verify worker (child to middle) is up
+            worker.Tell("ping");
+            ExpectMsg("pong");
+
+        }
+        [Fact]
+        public void A_supervisor_hierarchy_must_suspend_children_while_failing()
         {
             var latch = CreateTestLatch();
             var slowResumer = ActorOf(c =>
@@ -76,5 +230,52 @@ namespace Akka.Tests.Actor
             //Check that all children, and especially worker is resumed. It should receive the ping and respond with a pong
             ExpectMsg("pong");
         }
+
+        [Fact]
+        public void A_supervisor_hierarchy_must_handle_failure_in_creation_when_supervision_startegy_returns_Resume_and_Restart()
+        {
+            var createAttempt = new AtomicCounter(0);
+            var preStartCalled = new AtomicCounter(0);
+            var postRestartCalled = new AtomicCounter(0);
+
+            EventFilter.Exception<Failure>()
+                .And.Exception<InvalidOperationException>("OH NO!")
+                .And.Error(start: "changing Recreate into Create")
+                .And.Error(start: "changing Resume into Create")
+                .Mute(() =>
+                {
+                    //Create:
+                    // failresumer
+                    //    |
+                    // failingChild
+                    //    | (sometimes)
+                    // workingChild
+                    var failresumer = ActorOf((resumerDsl, context) =>
+                    {
+                        resumerDsl.Strategy = new OneForOneStrategy(ex => ex is ActorInitializationException ? (createAttempt.Current % 2 == 0 ? Directive.Resume : Directive.Restart) : Directive.Escalate);
+                        var failingChild = context.ActorOf((childDsl, childContext) =>
+                        {
+                            var ca = createAttempt.IncrementAndGet();
+                            if (ca <= 6 && ca % 3 == 0)
+                                childContext.ActorOf(BlackHoleActor.Props, "workingChild");
+                            if (ca < 6)
+                                throw new InvalidOperationException("OH NO!");
+                            childDsl.OnPreStart = _ => preStartCalled.IncrementAndGet();
+                            childDsl.OnPostRestart = (e, _) => postRestartCalled.IncrementAndGet();
+                            childDsl.ReceiveAny((m, actorContext) => actorContext.Sender.Tell(m));
+                        }, "failingChild");
+                        resumerDsl.ReceiveAny((m, _) => failingChild.Forward(m));
+                    }, "failresumer");
+
+                    //Send failresumer some meatballs. This message will be forwarded to failingChild
+                    failresumer.Tell("Köttbullar");
+                    ExpectMsg("Köttbullar");
+                });
+
+            createAttempt.Current.ShouldBe(6);
+            preStartCalled.Current.ShouldBe(1);
+            postRestartCalled.Current.ShouldBe(0);
+        }
+
     }
 }

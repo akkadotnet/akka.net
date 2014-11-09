@@ -76,11 +76,7 @@ namespace Akka.Actor
                         ClearActor(_actor);
                     }
                 }
-                //TODO: Remove. This was just used for debugging, but forgot to remove it. /Håkan
-                //   if (!Mailbox.IsSuspended)
-                //   {
-                //       throw new Exception("TODO: Remove");
-                //   }
+
                 global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended, "Mailbox must be suspended during restart, status=" + Mailbox.Status);
                 if (!SetChildrenTerminationReason(new SuspendReason.Recreation(cause)))
                 {

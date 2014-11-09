@@ -50,7 +50,7 @@ namespace Akka.Actor
     public class ActorInitializationException : AkkaException
     {
         private readonly ActorRef _actor;
-        public ActorInitializationException() : base(){}
+        protected ActorInitializationException() : base(){}
 
         public ActorInitializationException(string message) : base(message) { }
 
