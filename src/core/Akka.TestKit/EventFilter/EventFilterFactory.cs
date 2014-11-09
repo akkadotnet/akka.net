@@ -55,11 +55,12 @@ namespace Akka.TestKit
         /// <param name="exceptionType">The type of the exception. It must be a <see cref="System.Exception"/>.</param>
         /// <param name="pattern">The event must match the pattern to be filtered.</param>
         /// <param name="source">>Optional. The event source.</param>
+        /// <param name="checkInnerExceptions">Optional. When set to <c>true</c> not only the top level exception is matched, but inner exceptions are also checked until one macthes. Default: <c>false</c></param>
         /// <returns>The new filter</returns>
-        public EventFilterApplier Exception(Type exceptionType, Regex pattern, string source = null)
+        public EventFilterApplier Exception(Type exceptionType, Regex pattern, string source = null, bool checkInnerExceptions=false)
         {
             var sourceMatcher = source == null ? null : new EqualsString(source);
-            return Exception(exceptionType, new RegexMatcher(pattern), sourceMatcher);
+            return Exception(exceptionType, new RegexMatcher(pattern), sourceMatcher, checkInnerExceptions);
         }
 
 
@@ -111,20 +112,21 @@ namespace Akka.TestKit
         /// <param name="contains">Optional. If specified (and neither <paramref name="message"/> nor <paramref name="start"/> are specified), the event must contain the string to be filtered.</param>
         /// <param name="start">>Optional. If specified (and <paramref name="message"/> is not specified, the event must start with the string to be filtered.</param>
         /// <param name="source">>Optional. The event source.</param>
+        /// <param name="checkInnerExceptions">Optional. When set to <c>true</c> not only the top level exception is matched, but inner exceptions are also checked until one macthes. Default: <c>false</c></param>
         /// <returns>The new filter</returns>
-        public EventFilterApplier Exception(Type exceptionType, string message = null, string start = null, string contains = null, string source = null)
+        public EventFilterApplier Exception(Type exceptionType, string message = null, string start = null, string contains = null, string source = null, bool checkInnerExceptions=false)
         {
             var messageMatcher = CreateMessageMatcher(message, start, contains);
             var sourceMatcher = source == null ? null : new EqualsString(source);
-            return Exception(exceptionType, messageMatcher, sourceMatcher);
+            return Exception(exceptionType, messageMatcher, sourceMatcher, checkInnerExceptions);
         }
 
         /// <summary>
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
-        private EventFilterApplier Exception(Type exceptionType, IStringMatcher messageMatcher, IStringMatcher sourceMatcher)
+        private EventFilterApplier Exception(Type exceptionType, IStringMatcher messageMatcher, IStringMatcher sourceMatcher, bool checkInnerExceptions)
         {
-            var filter = new ErrorFilter(exceptionType, messageMatcher, sourceMatcher);
+            var filter = new ErrorFilter(exceptionType, messageMatcher, sourceMatcher, checkInnerExceptions);
             return CreateApplier(filter);
         }
 
