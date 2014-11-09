@@ -299,6 +299,7 @@
     <EmbeddedResource Include="Configuration\Pigeon.conf" />
     <Compile Include="Actor\ActorCell.ReceiveTimeout.cs" />
     <Compile Include="Actor\ActorCell.FaultHandling.cs" />
+    <Compile Include="Actor\ActorCell.Children.cs" />
     <None Include="Akka.nuspec" />
     <None Include="packages.config" />
     <None Include="Util\MatchHandler\README.md" />

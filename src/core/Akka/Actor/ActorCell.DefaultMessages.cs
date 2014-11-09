@@ -40,27 +40,6 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Stops the specified child.
-        /// </summary>
-        /// <param name="child">The child.</param>
-        public void Stop(ActorRef child)
-        {
-            //TODO: in akka this does some wild magic on childrefs and then just call child.stop();
-
-            //ignore this for now
-            //if (Children.ContainsKey(child.Path.Name))
-            //{
-            //    child.Cell.Become(System.DeadLetters.Tell);
-            //    LocalActorRef tmp;
-            //    var name = child.Path.Name;
-            //    this.Children.TryRemove(name, out tmp);
-            //    Publish(new Pigeon.Event.Debug(Self.Path.ToString(), Actor.GetType(), string.Format("Child Actor {0} stopped - no longer supervising", child.Path)));
-            //}
-
-            ((InternalActorRef)child).Stop();
-        }
-
-        /// <summary>
         ///     Invokes the specified envelope.
         /// </summary>
         /// <param name="envelope">The envelope.</param>
@@ -206,17 +185,6 @@ namespace Akka.Actor
 
         }
 
-        /// <summary>
-        ///     Suspends the children.
-        /// </summary>
-        private void SuspendChildren()
-        {
-            foreach (InternalActorRef child in GetChildren())
-            {
-                child.Suspend();
-            }
-        }
-
         private void TerminatedQueueFor(ActorRef actorRef)
         {
             terminatedQueue.Add(actorRef);
@@ -247,21 +215,22 @@ namespace Akka.Actor
         private void Supervise(ActorRef child, bool async)
         {
             //TODO: complete this
-    //  if (!isTerminating) {
-    //    // Supervise is the first thing we get from a new child, so store away the UID for later use in handleFailure()
-    //    initChild(child) match {
-    //      case Some(crs) ⇒
-    //        handleSupervise(child, async)
-    //        if (system.settings.DebugLifecycle) publish(Debug(self.path.toString, clazz(actor), "now supervising " + child))
-    //      case None ⇒ publish(Error(self.path.toString, clazz(actor), "received Supervise from unregistered child " + child + ", this will not end well"))
-    //    }
-    //  }
-            HandleSupervise(child, async);
-            if (System.Settings.DebugLifecycle)
+            if (!IsTerminating)
             {
-                Publish(new Debug(Self.Path.ToString(), ActorType, "now supervising " + child.Path));
+                var childRestartStats = InitChild((InternalActorRef) child);
+                if (childRestartStats != null)
+                {
+                    HandleSupervise(child, async);
+                    if (System.Settings.DebugLifecycle)
+                    {
+                        Publish(new Debug(Self.Path.ToString(), ActorType, "now supervising " + child.Path));
+                    }
+                }
+                else
+                {
+                    Publish(new Debug(Self.Path.ToString(), ActorType, "received Supervise from unregistered child " + child.Path + ", this will not end well"));
+                }
             }
-            //     case None ⇒ publish(Error(self.path.toString, clazz(actor), "received Supervise from unregistered child " + child + ", this will not end well"))
         }
 
         private void HandleSupervise(ActorRef child, bool async)

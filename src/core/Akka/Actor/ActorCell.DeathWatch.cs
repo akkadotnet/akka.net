@@ -69,7 +69,7 @@ namespace Akka.Actor
                     TerminatedQueuedFor(actor);
                 }
             }
-            if (children.ContainsKey(actor.Path.Name))
+            if (ChildrenContainer.Contains(actor))
             {
                 HandleChildTerminated(actor);
             }

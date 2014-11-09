@@ -190,8 +190,7 @@ namespace Akka.Actor
         /// <param name="actor">The actor.</param>
         private void HandleChildTerminated(ActorRef actor)
         {
-            InternalActorRef tmp;
-            children.TryRemove(actor.Path.Name, out tmp);
+            RemoveChildAndGetStateChange(actor);
             //global::System.Diagnostics.Debug.WriteLine("removed child " + actor.Path.Name);
             //global::System.Diagnostics.Debug.WriteLine("count " + Children.Count());
         }

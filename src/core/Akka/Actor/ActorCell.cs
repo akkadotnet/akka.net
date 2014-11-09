@@ -21,9 +21,6 @@ namespace Akka.Actor
         private Props _props;
         private static readonly Props terminatedProps=new TerminatedProps();
 
-        protected ConcurrentDictionary<string, InternalActorRef> children =
-            new ConcurrentDictionary<string, InternalActorRef>();
-
         protected Stack<Receive> behaviorStack = new Stack<Receive>();
         private long _uid;
         private ActorBase _actor;
@@ -107,18 +104,10 @@ namespace Akka.Actor
             }
         }
 
+        [Obsolete("Use TryGetChildStatsByName", true)]
         public InternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
         {
             return GetSingleChild(name);
-        }
-
-        public InternalActorRef GetSingleChild(string name)
-        {
-            InternalActorRef actorRef;
-            children.TryGetValue(name, out actorRef);
-            if(actorRef.IsNobody())
-                return ActorRef.Nobody;
-            return actorRef;
         }
 
         ActorRef IActorContext.Child(string name)
@@ -136,11 +125,6 @@ namespace Akka.Actor
             return ActorRefFactoryShared.ActorSelection(path, _systemImpl);
         }
 
-        public virtual ActorRef ActorOf(Props props, string name = null)
-        {
-            return MakeChild(props, name);
-        }
-
 
         IEnumerable<ActorRef> IActorContext.GetChildren()
         {
@@ -149,7 +133,7 @@ namespace Akka.Actor
 
         public IEnumerable<InternalActorRef> GetChildren()
         {
-            return children.Values.ToList();
+            return ChildrenContainer.Children;
         }
 
 
@@ -171,59 +155,10 @@ namespace Akka.Actor
             Become(m => { receive(m); return true; }, discardOld);
         }
 
-        private InternalActorRef MakeChild(Props props, string name)
-        {
-            long childUid = NewUid();
-            name = GetActorName(name, childUid);
-            //reserve the name before we create the actor
-            ReserveChild(name);
-            InternalActorRef actor;
-            try
-            {
-                ActorPath childPath = (Self.Path/name).WithUid(childUid);
-                actor = _systemImpl.Provider.ActorOf(_systemImpl, props, _self, childPath,false,null,true,false);
-            }
-            catch
-            {
-                //if actor creation failed, unreserve the name
-                UnreserveChild(name);
-                throw;
-            }
-            //replace the reservation with the real actor
-            InitChild(actor);
-            actor.Start();
-            return actor;
-        }
-
-        private void UnreserveChild(string name)
-        {
-            InternalActorRef tmp;
-            children.TryRemove(name, out tmp);
-        }
-
-        /// <summary>This should only be used privately or when creating the root actor. </summary>
-        public void InitChild(InternalActorRef actor)
-        {
-            children.TryUpdate(actor.Path.Name, actor, ActorRef.Reserved);
-        }
-
-        public void ReserveChild(string name)
-        {
-            if (!children.TryAdd(name, ActorRef.Reserved))
-            {
-                throw new Exception("The name is already reserved: " + name);
-            }
-        }
-
         private long NewUid()
         {
             var auid = Interlocked.Increment(ref _uid);
             return auid;
-        }
-
-        private static string GetActorName(string name, long actorUid)
-        {
-            return name ?? ("$" + actorUid.Base64Encode());
         }
 
         private ActorBase NewActor()

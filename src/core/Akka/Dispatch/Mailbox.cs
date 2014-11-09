@@ -145,5 +145,7 @@ namespace Akka.Dispatch
 
 
         public abstract void CleanUp();
+
+        //TODO: When Mailbox gets SuspendCount, update ActorCell.MakeChild
     }   
 }
