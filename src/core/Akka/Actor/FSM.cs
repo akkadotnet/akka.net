@@ -506,7 +506,7 @@ namespace Akka.Actor
                 _logAdapter.Debug("setting " + (repeat ? "repeating" : "") + "timer '{0}' / {1}: {2}", name, timeout, msg);
             if(_timers.ContainsKey(name))
                 _timers[name].Cancel();
-            var timer = new Timer(name, msg, repeat, _timerGen.Next, Context, DebugEvent ? _logAdapter : null);
+            var timer = new Timer(name, msg, repeat, _timerGen.Next(), Context, DebugEvent ? _logAdapter : null);
             timer.Schedule(Self, timeout);
 
             if (!_timers.ContainsKey(name))

@@ -1,5 +1,7 @@
 #### 0.7.1 NEXTVERSION
-_This is a placeholder for the next released version. Add new stuff that will go into the next version below. It might be 0.7.1 or 0.8._
+_This is a placeholder for the next released version. Add new stuff that will go into the next version below. It might be 0.7.1 or 0.8. __REMOVE THIS TEXT BEFORE RELEASING!___
+
+__Breaking Change to the internal api: The `Next` property on `IAtomicCounter<T>` has been changed into the function `Next()`__ This was done as it had side effects, i.e. the value was increased when the getter was called. This makes it very hard to debug as the debugger kept calling the property and causing the value to be increased.
 
 __Akka.Serilog__ `SerilogLogMessageFormatter` has been moved to the namespace `Akka.Logger.Serilog` (it used to be in `Akka.Serilog.Event.Serilog`).
 Update your `using` statements from `using Akka.Serilog.Event.Serilog;` to `using Akka.Logger.Serilog;`.

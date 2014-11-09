@@ -29,7 +29,7 @@ namespace Akka.Tests
                 this.testActor = testActor;
                 this.id = id;
                 this.generationProvider = generationProvider;
-                this.CurrentGeneration = generationProvider.Next;
+                this.CurrentGeneration = generationProvider.Next();
             }
 
             private void Report(object message)
@@ -77,7 +77,7 @@ namespace Akka.Tests
                 this.testActor = testActor;
                 this.id = id;
                 this.generationProvider = generationProvider;
-                this.CurrentGeneration = generationProvider.Next;
+                this.CurrentGeneration = generationProvider.Next();
             }
 
             private void Report(object message)
