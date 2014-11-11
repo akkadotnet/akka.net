@@ -58,6 +58,12 @@ namespace Akka.TestKit.Internal
             return false;
         }
 
+        /// <summary>
+        /// Removes an item from the collection.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token that can be used to cancel the operation..</param>
+        /// <returns>The item removed from the collection.</returns>
+        /// <exception cref="OperationCanceledException">Thrown if the operation was cancelled</exception>
         public T Take(CancellationToken cancellationToken)
         {
             var p = _collection.Take(cancellationToken);
