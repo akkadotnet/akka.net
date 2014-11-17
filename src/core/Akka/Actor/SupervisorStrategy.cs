@@ -161,6 +161,18 @@ namespace Akka.Actor
             get { return new OneForOneStrategy(DefaultDecider); }
         }
 
+        public static Func<Exception, Directive> MakeDecider(params Type[] trapExit)
+        {
+            var baseException = typeof (Exception);
+            // all types in [trapExit] have to inherit from System.Exception
+            if (!trapExit.Any(baseException.IsAssignableFrom))
+            {
+                throw new ArgumentException("SupervisorStrategy.MakeDecider requires all provided types to inherit from System.Exception class", "trapExit");
+            }
+
+            return reason => trapExit.Any(e => e.IsInstanceOfType(reason)) ? Directive.Restart : Directive.Escalate;
+        }
+
         #endregion
     }
 
