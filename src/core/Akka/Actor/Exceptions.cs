@@ -38,6 +38,20 @@ namespace Akka.Actor
     }
 
     /// <summary>
+    ///     Class LoggerInitializationException is thrown to indicate that there was a problem initializing a logger.
+    /// </summary>
+    public class LoggerInitializationException : AkkaException
+    {
+        public LoggerInitializationException() : base() { }
+
+        public LoggerInitializationException(string message) : base(message) { }
+
+        public LoggerInitializationException(string message, Exception cause = null) : base(message, cause) { }
+    }
+
+
+
+    /// <summary>
     ///     Class ActorKilledException.
     /// </summary>
     public class ActorKilledException : AkkaException
