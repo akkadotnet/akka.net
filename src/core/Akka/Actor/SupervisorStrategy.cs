@@ -179,7 +179,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class OneForOneStrategy. This class cannot be inherited.
     /// </summary>
-    public sealed class OneForOneStrategy : SupervisorStrategy
+    public class OneForOneStrategy : SupervisorStrategy
     {
         /// <summary>
         ///     The actor failures
@@ -290,7 +290,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class AllForOneStrategy. This class cannot be inherited.
     /// </summary>
-    public sealed class AllForOneStrategy : SupervisorStrategy
+    public class AllForOneStrategy : SupervisorStrategy
     {
         private Failures failures = new Failures();
         /// <summary>
