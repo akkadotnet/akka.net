@@ -249,6 +249,7 @@ let createNugetPackages _ =
         !! (releaseDir @@ project + ".dll")
         ++ (releaseDir @@ project + ".pdb")
         ++ (releaseDir @@ project + ".xml")
+        ++ (releaseDir @@ project + ".ExternalAnnotations.xml")
         |> CopyFiles libDir
 
         // Copy all src-files (.cs and .fs files) to workingDir/src

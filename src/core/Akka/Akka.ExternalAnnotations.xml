@@ -1,0 +1,53 @@
+
+﻿<?xml version="1.0" encoding="utf-8"?>
+<assembly name="Akka">
+  <!-- LoggingAdapter -->
+  <member name="M:Akka.Event.LoggingAdapter.Debug(System.String,System.Object[])">
+    <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>format</argument></attribute>
+  </member>
+  <member name="M:Akka.Event.LoggingAdapter.Info(System.String,System.Object[])">
+    <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>format</argument></attribute>
+  </member>
+  <member name="M:Akka.Event.LoggingAdapter.Warning(System.String,System.Object[])">
+    <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>format</argument></attribute>
+  </member>
+  <member name="M:Akka.Event.LoggingAdapter.Error(System.String,System.Object[])">
+    <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>format</argument></attribute>
+  </member>
+  <member name="M:Akka.Event.LoggingAdapter.Error(System.Exception,System.String,System.Object[])">
+    <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>format</argument></attribute>
+  </member>
+  <member name="M:Akka.Event.LoggingAdapter.Log(Akka.Event.LogLevel,System.String,System.Object[])">
+    <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>format</argument></attribute>
+  </member>
+
+  <!-- LoggingAdapterBase -->
+  <member name="M:Akka.Event.LoggingAdapterBase.Debug(System.String,System.Object[])">
+    <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>format</argument></attribute>
+  </member>
+  <member name="M:Akka.Event.LoggingAdapterBase.Info(System.String,System.Object[])">
+    <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>format</argument></attribute>
+  </member>
+  <member name="M:Akka.Event.LoggingAdapterBase.Warning(System.String,System.Object[])">
+    <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>format</argument></attribute>
+  </member>
+  <member name="M:Akka.Event.LoggingAdapterBase.Error(System.String,System.Object[])">
+    <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>format</argument></attribute>
+  </member>
+  <member name="M:Akka.Event.LoggingAdapterBase.Error(System.Exception,System.String,System.Object[])">
+    <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>format</argument></attribute>
+  </member>
+  <member name="M:Akka.Event.LoggingAdapterBase.Log(Akka.Event.LogLevel,System.String,System.Object[])">
+    <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>format</argument></attribute>
+  </member>
+    
+  <!-- ILogMessageFormatter -->
+  <member name="M:Akka.Event.ILogMessageFormatter.Format(System.String,System.Object[])">
+    <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>format</argument></attribute>
+  </member>
+  
+  <!-- DefaultLogMessageFormatter -->
+  <member name="M:Akka.Event.DefaultLogMessageFormatter.Format(System.String,System.Object[])">
+    <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>format</argument></attribute>
+  </member>
+</assembly>
