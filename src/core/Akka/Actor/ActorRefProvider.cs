@@ -350,9 +350,9 @@ namespace Akka.Actor
 
             Deploy configDeploy = _system.Provider.Deployer.Lookup(path);
             deploy = configDeploy ?? props.Deploy ?? Deploy.None;
-            if(deploy.Mailbox != null)
+            if(deploy.Mailbox != Deploy.NoMailboxGiven)
                 props = props.WithMailbox(deploy.Mailbox);
-            if(deploy.Dispatcher != null)
+            if(deploy.Dispatcher != Deploy.NoDispatcherGiven)
                 props = props.WithDispatcher(deploy.Dispatcher);
 
             //TODO: how should this be dealt with?
@@ -395,7 +395,8 @@ namespace Akka.Actor
         private InternalActorRef CreateNoRouter(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path,
             Deploy deploy, bool async)
         {
-            props = props.WithDeploy(deploy);
+            if(props.Deploy != deploy)
+                props = props.WithDeploy(deploy);
             var dispatcher = system.Dispatchers.FromConfig(props.Dispatcher);
             var mailbox = _system.Mailboxes.CreateMailbox(props, null /*dispatcher.Configurator.Config*/);
             //TODO: Should be: system.mailboxes.getMailboxType(props2, dispatcher.configurator.config)

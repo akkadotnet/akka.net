@@ -60,6 +60,7 @@ namespace Akka.Actor
         public bool HasMessages { get { return Mailbox.HasUnscheduledMessages; } }
         public int NumberOfMessages { get { return Mailbox.NumberOfMessages; } }
         internal bool ActorHasBeenCleared { get { return _actorHasBeenCleared; } }
+        internal static Props TerminatedProps { get { return terminatedProps; } }
 
         public void Init(bool sendSupervise, Func<Mailbox> createMailbox /*, MailboxType mailboxType*/) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType
         {
