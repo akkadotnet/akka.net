@@ -663,12 +663,7 @@ namespace Akka.Remote
                         Transport.Transport driver;
                         try
                         {
-                            var driverType = Type.GetType(transportSettings.TransportClass);
-                            if(driverType==null)
-                                throw new Exception(string.Format("Cannot instantiate transport [{0}]. Cannot find the type.",transportSettings.TransportClass));
-
-                            if(!typeof(Transport.Transport).IsAssignableFrom(driverType))
-                                throw new Exception(string.Format("Cannot instantiate transport [{0}]. It does not implement [{1}].",transportSettings.TransportClass,typeof(Transport.Transport).FullName));
+                            var driverType = TypeExtensions.ResolveType(transportSettings.TransportClass, typeof(Transport.Transport));
 
                             var constructorInfo = driverType.GetConstructor(new []{typeof(ActorSystem),typeof(Config)});
                             if(constructorInfo==null)

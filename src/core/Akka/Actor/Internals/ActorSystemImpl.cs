@@ -8,6 +8,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Util;
 
 
 namespace Akka.Actor.Internals
@@ -249,8 +250,7 @@ namespace Akka.Actor.Internals
         /// </summary>
         private void ConfigureProvider()
         {
-            Type providerType = Type.GetType(_settings.ProviderClass);
-            global::System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
+            Type providerType = TypeExtensions.ResolveType(_settings.ProviderClass, typeof(ActorRefProvider));
             var provider = (ActorRefProvider)Activator.CreateInstance(providerType, _name, _settings, _eventStream);
             _provider = provider;
         }

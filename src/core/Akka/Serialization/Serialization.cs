@@ -40,6 +40,7 @@ namespace Akka.Serialization
                 var serializerType = Type.GetType(serializerTypeName);
                 if (serializerType == null)
                 {
+                    //TODO: why does this log when mailbox type resolution does not?
                     system.Log.Warning(string.Format("The type name for serializer '{0}' did not resolve to an actual Type: '{1}'",
                             kvp.Key, serializerTypeName));
                     continue;
@@ -55,7 +56,7 @@ namespace Akka.Serialization
                 var typename = kvp.Key;
                 var serializerName = kvp.Value.GetString();
                 var messageType = Type.GetType(typename);
-
+                //TODO: should this throw?
                 if (messageType == null)
                 {
 
