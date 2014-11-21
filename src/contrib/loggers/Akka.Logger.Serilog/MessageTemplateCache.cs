@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Serilog.Events;
 using Serilog.Parsing;
 
-namespace Akka.Serilog.Event.Serilog
+namespace Akka.Logger.Serilog
 {
     /// <summary>
     /// Taken directly from Serilog as the cache was internal.

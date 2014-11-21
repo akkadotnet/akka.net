@@ -1,6 +1,8 @@
 #### 0.7.1 NEXTVERSION
 _This is a placeholder for the next released version. Add new stuff that will go into the next version below. It might be 0.7.1 or 0.8._
 
+__Akka.Serilog__ `SerilogLogMessageFormatter` has been moved to the namespace `Akka.Logger.Serilog` (it used to be in `Akka.Serilog.Event.Serilog`).
+Update your `using` statements from `using Akka.Serilog.Event.Serilog;` to `using Akka.Logger.Serilog;`.
 
 #### 0.7.0 Oct 16 2014
 Major new changes and additions in this release, including some breaking changes...
@@ -11,7 +13,7 @@ __Akka.Cluster__ Support (pre-release) - Akka.Cluster is now available on NuGet 
         actor {
           provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
         }
-        
+
         remote {
           log-remote-lifecycle-events = DEBUG
           helios.tcp {
@@ -19,12 +21,12 @@ __Akka.Cluster__ Support (pre-release) - Akka.Cluster is now available on NuGet 
         port = 0
           }
         }
-        
+
         cluster {
           seed-nodes = [
         "akka.tcp://ClusterSystem@127.0.0.1:2551",
         "akka.tcp://ClusterSystem@127.0.0.1:2552"]
-        
+
           auto-down-unreachable-after = 10s
         }
       }
@@ -55,7 +57,7 @@ __Breaking Changes: Renamed Logger Namespaces__ - The namespaces, DLL names, and
 
 __Serilog Support__ - Akka.NET now has an official [Serilog](http://serilog.net/) logger that you can install via the `Akka.Logger.Serilog` package. You can register the serilog logger via your HOCON configuration like this:
 
-     loggers=["Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog"]
+     akka.loggers=["Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog"]
 
 __New Feature: Priority Mailbox__ - The `PriorityMailbox` allows you to define the priority of messages handled by your actors, and this is done by creating your own subclass of either the `UnboundedPriorityMailbox` or `BoundedPriorityMailbox` class and implementing the `PriorityGenerator` method like so:
 
