@@ -18,15 +18,11 @@ type Actor<'msg> =
 type Actor() = 
     inherit Akka.Actor.UntypedActor()
 
-let inline select (path : string) : ActorSelection = ActorSelection(ActorCell.GetCurrentSelfOrNoSender(), path)
+let inline select (selector: ActorRefFactory) (path : string) : ActorSelection = selector.ActorSelection path
 let inline (<!) (actorRef : #ICanTell) (msg : obj) = actorRef.Tell(msg, ActorCell.GetCurrentSelfOrNoSender())
 let inline (!>) (msg : obj) (actorRef : #ICanTell) = actorRef <! msg
 let inline (<?) (tell : #ICanTell) (msg : obj) = tell.Ask msg |> Async.AwaitTask
 let inline (?>) (msg : obj) (actorRef : #ICanTell) = actorRef <? msg
-
-module ActorSelection = 
-    let inline (<!) (actorPath : string) (msg : obj) = (select actorPath) <! msg
-    let inline (<?) (actorPath : string) (msg : obj) = (select actorPath) <? msg
 
 type ActorPath with
     
