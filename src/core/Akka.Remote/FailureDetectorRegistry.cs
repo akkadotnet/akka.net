@@ -2,6 +2,7 @@
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Util;
 
 namespace Akka.Remote
 {
@@ -58,11 +59,7 @@ namespace Akka.Remote
         /// <returns>A configured instance of the given <see cref="FailureDetector"/> implementation.</returns>
         public static FailureDetector Load(string fqcn, Config config, ActorSystem system)
         {
-            var failureDetectorClass = Type.GetType(fqcn);
-            if (failureDetectorClass == null)
-            {
-                throw new ConfigurationException(string.Format("Could not create custom FailureDetector {0}", fqcn));
-            }
+            var failureDetectorClass = TypeExtensions.ResolveConfiguredType(fqcn);
             var failureDetector = (FailureDetector) Activator.CreateInstance(failureDetectorClass, config, system.EventStream);
             return failureDetector;
         }

@@ -4,6 +4,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Routing;
 using Akka.Serialization;
+using Akka.Util;
 using Google.ProtocolBuffers;
 
 namespace Akka.Remote.Serialization
@@ -106,7 +107,7 @@ namespace Akka.Remote.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             var proto = DaemonMsgCreateData.ParseFrom(bytes);
-            var clazz = Type.GetType(proto.Props.Clazz);
+            var clazz = TypeExtensions.ResolveType(proto.Props.Clazz);
             var args = GetArgs(proto);
             var props = new Props(GetDeploy(proto.Props.Deploy), clazz, args);
             return new DaemonMsgCreate(
@@ -161,7 +162,7 @@ namespace Akka.Remote.Serialization
                 {
                     Type t = null;
                     if (typeName != null)
-                        t = Type.GetType(typeName);
+                        t = TypeExtensions.ResolveType(typeName);
                     args[i] = Deserialize(arg, t);
                 }
             }

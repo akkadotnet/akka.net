@@ -1,6 +1,7 @@
 ﻿using System;
 using Akka.Actor;
 using Akka.Serialization;
+using Akka.Util;
 using Google.ProtocolBuffers;
 
 namespace Akka.Remote
@@ -19,7 +20,7 @@ namespace Akka.Remote
         public static object Deserialize(ActorSystem system, SerializedMessage messageProtocol)
         {
             Type type = messageProtocol.HasMessageManifest
-                ? Type.GetType(messageProtocol.MessageManifest.ToStringUtf8())
+                ? TypeExtensions.ResolveType(messageProtocol.MessageManifest.ToStringUtf8())
                 : null;
             var message = system.Serialization.Deserialize(messageProtocol.Message.ToByteArray(),
                 messageProtocol.SerializerId, type);

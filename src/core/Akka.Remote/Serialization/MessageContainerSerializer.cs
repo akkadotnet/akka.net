@@ -2,6 +2,7 @@
 using System.Linq;
 using Akka.Actor;
 using Akka.Serialization;
+using Akka.Util;
 using Google.ProtocolBuffers;
 
 namespace Akka.Remote.Serialization
@@ -83,7 +84,7 @@ namespace Akka.Remote.Serialization
             Type msgType = null;
             if (selectionEnvelope.HasMessageManifest)
             {
-                msgType = Type.GetType(selectionEnvelope.MessageManifest.ToStringUtf8());
+                msgType = TypeExtensions.ResolveType(selectionEnvelope.MessageManifest.ToStringUtf8());
             }
             int serializerId = selectionEnvelope.SerializerId;
             object msg = Deserialize(selectionEnvelope.EnclosedMessage, msgType, serializerId);
