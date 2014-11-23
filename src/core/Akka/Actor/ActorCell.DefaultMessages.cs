@@ -6,7 +6,7 @@ using System.Threading;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.Util;
+using Akka.Util.Internal;
 using Debug = Akka.Event.Debug;
 
 namespace Akka.Actor
@@ -19,6 +19,19 @@ namespace Akka.Actor
     {
         //terminatedqueue should never be used outside the message loop
         private readonly HashSet<ActorRef> terminatedQueue = new HashSet<ActorRef>();
+
+        // ReSharper disable once InconsistentNaming
+        private ActorRef _failed_DoNotUseMeDirectly;
+        private bool IsFailed { get { return _failed_DoNotUseMeDirectly != null; } }
+        private void SetFailed(ActorRef perpetrator)
+        {
+            _failed_DoNotUseMeDirectly = perpetrator;
+        }
+        private void ClearFailed()
+        {
+            _failed_DoNotUseMeDirectly = null;
+        }
+        private ActorRef Perpetrator { get { return _failed_DoNotUseMeDirectly; } }
 
         /// <summary>
         ///     The is terminating
@@ -59,12 +72,53 @@ namespace Akka.Actor
             }
             catch(Exception cause)
             {
-                Mailbox.Suspend();
-                Parent.Tell(new Failed(Self, cause, Self.Path.Uid));
+                HandleInvokeFailure(cause);
             }
             finally
             {
                 CheckReceiveTimeout(); // Reschedule receive timeout
+            }
+        }
+
+        private void HandleInvokeFailure(Exception cause, IEnumerable<ActorRef> childrenNotToSuspend = null)
+        {
+            if (!IsFailed)
+            {
+                try
+                {
+                    SuspendNonRecursive();
+
+                    if (CurrentMessage is Failed)
+                    {
+                        var failedChild = Sender;
+                        childrenNotToSuspend = childrenNotToSuspend.Concat(failedChild); //Function handles childrenNotToSuspend beeing null
+                        SetFailed(failedChild);
+                    }
+                    else
+                    {
+                        SetFailed(Self);
+                    }
+                    SuspendChildren(childrenNotToSuspend==null ? null : childrenNotToSuspend.ToList());
+
+                    //Tell supervisor
+                    Parent.Tell(new Failed(Self, cause, Self.Path.Uid));
+                }
+                catch (Exception e)
+                {
+                    Publish(new Error(e, Self.Path.ToString(), _actor.GetType(), "Emergency stop: exception in failure handling for " + cause));
+                    try
+                    {
+                        foreach (var child in GetChildren())
+                        {
+                            child.Stop();
+                        }
+                    }
+                    finally
+                    {
+                        FinishTerminate();
+                    }
+                }
+
             }
         }
 
@@ -180,7 +234,7 @@ namespace Akka.Actor
                 }
                 catch (Exception cause)
                 {
-                    Parent.Tell(new Failed(Self, cause, Self.Path.Uid));
+                    HandleInvokeFailure(cause);
                 }
 
         }

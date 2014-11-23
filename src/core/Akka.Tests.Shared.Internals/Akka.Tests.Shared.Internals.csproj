@@ -48,6 +48,7 @@
     <Compile Include="..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="ActorDslExtensions.cs" />
     <Compile Include="AkkaSpec.cs" />
     <Compile Include="AkkaSpecExtensions.cs" />
     <Compile Include="AskExtensions.cs" />

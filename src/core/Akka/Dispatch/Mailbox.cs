@@ -129,7 +129,7 @@ namespace Akka.Dispatch
         }
 
         protected volatile bool _isSuspended;
-
+        public bool IsSuspended { get { return _isSuspended; } }
         public void Suspend()
         {
             _isSuspended = true;
