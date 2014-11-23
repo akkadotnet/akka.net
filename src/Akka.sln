@@ -121,6 +121,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Routing", "Routing", "{0BA8B1E8-11DD-4A32-8BB4-99F7AB3E27BB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Cluster.ConsistentHashRouting", "examples\Cluster\Routing\Samples.Cluster.ConsistentHashRouting\Samples.Cluster.ConsistentHashRouting.csproj", "{29A08A09-83F6-48D4-A9AE-B4AE314069C4}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.MultiNodeTestRunner", "core\Akka.MultiNodeTestRunner\Akka.MultiNodeTestRunner.csproj", "{C1113300-74F1-446A-9914-3020C842EDF1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.NodeTestRunner", "core\Akka.NodeTestRunner\Akka.NodeTestRunner.csproj", "{28520F30-2868-4BD3-9CAE-AC27226C24E3}"
