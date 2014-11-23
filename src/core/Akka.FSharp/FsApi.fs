@@ -18,18 +18,14 @@ type Actor<'msg> =
 type Actor() = 
     inherit Akka.Actor.UntypedActor()
 
-let inline select (path : string) : ActorSelection = ActorSelection(ActorCell.GetCurrentSelfOrNoSender(), path)
+let inline select (selector: ActorRefFactory) (path : string) : ActorSelection = selector.ActorSelection path
 let inline (<!) (actorRef : #ICanTell) (msg : obj) = actorRef.Tell(msg, ActorCell.GetCurrentSelfOrNoSender())
 let inline (!>) (msg : obj) (actorRef : #ICanTell) = actorRef <! msg
 let inline (<?) (tell : #ICanTell) (msg : obj) = tell.Ask msg |> Async.AwaitTask
 let inline (?>) (msg : obj) (actorRef : #ICanTell) = actorRef <? msg
 
-module ActorSelection = 
-    let inline (<!) (actorPath : string) (msg : obj) = (select actorPath) <! msg
-    let inline (<?) (actorPath : string) (msg : obj) = (select actorPath) <? msg
-
 type ActorPath with
-
+    
     static member TryParse(path : string) = 
         let mutable actorPath : ActorPath = null
         if ActorPath.TryParse(path, &actorPath) then (true, actorPath)
@@ -225,7 +221,7 @@ module Serialization =
 module Configuration = 
     let parse = Akka.Configuration.ConfigurationFactory.ParseString
     let defaultConfig = Akka.Configuration.ConfigurationFactory.Default
-
+    
 module Strategy = 
     /// <summary>
     /// Returns a builder function returning OneForOneStrategy supervisor based on provided decider func.
@@ -240,7 +236,7 @@ module Strategy =
     /// <param name="retries">Number of times, actor could be restarted. If negative, there is not limit.</param>
     /// <param name="timeout">Time window for number of retries to occur.</param>
     /// <param name="decider">Supervisor strategy behavior decider function.</param>
-    let oneForOne' retries timeout (decider : Exception -> Directive) = 
+    let oneForOne2 retries timeout (decider : Exception -> Directive) = 
         OneForOneStrategy(retries, timeout, System.Func<_, _>(decider)) :> SupervisorStrategy
     
     /// <summary>
@@ -256,7 +252,7 @@ module Strategy =
     /// <param name="retries">Number of times, actor could be restarted. If negative, there is not limit.</param>
     /// <param name="timeout">Time window for number of retries to occur.</param>
     /// <param name="decider">Supervisor strategy behavior decider function.</param>
-    let allForOne' retries timeout (decider : Exception -> Directive) () = 
+    let allForOne2 retries timeout (decider : Exception -> Directive) () = 
         AllForOneStrategy(retries, timeout, System.Func<_, _>(decider)) :> SupervisorStrategy
 
 module System = 
@@ -303,6 +299,24 @@ let spawns (system : ActorSystem) name (strategy : SupervisorStrategy) (f : Acto
 /// <param name="name">The actor instance nane</param>
 /// <param name="f">the actor's message handling function.</param>
 let spawn (system : ActorSystem) name (f : Actor<'m> -> Cont<'m, 'v>) = spawns system name null f
+
+let actorOf (fn : 'a -> unit) (mailbox : Actor<'a>) = 
+    let rec loop'() = 
+        actor { 
+            let! msg = mailbox.Receive()
+            fn msg
+            return! loop'()
+        }
+    loop'()
+
+let actorOf2 (fn : Actor<'a> -> 'a -> unit) (mailbox : Actor<'a>) = 
+    let rec loop'() = 
+        actor { 
+            let! msg = mailbox.Receive()
+            fn mailbox msg
+            return! loop'()
+        }
+    loop'()
 
 [<AutoOpen>]
 module Actors = 
