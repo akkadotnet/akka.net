@@ -277,11 +277,7 @@ namespace Akka.Actor
         public InternalActorRef GetSingleChild(string name)
         {
             InternalActorRef child;
-            if (TryGetSingleChild(name, out child))
-            {
-                return child;
-            }
-            return ActorRef.Nobody;
+            return TryGetSingleChild(name, out child) ? child : ActorRef.Nobody;
         }
 
         public bool TryGetSingleChild(string name, out InternalActorRef child)
@@ -353,7 +349,7 @@ namespace Akka.Actor
 
             // In case we are currently terminating, fail external attachChild requests
             // (internal calls cannot happen anyway because we are suspended)
-            if (ChildrenContainer.IsTerminating)
+            if (IsTerminating)
                 throw new InvalidOperationException("Cannot create child while terminating or terminated");
             //reserve the name before we create the actor
             ReserveChild(name);

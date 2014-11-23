@@ -44,7 +44,9 @@ namespace Akka.Actor.Internal
         /// </summary>
         public class Termination : SuspendReason
         {
-            //Intentionally left blank
+            private static readonly Termination _instance = new Termination();
+            private Termination() { }
+            public static Termination Instance { get { return _instance; } }
         }
 
         /// <summary>
@@ -52,7 +54,9 @@ namespace Akka.Actor.Internal
         /// </summary>
         public class UserRequest : SuspendReason
         {
-            //Intentionally left blank
+            private static readonly UserRequest _instance = new UserRequest();
+            private UserRequest() { }
+            public static UserRequest Instance { get { return _instance; } }
         }
     }
 }

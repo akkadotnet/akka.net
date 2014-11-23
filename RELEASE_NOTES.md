@@ -6,6 +6,9 @@ __Breaking Change to the internal api: The `Next` property on `IAtomicCounter<T>
 __Akka.Serilog__ `SerilogLogMessageFormatter` has been moved to the namespace `Akka.Logger.Serilog` (it used to be in `Akka.Serilog.Event.Serilog`).
 Update your `using` statements from `using Akka.Serilog.Event.Serilog;` to `using Akka.Logger.Serilog;`.
 
+__Breaking Change to the internal api: Changed signatures in the abstract class `SupervisorStrategy`__. The following methods has new signatures: `HandleFailure`, `ProcessFailure`. If you've inherited from `SupervisorStrategy`, `OneForOneStrategy` or `AllForOneStrategy` and overriden the aforementioned methods you need to update their signatures.
+
+
 #### 0.7.0 Oct 16 2014
 Major new changes and additions in this release, including some breaking changes...
 

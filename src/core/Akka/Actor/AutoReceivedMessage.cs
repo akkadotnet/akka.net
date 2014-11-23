@@ -54,6 +54,14 @@ namespace Akka.Actor
         public ActorRef Subject { get; private set; }
     }
 
+    /// <summary>
+    /// Sending a <see cref="PoisonPill"/> to an actor causes it to , which will stop the actor when the message 
+    /// is processed. <see cref="PoisonPill"/> is enqueued as ordinary messages and will be handled after 
+    /// messages that were already queued in the mailbox.
+    /// <para>See also <see cref="Kill"/> which causes the actor to throw an  <see cref="ActorKilledException"/> when 
+    /// it processes the message, which gets handled using the normal supervisor mechanism, and
+    /// <see cref="IActorContext.Stop"/> which causes the actor to stop without processing any more messages. </para>
+    /// </summary>
     public sealed class PoisonPill : AutoReceivedMessage 
     {
         private PoisonPill() { }
@@ -67,6 +75,14 @@ namespace Akka.Actor
         }
     }
 
+
+    /// <summary>
+    /// Sending an <see cref="Kill"/> message to an actor causes the actor to throw an 
+    /// <see cref="ActorKilledException"/> when it processes the message, which gets handled using the normal supervisor mechanism.
+    /// <para>See also <see cref="PoisonPill"/> which causes the actor to stop when the <see cref="PoisonPill"/>
+    /// is processed, without throwing an exception, and 
+    /// <see cref="IActorContext.Stop"/> which causes the actor to stop without processing any more messages. </para>
+    /// </summary>
     public sealed class Kill : AutoReceivedMessage
     {
         private Kill() { }

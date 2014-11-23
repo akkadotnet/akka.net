@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using Akka.Actor.Internal;
 using Akka.Event;
 using Akka.Util.Internal;
 
@@ -11,15 +13,13 @@ namespace Akka.Actor
     /// </summary>
     public abstract class SupervisorStrategy
     {
-
-
         /// <summary>
         ///     Handles the specified child.
         /// </summary>
         /// <param name="child">The actor that caused the evaluation to occur</param>
         /// <param name="x">The exception that caused the evaluation to occur.</param>
         /// <returns>Directive.</returns>
-        public abstract Directive Handle(ActorRef child, Exception x);
+        protected abstract Directive Handle(ActorRef child, Exception x);
 
         /// <summary>
         ///     This is the main entry point: in case of a child’s failure, this method
@@ -33,12 +33,14 @@ namespace Akka.Actor
         ///     do the logging inside the `decider` or override the `LogFailure` method.
         /// </summary>
         /// <param name="actorCell">The actor cell.</param>
-        /// <param name="child">The child.</param>
         /// <param name="cause">The cause.</param>
+        /// <param name="failedChildStats">The stats for the failed child.</param>
+        /// <param name="allChildren"></param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        public bool HandleFailure(ActorCell actorCell, ActorRef child, Exception cause)
+        public bool HandleFailure(ActorCell actorCell, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
         {
-            Directive directive = Handle(child, cause);
+            var child = failedChildStats.Child;
+            var directive = Handle(child, cause);
             switch (directive)
             {
                 case Directive.Escalate:
@@ -50,11 +52,11 @@ namespace Akka.Actor
                     return true;
                 case Directive.Restart:
                     LogFailure(actorCell, child, cause, directive);
-                    ProcessFailure(actorCell, true, child, cause);
+                    ProcessFailure(actorCell, true, cause, failedChildStats, allChildren);
                     return true;
                 case Directive.Stop:
                     LogFailure(actorCell, child, cause, directive);
-                    ProcessFailure(actorCell, false, child, cause);
+                    ProcessFailure(actorCell, false, cause, failedChildStats, allChildren);
                     return true;
             }
             return false;
@@ -97,23 +99,19 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        ///     Processes the failure.
+        /// This method is called to act on the failure of a child: restart if the flag is true, stop otherwise.
         /// </summary>
-        /// <param name="actorCell">The actor cell.</param>
-        /// <param name="restart">if set to <c>true</c> [restart].</param>
-        /// <param name="child">The child.</param>
-        /// <param name="cause">The cause.</param>
-        protected abstract void ProcessFailure(ActorCell actorCell, bool restart, ActorRef child, Exception cause);
-            /*
-    if (children.nonEmpty) {
-      if (restart && children.forall(_.requestRestartPermission(retriesWindow)))
-        children foreach (crs ⇒ restartChild(crs.child, cause, suspendFirst = (crs.child != child)))
-      else
-        for (c ← children) context.stop(c.child)
-    }*/        
+        /// <param name="context">The actor context.</param>
+        /// <param name="restart">if set to <c>true</c> restart, stop otherwise.</param>
+        /// <param name="cause">The exception that caused the child to fail.</param>
+        /// <param name="failedChildStats">The stats for the child that failed. The ActorRef to the child can be obtained via the <see cref="ChildRestartStats.Child"/> property</param>
+        /// <param name="allChildren">The stats for all children</param>
+        protected abstract void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren);
 
         /// <summary>
-        ///     Resumes the child.
+        ///  Resume the previously failed child: <b>do never apply this to a child which
+        ///  is not the currently failing child</b>. Suspend/resume needs to be done in
+        ///  matching pairs, otherwise actors will wake up too soon or never at all.
         /// </summary>
         /// <param name="child">The child.</param>
         /// <param name="exception">The exception.</param>
@@ -125,29 +123,49 @@ namespace Akka.Actor
         /// <summary>
         ///     Logs the failure.
         /// </summary>
-        /// <param name="actorCell">The actor cell.</param>
+        /// <param name="context">The actor cell.</param>
         /// <param name="child">The child.</param>
         /// <param name="cause">The cause.</param>
         /// <param name="directive">The directive.</param>
-        protected virtual void LogFailure(ActorCell actorCell, ActorRef child, Exception cause, Directive directive)
+        protected virtual void LogFailure(IActorContext context, ActorRef child, Exception cause, Directive directive)
         {
-            switch (directive)
+            if(LoggingEnabled)
             {
-                case Directive.Resume:
-                    actorCell.System.EventStream.Publish(new Warning(child.Path.ToString(), GetType(), cause.Message));
-                    break;
-                case Directive.Escalate:
-                    break;
-                default:
-                    //case Directive.Restart:
-                    //case Directive.Stop:
-                    actorCell.System.EventStream.Publish(new Error(cause, child.Path.ToString(), GetType(),
-                        cause.Message));
-                    break;
+                var actorInitializationException = cause as ActorInitializationException;
+                if (actorInitializationException != null && actorInitializationException.InnerException!=null)
+                {
+                    cause = actorInitializationException.InnerException;
+                }
+                switch (directive)
+                {
+                    case Directive.Resume:
+                        Publish(context, new Warning(child.Path.ToString(), GetType(), cause.Message));
+                        break;
+                    case Directive.Escalate:
+                        //Don't log here
+                        break;
+                    default:
+                        //case Directive.Restart:
+                        //case Directive.Stop:
+                        Publish(context, new Error(cause, child.Path.ToString(), GetType(), cause.Message));
+                        break;
+                }
             }
         }
 
-        #region Static methods
+        protected abstract bool LoggingEnabled { get;}
+
+        private void Publish(IActorContext context, LogEvent logEvent)
+        {
+            try
+            {
+                context.System.EventStream.Publish(logEvent);
+            }
+            catch (Exception)
+            {
+               // swallow any exceptions
+            }
+        }
 
         /// <summary>
         ///     When supervisorStrategy is not specified for an actor this
@@ -157,9 +175,15 @@ namespace Akka.Actor
         /// <value>The default.</value>
         public static SupervisorStrategy DefaultStrategy
         {
-            //TODO: should be -1 retries, inf timeout, fix bug that prevents test to pass
             get { return new OneForOneStrategy(DefaultDecider); }
         }
+
+        /// <summary>
+        /// This method is called after the child has been removed from the set of children.
+        /// It does not need to do anything special. Exceptions thrown from this method
+        /// do NOT make the actor fail if this happens during termination.
+        /// </summary>
+        public abstract void HandleChildTerminated(IActorContext actorContext, ActorRef child, IEnumerable<InternalActorRef> children);
 
         public static Func<Exception, Directive> MakeDecider(params Type[] trapExit)
         {
@@ -173,7 +197,6 @@ namespace Akka.Actor
             return reason => trapExit.Any(e => e.IsInstanceOfType(reason)) ? Directive.Restart : Directive.Escalate;
         }
 
-        #endregion
     }
 
     /// <summary>
@@ -181,10 +204,10 @@ namespace Akka.Actor
     /// </summary>
     public class OneForOneStrategy : SupervisorStrategy
     {
-        /// <summary>
-        ///     The actor failures
-        /// </summary>
-        private Dictionary<ActorRef, Failures> actorFailures = new Dictionary<ActorRef, Failures>();
+        private readonly int _maxNumberOfRetries;
+        private readonly int _withinTimeRangeMilliseconds;
+        private readonly Func<Exception, Directive> _decider;
+        private readonly bool _loggingEnabled;
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
@@ -198,37 +221,39 @@ namespace Akka.Actor
         /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, Duration.Inf means no window.</param>
         /// <param name="decider">mapping from Exception to [[Akka.Actor.SupervisorStrategy.Directive]]</param>
         public OneForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> decider)
+            : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, decider)
         {
-            MaxNumberOfRetries = maxNrOfRetries;
-            WithinTimeRange = withinTimeRange;
-            Decider = decider;
+
         }
 
-        //TODO: should be -1 retries, inf timeout, fix bug that prevents test to pass
-        //TODO: timeout can be null for inf.. null retries causes random remoting tests to fail/hang..
+        /// <summary>
+        ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
+        ///     to all children when one fails, as opposed to [[akka.actor.OneForOneStrategy]] that applies
+        ///     it only to the child actor that failed.
+        /// </summary>
+        /// <param name="maxNrOfRetries">
+        ///     the number of times a child actor is allowed to be restarted, negative value means no limit,
+        ///     if the limit is exceeded the child actor is stopped.
+        /// </param>
+        /// <param name="withinTimeMilliseconds">duration in milliseconds of the time window for <paramref name="maxNrOfRetries"/>, negative values means no window.</param>
+        /// <param name="decider">Mapping from an <see cref="Exception"/> to <see cref="Directive"/></param>
+        /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
+        public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> decider, bool loggingEnabled = true)
+        {
+            _maxNumberOfRetries = maxNrOfRetries;
+            _withinTimeRangeMilliseconds = withinTimeMilliseconds;
+            _decider = decider;
+            _loggingEnabled = loggingEnabled;
+        }
+
         /// <summary>
         /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
         /// </summary>
-        public OneForOneStrategy(Func<Exception, Directive> decider) : this(10, null, decider) { }
+        public OneForOneStrategy(Func<Exception, Directive> decider) : this(-1, -1, decider, true)
+        {
+        }
 
-        /// <summary>
-        ///     The number of times a child actor is allowed to be restarted, negative value means no limit,
-        ///     if the limit is exceeded the child actor is stopped.
-        /// </summary>
-        /// <value>The maximum number of retries.</value>
-        public int? MaxNumberOfRetries { get; private set; }
-
-        /// <summary>
-        ///     Duration of the time window for maxNrOfRetries, Duration.Inf means no window.
-        /// </summary>
-        /// <value>The duration.</value>
-        public TimeSpan? WithinTimeRange { get; private set; }
-
-        /// <summary>
-        ///     Mapping from Exception to [[Akka.Actor.SupervisorStrategy.Directive]].
-        /// </summary>
-        /// <value>The decider.</value>
-        public Func<Exception, Directive> Decider { get; private set; }
+        protected override bool LoggingEnabled { get { return _loggingEnabled; } }
 
         /// <summary>
         ///     Handles the specified child.
@@ -236,54 +261,25 @@ namespace Akka.Actor
         /// <param name="child">The child.</param>
         /// <param name="x">The x.</param>
         /// <returns>Directive.</returns>
-        public override Directive Handle(ActorRef child, Exception x)
+        protected override Directive Handle(ActorRef child, Exception x)
         {
-            Failures failures;
-            actorFailures.TryGetValue(child, out failures);
-            //create if missing
-            if (failures == null)
-            {
-                failures = new Failures();
-                actorFailures.Add(child, failures);
-            }
-            //add entry
-            failures.Entries.Add(new Failure
-            {
-                Exception = x,
-                Timestamp = DateTime.Now,
-            });
-            //remove expired
-            if (WithinTimeRange.HasValue)
-            {
-                failures.Entries.RemoveAll(f => f.Timestamp < DateTime.Now - WithinTimeRange);
-            }
-            //calc count of active
-            int count = failures.Entries.Count();
-
-            if (ShouldStop(count))
-            {
-                return Directive.Stop;
-            }
-
-            Directive whatToDo = Decider(x);
-            return whatToDo;
+            return _decider(x);
         }
 
-        private bool ShouldStop(int count)
+        protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
         {
-            return MaxNumberOfRetries.HasValue && MaxNumberOfRetries.HasValue && count > MaxNumberOfRetries.Value;
-        }
+            var failedChild = failedChildStats.Child;
 
-        protected override void ProcessFailure(ActorCell actorCell, bool restart, ActorRef child, Exception cause) 
-        {
-            if (restart)
-            {
-                RestartChild(child, cause, false);
-            }
+            if (restart && failedChildStats.RequestRestartPermission(_maxNumberOfRetries, _withinTimeRangeMilliseconds))
+                RestartChild(failedChild, cause, suspendFirst: false);
             else
-            {
-                child.AsInstanceOf<InternalActorRef>().Stop();
-            }
+                context.Stop(failedChild);
+        }
+
+
+        public override void HandleChildTerminated(IActorContext actorContext, ActorRef child, IEnumerable<InternalActorRef> children)
+        {
+            //Intentionally left blank
         }
     }
 
@@ -292,7 +288,28 @@ namespace Akka.Actor
     /// </summary>
     public class AllForOneStrategy : SupervisorStrategy
     {
-        private Failures failures = new Failures();
+        private readonly int _maxNumberOfRetries;
+        private readonly int _withinTimeRangeMilliseconds;
+        private readonly Func<Exception, Directive> _decider;
+        private readonly bool _loggingEnabled;
+
+        /// <summary>
+        ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
+        ///     to all children when one fails, as opposed to [[Akka.Actor.AllForOneStrategy]] that applies
+        ///     it only to the child actor that failed.
+        /// </summary>
+        /// <param name="maxNrOfRetries">
+        ///     the number of times a child actor is allowed to be restarted, negative value and null means no limit,
+        ///     if the limit is exceeded the child actor is stopped.
+        /// </param>
+        /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, <see cref="Timeout.InfiniteTimeSpan"/> means no window.</param>
+        /// <param name="decider">mapping from Exception to <see cref="Directive"/></param>
+        public AllForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> decider)
+            : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, decider)
+        {
+            //Intentionally left blank
+        }
+
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
         ///     to all children when one fails, as opposed to [[Akka.Actor.AllForOneStrategy]] that applies
@@ -302,39 +319,23 @@ namespace Akka.Actor
         ///     the number of times a child actor is allowed to be restarted, negative value means no limit,
         ///     if the limit is exceeded the child actor is stopped.
         /// </param>
-        /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, Duration.Inf means no window.</param>
-        /// <param name="decider">mapping from Exception to [[Akka.Actor.SupervisorStrategy.Directive]]</param>
-        public AllForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> decider)
+        /// <param name="withinTimeMilliseconds">duration in milliseconds of the time window for <paramref name="maxNrOfRetries"/>, negative values means no window.</param>
+        /// <param name="decider">Mapping from an <see cref="Exception"/> to <see cref="Directive"/></param>
+        /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
+        public AllForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> decider, bool loggingEnabled=true)
         {
-            MaxNumberOfRetries = maxNrOfRetries;
-            WithinTimeRange = withinTimeRange;
-            Decider = decider;
+            _maxNumberOfRetries = maxNrOfRetries;
+            _withinTimeRangeMilliseconds = withinTimeMilliseconds;
+            _decider = decider;
+            _loggingEnabled = loggingEnabled;
         }
 
-        //TODO: should be -1 retries, inf timeout, fix bug that prevents test to pass
         /// <summary>
         /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
         /// </summary>
-        public AllForOneStrategy(Func<Exception, Directive> decider) : this(null, null, decider) { }
+        public AllForOneStrategy(Func<Exception, Directive> decider) : this(-1, -1, decider, true) { }
 
-        /// <summary>
-        ///     The number of times a child actor is allowed to be restarted, negative value means no limit,
-        ///     if the limit is exceeded the child actor is stopped.
-        /// </summary>
-        /// <value>The maximum number of retries.</value>
-        public int? MaxNumberOfRetries { get; private set; }
-
-        /// <summary>
-        ///     Duration of the time window for maxNrOfRetries, Duration.Inf means no window.
-        /// </summary>
-        /// <value>The duration.</value>
-        public TimeSpan? WithinTimeRange { get; private set; }
-
-        /// <summary>
-        ///     Mapping from Exception to [[Akka.Actor.SupervisorStrategy.Directive]].
-        /// </summary>
-        /// <value>The decider.</value>
-        public Func<Exception, Directive> Decider { get; private set; }
+        protected override bool LoggingEnabled { get { return _loggingEnabled; } }
 
         /// <summary>
         ///     Determines what to do with the child when the given exception occurs.
@@ -342,47 +343,37 @@ namespace Akka.Actor
         /// <param name="child">The child.</param>
         /// <param name="x">The x.</param>
         /// <returns>Directive.</returns>
-        public override Directive Handle(ActorRef child, Exception x)
-        {            
-            //add entry
-            failures.Entries.Add(new Failure
-            {
-                Exception = x,
-                Timestamp = DateTime.Now,
-            });
-            //remove expired
-            if (WithinTimeRange.HasValue)
-            {
-                failures.Entries.RemoveAll(f => f.Timestamp < DateTime.Now - WithinTimeRange);
-            }
-            //calc count of active
-            int count = failures.Entries.Count();
-
-            if (MaxNumberOfRetries.HasValue && count > MaxNumberOfRetries)
-            {
-                return Directive.Stop;
-            }
-
-            Directive whatToDo = Decider(x);
-            return whatToDo;
+        protected override Directive Handle(ActorRef child, Exception x)
+        {
+            return _decider(x);
         }
 
-        protected override void ProcessFailure(ActorCell actorCell, bool restart, ActorRef child, Exception cause)
+        protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
         {
-            if (restart)
+            if (allChildren.Count > 0)
             {
-                foreach (var c in actorCell.GetChildren().ToArray())
+                var failedChild = failedChildStats.Child;
+
+                if (restart && allChildren.All(c => c.RequestRestartPermission(_maxNumberOfRetries, _withinTimeRangeMilliseconds)))
                 {
-                    RestartChild(child, cause, false);
+                    foreach (var crs in allChildren)
+                    {
+                        RestartChild(crs.Child, cause, suspendFirst: !failedChild.Equals(crs.Child));
+                    }
+                }
+                else
+                {
+                    foreach (var crs in allChildren)
+                    {
+                        context.Stop(crs.Child);
+                    }
                 }
             }
-            else
-            {
-                foreach (var c in actorCell.GetChildren().ToArray())
-                {
-                    child.AsInstanceOf<InternalActorRef>().Stop();
-                }
-            }
+        }
+
+        public override void HandleChildTerminated(IActorContext actorContext, ActorRef child, IEnumerable<InternalActorRef> children)
+        {
+            //Intentionally left blank
         }
     }
 

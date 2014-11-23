@@ -17,27 +17,6 @@ namespace Akka.Actor
     [DebuggerDisplay("{Self,nq}")]
     public partial class ActorCell
     {
-        //terminatedqueue should never be used outside the message loop
-        private readonly HashSet<ActorRef> terminatedQueue = new HashSet<ActorRef>();
-
-        // ReSharper disable once InconsistentNaming
-        private ActorRef _failed_DoNotUseMeDirectly;
-        private bool IsFailed { get { return _failed_DoNotUseMeDirectly != null; } }
-        private void SetFailed(ActorRef perpetrator)
-        {
-            _failed_DoNotUseMeDirectly = perpetrator;
-        }
-        private void ClearFailed()
-        {
-            _failed_DoNotUseMeDirectly = null;
-        }
-        private ActorRef Perpetrator { get { return _failed_DoNotUseMeDirectly; } }
-
-        /// <summary>
-        ///     The is terminating
-        /// </summary>
-        private volatile bool isTerminating;
-
         /// <summary>
         ///     Gets the type of the actor.
         /// </summary>
@@ -77,48 +56,6 @@ namespace Akka.Actor
             finally
             {
                 CheckReceiveTimeout(); // Reschedule receive timeout
-            }
-        }
-
-        private void HandleInvokeFailure(Exception cause, IEnumerable<ActorRef> childrenNotToSuspend = null)
-        {
-            if (!IsFailed)
-            {
-                try
-                {
-                    SuspendNonRecursive();
-
-                    if (CurrentMessage is Failed)
-                    {
-                        var failedChild = Sender;
-                        childrenNotToSuspend = childrenNotToSuspend.Concat(failedChild); //Function handles childrenNotToSuspend beeing null
-                        SetFailed(failedChild);
-                    }
-                    else
-                    {
-                        SetFailed(Self);
-                    }
-                    SuspendChildren(childrenNotToSuspend==null ? null : childrenNotToSuspend.ToList());
-
-                    //Tell supervisor
-                    Parent.Tell(new Failed(Self, cause, Self.Path.Uid));
-                }
-                catch (Exception e)
-                {
-                    Publish(new Error(e, Self.Path.ToString(), _actor.GetType(), "Emergency stop: exception in failure handling for " + cause));
-                    try
-                    {
-                        foreach (var child in GetChildren())
-                        {
-                            child.Stop();
-                        }
-                    }
-                    finally
-                    {
-                        FinishTerminate();
-                    }
-                }
-
             }
         }
 
@@ -207,42 +144,33 @@ namespace Akka.Actor
         /// <param name="envelope">The envelope.</param>
         public void SystemInvoke(Envelope envelope)
         {
-            //CurrentMessage = envelope.Message;
-            //Sender = envelope.Sender;
 
-            //set the current context
-
-                try
-                {
-                    envelope
-                        .Message
-                        .Match()
-                        .With<CompleteFuture>(HandleCompleteFuture)
-                        .With<Failed>(HandleFailed)
-                        .With<DeathWatchNotification>(m => WatchedActorTerminated(m.Actor, m.ExistenceConfirmed, m.AddressTerminated))
-                        .With<Create>(HandleCreate)
-                        //TODO: see """final def init(sendSupervise: Boolean, mailboxType: MailboxType): this.type = {""" in dispatch.scala
-                        //case Create(failure) ⇒ create(failure)
-                        .With<Watch>(m => AddWatcher(m.Watchee, m.Watcher))
-                        .With<Unwatch>(m => RemWatcher(m.Watchee, m.Watcher))
-                        .With<Recreate>(FaultRecreate)
-                        .With<Suspend>(FaultSuspend)
-                        .With<Resume>(FaultResume)
-                        .With<Terminate>(Terminate)
-                        .With<Supervise>(s => Supervise(s.Child, s.Async))
-                        .Default(m => { throw new NotSupportedException("Unknown message " + m.GetType().Name); });
-                }
-                catch (Exception cause)
-                {
-                    HandleInvokeFailure(cause);
-                }
-
+            try
+            {
+                envelope
+                    .Message
+                    .Match()
+                    .With<CompleteFuture>(HandleCompleteFuture)
+                    .With<Failed>(HandleFailed)
+                    .With<DeathWatchNotification>(m => WatchedActorTerminated(m.Actor, m.ExistenceConfirmed, m.AddressTerminated))
+                    .With<Create>(m => HandleCreate(m.Failure))
+                    //TODO: see """final def init(sendSupervise: Boolean, mailboxType: MailboxType): this.type = {""" in dispatch.scala
+                    //case Create(failure) ⇒ create(failure)
+                    .With<Watch>(m => AddWatcher(m.Watchee, m.Watcher))
+                    .With<Unwatch>(m => RemWatcher(m.Watchee, m.Watcher))
+                    .With<Recreate>(m => FaultRecreate(m.Cause))
+                    .With<Suspend>(m => FaultSuspend())
+                    .With<Resume>(m => FaultResume(m.CausedByFailure))
+                    .With<Terminate>(Terminate)
+                    .With<Supervise>(s => Supervise(s.Child, s.Async))
+                    .Default(m => { throw new NotSupportedException("Unknown message " + m.GetType().Name); });
+            }
+            catch (Exception cause)
+            {
+                HandleInvokeFailure(cause);
+            }
         }
 
-        private void TerminatedQueueFor(ActorRef actorRef)
-        {
-            terminatedQueue.Add(actorRef);
-        }
 
         public void SwapMailbox(DeadLetterMailbox mailbox)
         {
@@ -312,31 +240,42 @@ namespace Akka.Actor
             _self.Stop();
         }
 
+
         /// <summary>
         ///     Restarts the specified cause.
         /// </summary>
         /// <param name="cause">The cause.</param>
         public void Restart(Exception cause)
         {
-            Self.Tell(new Recreate(cause));
+            SendSystemMessage(new Recreate(cause));
         }
 
-
-        private void HandleCreate(Create obj)   //Called create in Akka (ActorCell.scala)
+        private void HandleCreate(Exception failure)
         {
-            //TODO: this is missing bits and pieces compared to Akka
+            Create(failure);
+        }
+
+        private void Create(Exception failure)
+        {
+            if (failure != null)
+                throw failure;
             try
             {
-                var instance = NewActor();
-                _actor = instance;
-                UseThreadContext(() => instance.AroundPreStart());
+                var created = NewActor();
+                _actor = created;
+                UseThreadContext(() => created.AroundPreStart());
                 CheckReceiveTimeout();
-                if(System.Settings.DebugLifecycle)
-                    Publish(new Debug(Self.Path.ToString(),instance.GetType(),"Started ("+instance+")"));
+                if (System.Settings.DebugLifecycle)
+                    Publish(new Debug(Self.Path.ToString(), created.GetType(), "Started (" + created + ")"));
             }
-            catch
+            catch (Exception e)
             {                
-                throw;
+                if (_actor != null)
+                {
+                    ClearActor(_actor);
+                    _actor = null; // ensure that we know that we failed during creation
+                }
+                throw new ActorInitializationException(_self, "Exception during creation", e);
             }
         }
 
@@ -345,9 +284,6 @@ namespace Akka.Actor
         /// </summary>
         public void Start()
         {
-            if (isTerminating)
-                return;
-
             PreStart();
             Mailbox.Start();
         }
@@ -365,10 +301,7 @@ namespace Akka.Actor
         /// <param name="causedByFailure">The caused by failure.</param>
         public void Resume(Exception causedByFailure)
         {
-            if (isTerminating)
-                return;
-
-            Self.Tell(new Resume(causedByFailure));
+            SendSystemMessage(new Resume(causedByFailure));
         }
 
         /// <summary>
@@ -376,13 +309,7 @@ namespace Akka.Actor
         /// </summary>
         public void Stop()
         {
-            //try
-            //{
-            Self.Tell(Akka.Dispatch.SysMsg.Terminate.Instance);
-            //}
-            //catch
-            //{
-            //}
+            SendSystemMessage(Dispatch.SysMsg.Terminate.Instance);
         }
 
         /// <summary>
@@ -390,10 +317,19 @@ namespace Akka.Actor
         /// </summary>
         public void Suspend()
         {
-            if (isTerminating)
-                return;
+            SendSystemMessage(Dispatch.SysMsg.Suspend.Instance);
+        }
 
-            Self.Tell(Akka.Dispatch.SysMsg.Suspend.Instance);
+        private void SendSystemMessage(SystemMessage systemMessage)
+        {
+            try
+            {
+                Self.Tell(systemMessage);
+            }
+            catch (Exception e)
+            {
+                _systemImpl.EventStream.Publish(new Error(e, _self.Parent.ToString(), ActorType, "Swallowing exception during message send"));
+            }
         }
 
         /// <summary>

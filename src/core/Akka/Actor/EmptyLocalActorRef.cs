@@ -21,6 +21,7 @@ namespace Akka.Actor
         public override ActorPath Path { get { return _path; } }
 
         public override ActorRefProvider Provider { get { return _provider; } }
+        public override bool IsTerminated { get { return true; } }
 
         protected override void TellInternal(object message, ActorRef sender)
         {

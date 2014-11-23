@@ -10,7 +10,7 @@ namespace Akka.Actor
     {
         HashSet<ActorRef> _watching = new HashSet<ActorRef>();
         readonly HashSet<ActorRef> _watchedBy = new HashSet<ActorRef>();
-        HashSet<ActorRef> _terminatedQueue = new HashSet<ActorRef>();
+        HashSet<ActorRef> _terminatedQueue = new HashSet<ActorRef>();//terminatedqueue should never be used outside the message loop
 
         public ActorRef Watch(ActorRef subject)
         {
@@ -63,7 +63,7 @@ namespace Akka.Actor
                 {
                     _watching = RemoveFromSet(actor, _watching);
                 }, actor);
-                if (!isTerminating)
+                if (!IsTerminating)
                 {
                     Self.Tell(new Terminated(actor, existenceConfirmed, addressTerminated), actor);
                     TerminatedQueuedFor(actor);

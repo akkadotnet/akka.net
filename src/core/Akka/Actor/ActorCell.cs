@@ -44,7 +44,7 @@ namespace Akka.Actor
         public MessageDispatcher Dispatcher { get; private set; }
         public bool IsLocal { get{return true;} }
         protected ActorBase Actor { get { return _actor; } }
-
+        public bool IsTerminated { get { return ReferenceEquals(_systemImpl.Mailboxes.DeadLetterMailbox,_mailbox) || _mailbox.IsClosed; } }
         internal static ActorCell Current
         {
             get { return InternalCurrentActorCellKeeper.Current; }
@@ -107,12 +107,14 @@ namespace Akka.Actor
         [Obsolete("Use TryGetChildStatsByName", true)]
         public InternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
         {
-            return GetSingleChild(name);
+            InternalActorRef child;
+            return TryGetSingleChild(name, out child) ? child : ActorRef.Nobody;
         }
 
         ActorRef IActorContext.Child(string name)
         {
-            return GetSingleChild(name);
+            InternalActorRef child;
+            return TryGetSingleChild(name, out child) ? child : ActorRef.Nobody;
         }
 
         public ActorSelection ActorSelection(string path)
@@ -163,13 +165,14 @@ namespace Akka.Actor
 
         private ActorBase NewActor()
         {
+            PrepareForNewActor();
             ActorBase instance=null;
             //set the thread static context or things will break
             UseThreadContext(() =>
             {
-                behaviorStack.Clear();
+                behaviorStack = new Stack<Receive>();
                 instance = CreateNewActorInstance();
-                instance.supervisorStrategy = _props.SupervisorStrategy;
+                instance.SupervisorStrategyInternal = _props.SupervisorStrategy;
                 //defaults to null - won't affect lazy instantiation unless explicitly set in props
             });
             return instance;
@@ -249,21 +252,33 @@ namespace Akka.Actor
 
         protected void ClearActorCell()
         {
-            //TODO: UnstashAll();
+            //TODO_ UnstashAll stashed system messages (this is not the same stash that might exist on the actor)
             _props = terminatedProps;
         }
 
-        protected void ClearActor()
+        protected void ClearActor(ActorBase actor)
         {
-            if(_actor != null)
+            if (actor != null)
             {
-                _actor.Clear(_systemImpl.DeadLetters);
+                actor.Clear(_systemImpl.DeadLetters);
             }
             _actorHasBeenCleared = true;
             CurrentMessage = null;
             behaviorStack = null;
         }
 
+        protected void PrepareForNewActor()
+        {
+            behaviorStack = new Stack<Receive>();
+            _actorHasBeenCleared = false;
+        }
+        protected void SetActorFields(ActorBase actor)
+        {
+            if (actor != null)
+            {
+                actor.Unclear();
+            }
+        }
         public static NameAndUid SplitNameAndUid(string name)
         {
             var i = name.IndexOf('#');

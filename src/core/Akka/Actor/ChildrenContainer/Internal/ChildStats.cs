@@ -44,23 +44,19 @@ namespace Akka.Actor.Internal
 
         public long RestartTimeWindowStartTicks { get { return _restartTimeWindowStartTicks; } }
 
-        public bool RequestRestartPermission(int? maxNrOfRetries, int? withinTimeMilliseconds)
+        public bool RequestRestartPermission(int maxNrOfRetries, int withinTimeMilliseconds)
         {
-            if (maxNrOfRetries.HasValue)
+            if (maxNrOfRetries == 0) return false;
+            var retriesIsDefined = maxNrOfRetries > 0;
+            var windowIsDefined = withinTimeMilliseconds > 0;
+            if (retriesIsDefined && !windowIsDefined)
             {
-                var retries = maxNrOfRetries.Value;
-                if (retries < 1)
-                    return false;
-                if (!withinTimeMilliseconds.HasValue)
-                {
-                    _maxNrOfRetriesCount++;
-                    return _maxNrOfRetriesCount <= retries;
-                }
+                _maxNrOfRetriesCount++;
+                return _maxNrOfRetriesCount <= maxNrOfRetries;
             }
-            if (withinTimeMilliseconds.HasValue)
+            if (windowIsDefined)
             {
-                var window = withinTimeMilliseconds.Value;
-                return RetriesInWindowOkay(maxNrOfRetries.GetValueOrDefault(1), window);
+                return RetriesInWindowOkay(retriesIsDefined ? maxNrOfRetries : 1, withinTimeMilliseconds);
             }
             return true;
             //retriesWindow match {

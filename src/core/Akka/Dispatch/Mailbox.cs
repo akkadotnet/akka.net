@@ -51,6 +51,7 @@ namespace Akka.Dispatch
         /// </summary>
         public abstract void BecomeClosed();
 
+        public abstract bool IsClosed { get; }
         /// <summary>
         ///     Attaches a MessageDispatcher to the Mailbox.
         /// </summary>

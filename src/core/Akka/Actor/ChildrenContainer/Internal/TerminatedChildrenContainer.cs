@@ -15,7 +15,7 @@ namespace Akka.Actor.Internal
         {
             //Intentionally left blank
         }
-        public static ChildrenContainer Instance { get { return _instance; } }
+        public new static ChildrenContainer Instance { get { return _instance; } }
 
         public override ChildrenContainer Add(string name, ChildRestartStats stats)
         {

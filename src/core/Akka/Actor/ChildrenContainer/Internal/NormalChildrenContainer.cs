@@ -34,7 +34,7 @@ namespace Akka.Actor.Internal
 
         public override ChildrenContainer ShallDie(ActorRef actor)
         {
-            return new TerminatingChildrenContainer(InternalChildren, actor, new SuspendReason.UserRequest());
+            return new TerminatingChildrenContainer(InternalChildren, actor, SuspendReason.UserRequest.Instance);
         }
 
         public override ChildrenContainer Reserve(string name)

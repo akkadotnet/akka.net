@@ -2,14 +2,17 @@
 {
     public abstract partial class ActorBase
     {
-        internal SupervisorStrategy supervisorStrategy = null;
+        private SupervisorStrategy _supervisorStrategy = null;
 
-        internal SupervisorStrategy SupervisorStrategyLazy()
+        /// <summary>
+        /// Gets or sets a <see cref="SupervisorStrategy"/>.
+        /// When getting, if a previously <see cref="SupervisorStrategy"/> has been set it's returned; otherwise calls
+        /// <see cref="SupervisorStrategy">SupervisorStratregy()</see>, stores and returns it.
+        /// </summary>
+        internal SupervisorStrategy SupervisorStrategyInternal
         {
-            if (supervisorStrategy == null)
-                supervisorStrategy = SupervisorStrategy();
-
-            return supervisorStrategy;
+            get { return _supervisorStrategy ?? (_supervisorStrategy = SupervisorStrategy()); }
+            set { _supervisorStrategy = value; }
         }
 
         protected virtual SupervisorStrategy SupervisorStrategy()

@@ -111,15 +111,13 @@ namespace Akka.Util.Internal.Collections
 					case AddOperation.AddOrUpdate:
 						newNode = new Node(key, value, node.Left, node.Right);
 						return true;
-						break;
 					case AddOperation.AddOnlyUnique:
 						newNode = null;
 						return false;
-						break;
-					case AddOperation.Add:
-					default:
-						//Intentionally left blank
-						break;
+                    //case AddOperation.Add:
+                    //default:
+                    //    //Intentionally left blank
+                    //    break;
 				}
 			}
 

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Dispatch;
 using Akka.TestKit;
 using Akka.Tests.TestUtils;
@@ -264,10 +266,11 @@ namespace Akka.Tests.Actor
                 TestActor = testActor;
             }
 
-            protected override void ProcessFailure(ActorCell actorCell, bool restart, ActorRef child, Exception cause)
+            protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
             {
-                TestActor.Tell(new FF(new Failed(child, cause)), child);
-                base.ProcessFailure(actorCell, restart, child, cause);
+                var child = failedChildStats.Child;
+                TestActor.Tell(new FF(new Failed(child, cause, failedChildStats.Uid)), child);
+                base.ProcessFailure(context, restart, cause, failedChildStats, allChildren);
             }
         }
 

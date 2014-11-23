@@ -118,6 +118,8 @@ namespace Akka.Actor
 
         protected InternalActorRef Supervisor{get { return _supervisor; }}
 
+        public override bool IsTerminated { get { return _cell.IsTerminated; } }
+
         protected Func<Mailbox> CreateMailbox
         {
             get { return _createMailbox; }
@@ -140,7 +142,8 @@ namespace Akka.Actor
 
         public override InternalActorRef GetSingleChild(string name)
         {
-            return _cell.GetSingleChild(name);
+            InternalActorRef child;
+            return _cell.TryGetSingleChild(name, out child) ? child : Nobody;
         }
 
         public override ActorRef GetChild(IEnumerable<string> name)

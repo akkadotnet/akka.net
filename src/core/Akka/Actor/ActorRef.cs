@@ -240,14 +240,14 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">The path elements.</param>
         /// <returns>The <see cref="ActorRef"/>, or if the requested path does not exist, returns <see cref="Nobody"/>.</returns>
-        public abstract ActorRef GetChild(IEnumerable<string> name);
+        public abstract ActorRef GetChild(IEnumerable<string> name);    //TODO: Refactor this to use an IEnumerator instead as this will be faster instead of enumerating multiple times over name, as the implementations currently do.
         public abstract void Resume(Exception causedByFailure = null);
         public abstract void Start();
         public abstract void Stop();
         public abstract void Restart(Exception cause);
         public abstract void Suspend();
 
-        public bool IsTerminated { get; internal set; }
+        public abstract bool IsTerminated { get; }
         public abstract bool IsLocal { get; }
     }
 
@@ -293,6 +293,8 @@ namespace Akka.Actor
         {
             get { return true; }
         }
+
+        public override bool IsTerminated { get { return false; } }
     }
 
     /// <summary> This is an internal look-up failure token, not useful for anything else.</summary>
@@ -343,6 +345,7 @@ namespace Akka.Actor
         public abstract IEnumerable<ActorRef> Children { get; }
 
         public abstract InternalActorRef GetSingleChild(string name);
+
     }
 
     public sealed class NoSender : ActorRef
