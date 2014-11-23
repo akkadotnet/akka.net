@@ -34,6 +34,14 @@ namespace Akka.Routing
         }
     }
 
+    public static class RouterConfigExtensions
+    {
+        public static bool NoRouter(this RouterConfig config)
+        {
+            return config == null || config is NoRouter;
+        }
+    }
+
     public class NoRouter : RouterConfig
     {
         public override RouterActor CreateRouterActor()
@@ -210,10 +218,18 @@ namespace Akka.Routing
 
     public class FromConfig : RouterConfig
     {
+        private static readonly FromConfig _instance = new FromConfig();
+
+        public static FromConfig Instance
+        {
+            get { return _instance; }
+        }
+
         public FromConfig() : base()
         {
             
         }
+
         public override Router CreateRouter(ActorSystem system)
         {
             throw new NotSupportedException();

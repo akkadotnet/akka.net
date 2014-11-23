@@ -132,55 +132,64 @@ namespace Akka.Remote
                 props = props.WithMailbox(deploy.Mailbox);
             if (deploy.Dispatcher != null)
                 props = props.WithDispatcher(deploy.Dispatcher);
-            if (deploy.Scope is RemoteScope)
-            {
 
+
+            if (props.RouterConfig.NoRouter())
+            {
+                return CreateNoRouter(system, props, supervisor, path, deploy, async);
             }
 
-            //If this actor is a Router
-            if (!(props.RouterConfig is NoRouter || props.RouterConfig == null))
-            {
-                //if no Router config value was specified, override with procedural input
-                if (deploy.RouterConfig is NoRouter)
-                {
-                    deploy = deploy.WithRouterConfig(props.RouterConfig);
-                }
-            }
-            props = props.WithDeploy(deploy);
+            return CreateWithRouter(system, props, supervisor, path, deploy, async);
+
             
+        }
 
-            if (string.IsNullOrEmpty(props.Mailbox))
-            {
-                //   throw new NotSupportedException("Mailbox can not be configured as null or empty");
-            }
-            if (string.IsNullOrEmpty(props.Dispatcher))
-            {
-                //TODO: fix this..
-                //    throw new NotSupportedException("Dispatcher can not be configured as null or empty");
-            }
+        private InternalActorRef CreateNoRouter(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, Deploy deploy, bool async)
+        {
+            //remove the router config from the deploy since props does not contain FromConfig / nor any other router info
+            deploy = deploy.WithRouterConfig(props.RouterConfig);
+            //apply other information, e.g. remote deploy
+            var deployProps = props.WithDeploy(deploy);
 
-
-            if (props.Deploy != null && props.Deploy.Scope is RemoteScope)
+            if (deployProps.Deploy != null && deployProps.Deploy.Scope is RemoteScope)
             {
-                var addr = props.Deploy.Scope.AsInstanceOf<RemoteScope>().Address;
+                var addr = deployProps.Deploy.Scope.AsInstanceOf<RemoteScope>().Address;
 
                 //Even if this actor is in RemoteScope, it might still be a local address
                 if (HasAddress(addr))
                 {
-                    //if (path.Elements.First() == "remote")
-                    //{
-                    //    //this is a remote deployed actor
-                        
-                    //}
-                    //else
-                    //{
-                    return LocalActorOf(system, props, supervisor, path, false, null, false, async);     //TODO: replace deploy:null with deployment.headOption
-                    // }
+                    return LocalActorOf(system, deployProps, supervisor, path, false, null, false, async);     //TODO: replace deploy:null with deployment.headOption
                 }
 
-                return RemoteActorOf(system, props, supervisor, path);
+                return RemoteActorOf(system, deployProps, supervisor, path);
             }
-            return LocalActorOf(system, props, supervisor, path, false, null, false, async);        //TODO: replace deploy:null with deployment.headOption
+            return LocalActorOf(system, deployProps, supervisor, path, false, null, false, async);        //TODO: replace deploy:null with deployment.headOption
+        }
+
+        private InternalActorRef CreateWithRouter(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, Deploy deploy, bool async)
+        {
+            //if no router info is in the deployment
+            if (deploy.RouterConfig.NoRouter())
+            {
+                //apply the props router to the deploy
+                deploy = deploy.WithRouterConfig(props.RouterConfig);
+            }
+
+            var deployProps = props.WithDeploy(deploy);
+
+            if (deployProps.Deploy != null && deployProps.Deploy.Scope is RemoteScope)
+            {
+                var addr = deployProps.Deploy.Scope.AsInstanceOf<RemoteScope>().Address;
+
+                //Even if this actor is in RemoteScope, it might still be a local address
+                if (HasAddress(addr))
+                {
+                    return LocalActorOf(system, deployProps, supervisor, path, false, null, false, async);     //TODO: replace deploy:null with deployment.headOption
+                }
+
+                return RemoteActorOf(system, deployProps, supervisor, path);
+            }
+            return LocalActorOf(system, deployProps, supervisor, path, false, null, false, async);        //TODO: replace deploy:null with deployment.headOption
         }
 
         private bool HasAddress(Address address)
