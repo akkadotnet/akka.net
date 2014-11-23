@@ -7,7 +7,6 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Configuration;
-using Akka.Util;
 
 namespace Akka.Event
 {
@@ -84,7 +83,12 @@ namespace Akka.Event
             var shouldRemoveStandardOutLogger = true;
             foreach (var strLoggerType in loggerTypes)
             {
-                var loggerType = TypeExtensions.ResolveConfiguredType(strLoggerType);
+                var loggerType = Type.GetType(strLoggerType);
+
+                if (loggerType == null)
+                {
+                    throw new ConfigurationException("Logger specified in config cannot be found: \"" + strLoggerType + "\"");
+                }
                 if (loggerType == typeof(StandardOutLogger))
                 {
                     shouldRemoveStandardOutLogger = false;

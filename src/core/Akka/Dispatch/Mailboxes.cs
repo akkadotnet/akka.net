@@ -35,7 +35,6 @@ namespace Akka.Dispatch
             foreach (var kvp in requirements)
             {
                 var type = Type.GetType(kvp.Key);
-                //TODO: should this throw?
                 if (type == null)
                 {
                     //TODO: can't log here, logger not created yet
