@@ -27,9 +27,9 @@ namespace Akka.Actor
         ///     child (and returning `true`), or it returns `false` to escalate the
         ///     failure, which will lead to this actor re-throwing the exception which
         ///     caused the failure. The exception will not be wrapped.
-        ///     This method calls [[Akka.Actor.SupervisorStrategy#LogFailure]], which will
+        ///     This method calls <see cref="Akka.Actor.SupervisorStrategy"/>, which will
         ///     log the failure unless it is escalated. You can customize the logging by
-        ///     setting [[Akka.Actor.SupervisorStrategy#LoggingEnabled]] to `false` and
+        ///     setting <see cref="Akka.Actor.SupervisorStrategy" /> to `false` and
         ///     do the logging inside the `decider` or override the `LogFailure` method.
         /// </summary>
         /// <param name="actorCell">The actor cell.</param>
@@ -64,9 +64,9 @@ namespace Akka.Actor
 
         /// <summary>
         ///     When supervisorStrategy is not specified for an actor this
-        ///     [[Decider]] is used by default in the supervisor strategy.
-        ///     The child will be stopped when [[Akka.Actor.ActorInitializationException]],
-        ///     [[Akka.Actor.ActorKilledException]], or [[Akka.Actor.DeathPactException]] is
+        ///     Decider is used by default in the supervisor strategy.
+        ///     The child will be stopped when <see cref="Akka.Actor.ActorInitializationException"/>,
+        ///     <see cref="Akka.Actor.ActorKilledException"/>, or <see cref="Akka.Actor.DeathPactException"/> is
         ///     thrown. It will be restarted for other `Exception` types.
         ///     The error is escalated if it's a `Exception`, i.e. `Error`.
         /// </summary>
@@ -211,7 +211,7 @@ namespace Akka.Actor
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
-        ///     to all children when one fails, as opposed to [[akka.actor.OneForOneStrategy]] that applies
+        ///     to all children when one fails, as opposed to <see cref="OneForOneStrategy" /> that applies
         ///     it only to the child actor that failed.
         /// </summary>
         /// <param name="maxNrOfRetries">
@@ -219,7 +219,7 @@ namespace Akka.Actor
         ///     if the limit is exceeded the child actor is stopped.
         /// </param>
         /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, Duration.Inf means no window.</param>
-        /// <param name="decider">mapping from Exception to [[Akka.Actor.SupervisorStrategy.Directive]]</param>
+        /// <param name="decider">mapping from Exception to <see cref="Directive" /></param>
         public OneForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> decider)
             : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, decider)
         {
@@ -228,7 +228,7 @@ namespace Akka.Actor
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
-        ///     to all children when one fails, as opposed to [[akka.actor.OneForOneStrategy]] that applies
+        ///     to all children when one fails, as opposed to <see cref="OneForOneStrategy" /> that applies
         ///     it only to the child actor that failed.
         /// </summary>
         /// <param name="maxNrOfRetries">
@@ -295,7 +295,7 @@ namespace Akka.Actor
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
-        ///     to all children when one fails, as opposed to [[Akka.Actor.AllForOneStrategy]] that applies
+        ///     to all children when one fails, as opposed to <see cref="AllForOneStrategy" /> that applies
         ///     it only to the child actor that failed.
         /// </summary>
         /// <param name="maxNrOfRetries">
@@ -312,7 +312,7 @@ namespace Akka.Actor
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
-        ///     to all children when one fails, as opposed to [[Akka.Actor.AllForOneStrategy]] that applies
+        ///     to all children when one fails, as opposed to <see cref="AllForOneStrategy" /> that applies
         ///     it only to the child actor that failed.
         /// </summary>
         /// <param name="maxNrOfRetries">

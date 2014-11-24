@@ -55,7 +55,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Sending a <see cref="PoisonPill"/> to an actor causes it to , which will stop the actor when the message 
+    /// Sending a <see cref="PoisonPill"/> to an will stop the actor when the message 
     /// is processed. <see cref="PoisonPill"/> is enqueued as ordinary messages and will be handled after 
     /// messages that were already queued in the mailbox.
     /// <para>See also <see cref="Kill"/> which causes the actor to throw an  <see cref="ActorKilledException"/> when 
