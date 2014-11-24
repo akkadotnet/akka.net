@@ -7,19 +7,19 @@ using Xunit;
 
 namespace Akka.Cluster.Tests.MultiNode
 {
-    public class JoinInProgressMultiNodeSpec : MultiNodeConfig
+    public class JoinInProgressMultiNodeConfig : MultiNodeConfig
     {
         readonly RoleName _first;
         public RoleName First { get {return _first;} }
         readonly RoleName _second;
         public RoleName Second { get { return _second; } }
 
-        public JoinInProgressMultiNodeSpec()
+        public JoinInProgressMultiNodeConfig()
         {
             _first = Role("first");
             _second = Role("second");
 
-            CommonConfig = DebugConfig(false).WithFallback(
+            CommonConfig = ConfigurationFactory.ParseString(@"akka.loggers = [""Akka.Logger.NLog.NLogLogger, Akka.Logger.NLog""]").WithFallback(DebugConfig(true)).WithFallback(
                 ConfigurationFactory.ParseString(@"
                     akka.stdout-loglevel = DEBUG
                     akka.cluster {
@@ -43,15 +43,15 @@ namespace Akka.Cluster.Tests.MultiNode
 
     public abstract class JoinInProgressSpec : MultiNodeClusterSpec
     {
-        readonly JoinInProgressMultiNodeSpec _config;
+        readonly JoinInProgressMultiNodeConfig _config;
 
-        protected JoinInProgressSpec() : this(new JoinInProgressMultiNodeSpec())
+        protected JoinInProgressSpec() : this(new JoinInProgressMultiNodeConfig())
         {
         }
 
-        private JoinInProgressSpec(JoinInProgressMultiNodeSpec spec) : base(spec)
+        private JoinInProgressSpec(JoinInProgressMultiNodeConfig config) : base(config)
         {
-            _config = spec;
+            _config = config;
         }
 
         [MultiNodeFact]

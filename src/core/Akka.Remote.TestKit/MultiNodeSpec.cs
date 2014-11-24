@@ -225,8 +225,8 @@ namespace Akka.Remote.TestKit
             {
                 const string config = @"
                 akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                helios.tcp.hostname = ""{0}""
-                helios.tcp.port = {1}";
+                akka.remote.helios.tcp.hostname = ""{0}""
+                akka.remote.helios.tcp.port = {1}";
 
                 return ConfigurationFactory.ParseString(String.Format(config, SelfName, SelfPort));
             }
