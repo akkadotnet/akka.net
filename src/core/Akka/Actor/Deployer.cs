@@ -92,7 +92,8 @@ namespace Akka.Actor
 
             var path = string.Format("akka.actor.router.type-mapping.{0}", routerTypeAlias);
             var routerTypeName = _settings.Config.GetString(path);
-            var routerType = TypeExtensions.ResolveType(routerTypeName, typeof(RouterConfig));
+            var routerType = Type.GetType(routerTypeName);
+            Debug.Assert(routerType != null, "routerType != null");
             var routerConfig = (RouterConfig)Activator.CreateInstance(routerType, deployment);
 
             return routerConfig;

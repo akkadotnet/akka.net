@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internals;
-using Akka.Util;
 
 namespace Akka.Remote.Transport
 {
@@ -60,7 +59,8 @@ namespace Akka.Remote.Transport
             {
                 try
                 {
-                    var adapterTypeName = TypeExtensions.ResolveType(adapter.Value, typeof(ITransportAdapterProvider));
+                    var adapterTypeName = Type.GetType(adapter.Value);
+                    // ReSharper disable once AssignNullToNotNullAttribute
                     var newAdapter = (ITransportAdapterProvider)Activator.CreateInstance(adapterTypeName);
                     _adaptersTable.Add(adapter.Key, newAdapter);
                 }

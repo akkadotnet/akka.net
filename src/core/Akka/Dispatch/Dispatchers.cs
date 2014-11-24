@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Util;
 
 namespace Akka.Dispatch
 {
@@ -246,7 +245,11 @@ namespace Akka.Dispatch
                 case null:
                     throw new NotSupportedException("Could not resolve dispatcher for path " + path+". type is null");
                 default:
-                    Type dispatcherType = TypeExtensions.ResolveConfiguredType(type,typeof(MessageDispatcher));
+                    Type dispatcherType = Type.GetType(type);
+                    if (dispatcherType == null)
+                    {
+                        throw new NotSupportedException("Could not resolve dispatcher type " + type+" for path "+ path);
+                    }
                     dispatcher = (MessageDispatcher) Activator.CreateInstance(dispatcherType);
                     break;
             }
