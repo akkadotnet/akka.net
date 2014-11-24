@@ -110,7 +110,7 @@ namespace Akka.Tests.Actor
                             c.DefaultPostRestart(reason);
                         };
                     });
-                    a.Strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), SupervisorStrategy.MakeDecider(typeof(Exception)));
+                    a.Strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), r=> Directive.Restart);
                     a.Receive<string>((_, ctx) => child.Tell(Kill.Instance));
                 });
 
