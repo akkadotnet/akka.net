@@ -23,18 +23,44 @@ namespace Akka.Actor
             : base(message, cause)
         {
         }
+        protected Exception Cause { get { return InnerException; } }
     }
 
     /// <summary>
-    ///     Class ActorInitializationException.
+    /// An ActorInitializationException is thrown when the the initialization logic for an Actor fails.
+    /// which doesn't validate.
+    /// </summary>
+    public class InvalidActorNameException : AkkaException
+    {
+        public InvalidActorNameException(string message)
+            : base(message)
+        {
+            //Intentionally left blank
+        }
+
+        public InvalidActorNameException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+            //Intentionally left blank
+        }
+    }
+
+    /// <summary>
     /// </summary>
     public class ActorInitializationException : AkkaException
     {
-        public ActorInitializationException() : base(){}
+        private readonly ActorRef _actor;
+        protected ActorInitializationException() : base(){}
 
         public ActorInitializationException(string message) : base(message) { }
 
         public ActorInitializationException(string message, Exception cause = null) : base(message, cause) { }
+        public ActorInitializationException(ActorRef actor, string message, Exception cause = null) : base(message, cause)
+        {
+            _actor = actor;
+        }
+
+        public ActorRef Actor { get { return _actor; } }
     }
 
     /// <summary>
@@ -52,7 +78,7 @@ namespace Akka.Actor
 
 
     /// <summary>
-    ///     Class ActorKilledException.
+    /// Thrown when a <see cref="Kill"/> message has been sent to an actor. <see cref="SupervisorStrategy.DefaultDecider"/> will by default stop the actor.
     /// </summary>
     public class ActorKilledException : AkkaException
     {
@@ -120,6 +146,32 @@ namespace Akka.Actor
             exception = cause;
             this.optionalMessage = optionalMessage;
         }
+    }
+
+    /// <summary>
+    /// A PostRestartException is thrown when constructor or postRestart() method
+    /// fails during a restart attempt.
+    /// <para><see cref="PostRestartException.Actor"/>: actor is the actor whose constructor or postRestart() hook failed.</para>
+    /// <para><see cref="PostRestartException.Cause"/>: cause is the exception thrown by that actor within preRestart()</para>
+    /// <para><see cref="OriginalCause"/>: originalCause is the exception which caused the restart in the first place</para>
+    /// </summary>
+    public class PostRestartException : ActorInitializationException
+    {
+        private readonly Exception _originalCause;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PostRestartException"/> class.
+        /// </summary>
+        /// <param name="actor">The actor whose constructor or postRestart() hook failed.</param>
+        /// <param name="cause">Cause is the exception thrown by that actor within preRestart().</param>
+        /// <param name="originalCause">The original causeis the exception which caused the restart in the first place.</param>
+        public PostRestartException(ActorRef actor, Exception cause, Exception originalCause)
+            :base(actor,"Exception post restart (" + (originalCause == null ?"null" : originalCause.GetType().ToString()) + ")", cause)
+        {
+            _originalCause = originalCause;
+        }
+
+        public Exception OriginalCause { get { return _originalCause; } }
     }
 
 

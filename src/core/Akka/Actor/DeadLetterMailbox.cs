@@ -44,6 +44,8 @@ namespace Akka.Actor
             
         }
 
+        public override bool IsClosed{get { return true; }}
+
         protected override int GetNumberOfMessages()
         {
             return 0;

@@ -89,6 +89,24 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="configure">An action that configures the actor's behavior.</param>
         /// <param name="name">Optional: The name of the actor.</param>
+        public ActorRef ActorOf(Action<IActorDsl, IActorContext> configure, string name = null)
+        {
+            return ActExtensions.ActorOf(this, configure, name);
+        }
+
+        /// <summary>
+        /// Creates a new actor by defining the behavior inside the <paramref name="configure"/> action.
+        /// <example>
+        /// <pre><code>
+        /// ActorOf(c =>
+        /// {
+        ///     c.Receive&lt;string&gt;((msg, ctx) => ctx.Sender.Tell("Hello " + msg));
+        /// });
+        /// </code></pre>
+        /// </example>
+        /// </summary>
+        /// <param name="configure">An action that configures the actor's behavior.</param>
+        /// <param name="name">Optional: The name of the actor.</param>
         public ActorRef ActorOf(Action<IActorDsl> configure, string name = null)
         {
             return ActExtensions.ActorOf(this, configure, name);

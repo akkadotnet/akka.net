@@ -69,6 +69,15 @@
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Actor\ActorCell.DeathWatch.cs" />
+    <Compile Include="Actor\ChildrenContainer\Internal\ChildrenContainer.cs" />
+    <Compile Include="Actor\ChildrenContainer\Internal\ChildrenContainerBase.cs" />
+    <Compile Include="Actor\ChildrenContainer\Internal\ChildStats.cs" />
+    <Compile Include="Actor\ChildrenContainer\Internal\EmptyChildrenContainer.cs" />
+    <Compile Include="Actor\ChildrenContainer\Internal\NormalChildrenContainer.cs" />
+    <Compile Include="Actor\ChildrenContainer\Internal\SuspendReason.cs" />
+    <Compile Include="Actor\ChildrenContainer\Internal\TerminatedChildrenContainer.cs" />
+    <Compile Include="Actor\ChildrenContainer\Internal\TerminatingChildrenContainer.cs" />
+    <Compile Include="Actor\ActorCell.FaultHandling.cs" />
     <Compile Include="Actor\Dsl\Act.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
     <Compile Include="Actor\Internals\InternalCurrentActorCellKeeper.cs" />
@@ -198,6 +207,17 @@
     <Compile Include="Event\LogLevel.cs" />
     <Compile Include="Event\LogMessage.cs" />
     <Compile Include="Event\StandardOutLogger.cs" />
+    <Compile Include="Util\Internal\InterlockedSpin.cs" />
+    <Compile Include="Util\Internal\Collections\EmptyReadOnlyCollections.cs" />
+    <Compile Include="Util\Internal\Collections\IBinaryTreeNode.cs" />
+    <Compile Include="Util\Internal\Collections\IImmutableMap.cs" />
+    <Compile Include="Util\Internal\Collections\IImmutableSet.cs" />
+    <Compile Include="Util\Internal\Collections\IKeyValuePair.cs" />
+    <Compile Include="Util\Internal\Collections\ImmutableAvlTree.cs" />
+    <Compile Include="Util\Internal\Collections\ImmutableAvlTreeBase.cs" />
+    <Compile Include="Util\Internal\Collections\ImmutableAvlTreeMap.cs" />
+    <Compile Include="Util\Internal\Collections\ImmutableTreeSet.cs" />
+    <Compile Include="Util\Internal\StringBuilderExtensions.cs" />
     <Compile Include="Util\StandardOutWriter.cs" />
     <Compile Include="Event\Subscription.cs" />
     <Compile Include="Event\TraceLogger.cs" />
@@ -279,7 +299,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Configuration\Pigeon.conf" />
     <Compile Include="Actor\ActorCell.ReceiveTimeout.cs" />
-    <Compile Include="Actor\ActorCell.FaultHandling.cs" />
+    <Compile Include="Actor\ActorCell.Children.cs" />
     <None Include="Akka.nuspec" />
     <None Include="packages.config" />
     <None Include="Util\MatchHandler\README.md" />

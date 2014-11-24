@@ -104,6 +104,7 @@
     <Compile Include="Actor\RootGuardianActorRef_Tests.cs" />
     <Compile Include="Actor\StashMailboxSpec.cs" />
     <Compile Include="Actor\Stash\ActorWithStashSpec.cs" />
+    <Compile Include="Actor\SupervisorHierarchySpec.cs" />
     <Compile Include="Configuration\ConfigurationSpec.cs" />
     <Compile Include="Actor\ReceiveActorTests_Become.cs" />
     <Compile Include="Actor\ReceiveActorTests_LifeCycle.cs" />
@@ -129,8 +130,12 @@
     <Compile Include="Routing\TailChoppingSpec.cs" />
     <Compile Include="Serialization\SerializationSpec.cs" />
     <Compile Include="TestUtils\Comparable.cs" />
+    <Compile Include="TestUtils\PropsWithName.cs" />
     <Compile Include="TestUtils\Supervisor.cs" />
     <Compile Include="Util\CollectionExtensionsSpec.cs" />
+    <Compile Include="Util\Internal\InterlockedSpinTests.cs" />
+    <Compile Include="Util\Internal\Collections\ImmutableAvlTreeMapTests.cs" />
+    <Compile Include="Util\Internal\Collections\ImmutableAvlTreeTests.cs" />
     <Compile Include="Util\PatternSpec.cs" />
     <Compile Include="Util\SwitchTests.cs" />
     <Compile Include="Util\TypeExtensionsTests.cs" />

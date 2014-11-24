@@ -172,7 +172,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         public void TestActorRef_must_proxy_receive_for_the_underlying_actor_with_sender()
         {
             var a = new TestActorRef<WorkerActor>(Sys, Props.Create<WorkerActor>());
-            a.Receive("work", TestActor);
+            a.Receive("work", TestActor);   //This will stop the actor
             var actorRef = (InternalTestActorRef)a.Ref;
             Assert.True(actorRef.IsTerminated);
             ExpectMsg("workDone");

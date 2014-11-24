@@ -51,6 +51,7 @@ namespace Akka.Dispatch
         /// </summary>
         public abstract void BecomeClosed();
 
+        public abstract bool IsClosed { get; }
         /// <summary>
         ///     Attaches a MessageDispatcher to the Mailbox.
         /// </summary>
@@ -129,7 +130,7 @@ namespace Akka.Dispatch
         }
 
         protected volatile bool _isSuspended;
-
+        public bool IsSuspended { get { return _isSuspended; } }
         public void Suspend()
         {
             _isSuspended = true;
@@ -145,5 +146,7 @@ namespace Akka.Dispatch
 
 
         public abstract void CleanUp();
+
+        //TODO: When Mailbox gets SuspendCount, update ActorCell.MakeChild
     }   
 }

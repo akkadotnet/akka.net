@@ -104,25 +104,26 @@ namespace Akka.Tests.Actor
         [Fact]
         public void A_lightweight_creator_must_support_actor_base_method_calls()
         {
-            var a = Sys.ActorOf(act =>
+            var parent = Sys.ActorOf(act =>
             {
-                var b = act.ActorOf(act2 =>
+                var child = act.ActorOf(act2 =>
                 {
                     act2.OnPostStop = _ => TestActor.Tell("stopping child");
-                    act2.Receive<string>(msg => msg == "ping", (msg, _) => TestActor.Tell("pong"));
+                    act2.Receive("ping", (msg, _) => TestActor.Tell("pong"));
                 }, "child");
                 act.OnPreRestart = (exc, msg, ctx) =>
                 {
                     TestActor.Tell("restarting parent");
-                    act.DefaultPreRestart(exc, msg);
+                    act.DefaultPreRestart(exc, msg);    //Will stop the children
                 };
-                act.ReceiveAny((x, _) => b.Tell(x));
+                act.Receive("crash",(m,ctx)=>{throw new Exception("Received <crash>");});
+                act.ReceiveAny((x, _) => child.Tell(x));
             }, "parent");
             
-            a.Tell("ping");
+            parent.Tell("ping");
             ExpectMsg("pong");
 
-            a.Tell(new Recreate(new Exception("request for restart")));
+            parent.Tell("crash");
             ExpectMsg("restarting parent");
             ExpectMsg("stopping child");
         }

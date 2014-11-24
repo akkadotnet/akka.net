@@ -775,7 +775,7 @@ namespace Akka.Remote
                             remoteAddress, refuseUid, transport, endpointSettings, new AkkaPduProtobuffCodec(),
                             _receiveBuffers).WithDeploy(Deploy.Local),
                         string.Format("reliableEndpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress),
-                            endpointId.Next));
+                            endpointId.Next()));
             }
             else
             {
@@ -784,7 +784,7 @@ namespace Akka.Remote
                         EndpointWriter.EndpointWriterProps(handleOption, localAddress, remoteAddress, refuseUid,
                             transport, endpointSettings, new AkkaPduProtobuffCodec(), _receiveBuffers,
                             reliableDeliverySupervisor: null).WithDeploy(Deploy.Local),
-                        string.Format("endpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress), endpointId.Next));
+                        string.Format("endpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress), endpointId.Next()));
             }
 
             Context.Watch(endpointActor);
