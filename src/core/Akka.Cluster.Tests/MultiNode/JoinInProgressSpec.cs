@@ -54,7 +54,7 @@ namespace Akka.Cluster.Tests.MultiNode
             _config = spec;
         }
 
-        [Fact]
+        [MultiNodeFact]
         public void AClusterNodeMustSendHeartbeatsImmediatelyWhenJoiningToAvoidFalseFailureDetectionDueToDelayedGossip()
         {
             RunOn(StartClusterNode, _config.First);
