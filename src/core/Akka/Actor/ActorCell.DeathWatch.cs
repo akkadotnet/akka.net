@@ -100,7 +100,7 @@ namespace Akka.Actor
 
         protected void TellWatchersWeDied()
         {
-            if (!_watchedBy.Any()) return;
+            if (_watchedBy.Count==0) return;
             try
             {
                 // Don't need to send to parent parent since it receives a DWN by default
@@ -137,7 +137,7 @@ namespace Akka.Actor
 
         protected void UnwatchWatchedActors(ActorBase actor)
         {
-            if (!_watchedBy.Any()) return;
+            if(_watching.Count==0) return;
             MaintainAddressTerminatedSubscription(() =>
             {
                 try
