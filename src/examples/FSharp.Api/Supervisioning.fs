@@ -35,7 +35,7 @@ let main() =
             | _                      -> Directive.Escalate)
         <| fun mailbox ->
             // by using mailbox.spawn we may create a child actors without exiting a F# functional API
-            let worker = mailbox.spawn "worker" <| workerFun
+            let worker = spawn mailbox "worker" <| workerFun
             let rec loop() = actor {
                 let! msg = mailbox.Receive()
                 match msg :> obj with
