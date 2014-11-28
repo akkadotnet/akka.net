@@ -40,4 +40,4 @@ If you are interested in helping porting Akka to .NET please take a look at [Con
 
 Also, please see [Building Akka .NET](https://github.com/akkadotnet/akka.net/wiki/Building-and-Distributing-Pigeon).
 
-<a href="http://www.jetbrains.com/resharper"><img src="http://download-codeplex.sec.s-msft.com/Download?ProjectName=FluentValidation&DownloadId=304536" alt="ReSharper" title="ReSharper"></a>
+<a href="http://www.jetbrains.com/resharper"><img src="http://i61.tinypic.com/15qvwj7.jpg" alt="ReSharper" title="ReSharper"></a>
