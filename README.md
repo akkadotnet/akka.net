@@ -39,3 +39,5 @@ PM> Install-Package Akka.FSharp
 If you are interested in helping porting Akka to .NET please take a look at [Contributing to Akka.NET](http://akkadotnet.github.io/wiki/Contributing to Akka.NET).
 
 Also, please see [Building Akka .NET](https://github.com/akkadotnet/akka.net/wiki/Building-and-Distributing-Pigeon).
+
+<a href="http://www.jetbrains.com/resharper"><img src="http://download-codeplex.sec.s-msft.com/Download?ProjectName=FluentValidation&DownloadId=304536" alt="ReSharper" title="ReSharper"></a>
