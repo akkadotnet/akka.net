@@ -12,27 +12,10 @@ using Xunit.Extensions;
 
 namespace Akka.Tests.Actor
 {
+    using Akka.TestKit.TestActors;
+
     public class LocalActorRefProviderSpec : AkkaSpec
     {
-        private static readonly string _akkaSpecConfig = @"
-            akka {
-              actor {
-                default-dispatcher {
-                  executor = ""thread-pool-executor""
-                  thread-pool-executor {
-                    core-pool-size-min = 16
-                    core-pool-size-max = 16
-                  }
-                }
-              }
-            }";
-
-        public LocalActorRefProviderSpec()
-            : base(_akkaSpecConfig)
-        {
-                
-        }
-
         [Fact]
         public void A_LocalActorRefs_ActorCell_must_not_retain_its_original_Props_when_Terminated()
         {
@@ -62,12 +45,12 @@ namespace Akka.Tests.Actor
 
             for (var i = 0; i < 100; i++)
             {
-                var timeout = TimeSpan.FromSeconds(5);
+                var timeout = Dilated(TimeSpan.FromSeconds(5));
                 var address = "new-actor" + i;
-                var actors = new object[4].Select(x => Task<ActorRef>.Run(() => Sys.ActorOf(Props.Create(() => new EmptyActor()), address))).ToArray();
-                Task.WhenAll(actors).ContinueWith(a => { }).Wait();
-                Assert.True(actors.Any(x => x.Status == TaskStatus.RanToCompletion));
-                Assert.True(actors.Any(x => x.Status == TaskStatus.Faulted));
+                var actors = Enumerable.Range(0, 4).Select(x => Task.Run(() => Sys.ActorOf(Props.Create(() => new BlackHoleActor()), address))).ToArray();
+                Task.WhenAll(actors).ContinueWith(a => { }).Wait(timeout);
+                Assert.True(actors.Any(x => x.Status == TaskStatus.RanToCompletion && x.Result != null), "Failed to create any Actors");
+                Assert.True(actors.Any(x => x.Status == TaskStatus.Faulted && x.Exception.InnerException is InvalidActorNameException), "Succeeded in creating all Actors. Some should have failed.");
             }
         }
 
@@ -106,14 +89,6 @@ namespace Akka.Tests.Actor
                     var b = Context.ActorOf(Props.Empty, "duplicate");
                     return true;
                 }
-                return false;
-            }
-        }
-
-        private class EmptyActor : ActorBase
-        {
-            protected override bool Receive(object message)
-            {
                 return false;
             }
         }
