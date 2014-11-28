@@ -41,6 +41,17 @@ tracked by actorRef and awaits for response send back from corresponding actor.
 *)
 let inline (<?) (tell : #ICanTell) (msg : obj) = tell.Ask msg |> Async.AwaitTask
 
+(** Pipes an output of asynchronous expression directly to the recipients mailbox *)
+let pipeTo (computation : Async<'t>) (recipient : ICanTell) (sender : ActorRef) : Async<unit> = 
+    let success (result : 't) : unit = recipient.Tell(result, sender)
+    let failure (err : exn) : unit = recipient.Tell(Status.Failure(err), sender)
+    async { do Async.StartWithContinuations(computation, success, failure, failure) }
+
+(** Pipe operator which sends an output of asynchronous expression directly to the recipients mailbox *)
+let inline (|!>) (computation : Async<'t>) (recipient : ICanTell) = pipeTo computation recipient ActorRef.NoSender
+(** Pipe operator which sends an output of asynchronous expression directly to the recipients mailbox *)
+let inline (<!|) (recipient : ICanTell) (computation : Async<'t>) = pipeTo computation recipient ActorRef.NoSender
+
 [<AutoOpen>]
 module Logging = 
     open Akka.Event
@@ -49,20 +60,20 @@ module Logging =
     let inline private loggerFor (context : IActorContext) : LoggingAdapter = Logging.GetLogger(context)
     
     (** Logs a message using configured Akka logger. *)
-    let log (level : LogLevel) (mailbox : Actor<'a>) (fmt : StringFormat<string>) : unit = 
+    let log (level : LogLevel) (mailbox : Actor<'a>) (msg: string) : unit = 
         let logger = loggerFor mailbox.Context
-        logger.Log(level, sprintf fmt)
+        logger.Log(level, msg)
     
     (** Logs a message at Debug level using configured Akka logger. *)
-    let logDebug() = log (LogLevel.DebugLevel)
+    let inline logDebug mailbox msg = log (LogLevel.DebugLevel) mailbox msg
     (** Logs a message at Info level using configured Akka logger. *)
-    let logInfo() = log (LogLevel.InfoLevel)
+    let inline logInfo mailbox msg = log (LogLevel.InfoLevel)  mailbox msg
     (** Logs a message at Warning level using configured Akka logger. *)
-    let logWarning() = log (LogLevel.WarningLevel)
+    let inline logWarning mailbox msg = log (LogLevel.WarningLevel)  mailbox msg
     (** Logs a message at Error level using configured Akka logger. *)
-    let logError() = log (LogLevel.ErrorLevel)
+    let inline logError mailbox msg = log (LogLevel.ErrorLevel) mailbox msg
     (** Logs an exception message at Error level using configured Akka logger. *)
-    let logException context (e : exn) = log (LogLevel.ErrorLevel) context (StringFormat<string>(e.Message))
+    let inline logException mailbox (e : exn) = log (LogLevel.ErrorLevel) mailbox (e.Message)
 
 type ActorPath with
     
@@ -173,7 +184,7 @@ type ActorBuilder() =
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Linq.QuotationEvaluation
 
-type FunActor<'m, 'v>(actor : Actor<'m> -> Cont<'m, 'v>, strategy : SupervisorStrategy) as self = 
+type FunActor<'m, 'v>(actor : Actor<'m> -> Cont<'m, 'v>) as self = 
     inherit UntypedActor()
     
     let mutable state = 
@@ -190,36 +201,15 @@ type FunActor<'m, 'v>(actor : Actor<'m> -> Cont<'m, 'v>, strategy : SupervisorSt
                     member this.ActorSelection(path : ActorPath) = context'.ActorSelection(path) }
     
     new(actor : Expr<Actor<'m> -> Cont<'m, 'v>>) = FunActor(actor.Compile () ())
-    new(actor : Actor<'m> -> Cont<'m, 'v>) = FunActor(actor, null)
-    member x.Sender(): ActorRef = base.Sender
-    member x.Unhandled(msg : 'm): unit = base.Unhandled msg
-    
-    override x.SupervisorStrategy(): SupervisorStrategy = 
-        if strategy <> null then strategy
-        else base.SupervisorStrategy()
-    
-    override x.OnReceive(msg: obj): unit = 
+    member x.Sender() : ActorRef = base.Sender
+    member x.Unhandled(msg : 'm) : unit = base.Unhandled msg
+    override x.OnReceive(msg : obj) : unit = 
         let message = msg :?> 'm
         match state with
         | Func f -> state <- f message
         | Return v -> x.PostStop()
 
-(** 
-Builds an actor message handler using an actor expression syntax. 
-
-Example:
-```
-spawn system "exampleActor" 
-    <|fun mailbox ->
-        let rec loop'() = 
-            actor { 
-                let! msg = mailbox.Receive()
-                // some computations
-                return! loop'()
-            }
-        loop'()
-```
-*)
+(** Builds an actor message handler using an actor expression syntax. *)
 let actor = ActorBuilder()
 
 module Linq = 
@@ -318,31 +308,79 @@ module System =
         system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
         system
 
+type PropsParams = 
+    { Deploy : Deploy option
+      Router : Akka.Routing.RouterConfig option
+      SupervisorStrategy : SupervisorStrategy option
+      Dispatcher : string option
+      Mailbox : string option }
+    static member empty = 
+        { Deploy = None
+          Router = None
+          SupervisorStrategy = None
+          Dispatcher = None
+          Mailbox = None }
+
+let internal configProps (p : PropsParams) (props : Props) : Props = 
+    let mutable res = props
+    if p.Deploy.IsSome then res <- res.WithDeploy p.Deploy.Value
+    if p.Router.IsSome then res <- res.WithRouter p.Router.Value
+    if p.SupervisorStrategy.IsSome then res <- res.WithSupervisorStrategy p.SupervisorStrategy.Value
+    if p.Dispatcher.IsSome then res <- res.WithDispatcher p.Dispatcher.Value
+    if p.Mailbox.IsSome then res <- res.WithMailbox p.Mailbox.Value
+    res
+
 (**
 Spawns an actor using specified actor computation expression, using an Expression AST.
 The actor code can be deployed remotely.
 
-Example:
+Parameters:
+
+- `system` is either actor system or parent actor
+- `name` name of spawned child actor
+- `mapParams` used to configure Props settings for current actor creation
+- `f` is F# expression compiled down to receive function used by actor for response for incoming request
+
+Example (remote deploy):
+```
+spawne system "remote" 
+    <| fun p -> { p with Deploy = Some (Deploy(RemoteScope(Address.Parse remoteSystemAddress))) }
+    <| <@ fun mailbox -> 
+        let rec loop'() : Cont<string, string> = actor {
+            let! msg = mailbox.Receive()
+            return! loop'()
+        }
+        loop'() @>
+```
 *)
-let spawne (system : ActorRefFactory) (name: string) (f : Expr<Actor<'m> -> Cont<'m, 'v>>) : ActorRef = 
+let spawne (system : ActorRefFactory) (name : string) (mapParams : PropsParams -> PropsParams) 
+    (f : Expr<Actor<'m> -> Cont<'m, 'v>>) : ActorRef = 
     let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m, 'v>(f))
-    system.ActorOf(Props.Create(e), name)
+    let props = Props.Create e
+    system.ActorOf(configProps (mapParams PropsParams.empty) props, name)
 
 (**
-Spawns an actor using specified actor computation expression, with custom strategy supervisor.
+Spawns an actor using specified actor computation expression, with custom actor Props settings.
 The actor can only be used locally. 
+
+Parameters:
+
+- `system` is either actor system or parent actor
+- `name` name of spawned child actor
+- `mapParams` used to configure Props settings for current actor creation
+- `f` is receive function used by actor for response for incoming request
 
 Example:
 ```
 let parent =
-    spawns system "master"
+    spawnp system "master"
     // below we define OneForOneStrategy to handle specific exceptions 
     // incoming from child actors
-    <| (Strategy.oneForOne <| fun e ->
+    <| fun p -> { p with SupervisorStrategy = Some (Strategy.oneForOne (fun e ->
         match e with
         | :? ArithmeticException -> Directive.Resume
         | :? ArgumentException   -> Directive.Stop
-        | _                      -> Directive.Escalate)
+        | _                      -> Directive.Escalate)) }
     <| fun mailbox ->
         let worker = spawn mailbox "worker" <| workerFun
         let rec loop() = actor {
@@ -352,13 +390,21 @@ let parent =
         loop()
 ```
 *)
-let spawns (system : ActorRefFactory) (name: string) (strategy : SupervisorStrategy) (f : Actor<'m> -> Cont<'m, 'v>) : ActorRef = 
-    let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m, 'v>(f, strategy))
-    system.ActorOf(Props.Create(e), name)
+let spawnp (system : ActorRefFactory) (name : string) (mapParams : PropsParams -> PropsParams) 
+    (f : Actor<'m> -> Cont<'m, 'v>) : ActorRef = 
+    let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m, 'v>(f))
+    let props = Props.Create e
+    system.ActorOf(configProps (mapParams PropsParams.empty) props, name)
 
 (**
 Spawns an actor using specified actor computation expression.
 The actor can only be used locally. 
+
+Parameters:
+
+- `system` is either actor system or parent actor
+- `name` name of spawned child actor
+- `f` is receive function used by actor for response for incoming request
 
 Example:
 ```
@@ -375,7 +421,9 @@ spawn system "parent"
         loop'()
 ```
 *)
-let spawn (system : ActorRefFactory) (name: string) (f : Actor<'m> -> Cont<'m, 'v>) : ActorRef = spawns system name null f
+let spawn (system : ActorRefFactory) (name : string) (f : Actor<'m> -> Cont<'m, 'v>) : ActorRef = 
+    let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m, 'v>(f))
+    system.ActorOf(Props.Create e, name)
 
 (** 
 Wraps provided function with actor behavior. It will be invoked each time, 
@@ -423,4 +471,43 @@ Creates an actor-like object, which could be interrogated from the outside.
 Usually it's used to spy on other actors lifecycle.
 Most of the inbox methods works in thread-blocking manner.
 *)
-let inbox (system: ActorSystem) : Inbox = Inbox.Create system
+let inbox (system : ActorSystem) : Inbox = Inbox.Create system
+
+(** 
+Receives a next message sent to the inbox. This is a blocking operation.
+Returns None if timeout occurred or message is incompatible with expected response type.
+*)
+let receive (timeout : TimeSpan) (i : Inbox) : 'm option = 
+    try 
+        Some(i.Receive(timeout) :?> 'm)
+    with _ -> None
+
+(** 
+Receives a next message sent to the inbox, which satisfies provided predicate. 
+This is a blocking operation. Returns None if timeout occurred or message 
+is incompatible with expected response type.
+*)
+let filterReceive (timeout : TimeSpan) (predicate : 'm -> bool) (i : Inbox) : 'm option = 
+    try 
+        let r = 
+            i.ReceiveWhere(Predicate<obj>(fun (o : obj) -> 
+                               match o with
+                               | :? 'm -> predicate (o :?> 'm)
+                               | _ -> false), timeout)
+        Some(r :?> 'm)
+    with _ -> None
+
+(**
+Awaits in async block fora  next message sent to the inbox. 
+Returns None if message is incompatible with expected response type.
+*)
+let asyncReceive (i : Inbox) : Async<'m option> = 
+    async { 
+        let! r = i.ReceiveAsync() |> Async.AwaitTask
+        return match r with
+               | :? 'm -> Some(r :?> 'm)
+               | _ -> None
+    }
+
+(** Orders inbox to watch an ActorRef *)
+let inline watch (actorRef : ActorRef) (i : Inbox) : unit = i.Watch actorRef
