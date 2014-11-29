@@ -127,7 +127,7 @@ namespace Akka.Tests.Actor
             {
                 var timeout = TimeSpan.FromSeconds(5);
                 var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(
-                    new OneForOneStrategy(2, TimeSpan.FromSeconds(1), SupervisorStrategy.MakeDecider(typeof(Exception))))));
+                    new OneForOneStrategy(2, TimeSpan.FromSeconds(1), r => Directive.Restart))));
 
                 var t1 = supervisor.Ask(Props.Create(() => new EchoTestActor()));
                 t1.Wait(timeout);
