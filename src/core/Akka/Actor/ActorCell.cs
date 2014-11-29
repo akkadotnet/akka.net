@@ -265,9 +265,9 @@ namespace Akka.Actor
         {
             var tmp = InternalCurrentActorCellKeeper.Current;
             InternalCurrentActorCellKeeper.Current = this;
-            var tmpSynchronizationContext = SynchronizationContext.Current;
-            SynchronizationContext.SetSynchronizationContext(ActorSynchronizationContext.Instance);
-            CallContext.LogicalSetData("actor", this);
+         //   var tmpSynchronizationContext = SynchronizationContext.Current;
+          //  SynchronizationContext.SetSynchronizationContext(ActorSynchronizationContext.Instance);
+            //CallContext.LogicalSetData("actor", this);
             try
             {
                 action();
@@ -276,7 +276,7 @@ namespace Akka.Actor
             {
                 //ensure we set back the old context
                 InternalCurrentActorCellKeeper.Current = tmp;
-                SynchronizationContext.SetSynchronizationContext(tmpSynchronizationContext);
+         //       SynchronizationContext.SetSynchronizationContext(tmpSynchronizationContext);
             }
         }
 

@@ -73,8 +73,9 @@ namespace Akka.Actor
 
             //since each message can have a new sender
             //we have to apply the new sender to the current call context
-            CallContext.LogicalSetData("sender", Sender);
-    
+        //    CallContext.LogicalSetData("sender", Sender);
+
+            SynchronizationContext.SetSynchronizationContext(new MessageSynchronizationContext(Self, Sender));
             try
             {
                 var autoReceivedMessage = message as AutoReceivedMessage;

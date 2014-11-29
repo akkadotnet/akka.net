@@ -14,16 +14,9 @@ namespace Akka.Tests.Dispatch
     {
         public AsyncAwaitActor()
         {
-            var myContext = Context;
             Receive<string>(async _ =>
             {
                 await Task.Delay(TimeSpan.FromSeconds(1));
-                var tId = System.Threading.Thread.CurrentThread.GetHashCode();
-                var currentContext = InternalCurrentActorCellKeeper.Current;
-                if (currentContext != myContext)
-                {
-                    throw new Exception("Actor concurrency constraint is broken");
-                }
                 Sender.Tell("done");
             });
         }
@@ -32,11 +25,13 @@ namespace Akka.Tests.Dispatch
     public class ActorAsyncAwaitSpec : AkkaSpec
     {
         [Fact]
-        public async Task Actors_should_be_able_to_async_await_in_message_loop()
+        public async void Actors_should_be_able_to_async_await_in_message_loop()
         {
             var actor = Sys.ActorOf(Props.Create<AsyncAwaitActor>());
-            var result = await actor.Ask("start", TimeSpan.FromSeconds(5));
-            
+            var task = actor.Ask<string>("start", TimeSpan.FromSeconds(55));
+            actor.Tell(123, ActorRef.NoSender);
+            var res = await task;
+            Assert.Equal("done", res);
         }
     }
 }

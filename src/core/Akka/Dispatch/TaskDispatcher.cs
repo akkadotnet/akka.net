@@ -23,6 +23,29 @@ namespace Akka.Dispatch
         }
     }
 
+    public class MessageSynchronizationContext : SynchronizationContext
+    {
+        private readonly ActorRef _sender;
+        private readonly ActorRef _self;
+        public MessageSynchronizationContext(ActorRef self, ActorRef sender)
+        {
+            _self = self;
+            _sender = sender;
+        }
+        public override void Post(SendOrPostCallback d, object state)
+        {
+            try
+            {
+               //send the continuation as a message to self, and preserve sender from before await
+                _self.Tell(new CompleteTask(() => d(state)), _sender);
+            }
+            catch
+            {
+
+            }
+        }
+    }
+
     public class ActorSynchronizationContext : SynchronizationContext
     {
         private static readonly ActorSynchronizationContext _instance = new ActorSynchronizationContext();
@@ -34,12 +57,19 @@ namespace Akka.Dispatch
 
         public override void Post(SendOrPostCallback d, object state)
         {
-            //This will only occur when a continuation is about to run
-            var sender = CallContext.LogicalGetData("sender") as ActorRef;
-            var context = CallContext.LogicalGetData("actor") as IActorContext;
-          
-            //send the continuation as a message to self, and preserve sender from before await
-            context.Self.Tell(new CompleteTask(() => d(state)), sender);
+            try
+            {
+                //This will only occur when a continuation is about to run
+                var sender = CallContext.LogicalGetData("sender") as ActorRef;
+                var context = CallContext.LogicalGetData("actor") as IActorContext;
+
+                //send the continuation as a message to self, and preserve sender from before await
+                context.Self.Tell(new CompleteTask(() => d(state)), sender);
+            }
+            catch
+            {
+
+            }
         }
     }
 
