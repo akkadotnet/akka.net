@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -70,6 +71,10 @@ namespace Akka.Actor
             CurrentMessage = message;
             Sender = envelope.Sender;
 
+            //since each message can have a new sender
+            //we have to apply the new sender to the current call context
+            CallContext.LogicalSetData("sender", Sender);
+    
             try
             {
                 var autoReceivedMessage = message as AutoReceivedMessage;
@@ -184,6 +189,7 @@ namespace Akka.Actor
                     envelope
                         .Message
                         .Match()
+                        .With<CompleteTask>(HandleCompleteTask)
                         .With<CompleteFuture>(HandleCompleteFuture)
                         .With<Failed>(HandleFailed)
                         .With<DeathWatchNotification>(m => WatchedActorTerminated(m.Actor, m.ExistenceConfirmed, m.AddressTerminated))
@@ -204,6 +210,11 @@ namespace Akka.Actor
                     Parent.Tell(new Failed(Self, cause));
                 }
 
+        }
+
+        private void HandleCompleteTask(CompleteTask task)
+        {
+            task.SetResult();
         }
 
         /// <summary>
@@ -306,7 +317,7 @@ namespace Akka.Actor
             {
                 var instance = NewActor();
                 _actor = instance;
-                UseThreadContext(() => instance.AroundPreStart());
+                UseThreadContext(instance.AroundPreStart);
                 CheckReceiveTimeout();
                 if(System.Settings.DebugLifecycle)
                     Publish(new Debug(Self.Path.ToString(),instance.GetType(),"Started ("+instance+")"));

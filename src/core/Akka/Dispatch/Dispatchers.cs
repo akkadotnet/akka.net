@@ -77,17 +77,6 @@ namespace Akka.Dispatch
     }
 
     /// <summary>
-    ///     Task based dispatcher
-    /// </summary>
-    public class TaskDispatcher : MessageDispatcher
-    {
-        public override void Schedule(Action run)
-        {
-            Task.Factory.StartNew(run, TaskCreationOptions.PreferFairness);
-        }
-    }
-
-    /// <summary>
     ///     Dispatcher that dispatches messages on the current synchronization context, e.g. WinForms or WPF GUI thread
     /// </summary>
     public class CurrentSynchronizationContextDispatcher : MessageDispatcher
@@ -212,7 +201,11 @@ namespace Akka.Dispatch
             //TODO: this should not exist, it is only here because we dont serialize dispathcer when doing remote deploy..
             if (string.IsNullOrEmpty(path))
             {
-                var disp = new ThreadPoolDispatcher
+                //var disp = new ThreadPoolDispatcher
+                //{
+                //    Throughput = 100
+                //};
+                var disp = new TaskDispatcher()
                 {
                     Throughput = 100
                 };

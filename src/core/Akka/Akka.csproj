@@ -171,6 +171,7 @@
     <Compile Include="Dispatch\Mailboxes.cs" />
     <Compile Include="Dispatch\MessageQueues\MessageQueue.cs" />
     <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
+    <Compile Include="Dispatch\TaskDispatcher.cs" />
     <Compile Include="Dispatch\ThreadPoolBuilder.cs" />
     <Compile Include="Dispatch\UnboundedDequeBasedMailbox.cs" />
     <Compile Include="Dispatch\UnboundedMailbox.cs" />

@@ -246,6 +246,24 @@ namespace Akka.Dispatch.SysMsg
         public Action SetResult { get; private set; }
     }
 
+    public sealed class CompleteTask : SystemMessage
+    {
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="CompleteTask" /> class.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        public CompleteTask(Action action)
+        {
+            SetResult = action;
+        }
+
+        /// <summary>
+        ///     Gets the set result.
+        /// </summary>
+        /// <value>The set result.</value>
+        public Action SetResult { get; private set; }
+    }
+
     /// <summary>
     ///     Class Restart.
     /// </summary>

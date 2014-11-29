@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Actor.Internals;
@@ -264,6 +265,9 @@ namespace Akka.Actor
         {
             var tmp = InternalCurrentActorCellKeeper.Current;
             InternalCurrentActorCellKeeper.Current = this;
+            var tmpSynchronizationContext = SynchronizationContext.Current;
+            SynchronizationContext.SetSynchronizationContext(ActorSynchronizationContext.Instance);
+            CallContext.LogicalSetData("actor", this);
             try
             {
                 action();
@@ -272,6 +276,7 @@ namespace Akka.Actor
             {
                 //ensure we set back the old context
                 InternalCurrentActorCellKeeper.Current = tmp;
+                SynchronizationContext.SetSynchronizationContext(tmpSynchronizationContext);
             }
         }
 
