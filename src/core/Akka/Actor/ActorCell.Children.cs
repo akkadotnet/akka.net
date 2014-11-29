@@ -325,8 +325,8 @@ namespace Akka.Actor
 
         private void CheckName(string name)
         {
-            if (name == null) throw new IllegalActorNameException("Actor name cannot be null.");
-            if (name.Length == 0) throw new IllegalActorNameException("Actor name cannot be \"\".");
+            if (name == null) throw new InvalidActorNameException("Actor name must not be null.");
+            if (name.Length == 0) throw new InvalidActorNameException("Actor name must not be empty.");
             if (!ActorPath.ElementRegex.IsMatch(name))
             {
                 throw new InvalidActorNameException(string.Format("Illegal actor name \"{0}\", must conform to {1}", name, ActorPath.ElementRegex));

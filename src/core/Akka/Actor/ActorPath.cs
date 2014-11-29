@@ -24,7 +24,7 @@ namespace Akka.Actor
     {
         /// <summary> The regex that actor names must conform to </summary>
         public static readonly Regex ElementRegex =
-            new Regex(@"(?:[-\w:@&=+,.!~*'_;]|%\\p{N}{2})(?:[-\w:@&=+,.!~*'$_;]|%\\p{N}{2})*", RegexOptions.Compiled);
+            new Regex(@"^(?:[-a-zA-Z0-9:@&=+,.!~*'_;]|%\\p{N}{2})(?:[-a-zA-Z0-9:@&=+,.!~*'\$_;]|%\\p{N}{2})*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         private readonly string _name;
 
