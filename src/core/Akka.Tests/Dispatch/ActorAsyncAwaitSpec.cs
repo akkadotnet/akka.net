@@ -22,14 +22,37 @@ namespace Akka.Tests.Dispatch
         }
     }
 
+    public class Asker : ReceiveActor
+    {
+        public Asker(ActorRef other)
+        {
+            Receive<string>(async _ =>
+            {
+                var res = await other.Ask<string>("start");
+                Sender.Tell(res);
+            });
+        }
+    }
+
     public class ActorAsyncAwaitSpec : AkkaSpec
     {
         [Fact]
-        public async void Actors_should_be_able_to_async_await_in_message_loop()
+        public async Task Actors_should_be_able_to_async_await_in_message_loop()
         {
             var actor = Sys.ActorOf(Props.Create<AsyncAwaitActor>());
             var task = actor.Ask<string>("start", TimeSpan.FromSeconds(55));
-            actor.Tell(123, ActorRef.NoSender);
+         //   actor.Tell(123, ActorRef.NoSender);
+            var res = await task;
+            Assert.Equal("done", res);
+        }
+
+        [Fact]
+        public async Task Actors_should_be_able_to_async_await_ask_message_loop()
+        {
+            var actor = Sys.ActorOf(Props.Create<AsyncAwaitActor>());
+            var asker = Sys.ActorOf(Props.Create(() => new Asker(actor)));
+            var task = asker.Ask<string>("start", TimeSpan.FromSeconds(55));
+       //     actor.Tell(123, ActorRef.NoSender);
             var res = await task;
             Assert.Equal("done", res);
         }
