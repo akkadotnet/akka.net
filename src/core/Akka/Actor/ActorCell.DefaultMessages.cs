@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -32,6 +33,8 @@ namespace Akka.Actor
         }
 
         /// <summary>
+
+
         ///     Invokes the specified envelope.
         /// </summary>
         /// <param name="envelope">The envelope.</param>
@@ -40,16 +43,16 @@ namespace Akka.Actor
             var message = envelope.Message;
             CurrentMessage = message;
             Sender = envelope.Sender;
-
+              
             try
             {
                 var autoReceivedMessage = message as AutoReceivedMessage;
-                if(autoReceivedMessage!=null)
+                if (autoReceivedMessage != null)
                     AutoReceiveMessage(envelope);
                 else
                     ReceiveMessage(message);
             }
-            catch(Exception cause)
+            catch (Exception cause)
             {
                 HandleInvokeFailure(cause);
             }
@@ -150,9 +153,10 @@ namespace Akka.Actor
                 envelope
                     .Message
                     .Match()
-                    .With<CompleteFuture>(HandleCompleteFuture)
+                    .With<CompleteTask>(HandleCompleteTask)
                     .With<Failed>(HandleFailed)
-                    .With<DeathWatchNotification>(m => WatchedActorTerminated(m.Actor, m.ExistenceConfirmed, m.AddressTerminated))
+                    .With<DeathWatchNotification>(
+                        m => WatchedActorTerminated(m.Actor, m.ExistenceConfirmed, m.AddressTerminated))
                     .With<Create>(m => HandleCreate(m.Failure))
                     //TODO: see """final def init(sendSupervise: Boolean, mailboxType: MailboxType): this.type = {""" in dispatch.scala
                     //case Create(failure) ⇒ create(failure)
@@ -171,6 +175,12 @@ namespace Akka.Actor
             }
         }
 
+        private void HandleCompleteTask(CompleteTask task)
+        {
+            CurrentMessage = task.State.Message;
+            Sender = task.State.Sender;
+            task.SetResult();
+        }
 
         public void SwapMailbox(DeadLetterMailbox mailbox)
         {
@@ -339,15 +349,6 @@ namespace Akka.Actor
         private void Kill()
         {
             throw new ActorKilledException("Kill");
-        }
-
-        /// <summary>
-        ///     Handles the complete future.
-        /// </summary>
-        /// <param name="m">The m.</param>
-        private void HandleCompleteFuture(CompleteFuture m)
-        {
-            m.SetResult();
         }
     }
 }

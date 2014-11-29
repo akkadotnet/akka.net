@@ -57,6 +57,16 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="run">The run.</param>
         public abstract void Schedule(Action run);
+
+        public virtual void Dispatch(ActorCell cell, Envelope envelope)
+        {
+            cell.Invoke(envelope);
+        }
+
+        public virtual void SystemDispatch(ActorCell cell, Envelope envelope)
+        {
+            cell.SystemInvoke(envelope);
+        }
     }
 
     /// <summary>
@@ -72,17 +82,7 @@ namespace Akka.Dispatch
         {
             var wc = new WaitCallback(_ => run());
             ThreadPool.UnsafeQueueUserWorkItem(wc, null);
-        }
-    }
-
-    /// <summary>
-    ///     Task based dispatcher
-    /// </summary>
-    public class TaskDispatcher : MessageDispatcher
-    {
-        public override void Schedule(Action run)
-        {
-            Task.Factory.StartNew(run, TaskCreationOptions.PreferFairness);
+            //ThreadPool.QueueUserWorkItem(wc, null);
         }
     }
 
@@ -211,7 +211,11 @@ namespace Akka.Dispatch
             //TODO: this should not exist, it is only here because we dont serialize dispathcer when doing remote deploy..
             if (string.IsNullOrEmpty(path))
             {
-                var disp = new ThreadPoolDispatcher
+                //var disp = new ThreadPoolDispatcher
+                //{
+                //    Throughput = 100
+                //};
+                var disp = new TaskDispatcher()
                 {
                     Throughput = 100
                 };

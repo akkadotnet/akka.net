@@ -3,10 +3,13 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Threading.Tasks;
 using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using System.Threading;
+using Akka.Actor.Internal;
+using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -51,12 +54,16 @@ namespace Akka.Actor
         private readonly TaskCompletionSource<object> _result;
         private readonly Action _unregister;
         private readonly ActorPath _path;
-        private ActorRef _sender;
+        private readonly ActorRef _actorAwaitingResult;
 
-        public FutureActorRef(TaskCompletionSource<object> result, ActorRef sender, Action unregister, ActorPath path)
+        public FutureActorRef(TaskCompletionSource<object> result, ActorRef actorAwaitingResult, Action unregister, ActorPath path)
         {
+            if (ActorCell.Current != null)
+            {
+                _actorAwaitingResultSender = ActorCell.Current.Sender;
+            }
             _result = result;
-            _sender = sender ?? NoSender;
+            _actorAwaitingResult = actorAwaitingResult ?? NoSender;
             _unregister = unregister;
             _path = path;
         }
@@ -75,6 +82,8 @@ namespace Akka.Actor
         private const int INITIATED = 0;
         private const int COMPLETED = 1;
         private int status = INITIATED;
+        private readonly ActorRef _actorAwaitingResultSender;
+
         protected override void TellInternal(object message, ActorRef sender)
         {
             if (message is SystemMessage) //we have special handling for system messages
@@ -85,14 +94,23 @@ namespace Akka.Actor
             {
                 if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
                 {
-                    _unregister();
-                    if (_sender == NoSender || message is Terminated)
+                    //hide any potential local thread state
+                    var tmp = InternalCurrentActorCellKeeper.Current;
+                    InternalCurrentActorCellKeeper.Current = null;
+                    try
                     {
+                        CallContext.LogicalSetData("akka.state", new AmbientState()
+                        {
+                            Self = _actorAwaitingResult,
+                            Message = "",
+                            Sender = _actorAwaitingResultSender,
+                        });
+
                         _result.TrySetResult(message);
                     }
-                    else
+                    finally
                     {
-                        _sender.Tell(new CompleteFuture(() => _result.TrySetResult(message)));
+                        InternalCurrentActorCellKeeper.Current = tmp;
                     }
                 }
             }
@@ -147,7 +165,7 @@ namespace Akka.Actor
 
         public void Tell(object message, ActorRef sender)
         {
-            if (sender == null) throw new ArgumentNullException("sender", "A sender must be specified");
+            if (sender == null) throw new ArgumentNullException("sender", "A actorAwaitingResult must be specified");
 
             TellInternal(message, sender);
         }
