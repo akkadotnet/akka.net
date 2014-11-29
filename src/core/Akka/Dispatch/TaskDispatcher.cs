@@ -46,6 +46,13 @@ namespace Akka.Dispatch
         }
     }
 
+    public class AmbientState
+    {
+        public ActorRef Self { get; set; }
+        public ActorRef Sender { get; set; }
+        public object Message { get; set; }
+    }
+
     public class ActorSynchronizationContext : SynchronizationContext
     {
         private static readonly ActorSynchronizationContext _instance = new ActorSynchronizationContext();
@@ -60,11 +67,10 @@ namespace Akka.Dispatch
             try
             {
                 //This will only occur when a continuation is about to run
-                var sender = CallContext.LogicalGetData("sender") as ActorRef;
-                var context = CallContext.LogicalGetData("actor") as IActorContext;
+                var s = CallContext.LogicalGetData("akka.state") as AmbientState;
 
                 //send the continuation as a message to self, and preserve sender from before await
-                context.Self.Tell(new CompleteTask(() => d(state)), sender);
+                s.Self.Tell(new CompleteTask(() => d(state)), s.Sender);
             }
             catch
             {
