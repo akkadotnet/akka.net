@@ -303,15 +303,6 @@ namespace Akka.Actor
                 message = deserialized;
             }
             
-            //Execute CompleteFuture objects inline - if the Actor is waiting on the result of an Ask operation inside
-            //its receive method, then the mailbox will never schedule the CompleteFuture.
-            //Thus - we execute it inline, outside of the mailbox.
-            if (message is CompleteFuture)
-            {
-                HandleCompleteFuture(message.AsInstanceOf<CompleteFuture>());
-                return;
-            }
-
             var m = new Envelope
             {
                 Sender = sender,

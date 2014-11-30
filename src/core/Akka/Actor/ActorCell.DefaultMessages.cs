@@ -199,10 +199,12 @@ namespace Akka.Actor
                         .Match()
                         .With<CompleteTask>(m =>
                         {
+                            //HACK system messages don't set sender
+                            //This is needed for ambient context when await continuation runs
+                            //Sideeffects?
                             this.Sender = envelope.Sender;
                             HandleCompleteTask(m);
                         })
-                        .With<CompleteFuture>(HandleCompleteFuture)
                         .With<Failed>(HandleFailed)
                         .With<DeathWatchNotification>(m => WatchedActorTerminated(m.Actor, m.ExistenceConfirmed, m.AddressTerminated))
                         .With<Create>(HandleCreate)
@@ -403,15 +405,6 @@ namespace Akka.Actor
         private void Kill()
         {
             throw new ActorKilledException("Kill");
-        }
-
-        /// <summary>
-        ///     Handles the complete future.
-        /// </summary>
-        /// <param name="m">The m.</param>
-        private void HandleCompleteFuture(CompleteFuture m)
-        {
-            m.SetResult();
         }
     }
 }
