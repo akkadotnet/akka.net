@@ -42,10 +42,10 @@ tracked by actorRef and awaits for response send back from corresponding actor.
 let inline (<?) (tell : #ICanTell) (msg : obj) = tell.Ask msg |> Async.AwaitTask
 
 (** Pipes an output of asynchronous expression directly to the recipients mailbox *)
-let pipeTo (computation : Async<'t>) (recipient : ICanTell) (sender : ActorRef) : Async<unit> = 
+let pipeTo (computation : Async<'t>) (recipient : ICanTell) (sender : ActorRef) : unit = 
     let success (result : 't) : unit = recipient.Tell(result, sender)
     let failure (err : exn) : unit = recipient.Tell(Status.Failure(err), sender)
-    async { do Async.StartWithContinuations(computation, success, failure, failure) }
+    Async.StartWithContinuations(computation, success, failure, failure)
 
 (** Pipe operator which sends an output of asynchronous expression directly to the recipients mailbox *)
 let inline (|!>) (computation : Async<'t>) (recipient : ICanTell) = pipeTo computation recipient ActorRef.NoSender
