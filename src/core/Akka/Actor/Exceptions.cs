@@ -27,8 +27,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// An ActorInitializationException is thrown when the the initialization logic for an Actor fails.
-    /// which doesn't validate.
+    /// An InvalidActorNameException is thrown when the actor name is invalid
     /// </summary>
     public class InvalidActorNameException : AkkaException
     {
