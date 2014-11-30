@@ -46,7 +46,7 @@ namespace Akka.TestKit
         public EventFilterApplier Error(string message = null, string start = null, string contains = null, string source = null)
         {				    
             var messageMatcher = CreateMessageMatcher(message, start, contains);   //This file has been auto generated. Do NOT modify this file directly
-            var sourceMatcher = source == null ? null : new EqualsString(source);
+            var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new ErrorFilter(messageMatcher, sourceMatcher);
             return CreateApplier(filter);
         }
@@ -66,7 +66,7 @@ namespace Akka.TestKit
         /// <returns>The new filter</returns>
         public EventFilterApplier Error(Regex pattern, string source = null)
         {
-            var sourceMatcher = source == null ? null : new EqualsString(source);
+            var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new ErrorFilter(new RegexMatcher(pattern), sourceMatcher);
             return CreateApplier(filter);
         }
@@ -103,7 +103,7 @@ namespace Akka.TestKit
         public EventFilterApplier Warning(string message = null, string start = null, string contains = null, string source = null)
         {				    
             var messageMatcher = CreateMessageMatcher(message, start, contains);   //This file has been auto generated. Do NOT modify this file directly
-            var sourceMatcher = source == null ? null : new EqualsString(source);
+            var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new WarningFilter(messageMatcher, sourceMatcher);
             return CreateApplier(filter);
         }
@@ -123,7 +123,7 @@ namespace Akka.TestKit
         /// <returns>The new filter</returns>
         public EventFilterApplier Warning(Regex pattern, string source = null)
         {
-            var sourceMatcher = source == null ? null : new EqualsString(source);
+            var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new WarningFilter(new RegexMatcher(pattern), sourceMatcher);
             return CreateApplier(filter);
         }
@@ -160,7 +160,7 @@ namespace Akka.TestKit
         public EventFilterApplier Info(string message = null, string start = null, string contains = null, string source = null)
         {				    
             var messageMatcher = CreateMessageMatcher(message, start, contains);   //This file has been auto generated. Do NOT modify this file directly
-            var sourceMatcher = source == null ? null : new EqualsString(source);
+            var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new InfoFilter(messageMatcher, sourceMatcher);
             return CreateApplier(filter);
         }
@@ -180,7 +180,7 @@ namespace Akka.TestKit
         /// <returns>The new filter</returns>
         public EventFilterApplier Info(Regex pattern, string source = null)
         {
-            var sourceMatcher = source == null ? null : new EqualsString(source);
+            var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new InfoFilter(new RegexMatcher(pattern), sourceMatcher);
             return CreateApplier(filter);
         }
@@ -217,7 +217,7 @@ namespace Akka.TestKit
         public EventFilterApplier Debug(string message = null, string start = null, string contains = null, string source = null)
         {				    
             var messageMatcher = CreateMessageMatcher(message, start, contains);   //This file has been auto generated. Do NOT modify this file directly
-            var sourceMatcher = source == null ? null : new EqualsString(source);
+            var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new DebugFilter(messageMatcher, sourceMatcher);
             return CreateApplier(filter);
         }
@@ -237,7 +237,7 @@ namespace Akka.TestKit
         /// <returns>The new filter</returns>
         public EventFilterApplier Debug(Regex pattern, string source = null)
         {
-            var sourceMatcher = source == null ? null : new EqualsString(source);
+            var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new DebugFilter(new RegexMatcher(pattern), sourceMatcher);
             return CreateApplier(filter);
         }
