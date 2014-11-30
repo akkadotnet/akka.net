@@ -54,13 +54,19 @@ namespace Akka.Actor
 
         public ActorInitializationException(string message) : base(message) { }
 
-        public ActorInitializationException(string message, Exception cause = null) : base(message, cause) { }
+        public ActorInitializationException(string message, Exception cause) : base(message, cause) { }
         public ActorInitializationException(ActorRef actor, string message, Exception cause = null) : base(message, cause)
         {
             _actor = actor;
         }
 
         public ActorRef Actor { get { return _actor; } }
+
+        public override string ToString()
+        {
+            if (_actor == null) return base.ToString();
+            return _actor + ": " + base.ToString();
+        }
     }
 
     /// <summary>
