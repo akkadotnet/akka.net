@@ -123,7 +123,7 @@ namespace Akka.Actor
         private ActorSystemImpl _system;
         private readonly Dictionary<string, InternalActorRef> _extraNames = new Dictionary<string, InternalActorRef>();
         private readonly TaskCompletionSource<Status> _terminationPromise = new TaskCompletionSource<Status>();
-        private SupervisorStrategy _systemGuardianStrategy;
+        private readonly SupervisorStrategy _systemGuardianStrategy;
         private VirtualPathContainer _tempContainer;
         private RootGuardianActorRef _rootGuardian;
         private LocalActorRef _userGuardian;    //This is called guardian in Akka
@@ -230,15 +230,13 @@ namespace Akka.Actor
 
         private LocalActorRef CreateSystemGuardian(LocalActorRef rootGuardian, string name, LocalActorRef userGuardian)     //Corresponds to Akka's: override lazy val guardian: systemGuardian
         {
-            //TODO: When SystemGuardianActor has been implemented switch to this:
-            //return CreateRootGuardianChild(rootGuardian, name, () =>
-            //{
-            //    var props = Props.Create(() => new SystemGuardianActor(userGuardian), _systemGuardianStrategy);
+            return CreateRootGuardianChild(rootGuardian, name, () =>
+            {
+                var props = Props.Create(() => new SystemGuardianActor(userGuardian), _systemGuardianStrategy);
 
-            //    var systemGuardian = new LocalActorRef(_system, props, DefaultDispatcher, _defaultMailbox, rootGuardian, RootPath / name);
-            //    return systemGuardian;
-            //});   
-            return (LocalActorRef)rootGuardian.Cell.ActorOf<GuardianActor>(name);           
+                var systemGuardian = new LocalActorRef(_system, props, DefaultDispatcher, _defaultMailbox, rootGuardian, RootPath/name);
+                return systemGuardian;
+            });
         }
 
         private LocalActorRef CreateRootGuardianChild(LocalActorRef rootGuardian, string name, Func<LocalActorRef> childCreator)
