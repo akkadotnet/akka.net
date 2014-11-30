@@ -8,6 +8,14 @@ Update your `using` statements from `using Akka.Serilog.Event.Serilog;` to `usin
 
 __Breaking Change to the internal api: Changed signatures in the abstract class `SupervisorStrategy`__. The following methods has new signatures: `HandleFailure`, `ProcessFailure`. If you've inherited from `SupervisorStrategy`, `OneForOneStrategy` or `AllForOneStrategy` and overriden the aforementioned methods you need to update their signatures.
 
+__TestProbe can be implicitly casted to ActorRef__. New feature. Tests requring the `ActorRef` of a `TestProbe` can now be simplified:
+``` C#
+var probe = CreateTestProbe();
+var sut = ActorOf<GreeterActor>();
+sut.Tell("Akka", probe); // previously probe.Ref was required
+probe.ExpectMsg("Hi Akka!");
+```
+
 
 #### 0.7.0 Oct 16 2014
 Major new changes and additions in this release, including some breaking changes...
