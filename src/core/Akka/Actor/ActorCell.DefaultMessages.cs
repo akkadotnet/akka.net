@@ -73,7 +73,8 @@ namespace Akka.Actor
 
             //since each message can have a new sender
             //we have to apply the new sender to the current call context
-            
+
+            SynchronizationContext.SetSynchronizationContext(ActorSynchronizationContext.Instance);
             CallContext.LogicalSetData("akka.state", new AmbientState()
             {
                 Sender = Sender,
@@ -81,16 +82,16 @@ namespace Akka.Actor
                 Message = CurrentMessage
             });
 
-            //SynchronizationContext.SetSynchronizationContext(new MessageSynchronizationContext(Self, Sender));
+               
             try
             {
                 var autoReceivedMessage = message as AutoReceivedMessage;
-                if(autoReceivedMessage!=null)
+                if (autoReceivedMessage != null)
                     AutoReceiveMessage(envelope);
                 else
                     ReceiveMessage(message);
             }
-            catch(Exception cause)
+            catch (Exception cause)
             {
                 Mailbox.Suspend();
                 Parent.Tell(new Failed(Self, cause));
@@ -196,7 +197,11 @@ namespace Akka.Actor
                     envelope
                         .Message
                         .Match()
-                        .With<CompleteTask>(HandleCompleteTask)
+                        .With<CompleteTask>(m =>
+                        {
+                            this.Sender = envelope.Sender;
+                            HandleCompleteTask(m);
+                        })
                         .With<CompleteFuture>(HandleCompleteFuture)
                         .With<Failed>(HandleFailed)
                         .With<DeathWatchNotification>(m => WatchedActorTerminated(m.Actor, m.ExistenceConfirmed, m.AddressTerminated))

@@ -41,7 +41,7 @@ namespace Akka.Tests.Dispatch
         {
             var actor = Sys.ActorOf(Props.Create<AsyncAwaitActor>());
             var task = actor.Ask<string>("start", TimeSpan.FromSeconds(55));
-         //   actor.Tell(123, ActorRef.NoSender);
+            actor.Tell(123, ActorRef.NoSender);
             var res = await task;
             Assert.Equal("done", res);
         }
@@ -52,7 +52,7 @@ namespace Akka.Tests.Dispatch
             var actor = Sys.ActorOf(Props.Create<AsyncAwaitActor>());
             var asker = Sys.ActorOf(Props.Create(() => new Asker(actor)));
             var task = asker.Ask<string>("start", TimeSpan.FromSeconds(55));
-       //     actor.Tell(123, ActorRef.NoSender);
+            actor.Tell(123, ActorRef.NoSender);
             var res = await task;
             Assert.Equal("done", res);
         }

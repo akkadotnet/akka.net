@@ -266,10 +266,10 @@ namespace Akka.Actor
             var tmp = InternalCurrentActorCellKeeper.Current;
             InternalCurrentActorCellKeeper.Current = this;
          //   var tmpSynchronizationContext = SynchronizationContext.Current;
-            if (SynchronizationContext.Current != ActorSynchronizationContext.Instance)
-            {
-                SynchronizationContext.SetSynchronizationContext(ActorSynchronizationContext.Instance);
-            }
+            //if (SynchronizationContext.Current != ActorSynchronizationContext.Instance)
+            //{
+            //    SynchronizationContext.SetSynchronizationContext(ActorSynchronizationContext.Instance);
+            //}
             //CallContext.LogicalSetData("actor", this);
 
             try
