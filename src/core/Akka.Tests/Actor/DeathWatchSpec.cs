@@ -66,7 +66,7 @@ namespace Akka.Tests.Actor
             mailbox.Resume();
 
             //The actor should Terminate, exchange the mailbox to a DeadLetterMailbox and forward the user message to the DeadLetterMailbox
-            ExpectMsg<DeadLetter>(d => (string)d.Message == "SomeUserMessage", TimeSpan.FromSeconds(1));
+            ExpectMsg<DeadLetter>(d => (string)d.Message == "SomeUserMessage");
             actor.Cell.Mailbox.ShouldBe(Sys.Mailboxes.DeadLetterMailbox);
         }
 
