@@ -55,9 +55,7 @@ namespace Akka.Tests.Actor
             var mailbox = actor.Cell.Mailbox;
             //Wait for the mailbox to become idle after processed all initial messages.
             AwaitCondition(() =>
-                !mailbox.HasUnscheduledMessages && mailbox.Status == Mailbox.MailboxStatus.Idle,
-                TimeSpan.FromSeconds(1),
-                TimeSpan.FromMilliseconds(50));
+                !mailbox.HasUnscheduledMessages && mailbox.Status == Mailbox.MailboxStatus.Idle);
 
             //Suspend the mailbox and post Terminate and a user message
             mailbox.Suspend();
