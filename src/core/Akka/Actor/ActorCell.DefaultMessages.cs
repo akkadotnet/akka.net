@@ -202,6 +202,13 @@ namespace Akka.Actor
                             //HACK system messages don't set sender
                             //This is needed for ambient context when await continuation runs
                             //Sideeffects?
+                            SynchronizationContext.SetSynchronizationContext(ActorSynchronizationContext.Instance);
+                            //CallContext.LogicalSetData("akka.state", new AmbientState()
+                            //{
+                            //    Sender = Sender,
+                            //    Self = Self,
+                            //    Message = CurrentMessage
+                            //});
                             this.Sender = envelope.Sender;
                             HandleCompleteTask(m);
                         })

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -16,6 +17,7 @@ namespace Akka.Tests.Dispatch
         {
             Receive<string>(async _ =>
             {
+                await Task.Yield();
                 await Task.Delay(TimeSpan.FromSeconds(1));
                 Sender.Tell("done");
             });
@@ -28,7 +30,8 @@ namespace Akka.Tests.Dispatch
         {
             Receive<string>(async _ =>
             {
-                var res = await other.Ask<string>("start");
+                var res = await other.Ask("start");
+                //bug, we get the sender of the previous ask, the one in AsyncAwaitActor
                 Sender.Tell(res);
             });
         }
