@@ -65,7 +65,7 @@ private void Generate(string name)
         public EventFilterApplier <#= name #>(string message = null, string start = null, string contains = null, string source = null)
         {				    
             var messageMatcher = CreateMessageMatcher(message, start, contains);   //This file has been auto generated. Do NOT modify this file directly
-            var sourceMatcher = source == null ? null : new EqualsString(source);
+            var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new <#= name #>Filter(messageMatcher, sourceMatcher);
             return CreateApplier(filter);
         }
@@ -85,7 +85,7 @@ private void Generate(string name)
         /// <returns>The new filter</returns>
         public EventFilterApplier <#= name #>(Regex pattern, string source = null)
         {
-            var sourceMatcher = source == null ? null : new EqualsString(source);
+            var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new <#= name #>Filter(new RegexMatcher(pattern), sourceMatcher);
             return CreateApplier(filter);
         }

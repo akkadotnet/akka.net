@@ -59,7 +59,7 @@ namespace Akka.TestKit
         /// <returns>The new filter</returns>
         public EventFilterApplier Exception(Type exceptionType, Regex pattern, string source = null, bool checkInnerExceptions=false)
         {
-            var sourceMatcher = source == null ? null : new EqualsString(source);
+            var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             return Exception(exceptionType, new RegexMatcher(pattern), sourceMatcher, checkInnerExceptions);
         }
 
@@ -117,7 +117,7 @@ namespace Akka.TestKit
         public EventFilterApplier Exception(Type exceptionType, string message = null, string start = null, string contains = null, string source = null, bool checkInnerExceptions=false)
         {
             var messageMatcher = CreateMessageMatcher(message, start, contains);
-            var sourceMatcher = source == null ? null : new EqualsString(source);
+            var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             return Exception(exceptionType, messageMatcher, sourceMatcher, checkInnerExceptions);
         }
 
@@ -249,7 +249,7 @@ namespace Akka.TestKit
 
         private EventFilterApplier DeadLetter(Predicate<DeadLetter> isMatch, string source = null)
         {
-            var sourceMatcher = source == null ? null : new EqualsString(source);
+            var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new DeadLettersFilter(null, sourceMatcher, isMatch);
             return CreateApplier(filter);
         }
