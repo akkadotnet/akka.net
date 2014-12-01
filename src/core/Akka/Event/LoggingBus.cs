@@ -74,7 +74,7 @@ namespace Akka.Event
         /// </summary>
         /// <param name="system">The system.</param>
         /// <exception cref="System.Exception">Can not use logger of type: + loggerType</exception>
-        public void StartDefaultLoggers(ActorSystemImpl system)
+        public void StartDefaultLoggers(ActorSystemImpl system) //TODO: Should be internal
         {
             var logName = SimpleName(this) + "(" + system.Name + ")";
             var logLevel = Logging.LogLevelFor(system.Settings.LogLevel);
@@ -117,6 +117,11 @@ namespace Akka.Event
                 Unsubscribe(Logging.StandardOutLogger);
             }
             Publish(new Debug(logName, GetType(), "Default Loggers started"));
+        }
+
+        internal void StopDefaultLoggers(ActorSystem system)
+        {
+            //TODO: Implement stopping loggers
         }
 
         private void AddLogger(ActorSystemImpl system, Type loggerType, LogLevel logLevel, string loggingBusName, TimeSpan timeout)
