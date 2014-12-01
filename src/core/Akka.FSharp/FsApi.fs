@@ -20,6 +20,8 @@ type Actor<'msg> =
     abstract Sender : unit -> ActorRef
     (** Explicit signalization of unhandled message *)
     abstract Unhandled : 'msg -> unit
+    (** Lazy logging adapter. It won't be initialized until logging function will be called. *)
+    abstract Log: Lazy<Akka.Event.LoggingAdapter>
 
 [<AbstractClass>]
 type Actor() = 
@@ -57,11 +59,9 @@ module Logging =
     open Akka.Event
     open Microsoft.FSharp.Core.Printf
     
-    let inline private loggerFor (context : IActorContext) : LoggingAdapter = Logging.GetLogger(context)
-    
     (** Logs a message using configured Akka logger. *)
     let log (level : LogLevel) (mailbox : Actor<'a>) (msg: string) : unit = 
-        let logger = loggerFor mailbox.Context
+        let logger = mailbox.Log.Force()
         logger.Log(level, msg)
     
     (** Logs a message at Debug level using configured Akka logger. *)
@@ -198,7 +198,8 @@ type FunActor<'m, 'v>(actor : Actor<'m> -> Cont<'m, 'v>) as self =
                     member this.Unhandled msg = self.Unhandled msg
                     member this.ActorOf(props, name) = context'.ActorOf(props, name)
                     member this.ActorSelection(path : string) = context'.ActorSelection(path)
-                    member this.ActorSelection(path : ActorPath) = context'.ActorSelection(path) }
+                    member this.ActorSelection(path : ActorPath) = context'.ActorSelection(path)
+                    member this.Log = lazy (Akka.Event.Logging.GetLogger(context'))}
     
     new(actor : Expr<Actor<'m> -> Cont<'m, 'v>>) = FunActor(actor.Compile () ())
     member x.Sender() : ActorRef = base.Sender
