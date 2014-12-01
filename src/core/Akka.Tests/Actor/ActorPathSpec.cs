@@ -1,4 +1,6 @@
-﻿using Akka.TestKit;
+﻿using System.Web;
+using Akka.Event;
+using Akka.TestKit;
 using Xunit;
 using System;
 using System.Collections.Generic;
@@ -6,11 +8,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Xunit.Extensions;
 
 namespace Akka.Tests.Actor
 {
     
-    public class ActorPathSpec : AkkaSpec 
+    public class ActorPathSpec
     {
         [Fact]
         public void SupportsParsingItsStringRep()
@@ -182,6 +185,35 @@ namespace Akka.Tests.Actor
             ActorPath.TryParse("akka.tcp://remotesystem@localhost:8080/user", out path2);
 
             Assert.Equal(path2, path1);
+        }
+
+        [Theory]
+        [InlineData("$NamesMayNotStartWithDollar", false)]
+        [InlineData("NamesMayContain$Dollar", true)]
+        [InlineData("-$NamesMayContain", true)]
+        [InlineData("(42)", true)]
+        [InlineData("%32", true)]
+        [InlineData("reliableEndpointWriter-akka.tcp%3a%2f%2fRemoteSystem%40localhost%3a22760-1", true)]
+        [InlineData(@"SomeCharacters;::@&=+,.!~*'_", true)]
+        [InlineData("/NamesMayNotStartWithSlash", false)]
+        [InlineData("NamesMayNotContain/Slash", false)]
+        [InlineData("EscapingWithOtherNumberCharacters-%Ⅷ⅓", false)]
+        public void Validate_element_parts(string element, bool matches)
+        {
+            ActorPath.ElementRegex.IsMatch(element).ShouldBe(matches);
+        }
+
+        [Theory]
+        [InlineData("$NamesMayNotNormallyStartWithDollarButShouldBeOkWHenEncoded")]
+        [InlineData("NamesMayContain$Dollar")]
+        [InlineData("ÎnternationalCharactersÅÄÖØê")]
+        [InlineData("ReservedCharacters:;/?:@&=+$,")]
+        [InlineData("Using parenthesis(4711)")]
+        public void Validate_that_url_encoded_values_are_valid_element_parts(string element)
+        {
+            var urlEncode = HttpUtility.UrlEncode(element);
+            global::System.Diagnostics.Debug.WriteLine("Encoded \"{0}\" to \"{1}\"", element, urlEncode)  ;
+            ActorPath.ElementRegex.IsMatch(urlEncode).ShouldBeTrue();
         }
     }
 }

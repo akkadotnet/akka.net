@@ -22,9 +22,11 @@ namespace Akka.Actor
     /// </summary>
     public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>
     {
-        /// <summary> The regex that actor names must conform to </summary>
+        /// <summary> The regex that actor names must conform to RFC 2396, http://www.ietf.org/rfc/rfc2396.txt </summary>
+        //Note that AKKA JVM does not allow parenthesis ( ) but, according to RFC 2396 those are allowed, and 
+        //since we use URL Encode to create valid actor names, we must allow them
         public static readonly Regex ElementRegex =
-            new Regex(@"^(?:[-a-zA-Z0-9:@&=+,.!~*'_;]|%\\p{N}{2})(?:[-a-zA-Z0-9:@&=+,.!~*'\$_;]|%\\p{N}{2})*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+            new Regex(@"^(?:[-a-zA-Z0-9:@&=+,.!~*'_;\(\)]|%[0-9a-fA-F]{2})(?:[-a-zA-Z0-9:@&=+,.!~*'\$_;\(\)]|%[0-9a-fA-F]{2})*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         private readonly string _name;
 
