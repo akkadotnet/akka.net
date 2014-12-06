@@ -22,6 +22,12 @@ let remoteDeploy systemPath =
         | (false, _) -> failwith "ActorPath address cannot be parsed"
         | (true, a) -> a
     Deploy(RemoteScope(address))
+    
+[<Literal>]
+let REQ = 1
+
+[<Literal>]
+let RES = 2
 
 [<EntryPoint>]
 let main argv = 
@@ -39,14 +45,26 @@ let main argv =
         // as long as actor receive logic is serializable F# Expr, there is no need for sharing any assemblies 
         // all code will be serialized, deployed to remote system and there compiled and executed
         <| <@ fun mailbox -> 
-            let rec loop'() : Cont<string, string> = actor {
+            let rec loop'() : Cont<int*string, int*string> = actor {
                 let! msg = mailbox.Receive()
-                printfn "Remote actor received: %A" msg
+                match msg with
+                | (REQ, m) -> 
+                    printfn "Remote actor received: %A" m
+                    mailbox.Sender() <! (RES, "ECHO " + m)
+                | _ ->
+                    logError mailbox (sprintf "Received unexpected message: %A" msg)
                 return! loop'()
             }
             loop'() @>
 
-    remoter <! "hello"
+    async {
+        let! msg = remoter <? (REQ, "hello")
+        match msg :?> int*string with
+        | (RES, m) ->
+            printfn "Remote actor responded: %s" m
+        | _ -> 
+            printfn "Unexpected response from remote actor"
+    } |> Async.RunSynchronously
 
     System.Console.ReadLine()
     0 // return an integer exit code

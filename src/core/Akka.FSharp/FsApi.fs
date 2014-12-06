@@ -309,7 +309,7 @@ module System =
         system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
         system
 
-type PropsParams = 
+type SpawnParams = 
     { Deploy : Deploy option
       Router : Akka.Routing.RouterConfig option
       SupervisorStrategy : SupervisorStrategy option
@@ -322,7 +322,7 @@ type PropsParams =
           Dispatcher = None
           Mailbox = None }
 
-let internal configProps (p : PropsParams) (props : Props) : Props = 
+let internal configProps (p : SpawnParams) (props : Props) : Props = 
     let mutable res = props
     if p.Deploy.IsSome then res <- res.WithDeploy p.Deploy.Value
     if p.Router.IsSome then res <- res.WithRouter p.Router.Value
@@ -354,11 +354,11 @@ spawne system "remote"
         loop'() @>
 ```
 *)
-let spawne (system : ActorRefFactory) (name : string) (mapParams : PropsParams -> PropsParams) 
+let spawne (system : ActorRefFactory) (name : string) (mapParams : SpawnParams -> SpawnParams) 
     (f : Expr<Actor<'m> -> Cont<'m, 'v>>) : ActorRef = 
     let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m, 'v>(f))
     let props = Props.Create e
-    system.ActorOf(configProps (mapParams PropsParams.empty) props, name)
+    system.ActorOf(configProps (mapParams SpawnParams.empty) props, name)
 
 (**
 Spawns an actor using specified actor computation expression, with custom actor Props settings.
@@ -391,11 +391,11 @@ let parent =
         loop()
 ```
 *)
-let spawnp (system : ActorRefFactory) (name : string) (mapParams : PropsParams -> PropsParams) 
+let spawnp (system : ActorRefFactory) (name : string) (mapParams : SpawnParams -> SpawnParams) 
     (f : Actor<'m> -> Cont<'m, 'v>) : ActorRef = 
     let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m, 'v>(f))
     let props = Props.Create e
-    system.ActorOf(configProps (mapParams PropsParams.empty) props, name)
+    system.ActorOf(configProps (mapParams SpawnParams.empty) props, name)
 
 (**
 Spawns an actor using specified actor computation expression.
