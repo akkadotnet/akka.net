@@ -195,9 +195,9 @@ namespace Akka.Persistence
             }
 
             var persistenceSettings = persistence.Settings;
-            RedeliverInterval = persistenceSettings.AtLeastOnceDelivery.RedeliverInterval;
-            UnconfirmedAttemptsToWarn = persistenceSettings.AtLeastOnceDelivery.UnconfirmedAttemptsToWarn;
-            MaxUnconfirmedMessages = persistenceSettings.AtLeastOnceDelivery.MaxUnconfirmedMessages;
+            RedeliverInterval = persistenceSettings.GuaranteedDelivery.RedeliverInterval;
+            UnconfirmedAttemptsToWarn = persistenceSettings.GuaranteedDelivery.UnconfirmedAttemptsToWarn;
+            MaxUnconfirmedMessages = persistenceSettings.GuaranteedDelivery.MaxUnconfirmedMessages;
 
             _redeliverTask = RedeliverTask(out _redeliveryTaskCanceler);
         }

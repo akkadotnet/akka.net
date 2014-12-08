@@ -26,7 +26,7 @@ namespace Akka.Persistence
         public long ReplayMax { get; private set; }
     }
 
-    public abstract class Recovery : ActorBase, IRecovery, ISnapshotter, IStash
+    public abstract class Recovery : ActorBase, IRecovery, ISnapshotter, WithUnboundedStash
     {
         private Exception _recoveryFailureCause;
         private Envelope _recoveryFailureMessage;
@@ -34,6 +34,8 @@ namespace Akka.Persistence
         private IPersistentRepresentation _currentPersistent;
 
         protected internal List<IResequencable> ProcessorBatch;
+
+        public IStash Stash { get; set; }
 
         protected Recovery()
         {
@@ -75,26 +77,6 @@ namespace Akka.Persistence
             throw new NotImplementedException();
         }
 
-        public void Stash()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Unstash()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void UnstashAll()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void UnstashAll(Func<Envelope, bool> predicate)
-        {
-            throw new NotImplementedException();
-        }
-
         protected internal void WithCurrentPersistent(IPersistentRepresentation persistent, Action<Receive, IPersistentRepresentation> body)
         {
             try
@@ -131,6 +113,11 @@ namespace Akka.Persistence
         internal void OnReplaySuccess(Receive receive, bool shouldAwait)
         {
             throw new NotImplementedException();
+        }
+
+        protected IState RecoveryStarted(long replayMax)
+        {
+            return new RecoveryStartedState(this, replayMax);
         }
     }
 

@@ -1,15 +1,22 @@
 ﻿using System.Collections.Generic;
 using Akka.Actor;
+using Akka.Persistence.Journal;
 using Akka.Persistence.Serialization;
 
 namespace Akka.Persistence
 {
+    /// <summary>
+    /// Marks messages, which can then be resequenced by <see cref="AsyncWriteJournal"/>.
+    /// </summary>
     public interface IResequencable
     {
         object Payload { get; }
         ActorRef Sender { get; }
     }
 
+    /// <summary>
+    /// Message, which can be resequenced by <see cref="AsyncWriteJournal"/>, but won't be persisted.
+    /// </summary>
     internal struct NonPersistentMessage : IResequencable
     {
         public NonPersistentMessage(object payload, ActorRef sender) : this()

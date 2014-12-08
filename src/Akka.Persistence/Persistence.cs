@@ -102,12 +102,12 @@ namespace Akka.Persistence
             public long AutoUpdateReplayMax { get; private set; }
         }
 
-        public AtLeastOnceDeliverySettings AtLeastOnceDelivery { get; set; }
-        public class AtLeastOnceDeliverySettings
+        public GuaranteedDeliverySettings GuaranteedDelivery { get; set; }
+        public class GuaranteedDeliverySettings
         {
-            public AtLeastOnceDeliverySettings(Config config)
+            public GuaranteedDeliverySettings(Config config)
             {
-                RedeliverInterval = config.GetMillisDuration("at-least-once-delivery.redeliver-interval");
+                RedeliverInterval = config.GetTimeSpan("at-least-once-delivery.redeliver-interval");
                 MaxUnconfirmedMessages = config.GetInt("at-least-once-delivery.max-unconfirmed-messages");
                 UnconfirmedAttemptsToWarn = config.GetInt("at-least-once-delivery.warn-after-number-of-unconfirmed-attempts");
             }
@@ -135,7 +135,7 @@ namespace Akka.Persistence
         {
             Journal = new JournalSettings(config);
             View = new ViewSettings(config);
-            AtLeastOnceDelivery = new AtLeastOnceDeliverySettings(config);
+            GuaranteedDelivery = new GuaranteedDeliverySettings(config);
         }
     }
 }

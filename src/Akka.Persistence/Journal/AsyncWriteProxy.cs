@@ -13,24 +13,65 @@ namespace Akka.Persistence.Journal
         }
     }
 
-    internal abstract class AsyncWriteProxy : AsyncWriteJournal, IStash
+    [Serializable]
+    internal sealed class SetStore
     {
-        public void Stash()
+        public SetStore(ActorRef store)
+        {
+            Store = store;
+        }
+
+        public ActorRef Store { get; private set; }
+    }
+
+    public abstract class AsyncWriteProxy : AsyncWriteJournal, WithUnboundedStash
+    {
+        private readonly Receive _initialized;
+        private ActorRef _store;
+
+        public IStash Stash { get; set; }
+        public TimeSpan Timeout { get; set; }
+
+        protected AsyncWriteProxy()
+        {
+            _initialized = base.Receive;
+        }
+
+        protected override bool Receive(object message)
+        {
+            if (message is SetStore)
+            {
+                var setStore = message as SetStore;
+                _store = setStore.Store;
+                Stash.UnstashAll();
+                Context.Become(_initialized);
+            }
+            else
+            {
+                Stash.Stash();
+            }
+
+            return true;
+        }
+
+        public override Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> replayCallback)
+        {
+            var mediator = Context.ActorOf(Props.Create(()=>new ReplayMediator(replayCallback, null, Timeout)).WithDeploy(Deploy.Local));
+            _store.Tell(new ReplayMessages(fromSequenceNr, toSequenceNr, max, persistenceId, mediator));
+            return null;
+        }
+
+        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
             throw new NotImplementedException();
         }
 
-        public void Unstash()
+        protected override Task WriteMessagesAsync(IEnumerable<IPersistentRepresentation> messages)
         {
             throw new NotImplementedException();
         }
 
-        public void UnstashAll()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void UnstashAll(Func<Envelope, bool> predicate)
+        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, bool isPermanent)
         {
             throw new NotImplementedException();
         }

@@ -9,15 +9,33 @@ namespace Akka.Persistence
         void AroundReceive(Receive receive, object message);
     }
 
+    internal sealed class RecoveryContext
+    {
+        public IState CurrentState { get; set; }
+        public Action<object> InternalUnhandled { get; set; }
+        public string SnapshoterId { get; set; }
+        public IStash Stash { get; set; }
+
+        public void WithCurrentPersistent(IPersistentRepresentation persistent, Action<Receive, object> process)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void LoadSnapshot(string snapshoterId, SnapshotSelectionCriteria fromSnapshot, long toSequenceNr)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     internal abstract class State : IState
     {
-        protected readonly PersistentActorBase Actor;
+        protected readonly RecoveryContext Context;
         protected Exception RecoveryFailureCause;
         protected object RecoveryFailureMessage;
 
-        protected State(PersistentActorBase actor)
+        protected State(RecoveryContext context)
         {
-            Actor = actor;
+            Context = context;
         }
 
         public abstract void AroundReceive(Receive receive, object message);
@@ -26,13 +44,13 @@ namespace Akka.Persistence
         {
             if (!receive(message))
             {
-                Actor.InternalUnhandled(message);
+                Context.InternalUnhandled(message);
             }
         }
 
         protected void ProcessPersistent(Receive receive, IPersistentRepresentation persistent)
         {
-            Actor.WithCurrentPersistent(persistent, Process);
+            Context.WithCurrentPersistent(persistent, Process);
         }
 
         protected void RecordFailure(Exception cause, object message)
@@ -45,8 +63,8 @@ namespace Akka.Persistence
 
     internal class RecoveryState : State
     {
-        public RecoveryState(PersistentActorBase actor)
-            : base(actor)
+        public RecoveryState(RecoveryContext context)
+            : base(context)
         {
         }
 
@@ -63,8 +81,8 @@ namespace Akka.Persistence
     /// </summary>
     internal class RecoveryPendingState : State
     {
-        public RecoveryPendingState(PersistentActorBase actor)
-            : base(actor)
+        public RecoveryPendingState(RecoveryContext context)
+            : base(context)
         {
         }
 
@@ -73,12 +91,12 @@ namespace Akka.Persistence
             if (message is Recover)
             {
                 var msg = (Recover)message;
-                Actor.CurrentState = new RecoveryStartedState(Actor, msg.ReplayMax);
-                Actor.LoadSnapshot(Actor.SnapshoterId, msg.FromSnapshot, msg.ToSequenceNr);
+                Context.CurrentState = new RecoveryStartedState(Context, msg.ReplayMax);
+                Context.LoadSnapshot(Context.SnapshoterId, msg.FromSnapshot, msg.ToSequenceNr);
             }
             else
             {
-                Actor.Stash();
+                Context.Stash.Stash();
             }
         }
 
@@ -98,8 +116,8 @@ namespace Akka.Persistence
     {
         private readonly long _replayMax;
 
-        public RecoveryStartedState(PersistentActorBase actor, long replayMax)
-            : base(actor)
+        public RecoveryStartedState(RecoveryContext context, long replayMax)
+            : base(context)
         {
             _replayMax = replayMax;
         }
@@ -127,7 +145,7 @@ namespace Akka.Persistence
             }
             else
             {
-                Actor.Stash();
+                Actor.Stash.Stash();
             }
         }
 
@@ -149,8 +167,8 @@ namespace Akka.Persistence
         /// <param name="shouldAwait">
         /// If true actor behavior is defered until replay completes. Otherwise, actor behavior is called immediately on replayed messages.
         /// </param>
-        public ReplayStartedState(PersistentActorBase actor, bool shouldAwait = false)
-            : base(actor)
+        public ReplayStartedState(RecoveryContext context, bool shouldAwait = false)
+            : base(context)
         {
             _shouldAwait = shouldAwait;
         }
@@ -184,7 +202,7 @@ namespace Akka.Persistence
             {
                 if (_shouldAwait)
                 {
-                    Actor.Stash();
+                    Actor.Stash.Stash();
                 }
                 else
                 {
@@ -201,8 +219,8 @@ namespace Akka.Persistence
     /// </summary>
     internal class ReplayFailedState : State
     {
-        public ReplayFailedState(PersistentActorBase actor)
-            : base(actor)
+        public ReplayFailedState(RecoveryContext context)
+            : base(context)
         {
         }
 
@@ -227,7 +245,7 @@ namespace Akka.Persistence
             }
             else
             {
-                Actor.Stash();
+                Actor.Stash.Stash();
             }
         }
 
@@ -244,12 +262,12 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// Class representing recovery state, in which actor re-receives a message that caused an exception and re-throws it.
+    /// Re-receives the replayed message that caused an exception and re-throws that exception.
     /// </summary>
     internal class PrepareRestartState : State
     {
-        public PrepareRestartState(PersistentActorBase actor)
-            : base(actor)
+        public PrepareRestartState(RecoveryContext context)
+            : base(context)
         {
         }
 

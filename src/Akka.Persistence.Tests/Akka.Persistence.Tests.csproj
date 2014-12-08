@@ -44,6 +44,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GuaranteedDeliveryCrashSpec.cs" />
     <Compile Include="GuaranteedDeliveryFailureSpec.cs" />
     <Compile Include="GuaranteedDeliverySpec.cs" />
     <Compile Include="PersistenceSpec.cs" />
