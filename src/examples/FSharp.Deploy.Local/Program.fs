@@ -39,13 +39,11 @@ let main argv =
 
     // spawn actor remotelly on remote-system location
     let remoter = 
-        spawne system "remote" 
-        // define deployment configuration using remote system address
-        <| fun p -> { p with Deploy = Some (remoteDeploy remoteSystemAddress) }
         // as long as actor receive logic is serializable F# Expr, there is no need for sharing any assemblies 
         // all code will be serialized, deployed to remote system and there compiled and executed
-        <| <@ fun mailbox -> 
-            let rec loop'() : Cont<int*string, int*string> = actor {
+        spawne system "remote" 
+            ( <@ fun mailbox -> 
+            let rec loop() : Cont<int*string, unit> = actor {
                 let! msg = mailbox.Receive()
                 match msg with
                 | (REQ, m) -> 
@@ -53,9 +51,9 @@ let main argv =
                     mailbox.Sender() <! (RES, "ECHO " + m)
                 | _ ->
                     logError mailbox (sprintf "Received unexpected message: %A" msg)
-                return! loop'()
+                return! loop()
             }
-            loop'() @>
+            loop() @> ) [ SpawnOption.Deploy (remoteDeploy remoteSystemAddress) ]
 
     async {
         let! msg = remoter <? (REQ, "hello")
