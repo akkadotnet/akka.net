@@ -1,50 +1,51 @@
 ﻿using Akka.Actor;
 using Akka.DI.Core;
-using Castle.Windsor;
+using Autofac;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Akka.DI.CastleWindsor
+namespace Akka.DI.AutoFac
 {
-    public class WindsorConfiguration : IContainerConfiguration
+    public class AutoFacConfiguration : IContainerConfiguration
     {
-        private IWindsorContainer container;
+        private IContainer container;
         private ConcurrentDictionary<string, Type> typeCache;
 
-        public WindsorConfiguration(IWindsorContainer container)
+        public AutoFacConfiguration(IContainer container)
         {
-            if (container == null) throw new ArgumentNullException("container");
             this.container = container;
             typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
         }
 
-      
         public Type GetType(string ActorName)
         {
             if (!typeCache.ContainsKey(ActorName))
-
                 typeCache.TryAdd(ActorName,
-                                 ActorName.GetTypeValue() ??
-                                 container.
-                                 Kernel.
-                                 GetAssignableHandlers(typeof(object)).
-                                 Where(handler => handler.ComponentModel.Name.Equals(ActorName, StringComparison.InvariantCultureIgnoreCase)).
-                                 Select(handler => handler.ComponentModel.Implementation).
-                                 FirstOrDefault());
+                ActorName.GetTypeValue() ??
+                container.
+                ComponentRegistry.
+                Registrations.
+                Where(registration => registration.Activator.LimitType.
+                    Name.Equals(ActorName, StringComparison.InvariantCultureIgnoreCase)).
+                    Select(regisration => regisration.Activator.LimitType).
+                    FirstOrDefault());
 
             return typeCache[ActorName];
-        }
 
+        }
+       
         public Func<ActorBase> CreateActorFactory(string ActorName)
         {
-            return () => (ActorBase)container.Resolve(GetType(ActorName));
+            return () =>
+            {
+                Type actorType = this.GetType(ActorName);
+                return (ActorBase)container.Resolve(actorType);
+            };
         }
-
         
-
     }
     internal static class Extensions
     {

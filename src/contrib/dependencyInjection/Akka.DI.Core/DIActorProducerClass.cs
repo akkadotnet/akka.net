@@ -11,14 +11,14 @@ namespace Akka.DI.Core
     {
         private IContainerConfiguration applicationContext;
         private string actorName;
-        readonly Func<ActorBase> myActor;
+        readonly Func<ActorBase> actorFactory;
 
         public DIActorProducerClass(IContainerConfiguration applicationContext,
                                     string actorName)
         {
             this.applicationContext = applicationContext;
             this.actorName = actorName;
-            this.myActor = applicationContext.CreateActor(actorName);
+            this.actorFactory = applicationContext.CreateActorFactory(actorName);
         }
         public Type ActorType
         {
@@ -27,7 +27,7 @@ namespace Akka.DI.Core
 
         public ActorBase Produce()
         {
-            return myActor();
+            return actorFactory();
         }
 
     }

@@ -10,7 +10,7 @@ namespace Akka.DI.Core
     public interface IContainerConfiguration
     {
         Type GetType(string ActorName);
-        Func<ActorBase> CreateActor(string ActorName);
-        ActorSystem CreateActorSystem(string SystemName);
+        Func<ActorBase> CreateActorFactory(string ActorName);
+
     }
 }
