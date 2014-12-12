@@ -9,12 +9,12 @@ using System.Text;
 
 namespace Akka.DI.AutoFac
 {
-    public class AutoFacConfiguration : IContainerConfiguration
+    public class AutoFacDependencyResolver : IDependencyResolver
     {
         private IContainer container;
         private ConcurrentDictionary<string, Type> typeCache;
 
-        public AutoFacConfiguration(IContainer container)
+        public AutoFacDependencyResolver(IContainer container)
         {
             this.container = container;
             typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);

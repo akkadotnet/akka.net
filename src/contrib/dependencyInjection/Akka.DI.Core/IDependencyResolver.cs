@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Akka.DI.Core
 {
-    public interface IContainerConfiguration
+    public interface IDependencyResolver
     {
         Type GetType(string ActorName);
         Func<ActorBase> CreateActorFactory(string ActorName);

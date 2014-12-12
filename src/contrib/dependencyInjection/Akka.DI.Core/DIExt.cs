@@ -9,15 +9,16 @@ namespace Akka.DI.Core
 {
     public class DIExt : IExtension
     {
-        private IContainerConfiguration applicationContext;
+        private IDependencyResolver dependencyResolver;
 
-        public void Initialize(IContainerConfiguration applicationContext)
+        public void Initialize(IDependencyResolver dependencyResolver)
         {
-            this.applicationContext = applicationContext;
+            if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
+            this.dependencyResolver = dependencyResolver;
         }
         public Props Props(String actorName)
         {
-            return new Props(typeof(DIActorProducerClass), new object[] { applicationContext, actorName });
+            return new Props(typeof(DIActorProducerClass), new object[] { dependencyResolver, actorName });
         }
 
     }

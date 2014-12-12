@@ -9,20 +9,23 @@ namespace Akka.DI.Core
 {
     public class DIActorProducerClass : IndirectActorProducer
     {
-        private IContainerConfiguration applicationContext;
+        private IDependencyResolver dependencyResolver;
         private string actorName;
         readonly Func<ActorBase> actorFactory;
 
-        public DIActorProducerClass(IContainerConfiguration applicationContext,
+        public DIActorProducerClass(IDependencyResolver dependencyResolver,
                                     string actorName)
         {
-            this.applicationContext = applicationContext;
+            if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
+            if (actorName == null) throw new ArgumentNullException("actorName");
+
+            this.dependencyResolver = dependencyResolver;
             this.actorName = actorName;
-            this.actorFactory = applicationContext.CreateActorFactory(actorName);
+            this.actorFactory = dependencyResolver.CreateActorFactory(actorName);
         }
         public Type ActorType
         {
-            get { return this.applicationContext.GetType(this.actorName); }
+            get { return this.dependencyResolver.GetType(this.actorName); }
         }
 
         public ActorBase Produce()
