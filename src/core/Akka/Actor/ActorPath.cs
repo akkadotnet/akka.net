@@ -20,11 +20,13 @@ namespace Akka.Actor
     /// references are compared the unique id of the actor is not taken into account
     /// when comparing actor paths.
     /// </summary>
-    public abstract class ActorPath : IEquatable<ActorPath>
+    public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>
     {
-        /// <summary> The regex that actor names must conform to </summary>
+        /// <summary> The regex that actor names must conform to RFC 2396, http://www.ietf.org/rfc/rfc2396.txt </summary>
+        //Note that AKKA JVM does not allow parenthesis ( ) but, according to RFC 2396 those are allowed, and 
+        //since we use URL Encode to create valid actor names, we must allow them
         public static readonly Regex ElementRegex =
-            new Regex(@"(?:[-\w:@&=+,.!~*'_;]|%\\p{N}{2})(?:[-\w:@&=+,.!~*'$_;]|%\\p{N}{2})*", RegexOptions.Compiled);
+            new Regex(@"^(?:[-a-zA-Z0-9:@&=+,.!~*'_;\(\)]|%[0-9a-fA-F]{2})(?:[-a-zA-Z0-9:@&=+,.!~*'\$_;\(\)]|%[0-9a-fA-F]{2})*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         private readonly string _name;
 
@@ -106,6 +108,8 @@ namespace Akka.Actor
         {
             return Address.Equals(other.Address) && Elements.SequenceEqual(other.Elements);
         }
+
+        public abstract int CompareTo(ActorPath other);
 
         /// <summary>
         /// Withes the uid.
@@ -248,6 +252,18 @@ namespace Akka.Actor
         }
 
         /// <summary>
+        /// Returns a string representation of this instance including uid.
+        /// </summary>
+        /// <returns></returns>
+        public string ToStringWithUid()
+        {
+            var uid = Uid;
+            if (uid == ActorCell.UndefinedUid)
+                return ToStringWithAddress();
+            return ToStringWithAddress() + "#" + uid;
+        }
+
+        /// <summary>
         /// Creates a child with the specified name
         /// </summary>
         /// <param name="childName"> Name of the child. </param>
@@ -361,6 +377,12 @@ namespace Akka.Actor
                 return this;
             throw new NotSupportedException("RootActorPath must have undefinedUid");
         }
+
+        public override int CompareTo(ActorPath other)
+        {
+            if (other is ChildActorPath) return 1;
+            return System.String.Compare(ToString(), other.ToString(), StringComparison.Ordinal);
+        }
     }
 
     /// <summary>
@@ -412,6 +434,26 @@ namespace Akka.Actor
             if (uid == Uid)
                 return this;
             return new ChildActorPath(_parent, _name, uid);
+        }
+
+        public override int CompareTo(ActorPath other)
+        {
+            return InternalCompareTo(this, other);
+        }
+
+        private int InternalCompareTo(ActorPath left, ActorPath right)
+        {
+            if (ReferenceEquals(left, right)) return 0;
+            var leftRoot = left as RootActorPath;
+            if (leftRoot != null)
+                return leftRoot.CompareTo(right);
+            var rightRoot = right as RootActorPath;
+            if (rightRoot != null)
+                return -rightRoot.CompareTo(left);
+            var nameCompareResult = String.Compare(left.Name, right.Name, StringComparison.Ordinal);
+            if (nameCompareResult != 0)
+                return nameCompareResult;
+            return InternalCompareTo(left.Parent, right.Parent);
         }
     }
 }

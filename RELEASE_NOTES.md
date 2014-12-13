@@ -1,3 +1,45 @@
+#### 0.7.1 Dec 13 2014
+__Brand New F# API__. The entire F# API has been updated to give it a more native F# feel while still holding true to the Erlang / Scala conventions used in actor systems. [Read more about the F# API changes](https://github.com/akkadotnet/akka.net/pull/526).
+
+__Multi-Node TestKit (Alpha)__. Not available yet as a NuGet package, but the first pass at the Akka.Remote.TestKit is now available from source, which allow you to test your actor systems running on multiple machines or processes.
+
+A multi-node test looks like this
+
+    public class InitialHeartbeatMultiNode1 : InitialHeartbeatSpec
+    {
+    }
+    
+    public class InitialHeartbeatMultiNode2 : InitialHeartbeatSpec
+    {
+    }
+    
+    public class InitialHeartbeatMultiNode3 : InitialHeartbeatSpec
+    {
+    }
+    
+    public abstract class InitialHeartbeatSpec : MultiNodeClusterSpec
+The MultiNodeTestRunner looks at this, works out that it needs to create 3 processes to run 3 nodes for the test.
+It executes NodeTestRunner in each process to do this passing parameters on the command line. [Read more about the multi-node testkit here](https://github.com/akkadotnet/akka.net/pull/497).
+
+__Breaking Change to the internal api: The `Next` property on `IAtomicCounter<T>` has been changed into the function `Next()`__ This was done as it had side effects, i.e. the value was increased when the getter was called. This makes it very hard to debug as the debugger kept calling the property and causing the value to be increased.
+
+__Akka.Serilog__ `SerilogLogMessageFormatter` has been moved to the namespace `Akka.Logger.Serilog` (it used to be in `Akka.Serilog.Event.Serilog`).
+Update your `using` statements from `using Akka.Serilog.Event.Serilog;` to `using Akka.Logger.Serilog;`.
+
+__Breaking Change to the internal api: Changed signatures in the abstract class `SupervisorStrategy`__. The following methods has new signatures: `HandleFailure`, `ProcessFailure`. If you've inherited from `SupervisorStrategy`, `OneForOneStrategy` or `AllForOneStrategy` and overriden the aforementioned methods you need to update their signatures.
+
+__TestProbe can be implicitly casted to ActorRef__. New feature. Tests requring the `ActorRef` of a `TestProbe` can now be simplified:
+``` C#
+var probe = CreateTestProbe();
+var sut = ActorOf<GreeterActor>();
+sut.Tell("Akka", probe); // previously probe.Ref was required
+probe.ExpectMsg("Hi Akka!");
+```
+
+__Bugfix for ConsistentHashableEvenlope__. When using `ConsistentHashableEvenlope` in conjunction with `ConsistentHashRouter`s, `ConsistentHashableEvenlope` now correctly extracts its inner message instead of sending the entire `ConsistentHashableEvenlope` directly to the intended routee.
+
+__Akka.Cluster group routers now work as expected__. New update of Akka.Cluster - group routers now work as expected on cluster deployments. Still working on pool routers. [Read more about Akka.Cluster routers here](https://github.com/akkadotnet/akka.net/pull/489).
+
 #### 0.7.0 Oct 16 2014
 Major new changes and additions in this release, including some breaking changes...
 
@@ -7,7 +49,7 @@ __Akka.Cluster__ Support (pre-release) - Akka.Cluster is now available on NuGet 
         actor {
           provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
         }
-        
+
         remote {
           log-remote-lifecycle-events = DEBUG
           helios.tcp {
@@ -15,12 +57,12 @@ __Akka.Cluster__ Support (pre-release) - Akka.Cluster is now available on NuGet 
         port = 0
           }
         }
-        
+
         cluster {
           seed-nodes = [
         "akka.tcp://ClusterSystem@127.0.0.1:2551",
         "akka.tcp://ClusterSystem@127.0.0.1:2552"]
-        
+
           auto-down-unreachable-after = 10s
         }
       }
@@ -51,7 +93,7 @@ __Breaking Changes: Renamed Logger Namespaces__ - The namespaces, DLL names, and
 
 __Serilog Support__ - Akka.NET now has an official [Serilog](http://serilog.net/) logger that you can install via the `Akka.Logger.Serilog` package. You can register the serilog logger via your HOCON configuration like this:
 
-     loggers=["Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog"]
+     akka.loggers=["Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog"]
 
 __New Feature: Priority Mailbox__ - The `PriorityMailbox` allows you to define the priority of messages handled by your actors, and this is done by creating your own subclass of either the `UnboundedPriorityMailbox` or `BoundedPriorityMailbox` class and implementing the `PriorityGenerator` method like so:
 
@@ -90,10 +132,9 @@ XUnit:
 
     install-package Akka.TestKit.Xunit
 
-#### 0.6.5
-* Logging to Standard Out is now done in color. To disable it set `StandardOutLogger.UseColors = false;`.
+__New Feature: Logging to Standard Out is now done in color__ - This new feature can be disabled by setting `StandardOutLogger.UseColors = false;`.
 Colors can be customized: `StandardOutLogger.DebugColor = ConsoleColor.Green;`.
-If you need to print to stdout use `Akka.Util.StandardOutWriter.Write()` instead of `Console.WriteLine`, otherwise your messages might get printed in the wrong color.
+If you need to print to stdout directly use `Akka.Util.StandardOutWriter.Write()` instead of `Console.WriteLine`, otherwise your messages might get printed in the wrong color.
 
 #### 0.6.4 Sep 9 2014
 * Introduced `TailChoppingRouter`

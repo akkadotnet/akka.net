@@ -74,5 +74,13 @@ namespace Akka.Util.Internal
         {
             return @this > other ? @this : other;
         }
+
+        public static IEnumerable<T> Concat<T>(this IEnumerable<T> enumerable, T item)
+        {
+            var itemInArray = new[] {item};
+            if (enumerable == null)
+                return itemInArray;
+            return enumerable.Concat(itemInArray);
+        }
     }
 }

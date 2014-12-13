@@ -78,8 +78,8 @@ namespace PingPong
             Console.WriteLine(" ms");
             Console.WriteLine();
 
-            Console.WriteLine("         ActorBase                          RecieveActor");
-            Console.WriteLine("Thruput, Msgs/sec, Start [ms], Total [ms],  Msgs/sec, Start [ms], Total [ms]");
+            Console.WriteLine("            ActorBase                          ReceiveActor");
+            Console.WriteLine("Throughput, Msgs/sec, Start [ms], Total [ms],  Msgs/sec, Start [ms], Total [ms]");
             for(var i = 0; i < timesToRun; i++)
             {
                 var redCountActorBase=0;
@@ -92,9 +92,9 @@ namespace PingPong
                     bestThroughputActorBase = result1.Item2;
                     redCountActorBase = result1.Item3;
                     Console.Write(",  ");
-                    await Benchmark<ClientReceiveActor>(throughput, processorCount, repeat, PrintStats.Stats, bestThroughputReceiveActor, redCountReceiveActor);
-                    bestThroughputReceiveActor = result1.Item2;
-                    redCountReceiveActor = result1.Item3;
+                    var result2 = await Benchmark<ClientReceiveActor>(throughput, processorCount, repeat, PrintStats.Stats, bestThroughputReceiveActor, redCountReceiveActor);
+                    bestThroughputReceiveActor = result2.Item2;
+                    redCountReceiveActor = result2.Item3;
                     Console.WriteLine();
                 }
             }
@@ -184,7 +184,7 @@ namespace PingPong
             else
             {
                 if(printStats.HasFlag(PrintStats.LineStart))
-                    Console.Write("{0,7}, ", factor);
+                    Console.Write("{0,10}, ", factor);
                 if(printStats.HasFlag(PrintStats.Stats))
                     Console.Write("{0,8}, {1,10}, {2,10}", throughput, setupTime.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture), totalWatch.Elapsed.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture));
             }

@@ -138,6 +138,7 @@ namespace Akka.Remote.TestKit
 
         public Task<Address> GetAddressFor(RoleName name)
         {
+            //TODO: QueryTimeout implicit?
             return _client.Ask<Address>(new ToServer<GetAddress>(new GetAddress(name)));
         }
     }
@@ -282,13 +283,15 @@ namespace Akka.Remote.TestKit
         readonly PlayerHandler _handler;
         readonly RoleName _name;
 
-        public ClientFSM(RoleName name, IPEndPoint controllerAddr)
+        public ClientFSM(RoleName name, INode controllerAddr)
         {
             _settings = TestConductor.Get(Context.System).Settings;
             _handler = new PlayerHandler(controllerAddr, _settings.ClientReconnects, _settings.ReconnectBackoff,
                 _settings.ClientSocketWorkerPoolSize, Self, Logging.GetLogger(Context.System, "PlayerHandler"),
                 Context.System.Scheduler);
             _name = name;
+
+            InitFSM();
         }
 
         public void InitFSM()
@@ -356,10 +359,11 @@ namespace Akka.Remote.TestKit
                     @event.StateData.Channel.Write(Done.Instance);
                     return Stay();
                 }
-                if (@event.FsmEvent is IToServer && @event.StateData.Channel != null &&
+                var toServer = @event.FsmEvent as IToServer;
+                if (toServer != null && @event.StateData.Channel != null &&
                     @event.StateData.RunningOp == null)
                 {
-                    @event.StateData.Channel.Write(@event.FsmEvent);
+                    @event.StateData.Channel.Write(toServer.Msg);
                     string token = null;
                     var enterBarrier = @event.FsmEvent as ToServer<EnterBarrier>;
                     if (enterBarrier != null) token = enterBarrier.Msg.Name;
@@ -370,10 +374,10 @@ namespace Akka.Remote.TestKit
                     }
                     return Stay().Using(@event.StateData.Copy(runningOp: Tuple.Create(token, Sender)));
                 }
-                if (@event.FsmEvent is IToServer && @event.StateData.Channel != null &&
+                if (toServer != null && @event.StateData.Channel != null &&
                     @event.StateData.RunningOp != null)
                 {
-                    Log.Error("cannot write {0} while waiting for {1}", @event.FsmEvent, @event.StateData.RunningOp);
+                    Log.Error("cannot write {0} while waiting for {1}", toServer.Msg, @event.StateData.RunningOp);
                     return Stay();
                 }
                 if (@event.FsmEvent is IClientOp && @event.StateData.Channel != null)
@@ -418,7 +422,7 @@ namespace Akka.Remote.TestKit
                         }
                         else
                         {
-                            @event.StateData.RunningOp.Item2.Tell(addressReply);
+                            @event.StateData.RunningOp.Item2.Tell(addressReply.Addr);
                         }
                         return Stay().Using(@event.StateData.Copy(runningOp: null));
                     }
@@ -503,7 +507,7 @@ namespace Akka.Remote.TestKit
     /// </summary>
     class PlayerHandler : IHeliosConnectionHandler
     {
-        readonly IPEndPoint _server;
+        readonly INode _server;
         int _reconnects;
         readonly TimeSpan _backoff;
         readonly int _poolSize;
@@ -513,7 +517,7 @@ namespace Akka.Remote.TestKit
         
         Deadline _nextAttempt;
         
-        public PlayerHandler(IPEndPoint server, int reconnects, TimeSpan backoff, int poolSize, ActorRef fsm,
+        public PlayerHandler(INode server, int reconnects, TimeSpan backoff, int poolSize, ActorRef fsm,
             LoggingAdapter log, Scheduler scheduler)
         {
             _server = server;
@@ -523,6 +527,8 @@ namespace Akka.Remote.TestKit
             _fsm = fsm;
             _log = log;
             _scheduler = scheduler;
+
+            Reconnect();
         }
 
         public void OnException(Exception ex, IConnection erroredChannel)
@@ -540,7 +546,7 @@ namespace Akka.Remote.TestKit
         private void Reconnect()
         {
             _nextAttempt = Deadline.Now + _backoff;
-            RemoteConnection.CreateConnection(Role.Client, _server.ToNode(TransportType.All), _poolSize, this);
+            RemoteConnection.CreateConnection(Role.Client, _server, _poolSize, this);
         }
 
         public void OnConnect(INode remoteAddress, IConnection responseChannel)

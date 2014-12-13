@@ -15,16 +15,7 @@ namespace Akka.Routing
         /// <param name="supervisorStrategy">The supervisor strategy.</param>
         public RouterPoolActor(SupervisorStrategy supervisorStrategy)
         {
-            this.supervisorStrategy = supervisorStrategy;
-        }
-
-        /// <summary>
-        /// Supervisors the strategy.
-        /// </summary>
-        /// <returns>SupervisorStrategy.</returns>
-        protected override SupervisorStrategy SupervisorStrategy()
-        {
-            return supervisorStrategy;
+            SupervisorStrategyInternal = supervisorStrategy;
         }
 
         /// <summary>

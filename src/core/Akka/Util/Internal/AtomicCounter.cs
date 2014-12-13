@@ -43,12 +43,9 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Increments the counter and returns the next value
         /// </summary>
-        public int Next
+        public int Next()
         {
-            get
-            {
-                return Interlocked.Increment(ref _value);
-            }
+            return Interlocked.Increment(ref _value);
         }
 
         /// <summary>
@@ -57,7 +54,7 @@ namespace Akka.Util.Internal
         /// <returns>The original value.</returns>
         public int GetAndIncrement()
         {
-            var nextValue = Next;
+            var nextValue = Next();
             return nextValue - 1;
         }
 
@@ -67,7 +64,7 @@ namespace Akka.Util.Internal
         /// <returns>The new value.</returns>
         public int IncrementAndGet()
         {
-            var nextValue = Next;
+            var nextValue = Next();
             return nextValue;
         }
 

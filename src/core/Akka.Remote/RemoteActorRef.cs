@@ -82,6 +82,8 @@ namespace Akka.Remote
             get { return Remote.Provider; }
         }
 
+        public override bool IsTerminated { get { return false; } }
+
         /// <summary>
         /// Gets the child.
         /// </summary>

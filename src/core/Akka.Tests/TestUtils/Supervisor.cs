@@ -27,6 +27,14 @@ namespace Akka.Tests.TestUtils
             {
                 Sender.Tell(Context.ActorOf(props));
             }
+            else
+            {
+                var propsWithName = message as PropsWithName;
+                if (propsWithName != null)
+                {
+                    Sender.Tell(Context.ActorOf(propsWithName.Props, propsWithName.Name));
+                }
+            }
         }
 
         protected override void PreRestart(Exception cause, object message)

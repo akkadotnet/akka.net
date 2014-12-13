@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Akka.Actor.Internal;
 using Akka.Actor.Internals;
 
 namespace Akka.Actor
@@ -61,6 +62,8 @@ namespace Akka.Actor
         /// </summary>
         int NumberOfMessages { get; }
 
+        bool IsTerminated { get; }
+
         void Post(ActorRef sender, object message);
 
 
@@ -72,7 +75,16 @@ namespace Akka.Actor
         /// It is racy if called from the outside.</summary>
         InternalActorRef GetSingleChild(string name);
 
-        InternalActorRef GetChildByName(string name);   //TODO: Should return  Option[ChildStats]
+        InternalActorRef GetChildByName(string name);
+
+        /// <summary>
+        /// Tries to get the stats for the child with the specified name. The stats can be either <see cref="ChildNameReserved"/> 
+        /// indicating that only a name has been reserved for the child, or a <see cref="ChildRestartStats"/> for a child that 
+        /// has been initialized/created.
+        /// </summary>
+        bool TryGetChildStatsByName(string name, out ChildStats child); //This is called getChildByName in Akka JVM
+
+
 
         // TODO: Missing:
         //    /**

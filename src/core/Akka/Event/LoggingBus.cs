@@ -1,10 +1,12 @@
-﻿using Akka.Actor;
+﻿using System.Threading;
+using Akka.Actor;
 using Akka.Actor.Internals;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.Configuration;
 
 namespace Akka.Event
 {
@@ -13,14 +15,8 @@ namespace Akka.Event
     /// </summary>
     public class LoggingBus : ActorEventBus<object, Type>
     {
-        /// <summary>
-        ///     All log levels
-        /// </summary>
+        private static int _loggerId = 0;
         private static readonly LogLevel[] _allLogLevels = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToArray();
-
-        /// <summary>
-        ///     The loggers
-        /// </summary>
         private readonly List<ActorRef> _loggers = new List<ActorRef>();
 
         private LogLevel _logLevel;
@@ -78,9 +74,8 @@ namespace Akka.Event
         /// </summary>
         /// <param name="system">The system.</param>
         /// <exception cref="System.Exception">Can not use logger of type: + loggerType</exception>
-        public async void StartDefaultLoggers(ActorSystemImpl system)
+        public void StartDefaultLoggers(ActorSystemImpl system) //TODO: Should be internal
         {
-            //TODO: find out why we have logName and in AddLogger, "name"
             var logName = SimpleName(this) + "(" + system.Name + ")";
             var logLevel = Logging.LogLevelFor(system.Settings.LogLevel);
             var loggerTypes = system.Settings.Loggers;
@@ -92,27 +87,20 @@ namespace Akka.Event
 
                 if (loggerType == null)
                 {
-                    //TODO: create real exceptions and refine error messages
-                    throw new Exception("Logger specified in config cannot be found: \"" + strLoggerType + "\"");
+                    throw new ConfigurationException("Logger specified in config cannot be found: \"" + strLoggerType + "\"");
                 }
                 if (loggerType == typeof(StandardOutLogger))
                 {
                     shouldRemoveStandardOutLogger = false;
                     continue;
                 }
-                var addLoggerTask = AddLogger(system, loggerType, logLevel, logName);
-
-                if (!addLoggerTask.Wait(timeout))
+                try
                 {
-                    Publish(new Warning(logName, GetType(),
-                        "Logger " + logName + " did not respond within " + timeout + " to InitializeLogger(bus)"));
+                    AddLogger(system, loggerType, logLevel, logName, timeout);
                 }
-                else
+                catch (Exception e)
                 {
-                    var actorRef = addLoggerTask.Result;
-                    _loggers.Add(actorRef);
-                    SubscribeLogLevelAndAbove(logLevel, actorRef);
-                    Publish(new Debug(logName, GetType(), "Logger " + actorRef.Path.Name + " started"));
+                    throw new ConfigurationException(string.Format("Logger [{0}] specified in config cannot be loaded: {1}", strLoggerType, e),e);
                 }
             }
             _logLevel = logLevel;
@@ -131,33 +119,41 @@ namespace Akka.Event
             Publish(new Debug(logName, GetType(), "Default Loggers started"));
         }
 
-        /// <summary>
-        ///     Adds the logger.
-        /// </summary>
-        /// <param name="system">The system.</param>
-        /// <param name="actorClass">The actor class.</param>
-        /// <param name="logLevel">The log level.</param>
-        /// <param name="logName">Name of the log.</param>
-        /// <returns>Task.</returns>
-        private async Task<ActorRef> AddLogger(ActorSystemImpl system, Type actorClass, LogLevel logLevel, string logName)
+        internal void StopDefaultLoggers(ActorSystem system)
         {
-            //TODO: remove the newguid stuff
-            string name = "log" + system.Name + "-" + SimpleName(actorClass);
-            ActorRef actor;
-            try
+            //TODO: Implement stopping loggers
+        }
+
+        private void AddLogger(ActorSystemImpl system, Type loggerType, LogLevel logLevel, string loggingBusName, TimeSpan timeout)
+        {
+            var loggerName = CreateLoggerName(loggerType);
+            var logger = system.SystemActorOf(Props.Create(loggerType), loggerName);
+
+            var askTask = logger.Ask(new InitializeLogger(this));
+
+            if (!askTask.Wait(timeout))
             {
-                actor = system.SystemActorOf(Props.Create(actorClass), name);
+                Publish(new Warning(loggingBusName, GetType(),
+                    string.Format("Logger {0} [{2}] did not respond within {1} to InitializeLogger(bus)", loggerName, timeout, loggerType.FullName)));
             }
-            catch
+            else
             {
-                //HACK: the EventStreamSpec tries to start up loggers for a new EventBus
-                //when doing so, this logger is already started and the name reserved.
-                //we need to examine how this is dealt with in akka.
-                name = name + Guid.NewGuid();
-                actor = system.SystemActorOf(Props.Create(actorClass), name);
+                var response = askTask.Result;
+                if (!(response is LoggerInitialized))
+                {
+                    throw new LoggerInitializationException(string.Format("Logger {0} [{2}] did not respond with LoggerInitialized, sent instead {1}", loggerName, response, loggerType.FullName));
+                }
+                _loggers.Add(logger);
+                SubscribeLogLevelAndAbove(logLevel, logger);
+                Publish(new Debug(loggingBusName, GetType(), string.Format("Logger {0} [{1}] started", loggerName, loggerType.Name)));
             }
-            await actor.Ask(new InitializeLogger(this));
-            return actor;
+        }
+
+        private string CreateLoggerName(Type actorClass)
+        {
+            var id = Interlocked.Increment(ref _loggerId);
+            var name = "log" + id + "-" + SimpleName(actorClass);
+            return name;
         }
 
         /// <summary>

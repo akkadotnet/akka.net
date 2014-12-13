@@ -13,14 +13,6 @@ type MRMsg =
     | Reduce of (string * int) list     // reduce mapped data
     | Map of string                     // map chunk of data
 
-/// Helper function used to wrap message handler functions into Akka.NET actor API
-let actorFor func' = fun (mailbox:Actor<MRMsg>) ->
-    let rec loop() = actor {
-        let! msg = mailbox.Receive()
-        func' mailbox msg
-        return! loop() }
-    loop()
-
 let mapWords (line:string) = seq { for word in line.Split() -> (word.ToLower(), 1) }
 
 /// Mapper actor function used for mapping chunk of data onto 
@@ -44,7 +36,7 @@ let reduce (dict:ConcurrentDictionary<string,int>) (mailbox:Actor<MRMsg>) = func
 /// Can either forward data chunk to mappers or forward a request of returning all reduced data
 let master mapper (reducer:ActorRef) (mailbox:Actor<MRMsg>) = function
     | Map line  -> mapper <! Map line
-    | Collect   -> reducer.Tell(Collect, mailbox.Sender())
+    | Collect   -> reducer.Forward Collect
     | m         -> mailbox.Unhandled m
 
 let main() =
@@ -53,9 +45,9 @@ let main() =
     let dict = ConcurrentDictionary<string,int>()
 
     // initialize system actors
-    let reducer = spawn system "reduce" <| actorFor (reduce dict)
-    let mapper =  spawn system "map"    <| actorFor (map reducer)
-    let master =  spawn system "master" <| actorFor (master mapper reducer)
+    let reducer = spawn system "reduce" <| actorOf2 (reduce dict)
+    let mapper =  spawn system "map"    <| actorOf2 (map reducer)
+    let master =  spawn system "master" <| actorOf2 (master mapper reducer)
 
     // send input data
     master <! Map "Orange orange apple"
@@ -65,7 +57,7 @@ let main() =
 
     // return processed data and display it
     async {
-        let! res = master.Ask(Collect) |> Async.AwaitTask
+        let! res = master <? Collect
         for (k, v) in res :?> (string*int) seq do
             printfn "%s\t%d" k v
         system.Shutdown()

@@ -25,6 +25,16 @@ namespace Akka.Actor
     public class Props
     {
         /// <summary>
+        ///     The default deploy
+        /// </summary>
+        private static readonly Deploy defaultDeploy = new Deploy();
+
+        /// <summary>
+        ///     No args
+        /// </summary>
+        private static readonly Object[] noArgs = new Object[] { };
+
+        /// <summary>
         ///     A Props instance whose creator will create an actor that doesn't respond to any message
         /// </summary>
         private static readonly Props empty = Props.Create<EmptyActor>();
@@ -35,12 +45,39 @@ namespace Akka.Actor
         public static readonly Props None = null;
 
         /// <summary>
+        ///     The default producer
+        /// </summary>
+        private static readonly IndirectActorProducer defaultProducer = new DefaultProducer();
+
+        /// <summary>
+        ///     The intern type of the actor or the producer
+        /// </summary>
+        private Type inputType;
+
+        /// <summary>
+        ///     The extern type of the actor
+        /// </summary>
+        private Type outputType;
+
+        /// <summary>
+        ///     The producer of the actor
+        /// </summary>
+        private IndirectActorProducer producer;
+
+        /// <summary>
         ///     Initializes a new instance of the <see cref="Props" /> class.
         /// </summary>
-        public Props()
+        protected Props()
+            : this(defaultDeploy, null, noArgs)
         {
-            Arguments = new object[] {};
-            Deploy = new Deploy();
+        }
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="Props" /> class from a copy.
+        /// </summary>
+        protected Props(Props copy)
+            : this(copy.Deploy, copy.inputType, copy.SupervisorStrategy, copy.Arguments)
+        {
         }
 
         /// <summary>
@@ -49,51 +86,82 @@ namespace Akka.Actor
         /// <param name="type">The type.</param>
         /// <param name="args">The arguments.</param>
         public Props(Type type, object[] args)
+            : this(defaultDeploy, type, args)
         {
-            Type = type;
-            Arguments = args;
-            Deploy = new Deploy();
         }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Props" /> class.
         /// </summary>
         /// <param name="type">The type.</param>
-        protected Props(Type type)
+        public Props(Type type)
+            : this(defaultDeploy, type, noArgs)
         {
-            Type = type;
-            Arguments = new object[] {};
-            Deploy = new Deploy();
-        }
-
-        public Props(Type type, SupervisorStrategy supervisorStrategy, IEnumerable<object> args)
-        {
-            Type = type;
-            Arguments = args.ToArray();
-            Deploy = new Deploy();
-            SupervisorStrategy = supervisorStrategy;
-        }
-
-        public Props(Type type, SupervisorStrategy supervisorStrategy, params object[] args)
-        {
-            Type = type;
-            Arguments = args;
-            Deploy = new Deploy();
-            SupervisorStrategy = supervisorStrategy;
-        }
-
-        public Props(Deploy deploy, Type type, IEnumerable<object> args)
-        {
-            Deploy = deploy;
-            Type = type;
-            Arguments = args.ToArray();
         }
 
         /// <summary>
-        ///     Gets or sets the type.
+        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <param name="supervisorStrategy">The supervisor strategy.</param>
+        /// <param name="args">The arguments.</param>
+        public Props(Type type, SupervisorStrategy supervisorStrategy, IEnumerable<object> args)
+            : this(defaultDeploy, type, args.ToArray())
+        {
+            SupervisorStrategy = supervisorStrategy;
+        }
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <param name="supervisorStrategy">The supervisor strategy.</param>
+        /// <param name="args">The arguments.</param>
+        public Props(Type type, SupervisorStrategy supervisorStrategy, params object[] args)
+            : this(defaultDeploy, type, args)
+        {
+            SupervisorStrategy = supervisorStrategy;
+        }
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// </summary>
+        /// <param name="deploy">The deploy.</param>
+        /// <param name="type">The type.</param>
+        /// <param name="args">The arguments.</param>
+        public Props(Deploy deploy, Type type, IEnumerable<object> args)
+            : this(deploy, type, args.ToArray())
+        {
+        }
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="Props" /> class.
+        /// </summary>
+        /// <param name="deploy">The deploy.</param>
+        /// <param name="type">The type.</param>
+        /// <param name="args">The arguments.</param>
+        public Props(Deploy deploy, Type type, params object[] args)
+        {
+            Deploy = deploy;
+            inputType = type;
+            Arguments = args;
+            producer = CreateProducer(inputType, Arguments);
+        }
+
+        /// <summary>
+        ///     Gets the type.
         /// </summary>
         /// <value>The type.</value>
-        public Type Type { get; protected set; }
+        public Type Type
+        {
+            get
+            {
+                if (outputType == null) {
+                    outputType = producer.ActorType;
+                }
+                return outputType;
+            }
+        }
 
         /// <summary>
         ///     Gets or sets the dispatcher.
@@ -175,7 +243,7 @@ namespace Akka.Actor
 
             object[] args = newExpression.GetArguments().ToArray();
 
-            return new Props(typeof (TActor),supervisorStrategy, args);
+            return new Props(typeof (TActor), args);
         }
 
         /// <summary>
@@ -183,9 +251,20 @@ namespace Akka.Actor
         /// </summary>
         /// <typeparam name="TActor">The type of the t actor.</typeparam>
         /// <returns>Props.</returns>
-        public static Props Create<TActor>() where TActor : ActorBase, new()
+        public static Props Create<TActor>(params object[] args) where TActor : ActorBase
         {
-            return new Props(typeof (TActor));
+            return new Props(typeof(TActor), args);
+        }
+
+        /// <summary>
+        ///     Creates an actor by an actor producer
+        /// </summary>
+        /// <typeparam name="TProducer">The type of the actor producer</typeparam>
+        /// <param name="args">The arguments</param>
+        /// <returns>Props</returns>
+        public static Props CreateBy<TProducer>(params object[] args) where TProducer : class, IndirectActorProducer
+        {
+            return new Props(typeof(TProducer), args);
         }
 
 
@@ -194,7 +273,7 @@ namespace Akka.Actor
         /// </summary>
         /// <typeparam name="TActor">The type of the t actor.</typeparam>
         /// <returns>Props.</returns>
-        public static Props Create<TActor>(SupervisorStrategy supervisorStrategy) where TActor : ActorBase
+        public static Props Create<TActor>(SupervisorStrategy supervisorStrategy) where TActor : ActorBase, new()
         {
             return new Props(typeof(TActor), supervisorStrategy);
         }
@@ -206,9 +285,9 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="type">The type.</param>
         /// <returns>Props.</returns>
-        public static Props Create(Type type)
+        public static Props Create(Type type, params object[] args)
         {
-            return new Props(type);
+            return new Props(type, args);
         }
 
         /// <summary>
@@ -282,13 +361,10 @@ namespace Akka.Actor
         {
             var type = Type;
             var arguments = Arguments;
-            try
-            {
-                return (ActorBase)Activator.CreateInstance(type, arguments);
-            }
-            catch(Exception e)
-            {
-                throw new Exception("Error while creating actor instance of type " + type + " with " + arguments.Length + " args: (" + StringFormat.SafeJoin(",", arguments)+")", e);
+            try {
+                return producer.Produce();
+            } catch (Exception e) {
+                throw new Exception("Error while creating actor instance of type " + type + " with " + arguments.Length + " args: (" + StringFormat.SafeJoin(",", arguments) + ")", e);
             }
         }
 
@@ -298,14 +374,7 @@ namespace Akka.Actor
         /// <returns>Props.</returns>
         protected virtual Props Copy()
         {
-            return new Props
-            {
-                Arguments = Arguments,
-                Type = Type,
-                Deploy = Deploy,
-                SupervisorStrategy = SupervisorStrategy,
-                
-            };
+            return new Props(Deploy, inputType, Arguments) { SupervisorStrategy = SupervisorStrategy };
         }
 
         #region INTERNAL API
@@ -322,7 +391,75 @@ namespace Akka.Actor
             }
         }
 
+        private class DefaultProducer : IndirectActorProducer
+        {
+            public ActorBase Produce()
+            {
+                throw new InvalidOperationException("No actor producer specified!");
+            }
+
+            public Type ActorType
+            {
+                get { return typeof(ActorBase); }
+            }
+        }
+
+        private class ActivatorProducer : IndirectActorProducer
+        {
+            private readonly Type _actorType;
+            private readonly object[] _args;
+
+            public ActivatorProducer(Type actorType, object[] args)
+            {
+                _actorType = actorType;
+                _args = args;
+            }
+
+            public ActorBase Produce()
+            {
+                return Activator.CreateInstance(_actorType, _args).AsInstanceOf<ActorBase>();
+            }
+
+            public Type ActorType
+            {
+                get { return _actorType; }
+            }
+        }
+
+        private class FactoryConsumer<TActor> : IndirectActorProducer where TActor : ActorBase
+        {
+            private readonly Func<TActor> _factory;
+
+            public FactoryConsumer(Func<TActor> factory)
+            {
+                _factory = factory;
+            }
+
+            public ActorBase Produce()
+            {
+                return _factory.Invoke();
+            }
+
+            public Type ActorType
+            {
+                get { return typeof(TActor); }
+            }
+        }
+
         #endregion
+
+        private static IndirectActorProducer CreateProducer(Type type, object[] args)
+        {
+            if (type == null) {
+                return defaultProducer;
+            } else if (typeof(IndirectActorProducer).IsAssignableFrom(type)) {
+                return Activator.CreateInstance(type, args).AsInstanceOf<IndirectActorProducer>();
+            } else if (typeof(ActorBase).IsAssignableFrom(type)) {
+                return new ActivatorProducer(type, args);
+            } else {
+                throw new ArgumentException(string.Format("Unknown actor producer [{0}]", type.FullName));
+            }
+        }
     }
 
     public class TerminatedProps : Props
@@ -351,7 +488,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="invoker">The invoker.</param>
         public DynamicProps(Func<TActor> invoker)
-            : base(typeof (TActor))
+            : base(typeof(TActor))
         {
             this.invoker = invoker;
         }
@@ -372,10 +509,9 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="copy">The copy.</param>
         /// <param name="invoker">The invoker.</param>
-        protected DynamicProps(Props copy, Func<TActor> invoker)
+        private DynamicProps(Props copy, Func<TActor> invoker)
+            : base(copy)
         {
-            Type = copy.Type;
-            Deploy = copy.Deploy;
             this.invoker = invoker;
         }
 
@@ -386,10 +522,33 @@ namespace Akka.Actor
         protected override Props Copy()
         {
             Props initialCopy = base.Copy();
-            var invokerCopy = (Func<TActor>) invoker.Clone();
+            var invokerCopy = (Func<TActor>)invoker.Clone();
             return new DynamicProps<TActor>(initialCopy, invokerCopy);
         }
 
         #endregion
+    }
+
+    /// <summary>
+    ///     This interface defines a class of actor creation strategies deviating from
+    ///     the usual default of just reflectively instantiating the [[Actor]]
+    ///     subclass. It can be used to allow a dependency injection framework to
+    ///     determine the actual actor class and how it shall be instantiated.
+    /// </summary>
+    public interface IndirectActorProducer
+    {
+        /// <summary>
+        ///     This factory method must produce a fresh actor instance upon each
+        ///     invocation. It is not permitted to return the same instance more than
+        ///     once.
+        /// </summary>
+        /// <returns>A fresh actor instance.</returns>
+        ActorBase Produce();
+
+        /// <summary>
+        ///     This method is used by [[Props]] to determine the type of actor which will
+        ///     be created. The returned type is not used to produce the actor.
+        /// </summary>
+        Type ActorType { get; }
     }
 }

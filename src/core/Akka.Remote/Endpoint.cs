@@ -1063,7 +1063,7 @@ namespace Akka.Remote
                     EndpointReader.ReaderProps(LocalAddress, RemoteAddress, Transport, Settings, codec, _msgDispatcher,
                         Inbound, (int)handle.HandshakeInfo.Uid, receiveBuffers, reliableDeliverySupervisor)
                         .WithDeploy(Deploy.Local),
-                    string.Format("endpointReader-{0}-{1}", AddressUrlEncoder.Encode(RemoteAddress), _readerId.Next));
+                    string.Format("endpointReader-{0}-{1}", AddressUrlEncoder.Encode(RemoteAddress), _readerId.Next()));
             Context.Watch(newReader);
             handle.ReadHandlerSource.SetResult(new ActorHandleEventListener(newReader));
             return newReader;

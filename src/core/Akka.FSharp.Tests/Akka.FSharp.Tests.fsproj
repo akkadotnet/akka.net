@@ -91,9 +91,19 @@
       <HintPath>..\..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj">
+      <Name>Akka.TestKit.Xunit</Name>
+      <Project>{11f4d4b8-7e07-4457-abf2-609b3e7b2649}</Project>
+      <Private>True</Private>
+    </ProjectReference>
     <ProjectReference Include="..\Akka.FSharp\Akka.FSharp.fsproj">
       <Name>Akka.FSharp</Name>
       <Project>{81574240-bc31-4be4-b447-adf0d32f4246}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">
+      <Name>Akka.TestKit</Name>
+      <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
       <Private>True</Private>
     </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">

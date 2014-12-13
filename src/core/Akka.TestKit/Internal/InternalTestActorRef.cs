@@ -42,7 +42,7 @@ namespace Akka.TestKit.Internal
         protected static ActorCell NewActorCell(ActorSystem system, LocalActorRef actorRef, Props props, MessageDispatcher dispatcher, InternalActorRef supervisor, Func<Mailbox> createMailbox)
         {
             var cell = new TestActorCell((ActorSystemImpl)system, actorRef, props, dispatcher, supervisor);
-            cell.Init(sendSupervise: false, createMailbox: createMailbox);
+            cell.Init(sendSupervise: true, createMailbox: createMailbox);
             return cell;
         }
 

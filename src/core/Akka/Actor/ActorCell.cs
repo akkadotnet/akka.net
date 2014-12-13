@@ -21,9 +21,6 @@ namespace Akka.Actor
         private Props _props;
         private static readonly Props terminatedProps=new TerminatedProps();
 
-        protected ConcurrentDictionary<string, InternalActorRef> children =
-            new ConcurrentDictionary<string, InternalActorRef>();
-
         protected Stack<Receive> behaviorStack = new Stack<Receive>();
         private long _uid;
         private ActorBase _actor;
@@ -47,7 +44,7 @@ namespace Akka.Actor
         public MessageDispatcher Dispatcher { get; private set; }
         public bool IsLocal { get{return true;} }
         protected ActorBase Actor { get { return _actor; } }
-
+        public bool IsTerminated { get { return ReferenceEquals(_systemImpl.Mailboxes.DeadLetterMailbox,_mailbox) || _mailbox.IsClosed; } }
         internal static ActorCell Current
         {
             get { return InternalCurrentActorCellKeeper.Current; }
@@ -63,6 +60,7 @@ namespace Akka.Actor
         public bool HasMessages { get { return Mailbox.HasUnscheduledMessages; } }
         public int NumberOfMessages { get { return Mailbox.NumberOfMessages; } }
         internal bool ActorHasBeenCleared { get { return _actorHasBeenCleared; } }
+        internal static Props TerminatedProps { get { return terminatedProps; } }
 
         public void Init(bool sendSupervise, Func<Mailbox> createMailbox /*, MailboxType mailboxType*/) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType
         {
@@ -107,23 +105,17 @@ namespace Akka.Actor
             }
         }
 
+        [Obsolete("Use TryGetChildStatsByName", true)]
         public InternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
         {
-            return GetSingleChild(name);
-        }
-
-        public InternalActorRef GetSingleChild(string name)
-        {
-            InternalActorRef actorRef;
-            children.TryGetValue(name, out actorRef);
-            if(actorRef.IsNobody())
-                return ActorRef.Nobody;
-            return actorRef;
+            InternalActorRef child;
+            return TryGetSingleChild(name, out child) ? child : ActorRef.Nobody;
         }
 
         ActorRef IActorContext.Child(string name)
         {
-            return GetSingleChild(name);
+            InternalActorRef child;
+            return TryGetSingleChild(name, out child) ? child : ActorRef.Nobody;
         }
 
         public ActorSelection ActorSelection(string path)
@@ -136,11 +128,6 @@ namespace Akka.Actor
             return ActorRefFactoryShared.ActorSelection(path, _systemImpl);
         }
 
-        public virtual ActorRef ActorOf(Props props, string name = null)
-        {
-            return MakeChild(props, name);
-        }
-
 
         IEnumerable<ActorRef> IActorContext.GetChildren()
         {
@@ -149,7 +136,7 @@ namespace Akka.Actor
 
         public IEnumerable<InternalActorRef> GetChildren()
         {
-            return children.Values.ToList();
+            return ChildrenContainer.Children;
         }
 
 
@@ -171,70 +158,22 @@ namespace Akka.Actor
             Become(m => { receive(m); return true; }, discardOld);
         }
 
-        private InternalActorRef MakeChild(Props props, string name)
-        {
-            long childUid = NewUid();
-            name = GetActorName(name, childUid);
-            //reserve the name before we create the actor
-            ReserveChild(name);
-            InternalActorRef actor;
-            try
-            {
-                ActorPath childPath = (Self.Path/name).WithUid(childUid);
-                actor = _systemImpl.Provider.ActorOf(_systemImpl, props, _self, childPath,false,null,true,false);
-            }
-            catch
-            {
-                //if actor creation failed, unreserve the name
-                UnreserveChild(name);
-                throw;
-            }
-            //replace the reservation with the real actor
-            InitChild(actor);
-            actor.Start();
-            return actor;
-        }
-
-        private void UnreserveChild(string name)
-        {
-            InternalActorRef tmp;
-            children.TryRemove(name, out tmp);
-        }
-
-        /// <summary>This should only be used privately or when creating the root actor. </summary>
-        public void InitChild(InternalActorRef actor)
-        {
-            children.TryUpdate(actor.Path.Name, actor, ActorRef.Reserved);
-        }
-
-        public void ReserveChild(string name)
-        {
-            if (!children.TryAdd(name, ActorRef.Reserved))
-            {
-                throw new Exception("The name is already reserved: " + name);
-            }
-        }
-
         private long NewUid()
         {
             var auid = Interlocked.Increment(ref _uid);
             return auid;
         }
 
-        private static string GetActorName(string name, long actorUid)
-        {
-            return name ?? ("$" + actorUid.Base64Encode());
-        }
-
         private ActorBase NewActor()
         {
+            PrepareForNewActor();
             ActorBase instance=null;
             //set the thread static context or things will break
             UseThreadContext(() =>
             {
-                behaviorStack.Clear();
+                behaviorStack = new Stack<Receive>();
                 instance = CreateNewActorInstance();
-                instance.supervisorStrategy = _props.SupervisorStrategy;
+                instance.SupervisorStrategyInternal = _props.SupervisorStrategy;
                 //defaults to null - won't affect lazy instantiation unless explicitly set in props
             });
             return instance;
@@ -314,21 +253,33 @@ namespace Akka.Actor
 
         protected void ClearActorCell()
         {
-            //TODO: UnstashAll();
+            //TODO_ UnstashAll stashed system messages (this is not the same stash that might exist on the actor)
             _props = terminatedProps;
         }
 
-        protected void ClearActor()
+        protected void ClearActor(ActorBase actor)
         {
-            if(_actor != null)
+            if (actor != null)
             {
-                _actor.Clear(_systemImpl.DeadLetters);
+                actor.Clear(_systemImpl.DeadLetters);
             }
             _actorHasBeenCleared = true;
             CurrentMessage = null;
             behaviorStack = null;
         }
 
+        protected void PrepareForNewActor()
+        {
+            behaviorStack = new Stack<Receive>();
+            _actorHasBeenCleared = false;
+        }
+        protected void SetActorFields(ActorBase actor)
+        {
+            if (actor != null)
+            {
+                actor.Unclear();
+            }
+        }
         public static NameAndUid SplitNameAndUid(string name)
         {
             var i = name.IndexOf('#');

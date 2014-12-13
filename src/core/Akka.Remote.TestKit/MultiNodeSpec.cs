@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.TestKit;
+using Akka.TestKit.Xunit;
 using Akka.Util.Internal;
 using Helios.Topology;
 
@@ -101,7 +104,7 @@ namespace Akka.Remote.TestKit
         {
             _myself = new Lazy<RoleName>(() =>
             {
-                if(_roles.Count > MultiNodeSpec.SelfIndex) throw new ArgumentException("not enough roles declared for this test");
+                if (MultiNodeSpec.SelfIndex > _roles.Count) throw new ArgumentException("not enough roles declared for this test");
                 return _roles[MultiNodeSpec.SelfIndex];
             });
         }
@@ -117,13 +120,18 @@ namespace Akka.Remote.TestKit
             {
                 //TODO: Equivalent in Helios?
                 var transportConfig = _testTransport ? 
-                    ConfigurationFactory.ParseString("akka.remote.netty.tcp.applied-adapters = [trttl, gremlin]")
+                    ConfigurationFactory.ParseString("akka.remote.helios.tcp.applied-adapters = []")
                         :  ConfigurationFactory.Empty;
 
-                var configs = ImmutableList.Create(_nodeConf[Myself], _commonConf, transportConfig,
-                    MultiNodeSpec.NodeConfig, MultiNodeSpec.BaseConfig);
+                var builder = ImmutableList.CreateBuilder<Config>();
+                Config nodeConfig;
+                if(_nodeConf.TryGetValue(Myself, out nodeConfig)) builder.Add(nodeConfig);
+                builder.Add(_commonConf);
+                builder.Add(transportConfig);
+                builder.Add(MultiNodeSpec.NodeConfig);
+                builder.Add(MultiNodeSpec.BaseConfig);
 
-                return configs.Aggregate((a, b) => a.WithFallback(b));
+                return builder.ToImmutable().Aggregate((a, b) => a.WithFallback(b));
             }
         }
 
@@ -157,7 +165,9 @@ namespace Akka.Remote.TestKit
         /// Number of nodes node taking part in this test.
         /// -Dmultinode.max-nodes=4
         /// </summary>
-        public static int MaxNodes {get{ throw new NotImplementedException();}}
+        public static int MaxNodes {
+            get { return CommandLine.GetInt32("multinode.max-nodes"); }
+        }
 
         /// <summary>
         /// Name (or IP address; must be resolvable)
@@ -168,7 +178,7 @@ namespace Akka.Remote.TestKit
         /// InetAddress.getLocalHost.getHostAddress is used if empty or "localhost"
         /// is defined as system property "multinode.host".
         /// </summary>
-        public static string SelfName { get { throw new NotImplementedException(); } }
+        public static string SelfName { get { return CommandLine.GetProperty("multinode.host"); } }
 
         //TODO: require(selfName != "", "multinode.host must not be empty")
 
@@ -177,7 +187,7 @@ namespace Akka.Remote.TestKit
         /// 
         /// <code>-Dmultinode.port=0</code>
         /// </summary>
-        public static int SelfPort { get { throw new NotImplementedException(); } }
+        public static int SelfPort { get { return 0; } }
 
         //TODO: require(selfPort >= 0 && selfPort < 65535, "multinode.port is out of bounds: " + selfPort)
 
@@ -187,7 +197,7 @@ namespace Akka.Remote.TestKit
         /// 
         /// <code>-Dmultinode.server-host=server.example.com</code>
         /// </summary>
-        public static string ServerName { get { throw new NotImplementedException(); } }
+        public static string ServerName { get { return CommandLine.GetProperty("multinode.server-host"); } }
 
         //TODO: require(serverName != "", "multinode.server-host must not be empty")
 
@@ -196,7 +206,7 @@ namespace Akka.Remote.TestKit
         /// 
         /// <code>-Dmultinode.server-port=4711</code>
         /// </summary>
-        public static int ServerPort { get { throw new NotImplementedException(); } }
+        public static int ServerPort { get { return 4711; } }
 
         //TODO: require(serverPort > 0 && serverPort < 65535, "multinode.server-port is out of bounds: " + serverPort)
         
@@ -205,7 +215,7 @@ namespace Akka.Remote.TestKit
         /// is started in “controller” mode on selfIndex 0, i.e. there you can inject
         /// failures and shutdown other nodes etc.
         /// </summary>
-        public static int SelfIndex { get { throw new NotImplementedException(); } }
+        public static int SelfIndex { get { return CommandLine.GetInt32("multinode.index"); } }
 
         //TODO: require(selfIndex >= 0 && selfIndex < maxNodes, "multinode.index is out of bounds: " + selfIndex)
 
@@ -268,23 +278,30 @@ namespace Akka.Remote.TestKit
         readonly ImmutableDictionary<RoleName, Replacement> _replacements;
         readonly Address _myAddress;
 
-        public MultiNodeSpec(TestKitAssertions assertions, MultiNodeConfig config) :
-            this(assertions, config.Myself, ActorSystem.Create(GetCallerName(), config.Config), config.Roles, config.Deployments)
+        public MultiNodeSpec(MultiNodeConfig config) :
+            this(config.Myself, ActorSystem.Create(GetCallerName(), config.Config), config.Roles, config.Deployments)
         {   
         }
 
         public MultiNodeSpec(
-            TestKitAssertions assertions, 
             RoleName myself, 
             ActorSystem system, 
             ImmutableList<RoleName> roles, 
-            Func<RoleName, ImmutableList<string>> deployments) : base(assertions, system)
+            Func<RoleName, ImmutableList<string>> deployments) : base(new XunitAssertions() , system)
         {
             _myself = myself;
             _log = Logging.GetLogger(Sys, this);
             _roles = roles;
             _deployments = deployments;
-            _controllerAddr = Helios.Topology.Node.FromString(String.Format("{0}:{1}", ServerName, ServerPort));
+            var node = new Node()
+            {
+                Host = Dns.GetHostEntry(ServerName).AddressList.First(a => a.AddressFamily == AddressFamily.InterNetwork),
+                Port = ServerPort
+            };
+            _controllerAddr = node;
+
+            AttachConductor(new TestConductor(system));
+
             _replacements = _roles.ToImmutableDictionary(r => r, r => new Replacement("@" + r.Name + "@", r, this));
 
             InjectDeployments(system, myself);
@@ -304,10 +321,10 @@ namespace Akka.Remote.TestKit
             // wait for all nodes to remove themselves before we shut the conductor down
             if (SelfIndex == 0)
             {
-                _testConductor.RemoveNode(_myself);
+                TestConductor.RemoveNode(_myself);
                 //TODO: Async stuff here
-                AwaitCondition(() => _testConductor.GetNodes().Result.Any(n => !n.Equals(_myself))
-                    , _testConductor.Settings.BarrierTimeout);
+                AwaitCondition(() => TestConductor.GetNodes().Result.Any(n => !n.Equals(_myself))
+                    , TestConductor.Settings.BarrierTimeout);
             }
             Shutdown(Sys);
             AfterTermination();
@@ -347,7 +364,7 @@ namespace Akka.Remote.TestKit
         //TODO: require(initialParticipants > 0, "initialParticipants must be a 'def' or early initializer, and it must be greater zero")
         //TODO: require(initialParticipants <= maxNodes, "not enough nodes to run this test")
 
-        TestConductor _testConductor;
+        protected TestConductor TestConductor;
 
         /// <summary>
         /// Execute the given block of code only on the given nodes (names according
@@ -355,6 +372,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public void RunOn(Action thunk, params RoleName[] nodes)
         {
+            if(nodes.Length == 0) throw new ArgumentException("No node given to run on.");
             if (IsNode(nodes)) thunk();
         }
 
@@ -372,7 +390,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public void EnterBarrier(params string[] name)
         {
-            _testConductor.Enter(RemainingOr(_testConductor.Settings.BarrierTimeout), name.ToImmutableList());
+            TestConductor.Enter(RemainingOr(TestConductor.Settings.BarrierTimeout), name.ToImmutableList());
         }
 
         /// <summary>
@@ -384,7 +402,7 @@ namespace Akka.Remote.TestKit
         public ActorPath Node(RoleName role)
         {
             //TODO: Async stuff here 
-            return new RootActorPath(_testConductor.GetAddressFor(role).Result);
+            return new RootActorPath(TestConductor.GetAddressFor(role).Result);
         }
 
         public void MuteDeadLetters(ActorSystem system = null, params Type[] messageClasses)
@@ -419,7 +437,7 @@ namespace Akka.Remote.TestKit
             {
                 throw new Exception("failure while attaching new conductor", e);
             }
-            _testConductor = tc;
+            TestConductor = tc;
         }
 
         // now add deployments, if so desired

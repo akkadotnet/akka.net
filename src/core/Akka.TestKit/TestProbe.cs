@@ -72,5 +72,10 @@ namespace Akka.TestKit
         {
             throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
         }
+
+        public static implicit operator ActorRef(TestProbe probe)
+        {
+            return probe.Ref;
+        }
     }
 }
