@@ -1,5 +1,25 @@
-#### 0.7.1 NEXTVERSION
-_This is a placeholder for the next released version. Add new stuff that will go into the next version below. It might be 0.7.1 or 0.8. __REMOVE THIS TEXT BEFORE RELEASING!___
+#### 0.7.1 Dec 13 2014
+__Brand New F# API__. The entire F# API has been updated to give it a more native F# feel while still holding true to the Erlang / Scala conventions used in actor systems. [Read more about the F# API changes](https://github.com/akkadotnet/akka.net/pull/526).
+
+__Multi-Node TestKit (Alpha)__. Not available yet as a NuGet package, but the first pass at the Akka.Remote.TestKit is now available from source, which allow you to test your actor systems running on multiple machines or processes.
+
+A multi-node test looks like this
+
+    public class InitialHeartbeatMultiNode1 : InitialHeartbeatSpec
+    {
+    }
+    
+    public class InitialHeartbeatMultiNode2 : InitialHeartbeatSpec
+    {
+    }
+    
+    public class InitialHeartbeatMultiNode3 : InitialHeartbeatSpec
+    {
+    }
+    
+    public abstract class InitialHeartbeatSpec : MultiNodeClusterSpec
+The MultiNodeTestRunner looks at this, works out that it needs to create 3 processes to run 3 nodes for the test.
+It executes NodeTestRunner in each process to do this passing parameters on the command line. [Read more about the multi-node testkit here](https://github.com/akkadotnet/akka.net/pull/497).
 
 __Breaking Change to the internal api: The `Next` property on `IAtomicCounter<T>` has been changed into the function `Next()`__ This was done as it had side effects, i.e. the value was increased when the getter was called. This makes it very hard to debug as the debugger kept calling the property and causing the value to be increased.
 
@@ -16,6 +36,9 @@ sut.Tell("Akka", probe); // previously probe.Ref was required
 probe.ExpectMsg("Hi Akka!");
 ```
 
+__Bugfix for ConsistentHashableEvenlope__. When using `ConsistentHashableEvenlope` in conjunction with `ConsistentHashRouter`s, `ConsistentHashableEvenlope` now correctly extracts its inner message instead of sending the entire `ConsistentHashableEvenlope` directly to the intended routee.
+
+__Akka.Cluster group routers now work as expected__. New update of Akka.Cluster - group routers now work as expected on cluster deployments. Still working on pool routers. [Read more about Akka.Cluster routers here](https://github.com/akkadotnet/akka.net/pull/489).
 
 #### 0.7.0 Oct 16 2014
 Major new changes and additions in this release, including some breaking changes...
