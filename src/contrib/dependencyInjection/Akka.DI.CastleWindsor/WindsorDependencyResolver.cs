@@ -22,25 +22,25 @@ namespace Akka.DI.CastleWindsor
         }
 
       
-        public Type GetType(string ActorName)
+        public Type GetType(string actorName)
         {
-            if (!typeCache.ContainsKey(ActorName))
+ 
+            typeCache.
+                TryAdd(actorName,
+                        actorName.GetTypeValue() ??
+                        container.
+                        Kernel.
+                        GetAssignableHandlers(typeof(object)).
+                        Where(handler => handler.ComponentModel.Name.Equals(actorName, StringComparison.InvariantCultureIgnoreCase)).
+                        Select(handler => handler.ComponentModel.Implementation).
+                        FirstOrDefault());
 
-                typeCache.TryAdd(ActorName,
-                                 ActorName.GetTypeValue() ??
-                                 container.
-                                 Kernel.
-                                 GetAssignableHandlers(typeof(object)).
-                                 Where(handler => handler.ComponentModel.Name.Equals(ActorName, StringComparison.InvariantCultureIgnoreCase)).
-                                 Select(handler => handler.ComponentModel.Implementation).
-                                 FirstOrDefault());
-
-            return typeCache[ActorName];
+            return typeCache[actorName];
         }
 
-        public Func<ActorBase> CreateActorFactory(string ActorName)
+        public Func<ActorBase> CreateActorFactory(string actorName)
         {
-            return () => (ActorBase)container.Resolve(GetType(ActorName));
+            return () => (ActorBase)container.Resolve(GetType(actorName));
         }
 
         

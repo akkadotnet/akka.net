@@ -22,21 +22,18 @@ namespace Akka.DI.Ninject
             typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
         }
 
-        public Type GetType(string ActorName)
+        public Type GetType(string actorName)
         {
-            
+            typeCache.TryAdd(actorName, actorName.GetTypeValue());
 
-            if (!typeCache.ContainsKey(ActorName))
-                typeCache.TryAdd(ActorName, ActorName.GetTypeValue());
-
-            return typeCache[ActorName];
+            return typeCache[actorName];
         }
 
-        public Func<ActorBase> CreateActorFactory(string ActorName)
+        public Func<ActorBase> CreateActorFactory(string actorName)
         {
             return () =>
             {
-                Type actorType = this.GetType(ActorName);
+                Type actorType = this.GetType(actorName);
 
                 return (ActorBase)container.GetService(actorType);
             };

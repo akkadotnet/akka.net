@@ -9,8 +9,8 @@ namespace Akka.DI.Core
 {
     public interface IDependencyResolver
     {
-        Type GetType(string ActorName);
-        Func<ActorBase> CreateActorFactory(string ActorName);
+        Type GetType(string actorName);
+        Func<ActorBase> CreateActorFactory(string actorName);
 
     }
 }

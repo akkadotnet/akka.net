@@ -20,28 +20,29 @@ namespace Akka.DI.AutoFac
             typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
         }
 
-        public Type GetType(string ActorName)
+        public Type GetType(string actorName)
         {
-            if (!typeCache.ContainsKey(ActorName))
-                typeCache.TryAdd(ActorName,
-                ActorName.GetTypeValue() ??
-                container.
-                ComponentRegistry.
-                Registrations.
-                Where(registration => registration.Activator.LimitType.
-                    Name.Equals(ActorName, StringComparison.InvariantCultureIgnoreCase)).
-                    Select(regisration => regisration.Activator.LimitType).
-                    FirstOrDefault());
+     
+            typeCache.
+                TryAdd(actorName,
+                       actorName.GetTypeValue() ??
+                       container.
+                       ComponentRegistry.
+                       Registrations.
+                       Where(registration => registration.Activator.LimitType.
+                                 Name.Equals(actorName, StringComparison.InvariantCultureIgnoreCase)).
+                        Select(regisration => regisration.Activator.LimitType).
+                        FirstOrDefault());
 
-            return typeCache[ActorName];
+            return typeCache[actorName];
 
         }
        
-        public Func<ActorBase> CreateActorFactory(string ActorName)
+        public Func<ActorBase> CreateActorFactory(string actorName)
         {
             return () =>
             {
-                Type actorType = this.GetType(ActorName);
+                Type actorType = this.GetType(actorName);
                 return (ActorBase)container.Resolve(actorType);
             };
         }
