@@ -92,13 +92,13 @@ namespace Akka.TestKit
             //Wait for the testactor to start
             AwaitCondition(() =>
             {
-                var repRef = _testActor as RepointableRef;
+                var repRef = testActor as RepointableRef;
                 return repRef == null || repRef.IsStarted;
-            }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(10));
+            }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(10));
 
             if(!(this is NoImplicitSender))
             {
-                InternalCurrentActorCellKeeper.Current = ((LocalActorRef)testActor).Cell;
+                InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)testActor).Underlying;
             }
             _testActor = testActor;
 

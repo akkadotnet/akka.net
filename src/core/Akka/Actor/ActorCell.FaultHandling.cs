@@ -1,199 +1,452 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
     public partial class ActorCell
     {
-        /// <summary>
-        ///     Suspends the non recursive.
-        /// </summary>
         private void SuspendNonRecursive()
         {
             Mailbox.Suspend();
         }
 
-        //TODO: resumeNonRecursive
-
-				//TODO: _failed, isFailed, setFailed, clearFailed, perpetrator
-
-        /// <summary>
-        ///     Faults the recreate.
-        /// </summary>
-        /// <param name="m">The m.</param>
-        private void FaultRecreate(Recreate m)
+        private void ResumeNonRecursive()
         {
-            isTerminating = false;
-            ActorBase failedActor = _actor;
+            UseThreadContext(() => Mailbox.Resume());
+        }
 
-            object optionalMessage = CurrentMessage;
+        // ReSharper disable once InconsistentNaming
+        private ActorRef _failed_DoNotUseMeDirectly;
+        private bool IsFailed { get { return _failed_DoNotUseMeDirectly != null; } }
+        private void SetFailed(ActorRef perpetrator)
+        {
+            _failed_DoNotUseMeDirectly = perpetrator;
+        }
+        private void ClearFailed()
+        {
+            _failed_DoNotUseMeDirectly = null;
+        }
+        private ActorRef Perpetrator { get { return _failed_DoNotUseMeDirectly; } }
 
-            if (System.Settings.DebugLifecycle)
-                Publish(new Debug(Self.Path.ToString(), failedActor.GetType(), "restarting"));
-
-            try
+        /// <summary>Re-create the actor in response to a failure.</summary>
+        private void FaultRecreate(Exception cause)
+        {
+            if (_actor == null)
             {
-                failedActor.AroundPreRestart(m.Cause, optionalMessage);
+                _systemImpl.EventStream.Publish(new Error(null, _self.Path.ToString(), GetType(), "Changing Recreate into Create after " + cause));
+                FaultCreate();
+                return;
+            }
+            if (IsNormal)
+            {
+                var failedActor = _actor;
 
-                //Check if the actor uses a stash. If it does we must Unstash all messages. 
-                //If the user do not want this behavior, the stash should be cleared in PreRestart
-                //either by calling ClearStash or by calling UnstashAll.
-                var actorStash = failedActor as IActorStash;
-                if(actorStash != null)
+                if (System.Settings.DebugLifecycle)
+                    Publish(new Debug(_self.Path.ToString(), failedActor.GetType(), "Restarting"));
+
+                if (failedActor != null)
                 {
-                    actorStash.Stash.UnstashAll();
+                    var optionalMessage = CurrentMessage;
+
+                    try
+                    {
+                        // if the actor fails in preRestart, we can do nothing but log it: it’s best-effort
+                        failedActor.AroundPreRestart(cause, optionalMessage);
+
+                        //if the actor uses a stash Unstash all messages. 
+                        //If the user do not want this behavior, the stash should be cleared in PreRestart
+                        //either by calling ClearStash or by calling UnstashAll.
+                        UnstashAllActorMessages(failedActor);
+                    }
+                    catch (Exception e)
+                    {
+                        HandleNonFatalOrInterruptedException(() =>
+                        {
+                            var ex = new PreRestartException(_self, e, cause, optionalMessage);
+                            Publish(new Error(ex, _self.Path.ToString(), failedActor.GetType(), e.Message));
+                        });
+                    }
+                    finally
+                    {
+                        ClearActor(_actor);
+                    }
+                }
+
+                global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended, "Mailbox must be suspended during restart, status=" + Mailbox.Status);
+                if (!SetChildrenTerminationReason(new SuspendReason.Recreation(cause)))
+                {
+                    FinishRecreate(cause, failedActor);
                 }
             }
-            catch (Exception e)
+            else
             {
-                HandleNonFatalOrInterruptedException(() =>
-                {
-                    var ex = new PreRestartException(_self, e, m.Cause, optionalMessage);
-                    Publish(new Error(ex, Self.Path.ToString(), failedActor.GetType(), e.Message));
-                });
+                // need to keep that suspend counter balanced
+                FaultResume(null);
             }
+        }
 
-            var freshActor = NewActor();
-            _actor = freshActor;
-            UseThreadContext(() =>
+        private static void UnstashAllActorMessages(ActorBase actor)
+        {
+            var actorStash = actor as IActorStash;
+            if (actorStash != null)
             {
-                Mailbox.Resume();
-                freshActor.AroundPostRestart(m.Cause, null);
-            });
-            if(System.Settings.DebugLifecycle)
-                Publish(new Debug(Self.Path.ToString(), freshActor.GetType(), "restarted (" + freshActor + ")"));
+                actorStash.Stash.UnstashAll();
+            }
         }
 
         /// <summary>
-        ///     Faults the suspend.
+        /// Suspends the actor in response to a failure of a parent (i.e. the "recursive suspend" feature).
         /// </summary>
-        /// <param name="obj">The object.</param>
-        private void FaultSuspend(Suspend obj)
+        private void FaultSuspend()
         {
             SuspendNonRecursive();
             SuspendChildren();
         }
 
         /// <summary>
-        ///     Faults the resume.
+        /// Resumes the actor in response to a failure
         /// </summary>
-        /// <param name="obj">The object.</param>
-        private void FaultResume(Resume obj)
+        /// <param name="causedByFailure">The exception that caused the failure. signifies if it was our own failure 
+        /// which prompted this action.</param>
+        private void FaultResume(Exception causedByFailure)
         {
-            Mailbox.Resume();
+            if (_actor == null)
+            {
+                _systemImpl.EventStream.Publish(new Error(null, _self.Path.ToString(), GetType(), "Changing Resume into Create after " + causedByFailure));
+                FaultCreate();
+            }
+            //Akka Jvm does the following commented section as well, but we do not store the context inside the actor so it's not applicable
+            //    else if (_actor.context == null && causedByFailure != null)
+            //    {
+            //        system.eventStream.publish(Error(self.path.toString, clazz(actor), "changing Resume into Restart after " + causedByFailure))
+            //        faultRecreate(causedByFailure)
+            //    }
+            else
+            {
+                var perp = Perpetrator;
+                // done always to keep that suspend counter balanced
+                // must happen "atomically"
+                try
+                {
+                    ResumeNonRecursive();
+                }
+                finally
+                {
+                    if (causedByFailure != null)
+                        ClearFailed();
+                }
+                ResumeChildren(causedByFailure, perp);
+            }
         }
 
-
-        //TODO: faultCreate
-
-        //TODO: finishCreate
-
-
         /// <summary>
-        ///     Terminates this instance.
+        /// Create the actor in response to a failure
         /// </summary>
-        private void Terminate()
+        private void FaultCreate()
         {
-            if (isTerminating)
-                return;
+            global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended, "Mailbox must be suspended during failed creation, status=" + Mailbox.Status);
+            global::System.Diagnostics.Debug.Assert(_self.Equals(Perpetrator), "Perpetrator should be self");
 
             SetReceiveTimeout(null);
             CancelReceiveTimeout();
 
-            isTerminating = true;
-            _self.IsTerminated = true;
+            // stop all children, which will turn childrenRefs into TerminatingChildrenContainer (if there are children)
+            StopChildren();
 
+            if (!SetChildrenTerminationReason(new SuspendReason.Creation()))
+                FinishCreate();
+        }
+
+        private void FinishCreate()
+        {
+            try
+            {
+                ResumeNonRecursive();
+            }
+            finally
+            {
+                ClearFailed();
+            }
+            try
+            {
+                Create(failure: null);
+            }
+            catch (Exception e)
+            {
+                HandleNonFatalOrInterruptedException(() => HandleInvokeFailure(e));
+            }
+        }
+
+        /// <summary>Terminates this instance.</summary>
+        private void Terminate()
+        {
+            SetReceiveTimeout(null);
+            CancelReceiveTimeout();
+
+            // prevent Deadletter(Terminated) messages
             UnwatchWatchedActors(_actor);
-            foreach (var child in GetChildren())
+
+            StopChildren();
+            //TODO: Implement when we have ActorSystem.Abort
+            //    if (systemImpl.aborting) {
+            //      // separate iteration because this is a very rare case that should not penalize normal operation
+            //      children foreach {
+            //        case ref: ActorRefScope if !ref.isLocal ⇒ self.sendSystemMessage(DeathWatchNotification(ref, true, false))
+            //        case _                                  ⇒
+            //      }
+            //    }
+            var wasTerminating = IsTerminating;
+            if (SetChildrenTerminationReason(SuspendReason.Termination.Instance))
+            {
+                if (!wasTerminating)
+                {
+                    // do not process normal messages while waiting for all children to terminate
+                    SuspendNonRecursive();
+                    // do not propagate failures during shutdown to the supervisor
+                    SetFailed(_self);
+                    if (System.Settings.DebugLifecycle)
+                        Publish(new Debug(_self.Path.ToString(), ActorType, "Stopping"));
+                }
+            }
+            else
+            {
+                SetTerminated();
+                FinishTerminate();
+            }
+        }
+
+        private void HandleInvokeFailure(Exception cause, IEnumerable<ActorRef> childrenNotToSuspend = null)
+        {
+            // prevent any further messages to be processed until the actor has been restarted
+            if (!IsFailed)
+            {
+                try
+                {
+                    SuspendNonRecursive();
+
+                    if (CurrentMessage is Failed)
+                    {
+                        var failedChild = Sender;
+                        childrenNotToSuspend = childrenNotToSuspend.Concat(failedChild); //Function handles childrenNotToSuspend beeing null
+                        SetFailed(failedChild);
+                    }
+                    else
+                    {
+                        SetFailed(_self);
+                    }
+                    SuspendChildren(childrenNotToSuspend == null ? null : childrenNotToSuspend.ToList());
+
+                    //Tell supervisor
+                    Parent.Tell(new Failed(_self, cause, _self.Path.Uid));
+                }
+                catch (Exception e)
+                {
+                    HandleNonFatalOrInterruptedException(() =>
+                    {
+                        Publish(new Error(e, _self.Path.ToString(), _actor.GetType(), "Emergency stop: exception in failure handling for " + cause));
+                        try
+                        {
+                            StopChildren();
+                        }
+                        finally
+                        {
+                            FinishTerminate();
+                        }
+                    });
+                }
+
+            }
+        }
+
+        private void StopChildren()
+        {
+            foreach (var child in ChildrenContainer.Children)
             {
                 child.Stop();
             }
-
-            if (System.Settings.DebugLifecycle)
-                Publish(new Debug(Self.Path.ToString(), ActorType, "stopping"));
-            FinishTerminate();
         }
 
-        //TODO: handleInvokeFailure
 
-        /// <summary>
-        ///     Finishes the terminate.
-        /// </summary>
         private void FinishTerminate()
         {
-            if (_actor == null)
+            // The following order is crucial for things to work properly. Only change this if you're very confident and lucky.
+            // 
+            // Please note that if a parent is also a watcher then ChildTerminated and Terminated must be processed in this
+            // specific order.
+            var a = _actor;
+            try
             {
-                //TODO: this is the root actor, do something....
-                return;
+                if (a != null)
+                {
+                    a.AroundPostStop();
+
+                    //if the actor uses a stash, we must Unstash all messages. 
+                    //If the user do not want this behavior, the stash should be cleared in PostStop
+                    //either by calling ClearStash or by calling UnstashAll.
+                    UnstashAllActorMessages(a);
+                }
+            }
+            catch (Exception x)
+            {
+                HandleNonFatalOrInterruptedException(
+                    () => Publish(new Error(x, _self.Path.ToString(), ActorType, x.Message)));
+            }
+            finally
+            {
+                try
+                //TODO: Akka Jvm: this is done in a call to dispatcher.detach()
+                {
+
+                    //TODO: Akka Jvm: this is done in a call to MessageDispatcher.detach()
+                    {
+                        var mailbox = Mailbox;
+                        var deadLetterMailbox = System.Mailboxes.DeadLetterMailbox;
+                        SwapMailbox(deadLetterMailbox);
+                        mailbox.BecomeClosed();
+                        mailbox.CleanUp();
+                    }
+                }
+                finally
+                {
+                    try { Parent.Tell(new DeathWatchNotification(_self, existenceConfirmed: true, addressTerminated: false)); }
+                    finally
+                    {
+                        try { TellWatchersWeDied(); }
+                        finally
+                        {
+                            try { UnwatchWatchedActors(a); }
+                            finally
+                            {
+                                if (System.Settings.DebugLifecycle)
+                                    Publish(new Debug(_self.Path.ToString(), ActorType, "Stopped"));
+
+                                ClearActor(a);
+                                ClearActorCell();
+                                _actor = null;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private void FinishRecreate(Exception cause, ActorBase failedActor)
+        {
+            // need to keep a snapshot of the surviving children before the new actor instance creates new ones
+            var survivors = ChildrenContainer.Children;
+            try
+            {
+                try { ResumeNonRecursive(); }
+                finally { ClearFailed(); }  // must happen in any case, so that failure is propagated
+
+                var freshActor = NewActor();
+                _actor = freshActor; // this must happen before postRestart has a chance to fail
+                if (ReferenceEquals(freshActor, failedActor))
+                    SetActorFields(freshActor); // If the creator returns the same instance, we need to restore our nulled out fields.
+
+                UseThreadContext(() => freshActor.AroundPostRestart(cause, null));
+
+                if (System.Settings.DebugLifecycle)
+                    Publish(new Debug(_self.Path.ToString(), freshActor.GetType(), "Restarted (" + freshActor + ")"));
+
+                // only after parent is up and running again do restart the children which were not stopped
+                foreach (var survivingChild in survivors)
+                {
+                    try
+                    {
+                        survivingChild.Restart(cause);
+                    }
+                    catch (Exception e)
+                    {
+                        var child = survivingChild;    //Needed since otherwise it would be access to foreach variable in closure
+                        HandleNonFatalOrInterruptedException(() => Publish(new Error(e, _self.Path.ToString(), freshActor.GetType(), "restarting (" + child + ")")));
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                ClearActor(_actor); // in order to prevent preRestart() from happening again
+                HandleInvokeFailure(new PostRestartException(_self, e, cause), survivors);
             }
 
+        }
+
+      
+        private void HandleFailed(Failed f) //Called handleFailure in Akka JVM
+        {
+            CurrentMessage = f;
+            var failedChild = f.Child;
+            var failedChildIsNobody = failedChild.IsNobody();
+            Sender = failedChildIsNobody ? _systemImpl.DeadLetters : failedChild;
+            //Only act upon the failure, if it comes from a currently known child;
+            //the UID protects against reception of a Failed from a child which was
+            //killed in preRestart and re-created in postRestart
+
+            ChildRestartStats childStats;
+            if (TryGetChildStatsByRef(failedChild, out childStats))
+            {
+                var statsUid = childStats.Child.Path.Uid;
+                if (statsUid == f.Uid)
+                {
+                    var handled = _actor.SupervisorStrategyInternal.HandleFailure(this, f.Cause, childStats, ChildrenContainer.Stats);
+                    if (!handled)
+                        throw f.Cause;
+                }
+                else
+                {
+                    Publish(new Debug(_self.Path.ToString(), _actor.GetType(), "Dropping Failed(" + f.Cause + ") from old child " + f.Child + " (uid=" + statsUid + " != " + f.Uid + ")"));
+                }
+            }
+            else
+            {
+                Publish(new Debug(_self.Path.ToString(), _actor.GetType(), "Dropping Failed(" + f.Cause + ") from unknown child " + failedChild));
+            }
+        }
+
+        private void HandleChildTerminated(ActorRef child)
+        {
+            var status = RemoveChildAndGetStateChange(child);
+
+            //If this fails, we do nothing in case of terminating/restarting state,
+            //otherwise tell the supervisor etc. (in that second case, the match
+            //below will hit the empty default case, too)
             if (_actor != null)
             {
                 try
                 {
-                    _actor.AroundPostStop();
-
-                    //Check if the actor uses a stash. If it does we must Unstash all messages. 
-                    //If the user do not want this behavior, the stash should be cleared in PostStop
-                    //either by calling ClearStash or by calling UnstashAll.
-                    var actorStash = _actor as IActorStash;
-                    if(actorStash != null)
+                    _actor.SupervisorStrategyInternal.HandleChildTerminated(this, child, GetChildren());
+                }
+                catch (Exception e)
+                {
+                    HandleNonFatalOrInterruptedException(() =>
                     {
-                        actorStash.Stash.UnstashAll();
-                    }
-                }
-                catch (Exception x)
-                {
-                    HandleNonFatalOrInterruptedException(
-                        () => Publish(new Error(x, Self.Path.ToString(), ActorType, x.Message)));
+                        Publish(new Error(e, _self.Path.ToString(), _actor.GetType(), "HandleChildTerminated failed"));
+                        HandleInvokeFailure(e);
+                    });
                 }
             }
-            //TODO: Akka Jvm: this is done in a call to dispatcher.detach()
+
+
+            // if the removal changed the state of the (terminating) children container,
+            // then we are continuing the previously suspended recreate/create/terminate action
+            var recreation = status as SuspendReason.Recreation;
+            if (recreation != null)
             {
-                //TODO: Akka Jvm: this is done in a call to MessageDispatcher.detach()
-                {
-                    var mailbox = Mailbox;
-                    var deadLetterMailbox = System.Mailboxes.DeadLetterMailbox;
-                    SwapMailbox(deadLetterMailbox);
-                    mailbox.BecomeClosed();
-                    mailbox.CleanUp();
-                }
+                FinishRecreate(recreation.Cause,_actor);
             }
-            Parent.Tell(new DeathWatchNotification(Self, true, false));
-            TellWatchersWeDied();
-            UnwatchWatchedActors(_actor);
-            if(System.Settings.DebugLifecycle)
-                Publish(new Debug(Self.Path.ToString(), ActorType, "stopped"));
-
-            ClearActor();
-            ClearActorCell();
-            _actor = null;
-        }
-
-        //TODO: finishRecreate
-
-        /// <summary>
-        ///     Handles the failed.
-        /// </summary>
-        /// <param name="m">The m.</param>
-        private void HandleFailed(Failed m)	//Is called handleFailure in Akka JVM
-        {
-            bool handled = _actor.SupervisorStrategyLazy().HandleFailure(this, m.Child, m.Cause);
-            if (!handled)
-                throw m.Cause;
-        }
-
-        /// <summary>
-        ///     Handles the child terminated.
-        /// </summary>
-        /// <param name="actor">The actor.</param>
-        private void HandleChildTerminated(ActorRef actor)
-        {
-            InternalActorRef tmp;
-            children.TryRemove(actor.Path.Name, out tmp);
-            //global::System.Diagnostics.Debug.WriteLine("removed child " + actor.Path.Name);
-            //global::System.Diagnostics.Debug.WriteLine("count " + Children.Count());
+            else if (status is SuspendReason.Creation)
+            {
+                FinishCreate();
+            }
+            else if (status is SuspendReason.Termination)
+            {
+                FinishTerminate();
+            }
         }
 
         /// <summary>

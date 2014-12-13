@@ -2,6 +2,7 @@
 using System.Threading;
 using Akka.Actor;
 using Akka.TestKit;
+using Akka.TestKit.Internal;
 using Akka.TestKit.TestActors;
 using Xunit;
 
@@ -88,13 +89,44 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
+        public void An_ActorRef_should_restart_when_Killed()
+        {
+            EventFilter.Exception<ActorKilledException>().ExpectOne(() =>
+            {
+                var latch = CreateTestLatch(2);
+                var boss = ActorOf(a =>
+                {
+                    var child = a.ActorOf(c =>
+                    {
+                        c.ReceiveAny((msg, ctx) => { });
+                        c.OnPreRestart = (reason, msg, ctx) =>
+                        {
+                            latch.CountDown(); 
+                            c.DefaultPreRestart(reason, msg);
+                        };
+                        c.OnPostRestart = (reason, ctx) =>
+                        {
+                            latch.CountDown();
+                            c.DefaultPostRestart(reason);
+                        };
+                    });
+                    a.Strategy = new OneForOneStrategy(2, TimeSpan.FromSeconds(1), r=> Directive.Restart);
+                    a.Receive<string>((_, ctx) => child.Tell(Kill.Instance));
+                });
+
+                boss.Tell("send kill");
+                latch.Ready(TimeSpan.FromSeconds(5));
+            });
+        }
+
+        [Fact]
         public void An_ActorRef_should_support_nested_ActorOfs()
         {
             var a = Sys.ActorOf(Props.Create(() => new NestingActor(Sys)));
             var t1 = a.Ask("any");
             t1.Wait(TimeSpan.FromSeconds(3));
             var nested = t1.Result as ActorRef;
-            
+
             Assert.NotNull(a);
             Assert.NotNull(nested);
             Assert.True(a != nested);
@@ -181,12 +213,6 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActorRef_should_restart_when_Killed()
-        {
-            //TODO: require FilterException implemented
-        }
-
-        [Fact]
         public void An_ActorRef_should_be_able_to_check_for_existence_of_the_children()
         {
             var timeout = TimeSpan.FromSeconds(3);
@@ -269,7 +295,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        private class NonPublicActor: ReceiveActor
+        private class NonPublicActor : ReceiveActor
         {
             internal static Props CreateProps()
             {
@@ -375,7 +401,8 @@ namespace Akka.Tests.Actor
 
         private class FailingChildInnerActor : FailingInnerActor
         {
-            public FailingChildInnerActor(ActorBase fail) : base(fail)
+            public FailingChildInnerActor(ActorBase fail)
+                : base(fail)
             {
                 Fail = new InnerActor();
             }
@@ -430,7 +457,8 @@ namespace Akka.Tests.Actor
 
         private class FailingChildOuterActor : FailingOuterActor
         {
-            public FailingChildOuterActor(ActorRef inner) : base(inner)
+            public FailingChildOuterActor(ActorRef inner)
+                : base(inner)
             {
                 Fail = new InnerActor();
             }

@@ -107,7 +107,7 @@ namespace Akka.Tests.Routing
         public void DefaultResizer_must_be_possible_to_define_in_configuration()
         {
             var latch = new TestLatch(Sys, 3);
-            var router = Sys.ActorOf(Props.Create<ResizerTestActor>().WithRouter(new FromConfig()), "router1");
+            var router = Sys.ActorOf(Props.Create<ResizerTestActor>().WithRouter(FromConfig.Instance), "router1");
 
             router.Tell(latch);
             router.Tell(latch);

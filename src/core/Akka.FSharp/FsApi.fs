@@ -3,60 +3,137 @@
 open Akka.Actor
 open System
 
-type IO<'msg> = 
+/// <summary>
+/// Unidirectional send operator. 
+/// Sends a message object directly to actor tracked by actorRef. 
+/// </summary>
+let inline (<!) (actorRef : #ICanTell) (msg : obj) : unit = actorRef.Tell(msg, ActorCell.GetCurrentSelfOrNoSender())
+
+/// <summary> 
+/// Bidirectional send operator. Sends a message object directly to actor 
+/// tracked by actorRef and awaits for response send back from corresponding actor. 
+/// </summary>
+let inline (<?) (tell : #ICanTell) (msg : obj) = tell.Ask msg |> Async.AwaitTask
+
+/// Pipes an output of asynchronous expression directly to the recipients mailbox.
+let pipeTo (computation : Async<'T>) (recipient : ICanTell) (sender : ActorRef) : unit = 
+    let success (result : 'T) : unit = recipient.Tell(result, sender)
+    let failure (err : exn) : unit = recipient.Tell(Status.Failure(err), sender)
+    Async.StartWithContinuations(computation, success, failure, failure)
+
+/// Pipe operator which sends an output of asynchronous expression directly to the recipients mailbox.
+let inline (|!>) (computation : Async<'T>) (recipient : ICanTell) = pipeTo computation recipient ActorRef.NoSender
+
+/// Pipe operator which sends an output of asynchronous expression directly to the recipients mailbox
+let inline (<!|) (recipient : ICanTell) (computation : Async<'T>) = pipeTo computation recipient ActorRef.NoSender
+
+type IO<'T> = 
     | Input
 
+/// <summary>
+/// Exposes an Akka.NET actor APi accessible from inside of F# continuations -> <see cref="Cont{'In, 'Out}" />
+/// </summary>
 [<Interface>]
-type Actor<'msg> = 
-    abstract Receive : unit -> IO<'msg>
+type Actor<'Message> = 
+    inherit ActorRefFactory
+    
+    /// <summary>
+    /// Explicitly retrieves next incoming message from the mailbox.
+    /// </summary>
+    abstract Receive : unit -> IO<'Message>
+    
+    /// <summary>
+    /// Gets <see cref="ActorRef" /> for the current actor.
+    /// </summary>
     abstract Self : ActorRef
+    
+    /// <summary>
+    /// Gets the current actor context.
+    /// </summary>
     abstract Context : IActorContext
+    
+    /// <summary>
+    /// Returns a sender of current message or <see cref="ActorRef.NoSender" />, if none could be determined.
+    /// </summary>
     abstract Sender : unit -> ActorRef
-    abstract Unhandled : 'msg -> unit
+    
+    /// <summary>
+    /// Explicit signalization of unhandled message.
+    /// </summary>
+    abstract Unhandled : 'Message -> unit
+    
+    /// <summary>
+    /// Lazy logging adapter. It won't be initialized until logging function will be called. 
+    /// </summary>
+    abstract Log : Lazy<Akka.Event.LoggingAdapter>
 
 [<AbstractClass>]
 type Actor() = 
-    inherit Akka.Actor.UntypedActor()
+    inherit UntypedActor()
 
-let inline select (path : string) : ActorSelection = ActorSelection(ActorCell.GetCurrentSelfOrNoSender(), path)
-let inline (<!) (actorRef : #ICanTell) (msg : obj) = actorRef.Tell(msg, ActorCell.GetCurrentSelfOrNoSender())
-let inline (!>) (msg : obj) (actorRef : #ICanTell) = actorRef <! msg
-let inline (<?) (tell : #ICanTell) (msg : obj) = tell.Ask msg |> Async.AwaitTask
-let inline (?>) (msg : obj) (actorRef : #ICanTell) = actorRef <? msg
+/// <summary>
+/// Returns an instance of <see cref="ActorSelection" /> for specified path. 
+/// If no matching receiver will be found, a <see cref="ActorRef.NoSender" /> instance will be returned. 
+/// </summary>
+let inline select (path : string) (selector : ActorRefFactory) : ActorSelection = selector.ActorSelection path
 
-module ActorSelection = 
-    let inline (<!) (actorPath : string) (msg : obj) = (select actorPath) <! msg
-    let inline (<?) (actorPath : string) (msg : obj) = (select actorPath) <? msg
+[<AutoOpen>]
+module Logging = 
+    open Akka.Event
+    
+    /// Logs a message using configured Akka logger.
+    let log (level : LogLevel) (mailbox : Actor<'Message>) (msg : string) : unit = 
+        let logger = mailbox.Log.Force()
+        logger.Log(level, msg)
+    
+    /// Logs a message at Debug level using configured Akka logger.
+    let inline logDebug mailbox msg = log (LogLevel.DebugLevel) mailbox msg
+    
+    /// Logs a message at Info level using configured Akka logger.
+    let inline logInfo mailbox msg = log (LogLevel.InfoLevel) mailbox msg
+    
+    /// Logs a message at Warning level using configured Akka logger.
+    let inline logWarning mailbox msg = log (LogLevel.WarningLevel) mailbox msg
+    
+    /// Logs a message at Error level using configured Akka logger. 
+    let inline logError mailbox msg = log (LogLevel.ErrorLevel) mailbox msg
+    
+    /// Logs an exception message at Error level using configured Akka logger.
+    let inline logException mailbox (e : exn) = log (LogLevel.ErrorLevel) mailbox (e.Message)
 
 type ActorPath with
-
-    static member TryParse(path : string) = 
+    
+    /// <summary>
+    /// Perform parsing string into valid <see cref="ActorPath" />. 
+    /// Returns tuple, which first argument informs about success of the operations, while second one may contain a parsed value.
+    /// </summary>
+    static member TryParse(path : string) : bool * ActorPath = 
         let mutable actorPath : ActorPath = null
         if ActorPath.TryParse(path, &actorPath) then (true, actorPath)
         else (false, actorPath)
     
-    static member TryParseAddress(path : string) = 
+    /// <summary>
+    /// Perform parsing string into valid <see cref="Address" />. 
+    /// Returns tuple, which first argument informs about success of the operations, while second one may contain a parsed value.
+    /// </summary>
+    static member TryParseAddress(path : string) : bool * Address = 
         let mutable address : Address = null
         if ActorPath.TryParseAddress(path, &address) then (true, address)
         else (false, address)
 
-/// <summary>
-/// Gives access to the next message throu let! binding in
-/// actor computation expression.
-/// </summary>
-type Cont<'m, 'v> = 
-    | Func of ('m -> Cont<'m, 'v>)
-    | Return of 'v
+/// Gives access to the next message throu let! binding in actor computation expression.
+type Cont<'In, 'Out> = 
+    | Func of ('In -> Cont<'In, 'Out>)
+    | Return of 'Out
 
-/// <summary>
-/// The builder for actor computation expression<
-/// </summary>
+/// The builder for actor computation expression.
 type ActorBuilder() = 
-    // binds the next message
-    member this.Bind(m : IO<'msg>, f : 'msg -> _) = Func(fun m -> f m)
     
-    // binds the result of another actor computation expression
-    member this.Bind(x : Cont<'m, 'a>, f : 'a -> Cont<'m, 'b>) : Cont<'m, 'b> = 
+    /// Binds the next message.
+    member this.Bind(m : IO<'In>, f : 'In -> _) = Func(fun m -> f m)
+    
+    /// Binds the result of another actor computation expression.
+    member this.Bind(x : Cont<'In, 'Out1>, f : 'Out1 -> Cont<'In, 'Out2>) : Cont<'In, 'Out2> = 
         match x with
         | Func fx -> Func(fun m -> this.Bind(fx m, f))
         | Return v -> f v
@@ -65,7 +142,7 @@ type ActorBuilder() =
     member this.Return x = Return x
     member this.Zero() = Return()
     
-    member this.TryWith(f : unit -> Cont<'m, 'a>, c : exn -> Cont<'m, 'a>) : Cont<'m, 'a> = 
+    member this.TryWith(f : unit -> Cont<'In, 'Out>, c : exn -> Cont<'In, 'Out>) : Cont<'In, 'Out> = 
         try 
             true, f()
         with ex -> false, c ex
@@ -73,7 +150,7 @@ type ActorBuilder() =
         | true, Func fn -> Func(fun m -> this.TryWith((fun () -> fn m), c))
         | _, v -> v
     
-    member this.TryFinally(f : unit -> Cont<'m, 'a>, fnl : unit -> unit) : Cont<'m, 'a> = 
+    member this.TryFinally(f : unit -> Cont<'In, 'Out>, fnl : unit -> unit) : Cont<'In, 'Out> = 
         try 
             match f() with
             | Func fn -> Func(fun m -> this.TryFinally((fun () -> fn m), fnl))
@@ -84,12 +161,12 @@ type ActorBuilder() =
             fnl()
             reraise()
     
-    member this.Using(d : #IDisposable, f : _ -> Cont<'m, 'v>) : Cont<'m, 'v> = 
+    member this.Using(d : #IDisposable, f : _ -> Cont<'In, 'Out>) : Cont<'In, 'Out> = 
         this.TryFinally((fun () -> f d), 
                         fun () -> 
                             if d <> null then d.Dispose())
     
-    member this.While(condition : unit -> bool, f : unit -> Cont<'m, unit>) : Cont<'m, unit> = 
+    member this.While(condition : unit -> bool, f : unit -> Cont<'In, unit>) : Cont<'In, unit> = 
         if condition() then 
             match f() with
             | Func fn -> 
@@ -99,7 +176,7 @@ type ActorBuilder() =
             | v -> this.While(condition, f)
         else Return()
     
-    member this.For(source : 's seq, f : 's -> Cont<'m, unit>) : Cont<'m, unit> = 
+    member this.For(source : 'Iter seq, f : 'Iter -> Cont<'In, unit>) : Cont<'In, unit> = 
         use e = source.GetEnumerator()
         
         let rec loop() = 
@@ -117,22 +194,22 @@ type ActorBuilder() =
     member this.Run(f : unit -> Cont<_, _>) = f()
     member this.Run(f : Cont<_, _>) = f
     
-    member this.Combine(f : unit -> Cont<'m, _>, g : unit -> Cont<'m, 'v>) : Cont<'m, 'v> = 
+    member this.Combine(f : unit -> Cont<'In, _>, g : unit -> Cont<'In, 'Out>) : Cont<'In, 'Out> = 
         match f() with
         | Func fx -> Func(fun m -> this.Combine((fun () -> fx m), g))
         | Return _ -> g()
     
-    member this.Combine(f : Cont<'m, _>, g : unit -> Cont<'m, 'v>) : Cont<'m, 'v> = 
+    member this.Combine(f : Cont<'In, _>, g : unit -> Cont<'In, 'Out>) : Cont<'In, 'Out> = 
         match f with
         | Func fx -> Func(fun m -> this.Combine(fx m, g))
         | Return _ -> g()
     
-    member this.Combine(f : unit -> Cont<'m, _>, g : Cont<'m, 'v>) : Cont<'m, 'v> = 
+    member this.Combine(f : unit -> Cont<'In, _>, g : Cont<'In, 'Out>) : Cont<'In, 'Out> = 
         match f() with
         | Func fx -> Func(fun m -> this.Combine((fun () -> fx m), g))
         | Return _ -> g
     
-    member this.Combine(f : Cont<'m, _>, g : Cont<'m, 'v>) : Cont<'m, 'v> = 
+    member this.Combine(f : Cont<'In, _>, g : Cont<'In, 'Out>) : Cont<'In, 'Out> = 
         match f with
         | Func fx -> Func(fun m -> this.Combine(fx m, g))
         | Return _ -> g
@@ -140,37 +217,33 @@ type ActorBuilder() =
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Linq.QuotationEvaluation
 
-type FunActor<'m, 'v>(actor : Actor<'m> -> Cont<'m, 'v>, strategy : SupervisorStrategy) as self = 
+type FunActor<'Message, 'Returned>(actor : Actor<'Message> -> Cont<'Message, 'Returned>) as self = 
     inherit UntypedActor()
     
     let mutable state = 
         let self' = self.Self
         let context' = UntypedActor.Context :> IActorContext
-        actor { new Actor<'m> with
+        actor { new Actor<'Message> with
                     member this.Receive() = Input
                     member this.Self = self'
                     member this.Context = context'
                     member this.Sender() = self.Sender()
-                    member this.Unhandled msg = self.Unhandled msg }
+                    member this.Unhandled msg = self.Unhandled msg
+                    member this.ActorOf(props, name) = context'.ActorOf(props, name)
+                    member this.ActorSelection(path : string) = context'.ActorSelection(path)
+                    member this.ActorSelection(path : ActorPath) = context'.ActorSelection(path)
+                    member this.Log = lazy (Akka.Event.Logging.GetLogger(context')) }
     
-    new(actor : Expr<Actor<'m> -> Cont<'m, 'v>>) = FunActor(actor.Compile () ())
-    new(actor : Actor<'m> -> Cont<'m, 'v>) = FunActor(actor, null)
-    member x.Sender() = base.Sender
-    member x.Unhandled(msg : 'm) = base.Unhandled msg
-    
-    override x.SupervisorStrategy() = 
-        if strategy <> null then strategy
-        else base.SupervisorStrategy()
-    
-    override x.OnReceive(msg) = 
-        let message = msg :?> 'm
+    new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile () ())
+    member x.Sender() : ActorRef = base.Sender
+    member x.Unhandled(msg : 'Message) : unit = base.Unhandled msg
+    override x.OnReceive(msg : obj) : unit = 
+        let message = msg :?> 'Message
         match state with
         | Func f -> state <- f message
         | Return v -> x.PostStop()
 
-/// <summary>
 /// Builds an actor message handler using an actor expression syntax.
-/// </summary>
 let actor = ActorBuilder()
 
 module Linq = 
@@ -196,10 +269,10 @@ module Linq =
     let (|Ar|) (p : System.Collections.ObjectModel.ReadOnlyCollection<Expression>) = Array.ofSeq p
     
     type Expression = 
-        static member ToExpression(f : System.Linq.Expressions.Expression<System.Func<FunActor<'m, 'v>>>) = 
+        static member ToExpression(f : System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>) = 
             match f with
             | Lambda(_, Invoke(Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]))) -> 
-                Expression.Lambda(p, [||]) :?> System.Linq.Expressions.Expression<System.Func<FunActor<'m, 'v>>>
+                Expression.Lambda(p, [||]) :?> System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>
             | _ -> failwith "Doesn't match"
 
 module Serialization = 
@@ -228,108 +301,187 @@ module Configuration =
 
 module Strategy = 
     /// <summary>
-    /// Returns a builder function returning OneForOneStrategy supervisor based on provided decider func.
+    /// Returns a supervisor strategy appliable only to child actor which faulted during execution.
     /// </summary>
-    /// <param name="decider">Supervisor strategy behavior decider function.</param>
-    let oneForOne (decider : Exception -> Directive) = 
+    /// <param name="decider">Used to determine a actor behavior response depending on exception occurred.</param>
+    let oneForOne (decider : Exception -> Directive) : SupervisorStrategy = 
         OneForOneStrategy(System.Func<_, _>(decider)) :> SupervisorStrategy
     
     /// <summary>
-    /// Returns a builder function returning OneForOneStrategy supervisor based on provided decider func.
+    /// Returns a supervisor strategy appliable only to child actor which faulted during execution.
     /// </summary>
-    /// <param name="retries">Number of times, actor could be restarted. If negative, there is not limit.</param>
-    /// <param name="timeout">Time window for number of retries to occur.</param>
-    /// <param name="decider">Supervisor strategy behavior decider function.</param>
-    let oneForOne' retries timeout (decider : Exception -> Directive) = 
-        OneForOneStrategy(retries, timeout, System.Func<_, _>(decider)) :> SupervisorStrategy
+    /// <param name="retries">Defines a number of times, an actor could be restarted. If it's a negative value, there is not limit.</param>
+    /// <param name="timeout">Defines time window for number of retries to occur.</param>
+    /// <param name="decider">Used to determine a actor behavior response depending on exception occurred.</param>
+    let oneForOne2 (retries : int) (timeout : TimeSpan) (decider : Exception -> Directive) : SupervisorStrategy = 
+        OneForOneStrategy(Nullable(retries), Nullable(timeout), System.Func<_, _>(decider)) :> SupervisorStrategy
     
     /// <summary>
-    /// Returns a builder function returning AllForOneStrategy supervisor based on provided decider func.
+    /// Returns a supervisor strategy appliable only each supervised actor when any of them had faulted during execution.
     /// </summary>
-    /// <param name="decider">Supervisor strategy behavior decider function.</param>
-    let allForOne (decider : Exception -> Directive) = 
+    /// <param name="decider">Used to determine a actor behavior response depending on exception occurred.</param>
+    let allForOne (decider : Exception -> Directive) : SupervisorStrategy = 
         AllForOneStrategy(System.Func<_, _>(decider)) :> SupervisorStrategy
     
     /// <summary>
-    /// Returns a builder function returning AllForOneStrategy supervisor based on provided decider func.
+    /// Returns a supervisor strategy appliable only each supervised actor when any of them had faulted during execution.
     /// </summary>
-    /// <param name="retries">Number of times, actor could be restarted. If negative, there is not limit.</param>
-    /// <param name="timeout">Time window for number of retries to occur.</param>
-    /// <param name="decider">Supervisor strategy behavior decider function.</param>
-    let allForOne' retries timeout (decider : Exception -> Directive) () = 
-        AllForOneStrategy(retries, timeout, System.Func<_, _>(decider)) :> SupervisorStrategy
+    /// <param name="retries">Defines a number of times, an actor could be restarted. If it's a negative value, there is not limit.</param>
+    /// <param name="timeout">Defines time window for number of retries to occur.</param>
+    /// <param name="decider">Used to determine a actor behavior response depending on exception occurred.</param>
+    let allForOne2 (retries : int) (timeout : TimeSpan) (decider : Exception -> Directive) : SupervisorStrategy = 
+        AllForOneStrategy(Nullable(retries), Nullable(timeout), System.Func<_, _>(decider)) :> SupervisorStrategy
 
 module System = 
-    /// <summary>
     /// Creates an actor system with remote deployment serialization enabled.
-    /// </summary>
-    /// <param name="name">The system name.</param>
-    /// <param name="configStr">The configuration</param>
-    let create name (config : Configuration.Config) = 
+    let create (name : string) (config : Configuration.Config) : ActorSystem = 
         let system = ActorSystem.Create(name, config)
         let serializer = new Serialization.ExprSerializer(system :?> ExtendedActorSystem)
         system.Serialization.AddSerializer(serializer)
         system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
         system
 
+type SpawnParams = 
+    { Deploy : Deploy option
+      Router : Akka.Routing.RouterConfig option
+      SupervisorStrategy : SupervisorStrategy option
+      Dispatcher : string option
+      Mailbox : string option }
+    static member empty = 
+        { Deploy = None
+          Router = None
+          SupervisorStrategy = None
+          Dispatcher = None
+          Mailbox = None }
+
+type SpawnOption = 
+    | Deploy of Deploy
+    | Router of Akka.Routing.RouterConfig
+    | SupervisorStrategy of SupervisorStrategy
+    | Dispatcher of string
+    | Mailbox of string
+
+let rec private applySpawnOptions (props : Props) (opt : SpawnOption list) : Props = 
+    match opt with
+    | [] -> props
+    | h :: t -> 
+        let p = 
+            match h with
+            | Deploy d -> props.WithDeploy d
+            | Router r -> props.WithRouter r
+            | SupervisorStrategy s -> props.WithSupervisorStrategy s
+            | Dispatcher d -> props.WithDispatcher d
+            | Mailbox m -> props.WithMailbox m
+        applySpawnOptions p t
+
 /// <summary>
 /// Spawns an actor using specified actor computation expression, using an Expression AST.
 /// The actor code can be deployed remotely.
 /// </summary>
-/// <param name="system">The system used to spawn the actor</param>
-/// <param name="name">The actor instance nane</param>
-/// <param name="f">the actor's message handling function.</param>
-let spawne (system : ActorSystem) name (f : Expr<Actor<'m> -> Cont<'m, 'v>>) = 
-    let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m, 'v>(f))
-    system.ActorOf(Props.Create(e), name)
+/// <param name="actorFactory">Either actor system or parent actor</param>
+/// <param name="name">Name of spawned child actor</param>
+/// <param name="expr">F# expression compiled down to receive function used by actor for response for incoming request</param>
+/// <param name="options">List of options used to configure actor creation</param>
+let spawne (actorFactory : ActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) 
+    (options : SpawnOption list) : ActorRef = 
+    let e = Linq.Expression.ToExpression(fun () -> new FunActor<'Message, 'Returned>(expr))
+    let props = applySpawnOptions (Props.Create e) options
+    actorFactory.ActorOf(props, name)
 
 /// <summary>
-/// Spawns an actor using specified actor computation expression, with strategy supervisor factory.
+/// Spawns an actor using specified actor computation expression, with custom actor Props settings.
 /// The actor can only be used locally. 
 /// </summary>
-/// <param name="system">The system used to spawn the actor</param>
-/// <param name="name">The actor instance name</param>
-/// <param name="strategy">Function used to generate supervisor strategy</param>
-/// <param name="f">the actor's message handling function.</param>
-let spawns (system : ActorSystem) name (strategy : SupervisorStrategy) (f : Actor<'m> -> Cont<'m, 'v>) = 
-    let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m, 'v>(f, strategy))
-    system.ActorOf(Props.Create(e), name)
+/// <param name="actorFactory">Either actor system or parent actor</param>
+/// <param name="name">Name of spawned child actor</param>
+/// <param name="f">Used by actor for handling response for incoming request</param>
+/// <param name="options">List of options used to configure actor creation</param>
+let spawnOpt (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) 
+    (options : SpawnOption list) : ActorRef = 
+    let e = Linq.Expression.ToExpression(fun () -> new FunActor<'Message, 'Returned>(f))
+    let props = applySpawnOptions (Props.Create e) options
+    actorFactory.ActorOf(props, name)
 
 /// <summary>
 /// Spawns an actor using specified actor computation expression.
 /// The actor can only be used locally. 
 /// </summary>
-/// <param name="system">The system used to spawn the actor</param>
-/// <param name="name">The actor instance nane</param>
-/// <param name="f">the actor's message handling function.</param>
-let spawn (system : ActorSystem) name (f : Actor<'m> -> Cont<'m, 'v>) = spawns system name null f
+/// <param name="actorFactory">Either actor system or parent actor</param>
+/// <param name="name">Name of spawned child actor</param>
+/// <param name="f">Used by actor for handling response for incoming request</param>
+let spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : ActorRef = 
+    spawnOpt actorFactory name f []
 
-[<AutoOpen>]
-module Actors = 
-    // declare extension methods for Actor interface
-    type Actor<'msg> with
-        
-        /// <summary>
-        /// Implementation of spawne method using actor-local context.
-        /// Actor refs returned this way are considered children of current actor.
-        /// </summary>
-        member this.spawne (system : ActorSystem) name (f : Expr<Actor<'m> -> Cont<'m, 'v>>) = 
-            let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m, 'v>(f))
-            this.Context.ActorOf(Props.Create(e), name)
-        
-        /// <summary>
-        /// Implementation of spawns method using actor-local context.
-        /// Actor refs returned this way are considered children of current actor. 
-        /// </summary>
-        /// <param name="name">The actor instance name to be created as child of current actor</param>
-        /// <param name="strategy">Function used to generate supervisor strategy</param>
-        /// <param name="f">the actor's message handling function.</param>
-        member this.spawns name (strategy : SupervisorStrategy) (f : Actor<'m> -> Cont<'m, 'v>) = 
-            let e = Linq.Expression.ToExpression(fun () -> new FunActor<'m, 'v>(f, strategy))
-            this.Context.ActorOf(Props.Create(e), name)
-        
-        /// <summary>
-        /// Implementation of spawn method using actor-local context.
-        /// Actor refs returned this way are considered children of current actor.
-        /// </summary>
-        member this.spawn name (f : Actor<'m> -> Cont<'m, 'v>) = this.spawns name null f
+/// <summary>
+/// Wraps provided function with actor behavior. 
+/// It will be invoked each time, an actor will receive a message. 
+/// </summary>
+let actorOf (fn : 'Message -> unit) (mailbox : Actor<'Message>) : Cont<'Message, 'Returned> = 
+    let rec loop'() = 
+        actor { 
+            let! msg = mailbox.Receive()
+            fn msg
+            return! loop'()
+        }
+    loop'()
+
+/// <summary>
+/// Wraps provided function with actor behavior. 
+/// It will be invoked each time, an actor will receive a message. 
+/// </summary>
+let actorOf2 (fn : Actor<'Message> -> 'Message -> unit) (mailbox : Actor<'Message>) : Cont<'Message, 'Returned> = 
+    let rec loop'() = 
+        actor { 
+            let! msg = mailbox.Receive()
+            fn mailbox msg
+            return! loop'()
+        }
+    loop'()
+
+/// <summary>
+/// Creates an actor-like object, which could be interrogated from the outside. 
+/// Usually it's used to spy on other actors lifecycle.
+/// Most of the inbox methods works in thread-blocking manner.
+/// </summary>
+let inbox (system : ActorSystem) : Inbox = Inbox.Create system
+
+/// <summary> 
+/// Receives a next message sent to the inbox. This is a blocking operation.
+/// Returns None if timeout occurred or message is incompatible with expected response type.
+/// </summary>
+let receive (timeout : TimeSpan) (i : Inbox) : 'Message option = 
+    try 
+        Some(i.Receive(timeout) :?> 'Message)
+    with _ -> None
+
+/// <summary>
+/// Receives a next message sent to the inbox, which satisfies provided predicate. 
+/// This is a blocking operation. Returns None if timeout occurred or message 
+/// is incompatible with expected response type.
+/// <summary>
+let filterReceive (timeout : TimeSpan) (predicate : 'Message -> bool) (i : Inbox) : 'Message option = 
+    try 
+        let r = 
+            i.ReceiveWhere(Predicate<obj>(fun (o : obj) -> 
+                               match o with
+                               | :? 'm -> predicate (o :?> 'Message)
+                               | _ -> false), timeout)
+        Some(r :?> 'Message)
+    with _ -> None
+
+/// <summary>
+/// Awaits in async block fora  next message sent to the inbox. 
+/// Returns None if message is incompatible with expected response type.
+/// </summary>
+let asyncReceive (i : Inbox) : Async<'Message option> = 
+    async { 
+        let! r = i.ReceiveAsync() |> Async.AwaitTask
+        return match r with
+               | :? 'Message -> Some(r :?> 'Message)
+               | _ -> None
+    }
+
+/// <summary>
+/// Orders inbox to watch an actor targeted by provided <paramref name="actorRef"/>.
+/// </summary>
+let inline watch (actorRef : ActorRef) (i : Inbox) : unit = i.Watch actorRef

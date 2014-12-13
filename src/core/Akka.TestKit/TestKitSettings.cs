@@ -13,6 +13,7 @@ namespace Akka.TestKit
         private readonly TimeSpan _singleExpectDefault;
         private readonly TimeSpan _testEventFilterLeeway;
         private readonly double _timefactor;
+        private readonly bool _logTestKitCalls;
 
         public TestKitSettings(Config config)
         {
@@ -20,6 +21,8 @@ namespace Akka.TestKit
             _singleExpectDefault = config.GetTimeSpan("akka.test.single-expect-default", allowInfinite: false);
             _testEventFilterLeeway = config.GetTimeSpan("akka.test.filter-leeway", allowInfinite: false);
             _timefactor = config.GetDouble("akka.test.timefactor");
+            _logTestKitCalls = config.GetBoolean("akka.test.testkit.debug");
+
             if(_timefactor <= 0)
                 throw new Exception(@"Expected a positive value for ""akka.test.timefactor"" but found "+_timefactor);
         }
@@ -51,5 +54,11 @@ namespace Akka.TestKit
         /// </para>
         /// </summary>
         public double TestTimeFactor { get { return _timefactor; } }
+
+        /// <summary>
+        /// If set to <c>true</c> calls to testkit will be logged.
+        /// This is enabled by seting configuration "akka.test.testkit.debug" value to a true.
+        /// </summary>
+        public bool LogTestKitCalls { get { return _logTestKitCalls; } }
     }
 }

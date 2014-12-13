@@ -7,6 +7,7 @@ using Helios.Buffers;
 using Helios.Exceptions;
 using Helios.Net;
 using Helios.Net.Bootstrap;
+using Helios.Ops.Executors;
 using Helios.Reactor.Bootstrap;
 using Helios.Serialization;
 using Helios.Topology;
@@ -56,7 +57,8 @@ namespace Akka.Remote.TestKit
 
         protected override void OnConnect(INode remoteAddress, IConnection responseChannel)
         {
-            responseChannel.BeginReceive();
+            //Got to pass OnMessage here or get null reference.
+            responseChannel.BeginReceive(OnMessage);
             _handler.OnConnect(remoteAddress, responseChannel);
         }
 
@@ -87,7 +89,7 @@ namespace Akka.Remote.TestKit
 
         #region Static methods
 
-        public static IConnection CreateConnection(Role role, INode socketAddress, int poolSize, IHeliosConnectionHandler upstreamHandler)
+        public static RemoteConnection CreateConnection(Role role, INode socketAddress, int poolSize, IHeliosConnectionHandler upstreamHandler)
         {
             if (role == Role.Client)
             {
@@ -96,8 +98,9 @@ namespace Akka.Remote.TestKit
                     .SetEncoder(Encoders.DefaultEncoder) //LengthFieldPrepender
                     .SetDecoder(Encoders.DefaultDecoder) //LengthFieldFrameBasedDecoder
                     .WorkerThreads(poolSize).Build().NewConnection(socketAddress);
-                connection.Open();
-                return connection;
+                var remoteConnection = new RemoteConnection(connection, upstreamHandler);
+                remoteConnection.Open();
+                return remoteConnection;
             }
             else //server
             {
@@ -106,8 +109,9 @@ namespace Akka.Remote.TestKit
                     .SetEncoder(Encoders.DefaultEncoder) //LengthFieldPrepender
                     .SetDecoder(Encoders.DefaultDecoder) //LengthFieldFrameBasedDecoder
                     .WorkerThreads(poolSize).Build().NewConnection(socketAddress);
-                connection.Open();
-                return connection;
+                var remoteConnection = new RemoteConnection(connection, upstreamHandler);
+                remoteConnection.Open();
+                return remoteConnection;
             }
         }
 

@@ -76,11 +76,23 @@ namespace Akka.TestKit
                 _end = prevEnd;
             }
 
-            var diff = Now - start;
-            _assertions.AssertTrue(min <= diff, "block took {0}, should have at least been {1}. {2}", diff, min, hint ?? "");
+            var elapsed = Now - start;
+            var wasTooFast = elapsed < min;
+            if(wasTooFast)
+            {
+                const string failMessage = "Failed: Block took {0}, should have at least been {1}. {2}";
+                ConditionalLog(failMessage, elapsed, min, hint ?? "");
+                _assertions.Fail(failMessage, elapsed, min, hint ?? "");
+            }
             if(!_lastWasNoMsg)
             {
-                _assertions.AssertTrue(diff <= maxDiff, "block took {0}, exceeding {1}. {2}", diff, maxDiff, hint ?? "");
+                var tookTooLong = elapsed > maxDiff;
+                if(tookTooLong)
+                {
+                    const string failMessage = "Failed: Block took {0}, exceeding {1}. {2}";
+                    ConditionalLog(failMessage, elapsed, maxDiff, hint ?? "");
+                    _assertions.Fail(failMessage, elapsed, maxDiff, hint ?? "");
+                }
             }
 
             return ret;

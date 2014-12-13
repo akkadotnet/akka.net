@@ -69,6 +69,7 @@ namespace Akka.Remote.Tests
 
               actor.deployment {
                 /blub.remote = ""akka.test://remote-sys@localhost:12346""
+                /echo.remote = ""akka.test://remote-sys@localhost:12346""
                 /looker1/child.remote = ""akka.test://remote-sys@localhost:12346""
                 /looker1/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
                 /looker2/child.remote = ""akka.test://remote-sys@localhost:12346""
@@ -163,6 +164,32 @@ namespace Akka.Remote.Tests
         {
             var r = Sys.ActorOf<Echo1>("blub");
             Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/blub", r.Path.ToString());
+        }
+
+        [Fact]
+        public void Remoting_must_create_by_IndirectActorProducer()
+        {
+            try {
+                Resolve.SetResolver(new TestResolver());
+                var r = Sys.ActorOf(Props.CreateBy<Resolve<Echo2>>(), "echo");
+                Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
+            } finally {
+                Resolve.SetResolver(null);
+            }
+        }
+
+        [Fact(Skip = "Fails on buildserver")]
+        public void Remoting_must_create_by_IndirectActorProducer_and_ping()
+        {
+            try {
+                Resolve.SetResolver(new TestResolver());
+                var r = Sys.ActorOf(Props.CreateBy<Resolve<Echo2>>(), "echo");
+                Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
+                r.Tell("ping", TestActor);
+                ExpectMsg(Tuple.Create("pong", TestActor), TimeSpan.FromSeconds(1.5));
+            } finally {
+                Resolve.SetResolver(null);
+            }
         }
 
         #endregion
@@ -342,6 +369,15 @@ namespace Akka.Remote.Tests
                 if (Sender.Path.Equals(_another.Path)) _one.Tell(message);
             }
         }
+
+        class TestResolver : IResolver
+        {
+            public T Resolve<T>(object[] args)
+            {
+                return Activator.CreateInstance(typeof(T), args).AsInstanceOf<T>();
+            }
+        }
+
 
         #endregion
     }

@@ -18,9 +18,9 @@ namespace Akka.Util.Internal
         T Current { get; }
 
         /// <summary>
-        /// Increments the counter and gets the next value.
+        /// Increments the counter and gets the next value. This is exactly the same as calling <see cref="IncrementAndGet"/>.
         /// </summary>
-        T Next { get; }
+        T Next();
 
         /// <summary>
         /// Atomically increments the counter by one.

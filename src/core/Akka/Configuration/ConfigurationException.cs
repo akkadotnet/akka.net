@@ -1,4 +1,5 @@
-﻿using Akka.Actor;
+﻿using System;
+using Akka.Actor;
 
 namespace Akka.Configuration
 {
@@ -6,6 +7,11 @@ namespace Akka.Configuration
     {
         public ConfigurationException(string message) : base(message)
         {
+        }
+
+        public ConfigurationException(string message, Exception exception): base(message, exception)
+        {
+            
         }
     }
 }

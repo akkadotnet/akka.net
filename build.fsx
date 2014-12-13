@@ -181,6 +181,7 @@ module Nuget =
     let getAkkaDependency project =
         match project with
         | "Akka" -> []
+        | "Akka.Cluster" -> ["Akka.Remote", release.NugetVersion]
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
 
@@ -248,6 +249,7 @@ let createNugetPackages _ =
         !! (releaseDir @@ project + ".dll")
         ++ (releaseDir @@ project + ".pdb")
         ++ (releaseDir @@ project + ".xml")
+        ++ (releaseDir @@ project + ".ExternalAnnotations.xml")
         |> CopyFiles libDir
 
         // Copy all src-files (.cs and .fs files) to workingDir/src

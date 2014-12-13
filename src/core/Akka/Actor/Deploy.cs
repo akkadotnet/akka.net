@@ -45,14 +45,14 @@ namespace Akka.Actor
         public Deploy(Scope scope)
             : this()
         {
-            Scope = scope;
+            Scope = scope ?? NoScopeGiven;
         }
 
         public Deploy(RouterConfig routerConfig, Scope scope)
             : this()
         {
             RouterConfig = routerConfig;
-            Scope = scope;
+            Scope = scope ?? NoScopeGiven;
         }
 
         public Deploy(RouterConfig routerConfig)
@@ -64,8 +64,8 @@ namespace Akka.Actor
             Path = path;
             Config = config;
             RouterConfig = routerConfig;
-            Scope = scope;
-            Dispatcher = dispatcher;
+            Scope = scope ?? NoScopeGiven;
+            Dispatcher = dispatcher ?? NoDispatcherGiven;
         }
 
         public Deploy(string path, Config config, RouterConfig routerConfig, Scope scope, string dispatcher, string mailbox)
@@ -73,9 +73,9 @@ namespace Akka.Actor
             Path = path;
             Config = config;
             RouterConfig = routerConfig;
-            Scope = scope;
-            Dispatcher = dispatcher;
-            Mailbox = mailbox;
+            Scope = scope ?? NoScopeGiven;
+            Dispatcher = dispatcher ?? NoDispatcherGiven;
+            Mailbox = mailbox ?? NoMailboxGiven;
         }
 
         public string Path { get; private set; }

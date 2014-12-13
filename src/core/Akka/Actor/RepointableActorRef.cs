@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Akka.Actor.Internal;
 using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -35,6 +36,10 @@ namespace Akka.Actor
         public override Cell Underlying { get { return _underlying_DoNotCallMeDirectly; } }
         public Cell Lookup { get { return _lookup_DoNotCallMeDirectly; } }
 
+        public override bool IsTerminated
+        {
+            get { return Underlying.IsTerminated; }
+        }
 
 
         public void SwapUnderlying(Cell cell)
@@ -170,7 +175,7 @@ namespace Akka.Actor
             var index = 0;
             foreach(var element in name)
             {
-                switch(element)
+                switch (element)
                 {
                     case "..":
                         return Parent.GetChild(name.Skip(index));
@@ -178,15 +183,17 @@ namespace Akka.Actor
                         break;
                     default:
                         var nameAndUid = ActorCell.SplitNameAndUid(element);
-                        var internalActorRef = Lookup.GetChildByName(nameAndUid.Name);
-                        if(internalActorRef.IsNobody()) return Nobody;
-                        return internalActorRef.GetChild(name.Skip(index));
-                        //TODO: Implement this in order to be able to handle restarting children
-                        //  lookup.getChildByName(childName) match {
-                        //    case Some(crs: ChildRestartStats) if uid == ActorCell.undefinedUid || uid == crs.uid ⇒
-                        //      crs.child.asInstanceOf[InternalActorRef].getChild(name)
-                        //    case _ ⇒ Nobody
-                        //  }
+                        ChildStats stats;
+                        if (Lookup.TryGetChildStatsByName(nameAndUid.Name, out stats))
+                        {
+                            var crs = stats as ChildRestartStats;
+                            var uid = nameAndUid.Uid;
+                            if (crs != null && (uid == ActorCell.UndefinedUid || uid == crs.Uid))
+                            {
+                                crs.Child.GetChild(name.Skip(index));
+                            }
+                        }
+                        return Nobody;
                 }
                 index++;
             }
@@ -285,6 +292,12 @@ namespace Akka.Actor
         public InternalActorRef GetChildByName(string name)
         {
             return Nobody.Instance;
+        }
+
+        public bool TryGetChildStatsByName(string name, out ChildStats child)
+        {
+            child = null;
+            return false;
         }
 
         public void Post(ActorRef sender, object message)
@@ -388,6 +401,15 @@ namespace Akka.Actor
         private bool CellIsReady(Cell cell)
         {
             return !ReferenceEquals(cell, this) && !ReferenceEquals(cell, null);
+        }
+
+        public bool IsTerminated
+        {
+            get
+            {
+                var cell = _self.Underlying;
+                return CellIsReady(cell) && cell.IsTerminated;
+            }
         }
 
         public bool HasMessages

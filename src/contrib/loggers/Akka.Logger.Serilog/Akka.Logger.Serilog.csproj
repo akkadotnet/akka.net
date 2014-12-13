@@ -51,8 +51,9 @@
     <Compile Include="..\..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="Event\Serilog\MessageTemplateCache.cs" />
     <Compile Include="Event\Serilog\SerilogLogMessageFormatter.cs" />
+    <Compile Include="MessageTemplateCache.cs" />
+    <Compile Include="SerilogLogMessageFormatter.cs" />
     <Compile Include="SerilogLogger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

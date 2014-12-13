@@ -35,7 +35,26 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        //TODO: INode should probably be IPEndPoint
+        /// <summary>
+        /// Start the <see cref="Controller"/>, which in turn will
+        /// bind to a TCP port as specified in the `akka.testconductor.port` config
+        /// property, where 0 denotes automatic allocation. Since the latter is
+        /// actually preferred, a `Future[Int]` is returned which will be completed
+        /// with the port number actually chosen, so that this can then be communicated
+        /// to the players for their proper start-up.
+        ///
+        /// This method also invokes Player.startClient,
+        /// since it is expected that the conductor participates in barriers for
+        /// overall coordination. The returned Future will only be completed once the
+        /// client’s start-up finishes, which in fact waits for all other players to
+        /// connect.
+        /// </summary>
+        /// <param name="participants">participants gives the number of participants which shall connect
+        ///  before any of their startClient() operations complete
+        /// </param>
+        /// <param name="name"></param>
+        /// <param name="controllerPort"></param>
+        /// <returns></returns>
         public async Task<INode> StartController(int participants, RoleName name, INode controllerPort)
         {
             if(_controller != null) throw new Exception("TestConductorServer was already started");
@@ -102,9 +121,10 @@ namespace Akka.Remote.TestKit
 
         private void RequireTestConductorTransport()
         {
-            if(!Transport.DefaultAddress.Protocol.Contains(".trttl.gremlin."))
+            //TODO: What is helios equivalent of this?
+            /*if(!Transport.DefaultAddress.Protocol.Contains(".trttl.gremlin."))
                 throw new ConfigurationException("To use this feature you must activate the failure injector adapters " +
-                    "(trttl, gremlin) by specifying `testTransport(on = true)` in your MultiNodeConfig.");
+                    "(trttl, gremlin) by specifying `testTransport(on = true)` in your MultiNodeConfig.");*/
         }
 
         /// <summary>
@@ -236,7 +256,8 @@ namespace Akka.Remote.TestKit
         public async void OnConnect(INode remoteAddress, IConnection responseChannel)
         {
             _log.Debug("connection from {0}", responseChannel.RemoteHost);
-            var fsm = await _controller.Ask<ActorRef>(new Controller.CreateServerFSM(responseChannel), TimeSpan.MaxValue);
+            //TODO: Seems wrong to create new RemoteConnection here
+            var fsm = await _controller.Ask<ActorRef>(new Controller.CreateServerFSM(new RemoteConnection(responseChannel, this)), TimeSpan.FromMilliseconds(Int32.MaxValue));
             _clients.AddOrUpdate(responseChannel, fsm, (connection, @ref) => fsm);
         }
 
@@ -300,6 +321,8 @@ namespace Akka.Remote.TestKit
         {
             _controller = controller;
             _channel = channel;
+
+            InitFSM();
         }
 
         protected void InitFSM()
@@ -367,24 +390,27 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is INetworkOp)
                 {
-                    Log.Warn("client {0} sent unsupported message {1}", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
+                    Log.Warning("client {0} sent unsupported message {1}", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
                     return Stop();
                 }
-                if (@event.FsmEvent is IToClient && @event.FsmEvent is IUnconfirmedClientOp)
+                var toClient = @event.FsmEvent as IToClient;
+                if (toClient != null)
                 {
-                    _channel.Write(@event.FsmEvent);
+                    if (toClient.Msg is IUnconfirmedClientOp)
+                    {
+                        _channel.Write(toClient.Msg);
+                        return Stay();                        
+                    }
+                    if (@event.StateData == null)
+                    {
+                        _channel.Write(toClient.Msg);
+                        return Stay().Using(Sender);
+                    }
+
+                    Log.Warning("cannot send {0} while waiting for previous ACK", toClient.Msg);
                     return Stay();
                 }
-                if (@event.FsmEvent is IToClient && @event.StateData == null)
-                {
-                    _channel.Write(@event.FsmEvent);
-                    return Stay().Using(Sender);
-                }
-                if (@event.FsmEvent is IToClient)
-                {
-                    Log.Warning("cannot send {0} while waiting for previous ACK", @event.FsmEvent);
-                    return Stay();
-                }
+
                 return null;
             });
 

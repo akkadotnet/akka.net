@@ -10,7 +10,7 @@ namespace Akka.Actor
     {
         HashSet<ActorRef> _watching = new HashSet<ActorRef>();
         readonly HashSet<ActorRef> _watchedBy = new HashSet<ActorRef>();
-        HashSet<ActorRef> _terminatedQueue = new HashSet<ActorRef>();
+        HashSet<ActorRef> _terminatedQueue = new HashSet<ActorRef>();//terminatedqueue should never be used outside the message loop
 
         public ActorRef Watch(ActorRef subject)
         {
@@ -63,13 +63,13 @@ namespace Akka.Actor
                 {
                     _watching = RemoveFromSet(actor, _watching);
                 }, actor);
-                if (!isTerminating)
+                if (!IsTerminating)
                 {
                     Self.Tell(new Terminated(actor, existenceConfirmed, addressTerminated), actor);
                     TerminatedQueuedFor(actor);
                 }
             }
-            if (children.ContainsKey(actor.Path.Name))
+            if (ChildrenContainer.Contains(actor))
             {
                 HandleChildTerminated(actor);
             }
@@ -100,7 +100,7 @@ namespace Akka.Actor
 
         protected void TellWatchersWeDied()
         {
-            if (!_watchedBy.Any()) return;
+            if (_watchedBy.Count==0) return;
             try
             {
                 // Don't need to send to parent parent since it receives a DWN by default
@@ -137,7 +137,7 @@ namespace Akka.Actor
 
         protected void UnwatchWatchedActors(ActorBase actor)
         {
-            if (!_watchedBy.Any()) return;
+            if(_watching.Count==0) return;
             MaintainAddressTerminatedSubscription(() =>
             {
                 try

@@ -71,32 +71,40 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class Failed : SystemMessage
     {
+        private readonly long _uid;
+        private readonly Exception _cause;
+        private readonly ActorRef _child;
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="Failed" /> class.
         /// </summary>
         /// <param name="child">The child.</param>
         /// <param name="cause">The cause.</param>
-        public Failed(ActorRef child, Exception cause)
+        /// <param name="uid">The uid</param>
+        public Failed(ActorRef child, Exception cause, long uid)
         {
-            Child = child;
-            Cause = cause;
+            _uid = uid;
+            _child = child;
+            _cause = cause;
         }
 
         /// <summary>
         ///     Gets the child.
         /// </summary>
         /// <value>The child.</value>
-        public ActorRef Child { get; private set; }
+        public ActorRef Child { get { return _child; } }
 
         /// <summary>
         ///     Gets the cause.
         /// </summary>
         /// <value>The cause.</value>
-        public Exception Cause { get; private set; }
+        public Exception Cause { get { return _cause; } }
+
+        public long Uid { get { return _uid; } }
 
         public override string ToString()
         {
-            return "<Failed>: " + Child + (Cause!=null ? ", Cause=" + Cause:"");
+            return "<Failed>: " + _child + " (" + _uid + ") " + (_cause!=null ? ", Cause=" + _cause : "");
         }
     }
 

@@ -9,12 +9,7 @@ namespace Akka.Routing
 
         public ResizablePoolActor(SupervisorStrategy supervisorStrategy)
         {
-            this.supervisorStrategy = supervisorStrategy;
-        }
-
-        protected override SupervisorStrategy SupervisorStrategy()
-        {
-            return supervisorStrategy;
+            SupervisorStrategyInternal = supervisorStrategy;
         }
 
         protected ResizablePoolCell ResizerCell

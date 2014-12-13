@@ -57,7 +57,10 @@ namespace Akka.Remote.TestKit
     //TODO: This is messy, better way to do this?
     //Marker interface to avoid using reflection to work out if message
     //is derived from generic type
-    interface IToClient{}
+    interface IToClient
+    {
+        object Msg { get; }
+    }
 
     class ToClient<T> : IToClient where T : IClientOp, INetworkOp
     {
@@ -66,6 +69,11 @@ namespace Akka.Remote.TestKit
         public ToClient(T msg)
         {
             _msg = msg;
+        }
+
+        object IToClient.Msg
+        {
+            get { return _msg; }
         }
 
         public T Msg
@@ -105,7 +113,10 @@ namespace Akka.Remote.TestKit
     //TODO: This is messy, better way to do this?
     //Marker interface to avoid using reflection to work out if message
     //is derived from generic type
-    interface IToServer{}
+    interface IToServer
+    {
+        object Msg { get; }
+    }
 
     class ToServer<T> : IToServer where T : IServerOp, INetworkOp
     {
@@ -117,6 +128,11 @@ namespace Akka.Remote.TestKit
         }
 
         public T Msg
+        {
+            get { return _msg; }
+        }
+
+        object IToServer.Msg
         {
             get { return _msg; }
         }

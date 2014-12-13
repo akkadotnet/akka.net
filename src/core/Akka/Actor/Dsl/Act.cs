@@ -51,6 +51,11 @@ namespace Akka.Actor.Dsl
             config(this);
         }
 
+        public Act(Action<IActorDsl, IActorContext> config)
+        {
+            config(this, Context);
+        }
+
         public void Receive<T>(Action<T, IActorContext> handler)
         {
             Receive<T>(msg => handler(msg, Context));
@@ -167,6 +172,11 @@ namespace Akka.Actor.Dsl
     public static class ActExtensions
     {
         public static ActorRef ActorOf(this ActorRefFactory factory, Action<IActorDsl> config, string name = null)
+        {
+            return factory.ActorOf(Props.Create(() => new Act(config)), name);
+        }
+
+        public static ActorRef ActorOf(this ActorRefFactory factory, Action<IActorDsl, IActorContext> config, string name = null)
         {
             return factory.ActorOf(Props.Create(() => new Act(config)), name);
         }

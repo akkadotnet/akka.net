@@ -89,6 +89,7 @@
     </Compile>
     <Compile Include="EventFilter\EventFilterFactory.cs" />
     <Compile Include="EventFilter\Internal\InfoFilter.cs" />
+    <Compile Include="EventFilter\Internal\StringMatcher\EqualsStringAndPathMatcher.cs" />
     <Compile Include="EventFilter\Internal\StringMatcher\IStringMatcher.cs" />
     <Compile Include="EventFilter\Internal\StringMatcher\MatchesAll.cs" />
     <Compile Include="EventFilter\Internal\StringMatcher\PredicateMatcher.cs" />

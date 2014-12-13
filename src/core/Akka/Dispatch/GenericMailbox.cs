@@ -185,6 +185,8 @@ namespace Akka.Dispatch
             _isClosed = true;
         }
 
+        public override bool IsClosed { get { return _isClosed; } }
+
         /// <summary>
         /// Disposes this instance.
         /// </summary>

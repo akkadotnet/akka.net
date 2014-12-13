@@ -8,19 +8,25 @@ using Akka.Util;
 
 namespace Akka.Routing
 {
+    /// <summary>
+    /// Marks a given class as consistently hashable, for use with <see cref="ConsistentHashingGroup"/>
+    /// or <see cref="ConsistentHashingPool"/> routers.
+    /// </summary>
     public interface ConsistentHashable
     {
         object ConsistentHashKey { get; }
     }
 
-    public class ConsistentHashableEnvelope : ConsistentHashable
+    /// <summary>
+    /// Envelope you can wrap around a message in order to make it hashable for use with <see cref="ConsistentHashingGroup"/>
+    /// or <see cref="ConsistentHashingPool"/> routers.
+    /// </summary>
+    public class ConsistentHashableEnvelope : RouterEnvelope,  ConsistentHashable
     {
-        public ConsistentHashableEnvelope(object message,object hashKey)
+        public ConsistentHashableEnvelope(object message,object hashKey) : base(message)
         {
-            this.Message = message;
-            this.HashKey = hashKey;
+            HashKey = hashKey;
         }
-        public object Message { get;private set; }
         public object HashKey { get;private set; }
 
         public object ConsistentHashKey
@@ -36,7 +42,7 @@ namespace Akka.Routing
         private ActorSystem _system;
         public override Routee Select(object message, Routee[] routees)
         {
-            if (message == null)
+            if (message == null || routees == null || routees.Length == 0)
                 return NoRoutee.NoRoutee;
 
             if (_hashMapping.ContainsKey(message.GetType()))
@@ -57,7 +63,7 @@ namespace Akka.Routing
             else
             {
                 _log.Value.Warning("Message [{0}] must be handled by hashMapping, or implement [{1}] or be wrapped in [{2}]", message.GetType().Name, typeof(ConsistentHashable).Name, typeof(ConsistentHashableEnvelope).Name);
-                return NoRoutee.NoRoutee;
+                return Routee.NoRoutee;
             }
         }
 

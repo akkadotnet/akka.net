@@ -79,7 +79,7 @@ namespace Akka.Actor
     public abstract partial class ActorBase : IInternalActor
     {
         private ActorRef _clearedSelf;
-        private bool _hasBeenCleared;
+        private bool HasBeenCleared { get { return _clearedSelf != null; } }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorBase" /> class.
@@ -105,7 +105,7 @@ namespace Akka.Actor
         ///     Gets the self ActorRef
         /// </summary>
         /// <value>Self ActorRef</value>
-        protected ActorRef Self { get { return _hasBeenCleared?  _clearedSelf : Context.Self; } }
+        protected ActorRef Self { get { return HasBeenCleared?  _clearedSelf : Context.Self; } }
 
         /// <summary>
         ///     Gets the context.
@@ -209,8 +209,12 @@ namespace Akka.Actor
 
         internal void Clear(ActorRef self)
         {
-            _hasBeenCleared = true;
             _clearedSelf = self;
+        }
+
+        internal void Unclear()
+        {
+            _clearedSelf = null;
         }
 
 
