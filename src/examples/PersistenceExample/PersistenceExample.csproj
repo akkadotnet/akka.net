@@ -4,17 +4,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{FCA84DEA-C118-424B-9EB8-34375DFEF18A}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{4022147A-4F95-4A04-BE09-01B7952BBDD9}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Akka.Persistence</RootNamespace>
-    <AssemblyName>Akka.Persistence</AssemblyName>
+    <RootNamespace>PersistenceExample</RootNamespace>
+    <AssemblyName>PersistenceExample</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
-    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -24,6 +23,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -39,50 +39,30 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="xunit">
-      <HintPath>..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GuaranteedDelivery.cs" />
-    <Compile Include="Eventsourced.cs" />
-    <Compile Include="JournalProtocol.cs" />
-    <Compile Include="Journal\AsyncRecovery.cs" />
-    <Compile Include="Journal\AsyncWriteJournal.cs" />
-    <Compile Include="Journal\AsyncWriteProxy.cs" />
-    <Compile Include="Journal\MemoryJournal.cs" />
-    <Compile Include="Journal\SyncWriteJournal.cs" />
-    <Compile Include="Journal\WriteJournal.cs" />
-    <Compile Include="Persistence.cs" />
-    <Compile Include="Persistent.cs" />
-    <Compile Include="Processor.cs" />
+    <Compile Include="ExamplePersistentActor.cs" />
+    <Compile Include="ExamplePersistentFailingActor.cs" />
+    <Compile Include="ExampleView.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Recovery.cs" />
-    <Compile Include="Serialization\MessageSerializer.cs" />
-    <Compile Include="Serialization\SnapshotSerializer.cs" />
-    <Compile Include="Snapshot.cs" />
-    <Compile Include="Snapshot\LocalSnapshotStore.cs" />
-    <Compile Include="Snapshot\SnapshotStore.cs" />
-    <Compile Include="State.cs" />
-    <Compile Include="Views.cs" />
+    <Compile Include="SnapshotedExampleActor.cs" />
+    <Compile Include="ViewExampleActor.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\core\Akka\Akka.csproj">
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\core\Akka.Persistence\Akka.Persistence.csproj">
+      <Project>{fca84dea-c118-424b-9eb8-34375dfef18a}</Project>
+      <Name>Akka.Persistence</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\core\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
-  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

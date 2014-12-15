@@ -100,10 +100,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.VsTest.Tests", "contrib\testkits\Akka.TestKit.VsTest.Tests\Akka.TestKit.VsTest.Tests.csproj", "{F5697316-A1C6-4B99-84B5-1E7DEB08D669}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Logger.Serilog", "contrib\loggers\Akka.Logger.Serilog\Akka.Logger.Serilog.csproj", "{53D9D2F0-4A35-4FCE-980C-8F7F3DCBDB2B}"
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serilog", "contrib\loggers\Akka.Serilog\Akka.Serilog.csproj", "{53D9D2F0-4A35-4FCE-980C-8F7F3DCBDB2B}"
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence", "Akka.Persistence\Akka.Persistence.csproj", "{FCA84DEA-C118-424B-9EB8-34375DFEF18A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Tests", "Akka.Persistence.Tests\Akka.Persistence.Tests.csproj", "{4492004A-A8D0-45B0-BACC-05BA2F38EC55}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serilog", "contrib\loggers\Akka.Serilog\Akka.Serilog.csproj", "{7DFE7F49-72DA-4179-BB48-D6B9FB0F1FFA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster", "core\Akka.Cluster\Akka.Cluster.csproj", "{6AB00F61-269A-4501-B06A-026707F000A7}"
 EndProject
@@ -144,6 +142,13 @@ EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Deploy.Remote", "examples\FSharp.Deploy.Remote\FSharp.Deploy.Remote.fsproj", "{F53B3F7C-6422-4AA7-AF87-B838D736DBAB}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Deploy.Local", "examples\FSharp.Deploy.Local\FSharp.Deploy.Local.fsproj", "{B65AAB66-A779-4A2C-AE6B-495C292551AE}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Persistence", "Persistence", "{B17C5E75-B5F7-4492-9A97-A0C8DF66EF02}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence", "core\Akka.Persistence\Akka.Persistence.csproj", "{FCA84DEA-C118-424B-9EB8-34375DFEF18A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Tests", "core\Akka.Persistence.Tests\Akka.Persistence.Tests.csproj", "{4492004A-A8D0-45B0-BACC-05BA2F38EC55}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersistenceExample", "examples\PersistenceExample\PersistenceExample.csproj", "{4022147A-4F95-4A04-BE09-01B7952BBDD9}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HelloWorld", "HelloWorld", "{19FD9F6D-7ED2-4DF6-98EE-348027F8D5DA}"
 EndProject
@@ -514,6 +519,14 @@ Global
 		{4492004A-A8D0-45B0-BACC-05BA2F38EC55}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{4492004A-A8D0-45B0-BACC-05BA2F38EC55}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4492004A-A8D0-45B0-BACC-05BA2F38EC55}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4022147A-4F95-4A04-BE09-01B7952BBDD9}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{4022147A-4F95-4A04-BE09-01B7952BBDD9}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{4022147A-4F95-4A04-BE09-01B7952BBDD9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4022147A-4F95-4A04-BE09-01B7952BBDD9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4022147A-4F95-4A04-BE09-01B7952BBDD9}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{4022147A-4F95-4A04-BE09-01B7952BBDD9}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{4022147A-4F95-4A04-BE09-01B7952BBDD9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4022147A-4F95-4A04-BE09-01B7952BBDD9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -576,7 +589,9 @@ Global
 		{B65AAB66-A779-4A2C-AE6B-495C292551AE} = {68D89B2A-6770-483E-B7B0-C7EDAE0C2A6D}
 		{19FD9F6D-7ED2-4DF6-98EE-348027F8D5DA} = {69279534-1DBA-4115-BF8B-03F77FC8125E}
 		{F09CC498-22E8-4D87-A235-CCE17E629612} = {19FD9F6D-7ED2-4DF6-98EE-348027F8D5DA}
+		{B17C5E75-B5F7-4492-9A97-A0C8DF66EF02} = {69279534-1DBA-4115-BF8B-03F77FC8125E}
 		{FCA84DEA-C118-424B-9EB8-34375DFEF18A} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 		{4492004A-A8D0-45B0-BACC-05BA2F38EC55} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
+		{4022147A-4F95-4A04-BE09-01B7952BBDD9} = {B17C5E75-B5F7-4492-9A97-A0C8DF66EF02}
 	EndGlobalSection
 EndGlobal

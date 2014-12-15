@@ -4,7 +4,7 @@ using Akka.Actor;
 namespace Akka.Persistence
 {
 
-    internal interface IState
+    public interface IState
     {
         void AroundReceive(Receive receive, object message);
     }

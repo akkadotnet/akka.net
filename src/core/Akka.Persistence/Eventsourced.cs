@@ -7,8 +7,8 @@ namespace Akka.Persistence
 {
     public interface IEventsourced
     {
-        Receive ReceiveRecover { get; }
-        Receive ReceiveCommand { get; }
+        bool ReceiveRecover(object message);
+        bool ReceiveCommand(object message);
         void Persist<TEvent>(TEvent evt, Action<TEvent> handler);
         void Persist<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler);
         Task PersistAsync<TEvent>(TEvent evt, Action<TEvent> handler);
@@ -50,13 +50,13 @@ namespace Akka.Persistence
         public Action<object> Handler { get; private set; }
     }
 
-    public class PersistentActorBase : Recovery, IEventsourced
+    public abstract class PersistentActorBase : Recovery, IEventsourced
     {
-        public PersistentActorBase()
+        protected PersistentActorBase()
         {
         }
 
-        public PersistentActorBase(string name)
+        protected PersistentActorBase(string name)
         {
         }
 
@@ -68,8 +68,10 @@ namespace Akka.Persistence
         internal IState CurrentState { get; set; }
         internal IGuaranteedDeliverer Deliverer { get; private set; }
 
-        public Receive ReceiveRecover { get; private set; }
-        public Receive ReceiveCommand { get; private set; }
+        public abstract bool ReceiveRecover(object message);
+
+        public abstract bool ReceiveCommand(object message);
+
         public void Persist<TEvent>(TEvent evt, Action<TEvent> handler)
         {
             throw new NotImplementedException();
@@ -100,5 +102,9 @@ namespace Akka.Persistence
             throw new NotImplementedException();
         }
 
+        public void UnstashAll()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

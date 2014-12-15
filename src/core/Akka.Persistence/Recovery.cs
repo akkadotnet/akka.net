@@ -36,13 +36,14 @@ namespace Akka.Persistence
         protected internal List<IResequencable> ProcessorBatch;
 
         public IStash Stash { get; set; }
+        public IPersistentRepresentation CurrentPersistentMessage { get { return _currentPersistent; } }
 
         protected Recovery()
         {
-            var persistenceExt = Context.System.GetExtension<Persistence>();
+            var persistenceExt = Context.System.GetExtension<PersistenceExtension>();
             if (persistenceExt == null)
             {
-                throw new ArgumentException(string.Format("Couldn't intantiate {0} class, because current context ActorSystem has no Persistence extension initalized", 
+                throw new ArgumentException(string.Format("Couldn't intantiate {0} class, because current context ActorSystem has no PersistenceExtension extension initalized", 
                     GetType().FullName));
             }
 
@@ -50,8 +51,8 @@ namespace Akka.Persistence
             ProcessorBatch = new List<IResequencable>();
         }
 
-        public string SnapshoterId { get; private set; }
-        public string PersistenceId { get; private set; }
+        public string SnapshoterId { get; protected set; }
+        public virtual string PersistenceId { get; protected set; }
         public long LastSequenceNr { get { return _lastSequenceNr; } }
         public long SnapshotSequenceNr { get { return _lastSequenceNr; }}
 

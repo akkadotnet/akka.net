@@ -6,12 +6,12 @@ namespace Akka.Persistence.Journal
 {
     public abstract class SyncWriteJournal: WriteJournalBase, IAsyncRecovery
     {
-        private readonly Persistence _persistence;
+        private readonly PersistenceExtension _persistence;
         private readonly bool _publish;
 
         protected SyncWriteJournal()
         {
-            _persistence = Context.System.GetExtension<Persistence>();
+            _persistence = Context.System.GetExtension<PersistenceExtension>();
             if (_persistence == null)
             {
                 throw new ArgumentException("Couldn't initialize SyncWriteJournal instance, because associated Persistance extension has not been used in current actor system context.");

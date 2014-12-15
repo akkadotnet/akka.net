@@ -6,7 +6,7 @@ using Akka.Persistence.Journal;
 
 namespace Akka.Persistence
 {
-    public class Persistence : IExtension
+    public class PersistenceExtension : IExtension
     {
         private const string DefaultPluginDispatcherId = "akka.persistence.dispatchers.default-plugin-dispatcher";
 
@@ -17,7 +17,7 @@ namespace Akka.Persistence
 
         public PersistenceSettings Settings { get; private set; }
 
-        public Persistence(ExtendedActorSystem system)
+        public PersistenceExtension(ExtendedActorSystem system)
         {
             _system = system;
             _config = system.Settings.Config.GetConfig("akka.persistence");
@@ -59,14 +59,20 @@ namespace Akka.Persistence
         }
     }
 
-    public class PersistenceIdProvider : ExtensionIdProvider<Persistence>
+    /// <summary>
+    /// Persistence extension.
+    /// </summary>
+    public class Persistence : ExtensionIdProvider<PersistenceExtension>
     {
-        public override Persistence CreateExtension(ExtendedActorSystem system)
+        public override PersistenceExtension CreateExtension(ExtendedActorSystem system)
         {
-            return new Persistence(system);
+            return new PersistenceExtension(system);
         }
     }
 
+    /// <summary>
+    /// Persistence configuration.
+    /// </summary>
     public class PersistenceSettings : Settings
     {
         public JournalSettings Journal { get; private set; }

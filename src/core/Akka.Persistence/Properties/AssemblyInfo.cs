@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Akka.Persistence.Tests")]
+[assembly: AssemblyTitle("Akka.PersistenceExtension")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Akka.Persistence.Tests")]
+[assembly: AssemblyProduct("Akka.PersistenceExtension")]
 [assembly: AssemblyCopyright("Copyright ©  2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("52136a30-911d-443a-a032-43e26df33b79")]
+[assembly: Guid("e3bcba88-003c-4cda-8a60-f0c2553fe3c8")]
 
 // Version information for an assembly consists of the following four values:
 //

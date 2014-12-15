@@ -55,5 +55,15 @@ namespace Akka.Persistence
     /// </summary>
     public abstract class PersistentView : Recovery
     {
+        public abstract string ViewId { get; }
+
+        /// <summary>
+        /// If true, the currently processed message was persisted (is sent from the Journal).
+        /// If false, the currently processed message comes from another actor (from "user-land").
+        /// </summary>
+        public bool IsPersistent
+        {
+            get { return CurrentPersistentMessage != null; }
+        }
     }
 }

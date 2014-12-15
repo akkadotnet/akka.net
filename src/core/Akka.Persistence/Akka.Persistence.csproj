@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{4492004A-A8D0-45B0-BACC-05BA2F38EC55}</ProjectGuid>
+    <ProjectGuid>{FCA84DEA-C118-424B-9EB8-34375DFEF18A}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Akka.Persistence.Tests</RootNamespace>
-    <AssemblyName>Akka.Persistence.Tests</AssemblyName>
+    <RootNamespace>Akka.Persistence</RootNamespace>
+    <AssemblyName>Akka.Persistence</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
@@ -44,39 +44,37 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GuaranteedDeliveryCrashSpec.cs" />
-    <Compile Include="GuaranteedDeliveryFailureSpec.cs" />
-    <Compile Include="GuaranteedDeliverySpec.cs" />
-    <Compile Include="PersistenceSpec.cs" />
-    <Compile Include="PersistentActorSpec.cs" />
+    <Compile Include="GuaranteedDelivery.cs" />
+    <Compile Include="Eventsourced.cs" />
+    <Compile Include="JournalProtocol.cs" />
+    <Compile Include="Journal\AsyncRecovery.cs" />
+    <Compile Include="Journal\AsyncWriteJournal.cs" />
+    <Compile Include="Journal\AsyncWriteProxy.cs" />
+    <Compile Include="Journal\MemoryJournal.cs" />
+    <Compile Include="Journal\SyncWriteJournal.cs" />
+    <Compile Include="Journal\WriteJournal.cs" />
+    <Compile Include="Persistence.cs" />
+    <Compile Include="Persistent.cs" />
+    <Compile Include="Processor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SnapshotSpec.cs" />
+    <Compile Include="Recovery.cs" />
+    <Compile Include="Serialization\MessageSerializer.cs" />
+    <Compile Include="Serialization\SnapshotSerializer.cs" />
+    <Compile Include="Snapshot.cs" />
+    <Compile Include="Snapshot\LocalSnapshotStore.cs" />
+    <Compile Include="Snapshot\SnapshotStore.cs" />
+    <Compile Include="State.cs" />
+    <Compile Include="PersistentView.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj">
-      <Project>{fca84dea-c118-424b-9eb8-34375dfef18a}</Project>
-      <Name>Akka.Persistence</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj">
-      <Project>{11F4D4B8-7E07-4457-ABF2-609B3E7B2649}</Project>
-      <Name>Akka.TestKit.Xunit</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\core\Akka.TestKit\Akka.TestKit.csproj">
-      <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
-      <Name>Akka.TestKit</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj">
-      <Project>{E636D23C-3432-4AA9-9A5D-5F29D33D3399}</Project>
-      <Name>Akka.Tests.Shared.Internals</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\core\Akka\Akka.csproj">
+    <ProjectReference Include="..\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <Compile Include="PersistentActorSpec.Stubs.cs" />
+    <None Include="persistence.conf" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

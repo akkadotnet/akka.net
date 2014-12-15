@@ -188,7 +188,7 @@ namespace Akka.Persistence
         public GuaranteedDeliverer(IActorContext actorContext)
         {
             _context = actorContext;
-            var persistence = actorContext.System.GetExtension<Persistence>();
+            var persistence = actorContext.System.GetExtension<PersistenceExtension>();
             if (persistence == null)
             {
                 throw new ArgumentException("Provided actor context refers to actor system, which doesn't have necessary persistance extension initialized");
@@ -308,11 +308,11 @@ namespace Akka.Persistence
         }
     }
 
-    public class PersistentGuaranteedDeliveryBase : PersistentActorBase
+    public abstract class PersistentGuaranteedDeliveryBase : PersistentActorBase
     {
         private readonly GuaranteedDeliverer _deliverer;
 
-        public PersistentGuaranteedDeliveryBase()
+        protected PersistentGuaranteedDeliveryBase()
         {
             _deliverer = new GuaranteedDeliverer(Context);
         }
