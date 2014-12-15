@@ -1,7 +1,7 @@
 ﻿open System
 
 [<EntryPoint>]
-let main args =
+let main _ =
     Supervisioning.main()
     Console.ReadLine() |> ignore
     0
