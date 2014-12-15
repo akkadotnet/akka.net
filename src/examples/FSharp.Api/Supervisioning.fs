@@ -21,7 +21,7 @@ let workerFun (mailbox : Actor<_>) =
             | Value num when num > 0 -> 
                 state := num
             | Value num ->
-                logError mailbox "Received an error-prone value %d" num
+                logErrorf mailbox "Received an error-prone value %d" num
                 raise (ArithmeticException "values equal or less than 0")
             | Respond -> mailbox.Sender() <! !state
             return! loop()

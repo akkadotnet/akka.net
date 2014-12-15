@@ -51,7 +51,7 @@ let main _ =
                         | (REQ, m) -> 
                             printfn "Remote actor received: %A" m
                             mailbox.Sender() <! (RES, "ECHO " + m)
-                        | _ -> logError mailbox "Received unexpected message: %A" msg
+                        | _ -> logErrorf mailbox "Received unexpected message: %A" msg
                         return! loop()
                     }
                 loop() 
