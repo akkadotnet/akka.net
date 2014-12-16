@@ -13,12 +13,16 @@ namespace Akka.DI.CastleWindsor
     {
         private IWindsorContainer container;
         private ConcurrentDictionary<string, Type> typeCache;
+        private ActorSystem system;
 
-        public WindsorDependencyResolver(IWindsorContainer container)
+        public WindsorDependencyResolver(IWindsorContainer container, ActorSystem system)
         {
+            if (system == null) throw new ArgumentNullException("system");
             if (container == null) throw new ArgumentNullException("container");
             this.container = container;
             typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
+            this.system = system;
+            this.system.AddDependencyResolver(this);
         }
 
       
@@ -43,7 +47,10 @@ namespace Akka.DI.CastleWindsor
             return () => (ActorBase)container.Resolve(GetType(actorName));
         }
 
-        
+        public void Create<TActor>(string name) where TActor : ActorBase
+        {
+            system.ActorOf(system.GetExtension<DIExt>().Props(typeof(TActor).Name), name);
+        }
 
     }
     internal static class Extensions

@@ -11,6 +11,6 @@ namespace Akka.DI.Core
     {
         Type GetType(string actorName);
         Func<ActorBase> CreateActorFactory(string actorName);
-
+        void Create<TActor>(string name) where TActor : ActorBase;
     }
 }

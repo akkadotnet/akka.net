@@ -14,11 +14,6 @@ namespace Akka.DI.Core
             system.RegisterExtension((IExtensionId)DIExtension.DIExtensionProvider);
             DIExtension.DIExtensionProvider.Get(system).Initialize(dependencyResolve);
         }
-
-        public static void ActorOf<TActor>(this ActorSystem system, string Name) where TActor : ActorBase
-        {
-            system.ActorOf(system.GetExtension<DIExt>().Props(typeof(TActor).Name), Name);
-        }
         
     }
 }

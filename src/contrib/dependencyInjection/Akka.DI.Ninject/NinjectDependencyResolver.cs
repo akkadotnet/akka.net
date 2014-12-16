@@ -14,12 +14,16 @@ namespace Akka.DI.Ninject
        IKernel container;
 
         private ConcurrentDictionary<string, Type> typeCache;
+        private ActorSystem system;
 
-        public NinjectDependencyResolver(IKernel container)
+        public NinjectDependencyResolver(IKernel container, ActorSystem system)
         {
+            if (system == null) throw new ArgumentNullException("system");
             if (container == null) throw new ArgumentNullException("container");
             this.container = container;
             typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
+            this.system = system;
+            this.system.AddDependencyResolver(this);
         }
 
         public Type GetType(string actorName)
@@ -37,7 +41,12 @@ namespace Akka.DI.Ninject
 
                 return (ActorBase)container.GetService(actorType);
             };
-        }   
+        }
+
+        public void Create<TActor>(string name) where TActor : ActorBase
+        {
+            system.ActorOf(system.GetExtension<DIExt>().Props(typeof(TActor).Name), name);
+        }
     }
     internal static class Extensions
     {

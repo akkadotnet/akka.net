@@ -13,11 +13,16 @@ namespace Akka.DI.AutoFac
     {
         private IContainer container;
         private ConcurrentDictionary<string, Type> typeCache;
+        private ActorSystem system;
 
-        public AutoFacDependencyResolver(IContainer container)
+        public AutoFacDependencyResolver(IContainer container, ActorSystem system)
         {
+            if (system == null) throw new ArgumentNullException("system");
+            if (container == null) throw new ArgumentNullException("container");
             this.container = container;
             typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
+            this.system = system;
+            this.system.AddDependencyResolver(this);
         }
 
         public Type GetType(string actorName)
@@ -46,7 +51,11 @@ namespace Akka.DI.AutoFac
                 return (ActorBase)container.Resolve(actorType);
             };
         }
-        
+
+        public void Create<TActor>(string name = null) where TActor : ActorBase
+        {
+            system.ActorOf(system.GetExtension<DIExt>().Props(typeof(TActor).Name), name);
+        }
     }
     internal static class Extensions
     {

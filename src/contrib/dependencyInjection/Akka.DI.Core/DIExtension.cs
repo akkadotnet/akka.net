@@ -17,5 +17,6 @@ namespace Akka.DI.Core
             var extension = new DIExt();
             return extension;
         }
+
     }
 }
