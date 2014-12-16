@@ -47,9 +47,9 @@ namespace Akka.DI.CastleWindsor
             return () => (ActorBase)container.Resolve(GetType(actorName));
         }
 
-        public void Create<TActor>(string name) where TActor : ActorBase
+        public Props Create<TActor>() where TActor : ActorBase
         {
-            system.ActorOf(system.GetExtension<DIExt>().Props(typeof(TActor).Name), name);
+            return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
         }
 
     }

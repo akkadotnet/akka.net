@@ -52,10 +52,11 @@ namespace Akka.DI.AutoFac
             };
         }
 
-        public void Create<TActor>(string name = null) where TActor : ActorBase
+        public Props Create<TActor>() where TActor : ActorBase
         {
-            system.ActorOf(system.GetExtension<DIExt>().Props(typeof(TActor).Name), name);
+            return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
         }
+
     }
     internal static class Extensions
     {
