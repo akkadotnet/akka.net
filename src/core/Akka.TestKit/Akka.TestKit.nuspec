@@ -10,7 +10,7 @@
     <summary>This only contains base functionality. You need a Akka.TestKit.* package!</summary>
     <licenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</licenseUrl>
     <projectUrl>https://github.com/akkadotnet/akka.net</projectUrl>
-    <iconUrl>https://raw.githubusercontent.com/akkadotnet/akka.net/gh-pages/images/icon.png</iconUrl>
+    <iconUrl>https://raw.githubusercontent.com/akkadotnet/akka.net/gh-pages/images/icon-32x32.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <releaseNotes>@releaseNotes@</releaseNotes>
     <copyright>@copyright@</copyright>
