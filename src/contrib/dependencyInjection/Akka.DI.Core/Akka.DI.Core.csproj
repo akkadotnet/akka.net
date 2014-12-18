@@ -42,7 +42,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DIActorProducerClass.cs" />
+    <Compile Include="DIActorProducer.cs" />
     <Compile Include="DIExt.cs" />
     <Compile Include="DIExtension.cs" />
     <Compile Include="Extensions.cs" />

@@ -7,13 +7,13 @@ using System.Threading.Tasks;
 
 namespace Akka.DI.Core
 {
-    public class DIActorProducerClass : IndirectActorProducer
+    public class DIActorProducer : IndirectActorProducer
     {
         private IDependencyResolver dependencyResolver;
         private string actorName;
         readonly Func<ActorBase> actorFactory;
 
-        public DIActorProducerClass(IDependencyResolver dependencyResolver,
+        public DIActorProducer(IDependencyResolver dependencyResolver,
                                     string actorName)
         {
             if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");

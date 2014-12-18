@@ -18,7 +18,7 @@ namespace Akka.DI.Core
         }
         public Props Props(String actorName)
         {
-            return new Props(typeof(DIActorProducerClass), new object[] { dependencyResolver, actorName });
+            return new Props(typeof(DIActorProducer), new object[] { dependencyResolver, actorName });
         }
 
     }
