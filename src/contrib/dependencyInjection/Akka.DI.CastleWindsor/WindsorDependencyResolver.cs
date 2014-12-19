@@ -9,12 +9,21 @@ using System.Text;
 
 namespace Akka.DI.CastleWindsor
 {
+    /// <summary>
+    /// Provide services to ActorSytem Extension system used to create Actor
+    /// using the CastleWindsor IOC Container to handle wiring up dependencies to
+    /// Actors
+    /// </summary>
     public class WindsorDependencyResolver : IDependencyResolver
     {
         private IWindsorContainer container;
         private ConcurrentDictionary<string, Type> typeCache;
         private ActorSystem system;
-
+        /// <summary>
+        /// WindsorDependencyResolver Constructor
+        /// </summary>
+        /// <param name="container">Instance of the WindsorContainer</param>
+        /// <param name="system">Instance of the ActorSystem</param>
         public WindsorDependencyResolver(IWindsorContainer container, ActorSystem system)
         {
             if (system == null) throw new ArgumentNullException("system");
@@ -25,7 +34,11 @@ namespace Akka.DI.CastleWindsor
             this.system.AddDependencyResolver(this);
         }
 
-      
+        /// <summary>
+        /// Returns the Type for the Actor Type specified in the actorName
+        /// </summary>
+        /// <param name="actorName"></param>
+        /// <returns></returns>
         public Type GetType(string actorName)
         {
  
@@ -41,12 +54,20 @@ namespace Akka.DI.CastleWindsor
 
             return typeCache[actorName];
         }
-
+        /// <summary>
+        /// Creates a delegate factory based on the actorName
+        /// </summary>
+        /// <param name="actorName">Name of the ActorType</param>
+        /// <returns>factory delegate</returns>
         public Func<ActorBase> CreateActorFactory(string actorName)
         {
             return () => (ActorBase)container.Resolve(GetType(actorName));
         }
-
+        /// <summary>
+        /// Used Register the Configuration for the ActorType specified in TActor
+        /// </summary>
+        /// <typeparam name="TActor">Tye of Actor that needs to be created</typeparam>
+        /// <returns>Props configuration instance</returns>
         public Props Create<TActor>() where TActor : ActorBase
         {
             return system.GetExtension<DIExt>().Props(typeof(TActor).Name);

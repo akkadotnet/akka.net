@@ -15,12 +15,13 @@ namespace Akka.DI.Core
         /// Method used to registrer the IDependencyResolver to the ActorSytem
         /// </summary>
         /// <param name="system">Instance of the AcotrSystem</param>
-        /// <param name="dependencyResolve">Contrete Instance of IDepenendcyResolver i.e. Akka.DI.AutoFac.AutoFacDependencyResolver</param>
-        public static void AddDependencyResolver(this ActorSystem system, IDependencyResolver dependencyResolve)
+        /// <param name="dependencyResolver">Contrete Instance of IDepenendcyResolver i.e. Akka.DI.AutoFac.AutoFacDependencyResolver</param>
+        public static void AddDependencyResolver(this ActorSystem system, IDependencyResolver dependencyResolver)
         {
             if (system == null) throw new ArgumentNullException("system");
+            if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
             system.RegisterExtension((IExtensionId)DIExtension.DIExtensionProvider);
-            DIExtension.DIExtensionProvider.Get(system).Initialize(dependencyResolve);
+            DIExtension.DIExtensionProvider.Get(system).Initialize(dependencyResolver);
         }
         
     }

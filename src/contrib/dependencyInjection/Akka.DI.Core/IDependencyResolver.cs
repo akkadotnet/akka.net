@@ -8,13 +8,13 @@ using System.Threading.Tasks;
 namespace Akka.DI.Core
 {
     /// <summary>
-    /// Contract used provide services to ActorSytem Extension system used to creat
+    /// Contract used provide services to ActorSytem Extension system used to create
     /// Actors
     /// </summary>
     public interface IDependencyResolver
     {
         /// <summary>
-        /// Gets the Type for the Actor Type specified in the actorName
+        /// Returns the Type for the Actor Type specified in the actorName
         /// </summary>
         /// <param name="actorName"></param>
         /// <returns>Type of the Actor specified in the actorName</returns>

@@ -9,12 +9,22 @@ using System.Text;
 
 namespace Akka.DI.AutoFac
 {
+    /// <summary>
+    /// Provide services to ActorSytem Extension system used to create Actor
+    /// using the AutoFac IOC Container to handle wiring up dependencies to
+    /// Actors
+    /// </summary>
     public class AutoFacDependencyResolver : IDependencyResolver
     {
         private IContainer container;
         private ConcurrentDictionary<string, Type> typeCache;
         private ActorSystem system;
 
+        /// <summary>
+        /// AutoFacDependencyResolver Constructor
+        /// </summary>
+        /// <param name="container">Instance to the AutoFac IContainer</param>
+        /// <param name="system">Instance of the ActorSystem</param>
         public AutoFacDependencyResolver(IContainer container, ActorSystem system)
         {
             if (system == null) throw new ArgumentNullException("system");
@@ -25,6 +35,11 @@ namespace Akka.DI.AutoFac
             this.system.AddDependencyResolver(this);
         }
 
+        /// <summary>
+        /// Returns the Type for the Actor Type specified in the actorName
+        /// </summary>
+        /// <param name="actorName"></param>
+        /// <returns></returns>
         public Type GetType(string actorName)
         {
      
@@ -42,7 +57,11 @@ namespace Akka.DI.AutoFac
             return typeCache[actorName];
 
         }
-       
+        /// <summary>
+        /// Creates a delegate factory based on the actorName
+        /// </summary>
+        /// <param name="actorName">Name of the ActorType</param>
+        /// <returns>factory delegate</returns>
         public Func<ActorBase> CreateActorFactory(string actorName)
         {
             return () =>
@@ -51,7 +70,11 @@ namespace Akka.DI.AutoFac
                 return (ActorBase)container.Resolve(actorType);
             };
         }
-
+        /// <summary>
+        /// Used Register the Configuration for the ActorType specified in TActor
+        /// </summary>
+        /// <typeparam name="TActor">Tye of Actor that needs to be created</typeparam>
+        /// <returns>Props configuration instance</returns>
         public Props Create<TActor>() where TActor : ActorBase
         {
             return system.GetExtension<DIExt>().Props(typeof(TActor).Name);

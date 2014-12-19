@@ -9,6 +9,11 @@ using System.Text;
 
 namespace Akka.DI.Ninject
 {
+    /// <summary>
+    /// Provide services to ActorSytem Extension system used to create Actor
+    /// using the Ninject IOC Container to handle wiring up dependencies to
+    /// Actors
+    /// </summary>
     public class NinjectDependencyResolver : IDependencyResolver
     {
        IKernel container;
@@ -16,6 +21,11 @@ namespace Akka.DI.Ninject
         private ConcurrentDictionary<string, Type> typeCache;
         private ActorSystem system;
 
+        /// <summary>
+        /// NinjectDependencyResolver Constructor
+        /// </summary>
+        /// <param name="container">Instance IKernel</param>
+        /// <param name="system">Instance to ActorSystem</param>
         public NinjectDependencyResolver(IKernel container, ActorSystem system)
         {
             if (system == null) throw new ArgumentNullException("system");
@@ -25,14 +35,22 @@ namespace Akka.DI.Ninject
             this.system = system;
             this.system.AddDependencyResolver(this);
         }
-
+        /// <summary>
+        /// Returns the Type for the Actor Type specified in the actorName
+        /// </summary>
+        /// <param name="actorName"></param>
+        /// <returns></returns>
         public Type GetType(string actorName)
         {
             typeCache.TryAdd(actorName, actorName.GetTypeValue());
 
             return typeCache[actorName];
         }
-
+        /// <summary>
+        /// Creates a delegate factory based on the actorName
+        /// </summary>
+        /// <param name="actorName">Name of the ActorType</param>
+        /// <returns>factory delegate</returns>
         public Func<ActorBase> CreateActorFactory(string actorName)
         {
             return () =>
@@ -42,7 +60,11 @@ namespace Akka.DI.Ninject
                 return (ActorBase)container.GetService(actorType);
             };
         }
-
+        /// <summary>
+        /// Used Register the Configuration for the ActorType specified in TActor
+        /// </summary>
+        /// <typeparam name="TActor">Tye of Actor that needs to be created</typeparam>
+        /// <returns>Props configuration instance</returns>
         public Props Create<TActor>() where TActor : ActorBase
         {
             return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
