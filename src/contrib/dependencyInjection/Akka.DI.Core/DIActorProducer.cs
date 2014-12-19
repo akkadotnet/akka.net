@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace Akka.DI.Core
 {
+    /// <summary>
+    /// Dependency Injection Backed IndirectActorProducer
+    /// </summary>
     public class DIActorProducer : IndirectActorProducer
     {
         private IDependencyResolver dependencyResolver;
@@ -14,7 +17,7 @@ namespace Akka.DI.Core
         readonly Func<ActorBase> actorFactory;
 
         public DIActorProducer(IDependencyResolver dependencyResolver,
-                                    string actorName)
+                               string actorName)
         {
             if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
             if (actorName == null) throw new ArgumentNullException("actorName");

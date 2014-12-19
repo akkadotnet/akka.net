@@ -7,10 +7,12 @@ using System.Threading.Tasks;
 
 namespace Akka.DI.Core
 {
+    /// <summary>
+    /// Used to Create a instance of DIExt which implements IExtension
+    /// </summary>
     public class DIExtension : ExtensionIdProvider<DIExt>
     {
         public static DIExtension DIExtensionProvider = new DIExtension();
-
 
         public override DIExt CreateExtension(ExtendedActorSystem system)
         {
