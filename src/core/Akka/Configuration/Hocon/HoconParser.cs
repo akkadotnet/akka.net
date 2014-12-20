@@ -112,6 +112,13 @@ namespace Akka.Configuration.Hocon
                         ParseObject(value, false);
                         return;
                     case TokenType.Assign:
+                        
+                        if (!value.IsObject())
+                        {
+                            //if not an object, then replace the value.
+                            //if object. value should be merged
+                            value.Clear();
+                        }
                         ParseValue(value);
                         return;
                     case TokenType.ObjectStart:
@@ -131,7 +138,6 @@ namespace Akka.Configuration.Hocon
             if (_reader.EoF)
                 throw new Exception("End of file reached while trying to read a value");
 
-            bool isObject = owner.IsObject();
             _reader.PullWhitespaceAndComments();
             while (_reader.IsValue())
             {
@@ -142,10 +148,9 @@ namespace Akka.Configuration.Hocon
                     case TokenType.EoF:
                         break;
                     case TokenType.LiteralValue:
-                        if (isObject)
+                        if (owner.IsObject())
                         {
                             //needed to allow for override objects
-                            isObject = false;
                             owner.Clear();
                         }
                         var lit = new HoconLiteral
