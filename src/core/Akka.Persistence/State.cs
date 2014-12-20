@@ -7,6 +7,7 @@ namespace Akka.Persistence
     public interface IState
     {
         void AroundReceive(Receive receive, object message);
+        bool IsRecoveryRunning { get; }
     }
 
     internal sealed class RecoveryContext

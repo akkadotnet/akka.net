@@ -46,6 +46,10 @@
   <ItemGroup>
     <Compile Include="GuaranteedDelivery.cs" />
     <Compile Include="Eventsourced.cs" />
+    <Compile Include="Eventsourced.State.cs" />
+    <Compile Include="PersistentActor.cs" />
+    <Compile Include="PersistentView.State.cs" />
+    <Compile Include="Snapshotter.cs" />
     <Compile Include="JournalProtocol.cs" />
     <Compile Include="Journal\AsyncRecovery.cs" />
     <Compile Include="Journal\AsyncWriteJournal.cs" />
@@ -55,9 +59,7 @@
     <Compile Include="Journal\WriteJournal.cs" />
     <Compile Include="Persistence.cs" />
     <Compile Include="Persistent.cs" />
-    <Compile Include="Processor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Recovery.cs" />
     <Compile Include="Serialization\MessageSerializer.cs" />
     <Compile Include="Serialization\SnapshotSerializer.cs" />
     <Compile Include="Snapshot.cs" />

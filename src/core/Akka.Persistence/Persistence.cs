@@ -64,6 +64,8 @@ namespace Akka.Persistence
     /// </summary>
     public class Persistence : ExtensionIdProvider<PersistenceExtension>
     {
+        public static readonly Persistence Instance = new Persistence();
+
         public override PersistenceExtension CreateExtension(ExtendedActorSystem system)
         {
             return new PersistenceExtension(system);

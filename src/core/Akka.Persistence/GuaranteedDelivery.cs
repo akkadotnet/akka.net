@@ -11,11 +11,10 @@ namespace Akka.Persistence
     #region Messages
 
     /// <summary>
-    /// <see cref="GuaranteedDeliverySnapshot"/> is a snapshot of the current state presented by deliverer.
-    /// Can be retrieved by <see cref="IGuaranteedDeliverer.GetDeliverySnapshot"/> method 
-    /// and saved with <see cref="PersistentActorBase.SaveSnapshot"/>. 
-    /// <see cref="GuaranteedDeliverySnapshot"/> contains full delivery state, including unconfirmed messages.
-    /// It may be serialized using binary data format.
+    /// Snapshot of a current <see cref="GuaranteedDeliverer"/> state. Can be retrieved with
+    /// <see cref="GuaranteedDeliverer.GetDeliverySnapshot"/> and saved with <see cref="Eventsourced.SaveSnapshot"/>.
+    /// During recovery the snapshot received in <see cref="SnapshotOffer"/> should be sent with 
+    /// <see cref="GuaranteedDeliverer.SetDeliverySnapshot"/>.
     /// </summary>
     [Serializable]
     public struct GuaranteedDeliverySnapshot : IMessage
@@ -106,6 +105,11 @@ namespace Akka.Persistence
             : base(message, cause)
         {
         }
+    }
+
+    public interface IWithGuaranteedDelivery
+    {
+        
     }
 
     /// <summary>
@@ -308,42 +312,5 @@ namespace Akka.Persistence
         }
     }
 
-    public abstract class PersistentGuaranteedDeliveryBase : PersistentActorBase
-    {
-        private readonly GuaranteedDeliverer _deliverer;
 
-        protected PersistentGuaranteedDeliveryBase()
-        {
-            _deliverer = new GuaranteedDeliverer(Context);
-        }
-
-        protected override bool AroundReceive(Receive receive, object message)
-        {
-            if (message is ReplayMessagesSuccess)
-            {
-                _deliverer.RedeliverOverdue();
-                return base.AroundReceive(receive, message);
-            }
-            
-            if (message is RedeliveryTick)
-            {
-                _deliverer.RedeliverOverdue();
-                return true;
-            }
-            
-            return base.AroundReceive(receive, message);
-        }
-
-        protected override void PreRestart(Exception reason, object message)
-        {
-            _deliverer.CancelRedelivery();
-            base.PreRestart(reason, message);
-        }
-
-        protected override void PostStop()
-        {
-            _deliverer.CancelRedelivery();
-            base.PostStop();
-        }
-    }
 }

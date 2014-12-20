@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 
 namespace Akka.Persistence
 {
-
     /// <summary>
     /// Instructs a <see cref="PersistentView"/> to update itself. This will run a single incremental message replay 
     /// with all messages from the corresponding persistent id's journal that have not yet been consumed by the view.  
@@ -34,7 +35,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// A view replicates the persistent message stream of a <see cref="PersistentActorBase"/>. Implementation classes receive
+    /// A view replicates the persistent message stream of a <see cref="PersistentActor"/>. Implementation classes receive
     /// the message stream directly from the Journal. These messages can be processed to update internal state
     /// in order to maintain an (eventual consistent) view of the state of the corresponding persistent actor. A
     /// persistent view can also run on a different node, provided that a replicated journal is used.
@@ -53,17 +54,163 @@ namespace Akka.Persistence
     /// `akka.persistence.view.auto-update-interval` configuration key. Applications may trigger additional
     /// view updates by sending the view <see cref="Update"/> requests. See also methods
     /// </summary>
-    public abstract class PersistentView : Recovery
+    public abstract partial class PersistentView : ActorBase, ISnapshotter, IWithPersistenceId, WithUnboundedStash
     {
-        public abstract string ViewId { get; }
+        protected readonly PersistenceExtension Extension;
+
+        private readonly PersistenceSettings.ViewSettings _viewSettings;
+        private ActorRef _journal;
+
+        private CancellationTokenSource _scheduleCancelation;
+
+        private IStash _internalStash;
+        private ViewState _currentState;
+
+        protected PersistentView()
+        {
+            LastSequenceNr = 0L;
+            Extension = Persistence.Instance.Get(Context.System);
+            _viewSettings = Extension.Settings.View;
+            _internalStash = CreateStash();
+        }
 
         /// <summary>
-        /// If true, the currently processed message was persisted (is sent from the Journal).
-        /// If false, the currently processed message comes from another actor (from "user-land").
+        /// Used as identifier for snapshots performed by this <see cref="PersistentView"/>. This allows the View to keep 
+        /// separate snapshots of data than the <see cref="PersistentActor"/> originating the message stream.
+        /// 
+        /// The usual case is to have a different identifiers for <see cref="ViewId"/> and <see cref="PersistenceId"/>.
         /// </summary>
-        public bool IsPersistent
+        protected abstract string ViewId { get; }
+
+        /// <summary>
+        /// Id of the persistent entity for which messages should be replayed.
+        /// </summary>
+        public abstract string PersistenceId { get; }
+
+        /// <summary>
+        /// Gets the <see cref="ViewId"/>.
+        /// </summary>
+        public string SnapshotterId { get { return ViewId; } }
+
+        /// <summary>
+        /// If true, the currently processed message was persisted - it sent from the <see cref="Journal"/>.
+        /// If false, the currently processed message comes from another actor ('/user/*' path).
+        /// </summary>
+        public bool IsPersistent { get { return _currentState.IsRecoveryRunning; } }
+
+        /// <summary>
+        /// If true, this view will update itself automatically withing an interval specified by <see cref="AutoUpdateInterval"/>.
+        /// If false, application must update this view explicily with <see cref="Update"/> requests.
+        /// </summary>
+        public virtual bool IsAutoUpdate { get { return _viewSettings.AutoUpdate; } }
+
+        /// <summary>
+        /// Time interval to automatic updates. Used only when <see cref="IsAutoUpdate"/> value is true.
+        /// </summary>
+        public virtual TimeSpan AutoUpdateInterval { get { return _viewSettings.AutoUpdateInterval; } }
+
+        /// <summary>
+        /// The maximum number of messages to replay per update.
+        /// </summary>
+        public virtual long AutoUpdateReplayMax { get { return _viewSettings.AutoUpdateReplayMax; } }
+
+        /// <summary>
+        /// Highest received sequence number so far or 0 it none persistent event has been replayed yet.
+        /// </summary>
+        public long LastSequenceNr { get; private set; }
+
+        /// <summary>
+        /// Gets last sequence number.
+        /// </summary>
+        public long SnapshotSequenceNr { get { return LastSequenceNr; } }
+
+        private ActorRef Journal
         {
-            get { return CurrentPersistentMessage != null; }
+            get { return _journal ?? (_journal = Extension.JournalFor(PersistenceId)); }
+        }
+
+        protected override void PreStart()
+        {
+            base.PreStart();
+            Self.Tell(new Recover(SnapshotSelectionCriteria.Latest, replayMax: AutoUpdateReplayMax));
+        }
+
+        protected override void PreRestart(Exception reason, object message)
+        {
+            try
+            {
+                _internalStash.UnstashAll();
+            }
+            finally
+            {
+                base.PreRestart(reason, message);   
+            }
+        }
+
+        protected override void PostStop()
+        {
+            if (_scheduleCancelation != null)
+            {
+                _scheduleCancelation.Cancel();
+            }
+
+            base.PostStop();
+        }
+
+        protected override bool AroundReceive(Receive receive, object message)
+        {
+            _currentState.StateReceive(receive, message);
+            return true;
+        }
+
+        protected override void Unhandled(object message)
+        {
+            if (message is RecoveryCompleted) ; // ignore
+            else if (message is RecoveryFailure)
+            {
+                var fail = (RecoveryFailure) message;
+                var errorMessage = string.Format("Persistent view killed after the recovery failure (Persistence id: {0}). To avoid killing persistent actors on recovery failures, PersistentView must handle RecoveryFailure messages. Failure was caused by: {1}", PersistenceId, fail.Cause.Message);
+                
+                throw new ActorKilledException(errorMessage);
+            }
+            else base.Unhandled(message);
+        }
+
+        private void ChangeState(ViewState state)
+        {
+            _currentState = state;
+        }
+
+        private void UpdateLastSequenceNr(IPersistentRepresentation persistent)
+        {
+            if (persistent.SequenceNr > LastSequenceNr) LastSequenceNr = persistent.SequenceNr;
+        }
+
+        public void LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SaveSnapshot(object snapshot)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void DeleteSnapshot(long sequenceNr, DateTime timestamp)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void DeleteSnapshots(SnapshotSelectionCriteria criteria)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IStash Stash { get; set; }
+
+        private IStash CreateStash()
+        {
+            return Context.CreateStash(GetType());
         }
     }
 }
