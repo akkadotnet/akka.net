@@ -262,9 +262,9 @@ namespace Akka.Configuration.Hocon
             }
             if (IsArray())
             {
-                return string.Format("[{0}]", string.Join(",", GetArray().Select(e => e.ToString())));
+                return string.Format("[{0}]", string.Join(",", GetArray().Select(e => e.ToString(indent + 1))));
             }
-            return "aa";
+            return "<<unknown value>>";
         }
 
         private string QuoteIfNeeded(string text)

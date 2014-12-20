@@ -580,5 +580,18 @@ akka.actor {
             serializersConfig.Select(kvp => kvp.Value).First().GetString().ShouldBe("Akka.Remote.Serialization.MessageContainerSerializer, Akka.Remote");
             serializerBindingConfig.Select(kvp => kvp.Key).Last().ShouldBe("Akka.Remote.DaemonMsgCreate, Akka.Remote");
         }
+
+        [Fact]
+        public void CanOverwriteValue()
+        {
+            var hocon = @"
+test {
+  value  = 123
+}
+test.value = 456
+";
+            var config = ConfigurationFactory.ParseString(hocon);
+            config.GetInt("test.value").ShouldBe(456);
+        }
     }
 }
