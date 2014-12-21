@@ -4,7 +4,7 @@
 
 #What is it?
 
-**Akka.DI.Core** is an **ActorSystem extension** library for the Akka.NET framework that provides the author's with a simple way to create an Actor Dependency Resolver that can be used an alternative to the basic capabilities of [Props](http://akkadotnet.github.io/wiki/Props) when you have Actors with multiple dependencies.  
+**Akka.DI.Core** is an **ActorSystem extension** library for the Akka.NET framework that provides a simple way to create an Actor Dependency Resolver that can be used an alternative to the basic capabilities of [Props](http://akkadotnet.github.io/wiki/Props) when you have Actors with multiple dependencies.  
 
 #How do you create an Extension?
 
@@ -12,7 +12,7 @@
 -  Reference your favorite IOC Container, the Akka.DI.Core and of course Akka
 -  Create a class and implement the IDependencyResolver
 
-Let's walk through the process of creating one for CastleWindsor container. We will assume that we already have a new project named Akka.DI.CastleWindsor with all the necessary references. So we will name our class WindsorDependencyResolver.
+Let's walk through the process of creating one for CastleWindsor container. You need to create  a new project named Akka.DI.CastleWindsor with all the necessary references including Akka.DI.Core, Akka and CastleWindosor. Name the initial class WindsorDependencyResolver.
 
     public class WindsorDependencyResolver : IDependencyResolver
 	{
@@ -32,7 +32,7 @@ Let's walk through the process of creating one for CastleWindsor container. We w
         }
 	}
 
-Let's start with by adding a constructor and private fields.
+Add a constructor and private fields.
 
 		private IWindsorContainer container;
         private ActorSystem system;
@@ -46,14 +46,14 @@ Let's start with by adding a constructor and private fields.
             this.system.AddDependencyResolver(this);
         }
 
-We have defined three private fields
+You have defined three private fields
 
 - IWindsorContainer container
 	- Reference to the container
 - ActorSystem system
 	- Reference to the ActorSystem
 
-First we will implement GetType. This is a basic implementation and is just from demonstration purposes. Essentially this is used by the Extension to get the Type of the Actor from it's type name.
+First you need to implement GetType. This is a basic implementation and is just from demonstration purposes. Essentially this is used by the Extension to get the Type of the Actor from it's type name.
 
         Type GetType(string actorName)
         {
@@ -71,14 +71,14 @@ First we will implement GetType. This is a basic implementation and is just from
             return firstTry ?? searchForType();
         }
 	
-Secondly well implement the CreateActorFactory method which will be used by the extension to create the Actor. This implementation will depend upon the API of the container.
+Secondly you need to implement the CreateActorFactory method which will be used by the extension to create the Actor. This implementation will depend upon the API of the container.
 
 		public Func<ActorBase> CreateActorFactory(string actorName)
         {
             return () => (ActorBase)container.Resolve(GetType(actorName));
         }
 
-Lastly, well implement the Create<TActor> which is used register the Props configuration for the referenced Actor Type with the ActorSystem. This method will always be the same implementation. 
+Lastly, you implement the Create<TActor> which is used register the Props configuration for the referenced Actor Type with the ActorSystem. This method will always be the same implementation. 
 
         public Props Create<TActor>() where TActor : ActorBase
         {
