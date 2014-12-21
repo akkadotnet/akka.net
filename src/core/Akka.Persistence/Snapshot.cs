@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Akka.Persistence
 {
-    public struct SnapshotMetadata: IEquatable<SnapshotMetadata>
+    public sealed class SnapshotMetadata: IEquatable<SnapshotMetadata>
     {
         internal class SnapshotMetadataTimestampComparer : IComparer<SnapshotMetadata>
         {
@@ -20,7 +20,7 @@ namespace Akka.Persistence
         {
         }
 
-        public SnapshotMetadata(string persistenceId, long sequenceNr, DateTime timestamp) : this()
+        public SnapshotMetadata(string persistenceId, long sequenceNr, DateTime timestamp)
         {
             PersistenceId = persistenceId;
             SequenceNr = sequenceNr;

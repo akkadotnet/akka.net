@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Persistence.Serialization;
 
 namespace Akka.Persistence
@@ -107,127 +109,100 @@ namespace Akka.Persistence
         }
     }
 
-    public interface IWithGuaranteedDelivery
-    {
-        
-    }
-
     /// <summary>
-    /// This interface exposes functionality of re-sending messages, that has not been confirmed withing configured timeout.
+    /// Persistent actor type, that sends messages with at-least-once delivery semantics to it's destinations.
+    /// It takes care of re-sending messages when they haven't been confirmed withing expected timeout. The same 
+    /// message may be send twice or more to the same destination as a result of possible resends.
+    /// 
+    /// Use a <see cref="Deliver"/> method to send a message to a destination. Call the <see cref="ConfirmDelivery"/>
+    /// method once destination has replied with a confirmation message. The interval between redelivery attempts
+    /// can be defined with <see cref="RedeliverInterval"/>. After a number of delivery attempts an 
+    /// <see cref="UnconfirmedWarning"/> message will be sent to <see cref="Self"/>. The resending will continue,
+    /// but you may choose <see cref="ConfirmDelivery"/> to cancel resending.
+    /// 
+    /// This actor type has state consisting of unconfirmed messages and a sequence number. It doesn't store it by
+    /// itself, so you must persist corresponding events so that state can be restored by calling the same 
+    /// delivery-related methods during recovery phase of the persisten actor. During recovery calls to 
+    /// <see cref="Deliver"/> won't send out a message, but it will be sent later if no <see cref="ConfirmDelivery"/>
+    /// call was performed.
+    /// 
+    /// Support for snapshot is provided by get and set delivery snapshot methods. These snapshots contains full
+    /// delivery state including unconfirmed messages. For custom snapshots remember to include those delivery ones.
     /// </summary>
-    public interface IGuaranteedDeliverer 
+    public abstract class GuaranteedDeliveryActor : PersistentActor, InitializableActor
     {
-        /// <summary>
-        /// Interval between next redelivery attempts.
-        /// </summary>
-        TimeSpan RedeliverInterval { get; }
-
-        /// <summary>
-        /// After this number of delivery attempts, <see cref="UnconfirmedWarning"/> should be sent to composing actor.
-        /// </summary>
-        int UnconfirmedAttemptsToWarn { get; }
-
-        /// <summary>
-        /// Maximum number of undelivered messages, that deliverer is allowed to hold in memory.
-        /// When that threshold will be exceeded, a <see cref="MaxUnconfirmedMessagesExceededException"/> will be thrown
-        /// and deliverer won't accept any following messages.
-        /// </summary>
-        int MaxUnconfirmedMessages { get; }
-        int UnconfirmedMessages { get; }
-
-        /// <summary>
-        /// Returns a full internal state of current deliverer. 
-        /// It may be saved using <see cref="PersistentActorBase.SaveSnapshot"/> method. During recovery snapshot received 
-        /// inside <see cref="SnapshotOffer"/> should be set back to deliverer using <see cref="SetDeliverySnapshot"/> method.
-        /// </summary>
-        /// <returns></returns>
-        GuaranteedDeliverySnapshot GetDeliverySnapshot();
-
-        /// <summary>
-        /// This method may be used for recovery delivery state after receiving <see cref="SnapshotOffer"/> containing
-        /// <see cref="GuaranteedDeliverySnapshot"/> created previously by <see cref="GetDeliverySnapshot"/>.
-        /// </summary>
-        /// <param name="snapshot"></param>
-        void SetDeliverySnapshot(GuaranteedDeliverySnapshot snapshot);
-
-        /// <summary>
-        /// Send the message created by <paramref name="idToMessageMapper"/> function and then delivered to the 
-        /// <paramref name="destination"/> actor. It will be trying to re-deliver message until
-        /// <see cref="ConfirmDelivery"/> method will be called. Correlation of this message between two 
-        /// methods is performed by deliveryId - an input parameter of <see cref="idToMessageMapper"/> function.
-        /// This identifier is also passed as one of the message properties.
-        /// 
-        /// DeliveryId is generated as monotinically increasing sequence, shared between current deliverer and
-        /// all possible destinations.
-        /// 
-        /// While recovering, deliverer won't send any messages. They will be sent later if no matching 
-        /// <see cref="ConfirmDelivery"/> method was invoked.
-        /// </summary>
-        /// <exception cref="MaxUnconfirmedMessagesExceededException">
-        /// Thrown when <see cref="UnconfirmedMessages"/> is greater than or equal to <see cref="MaxUnconfirmedMessages"/>.
-        /// </exception>
-        void Deliver(ActorPath destination, Func<long, object> idToMessageMapper);
-
-        /// <summary>
-        /// This method may be invoked in two cases:
-        /// <para>1. Message sent by <see cref="Deliver"/> method has been confirmed by the destination actor.</para>
-        /// <para>2. To abort re-sending message identified by <paramref name="deliveryId"/>.</para>
-        /// </summary>
-        /// <returns>
-        /// True on first confirmation of message identified by <paramref name="deliveryId"/>.
-        /// False on duplicate confirmations.
-        /// </returns>
-        bool ConfirmDelivery(long deliveryId);
-    }
-
-    public class GuaranteedDeliverer : IGuaranteedDeliverer
-    {
-        private readonly IActorContext _context;
-        private readonly CancellationTokenSource _redeliveryTaskCanceler;
-        private Task _redeliverTask;
-
+        private CancellationTokenSource _redeliverScheduleCancellation;
         private long _deliverySequenceNr = 0L;
-        private SortedList<long, Delivery> _unconfirmed = new SortedList<long, Delivery>();
-
-        public GuaranteedDeliverer(IActorContext actorContext)
+        private ConcurrentDictionary<long, Delivery> _unconfirmed = new ConcurrentDictionary<long, Delivery>();
+        
+        /// <summary>
+        /// Invoked after actor has been created and all of it's fields have been initialized.
+        /// </summary>
+        public void Init()
         {
-            _context = actorContext;
-            var persistence = actorContext.System.GetExtension<PersistenceExtension>();
-            if (persistence == null)
-            {
-                throw new ArgumentException("Provided actor context refers to actor system, which doesn't have necessary persistance extension initialized");
-            }
-
-            var persistenceSettings = persistence.Settings;
-            RedeliverInterval = persistenceSettings.GuaranteedDelivery.RedeliverInterval;
-            UnconfirmedAttemptsToWarn = persistenceSettings.GuaranteedDelivery.UnconfirmedAttemptsToWarn;
-            MaxUnconfirmedMessages = persistenceSettings.GuaranteedDelivery.MaxUnconfirmedMessages;
-
-            _redeliverTask = RedeliverTask(out _redeliveryTaskCanceler);
+            _redeliverScheduleCancellation = ScheduleRedelivery();
         }
 
-        public TimeSpan RedeliverInterval { get; private set; }
-        public int UnconfirmedAttemptsToWarn { get; private set; }
-        public int MaxUnconfirmedMessages { get; private set; }
-        public int UnconfirmedMessages { get { return _unconfirmed.Count; } }
 
-        public void Deliver(ActorPath destination, Func<long, object> idToMessageMapper)
+        /// <summary>
+        /// Interval between redelivery attempts.
+        /// </summary>
+        public virtual TimeSpan RedeliverInterval { get { return DefaultRedeliverInterval; } }
+        protected TimeSpan DefaultRedeliverInterval { get { return Extension.Settings.GuaranteedDelivery.RedeliverInterval; } }
+
+        /// <summary>
+        /// Maximum number of unconfirmed messages that will be sent at each redelivery burst. This is to help to 
+        /// prevent overflowing amount of messages to be sent at once, for eg. when destination cannot be reached for a long time.
+        /// </summary>
+        public virtual int RedeliveryBurstLimit { get { return DefaultRedeliveryBurstLimit; } }
+        protected int DefaultRedeliveryBurstLimit { get { return Extension.Settings.GuaranteedDelivery.RedeliveryBurstLimit; } }
+
+        /// <summary>
+        /// After this number of delivery attempts a <see cref="UnconfirmedWarning"/> message will be sent to <see cref="Self"/>.
+        /// The count is reset after restart.
+        /// </summary>
+        public virtual int UnconfirmedDeliveryAttemptsToWarn { get { return DefaultUnconfirmedDeliveryAttemptsToWarn; } }
+        protected int DefaultUnconfirmedDeliveryAttemptsToWarn { get { return Extension.Settings.GuaranteedDelivery.UnconfirmedAttemptsToWarn; } }
+
+        /// <summary>
+        /// Maximum number of unconfirmed messages, that this actor is allowed to hold in the memory. When this 
+        /// number is exceed, <see cref="Deliver"/> will throw <see cref="MaxUnconfirmedMessagesExceededException"/>
+        /// instead of accepting messages.
+        /// </summary>
+        public virtual int MaxUnconfirmedMessages { get { return DefaultMaxUnconfirmedMessages; } }
+        protected int DefaultMaxUnconfirmedMessages { get { return Extension.Settings.GuaranteedDelivery.MaxUnconfirmedMessages; } }
+
+        /// <summary>
+        /// Number of messages, that have not been confirmed yet.
+        /// </summary>
+        protected int UnconfirmedCount { get { return _unconfirmed.Count; } }
+
+        /// <summary>
+        /// Send the message created with <paramref name="deliveryMessageMapper"/> function to the <see cref="destination"/>
+        /// actor. It will retry sending the message until the delivery is confirmed with <see cref="ConfirmDelivery"/>.
+        /// Correlation between these two methods is performed by delivery id - parameter of <see cref="deliveryMessageMapper"/>.
+        /// Usually it's passed inside the message to the destination, which replies with the message having the same id.
+        /// 
+        /// During recovery this method won't send out any message, but it will be sent later until corresponding 
+        /// <see cref="ConfirmDelivery"/> method will be invoked.
+        /// </summary>
+        /// <exception cref="MaxUnconfirmedMessagesExceededException">
+        /// Thrown when <see cref="UnconfirmedCount"/> is greater than or equal to <see cref="MaxUnconfirmedMessages"/>.
+        /// </exception>
+        protected void Deliver(ActorPath destination, Func<long, object> deliveryMessageMapper)
         {
-            if (_unconfirmed.Count >= MaxUnconfirmedMessages)
+            if (UnconfirmedCount >= MaxUnconfirmedMessages)
             {
-                throw new MaxUnconfirmedMessagesExceededException("To many unconfirmed messages, maximum allowed is " + MaxUnconfirmedMessages);
+                throw new MaxUnconfirmedMessagesExceededException(string.Format("{0} has too many unconfirmed messages. Maximum allowed is {1}", PersistenceId, MaxUnconfirmedMessages));
             }
 
-            var recoveryRunning = false;    /* ((Processor)this).RecoveryRunning */
-            var deliveryId = Interlocked.Increment(ref _deliverySequenceNr);
-            var now = recoveryRunning
-                ? DateTime.UtcNow - RedeliverInterval
-                : DateTime.UtcNow;
-            var delivery = new Delivery(destination, idToMessageMapper(deliveryId), now, 0);
+            var deliveryId = NextDeliverySequenceNr();
+            var now = IsRecoveryRunning ? DateTime.Now - RedeliverInterval : DateTime.Now;
+            var delivery = new Delivery(destination, deliveryMessageMapper(deliveryId), now, attempt: 0);
 
-            if (recoveryRunning)
+            if (IsRecoveryRunning)
             {
-                _unconfirmed.Add(deliveryId, delivery);
+                _unconfirmed.AddOrUpdate(deliveryId, delivery, (id, d) => delivery);
             }
             else
             {
@@ -235,82 +210,121 @@ namespace Akka.Persistence
             }
         }
 
-        public bool ConfirmDelivery(long deliveryId)
+        /// <summary>
+        /// Call this method to confirm that message with <paramref name="deliveryId"/> has been sent
+        /// or to cancel redelivery attempts.
+        /// </summary>
+        /// <returns>True if delivery was confirmed first time, false for duplicate confirmations.</returns>
+        protected bool ConfirmDelivery(long deliveryId)
         {
-            if (_unconfirmed.ContainsKey(deliveryId))
+            Delivery delivery;
+            return _unconfirmed.TryRemove(deliveryId, out delivery);
+        }
+
+        /// <summary>
+        /// Returns full state of the current delivery actor. Could be saved using <see cref="Eventsourced.SaveSnapshot"/> method.
+        /// During recovery a snapshot received in <see cref="SnapshotOffer"/> should be set with <see cref="SetDeliverySnapshot"/>.
+        /// </summary>
+        protected GuaranteedDeliverySnapshot GetDeliverySnapshot()
+        {
+            var unconfirmedDeliveries = _unconfirmed
+                .Select(e => new UnconfirmedDelivery(e.Key, e.Value.Destination, e.Value.Message))
+                .ToArray();
+
+            return new GuaranteedDeliverySnapshot(_deliverySequenceNr, unconfirmedDeliveries);
+        }
+
+        /// <summary>
+        /// If snapshot from <see cref="GetDeliverySnapshot"/> was saved, it will be received during recovery phase in a
+        /// <see cref="SnapshotOffer"/> meesage and should be set with this method.
+        /// </summary>
+        /// <param name="snapshot"></param>
+        protected void SetDeliverySnapshot(GuaranteedDeliverySnapshot snapshot)
+        {
+            _deliverySequenceNr = snapshot.DeliveryId;
+            var now = DateTime.Now;
+            var unconfirmedDeliveries = snapshot.UnconfirmedDeliveries
+                .Select(u => new KeyValuePair<long, Delivery>(u.DeliveryId, new Delivery(u.Destination, u.Message, now, 0)));
+
+            _unconfirmed = new ConcurrentDictionary<long, Delivery>(unconfirmedDeliveries);
+        }
+
+        protected override void PreRestart(Exception reason, object message)
+        {
+            _redeliverScheduleCancellation.Cancel();
+            base.PreRestart(reason, message);
+        }
+
+        protected override void PostStop()
+        {
+            _redeliverScheduleCancellation.Cancel();
+            base.PostStop();
+        }
+
+        protected override void OnReplaySuccess()
+        {
+            RedeliverOverdue();
+            base.OnReplaySuccess();
+        }
+
+        protected override bool AroundReceive(Receive receive, object message)
+        {
+            if (message is RedeliveryTick)
             {
-                _unconfirmed.Remove(deliveryId);
+                RedeliverOverdue();
                 return true;
             }
-            return false;
+
+            return base.AroundReceive(receive, message);
         }
 
-        public void CancelRedelivery()
+        private void Send(long deliveryId, Delivery delivery, DateTime timestamp)
         {
-            _redeliveryTaskCanceler.Cancel();
+            var destination = Context.ActorSelection(delivery.Destination);
+            destination.Tell(delivery.Message);
+
+            var dcopy = new Delivery(delivery.Destination, delivery.Message, timestamp, delivery.Attempt + 1);
+            _unconfirmed.AddOrUpdate(deliveryId, dcopy, (id, d) => dcopy);
         }
 
-        public void RedeliverOverdue()
+        private void RedeliverOverdue()
         {
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
             var deadline = now - RedeliverInterval;
             var warnings = new List<UnconfirmedDelivery>();
 
-            foreach (var entry in _unconfirmed)
+            foreach (var entry in _unconfirmed.Where(e => e.Value.Timestamp <= deadline).Take(RedeliveryBurstLimit).ToArray())
             {
                 var deliveryId = entry.Key;
-                var delivery = entry.Value;
+                var unconfirmedDelivery = entry.Value;
 
-                if (delivery.Timestamp <= deadline)
+                Send(deliveryId, unconfirmedDelivery, now);
+
+                if (unconfirmedDelivery.Attempt == UnconfirmedDeliveryAttemptsToWarn)
                 {
-                    Send(deliveryId, delivery, now);
-
-                    if (delivery.Attempt == UnconfirmedAttemptsToWarn)
-                    {
-                        warnings.Add(new UnconfirmedDelivery(deliveryId, delivery.Destination, delivery.Message));
-                    }
+                    warnings.Add(new UnconfirmedDelivery(deliveryId, unconfirmedDelivery.Destination, unconfirmedDelivery.Message));
                 }
             }
 
-            if (warnings.Count > 0)
+            if (warnings.Count != 0)
             {
-                _context.Self.Tell(new UnconfirmedWarning(warnings));
+                Self.Tell(new UnconfirmedWarning(warnings));
             }
         }
 
-        public GuaranteedDeliverySnapshot GetDeliverySnapshot()
+        private long NextDeliverySequenceNr()
         {
-            return new GuaranteedDeliverySnapshot(_deliverySequenceNr, _unconfirmed
-                .Select(x => new UnconfirmedDelivery(x.Key, x.Value.Destination, x.Value.Message)));
+            return (++_deliverySequenceNr);
         }
 
-        public void SetDeliverySnapshot(GuaranteedDeliverySnapshot snapshot)
+        private CancellationTokenSource ScheduleRedelivery()
         {
-            _deliverySequenceNr = snapshot.DeliveryId;
-            var now = DateTime.UtcNow;
-            _unconfirmed = new SortedList<long, Delivery>(snapshot.UnconfirmedDeliveries
-                .ToDictionary(x => x.DeliveryId, y => new Delivery(y.Destination, y.Message, now, 0)));
-        }
+            var interval = new TimeSpan(RedeliverInterval.Ticks / 2);
+            var cancellation = new CancellationTokenSource();
 
-        private void Send(long deliveryId, Delivery delivery, DateTime now)
-        {
-            _context.ActorSelection(delivery.Destination).Tell(delivery.Message);
-            _unconfirmed.Add(deliveryId, delivery.IncrementedCopy());
-        }
+            Context.System.Scheduler.Schedule(interval, interval, Self, RedeliveryTick.Instance, cancellation.Token);
 
-        private object DeliveryIdToMessage(long deliveryId)
-        {
-            throw new NotImplementedException();
-        }
-
-        private Task RedeliverTask(out CancellationTokenSource cancelationTokenSource)
-        {
-            cancelationTokenSource = new CancellationTokenSource();
-            var interval = TimeSpan.FromTicks(RedeliverInterval.Ticks / 2);
-            var task = _context.System.Scheduler.Schedule(interval, interval, _context.Self, RedeliveryTick.Instance, cancelationTokenSource.Token);
-            return task;
+            return cancellation;
         }
     }
-
-
 }

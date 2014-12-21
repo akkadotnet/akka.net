@@ -6,40 +6,41 @@ namespace Akka.Persistence.Snapshot
 {
     public abstract class SnapshotStore : ActorBase
     {
-        private readonly PersistenceExtension _persistence;
+        private readonly PersistenceExtension _extension;
         private readonly bool _publish;
 
         protected SnapshotStore()
         {
-            _persistence = Context.System.GetExtension<PersistenceExtension>();
-            if (_persistence == null)
+            _extension = Persistence.Instance.Get(Context.System);
+            if (_extension == null)
             {
                 throw new ArgumentException("Couldn't initialize SnapshotStore instance, because associated Persistance extension has not been used in current actor system context.");
             }
 
-            _publish = _persistence.Settings.Internal.PublishPluginCommands;
+            _publish = _extension.Settings.Internal.PublishPluginCommands;
         }
 
         protected override bool Receive(object message)
         {
             if (message is LoadSnapshot)
             {
-                var msg = (LoadSnapshot) message;
-                var sender = Sender;
-                var task = LoadAsync(msg.PersistenceId, msg.Criteria.Limit(msg.ToSequenceNr));
-                task.ContinueWith(t => sender.Tell(!t.IsFaulted
+                var msg = (LoadSnapshot)message;
+
+                LoadAsync(msg.PersistenceId, msg.Criteria.Limit(msg.ToSequenceNr))
+                    .ContinueWith(t => !t.IsFaulted
                     ? new LoadSnapshotResult(t.Result, msg.ToSequenceNr)
-                    : new LoadSnapshotResult(null, msg.ToSequenceNr)));
+                    : new LoadSnapshotResult(null, msg.ToSequenceNr))
+                    .PipeTo(Sender);
             }
             else if (message is SaveSnapshot)
             {
                 var msg = (SaveSnapshot)message;
-                var sender = Sender;
-                var metadata = new SnapshotMetadata(msg.Metadata.PersistenceId, msg.Metadata.SequenceNr, DateTime.UtcNow);
-                SaveAsync(metadata, msg.Snapshot).ContinueWith(t =>
-                    Self.Tell(!t.IsFaulted
-                        ? (object) new SaveSnapshotSuccess(metadata)
-                        : new SaveSnapshotFailure(msg.Metadata, t.Exception), sender));
+                var metadata = new SnapshotMetadata(msg.Metadata.PersistenceId, msg.Metadata.SequenceNr, DateTime.Now);
+
+                SaveAsync(metadata, msg.Snapshot).ContinueWith(t => !t.IsFaulted
+                        ? (object)new SaveSnapshotSuccess(metadata)
+                        : new SaveSnapshotFailure(msg.Metadata, t.Exception))
+                        .PipeTo(Self, Sender);
 
             }
             else if (message is SaveSnapshotSuccess)
@@ -58,32 +59,49 @@ namespace Akka.Persistence.Snapshot
             {
                 var msg = (DeleteSnapshot)message;
                 Delete(msg.Metadata);
-                if (_publish)
-                {
-                    Context.System.EventStream.Publish(message);   
-                }
-            }
-            else if (message is DeleteSnapshots)
-            {
-                var msg = (DeleteSnapshots)message;
-                Delete(msg.PersistenceId, msg.Criteria);
+
                 if (_publish)
                 {
                     Context.System.EventStream.Publish(message);
                 }
             }
-            else
+            else if (message is DeleteSnapshots)
             {
-                return false;
-            }
+                var msg = (DeleteSnapshots) message;
+                Delete(msg.PersistenceId, msg.Criteria);
 
+                if (_publish)
+                {
+                    Context.System.EventStream.Publish(message);
+                }
+            }
+            else return false;
             return true;
         }
 
+        /// <summary>
+        /// Asynchronously loads a snapshot.
+        /// </summary>
         protected abstract Task<SelectedSnapshot?> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria);
+
+        /// <summary>
+        /// Asynchronously saves a snapshot.
+        /// </summary>
         protected abstract Task SaveAsync(SnapshotMetadata metadata, object snapshot);
+
+        /// <summary>
+        /// Called after successful saving a snapshot.
+        /// </summary>
         protected abstract void Saved(SnapshotMetadata metadata);
+
+        /// <summary>
+        /// Deletes the snapshot identified by <paramref name="metadata"/>.
+        /// </summary>
         protected abstract void Delete(SnapshotMetadata metadata);
+
+        /// <summary>
+        /// Deletes all snapshots matching provided <paramref name="criteria"/>.
+        /// </summary>
         protected abstract void Delete(string persistenceId, SnapshotSelectionCriteria criteria);
     }
 }

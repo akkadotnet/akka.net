@@ -4,28 +4,32 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
 
 namespace Akka.Persistence.Snapshot
 {
-    public class LocalSnapshotStore : SnapshotStore, IActorLogging
+    public class LocalSnapshotStore : SnapshotStore
     {
         private static readonly Regex FilenameRegex = new Regex(@"^snapshot-(.+)-(\d+)-(\d+)", RegexOptions.Compiled);
 
         private readonly DirectoryInfo _snapshotDirectory;
         private readonly ISet<SnapshotMetadata> _saving;
+        private readonly MessageDispatcher _streamDispatcher;
+
+        private readonly Akka.Serialization.Serialization _serialization;
 
         public LocalSnapshotStore()
         {
-            Log = Context.System.Log;
             var config = Context.System.Settings.Config.GetConfig("akka.persistence.snapshot-store.local");
             _snapshotDirectory = new DirectoryInfo(config.GetString("dir"));
+            _streamDispatcher = Context.System.Dispatchers.Lookup(config.GetString("stream-dispatcher"));
             _saving = new SortedSet<SnapshotMetadata>(SnapshotMetadata.TimestampComparer);
+            _serialization = Context.System.Serialization;
         }
 
-        public LoggingAdapter Log { get; private set; }
+        private LoggingAdapter _log;
+        public LoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
 
         protected override void PreStart()
         {
@@ -40,14 +44,16 @@ namespace Akka.Persistence.Snapshot
         protected override Task<SelectedSnapshot?> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             // Heurisitics: take 3 latest snapshots
-            var metas = GetSnapshotMetadata(persistenceId, criteria).OrderByDescending(x => x.Timestamp).Take(3);
-            return Task.Factory.StartNew(() => Load(metas)); // Future(load(metadata))(streamDispatcher)
+            //TODO: convert 3 to configurable value
+            var metas = GetSnapshotMetadata(persistenceId, criteria);
+            return Task.FromResult(Load(metas, 3));
         }
 
         protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
             _saving.Add(metadata);
-            return Task.Factory.StartNew(() => Save(metadata, snapshot));
+            Save(metadata, snapshot);
+            return Task.Delay(0);
         }
 
         protected override void Saved(SnapshotMetadata metadata)
@@ -63,27 +69,71 @@ namespace Akka.Persistence.Snapshot
 
         protected override void Delete(string persistenceId, SnapshotSelectionCriteria criteria)
         {
-            var metas = GetSnapshotMetadata(persistenceId, criteria).ToList();
-            foreach (var snapshotMetadata in metas)
+            foreach (var metadata in GetSnapshotMetadata(persistenceId, criteria))
             {
-                Delete(snapshotMetadata);
+                Delete(metadata);
             }
         }
 
-        private SelectedSnapshot? Load(IEnumerable<SnapshotMetadata> metas)
+        private SelectedSnapshot? Load(IEnumerable<SnapshotMetadata> metas, int dec)
         {
-            if (metas.Any())
+            if (dec > 0)
             {
-                var metadata = metas.Last();
-                throw new NotImplementedException();
+                var metadata = metas.LastOrDefault();
+                if (metadata != null)
+                {
+                    using (var stream = ReadableStream(metadata))
+                    {
+                        try
+                        {
+                            var snapshot = Deserialize(stream);
+
+                            return new SelectedSnapshot(metadata, snapshot.Data);
+                        }
+                        catch (Exception exc)
+                        {
+                            Log.Error(exc, "Error loading a snapshot [{0}]", exc.Message);
+                            return Load(metas.Skip(1), dec - 1);
+                        }
+                    }
+                }
             }
 
             return null;
         }
 
-        private void Save(SnapshotMetadata metadata, object snapshot)
+        private Serialization.Snapshot Deserialize(Stream stream)
         {
-            throw new NotImplementedException();
+            var buffer = new byte[stream.Length];
+            stream.Read(buffer, 0, buffer.Length);
+            var snapshotType = typeof(Serialization.Snapshot);
+            var serializer = _serialization.FindSerializerForType(snapshotType);
+            var snapshot = (Serialization.Snapshot)serializer.FromBinary(buffer, snapshotType);
+            return snapshot;
+        }
+
+        private Stream ReadableStream(SnapshotMetadata metadata)
+        {
+            var snapshotFile = GetSnapshotFile(metadata);
+            return snapshotFile.OpenRead();
+        }
+
+        private void Save(SnapshotMetadata metadata, object payload)
+        {
+            var tempFile = GetSnapshotFile(metadata, ".tmp");
+            using (var stream = tempFile.OpenWrite())
+            {
+                var snapshot = new Serialization.Snapshot(payload);
+                Serialize(snapshot, stream);
+                tempFile.MoveTo(tempFile.Name.Replace(".tmp", string.Empty));
+            }
+        }
+
+        private void Serialize(Serialization.Snapshot snapshot, Stream stream)
+        {
+            var serializer = _serialization.FindSerializerFor(snapshot);
+            var bytes = serializer.ToBinary(snapshot);
+            stream.Write(bytes, 0, bytes.Length);
         }
 
         private IEnumerable<SnapshotMetadata> GetSnapshotMetadata(string persistenceId, SnapshotSelectionCriteria criteria)
@@ -91,12 +141,12 @@ namespace Akka.Persistence.Snapshot
             var snapshots = _snapshotDirectory
                 .EnumerateFiles("snapshot-" + persistenceId, SearchOption.TopDirectoryOnly)
                 .Select(ExtractSnapshotMetadata)
-                .Where(metadata => metadata.HasValue && criteria.IsMatch(metadata.Value) && !_saving.Contains(metadata.Value));
+                .Where(metadata => metadata != null && criteria.IsMatch(metadata) && !_saving.Contains(metadata));
 
-            return snapshots.Select(md => md.Value);    // guaranteed to be not null in previous constraint
+            return snapshots;    // guaranteed to be not null in previous constraint
         }
 
-        private SnapshotMetadata? ExtractSnapshotMetadata(FileInfo fileInfo)
+        private SnapshotMetadata ExtractSnapshotMetadata(FileInfo fileInfo)
         {
             var match = FilenameRegex.Match(fileInfo.Name);
             if (match.Success)
@@ -111,13 +161,13 @@ namespace Akka.Persistence.Snapshot
                     return new SnapshotMetadata(pid, sequenceNr, new DateTime(ticks));
                 }
             }
-            
+
             return null;
         }
 
         private FileInfo GetSnapshotFile(SnapshotMetadata metadata, string extension = "")
         {
-            var filename = string.Format("snapshot-{0}-{1}-{2}${3}", metadata.PersistenceId, metadata.SequenceNr, metadata.Timestamp.Ticks, extension);
+            var filename = string.Format("snapshot-{0}-{1}-{2}{3}", metadata.PersistenceId, metadata.SequenceNr, metadata.Timestamp.Ticks, extension);
             return _snapshotDirectory.GetFiles(filename, SearchOption.TopDirectoryOnly).FirstOrDefault();
         }
     }

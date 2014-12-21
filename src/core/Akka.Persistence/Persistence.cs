@@ -118,11 +118,13 @@ namespace Akka.Persistence
                 RedeliverInterval = config.GetTimeSpan("at-least-once-delivery.redeliver-interval");
                 MaxUnconfirmedMessages = config.GetInt("at-least-once-delivery.max-unconfirmed-messages");
                 UnconfirmedAttemptsToWarn = config.GetInt("at-least-once-delivery.warn-after-number-of-unconfirmed-attempts");
+                RedeliveryBurstLimit = config.GetInt("at-least-once-delivery.redelivery-burst-limit");
             }
 
             public TimeSpan RedeliverInterval { get; private set; }
             public int MaxUnconfirmedMessages { get; private set; }
             public int UnconfirmedAttemptsToWarn { get; private set; }
+            public int RedeliveryBurstLimit { get; private set; }
         }
 
         public InternalSettings Internal { get; private set; }
