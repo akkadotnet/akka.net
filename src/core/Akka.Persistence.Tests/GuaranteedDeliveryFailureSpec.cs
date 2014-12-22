@@ -167,8 +167,9 @@ namespace Akka.Persistence.Tests
         }
 
 
-        internal class ChaosSender : PersistentActorBase
+        internal class ChaosSender : PersistentActor
         {
+            private readonly string _persistenceId;
             private readonly ActorRef _destination;
             private readonly Config _config;
             private readonly double _liveProcessingFailureRate;
@@ -179,14 +180,23 @@ namespace Akka.Persistence.Tests
                 _destination = destination;
                 Probe = probe;
                 State = new List<int>();
-                PersistenceId = "chaosSender";
+                _persistenceId = "chaosSender";
 
                 _config = Context.System.Settings.Config.GetConfig("akka.persistence.sender.chaos");
                 _liveProcessingFailureRate = _config.GetDouble("live-processing-failure-rate");
                 _replayProcessingFailureRate = _config.GetDouble("replay-processing-failure-rate");
             }
 
-            public string PersistenceId { get; set; }
+            public override string PersistenceId { get { return _persistenceId; } }
+            protected override bool ReceiveRecover(object message)
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                throw new NotImplementedException();
+            }
 
             public ActorRef Probe { get; private set; }
             public List<int> State { get; set; }

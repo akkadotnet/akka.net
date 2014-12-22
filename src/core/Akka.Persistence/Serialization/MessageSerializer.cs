@@ -8,7 +8,8 @@ namespace Akka.Persistence.Serialization
 
     public class MessageSerializer : Serializer
     {
-        public MessageSerializer(ExtendedActorSystem system) : base(system)
+        public MessageSerializer(ExtendedActorSystem system)
+            : base(system)
         {
         }
 
@@ -24,10 +25,36 @@ namespace Akka.Persistence.Serialization
 
         public override byte[] ToBinary(object obj)
         {
-            throw new NotImplementedException();
+            if (obj is IPersistentRepresentation) return PersistentToBinary(obj as IPersistentRepresentation);
+            if (obj is GuaranteedDeliverySnapshot) return SnapshotToBinary(obj as GuaranteedDeliverySnapshot);
+
+            throw new ArgumentException(typeof(MessageSerializer) + " cannot serialize object of type " + obj.GetType());
         }
 
         public override object FromBinary(byte[] bytes, Type type)
+        {
+            if (type == null || type == typeof(Persistent) || type == typeof(IPersistentRepresentation)) return PersistentMessageFrom(bytes);
+            if (type == typeof (GuaranteedDeliverySnapshot)) return SnapshotFrom(bytes);
+
+            throw new ArgumentException(typeof(MessageSerializer) + " cannot deserialize object of type " + type);
+        }
+
+        private GuaranteedDeliverySnapshot SnapshotFrom(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private IPersistentRepresentation PersistentMessageFrom(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private byte[] SnapshotToBinary(GuaranteedDeliverySnapshot guaranteedDeliverySnapshot)
+        {
+            throw new NotImplementedException();
+        }
+
+        private byte[] PersistentToBinary(IPersistentRepresentation persistentRepresentation)
         {
             throw new NotImplementedException();
         }

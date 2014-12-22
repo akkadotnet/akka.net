@@ -3,7 +3,7 @@ using Akka.Persistence;
 
 namespace PersistenceExample
 {
-    public class ViewExampleActor : PersistentActorBase
+    public class ViewExampleActor : PersistentActor
     {
         private int _count = 1;
 

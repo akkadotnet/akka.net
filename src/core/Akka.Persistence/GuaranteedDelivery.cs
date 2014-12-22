@@ -19,10 +19,9 @@ namespace Akka.Persistence
     /// <see cref="GuaranteedDeliverer.SetDeliverySnapshot"/>.
     /// </summary>
     [Serializable]
-    public struct GuaranteedDeliverySnapshot : IMessage
+    public sealed class GuaranteedDeliverySnapshot : IMessage
     {
         public GuaranteedDeliverySnapshot(long deliveryId, IEnumerable<UnconfirmedDelivery> unconfirmedDeliveries)
-            : this()
         {
             DeliveryId = deliveryId;
             UnconfirmedDeliveries = unconfirmedDeliveries;
@@ -36,10 +35,9 @@ namespace Akka.Persistence
     /// <see cref="UnconfirmedWarning"/> message should be sent after 
     /// <see cref="IGuaranteedDeliverer.UnconfirmedAttemptsToWarn"/> limit will be reached.
     /// </summary>
-    public struct UnconfirmedWarning
+    public sealed class UnconfirmedWarning
     {
         public UnconfirmedWarning(IEnumerable<UnconfirmedDelivery> unconfirmedDeliveries)
-            : this()
         {
             UnconfirmedDeliveries = unconfirmedDeliveries;
         }
@@ -51,10 +49,9 @@ namespace Akka.Persistence
     /// <see cref="UnconfirmedDelivery"/> contains details about unconfirmed messages.
     /// It's included inside <see cref="UnconfirmedWarning"/> and <see cref="GuaranteedDeliverySnapshot"/>.
     /// </summary>
-    public struct UnconfirmedDelivery
+    public sealed class UnconfirmedDelivery
     {
         public UnconfirmedDelivery(long deliveryId, ActorPath destination, object message)
-            : this()
         {
             DeliveryId = deliveryId;
             Destination = destination;
@@ -66,10 +63,9 @@ namespace Akka.Persistence
         public object Message { get; set; }
     }
 
-    internal struct Delivery
+    internal sealed class Delivery
     {
         public Delivery(ActorPath destination, object message, DateTime timestamp, int attempt)
-            : this()
         {
             Destination = destination;
             Message = message;

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Akka.Persistence
 {
-    public sealed class SnapshotMetadata: IEquatable<SnapshotMetadata>
+    public sealed class SnapshotMetadata : IEquatable<SnapshotMetadata>
     {
         internal class SnapshotMetadataTimestampComparer : IComparer<SnapshotMetadata>
         {
@@ -15,7 +15,7 @@ namespace Akka.Persistence
 
         public static readonly IComparer<SnapshotMetadata> TimestampComparer = new SnapshotMetadataTimestampComparer();
 
-        public SnapshotMetadata(string persistenceId, long sequenceNr) 
+        public SnapshotMetadata(string persistenceId, long sequenceNr)
             : this(persistenceId, sequenceNr, DateTime.MinValue)
         {
         }
@@ -45,7 +45,7 @@ namespace Akka.Persistence
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
-            return obj is SnapshotMetadata && Equals((SnapshotMetadata) obj);
+            return obj is SnapshotMetadata && Equals((SnapshotMetadata)obj);
         }
 
         public bool Equals(SnapshotMetadata other)
@@ -68,9 +68,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Sent to <see cref="PersistentActor"/> after successful saving of a snapshot.
     /// </summary>
-    public struct SaveSnapshotSuccess
+    public sealed class SaveSnapshotSuccess
     {
-        public SaveSnapshotSuccess(SnapshotMetadata metadata) : this()
+        public SaveSnapshotSuccess(SnapshotMetadata metadata)
         {
             Metadata = metadata;
         }
@@ -81,9 +81,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Sent to <see cref="PersistentActor"/> after failed saving a snapshot.
     /// </summary>
-    public struct SaveSnapshotFailure
+    public sealed class SaveSnapshotFailure
     {
-        public SaveSnapshotFailure(SnapshotMetadata metadata, Exception cause) : this()
+        public SaveSnapshotFailure(SnapshotMetadata metadata, Exception cause)
         {
             Metadata = metadata;
             Cause = cause;
@@ -104,9 +104,9 @@ namespace Akka.Persistence
     /// Offers a <see cref="PersistentActor"/> a previously saved snapshot during recovery.
     /// This offer is received before any further replayed messages.
     /// </summary>
-    public struct SnapshotOffer
+    public sealed class SnapshotOffer
     {
-        public SnapshotOffer(SnapshotMetadata metadata, object snapshot) : this()
+        public SnapshotOffer(SnapshotMetadata metadata, object snapshot)
         {
             Metadata = metadata;
             Snapshot = snapshot;
@@ -119,13 +119,12 @@ namespace Akka.Persistence
     /// <summary>
     /// Selection criteria for loading and deleting a snapshots.
     /// </summary>
-    public struct SnapshotSelectionCriteria
+    public sealed class SnapshotSelectionCriteria
     {
         public static readonly SnapshotSelectionCriteria Latest = new SnapshotSelectionCriteria(long.MaxValue, DateTime.MaxValue);
         public static readonly SnapshotSelectionCriteria None = new SnapshotSelectionCriteria(0L, DateTime.MinValue);
 
-        public SnapshotSelectionCriteria(long maxSequenceNr, DateTime maxTimeStamp) 
-            : this()
+        public SnapshotSelectionCriteria(long maxSequenceNr, DateTime maxTimeStamp)
         {
             MaxSequenceNr = maxSequenceNr;
             MaxTimeStamp = maxTimeStamp;
@@ -157,9 +156,9 @@ namespace Akka.Persistence
     /// <summary>
     /// A selected snapshot matching <see cref="SnapshotSelectionCriteria"/>.
     /// </summary>
-    public struct SelectedSnapshot
+    public sealed class SelectedSnapshot
     {
-        public SelectedSnapshot(SnapshotMetadata metadata, object snapshot) : this()
+        public SelectedSnapshot(SnapshotMetadata metadata, object snapshot)
         {
             Metadata = metadata;
             Snapshot = snapshot;
@@ -173,11 +172,11 @@ namespace Akka.Persistence
     #region Internal API for Snapshot protocol
 
     /// <summary>
-    /// Instructs a snapshot store to load the snapshot.
+    /// Insealed classs a snapshot store to load the snapshot.
     /// </summary>
-    internal struct LoadSnapshot
+    internal sealed class LoadSnapshot
     {
-        public LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr) : this()
+        public LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
         {
             PersistenceId = persistenceId;
             Criteria = criteria;
@@ -203,9 +202,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Response to a <see cref="LoadSnapshot"/> message.
     /// </summary>
-    internal struct LoadSnapshotResult
+    internal sealed class LoadSnapshotResult
     {
-        public LoadSnapshotResult(SelectedSnapshot? snapshot, long toSequenceNr) : this()
+        public LoadSnapshotResult(SelectedSnapshot snapshot, long toSequenceNr)
         {
             Snapshot = snapshot;
             ToSequenceNr = toSequenceNr;
@@ -214,16 +213,16 @@ namespace Akka.Persistence
         /// <summary>
         /// Loaded snapshot or null if none provided.
         /// </summary>
-        public SelectedSnapshot? Snapshot { get; private set; }
+        public SelectedSnapshot Snapshot { get; private set; }
         public long ToSequenceNr { get; private set; }
     }
 
     /// <summary>
-    /// Instructs snapshot store to save a snapshot.
+    /// Insealed classs snapshot store to save a snapshot.
     /// </summary>
-    internal struct SaveSnapshot
+    internal sealed class SaveSnapshot
     {
-        public SaveSnapshot(SnapshotMetadata metadata, object snapshot) : this()
+        public SaveSnapshot(SnapshotMetadata metadata, object snapshot)
         {
             Metadata = metadata;
             Snapshot = snapshot;
@@ -234,11 +233,11 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// Instructs a snapshot store to save a snapshot.
+    /// Insealed classs a snapshot store to save a snapshot.
     /// </summary>
-    internal struct DeleteSnapshot
+    internal sealed class DeleteSnapshot
     {
-        public DeleteSnapshot(SnapshotMetadata metadata) : this()
+        public DeleteSnapshot(SnapshotMetadata metadata)
         {
             Metadata = metadata;
         }
@@ -247,11 +246,11 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// Instructs a snapshot store to delete all snapshots that match provided criteria.
+    /// Insealed classs a snapshot store to delete all snapshots that match provided criteria.
     /// </summary>
-    internal struct DeleteSnapshots
+    internal sealed class DeleteSnapshots
     {
-        public DeleteSnapshots(string persistenceId, SnapshotSelectionCriteria criteria) : this()
+        public DeleteSnapshots(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             PersistenceId = persistenceId;
             Criteria = criteria;

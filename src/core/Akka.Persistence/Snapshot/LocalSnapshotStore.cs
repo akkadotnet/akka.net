@@ -41,7 +41,7 @@ namespace Akka.Persistence.Snapshot
             base.PreStart();
         }
 
-        protected override Task<SelectedSnapshot?> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
+        protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             // Heurisitics: take 3 latest snapshots
             //TODO: convert 3 to configurable value
@@ -75,7 +75,7 @@ namespace Akka.Persistence.Snapshot
             }
         }
 
-        private SelectedSnapshot? Load(IEnumerable<SnapshotMetadata> metas, int dec)
+        private SelectedSnapshot Load(IEnumerable<SnapshotMetadata> metas, int dec)
         {
             if (dec > 0)
             {

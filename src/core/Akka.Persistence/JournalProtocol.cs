@@ -4,10 +4,9 @@ using Akka.Actor;
 
 namespace Akka.Persistence
 {
-    internal struct DeleteMessages
+    internal sealed class DeleteMessages
     {
         public DeleteMessages(IEnumerable<IPersistentEnvelope> messageIds, bool isPermanent, ActorRef requestor)
-            : this()
         {
             MessageIds = messageIds;
             IsPermanent = isPermanent;
@@ -19,10 +18,9 @@ namespace Akka.Persistence
         public ActorRef Requestor { get; private set; }
     }
 
-    internal struct DeleteMessagesSuccess
+    internal sealed class DeleteMessagesSuccess
     {
         public DeleteMessagesSuccess(IEnumerable<IPersistentEnvelope> messageIds)
-            : this()
         {
             MessageIds = messageIds;
         }
@@ -33,9 +31,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Reply message to failed <see cref="DeleteMessages"/> request.
     /// </summary>
-    internal struct DeleteMessagesFailure
+    internal sealed class DeleteMessagesFailure
     {
-        public DeleteMessagesFailure(Exception cause) : this()
+        public DeleteMessagesFailure(Exception cause)
         {
             Cause = cause;
         }
@@ -46,9 +44,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Request to delete all persistent messages with sequence numbers up to `toSequenceNr` (inclusive).  
     /// </summary>
-    internal struct DeleteMessagesTo
+    internal sealed class DeleteMessagesTo
     {
-        public DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent) : this()
+        public DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent)
         {
             PersistenceId = persistenceId;
             ToSequenceNr = toSequenceNr;
@@ -65,33 +63,9 @@ namespace Akka.Persistence
         public bool IsPermanent { get; private set; }
     }
 
-    internal struct WriteConfirmations
-    {
-        public WriteConfirmations(IEnumerable<IPersistentConfirmation> confirmations, ActorRef requestor) : this()
-        {
-            Confirmations = confirmations;
-            Requestor = requestor;
-        }
-
-        public IEnumerable<IPersistentConfirmation> Confirmations { get; private set; }
-        public ActorRef Requestor { get; private set; }
-    }
-
-    internal struct WriteConfirmationsSuccess
-    {
-        public WriteConfirmationsSuccess(IEnumerable<IPersistentConfirmation> confirmations)
-            : this()
-        {
-            Confirmations = confirmations;
-        }
-
-        public IEnumerable<IPersistentConfirmation> Confirmations { get; private set; }
-    }
-
-    internal struct WriteConfirmationsFailure
+    internal sealed class WriteConfirmationsFailure
     {
         public WriteConfirmationsFailure(Exception cause)
-            : this()
         {
             Cause = cause;
         }
@@ -99,9 +73,9 @@ namespace Akka.Persistence
         public Exception Cause { get; private set; }
     }
 
-    internal struct WriteMessages
+    internal sealed class WriteMessages
     {
-        public WriteMessages(IEnumerable<IPersistentEnvelope> messages, ActorRef persistentActor, int actorInstanceId) : this()
+        public WriteMessages(IEnumerable<IPersistentEnvelope> messages, ActorRef persistentActor, int actorInstanceId)
         {
             Messages = messages;
             PersistentActor = persistentActor;
@@ -128,10 +102,9 @@ namespace Akka.Persistence
     /// Reply message to a failed <see cref="WriteMessages"/> request. This reply is sent 
     /// to the requestor before all subsequent <see cref="WriteMessageFailure"/> replies.
     /// </summary>
-    internal struct WriteMessagesFailed
+    internal sealed class WriteMessagesFailed
     {
         public WriteMessagesFailed(Exception cause)
-            : this()
         {
             Cause = cause;
         }
@@ -143,9 +116,9 @@ namespace Akka.Persistence
     /// Reply message to a successful <see cref="WriteMessages"/> request. For each contained 
     /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requestor.
     /// </summary>
-    internal struct WriteMessageSuccess
+    internal sealed class WriteMessageSuccess
     {
-        public WriteMessageSuccess(IPersistentRepresentation persistent, int actorInstanceId) : this()
+        public WriteMessageSuccess(IPersistentRepresentation persistent, int actorInstanceId)
         {
             Persistent = persistent;
             ActorInstanceId = actorInstanceId;
@@ -162,9 +135,9 @@ namespace Akka.Persistence
     /// Reply message to a failed <see cref="WriteMessages"/> request. For each contained 
     /// <see cref="IPersistentRepresentation"/> message in the request, a separate reply is sent to the requestor.
     /// </summary>
-    internal struct WriteMessageFailure
+    internal sealed class WriteMessageFailure
     {
-        public WriteMessageFailure(IPersistentRepresentation persistent, Exception cause, int actorInstanceId) : this()
+        public WriteMessageFailure(IPersistentRepresentation persistent, Exception cause, int actorInstanceId)
         {
             Persistent = persistent;
             Cause = cause;
@@ -183,9 +156,9 @@ namespace Akka.Persistence
         public int ActorInstanceId { get; private set; }
     }
 
-    internal struct LoopMessage
+    internal sealed class LoopMessage
     {
-        public LoopMessage(object message, ActorRef persistentActor, int actorInstanceId) : this()
+        public LoopMessage(object message, ActorRef persistentActor, int actorInstanceId)
         {
             Message = message;
             PersistentActor = persistentActor;
@@ -200,10 +173,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Reply message to a <see cref="WriteMessages"/> with a non-persistent message.
     /// </summary>
-    internal struct LoopMessageSuccess
+    internal sealed class LoopMessageSuccess
     {
         public LoopMessageSuccess(object message, int actorInstanceId)
-            : this()
         {
             Message = message;
             ActorInstanceId = actorInstanceId;
@@ -219,10 +191,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Request to replay messages to the <see cref="PersistentActor"/>.
     /// </summary>
-    internal struct ReplayMessages
+    internal sealed class ReplayMessages
     {
-        public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId, ActorRef persistentActor, bool replayDeleted = false) 
-            : this()
+        public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId, ActorRef persistentActor, bool replayDeleted = false)
         {
             FromSequenceNr = fromSequenceNr;
             ToSequenceNr = toSequenceNr;
@@ -266,9 +237,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Reply message to a <see cref="ReplayMessages"/> request. A separate reply is sent to the requestor for each replayed message.
     /// </summary>
-    internal struct ReplayedMessage
+    internal sealed class ReplayedMessage
     {
-        public ReplayedMessage(IPersistentRepresentation persistent) : this()
+        public ReplayedMessage(IPersistentRepresentation persistent)
         {
             Persistent = persistent;
         }
@@ -286,10 +257,9 @@ namespace Akka.Persistence
         private ReplayMessagesSuccess() { }
     }
 
-    internal struct ReplayMessagesFailure
+    internal sealed class ReplayMessagesFailure
     {
         public ReplayMessagesFailure(Exception cause)
-            : this()
         {
             Cause = cause;
         }
@@ -297,9 +267,9 @@ namespace Akka.Persistence
         public Exception Cause { get; private set; }
     }
 
-    internal struct ReadHighestSequenceNr
+    internal sealed class ReadHighestSequenceNr
     {
-        public ReadHighestSequenceNr(long fromSequenceNr, string persistenceId, ActorRef persistentActor) : this()
+        public ReadHighestSequenceNr(long fromSequenceNr, string persistenceId, ActorRef persistentActor)
         {
             FromSequenceNr = fromSequenceNr;
             PersistenceId = persistenceId;
@@ -311,9 +281,9 @@ namespace Akka.Persistence
         public ActorRef PersistentActor { get; private set; }
     }
 
-    internal struct ReadHighestSequenceNrSuccess
+    internal sealed class ReadHighestSequenceNrSuccess
     {
-        public ReadHighestSequenceNrSuccess(long highestSequenceNr) : this()
+        public ReadHighestSequenceNrSuccess(long highestSequenceNr)
         {
             HighestSequenceNr = highestSequenceNr;
         }
@@ -321,10 +291,9 @@ namespace Akka.Persistence
         public long HighestSequenceNr { get; private set; }
     }
 
-    internal struct ReadHighestSequenceNrFailure
+    internal sealed class ReadHighestSequenceNrFailure
     {
         public ReadHighestSequenceNrFailure(Exception cause)
-            : this()
         {
             Cause = cause;
         }

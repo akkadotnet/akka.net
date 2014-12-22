@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Akka.Actor;
 
 namespace Akka.Persistence.Journal
 {
-    public abstract class SyncWriteJournal: WriteJournalBase, IAsyncRecovery
+    public abstract class SyncWriteJournal : WriteJournalBase, IAsyncRecovery
     {
         private readonly PersistenceExtension _extension;
-        private readonly bool _publish;
+        protected readonly bool CanPublish;
 
         protected SyncWriteJournal()
         {
@@ -17,141 +18,64 @@ namespace Akka.Persistence.Journal
                 throw new ArgumentException("Couldn't initialize SyncWriteJournal instance, because associated Persistance extension has not been used in current actor system context.");
             }
 
-            _publish = _extension.Settings.Internal.PublishPluginCommands;
-        }
-
-        protected override bool Receive(object message)
-        {
-            if (message is WriteMessages)
-            {
-                HandleWriteMessages((WriteMessages)message);
-            }
-            else if (message is ReplayMessages)
-            {
-                HandleReplayMessages((ReplayMessages)message);
-            }
-            else if (message is ReadHighestSequenceNr)
-            {
-                HandleReadHighestSequenceNr((ReadHighestSequenceNr)message);
-            }
-            else if (message is WriteConfirmations)
-            {
-                HandleWriteConfirmations((WriteConfirmations)message);
-            }
-            else if (message is DeleteMessages)
-            {
-                HandleDeleteMessages((DeleteMessages)message);
-            }
-            else if (message is DeleteMessagesTo)
-            {
-                HandleDeleteMessagesTo((DeleteMessagesTo)message);
-            }
-            else if (message is LoopMessage)
-            {
-                var msg = (LoopMessage) message;
-                msg.PersistentActor.Forward(new LoopMessageSuccess(msg.Message, msg.ActorInstanceId));
-            }
-            else
-            {
-                return false;
-            }
-
-            return true;
+            CanPublish = _extension.Settings.Internal.PublishPluginCommands;
         }
 
         public abstract Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> replayCallback);
+        
         public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
+
+        /// <summary>
+        /// Synchronously writes a batch of a persistent messages to the journal. The batch must be atomic,
+        /// i.e. all persistent messages in batch are written at once or none of them.
+        /// </summary>
         protected abstract void WriteMessages(IEnumerable<IPersistentRepresentation> messages);
-        protected abstract void WriteConfirmations(IEnumerable<IPersistentConfirmation> confirmations);
-        protected abstract void DeleteMessages(IEnumerable<IPersistentId> messageIds, bool isPermanent);
+
+        /// <summary>
+        /// Synchronously deletes all persistent messages up to inclusive <paramref name="toSequenceNr"/>
+        /// bound. If <paramref name="isPermanent"/> flag is clear, the persistent messages are marked as
+        /// deleted, otherwise they're permanently deleted.
+        /// </summary>
         protected abstract void DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent);
+
+        protected override bool Receive(object message)
+        {
+            if (message is WriteMessages) HandleWriteMessages(message as WriteMessages);
+            else if (message is ReplayMessages) HandleReplayMessages(message as ReplayMessages);
+            else if (message is ReadHighestSequenceNr) HandleReadHighestSequenceNr(message as ReadHighestSequenceNr);
+            else if (message is DeleteMessagesTo) HandleDeleteMessagesTo(message as DeleteMessagesTo);
+            else return false;
+            return true;
+        }
 
         private void HandleDeleteMessagesTo(DeleteMessagesTo msg)
         {
             try
             {
                 DeleteMessagesTo(msg.PersistenceId, msg.ToSequenceNr, msg.IsPermanent);
-                if (_publish)
-                {
-                    Context.System.EventStream.Publish(msg);
-                }
-            }
-            catch (Exception e)
-            {
-                /* do nothing */
-            }
-        }
 
-        private void HandleDeleteMessages(DeleteMessages msg)
-        {
-            try
-            {
-                DeleteMessages(msg.MessageIds, msg.IsPermanent);
-                if (msg.Requestor != null)
-                {
-                    msg.Requestor.Tell(new DeleteMessagesSuccess(msg.MessageIds));
-                }
-
-                if (_publish)
-                {
-                    Context.System.EventStream.Publish(msg);
-                }
+                if (CanPublish) Context.System.EventStream.Publish(msg);
             }
-            catch (Exception e)
-            {
-                if (msg.Requestor != null)
-                {
-                    msg.Requestor.Tell(new DeleteMessagesFailure(e));
-                }
-            }
-        }
-
-        private void HandleWriteConfirmations(WriteConfirmations msg)
-        {
-            try
-            {
-                WriteConfirmations(msg.Confirmations);
-                msg.Requestor.Tell(new WriteConfirmationsSuccess(msg.Confirmations));
-            }
-            catch (Exception e)
-            {
-                msg.Requestor.Tell(new WriteConfirmationsFailure(e));
-            }
+            catch (Exception e) { /* do nothing */ }
         }
 
         private void HandleReadHighestSequenceNr(ReadHighestSequenceNr msg)
         {
             ReadHighestSequenceNrAsync(msg.PersistenceId, msg.FromSequenceNr)
-                .ContinueWith(t =>
-                {
-                    var result = t.IsFaulted
+                .ContinueWith(t => t.IsFaulted
                         ? (object)new ReadHighestSequenceNrSuccess(t.Result)
-                        : new ReadHighestSequenceNrFailure(t.Exception);
-                    msg.PersistentActor.Tell(result);
-                });
+                        : new ReadHighestSequenceNrFailure(t.Exception))
+                .PipeTo(msg.PersistentActor);
         }
 
         private void HandleReplayMessages(ReplayMessages msg)
         {
             ReplayMessagesAsync(msg.PersistenceId, msg.FromSequenceNr, msg.ToSequenceNr, msg.Max, persitent =>
             {
-                try
-                {
-                    if (!persitent.IsDeleted || msg.ReplayDeleted)
-                    {
-                        msg.PersistentActor.Tell(new ReplayedMessage(persitent), persitent.Sender);
-                    }
-                    if (_publish)
-                    {
-                        Context.System.EventStream.Publish(msg);
-                    }
+                if (!persitent.IsDeleted || msg.ReplayDeleted)
+                    msg.PersistentActor.Tell(new ReplayedMessage(persitent), persitent.Sender);
 
-                    msg.PersistentActor.Tell(ReplayMessagesSuccess.Instance);
-                }
-                catch (Exception e)
-                {
-                    msg.PersistentActor.Tell(new ReplayMessagesFailure(e));
-                }
+                if (CanPublish) Context.System.EventStream.Publish(msg);
             });
         }
 
@@ -162,37 +86,36 @@ namespace Akka.Persistence.Journal
                 var batch = CreatePersitentBatch(msg.Messages);
                 WriteMessages(batch);
 
-                msg.PersistentActor.Tell(WriteMessagesSuccess.Instance);
-                foreach (var resequencable in msg.Messages)
+                msg.PersistentActor.Tell(WriteMessagesSuccessull.Instance);
+                foreach (var message in msg.Messages)
                 {
-                    if (resequencable is IPersistentRepresentation)
+                    if (message is IPersistentRepresentation)
                     {
-                        var p = resequencable as IPersistentRepresentation;
+                        var p = message as IPersistentRepresentation;
                         msg.PersistentActor.Tell(new WriteMessageSuccess(p, msg.ActorInstanceId), p.Sender);
                     }
                     else
                     {
-                        msg.PersistentActor.Tell(new LoopMessageSuccess(resequencable.Payload, msg.ActorInstanceId),
-                            resequencable.Sender);
+                        msg.PersistentActor.Tell(new LoopMessageSuccess(message.Payload, msg.ActorInstanceId), message.Sender);
                     }
                 }
             }
             catch (Exception e)
             {
-                msg.PersistentActor.Tell(new WriteMessagesFailure(e));
-                foreach (var resequencable in msg.Messages)
+                msg.PersistentActor.Tell(new WriteMessagesFailed(e));
+                foreach (var message in msg.Messages)
                 {
-                    if (resequencable is IPersistentRepresentation)
+                    if (message is IPersistentRepresentation)
                     {
-                        var p = resequencable as IPersistentRepresentation;
+                        var p = message as IPersistentRepresentation;
                         msg.PersistentActor.Tell(new WriteMessageFailure(p, e, msg.ActorInstanceId), p.Sender);
                     }
                     else
                     {
-                        msg.PersistentActor.Tell(new LoopMessageSuccess(resequencable.Payload, msg.ActorInstanceId),
-                            resequencable.Sender);
+                        msg.PersistentActor.Tell(new LoopMessageSuccess(message.Payload, msg.ActorInstanceId), message.Sender);
                     }
                 }
+
                 throw;
             }
         }

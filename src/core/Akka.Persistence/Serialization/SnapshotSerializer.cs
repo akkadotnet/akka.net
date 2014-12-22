@@ -4,9 +4,12 @@ using Akka.Serialization;
 
 namespace Akka.Persistence.Serialization
 {
-    public struct Snapshot
+    /// <summary>
+    /// Wrapper for snapshot data.
+    /// </summary>
+    public sealed class Snapshot
     {
-        public Snapshot(object data) : this()
+        public Snapshot(object data)
         {
             Data = data;
         }
@@ -14,9 +17,9 @@ namespace Akka.Persistence.Serialization
         public object Data { get; private set; }
     }
 
-    public struct SnapshotHeader
+    public sealed class SnapshotHeader
     {
-        public SnapshotHeader(int serializerId, string manifest) : this()
+        public SnapshotHeader(int serializerId, string manifest)
         {
             SerializerId = serializerId;
             Manifest = manifest;
@@ -44,10 +47,22 @@ namespace Akka.Persistence.Serialization
 
         public override byte[] ToBinary(object obj)
         {
-            throw new NotImplementedException();
+            if (obj is Snapshot) return SnapshotToBinary((obj as Snapshot).Data);
+
+            throw new ArgumentException(typeof(SnapshotSerializer) + "cannot serialize object of type " + obj.GetType(), "obj");
         }
 
         public override object FromBinary(byte[] bytes, Type type)
+        {
+            return new Snapshot(SnapshotFromBinary(bytes));
+        }
+
+        private object SnapshotFromBinary(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        private byte[] SnapshotToBinary(object data)
         {
             throw new NotImplementedException();
         }

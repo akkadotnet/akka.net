@@ -63,9 +63,9 @@ namespace Akka.Persistence
                 else if (message is LoadSnapshotResult)
                 {
                     var loadResult = (LoadSnapshotResult)message;
-                    if (loadResult.Snapshot.HasValue)
+                    if (loadResult.Snapshot != null)
                     {
-                        var selectedSnapshot = loadResult.Snapshot.Value;
+                        var selectedSnapshot = loadResult.Snapshot;
                         LastSequenceNr = selectedSnapshot.Metadata.SequenceNr;
                         // since we're recovering, we can ignore receive behavior from the stack
                         base.AroundReceive(receive, new SnapshotOffer(selectedSnapshot.Metadata, selectedSnapshot.Snapshot));

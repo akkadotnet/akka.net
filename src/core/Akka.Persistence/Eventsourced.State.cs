@@ -72,9 +72,9 @@ namespace Akka.Persistence
                 if (message is LoadSnapshotResult)
                 {
                     var res = (LoadSnapshotResult)message;
-                    if (res.Snapshot.HasValue)
+                    if (res.Snapshot != null)
                     {
-                        var snapshot = res.Snapshot.Value;
+                        var snapshot = res.Snapshot;
                         LastSequenceNr = snapshot.Metadata.SequenceNr;
                         base.AroundReceive(recoveryBehavior, new SnapshotOffer(snapshot.Metadata, snapshot.Snapshot));
                     }
@@ -312,7 +312,7 @@ namespace Akka.Persistence
                     TryFirstInvocationHandler(m.Message, onWriteMessageComplete);
                 }
             }
-            else if (message is WriteMessagesSuccess || message is WriteMessagesFailure)
+            else if (message is WriteMessagesSuccessull || message is WriteMessagesFailed)
             {
                 if (_journalBatch.Count == 0) _isWriteInProgress = false;
                 else FlushJournalBatch();

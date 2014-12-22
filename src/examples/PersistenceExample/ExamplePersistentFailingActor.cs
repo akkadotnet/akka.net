@@ -6,12 +6,12 @@ using Akka.Persistence;
 
 namespace PersistenceExample
 {
-    public class ExamplePersistentFailingActor : PersistentActorBase
+    public class ExamplePersistentFailingActor : PersistentActor
     {
         public override string PersistenceId { get { return "sample-id-2"; } }
 
         public List<string> Received { get; set; }
-        public override bool ReceiveRecover(object message)
+        protected override bool ReceiveRecover(object message)
         {
             if (message is string)
                 Received = new[] {message.ToString()}.Union(Received).ToList();
@@ -19,7 +19,7 @@ namespace PersistenceExample
             return true;
         }
 
-        public override bool ReceiveCommand(object message)
+        protected override bool ReceiveCommand(object message)
         {
             if (message == "print")
                 Console.WriteLine("Received " + string.Join("; ", Enumerable.Reverse(Received)));

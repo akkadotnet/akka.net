@@ -6,16 +6,15 @@ using Akka.Actor;
 namespace Akka.Persistence
 {
     /// <summary>
-    /// Instructs a <see cref="PersistentView"/> to update itself. This will run a single incremental message replay 
+    /// Insealed classs a <see cref="PersistentView"/> to update itself. This will run a single incremental message replay 
     /// with all messages from the corresponding persistent id's journal that have not yet been consumed by the view.  
     /// To update a view with messages that have been written after handling this request, another <see cref="Update"/> 
     /// request must be sent to the view.
     /// </summary>
     [Serializable]
-    public struct Update
+    public sealed class Update
     {
         public Update(bool isAwait = false, long replayMax = long.MaxValue)
-            : this()
         {
             IsAwait = isAwait;
             ReplayMax = replayMax;
@@ -80,7 +79,7 @@ namespace Akka.Persistence
         /// 
         /// The usual case is to have a different identifiers for <see cref="ViewId"/> and <see cref="PersistenceId"/>.
         /// </summary>
-        protected abstract string ViewId { get; }
+        public abstract string ViewId { get; }
 
         /// <summary>
         /// Id of the persistent entity for which messages should be replayed.

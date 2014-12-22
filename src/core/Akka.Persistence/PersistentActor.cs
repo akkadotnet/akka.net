@@ -8,9 +8,9 @@ namespace Akka.Persistence
     /// If not handled, an <see cref="ActorKilledException"/> is thrown by that persistent actor.
     /// </summary>
     [Serializable]
-    public struct PersistenceFailure
+    public sealed class PersistenceFailure
     {
-        public PersistenceFailure(object payload, long sequenceNr, Exception cause) : this()
+        public PersistenceFailure(object payload, long sequenceNr, Exception cause)
         {
             Payload = payload;
             SequenceNr = sequenceNr;
@@ -38,9 +38,9 @@ namespace Akka.Persistence
     /// persistent actor's highest sequence number. If not handled, the actor will be stopped.
     /// </summary>
     [Serializable]
-    public struct RecoveryFailure
+    public sealed class RecoveryFailure
     {
-        public RecoveryFailure(Exception cause) : this()
+        public RecoveryFailure(Exception cause)
         {
             Cause = cause;
         }
@@ -56,7 +56,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// Instructs a <see cref="PersistentActor"/> to recover itself. Recovery will start from the first previously saved snapshot
+    /// Insealed classs a <see cref="PersistentActor"/> to recover itself. Recovery will start from the first previously saved snapshot
     /// matching provided <see cref="FromSnapshot"/> selection criteria, if any. Otherwise it will replay all journaled messages.
     /// 
     /// If recovery starts from a snapshot, the <see cref="PersistentActor"/> is offered with that snapshot wrapped in 
@@ -64,10 +64,9 @@ namespace Akka.Persistence
     /// specified upper sequence number bound (<see cref="ToSequenceNr"/>).
     /// </summary>
     [Serializable]
-    public struct Recover
+    public sealed class Recover
     {
         public Recover(SnapshotSelectionCriteria fromSnapshot, long toSequenceNr = long.MaxValue, long replayMax = long.MaxValue)
-            : this()
         {
             FromSnapshot = fromSnapshot;
             ToSequenceNr = toSequenceNr;

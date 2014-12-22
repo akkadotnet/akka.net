@@ -9,6 +9,12 @@ namespace Akka.Persistence.Tests
 {
     public class GuaranteedDeliverySpec : PersistenceSpec
     {
+
+        public GuaranteedDeliverySpec(string config)
+            : base(config)
+        {
+        }
+
         [Fact]
         public void GuaranteedDelivery_must_deliver_messages_in_order_when_nothing_is_lost()
         {
@@ -237,10 +243,10 @@ namespace Akka.Persistence.Tests
             resC.ShouldOnlyContainInOrder(c);
         }
 
-        class Sender : PersistentActorBase
+        class Sender : NamedPersistentActor
         {
-            public Sender(ActorRef testActor, string name, TimeSpan redeliverInterval, int warn, bool async,
-            IDictionary<string, ActorPath> destinations)
+            public Sender(ActorRef testActor, string name, TimeSpan redeliverInterval, int warn, bool async, IDictionary<string, ActorPath> destinations) 
+                : base(name)
             {
             }
 
@@ -249,12 +255,12 @@ namespace Akka.Persistence.Tests
             public int MaxUnconfirmedMessages { get; private set; }
             public int UnconfirmedMessages { get; private set; }
             public GuaranteedDeliverySnapshot DeliverySnapshot { get; set; }
-            public void Deliver(ActorPath destination, Func<long, object> idToMessageMapper)
+            protected override bool ReceiveRecover(object message)
             {
                 throw new NotImplementedException();
             }
 
-            public bool ConfirmDelivery(long deliveryId)
+            protected override bool ReceiveCommand(object message)
             {
                 throw new NotImplementedException();
             }

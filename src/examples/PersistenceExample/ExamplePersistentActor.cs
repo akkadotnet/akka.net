@@ -46,7 +46,7 @@ namespace PersistenceExample
         }
     }
 
-    public class ExamplePersistentActor : PersistentActorBase
+    public class ExamplePersistentActor : PersistentActor
     {
         public ExamplePersistentActor()
         {
@@ -63,7 +63,7 @@ namespace PersistenceExample
             State = State.Update(evt);
         }
 
-        public override bool ReceiveRecover(object message)
+        protected override bool ReceiveRecover(object message)
         {
             ExampleState state;
             if (message is Event)
@@ -74,7 +74,7 @@ namespace PersistenceExample
             return true;
         }
 
-        public override bool ReceiveCommand(object message)
+        protected override bool ReceiveCommand(object message)
         {
             if (message is Command)
             {

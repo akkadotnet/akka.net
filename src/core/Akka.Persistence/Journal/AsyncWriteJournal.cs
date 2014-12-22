@@ -9,117 +9,80 @@ namespace Akka.Persistence.Journal
 {
     public abstract class AsyncWriteJournal : WriteJournalBase, IAsyncRecovery
     {
-        private readonly PersistenceExtension _persistence;
-        private readonly bool _publish;
+        protected readonly bool CanPublish;
+        private readonly PersistenceExtension _extension;
         private readonly ActorRef _resequencer;
 
         private long _resequencerCounter = 0L;
 
         protected AsyncWriteJournal()
         {
-            _persistence = Context.System.GetExtension<PersistenceExtension>();
-            if (_persistence == null)
+            _extension = Persistence.Instance.Get(Context.System);
+            if (_extension == null)
             {
                 throw new ArgumentException("Couldn't initialize SyncWriteJournal instance, because associated Persistance extension has not been used in current actor system context.");
             }
 
-            _publish = _persistence.Settings.Internal.PublishPluginCommands;
+            CanPublish = _extension.Settings.Internal.PublishPluginCommands;
             _resequencer = Context.System.ActorOf(Props.Create(() => new Resequencer()));
         }
 
+        public abstract Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> replayCallback);
+
+        public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
+
+        /// <summary>
+        /// Asynchronously writes a batch of a persistent messages to the journal. The batch must be atomic,
+        /// i.e. all persistent messages in batch are written at once or none of them.
+        /// </summary>
+        protected abstract Task WriteMessagesAsync(IEnumerable<IPersistentRepresentation> messages);
+
+        /// <summary>
+        /// Asynchronously deletes all persistent messages up to inclusive <paramref name="toSequenceNr"/>
+        /// bound. If <paramref name="isPermanent"/> flag is clear, the persistent messages are marked as
+        /// deleted, otherwise they're permanently deleted.
+        /// </summary>
+        protected abstract Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, bool isPermanent);
+
         protected override bool Receive(object message)
         {
-            if (message is WriteMessages)
-            {
-                HandleWriteMessages((WriteMessages)message);
-            }
-            else if (message is ReplayMessages)
-            {
-                HandleReplayMessages((ReplayMessages)message);
-            }
-            else if (message is ReadHighestSequenceNr)
-            {
-                HandleReadHighestSequenceNr((ReadHighestSequenceNr)message);
-            }
-            else if (message is WriteConfirmations)
-            {
-                HandleWriteConfirmations((WriteConfirmations)message);
-            }
-            else if (message is DeleteMessages)
-            {
-                HandleDeleteMessages((DeleteMessages)message);
-            }
-            else if (message is DeleteMessagesTo)
-            {
-                HandleDeleteMessagesTo((DeleteMessagesTo)message);
-            }
-            else if (message is LoopMessage)
-            {
-                var msg = (LoopMessage)message;
-                _resequencer.Tell(new Desequenced(new LoopMessageSuccess(msg.Message, msg.ActorInstanceId), _resequencerCounter, msg.PersistentActor, Sender));
-                Interlocked.Increment(ref _resequencerCounter);
-            }
-            else
-            {
-                return false;
-            }
-
+            if (message is WriteMessages) HandleWriteMessages((WriteMessages)message);
+            else if (message is ReplayMessages) HandleReplayMessages((ReplayMessages)message);
+            else if (message is ReadHighestSequenceNr) HandleReadHighestSequenceNr((ReadHighestSequenceNr)message);
+            else if (message is DeleteMessagesTo) HandleDeleteMessagesTo((DeleteMessagesTo)message);
+            else return false;
             return true;
         }
-
-        public abstract Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> replayCallback);
-        public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
-        protected abstract Task WriteMessagesAsync(IEnumerable<IPersistentRepresentation> messages);
-        protected abstract Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, bool isPermanent);
 
         private void HandleDeleteMessagesTo(DeleteMessagesTo message)
         {
             DeleteMessagesToAsync(message.PersistenceId, message.ToSequenceNr, message.IsPermanent)
                 .ContinueWith(t =>
                 {
-                    if (!t.IsFaulted && _publish)
-                    {
-                        Context.System.EventStream.Publish(message);
-                    }
+                    if (!t.IsFaulted && CanPublish) Context.System.EventStream.Publish(message);
                 });
-        }
-
-        private void HandleDeleteMessages(DeleteMessages message)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void HandleWriteConfirmations(WriteConfirmations message)
-        {
-            throw new NotImplementedException();
         }
 
         private void HandleReadHighestSequenceNr(ReadHighestSequenceNr message)
         {
+            // Send read highest sequence number to persistentActor directly. No need
+            // to resequence the result relative to written and looped messages.
             ReadHighestSequenceNrAsync(message.PersistenceId, message.FromSequenceNr)
-                .ContinueWith(t =>
-                {
-                    if (t.IsFaulted)
-                    {
-                        message.PersistentActor.Tell(new ReadHighestSequenceNrFailure(t.Exception));
-                    }
-                    else
-                    {
-                        message.PersistentActor.Tell(new ReadHighestSequenceNrSuccess(t.Result));
-                    }
-                });
+                .ContinueWith(t => t.IsFaulted
+                    ? (object)new ReadHighestSequenceNrFailure(t.Exception)
+                    : new ReadHighestSequenceNrSuccess(t.Result))
+                .PipeTo(message.PersistentActor);
         }
 
         private void HandleReplayMessages(ReplayMessages message)
         {
+            // Send replayed messages and replay result to persistentActor directly. No need
+            // to resequence replayed messages relative to written and looped messages.
             ReplayMessagesAsync(message.PersistenceId, message.FromSequenceNr, message.ToSequenceNr, message.Max, p =>
             {
                 try
                 {
-                    if (!p.IsDeleted || message.ReplayDeleted)
-                    {
-                        message.PersistentActor.Tell(new ReplayedMessage(p), p.Sender);
-                    }
+                    if (!p.IsDeleted || message.ReplayDeleted) message.PersistentActor.Tell(new ReplayedMessage(p), p.Sender);
                     message.PersistentActor.Tell(ReplayMessagesSuccess.Instance);
                 }
                 catch (Exception e)
@@ -127,10 +90,7 @@ namespace Akka.Persistence.Journal
                     message.PersistentActor.Tell(new ReplayMessagesFailure(e));
                 }
 
-                if (_publish)
-                {
-                    Context.System.EventStream.Publish(message);    
-                }
+                if (CanPublish) Context.System.EventStream.Publish(message);
             });
         }
 
@@ -139,15 +99,15 @@ namespace Akka.Persistence.Journal
             var counter = _resequencerCounter;
             WriteMessagesAsync(CreatePersitentBatch(message.Messages)).ContinueWith(t =>
             {
-                if (t.IsFaulted)
+                if (!t.IsFaulted)
                 {
-                    _resequencer.Tell(new Desequenced(new WriteMessagesFailure(t.Exception), counter, message.PersistentActor, Self));
-                    Resequence(message, counter, x => new WriteMessageFailure(x, t.Exception, message.ActorInstanceId));
+                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessull.Instance, counter, message.PersistentActor, Self));
+                    Resequence(message, counter, x => new WriteMessageSuccess(x, message.ActorInstanceId));
                 }
                 else
                 {
-                    _resequencer.Tell(new Desequenced(WriteMessagesSuccess.Instance, counter, message.PersistentActor, Self));
-                    Resequence(message, counter, x => new WriteMessageSuccess(x, message.ActorInstanceId));
+                    _resequencer.Tell(new Desequenced(new WriteMessagesFailed(t.Exception), counter, message.PersistentActor, Self));
+                    Resequence(message, counter, x => new WriteMessageFailure(x, t.Exception, message.ActorInstanceId));
                 }
             });
             var resequencablesLength = message.Messages.Count();
@@ -173,10 +133,9 @@ namespace Akka.Persistence.Journal
             }
         }
 
-        internal struct Desequenced
+        internal sealed class Desequenced
         {
             public Desequenced(object message, long sequenceNr, ActorRef target, ActorRef sender)
-                : this()
             {
                 Message = message;
                 SequenceNr = sequenceNr;
@@ -197,21 +156,19 @@ namespace Akka.Persistence.Journal
 
             protected override bool Receive(object message)
             {
-                if (message is Desequenced)
+                Desequenced d;
+                if ((d = message as Desequenced) != null)
                 {
-                    Desequenced? d = (Desequenced)message;
-                    while (d.HasValue)
+                    do
                     {
-                        d = Resequence(d.Value);
-                    }
-
+                        d = Resequence(d);
+                    } while (d != null);
                     return true;
                 }
-
                 return false;
             }
 
-            private Desequenced? Resequence(Desequenced desequenced)
+            private Desequenced Resequence(Desequenced desequenced)
             {
                 if (desequenced.SequenceNr == _delivered + 1)
                 {

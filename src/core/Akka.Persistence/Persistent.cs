@@ -22,10 +22,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Message, which can be resequenced by <see cref="AsyncWriteJournal"/>, but won't be persisted.
     /// </summary>
-    internal struct NonPersistentMessage : IPersistentEnvelope
+    internal sealed class NonPersistentMessage : IPersistentEnvelope
     {
         public NonPersistentMessage(object payload, ActorRef sender)
-            : this()
         {
             Payload = payload;
             Sender = sender;
@@ -79,12 +78,12 @@ namespace Akka.Persistence
     [Serializable]
     public class Persistent : IPersistentRepresentation
     {
-        public Persistent(object payload, long sequenceNr, string persistenceId, bool isDeleted, ActorRef sender)
+        public Persistent(object payload, long sequenceNr = 0L, string persistenceId = null, bool isDeleted = false, ActorRef sender = null)
         {
             Payload = payload;
             SequenceNr = sequenceNr;
             IsDeleted = isDeleted;
-            PersistenceId = persistenceId;
+            PersistenceId = persistenceId ?? string.Empty;
             Sender = sender;
         }
 

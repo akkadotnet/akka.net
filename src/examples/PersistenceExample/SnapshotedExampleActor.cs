@@ -5,7 +5,7 @@ using Akka.Persistence;
 
 namespace PersistenceExample
 {
-    public class SnapshotedExampleActor : PersistentActorBase
+    public class SnapshotedExampleActor : PersistentActor
     {
         public SnapshotedExampleActor()
         {
@@ -16,7 +16,7 @@ namespace PersistenceExample
 
         public ExampleState State { get; set; }
 
-        public override bool ReceiveRecover(object message)
+        protected override bool ReceiveRecover(object message)
         {
             if (message is SnapshotOffer)
             {
@@ -30,7 +30,7 @@ namespace PersistenceExample
             return true;
         }
 
-        public override bool ReceiveCommand(object message)
+        protected override bool ReceiveCommand(object message)
         {
             if (message == "print")
                 Console.WriteLine("current state = " + State);

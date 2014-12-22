@@ -82,7 +82,7 @@ namespace Akka.Persistence.Snapshot
         /// <summary>
         /// Asynchronously loads a snapshot.
         /// </summary>
-        protected abstract Task<SelectedSnapshot?> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria);
+        protected abstract Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria);
 
         /// <summary>
         /// Asynchronously saves a snapshot.

@@ -62,7 +62,7 @@ namespace Akka.Persistence.Tests
             public bool IsRecovering { get; private set; }
         }
 
-        internal class CrashingActor : PersistentActorBase
+        internal class CrashingActor : PersistentActor
         {
             private readonly ActorRef _testProbe;
             private LoggingAdapter _adapter;
@@ -77,6 +77,11 @@ namespace Akka.Persistence.Tests
             protected override bool Receive(object message)
             {
                 throw new NotImplementedException();
+            }
+
+            public override string PersistenceId
+            {
+                get { return Self.Path.Name; }
             }
 
             protected override bool ReceiveRecover(object message)
@@ -106,7 +111,6 @@ namespace Akka.Persistence.Tests
 
             private void Send()
             {
-                Deliver(_testProbe.Path);
             }
         }
         #endregion
