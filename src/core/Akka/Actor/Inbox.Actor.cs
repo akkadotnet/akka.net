@@ -78,7 +78,7 @@ namespace Akka.Actor
 
         protected override bool Receive(object message)
         {
-            PatternMatch.Match(message)
+            message.Match()
                 .With<Get>(get =>
                 {
                     if (_messages.Count == 0)
@@ -112,6 +112,7 @@ namespace Akka.Actor
                     }
                 })
                 .With<StartWatch>(sw => Context.Watch(sw.Target))
+                .With<StopWatch>(sw => Context.Unwatch(sw.Target))
                 .With<Kick>(() =>
                 {
                     var now = DateTime.Now;

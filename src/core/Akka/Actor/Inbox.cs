@@ -62,6 +62,17 @@ namespace Akka.Actor
         public ActorRef Target { get; private set; }
     }
 
+    internal struct StopWatch
+    {
+        public StopWatch(ActorRef target) 
+            : this()
+        {
+            Target = target;
+        }
+
+        public ActorRef Target { get; private set; }
+    }
+
     internal struct Kick { }
 
     // LinkedList wrapper instead of Queue? While it's used for queueing, however I expect a lot of churn around 
@@ -177,7 +188,7 @@ namespace Akka.Actor
     /// It can watch other actors lifecycle and contains inner actor, which could be passed
     /// as reference to other actors.
     /// </summary>
-    public interface Inboxable
+    public interface Inboxable : ICanWatch
     {
         /// <summary>
         /// Get a reference to internal actor. It may be for example registered in event stream.
@@ -210,12 +221,6 @@ namespace Akka.Actor
         /// Receive a next message satisfying specified <paramref name="predicate"/> under provided <paramref name="timeout"/>.
         /// </summary>
         object ReceiveWhere(Predicate<object> predicate, TimeSpan timeout);
-
-        /// <summary>
-        /// Makes internal actor watch a provided <paramref name="target"/> actor. 
-        /// If it terminates a <see cref="Terminated"/> message will be received.
-        /// </summary>
-        void Watch(ActorRef target);
 
         /// <summary>
         /// Makes an internal actor act as a proxy of given <paramref name="message"/>, 
@@ -253,14 +258,21 @@ namespace Akka.Actor
         }
 
         public ActorRef Receiver { get; private set; }
-
+        
         /// <summary>
         /// Make the inbox’s actor watch the <paramref name="target"/> actor such that 
         /// reception of the <see cref="Terminated"/> message can then be awaited.
         /// </summary>
-        public void Watch(ActorRef target)
+        public ActorRef Watch(ActorRef subject)
         {
-            Receiver.Tell(new StartWatch(target));
+            Receiver.Tell(new StartWatch(subject));
+            return subject;
+        }
+
+        public ActorRef Unwatch(ActorRef subject)
+        {
+            Receiver.Tell(new StopWatch(subject));
+            return subject;
         }
 
         public void Send(ActorRef actorRef, object msg)
