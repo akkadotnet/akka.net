@@ -52,6 +52,7 @@
     <Compile Include="Eventsourced.State.cs" />
     <Compile Include="PersistentActor.cs" />
     <Compile Include="PersistentView.State.cs" />
+    <Compile Include="Serialization\Proto\PersistenceMessages.cs" />
     <Compile Include="Snapshotter.cs" />
     <Compile Include="JournalProtocol.cs" />
     <Compile Include="Journal\AsyncRecovery.cs" />
@@ -80,6 +81,7 @@
     <None Include="packages.config" />
     <None Include="persistence.conf" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

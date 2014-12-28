@@ -145,6 +145,15 @@ namespace Akka.Actor
             return a;
         }
 
+        public static ActorPath Parse(string path)
+        {
+            ActorPath actorPath;
+            if (TryParse(path, out actorPath))
+            {
+                return actorPath;
+            }
+            else throw new UriFormatException("Canno parse an ActorPath: " + path);
+        }
 
         /// <summary>
         /// Tries to parse the uri, which should be a full uri, i.e containing protocol.
