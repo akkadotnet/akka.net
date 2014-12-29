@@ -73,7 +73,7 @@ namespace Akka.Persistence
         {
             LastSequenceNr = 0L;
 
-            Extension = Persistence.Instance.Get(Context.System);
+            Extension = Persistence.Instance.Apply(Context.System);
             _instanceId = InstanceCounter.GetAndIncrement();
             _maxMessageBatchSize = Extension.Settings.Journal.MaxMessageBatchSize;
             _currentState = RecoveryPending();
@@ -286,8 +286,7 @@ namespace Akka.Persistence
             // the internal stash one-by-one. Hence, an unstashAll() from the
             // user stash must be prepended to the internal stash.
 
-            // internalStash.prepend(clearStash())
-            throw new NotImplementedException();
+            _internalStash.Prepend(Stash.ClearStash());
         }
 
         /// <summary>

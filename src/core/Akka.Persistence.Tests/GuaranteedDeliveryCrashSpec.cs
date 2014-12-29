@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Threading;
 using Akka.Actor;
 using Akka.Event;
-using Akka.Pattern;
 using Akka.TestKit;
 using Xunit;
 
@@ -11,7 +9,8 @@ namespace Akka.Persistence.Tests
     public class GuaranteedDeliveryCrashSpec : AkkaSpec
     {
 
-        #region internal classes
+        #region internal test classes
+
         internal class StoppingStrategySupervisor : ActorBase
         {
             private readonly ActorRef _testProbe;
@@ -33,7 +32,7 @@ namespace Akka.Persistence.Tests
             {
                 return new OneForOneStrategy(10, TimeSpan.FromSeconds(10), reason =>
                 {
-                    if(reason is IllegalActorStateException) return Directive.Stop;
+                    if (reason is IllegalActorStateException) return Directive.Stop;
                     return Actor.SupervisorStrategy.DefaultDecider(reason);
                 });
             }
@@ -42,8 +41,9 @@ namespace Akka.Persistence.Tests
         internal class Message
         {
             public static readonly Message Instance = new Message();
-            private Message() {}
+            private Message() { }
         }
+
         internal class CrashMessage
         {
             public static readonly CrashMessage Instance = new CrashMessage();
@@ -62,7 +62,7 @@ namespace Akka.Persistence.Tests
             public bool IsRecovering { get; private set; }
         }
 
-        internal class CrashingActor : PersistentActor
+        internal class CrashingActor : GuaranteedDeliveryActor
         {
             private readonly ActorRef _testProbe;
             private LoggingAdapter _adapter;
@@ -72,11 +72,6 @@ namespace Akka.Persistence.Tests
             public CrashingActor(ActorRef testProbe)
             {
                 _testProbe = testProbe;
-            }
-
-            protected override bool Receive(object message)
-            {
-                throw new NotImplementedException();
             }
 
             public override string PersistenceId
@@ -90,7 +85,7 @@ namespace Akka.Persistence.Tests
                 else if (message is CrashMessage)
                 {
                     Log.Debug("Crash it!");
-                    throw new IllegalStateException("Intentionally crashed");
+                    throw new IllegalActorStateException("Intentionally crashed");
                 }
                 else
                 {
@@ -102,22 +97,23 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if(message is Message) Persist(message as Message, _ => Send());
-                else if (message is CrashMessage) Persist(message as Message, _ => { });
+                if (message is Message) Persist(message as Message, _ => Send());
+                else if (message is CrashMessage) Persist(message as CrashMessage, _ => { });
                 else return false;
-
                 return true;
             }
 
             private void Send()
             {
+                Deliver(_testProbe.Path, id => new SendingMessage(id, false));
             }
         }
+
         #endregion
 
         public GuaranteedDeliveryCrashSpec()
+            : base(PersistenceSpec.Configuration("inmem", "GuaranteedDeliveryCrashSpec", serialization: "off"))
         {
-            
         }
 
         [Fact]
@@ -125,6 +121,7 @@ namespace Akka.Persistence.Tests
         {
             var testProbe = CreateTestProbe();
             var supervisor = Sys.ActorOf(Props.Create(() => new StoppingStrategySupervisor(testProbe.Ref)), "supervisor");
+
             supervisor.Tell(Message.Instance);
             testProbe.ExpectMsg<SendingMessage>();
 

@@ -47,11 +47,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Eventsourced.Lifecycle.cs" />
     <Compile Include="GuaranteedDelivery.cs" />
     <Compile Include="Eventsourced.cs" />
-    <Compile Include="Eventsourced.State.cs" />
+    <Compile Include="Eventsourced.Recovery.cs" />
     <Compile Include="PersistentActor.cs" />
-    <Compile Include="PersistentView.State.cs" />
+    <Compile Include="PersistentView.Recovery.cs" />
+    <Compile Include="PersistentView.Lifecycle.cs" />
     <Compile Include="Serialization\Proto\PersistenceMessages.cs" />
     <Compile Include="Snapshotter.cs" />
     <Compile Include="JournalProtocol.cs" />
@@ -80,6 +82,7 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="persistence.conf" />
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

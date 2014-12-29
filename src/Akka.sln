@@ -22,6 +22,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Protobuf", "Protobuf", "{98
 		core\protobuf\ContainerFormats.proto = core\protobuf\ContainerFormats.proto
 		core\protobuf\csharp_options.proto = core\protobuf\csharp_options.proto
 		core\protobuf\descriptor.proto = core\protobuf\descriptor.proto
+		core\protobuf\PersistenceMessages.proto = core\protobuf\PersistenceMessages.proto
 		core\protobuf\WireFormats.proto = core\protobuf\WireFormats.proto
 	EndProjectSection
 EndProject

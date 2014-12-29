@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Persistence.Serialization;
@@ -13,10 +12,10 @@ namespace Akka.Persistence
     #region Messages
 
     /// <summary>
-    /// Snapshot of a current <see cref="GuaranteedDeliverer"/> state. Can be retrieved with
-    /// <see cref="GuaranteedDeliverer.GetDeliverySnapshot"/> and saved with <see cref="Eventsourced.SaveSnapshot"/>.
+    /// Snapshot of a current <see cref="GuaranteedDeliveryActor"/> state. Can be retrieved with
+    /// <see cref="GuaranteedDeliveryActor.GetDeliverySnapshot"/> and saved with <see cref="Eventsourced.SaveSnapshot"/>.
     /// During recovery the snapshot received in <see cref="SnapshotOffer"/> should be sent with 
-    /// <see cref="GuaranteedDeliverer.SetDeliverySnapshot"/>.
+    /// <see cref="GuaranteedDeliveryActor.SetDeliverySnapshot"/>.
     /// </summary>
     [Serializable]
     public sealed class GuaranteedDeliverySnapshot : IMessage
@@ -33,7 +32,7 @@ namespace Akka.Persistence
 
     /// <summary>
     /// <see cref="UnconfirmedWarning"/> message should be sent after 
-    /// <see cref="IGuaranteedDeliverer.UnconfirmedAttemptsToWarn"/> limit will be reached.
+    /// <see cref="GuaranteedDeliveryActor.UnconfirmedDeliveryAttemptsToWarn"/> limit will be reached.
     /// </summary>
     public sealed class UnconfirmedWarning
     {
@@ -95,7 +94,7 @@ namespace Akka.Persistence
     #endregion
 
     /// <summary>
-    /// An exception thrown, when <see cref="IGuaranteedDeliverer.MaxUnconfirmedMessages"/> threshold has been exceeded.
+    /// An exception thrown, when <see cref="GuaranteedDeliveryActor.MaxUnconfirmedMessages"/> threshold has been exceeded.
     /// </summary>
     public class MaxUnconfirmedMessagesExceededException : AkkaException
     {

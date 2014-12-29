@@ -8,7 +8,10 @@ namespace Akka.Persistence.Journal
     [Serializable]
     public class AsyncReplayTimeoutException : AkkaException
     {
-        public AsyncReplayTimeoutException(string msg) : base(msg) { }
+        public AsyncReplayTimeoutException(string msg)
+            : base(msg)
+        {
+        }
     }
 
     [Serializable]
@@ -21,13 +24,14 @@ namespace Akka.Persistence.Journal
 
         public ActorRef Store { get; private set; }
     }
-    
-    public abstract class AsyncWriteProxy : AsyncWriteJournal, WithUnboundedStash
+
+    public static class AsyncWriteTarget
     {
+
         #region Internal Messages
 
         [Serializable]
-        internal sealed class ReplayFailure
+        public sealed class ReplayFailure
         {
             public ReplayFailure(Exception cause)
             {
@@ -38,14 +42,17 @@ namespace Akka.Persistence.Journal
         }
 
         [Serializable]
-        internal sealed class ReplaySuccess
+        public sealed class ReplaySuccess
         {
             public static readonly ReplaySuccess Instance = new ReplaySuccess();
-            private ReplaySuccess() { }
+
+            private ReplaySuccess()
+            {
+            }
         }
 
         [Serializable]
-        internal sealed class WriteMessages
+        public sealed class WriteMessages
         {
             public WriteMessages(IEnumerable<IPersistentRepresentation> messages)
             {
@@ -56,7 +63,7 @@ namespace Akka.Persistence.Journal
         }
 
         [Serializable]
-        internal sealed class ReplayMessages : IWithPersistenceId
+        public sealed class ReplayMessages : IWithPersistenceId
         {
             public ReplayMessages(string persistenceId, long fromSequenceNr, long toSequenceNr, long max)
             {
@@ -73,7 +80,7 @@ namespace Akka.Persistence.Journal
         }
 
         [Serializable]
-        internal sealed class ReadHighestSequenceNr : IWithPersistenceId
+        public sealed class ReadHighestSequenceNr : IWithPersistenceId
         {
             public ReadHighestSequenceNr(string persistenceId, long fromSequenceNr)
             {
@@ -85,8 +92,26 @@ namespace Akka.Persistence.Journal
             public long FromSequenceNr { get; private set; }
         }
 
-        #endregion
+        [Serializable]
+        public sealed class DeleteMessagesTo
+        {
+            public DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent)
+            {
+                PersistenceId = persistenceId;
+                ToSequenceNr = toSequenceNr;
+                IsPermanent = isPermanent;
+            }
 
+            public string PersistenceId { get; private set; }
+            public long ToSequenceNr { get; private set; }
+            public bool IsPermanent { get; private set; }
+        }
+
+        #endregion
+    }
+
+    public abstract class AsyncWriteProxy : AsyncWriteJournal, WithUnboundedStash
+    {
         private readonly Receive _initialized;
         private ActorRef _store;
 
@@ -115,7 +140,7 @@ namespace Akka.Persistence.Journal
         public override Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> replayCallback)
         {
             var mediator = Context.ActorOf(Props.Create(() => new ReplayMediator(replayCallback, Timeout)).WithDeploy(Deploy.Local));
-            return _store.Ask(new ReplayMessages(persistenceId, fromSequenceNr, toSequenceNr, max))
+            return _store.Ask(new AsyncWriteTarget.ReplayMessages(persistenceId, fromSequenceNr, toSequenceNr, max))
                 // since we cannot set sender directly in Ask, just forward message to mediator
                 // just make sure, that mediator won't call it's Sender inside
                 .ContinueWith(t => mediator.Ask(t.Result)
@@ -132,18 +157,18 @@ namespace Akka.Persistence.Journal
 
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
         {
-            return _store.Ask(new ReadHighestSequenceNr(persistenceId, fromSequenceNr))
+            return _store.Ask(new AsyncWriteTarget.ReadHighestSequenceNr(persistenceId, fromSequenceNr))
                 .ContinueWith(t => (long)t.Result);
         }
 
         protected override Task WriteMessagesAsync(IEnumerable<IPersistentRepresentation> messages)
         {
-            return _store.Ask(new WriteMessages(messages));
+            return _store.Ask(new AsyncWriteTarget.WriteMessages(messages));
         }
 
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, bool isPermanent)
         {
-            return _store.Ask(new DeleteMessagesTo(persistenceId, toSequenceNr, isPermanent));
+            return _store.Ask(new AsyncWriteTarget.DeleteMessagesTo(persistenceId, toSequenceNr, isPermanent));
         }
     }
 
@@ -185,14 +210,14 @@ namespace Akka.Persistence.Journal
         protected override bool Receive(object message)
         {
             if (message is IPersistentRepresentation) _replayCallback(message as IPersistentRepresentation);
-            else if (message is AsyncWriteProxy.ReplaySuccess)
+            else if (message is AsyncWriteTarget.ReplaySuccess)
             {
                 Sender.Tell(ReplayCompletionSuccess.Instance);
                 Context.Stop(Self);
             }
-            else if (message is AsyncWriteProxy.ReplayFailure)
+            else if (message is AsyncWriteTarget.ReplayFailure)
             {
-                var failure = message as AsyncWriteProxy.ReplayFailure;
+                var failure = message as AsyncWriteTarget.ReplayFailure;
                 Sender.Tell(new ReplayCompletionFailure(failure.Cause));
                 Context.Stop(Self);
             }

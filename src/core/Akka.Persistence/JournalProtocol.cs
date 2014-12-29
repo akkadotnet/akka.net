@@ -75,7 +75,8 @@ namespace Akka.Persistence
 
     internal sealed class WriteMessages
     {
-        public WriteMessages(IEnumerable<IPersistentEnvelope> messages, ActorRef persistentActor, int actorInstanceId)
+        public WriteMessages(IEnumerable<IPersistentEnvelope> messages, ActorRef persistentActor,
+            int actorInstanceId)
         {
             Messages = messages;
             PersistentActor = persistentActor;
@@ -95,7 +96,10 @@ namespace Akka.Persistence
     internal class WriteMessagesSuccessull
     {
         public static readonly WriteMessagesSuccessull Instance = new WriteMessagesSuccessull();
-        private WriteMessagesSuccessull() { }
+
+        private WriteMessagesSuccessull()
+        {
+        }
     }
 
     /// <summary>
@@ -128,6 +132,7 @@ namespace Akka.Persistence
         /// Successfully writen message.
         /// </summary>
         public IPersistentRepresentation Persistent { get; private set; }
+
         public int ActorInstanceId { get; private set; }
     }
 
@@ -153,6 +158,7 @@ namespace Akka.Persistence
         /// Failure cause.
         /// </summary>
         public Exception Cause { get; private set; }
+
         public int ActorInstanceId { get; private set; }
     }
 
@@ -185,15 +191,17 @@ namespace Akka.Persistence
         /// A looped message.
         /// </summary>
         public object Message { get; private set; }
+
         public int ActorInstanceId { get; private set; }
     }
 
     /// <summary>
     /// Request to replay messages to the <see cref="PersistentActor"/>.
     /// </summary>
-    internal sealed class ReplayMessages
+    public sealed class ReplayMessages
     {
-        public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId, ActorRef persistentActor, bool replayDeleted = false)
+        public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId,
+            ActorRef persistentActor, bool replayDeleted = false)
         {
             FromSequenceNr = fromSequenceNr;
             ToSequenceNr = toSequenceNr;
@@ -254,7 +262,10 @@ namespace Akka.Persistence
     internal class ReplayMessagesSuccess
     {
         public static readonly ReplayMessagesSuccess Instance = new ReplayMessagesSuccess();
-        private ReplayMessagesSuccess() { }
+
+        private ReplayMessagesSuccess()
+        {
+        }
     }
 
     internal sealed class ReplayMessagesFailure

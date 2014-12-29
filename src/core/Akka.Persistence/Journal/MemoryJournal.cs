@@ -6,6 +6,17 @@ using Akka.Actor;
 
 namespace Akka.Persistence.Journal
 {
+    using Messages = IDictionary<string, LinkedList<IPersistentRepresentation>>;
+
+    public interface IMemoryMessages
+    {
+        Messages Add(IPersistentRepresentation persistent);
+        Messages Update(string pid, long seqNr, Func<IPersistentRepresentation, IPersistentRepresentation> updater);
+        Messages Delete(string pid, long seqNr);
+        IEnumerable<IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max);
+        long HighestSequenceNr(string pid);
+    }
+
     /// <summary>
     /// In-memory journal for testing purposes.
     /// </summary>
@@ -20,21 +31,21 @@ namespace Akka.Persistence.Journal
         }
     }
 
-    public class MemoryStore : ActorBase
+    public class MemoryStore : ActorBase, IMemoryMessages
     {
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>>();
 
         protected override bool Receive(object message)
         {
-            if (message is AsyncWriteProxy.WriteMessages) Add(message as AsyncWriteProxy.WriteMessages);
-            else if (message is DeleteMessagesTo) Delete(message as DeleteMessagesTo);
-            else if (message is AsyncWriteProxy.ReplayMessages) Read(message as AsyncWriteProxy.ReplayMessages);
-            else if (message is AsyncWriteProxy.ReadHighestSequenceNr) GetHighestSequenceNumber(message as AsyncWriteProxy.ReadHighestSequenceNr);
+            if (message is AsyncWriteTarget.WriteMessages) Add(message as AsyncWriteTarget.WriteMessages);
+            else if (message is AsyncWriteTarget.DeleteMessagesTo) Delete(message as AsyncWriteTarget.DeleteMessagesTo);
+            else if (message is AsyncWriteTarget.ReplayMessages) Read(message as AsyncWriteTarget.ReplayMessages);
+            else if (message is AsyncWriteTarget.ReadHighestSequenceNr) GetHighestSequenceNumber(message as AsyncWriteTarget.ReadHighestSequenceNr);
             else return false;
             return true;
         }
 
-        private void GetHighestSequenceNumber(AsyncWriteProxy.ReadHighestSequenceNr rhsn)
+        private void GetHighestSequenceNumber(AsyncWriteTarget.ReadHighestSequenceNr rhsn)
         {
             LinkedList<IPersistentRepresentation> list;
             Sender.Tell(_messages.TryGetValue(rhsn.PersistenceId, out list)
@@ -42,7 +53,7 @@ namespace Akka.Persistence.Journal
                 : 0L);
         }
 
-        private void Read(AsyncWriteProxy.ReplayMessages replay)
+        private void Read(AsyncWriteTarget.ReplayMessages replay)
         {
             LinkedList<IPersistentRepresentation> list;
             if (_messages.TryGetValue(replay.PersistenceId, out list))
@@ -57,10 +68,10 @@ namespace Akka.Persistence.Journal
                 }
             }
 
-            Sender.Tell(AsyncWriteProxy.ReplaySuccess.Instance);
+            Sender.Tell(AsyncWriteTarget.ReplaySuccess.Instance);
         }
 
-        private void Delete(DeleteMessagesTo deleteCommand)
+        private void Delete(AsyncWriteTarget.DeleteMessagesTo deleteCommand)
         {
             LinkedList<IPersistentRepresentation> list;
             if (_messages.TryGetValue(deleteCommand.PersistenceId, out list))
@@ -79,7 +90,7 @@ namespace Akka.Persistence.Journal
             Sender.Tell(new object());
         }
 
-        private static void MarkAsDeleted(DeleteMessagesTo deleteCommand, LinkedListNode<IPersistentRepresentation> node)
+        private static void MarkAsDeleted(AsyncWriteTarget.DeleteMessagesTo deleteCommand, LinkedListNode<IPersistentRepresentation> node)
         {
             while (node != null)
             {
@@ -96,7 +107,7 @@ namespace Akka.Persistence.Journal
             }
         }
 
-        private static void DeletePermanently(DeleteMessagesTo deleteCommand, LinkedListNode<IPersistentRepresentation> node, LinkedList<IPersistentRepresentation> list)
+        private static void DeletePermanently(AsyncWriteTarget.DeleteMessagesTo deleteCommand, LinkedListNode<IPersistentRepresentation> node, LinkedList<IPersistentRepresentation> list)
         {
             while (node != null)
             {
@@ -109,7 +120,7 @@ namespace Akka.Persistence.Journal
             }
         }
 
-        private void Add(AsyncWriteProxy.WriteMessages writeMessages)
+        private void Add(AsyncWriteTarget.WriteMessages writeMessages)
         {
             foreach (var persistent in writeMessages.Messages)
             {
@@ -119,5 +130,77 @@ namespace Akka.Persistence.Journal
 
             Sender.Tell(new object());
         }
+
+        #region IMemoryMessages implementation
+
+        public Messages Add(IPersistentRepresentation persistent)
+        {
+            var list = _messages.GetOrAdd(persistent.PersistenceId, new LinkedList<IPersistentRepresentation>());
+            list.AddLast(persistent);
+            return _messages;
+        }
+
+        public Messages Update(string pid, long seqNr, Func<IPersistentRepresentation, IPersistentRepresentation> updater)
+        {
+            LinkedList<IPersistentRepresentation> persistents;
+            if (_messages.TryGetValue(pid, out persistents))
+            {
+                var node = persistents.First;
+                while (node != null)
+                {
+                    if (node.Value.SequenceNr == seqNr)
+                        node.Value = updater(node.Value);
+
+                    node = node.Next;
+                }
+            }
+
+            return _messages;
+        }
+
+        public Messages Delete(string pid, long seqNr)
+        {
+            LinkedList<IPersistentRepresentation> persistents;
+            if (_messages.TryGetValue(pid, out persistents))
+            {
+                var node = persistents.First;
+                while (node != null)
+                {
+                    if (node.Value.SequenceNr == seqNr)
+                        persistents.Remove(node);
+
+                    node = node.Next;
+                }
+            }
+
+            return _messages;
+        }
+
+        public IEnumerable<IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max)
+        {
+            LinkedList<IPersistentRepresentation> persistents;
+            if (_messages.TryGetValue(pid, out persistents))
+            {
+                return persistents
+                    .Where(x => x.SequenceNr >= fromSeqNr && x.SequenceNr <= toSeqNr)
+                    .Take(max > int.MaxValue ? int.MaxValue : (int) max);
+            }
+
+            return Enumerable.Empty<IPersistentRepresentation>();
+        }
+
+        public long HighestSequenceNr(string pid)
+        {
+            LinkedList<IPersistentRepresentation> persistents;
+            if (_messages.TryGetValue(pid, out persistents))
+            {
+                var last = persistents.LastOrDefault();
+                return last != null ? last.SequenceNr : 0L;
+            }
+
+            return 0L;
+        }
+
+        #endregion
     }
 }

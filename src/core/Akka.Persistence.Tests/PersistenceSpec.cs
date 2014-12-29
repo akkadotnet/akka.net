@@ -41,7 +41,14 @@ namespace Akka.Persistence.Tests
             Clean.Initialize();
         }
 
-        public PersistenceExtension Extension { get { return Persistence.Instance.Get(Sys); } }
+        protected PersistenceSpec(Config config = null) : base(config)
+        {
+            _name = NamePrefix + "-" + _counter.GetAndIncrement();
+            Clean = new Cleanup(this);
+            Clean.Initialize();
+        }
+
+        public PersistenceExtension Extension { get { return Persistence.Instance.Apply(Sys); } }
 
         public string NamePrefix { get { return Sys.Name; }}
         public string Name { get { return _name; }}
