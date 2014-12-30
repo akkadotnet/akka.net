@@ -20,7 +20,7 @@ namespace Akka.Persistence
         public PersistenceExtension(ExtendedActorSystem system)
         {
             _system = system;
-            _config = system.Settings.Config.GetConfig("akka.persistence");
+            _config = system.Settings.Config.WithFallback(Persistence.DefaultConfig()).GetConfig("akka.persistence");
             _journal = CreatePlugin("journal", type => typeof (AsyncWriteJournal).IsAssignableFrom(type)
                 ? Dispatchers.DefaultDispatcherId
                 : DefaultPluginDispatcherId);
@@ -36,13 +36,13 @@ namespace Akka.Persistence
 
         public ActorRef SnapshotStoreFor(string persistenceId)
         {
-            // currently always returns _snapshotStore, but in future it may returne dedicated actor for each persistence id
+            // currently always returns _snapshotStore, but in future it may return dedicated actor for each persistence id
             return _snapshotStore;
         }
 
         public ActorRef JournalFor(string persistenceId)
         {
-            // currently always returns _journal, but in future it may returne dedicated actor for each persistence id
+            // currently always returns _journal, but in future it may return dedicated actor for each persistence id
             return _journal;
         }
 
@@ -69,6 +69,11 @@ namespace Akka.Persistence
         public override PersistenceExtension CreateExtension(ExtendedActorSystem system)
         {
             return new PersistenceExtension(system);
+        }
+
+        public static Config DefaultConfig()
+        {
+            return ConfigurationFactory.FromResource<Persistence>("Akka.Persistence.persistence.conf");
         }
     }
 
@@ -146,6 +151,7 @@ namespace Akka.Persistence
             Journal = new JournalSettings(config);
             View = new ViewSettings(config);
             GuaranteedDelivery = new GuaranteedDeliverySettings(config);
+            Internal = new InternalSettings(config);
         }
     }
 }

@@ -51,6 +51,7 @@
     <Compile Include="GuaranteedDelivery.cs" />
     <Compile Include="Eventsourced.cs" />
     <Compile Include="Eventsourced.Recovery.cs" />
+    <Compile Include="Journal\TaskExtensions.cs" />
     <Compile Include="PersistentActor.cs" />
     <Compile Include="PersistentView.Recovery.cs" />
     <Compile Include="PersistentView.Lifecycle.cs" />
@@ -81,7 +82,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="persistence.conf" />
+    <EmbeddedResource Include="persistence.conf" />
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup />

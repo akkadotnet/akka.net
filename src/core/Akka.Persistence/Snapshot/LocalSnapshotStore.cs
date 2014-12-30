@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 
@@ -23,9 +24,16 @@ namespace Akka.Persistence.Snapshot
         {
             var config = Context.System.Settings.Config.GetConfig("akka.persistence.snapshot-store.local");
             _snapshotDirectory = new DirectoryInfo(config.GetString("dir"));
-            _streamDispatcher = Context.System.Dispatchers.Lookup(config.GetString("stream-dispatcher"));
+            ResolveDispatcher(config);
             _saving = new SortedSet<SnapshotMetadata>(SnapshotMetadata.TimestampComparer);
             _serialization = Context.System.Serialization;
+            _streamDispatcher = ResolveDispatcher(config);
+        }
+
+        private MessageDispatcher ResolveDispatcher(Config config)
+        {
+            var dispatcherConfigPath = config.GetString("stream-dispatcher");
+            return Context.System.Dispatchers.Lookup(dispatcherConfigPath);
         }
 
         private LoggingAdapter _log;

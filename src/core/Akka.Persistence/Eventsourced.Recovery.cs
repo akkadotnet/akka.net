@@ -80,7 +80,7 @@ namespace Akka.Persistence
                     }
 
                     ChangeState(ReplayStarted(recoveryBehavior));
-                    _journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
+                    Journal.Tell(new ReplayMessages(LastSequenceNr + 1L, res.ToSequenceNr, maxReplays, PersistenceId, Self));
                 }
                 else _internalStash.Stash();
             });
@@ -121,7 +121,7 @@ namespace Akka.Persistence
                 {
                     OnReplaySuccess();
                     ChangeState(Initializing(recoveryBehavior));
-                    _journal.Tell(new ReadHighestSequenceNr(LastSequenceNr, PersistenceId, Self));
+                    Journal.Tell(new ReadHighestSequenceNr(LastSequenceNr, PersistenceId, Self));
                 }
                 else if (message is ReplayMessagesFailure)
                 {

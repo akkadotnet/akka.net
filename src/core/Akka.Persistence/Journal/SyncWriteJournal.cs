@@ -22,7 +22,7 @@ namespace Akka.Persistence.Journal
         }
 
         public abstract Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> replayCallback);
-        
+
         public abstract Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr);
 
         /// <summary>
@@ -70,12 +70,14 @@ namespace Akka.Persistence.Journal
 
         private void HandleReplayMessages(ReplayMessages msg)
         {
-            ReplayMessagesAsync(msg.PersistenceId, msg.FromSequenceNr, msg.ToSequenceNr, msg.Max, persitent =>
+            ReplayMessagesAsync(msg.PersistenceId, msg.FromSequenceNr, msg.ToSequenceNr, msg.Max, persistent =>
             {
-                if (!persitent.IsDeleted || msg.ReplayDeleted)
-                    msg.PersistentActor.Tell(new ReplayedMessage(persitent), persitent.Sender);
-
-                if (CanPublish) Context.System.EventStream.Publish(msg);
+                if (!persistent.IsDeleted || msg.ReplayDeleted) msg.PersistentActor.Tell(new ReplayedMessage(persistent), persistent.Sender);
+            })
+            .NotifyAboutReplayCompletion(msg.PersistentActor)
+            .ContinueWith(t =>
+            {
+                if (!t.IsFaulted && CanPublish) Context.System.EventStream.Publish(msg);
             });
         }
 

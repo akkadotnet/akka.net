@@ -80,17 +80,12 @@ namespace Akka.Persistence.Journal
             // to resequence replayed messages relative to written and looped messages.
             ReplayMessagesAsync(message.PersistenceId, message.FromSequenceNr, message.ToSequenceNr, message.Max, p =>
             {
-                try
-                {
-                    if (!p.IsDeleted || message.ReplayDeleted) message.PersistentActor.Tell(new ReplayedMessage(p), p.Sender);
-                    message.PersistentActor.Tell(ReplayMessagesSuccess.Instance);
-                }
-                catch (Exception e)
-                {
-                    message.PersistentActor.Tell(new ReplayMessagesFailure(e));
-                }
-
-                if (CanPublish) Context.System.EventStream.Publish(message);
+                if (!p.IsDeleted || message.ReplayDeleted) message.PersistentActor.Tell(new ReplayedMessage(p), p.Sender);
+            })
+            .NotifyAboutReplayCompletion(message.PersistentActor)
+            .ContinueWith(t =>
+            {
+                if(!t.IsFaulted && CanPublish) Context.System.EventStream.Publish(message);
             });
         }
 

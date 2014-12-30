@@ -116,10 +116,12 @@ namespace Akka.Persistence.Journal
         private ActorRef _store;
 
         public IStash Stash { get; set; }
-        public TimeSpan Timeout { get; set; }
+        public TimeSpan Timeout { get; private set; }
 
         protected AsyncWriteProxy()
         {
+            //TODO: turn into configurable value
+            Timeout = TimeSpan.FromSeconds(5);
             _initialized = base.Receive;
         }
 
@@ -139,20 +141,12 @@ namespace Akka.Persistence.Journal
 
         public override Task ReplayMessagesAsync(string persistenceId, long fromSequenceNr, long toSequenceNr, long max, Action<IPersistentRepresentation> replayCallback)
         {
-            var mediator = Context.ActorOf(Props.Create(() => new ReplayMediator(replayCallback, Timeout)).WithDeploy(Deploy.Local));
-            return _store.Ask(new AsyncWriteTarget.ReplayMessages(persistenceId, fromSequenceNr, toSequenceNr, max))
-                // since we cannot set sender directly in Ask, just forward message to mediator
-                // just make sure, that mediator won't call it's Sender inside
-                .ContinueWith(t => mediator.Ask(t.Result)
-                    .ContinueWith(mediatorResponseTask =>
-                    {
-                        // wait for mediator response and conditional turn it to Task failure exception
-                        if (mediatorResponseTask.Result is ReplayMediator.ReplayCompletionSuccess) ;
-                        else if (mediatorResponseTask.Result is ReplayMediator.ReplayCompletionFailure)
-                        {
-                            throw (mediatorResponseTask.Result as ReplayMediator.ReplayCompletionFailure).Cause;
-                        }
-                    }));
+            var replayCompletionPromise = new TaskCompletionSource<object>();
+            var mediator = Context.ActorOf(Props.Create(() => new ReplayMediator(replayCallback, replayCompletionPromise, Timeout)).WithDeploy(Deploy.Local));
+
+            _store.Tell(new AsyncWriteTarget.ReplayMessages(persistenceId, fromSequenceNr, toSequenceNr, max), mediator);
+
+            return replayCompletionPromise.Task;
         }
 
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
@@ -174,34 +168,14 @@ namespace Akka.Persistence.Journal
 
     internal class ReplayMediator : ActorBase
     {
-        #region Internal messages
-
-        [Serializable]
-        internal sealed class ReplayCompletionSuccess
-        {
-            public static readonly ReplayCompletionSuccess Instance = new ReplayCompletionSuccess();
-            private ReplayCompletionSuccess() { }
-        }
-
-        [Serializable]
-        internal sealed class ReplayCompletionFailure
-        {
-            public ReplayCompletionFailure(Exception cause)
-            {
-                Cause = cause;
-            }
-
-            public Exception Cause { get; private set; }
-        }
-
-        #endregion
-
         private readonly Action<IPersistentRepresentation> _replayCallback;
+        private readonly TaskCompletionSource<object> _replayCompletionPromise;
         private readonly TimeSpan _replayTimeout;
 
-        public ReplayMediator(Action<IPersistentRepresentation> replayCallback, TimeSpan replayTimeout)
+        public ReplayMediator(Action<IPersistentRepresentation> replayCallback, TaskCompletionSource<object> replayCompletionPromise, TimeSpan replayTimeout)
         {
             _replayCallback = replayCallback;
+            _replayCompletionPromise = replayCompletionPromise;
             _replayTimeout = replayTimeout;
 
             Context.SetReceiveTimeout(replayTimeout);
@@ -212,19 +186,19 @@ namespace Akka.Persistence.Journal
             if (message is IPersistentRepresentation) _replayCallback(message as IPersistentRepresentation);
             else if (message is AsyncWriteTarget.ReplaySuccess)
             {
-                Sender.Tell(ReplayCompletionSuccess.Instance);
+                _replayCompletionPromise.SetResult(new object());
                 Context.Stop(Self);
             }
             else if (message is AsyncWriteTarget.ReplayFailure)
             {
                 var failure = message as AsyncWriteTarget.ReplayFailure;
-                Sender.Tell(new ReplayCompletionFailure(failure.Cause));
+                _replayCompletionPromise.SetException(failure.Cause);
                 Context.Stop(Self);
             }
             else if (message is ReceiveTimeout)
             {
                 var timeoutException = new AsyncReplayTimeoutException("Replay timed out after " + _replayTimeout.TotalSeconds + " of inactivity");
-                Sender.Tell(new ReplayCompletionFailure(timeoutException));
+                _replayCompletionPromise.SetException(timeoutException);
                 Context.Stop(Self);
             }
             else return false;
