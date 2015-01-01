@@ -263,9 +263,13 @@ namespace Akka.Actor
                     {
                         disposable.Dispose();
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                        //TODO: what if user defined Dispose method will fail?
+                        if (_systemImpl.Log != null)
+                        {
+                            _systemImpl.Log.Error(e, "An error occurred while disposing {0} actor. Reason: {1}", 
+                                actor.GetType(), e.Message);
+                        }
                     }
                 }
 

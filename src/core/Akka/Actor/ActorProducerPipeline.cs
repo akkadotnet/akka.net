@@ -71,7 +71,7 @@ namespace Akka.Actor
 
         void IActorProducerPlugin.BeforeActorTerminated(ActorBase actor, IActorContext context)
         {
-            BeforeActorDestroyed(actor as TActor, context);
+            BeforeActorTerminated(actor as TActor, context);
         }
 
         /// <summary>
@@ -82,7 +82,7 @@ namespace Akka.Actor
         /// <summary>
         /// Plugin behavior applied to <paramref name="actor"/> instance before the actor is being recycled.
         /// </summary>
-        public virtual void BeforeActorDestroyed(TActor actor, IActorContext context) { }
+        public virtual void BeforeActorTerminated(TActor actor, IActorContext context) { }
     }
 
     internal class DefaultProducerPipeline : ActorProducerPipeline
