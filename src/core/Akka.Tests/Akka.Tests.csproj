@@ -86,6 +86,7 @@
     <Compile Include="Actor\ActorDslSpec.cs" />
     <Compile Include="Actor\ActorLifeCycleSpec.cs" />
     <Compile Include="Actor\ActorPathSpec.cs" />
+    <Compile Include="Actor\ActorProducerPipelineTests.cs" />
     <Compile Include="Actor\ActorRefSpec.cs" />
     <Compile Include="Actor\InboxSpec.cs" />
     <Compile Include="Actor\LocalActorRefProviderSpec.cs" />
