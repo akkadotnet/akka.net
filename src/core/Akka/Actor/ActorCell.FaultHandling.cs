@@ -58,10 +58,8 @@ namespace Akka.Actor
                         // if the actor fails in preRestart, we can do nothing but log it: it’s best-effort
                         failedActor.AroundPreRestart(cause, optionalMessage);
 
-                        //if the actor uses a stash Unstash all messages. 
-                        //If the user do not want this behavior, the stash should be cleared in PreRestart
-                        //either by calling ClearStash or by calling UnstashAll.
-                        UnstashAllActorMessages(failedActor);
+                        // run actor termination plugin pipeline
+                        _systemImpl.ActorProducerPipeline.BeforeActorTerminated(failedActor, this);
                     }
                     catch (Exception e)
                     {
@@ -87,15 +85,6 @@ namespace Akka.Actor
             {
                 // need to keep that suspend counter balanced
                 FaultResume(null);
-            }
-        }
-
-        private static void UnstashAllActorMessages(ActorBase actor)
-        {
-            var actorStash = actor as IActorStash;
-            if (actorStash != null)
-            {
-                actorStash.Stash.UnstashAll();
             }
         }
 
@@ -285,10 +274,8 @@ namespace Akka.Actor
                 {
                     a.AroundPostStop();
 
-                    //if the actor uses a stash, we must Unstash all messages. 
-                    //If the user do not want this behavior, the stash should be cleared in PostStop
-                    //either by calling ClearStash or by calling UnstashAll.
-                    UnstashAllActorMessages(a);
+                    // run actor termination plugin pipeline
+                    _systemImpl.ActorProducerPipeline.BeforeActorTerminated(a, this);
                 }
             }
             catch (Exception x)
