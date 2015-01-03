@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Akka.Actor;
 using Akka.TestKit;
+using Akka.Util.Internal;
 
 namespace Akka.Persistence.Tests
 {
@@ -382,6 +384,463 @@ namespace Akka.Persistence.Tests
                     }
                     else return false;
                 }
+                else return false;
+                return true;
+            }
+        }
+
+        internal class UserStashManyActor : ExamplePersistentActor
+        {
+            public UserStashManyActor(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (!CommonBehavior(message))
+                {
+                    var cmd = message as Cmd;
+                    if (cmd != null)
+                    {
+                        if (cmd.Data == "a")
+                        {
+                            Persist(new Evt("a"), evt =>
+                            {
+                                UpdateState(evt);
+                                Context.Become(ProcessC);
+                            });
+                        }
+                        else if (cmd.Data == "b-1" || cmd.Data == "b-2")
+                        {
+                            Persist(new Evt(cmd.Data.ToString()), UpdateStateHandler);
+                        }
+
+                        return true;
+                    }
+                }
+                else return true;
+                return false;
+            }
+
+            protected bool ProcessC(object message)
+            {
+                var cmd = message as Cmd;
+                if (cmd != null && cmd.Data == "c")
+                {
+                    Persist(new Evt("c"), evt =>
+                    {
+                        UpdateState(evt);
+                        Context.Unbecome();
+                    });
+                    Stash.UnstashAll();
+                }
+                else Stash.Stash();
+                return true;
+            }
+        }
+
+        internal class AsyncPersistActor : ExamplePersistentActor
+        {
+            private int _counter = 0;
+            public AsyncPersistActor(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (!CommonBehavior(message))
+                {
+                    var cmd = message as Cmd;
+                    if (cmd != null)
+                    {
+                        Sender.Tell(cmd.Data);
+                        PersistAsync(new Evt(cmd.Data.ToString() + "-" + (++_counter)), evt =>
+                        {
+                            Sender.Tell(evt.Data);
+                        });
+
+                        return true;
+                    }
+                }
+                else return true;
+                return false;
+            }
+        }
+
+        internal class AsyncPersistThreeTimesActor : ExamplePersistentActor
+        {
+            private int _counter = 0;
+            public AsyncPersistThreeTimesActor(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (!CommonBehavior(message))
+                {
+                    var cmd = message as Cmd;
+                    if (cmd != null)
+                    {
+                        Sender.Tell(cmd.Data);
+                        for (int i = 0; i < 3; i++)
+                        {
+                            PersistAsync(new Evt(cmd.Data.ToString() + "-" + (++_counter)), evt =>
+                            {
+                                Sender.Tell("a" + evt.Data.ToString().Substring(1));
+                            });
+                        }
+
+                        return true;
+                    }
+                }
+                else return true;
+                return false;
+            }
+        }
+
+        internal class AsyncPersistSameEventTwiceActor : ExamplePersistentActor
+        {
+            private AtomicCounter _sendMessageCounter = new AtomicCounter();
+            public AsyncPersistSameEventTwiceActor(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (!CommonBehavior(message))
+                {
+                    var cmd = message as Cmd;
+                    if (cmd != null)
+                    {
+                        Sender.Tell(cmd.Data);
+                        var @event = new Evt(cmd.Data);
+
+                        PersistAsync(@event, evt =>
+                        {
+                            Thread.Sleep(300);
+                            Sender.Tell(evt.Data.ToString() + "-a-" + _sendMessageCounter.IncrementAndGet());
+                        });
+
+                        PersistAsync(@event, evt => Sender.Tell(evt.Data.ToString() + "-b-" + _sendMessageCounter.IncrementAndGet()));
+
+                        return true;
+                    }
+                }
+                else return true;
+                return false;
+            }
+        }
+
+        internal class AsyncPersistAndPersistMixedSyncAsyncSyncActor : ExamplePersistentActor
+        {
+            private int _counter = 0;
+            public AsyncPersistAndPersistMixedSyncAsyncSyncActor(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (!CommonBehavior(message))
+                {
+                    var cmd = message as Cmd;
+                    if (cmd != null)
+                    {
+                        Sender.Tell(cmd.Data);
+
+                        Persist(new Evt(cmd.Data + "-e1"), evt => Sender.Tell(evt.Data + "-" + (++_counter)));
+                        PersistAsync(new Evt(cmd.Data + "-ea2"), evt => Sender.Tell(evt.Data + "-" + (++_counter)));
+                        Persist(new Evt(cmd.Data + "-e3"), evt => Sender.Tell(evt.Data + "-" + (++_counter)));
+
+                        return true;
+                    }
+                }
+                else return true;
+                return false;
+            }
+        }
+
+        internal class AsyncPersistAndPersistMixedSyncAsyncActor : ExamplePersistentActor
+        {
+            private int _counter = 0;
+            public AsyncPersistAndPersistMixedSyncAsyncActor(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (!CommonBehavior(message))
+                {
+                    var cmd = message as Cmd;
+                    if (cmd != null)
+                    {
+                        Sender.Tell(cmd.Data);
+
+                        Persist(new Evt(cmd.Data + "-e1"), evt => Sender.Tell(evt.Data + "-" + (++_counter)));
+                        PersistAsync(new Evt(cmd.Data + "-ea2"), evt => Sender.Tell(evt.Data + "-" + (++_counter)));
+
+                        return true;
+                    }
+                }
+                else return true;
+                return false;
+            }
+        }
+
+        internal class AsyncPersistHandlerCorrelationCheck : ExamplePersistentActor
+        {
+            private int _counter = 0;
+            public AsyncPersistHandlerCorrelationCheck(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (!CommonBehavior(message))
+                {
+                    var cmd = message as Cmd;
+                    if (cmd != null)
+                    {
+                        PersistAsync(new Evt(cmd.Data), evt =>
+                        {
+                            if (cmd.Data != evt.Data) Sender.Tell("Expected " + cmd.Data + " but got " + evt.Data);
+                            if ("done" != evt.Data) Sender.Tell("done");
+                        });
+
+                        return true;
+                    }
+                }
+                else return true;
+                return false;
+            }
+        }
+
+        internal class UserStashFailureActor : ExamplePersistentActor
+        {
+            public UserStashFailureActor(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (!CommonBehavior(message))
+                {
+                    var cmd = message as Cmd;
+                    if (cmd != null)
+                    {
+                        if (cmd.Data == "b-2") throw new TestException("boom");
+
+                        Persist(new Evt(cmd.Data), evt =>
+                        {
+                            UpdateState(evt);
+                            if (cmd.Data == "a") Context.Become(OtherCommandHandler);
+                        });
+
+                        return true;
+                    }
+                }
+                else return true;
+                return false;
+            }
+
+            protected bool OtherCommandHandler(object message)
+            {
+                var cmd = message as Cmd;
+                if (cmd != null && cmd.Data == "c")
+                {
+                    Persist(new Evt("c"), evt =>
+                    {
+                        UpdateState(evt);
+                        Context.Unbecome();
+                    });
+                    Stash.UnstashAll();
+                }
+                else Stash.Stash();
+                return true;
+            }
+        }
+
+        internal class AnyValEventPersistentActor : ExamplePersistentActor
+        {
+            public AnyValEventPersistentActor(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                var cmd = message as Cmd;
+                if (cmd != null && cmd.Data == "a")
+                {
+                    Persist(5, i => Sender.Tell(i));
+                    return true;
+                }
+                else return false;
+            }
+        }
+
+        internal class HandleRecoveryFinishedEventPersistentActor : SnapshottingPersistentActor
+        {
+            public HandleRecoveryFinishedEventPersistentActor(string name, ActorRef probe)
+                : base(name, probe)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (!base.ReceiveCommand(message)) Probe.Tell(message.ToString());
+                return true;
+            }
+
+            protected override bool ReceiveRecover(object message)
+            {
+                return SendingRecover(message) || base.ReceiveRecover(message);
+            }
+
+            protected bool SendingRecover(object message)
+            {
+                if (message is SnapshotOffer)
+                {
+                    // sending ourself a normal message tests
+                    // that we stash them until recovery is complete
+                    Self.Tell("I am the stashed");
+                    base.ReceiveRecover(message);
+                }
+                else if (message is RecoveryCompleted)
+                {
+                    Probe.Tell(RecoveryCompleted.Instance);
+                    Self.Tell("I am the recovered");
+                    UpdateState(new Evt(RecoveryCompleted.Instance));
+                }
+                else return false;
+                return true;
+            }
+        }
+
+        internal class DeferringWithPersistActor : ExamplePersistentActor
+        {
+            public DeferringWithPersistActor(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                var cmd = message as Cmd;
+                if (cmd != null)
+                {
+                    Defer("d-1", Sender.Tell);
+                    Persist(cmd.Data + "-2", Sender.Tell);
+                    Defer("d-3", Sender.Tell);
+                    Defer("d-4", Sender.Tell);
+
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        internal class DeferringWithAsyncPersistActor : ExamplePersistentActor
+        {
+            public DeferringWithAsyncPersistActor(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                var cmd = message as Cmd;
+                if (cmd != null)
+                {
+                    Defer("d-" + cmd.Data + "-1", Sender.Tell);
+                    PersistAsync("pa-" + cmd.Data + "-2", Sender.Tell);
+                    Defer("d-" + cmd.Data + "-3", Sender.Tell);
+                    Defer("d-" + cmd.Data + "-4", Sender.Tell);
+
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        internal class DeferringMixedCallsPPADDPADPersistActor : ExamplePersistentActor
+        {
+            public DeferringMixedCallsPPADDPADPersistActor(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                var cmd = message as Cmd;
+                if (cmd != null)
+                {
+                    Persist("p-" + cmd.Data + "-1", Sender.Tell);
+                    PersistAsync("pa-" + cmd.Data + "-2", Sender.Tell);
+                    Defer("d-" + cmd.Data + "-3", Sender.Tell);
+                    Defer("d-" + cmd.Data + "-4", Sender.Tell);
+                    PersistAsync("pa-" + cmd.Data + "-5", Sender.Tell);
+                    Defer("d-" + cmd.Data + "-6", Sender.Tell);
+
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        internal class DeferringWithNoPersistCallsPersistActor : ExamplePersistentActor
+        {
+            public DeferringWithNoPersistCallsPersistActor(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                var cmd = message as Cmd;
+                if (cmd != null)
+                {
+                    Defer("d-1", Sender.Tell);
+                    Defer("d-2", Sender.Tell);
+                    Defer("d-3", Sender.Tell);
+
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        internal class StressOrdering : ExamplePersistentActor
+        {
+            public StressOrdering(string name)
+                : base(name)
+            {
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                if (message is LatchCmd)
+                {
+                    var latchCmd = message as LatchCmd;
+                    Sender.Tell(latchCmd.Data);
+                    latchCmd.Latch.Ready(TimeSpan.FromSeconds(5));
+                    PersistAsync(latchCmd.Data, _ => { });
+                }
+                else if (message is Cmd)
+                {
+                    var cmd = message as Cmd;
+                    Sender.Tell(cmd.Data);
+                    PersistAsync(cmd.Data, _ => { });
+                }
+                else if (message is string)
+                    Sender.Tell(message.ToString());
                 else return false;
                 return true;
             }

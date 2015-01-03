@@ -174,7 +174,7 @@ namespace Akka.Persistence
     /// <summary>
     /// Insealed classs a snapshot store to load the snapshot.
     /// </summary>
-    internal sealed class LoadSnapshot
+    public sealed class LoadSnapshot
     {
         public LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
         {
@@ -202,7 +202,7 @@ namespace Akka.Persistence
     /// <summary>
     /// Response to a <see cref="LoadSnapshot"/> message.
     /// </summary>
-    internal sealed class LoadSnapshotResult
+    public sealed class LoadSnapshotResult
     {
         public LoadSnapshotResult(SelectedSnapshot snapshot, long toSequenceNr)
         {
@@ -220,7 +220,7 @@ namespace Akka.Persistence
     /// <summary>
     /// Insealed classs snapshot store to save a snapshot.
     /// </summary>
-    internal sealed class SaveSnapshot
+    public sealed class SaveSnapshot
     {
         public SaveSnapshot(SnapshotMetadata metadata, object snapshot)
         {
@@ -235,7 +235,7 @@ namespace Akka.Persistence
     /// <summary>
     /// Insealed classs a snapshot store to save a snapshot.
     /// </summary>
-    internal sealed class DeleteSnapshot
+    public sealed class DeleteSnapshot
     {
         public DeleteSnapshot(SnapshotMetadata metadata)
         {
@@ -248,7 +248,7 @@ namespace Akka.Persistence
     /// <summary>
     /// Insealed classs a snapshot store to delete all snapshots that match provided criteria.
     /// </summary>
-    internal sealed class DeleteSnapshots
+    public sealed class DeleteSnapshots
     {
         public DeleteSnapshots(string persistenceId, SnapshotSelectionCriteria criteria)
         {

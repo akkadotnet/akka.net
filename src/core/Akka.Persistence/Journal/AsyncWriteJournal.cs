@@ -9,6 +9,7 @@ namespace Akka.Persistence.Journal
 {
     public abstract class AsyncWriteJournal : WriteJournalBase, IAsyncRecovery
     {
+        private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent;
         protected readonly bool CanPublish;
         private readonly PersistenceExtension _extension;
         private readonly ActorRef _resequencer;
@@ -60,7 +61,7 @@ namespace Akka.Persistence.Journal
                 .ContinueWith(t =>
                 {
                     if (!t.IsFaulted && CanPublish) Context.System.EventStream.Publish(message);
-                });
+                }, _continuationOptions);
         }
 
         private void HandleReadHighestSequenceNr(ReadHighestSequenceNr message)
@@ -86,46 +87,47 @@ namespace Akka.Persistence.Journal
             .ContinueWith(t =>
             {
                 if(!t.IsFaulted && CanPublish) Context.System.EventStream.Publish(message);
-            });
+            }, _continuationOptions);
         }
 
         private void HandleWriteMessages(WriteMessages message)
         {
             var counter = _resequencerCounter;
+            Action<Func<IPersistentRepresentation, object>> resequence = (mapper) =>
+            {
+                var i = 0;
+                foreach (var resequencable in message.Messages)
+                {
+                    if (resequencable is IPersistentRepresentation)
+                    {
+                        var p = resequencable as IPersistentRepresentation;
+                        _resequencer.Tell(new Desequenced(mapper(p), counter + i + 1, message.PersistentActor, p.Sender));
+                    }
+                    else
+                    {
+                        var loopMsg = new LoopMessageSuccess(resequencable.Payload, message.ActorInstanceId);
+                        _resequencer.Tell(new Desequenced(loopMsg, counter + i + 1, message.PersistentActor,
+                            resequencable.Sender));
+                    }
+                    i++;
+                }
+            };
+
             WriteMessagesAsync(CreatePersitentBatch(message.Messages)).ContinueWith(t =>
             {
                 if (!t.IsFaulted)
                 {
                     _resequencer.Tell(new Desequenced(WriteMessagesSuccessull.Instance, counter, message.PersistentActor, Self));
-                    Resequence(message, counter, x => new WriteMessageSuccess(x, message.ActorInstanceId));
+                    resequence(x => new WriteMessageSuccess(x, message.ActorInstanceId));
                 }
                 else
                 {
                     _resequencer.Tell(new Desequenced(new WriteMessagesFailed(t.Exception), counter, message.PersistentActor, Self));
-                    Resequence(message, counter, x => new WriteMessageFailure(x, t.Exception, message.ActorInstanceId));
+                    resequence(x => new WriteMessageFailure(x, t.Exception, message.ActorInstanceId));
                 }
-            });
+            }, _continuationOptions);
             var resequencablesLength = message.Messages.Count();
             _resequencerCounter += resequencablesLength + 1;
-        }
-
-        private void Resequence(WriteMessages message, long counter, Func<IPersistentRepresentation, object> mapper)
-        {
-            var i = 0;
-            foreach (var resequencable in message.Messages)
-            {
-                if (resequencable is IPersistentRepresentation)
-                {
-                    var p = resequencable as IPersistentRepresentation;
-                    _resequencer.Tell(new Desequenced(mapper(p), counter + i + 1, message.PersistentActor, p.Sender));
-                }
-                else
-                {
-                    var loopMsg = new LoopMessageSuccess(resequencable.Payload, message.ActorInstanceId);
-                    _resequencer.Tell(new Desequenced(loopMsg, counter + i + 1, message.PersistentActor, resequencable.Sender));
-                }
-                i++;
-            }
         }
 
         internal sealed class Desequenced

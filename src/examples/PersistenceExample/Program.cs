@@ -80,11 +80,11 @@ namespace PersistenceExample
             var aref = system.ActorOf(Props.Create<ExamplePersistentActor>(), "basic-actor");
 
             aref.Tell(new Command("foo"));
-            //aref.Tell(new Command("baz"));
-            //aref.Tell(new Command("bar"));
-            //aref.Tell("snap");
-            //aref.Tell(new Command("buzz"));
-            //aref.Tell("print");
+            aref.Tell(new Command("baz"));
+            aref.Tell(new Command("bar"));
+            aref.Tell("snap");
+            aref.Tell(new Command("buzz"));
+            aref.Tell("print");
         }
     }
 }

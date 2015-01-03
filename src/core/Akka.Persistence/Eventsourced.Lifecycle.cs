@@ -5,6 +5,9 @@ namespace Akka.Persistence
 {
     public partial class Eventsourced
     {
+        public static readonly Func<Envelope, bool> UnstashFilterPredicate =
+            envelope => !(envelope.Message is WriteMessageSuccess || envelope.Message is ReplayedMessage);
+
         protected override void PreStart()
         {
             Self.Tell(new Recover(SnapshotSelectionCriteria.Latest));
@@ -23,6 +26,39 @@ namespace Akka.Persistence
         {
             _currentState.StateReceive(receive, message);
             return true;
+        }
+
+        public override void AroundPreRestart(Exception cause, object message)
+        {
+            try
+            {
+                _internalStash.UnstashAll();
+                Stash.UnstashAll(UnstashFilterPredicate);
+            }
+            finally
+            {
+                object inner;
+                if (message is WriteMessageSuccess) inner = (message as WriteMessageSuccess).Persistent;
+                else if (message is LoopMessageSuccess) inner = (message as LoopMessageSuccess).Message;
+                else if (message is ReplayedMessage) inner = (message as ReplayedMessage).Persistent;
+                else inner = null;
+
+                FlushJournalBatch();
+                base.AroundPreRestart(cause, inner);
+            }
+        }
+
+        public override void AroundPostStop()
+        {
+            try
+            {
+                _internalStash.UnstashAll();
+                Stash.UnstashAll(UnstashFilterPredicate);
+            }
+            finally
+            {
+                base.AroundPostStop();
+            }
         }
 
         protected override void Unhandled(object message)
