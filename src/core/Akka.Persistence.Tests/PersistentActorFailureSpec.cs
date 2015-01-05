@@ -1,7 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using Akka.Actor;
 using Akka.Persistence.Journal;
+using Akka.TestKit;
+using Xunit;
 
 namespace Akka.Persistence.Tests
 {
@@ -75,7 +79,20 @@ namespace Akka.Persistence.Tests
             : base(PersistenceSpec.Configuration("inmem", "PersistentActorFailureSpec",
                 extraConfig: @"akka.persistence.journal.inmem.class = ""Akka.Persistence.Tests.PersistentActorFailureSpec.FailingMemoryJournal"""))
         {
+            
+            var pref = ActorOf(Props.Create(() => new PersistentActorSpec.BehaviorOneActor(Name)));
+            pref.Tell(new PersistentActorSpec.Cmd("a"));
+            pref.Tell(GetState.Instance);
+            ExpectMsg<IEnumerable<string>>().ShouldOnlyContainInOrder("a-1", "a-2");
+        }
 
+        [Fact]
+        public void PersistentActor_throws_ActorKilledException_if_recovery_from_persisted_events_fails()
+        {
+            var supervisor = ActorOf(() => new Supervisor(TestActor));
+            supervisor.Tell(Props.Create(() => new PersistentActorSpec.BehaviorOneActor(Name)));
+            ExpectMsg<ActorRef>();
+            ExpectMsg<ActorKilledException>();
         }
     }
 }

@@ -16,7 +16,7 @@ namespace Akka.Persistence.Journal
             if (persistentEnvelope is IPersistentRepresentation)
             {
                 var repr = persistentEnvelope as IPersistentRepresentation;
-                // repr.PrepareWrite();
+                repr.PrepareWrite(Context);
                 return true;
             }
 

@@ -667,9 +667,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        internal class AnyValEventPersistentActor : ExamplePersistentActor
+        internal class IntEventPersistentActor : ExamplePersistentActor
         {
-            public AnyValEventPersistentActor(string name)
+            public IntEventPersistentActor(string name)
                 : base(name)
             {
             }

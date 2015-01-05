@@ -130,6 +130,10 @@ namespace Akka.Persistence
             MaxTimeStamp = maxTimeStamp;
         }
 
+        public SnapshotSelectionCriteria(long maxSequenceNr) : this(maxSequenceNr, DateTime.MaxValue)
+        {
+        }
+
         /// <summary>
         /// Upper bound for a selected snapshot's sequence number.
         /// </summary>

@@ -20,6 +20,11 @@ namespace Akka.Persistence
         public string Name { get; private set; }
         public bool IsRecoveryRunning { get; private set; }
         public StateReceive StateReceive { get; private set; }
+
+        public override string ToString()
+        {
+            return Name;
+        }
     }
 
     public abstract partial class Eventsourced
@@ -209,7 +214,7 @@ namespace Akka.Persistence
         {
             return new EventsourcedState("processing commands", false, (receive, message) =>
             {
-                var handled = CommonProcessingStateBehavior(message, () => _pendingInvocations.RemoveLast());
+                var handled = CommonProcessingStateBehavior(message, () => _pendingInvocations.Pop());
                 if (!handled)
                 {
                     base.AroundReceive(receive, message);
@@ -261,13 +266,12 @@ namespace Akka.Persistence
             {
                 var handled = CommonProcessingStateBehavior(message, () =>
                 {
-                    var last = _pendingInvocations.Last.Value;
-                    _pendingInvocations.RemoveLast();
+                    var invocation = _pendingInvocations.Pop();
 
                     // enables an early return to `processingCommands`, because if this counter hits `0`,
                     // we know the remaining pendingInvocations are all `persistAsync` created, which
                     // means we can go back to processing commands also - and these callbacks will be called as soon as possible
-                    if (last is StashingHandlerInvocation)
+                    if (invocation is StashingHandlerInvocation)
                         _pendingStashingPersistInvocations--;
 
                     if (_pendingStashingPersistInvocations == 0)
@@ -332,6 +336,23 @@ namespace Akka.Persistence
                 onWriteMessageComplete();
             }
         }
+    }
 
+    internal static class LinkedListExtensions
+    {
+        /// <summary>
+        /// Removes first element from the list and returns it or returns default value if list was empty.
+        /// </summary>
+        internal static T Pop<T>(this LinkedList<T> self)
+        {
+            if (self.First != null)
+            {
+                var first = self.First.Value;
+                self.RemoveFirst();
+                return first;
+            }
+
+            return default (T);
+        }
     }
 }

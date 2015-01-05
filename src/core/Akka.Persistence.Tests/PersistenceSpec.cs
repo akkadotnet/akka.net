@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -16,16 +17,15 @@ namespace Akka.Persistence.Tests
             var c = extraConfig == null
                 ? ConfigurationFactory.Empty
                 : ConfigurationFactory.ParseString(extraConfig);
-
-            return c.WithFallback(ConfigurationFactory.ParseString(
-                string.Format(@"
-                akka.actor.serialize-creators = ${0}
-                akka.actor.serialize-messages = ${0}
+            var configString = string.Format(@"
+                akka.actor.serialize-creators = {0}
+                akka.actor.serialize-messages = {0}
                 akka.persistence.publish-plugin-commands = on
-                akka.persistence.journal.plugin = ""akka.persistence.journal.${1}""
-                akka.persistence.journal.leveldb.dir = ""target/journal-${2}""
-                akka.persistence.snapshot-store.local.dir = ""target/snapshots-${2}/""
-                akka.test.single-expect-default = 10s", serialization ?? "on", plugin, test)));
+                akka.persistence.journal.plugin = ""akka.persistence.journal.{1}""
+                akka.persistence.snapshot-store.local.dir = ""target/snapshots-{2}/""
+                akka.test.single-expect-default = 10s", serialization ?? "on", plugin, test);
+
+            return c.WithFallback(ConfigurationFactory.ParseString(configString)).WithFallback(Persistence.DefaultConfig());
         }
 
         internal readonly Cleanup Clean;
@@ -34,14 +34,16 @@ namespace Akka.Persistence.Tests
 
         private readonly string _name;
 
-        protected PersistenceSpec(string config) : base(config)
+        protected PersistenceSpec(string config)
+            : base(config)
         {
             _name = NamePrefix + "-" + _counter.GetAndIncrement();
             Clean = new Cleanup(this);
             Clean.Initialize();
         }
 
-        protected PersistenceSpec(Config config = null) : base(config)
+        protected PersistenceSpec(Config config = null)
+            : base(config)
         {
             _name = NamePrefix + "-" + _counter.GetAndIncrement();
             Clean = new Cleanup(this);
@@ -50,8 +52,8 @@ namespace Akka.Persistence.Tests
 
         public PersistenceExtension Extension { get { return Persistence.Instance.Apply(Sys); } }
 
-        public string NamePrefix { get { return Sys.Name; }}
-        public string Name { get { return _name; }}
+        public string NamePrefix { get { return Sys.Name; } }
+        public string Name { get { return _name; } }
 
         protected override void AfterTest()
         {
@@ -68,17 +70,18 @@ namespace Akka.Persistence.Tests
         {
             StorageLocations = new[]
             {
-                "akka.persistence.journal.leveldb.dir",
-                "akka.persistence.journal.leveldb-shared.store.dir",
                 "akka.persistence.snapshot-store.local.dir"
             }.Select(s => new DirectoryInfo(spec.Sys.Settings.Config.GetString(s))).ToList();
         }
 
         public void Initialize()
         {
-            StorageLocations.ForEach(fi => fi.Delete());
+            StorageLocations.ForEach(fi =>
+            {
+                if (fi.Exists) fi.Delete();
+            });
         }
-        
+
         public void Dispose()
         {
             StorageLocations.ForEach(fi => fi.Delete());
@@ -108,7 +111,8 @@ namespace Akka.Persistence.Tests
 
     internal class TestException : Exception
     {
-        public TestException(string message) : base(message)
+        public TestException(string message)
+            : base(message)
         {
         }
     }

@@ -66,6 +66,7 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class Recover
     {
+        public static readonly Recover Default = new Recover(SnapshotSelectionCriteria.Latest);
         public Recover(SnapshotSelectionCriteria fromSnapshot, long toSequenceNr = long.MaxValue, long replayMax = long.MaxValue)
         {
             FromSnapshot = fromSnapshot;
@@ -99,5 +100,36 @@ namespace Akka.Persistence
             return ReceiveCommand(message);
         }
     }
+    
+    /// <summary>
+    /// Persistent actor - can be used to implement command or eventsourcing.
+    /// </summary>
+    public abstract class UntypedPersistentActor : Eventsourced
+    {
+        protected override bool Receive(object message)
+        {
+            return ReceiveCommand(message);
+        }
 
+        protected sealed override bool ReceiveCommand(object message)
+        {
+            OnReceiveCommand(message);
+            return true;
+        }
+
+        protected sealed override bool ReceiveRecover(object message)
+        {
+            OnReceiveRecover(message);
+            return true;
+        }
+
+        protected abstract void OnReceiveCommand(object message);
+        protected abstract void OnReceiveRecover(object message);
+        protected void Become(UntypedReceive receive, bool discardOld = true)
+        {
+            Context.Become(receive, discardOld);
+        }
+
+        protected static new IUntypedActorContext Context { get { return (IUntypedActorContext)ActorBase.Context; } }
+    }
 }

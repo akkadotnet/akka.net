@@ -110,7 +110,7 @@ namespace Akka.Persistence
 
         public IPersistentRepresentation PrepareWrite(IActorContext context)
         {
-            return PrepareWrite(Sender is MinimalActorRef ? context.System.DeadLetters : Sender);
+            return PrepareWrite(Sender is FutureActorRef ? context.System.DeadLetters : Sender);
         }
     }
 }

@@ -10,8 +10,8 @@ namespace Akka.Persistence.Tests
     public class GuaranteedDeliverySpec : PersistenceSpec
     {
 
-        public GuaranteedDeliverySpec(string config)
-            : base(config)
+        public GuaranteedDeliverySpec()
+            : base(PersistenceSpec.Configuration("inmem", "GuaranteedDeliverySpec"))
         {
         }
 

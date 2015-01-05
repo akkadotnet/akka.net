@@ -13,6 +13,11 @@ namespace PersistenceExample
         }
 
         public string Data { get; private set; }
+
+        public override string ToString()
+        {
+            return Data;
+        }
     }
 
     public class Event
@@ -23,6 +28,11 @@ namespace PersistenceExample
         }
 
         public string Data { get; private set; }
+
+        public override string ToString()
+        {
+            return Data;
+        }
     }
 
     public class ExampleState
@@ -80,11 +90,11 @@ namespace PersistenceExample
             {
                 var cmd = message as Command;
                 Persist(new Event(cmd.Data + "-" + EventsCount), UpdateState);
-                Persist(new Event(cmd.Data + "-" + EventsCount+1), @event =>
-                {
-                    UpdateState(@event);
-                    Context.System.EventStream.Publish(@event);
-                });
+                //Persist(new Event(cmd.Data + "-" + EventsCount+1), @event =>
+                //{
+                //    UpdateState(@event);
+                //    Context.System.EventStream.Publish(@event);
+                //});
             }
             else if (message == "snap")
                 SaveSnapshot(State);

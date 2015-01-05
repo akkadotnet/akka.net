@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
+using System.Linq;
 using Akka.Actor;
 using Akka.Util.Internal;
 
@@ -46,8 +47,6 @@ namespace Akka.Persistence
 
     public abstract partial class Eventsourced : ActorBase, IWithPersistenceId, WithUnboundedStash
     {
-        //TODO: to implement - Actor.PreStart, AroundReceive, AroundPreRestart, PreRestart, AroundPostStop, Unhandled
-
         private static readonly AtomicCounter InstanceCounter = new AtomicCounter(1);
 
         private readonly int _instanceId;
@@ -317,7 +316,7 @@ namespace Akka.Persistence
 
         private void FlushJournalBatch()
         {
-            Journal.Tell(new WriteMessages(_journalBatch, Self, _instanceId));
+            Journal.Tell(new WriteMessages(_journalBatch.ToArray(), Self, _instanceId));
             _journalBatch = new List<IPersistentEnvelope>(0);
             _isWriteInProgress = true;
         }

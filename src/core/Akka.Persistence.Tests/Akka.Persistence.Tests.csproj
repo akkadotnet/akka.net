@@ -52,6 +52,8 @@
     <Compile Include="PersistentActorFailureSpec.cs" />
     <Compile Include="PersistentActorSpec.cs" />
     <Compile Include="PersistentActorSpec.Actors.cs" />
+    <Compile Include="PersistentViewSpec.cs" />
+    <Compile Include="PersistentViewSpec.Actors.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SnapshotSpec.cs" />
   </ItemGroup>
