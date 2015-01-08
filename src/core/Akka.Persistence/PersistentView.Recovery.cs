@@ -168,16 +168,9 @@ namespace Akka.Persistence
                     // Recover(lastSequenceNr) is sent by preRestart
                     LastSequenceNr = long.MaxValue;
                 }
-                else if (message is ReplayMessagesSuccess)
-                {
-                    ReplayFailureCompleted(cause);
-                }
-                else if (message is ReplayedMessage)
-                {
-                    var replayedMessage = (ReplayedMessage)message;
-                    UpdateLastSequenceNr(replayedMessage.Persistent);
-                }
-                else if (message is Recover) ;    // ignore
+                else if (message is ReplayMessagesSuccess) ReplayFailureCompleted(cause);
+                else if (message is ReplayedMessage) UpdateLastSequenceNr(((ReplayedMessage)message).Persistent);
+                else if (message is Recover) ; // ignore
                 else _internalStash.Stash();
             });
         }
@@ -185,8 +178,7 @@ namespace Akka.Persistence
         private void ReplayFailureCompleted(Exception cause)
         {
             ChangeState(PrepareRestart(cause));
-            // mailbox.enqueueFirst(self, failureMessage)
-            throw new NotImplementedException();
+            Context.EnqueueMessageFirst(cause);
         }
 
         /// <summary>

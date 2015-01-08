@@ -38,6 +38,10 @@
     <Reference Include="Google.ProtocolBuffers.Serialization">
       <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Newtonsoft.Json.6.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -51,7 +55,7 @@
     <Compile Include="GuaranteedDelivery.cs" />
     <Compile Include="Eventsourced.cs" />
     <Compile Include="Eventsourced.Recovery.cs" />
-    <Compile Include="Journal\TaskExtensions.cs" />
+    <Compile Include="InternalExtensions.cs" />
     <Compile Include="PersistentActor.cs" />
     <Compile Include="PersistentView.Recovery.cs" />
     <Compile Include="PersistentView.Lifecycle.cs" />

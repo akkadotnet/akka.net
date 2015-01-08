@@ -36,7 +36,7 @@ namespace Akka.Persistence
         /// <returns></returns>
         private EventsourcedState RecoveryPending()
         {
-            return new EventsourcedState("recovery started", true, (receive, message) =>
+            return new EventsourcedState("recovery pending", true, (receive, message) =>
             {
                 if (message is Recover)
                 {
@@ -166,8 +166,10 @@ namespace Akka.Persistence
         private void ReplayCompleted(Exception cause, object failureMessage)
         {
             ChangeState(PrepareRestart(cause));
-            // mailbox.enqueueFirst(self, failureMessage)
-            throw new NotImplementedException();
+
+            //TODO: this implementation requires mailbox.EnqueueFirst to be available, but that actually gives a large 
+            // amount of composition constrains. If any of the casts below will go wrong, user-defined messages won't be handled by actors.
+            Context.EnqueueMessageFirst(failureMessage);
         }
 
         /// <summary>
@@ -281,7 +283,7 @@ namespace Akka.Persistence
                     }
                 });
 
-                if(!handled) _internalStash.Stash();
+                if (!handled) _internalStash.Stash();
             });
         }
 
@@ -352,7 +354,7 @@ namespace Akka.Persistence
                 return first;
             }
 
-            return default (T);
+            return default(T);
         }
     }
 }

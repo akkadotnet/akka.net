@@ -58,6 +58,7 @@ namespace Akka.Persistence
         protected readonly PersistenceExtension Extension;
 
         private readonly PersistenceSettings.ViewSettings _viewSettings;
+        private ActorRef _snapshotStore;
         private ActorRef _journal;
 
         private CancellationTokenSource _scheduleCancelation;
@@ -71,6 +72,11 @@ namespace Akka.Persistence
             Extension = Persistence.Instance.Apply(Context.System);
             _viewSettings = Extension.Settings.View;
             _internalStash = CreateStash();
+        }
+
+        private ActorRef SnapshotStore
+        {
+            get { return _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotterId)); }
         }
 
         /// <summary>
@@ -118,6 +124,8 @@ namespace Akka.Persistence
         /// </summary>
         public long LastSequenceNr { get; private set; }
 
+        public IStash Stash { get; set; }
+
         /// <summary>
         /// Gets last sequence number.
         /// </summary>
@@ -138,27 +146,39 @@ namespace Akka.Persistence
             if (persistent.SequenceNr > LastSequenceNr) LastSequenceNr = persistent.SequenceNr;
         }
 
+        /// <summary>
+        /// Orders to load a snapshots related to persitent actor identified by <paramref name="persistenceId"/>
+        /// that match specified <paramref name="criteria"/> up to provided <paramref name="toSequenceNr"/> upper, inclusive bound.
+        /// </summary>
         public void LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
         {
-            throw new NotImplementedException();
+            SnapshotStore.Tell(new LoadSnapshot(persistenceId, criteria, toSequenceNr));
         }
 
+        /// <summary>
+        /// Saves a <paramref name="snapshot"/> of this actor's state. If snapshot succeeds, this actor will
+        /// receive a <see cref="SaveSnapshotSuccess"/>, otherwise a <see cref="SaveSnapshotFailure"/> message.
+        /// </summary>
         public void SaveSnapshot(object snapshot)
         {
-            throw new NotImplementedException();
+            SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(SnapshotterId, SnapshotSequenceNr), snapshot));
         }
 
+        /// <summary>
+        /// Deletes a snapshot identified by <paramref name="sequenceNr"/> and <paramref name="timestamp"/>.
+        /// </summary>
         public void DeleteSnapshot(long sequenceNr, DateTime timestamp)
         {
-            throw new NotImplementedException();
+            SnapshotStore.Tell(new DeleteSnapshot(new SnapshotMetadata(SnapshotterId, sequenceNr, timestamp)));
         }
 
+        /// <summary>
+        /// Delete all snapshots matching <paramref name="criteria"/>.
+        /// </summary>
         public void DeleteSnapshots(SnapshotSelectionCriteria criteria)
         {
-            throw new NotImplementedException();
+            SnapshotStore.Tell(new DeleteSnapshots(SnapshotterId, criteria));
         }
-
-        public IStash Stash { get; set; }
 
         private IStash CreateStash()
         {

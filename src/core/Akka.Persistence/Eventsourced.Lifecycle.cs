@@ -10,7 +10,7 @@ namespace Akka.Persistence
 
         protected override void PreStart()
         {
-            Self.Tell(new Recover(SnapshotSelectionCriteria.Latest));
+            Self.Tell(Recover.Default);
         }
 
         protected override void PreRestart(Exception reason, object message)

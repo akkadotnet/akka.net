@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Akka.Persistence
 {
@@ -124,6 +125,7 @@ namespace Akka.Persistence
         public static readonly SnapshotSelectionCriteria Latest = new SnapshotSelectionCriteria(long.MaxValue, DateTime.MaxValue);
         public static readonly SnapshotSelectionCriteria None = new SnapshotSelectionCriteria(0L, DateTime.MinValue);
 
+        [JsonConstructor]
         public SnapshotSelectionCriteria(long maxSequenceNr, DateTime maxTimeStamp)
         {
             MaxSequenceNr = maxSequenceNr;
