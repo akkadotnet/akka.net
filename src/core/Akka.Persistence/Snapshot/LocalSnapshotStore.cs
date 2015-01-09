@@ -61,7 +61,7 @@ namespace Akka.Persistence.Snapshot
         {
             _saving.Add(metadata);
             Save(metadata, snapshot);
-            return Task.Delay(0);
+            return Task.FromResult(new object());
         }
 
         protected override void Saved(SnapshotMetadata metadata)
@@ -133,8 +133,11 @@ namespace Akka.Persistence.Snapshot
             {
                 var snapshot = new Serialization.Snapshot(payload);
                 Serialize(snapshot, stream);
-                tempFile.MoveTo(tempFile.Name.Replace(".tmp", string.Empty));
             }
+
+            // remove .tmp extension and rename
+            var newFilePath = tempFile.FullName.Substring(0, tempFile.FullName.Length - 4);
+            File.Move(tempFile.FullName, newFilePath);
         }
 
         private void Serialize(Serialization.Snapshot snapshot, Stream stream)
@@ -147,7 +150,7 @@ namespace Akka.Persistence.Snapshot
         private IEnumerable<SnapshotMetadata> GetSnapshotMetadata(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             var snapshots = _snapshotDirectory
-                .EnumerateFiles("snapshot-" + persistenceId, SearchOption.TopDirectoryOnly)
+                .EnumerateFiles("snapshot-" + persistenceId + "-*", SearchOption.TopDirectoryOnly)
                 .Select(ExtractSnapshotMetadata)
                 .Where(metadata => metadata != null && criteria.IsMatch(metadata) && !_saving.Contains(metadata));
 
@@ -176,7 +179,8 @@ namespace Akka.Persistence.Snapshot
         private FileInfo GetSnapshotFile(SnapshotMetadata metadata, string extension = "")
         {
             var filename = string.Format("snapshot-{0}-{1}-{2}{3}", metadata.PersistenceId, metadata.SequenceNr, metadata.Timestamp.Ticks, extension);
-            return _snapshotDirectory.GetFiles(filename, SearchOption.TopDirectoryOnly).FirstOrDefault();
+            var file = _snapshotDirectory.GetFiles(filename, SearchOption.TopDirectoryOnly).FirstOrDefault();
+            return file ?? new FileInfo(Path.Combine(_snapshotDirectory.FullName, filename));
         }
     }
 }

@@ -121,8 +121,7 @@ namespace Akka.Persistence
         /// Returns <see cref="LastSequenceNr"/>
         /// </summary>
         public long SnapshotSequenceNr { get { return LastSequenceNr; } }
-
-
+        
         protected void LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
         {
             SnapshotStore.Tell(new LoadSnapshot(persistenceId, criteria, toSequenceNr));

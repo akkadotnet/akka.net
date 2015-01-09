@@ -17,7 +17,7 @@ namespace Akka.Persistence.Tests
             var pref = ActorOf(Props.Create(() => new BehaviorOneActor(Name)));
             pref.Tell(new Cmd("a"));
             pref.Tell(GetState.Instance);
-           // ExpectMsgInOrder("a-1", "a-2");
+            ExpectMsgInOrder("a-1", "a-2");
         }
 
         [Fact]
@@ -25,8 +25,7 @@ namespace Akka.Persistence.Tests
         {
             var pref = ActorOf(Props.Create(() => new BehaviorOneActor(Name)));
             pref.Tell(GetState.Instance);
-           // ExpectMsgInOrder("a-1", "a-2");
-            Thread.Sleep(100000);
+            ExpectMsgInOrder("a-1", "a-2");
         }
 
         [Fact]
