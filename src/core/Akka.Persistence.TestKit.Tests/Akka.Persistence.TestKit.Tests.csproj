@@ -39,6 +39,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Cleanup.cs" />
+    <Compile Include="LocalSnapshotStoreSpec.cs" />
+    <Compile Include="MemoryJournalSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -49,6 +52,10 @@
     <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj">
       <Project>{fca84dea-c118-424b-9eb8-34375dfef18a}</Project>
       <Name>Akka.Persistence</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">
+      <Project>{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}</Project>
+      <Name>Akka.TestKit</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>

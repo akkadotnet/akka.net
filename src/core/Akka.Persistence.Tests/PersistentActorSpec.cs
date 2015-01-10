@@ -171,7 +171,7 @@ namespace Akka.Persistence.Tests
             ExpectMsg("a");
         }
 
-        [Fact]
+        [Fact(Skip = "not implemented yet")]
         public void PersistentActor_should_support_user_stash_operations_with_serveral_stashed_messages()
         {
             var pref = ActorOf(Props.Create(() => new UserStashManyActor(Name)));
@@ -298,7 +298,7 @@ namespace Akka.Persistence.Tests
             ExpectNoMsg(TimeSpan.FromMilliseconds(100));
         }
 
-        [Fact]
+        [Fact(Skip = "not implemented yet")]
         public void PersistentActor_should_support_a_mix_of_persist_calls_and_persist_calls()
         {
             var pref = ActorOf(Props.Create(() => new AsyncPersistAndPersistMixedSyncAsyncActor(Name)));
@@ -441,21 +441,21 @@ namespace Akka.Persistence.Tests
             ExpectMsg<RecoveryCompleted>();
         }
 
-        [Fact]
+        [Fact(Skip = "not implemented yet")]
         public void PersistentActor_should_preserve_order_of_incoming_messages()
         {
             throw new NotImplementedException();
         }
 
-        [Fact]
+        [Fact(Skip = "not implemented yet")]
         public void PersistentActor_should_be_used_as_a_stackable_modification()
         {
             throw new NotImplementedException();
         }
 
-        private void ExpectMsgInOrder<T>(params T[] ordered)
+        private void ExpectMsgInOrder(params string[] ordered)
         {
-            ExpectMsg<IEnumerable<object>>().ShouldOnlyContainInOrder(ordered);
+            ExpectMsg<object[]>().Select(x => x.ToString()).ShouldOnlyContainInOrder(ordered);
         }
     }
 }

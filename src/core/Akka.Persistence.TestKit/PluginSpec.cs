@@ -2,6 +2,7 @@
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
+using Akka.TestKit.Xunit;
 using Akka.Util.Internal;
 
 namespace Akka.Persistence.TestKit
@@ -9,25 +10,23 @@ namespace Akka.Persistence.TestKit
     public abstract class PluginSpec : TestKitBase, IDisposable
     {
         private readonly AtomicCounter _counter = new AtomicCounter(0);
-        private PersistenceExtension _extension;
+        private readonly PersistenceExtension _extension;
         private string _pid;
 
-        protected PluginSpec(TestKitAssertions assertions, ActorSystem system = null, string testActorName = null) 
-            : base(assertions, system, testActorName)
-        {
-            Init();
-        }
+        protected int ActorInstanceId = 1;
 
-        protected PluginSpec(TestKitAssertions assertions, Config config, string actorSystemName = null, string testActorName = null) 
-            : base(assertions, config.WithFallback(Persistence.DefaultConfig()), actorSystemName, testActorName)
-        {
-            Init();
-        }
-
-        private void Init()
+        protected PluginSpec(Config config = null, string actorSystemName = null, string testActorName = null) 
+            : base(new XunitAssertions(), FromConfig(config), actorSystemName, testActorName)
         {
             _extension = Persistence.Instance.Apply(Sys as ExtendedActorSystem);
             _pid = "p-" + _counter.IncrementAndGet();
+        }
+
+        protected static Config FromConfig(Config config = null)
+        {
+            return config == null
+                ? Persistence.DefaultConfig()
+                : config.WithFallback(Persistence.DefaultConfig());
         }
 
         public string Pid { get { return _pid; } }

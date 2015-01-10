@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Text.RegularExpressions;
-using Akka;
 using Akka.Persistence;
 
 namespace PersistenceExample
@@ -21,7 +19,7 @@ namespace PersistenceExample
             if (message is SnapshotOffer)
             {
                 var s = ((SnapshotOffer) message).Snapshot as ExampleState;
-                Console.WriteLine("offered state = " + s);
+                Console.WriteLine("Offered state (from snapshot): " + s);
                 State = s;
             }
             else if (message is string)
@@ -33,7 +31,7 @@ namespace PersistenceExample
         protected override bool ReceiveCommand(object message)
         {
             if (message == "print")
-                Console.WriteLine("current state = " + State);
+                Console.WriteLine("Current actor's state: " + State);
             else if (message == "snap")
                 SaveSnapshot(State);
             else if (message is SaveSnapshotFailure || message is SaveSnapshotSuccess) { }

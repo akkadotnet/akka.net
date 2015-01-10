@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using System.Threading.Tasks;
 using Akka.Actor;
 
 namespace Akka.Persistence
@@ -72,6 +71,7 @@ namespace Akka.Persistence
             Extension = Persistence.Instance.Apply(Context.System);
             _viewSettings = Extension.Settings.View;
             _internalStash = CreateStash();
+            _currentState = RecoveryPending();
         }
 
         private ActorRef SnapshotStore

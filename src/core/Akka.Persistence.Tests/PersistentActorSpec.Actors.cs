@@ -63,7 +63,7 @@ namespace Akka.Persistence.Tests
             {
                 if (message is Evt)
                 {
-                    Events.AddFirst((message as Evt).Data);
+                    Events.AddLast((message as Evt).Data);
                     return true;
                 }
 
@@ -72,7 +72,7 @@ namespace Akka.Persistence.Tests
 
             protected bool CommonBehavior(object message)
             {
-                if (message is GetState) Sender.Tell(Events.Reverse());
+                if (message is GetState) Sender.Tell(Events.Reverse().ToArray());
                 else if (message.ToString() == "boom") throw new TestException("boom");
                 else return false;
                 return true;

@@ -46,13 +46,14 @@ namespace PersistenceExample
 
         public ExampleState Update(Event evt)
         {
-            var list = new[] { evt.Data }.Union(Events).ToList();
+            var list = new List<string> {evt.Data};
+            list.AddRange(Events);
             return new ExampleState(list);
         }
 
         public override string ToString()
         {
-            return string.Join("; ", Events);
+            return string.Join(", ", Events);
         }
     }
 
@@ -90,11 +91,6 @@ namespace PersistenceExample
             {
                 var cmd = message as Command;
                 Persist(new Event(cmd.Data + "-" + EventsCount), UpdateState);
-                //Persist(new Event(cmd.Data + "-" + EventsCount+1), @event =>
-                //{
-                //    UpdateState(@event);
-                //    Context.System.EventStream.Publish(@event);
-                //});
             }
             else if (message == "snap")
                 SaveSnapshot(State);

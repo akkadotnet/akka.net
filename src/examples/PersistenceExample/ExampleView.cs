@@ -14,33 +14,33 @@ namespace PersistenceExample
         {
             if (message == "snap")
             {
-                Console.WriteLine("view saving snapshot");
+                Console.WriteLine("View saving snapshot");
                 SaveSnapshot(_numReplicated);
             }
             else if (message is SnapshotOffer)
             {
                 var offer = (SnapshotOffer) message;
-                _numReplicated = (int)offer.Snapshot;
-                Console.WriteLine("view received snapshot offer {0} (metadata = {1})", _numReplicated, offer.Metadata);
+                _numReplicated = Convert.ToInt32(offer.Snapshot);
+                Console.WriteLine("View received snapshot offer {0} (metadata = {1})", _numReplicated, offer.Metadata);
             }
             else if (IsPersistent)
             {
                 _numReplicated++;
-                Console.WriteLine("view replayed event {0} (num replicated = {1})", message, _numReplicated);
+                Console.WriteLine("View replayed event {0} (num replicated = {1})", message, _numReplicated);
             }
             else if (message is SaveSnapshotSuccess)
             {
                 var fail = (SaveSnapshotSuccess) message;
-                Console.WriteLine("view snapshot success (metadata = {0})", fail.Metadata);
+                Console.WriteLine("View snapshot success (metadata = {0})", fail.Metadata);
             }
             else if (message is SaveSnapshotFailure)
             {
                 var fail = (SaveSnapshotFailure) message;
-                Console.WriteLine("view snapshot failure (metadata = {0}), caused by {1}", fail.Metadata, fail.Cause);
+                Console.WriteLine("View snapshot failure (metadata = {0}), caused by {1}", fail.Metadata, fail.Cause);
             }
             else
             {
-                Console.WriteLine("view received other message " + message);
+                Console.WriteLine("View received other message " + message);
             }
 
             return true;
