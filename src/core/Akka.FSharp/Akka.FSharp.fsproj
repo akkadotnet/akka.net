@@ -81,6 +81,7 @@
     <Compile Include="FsApi.fs" />
     <None Include="packages.config" />
     <None Include="Akka.FSharp.nuspec" />
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.PowerPack">
