@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Event;
@@ -12,19 +13,19 @@ namespace Akka.Actor
     public interface IActorProducerPlugin
     {
         /// <summary>
-        /// Determines if current plugin can be applied to provided <paramref name="actor"/> instance.
+        /// Determines if current plugin can be applied to provided actor based on it's type.
         /// </summary>
-        bool CanBeAppliedTo(ActorBase actor);
+        bool CanBeAppliedTo(Type actorType);
 
         /// <summary>
-        /// Plugin behavior applied to <paramref name="actor"/> instance when the new one is being created.
+        /// Plugin behavior applied to underlying <paramref name="actor"/> instance when the new one is being created.
         /// </summary>
-        void AfterActorCreated(ActorBase actor, IActorContext context);
+        void AfterIncarnated(ActorBase actor, IActorContext context);
 
         /// <summary>
-        /// Plugin behavior applied to <paramref name="actor"/> instance before the actor is being recycled.
+        /// Plugin behavior applied to underlying <paramref name="actor"/> instance before the actor is being recycled.
         /// </summary>
-        void BeforeActorTerminated(ActorBase actor, IActorContext context);
+        void BeforeIncarnated(ActorBase actor, IActorContext context);
     }
 
     /// <summary>
@@ -35,7 +36,7 @@ namespace Akka.Actor
         /// <summary>
         /// By default derivatives of this plugin will be applied to all actors.
         /// </summary>
-        public virtual bool CanBeAppliedTo(ActorBase actor)
+        public virtual bool CanBeAppliedTo(Type actorType)
         {
             return true;
         }
@@ -43,12 +44,12 @@ namespace Akka.Actor
         /// <summary>
         /// Plugin behavior applied to <paramref name="actor"/> instance when the new one is being created.
         /// </summary>
-        public virtual void AfterActorCreated(ActorBase actor, IActorContext context) { }
+        public virtual void AfterIncarnated(ActorBase actor, IActorContext context) { }
 
         /// <summary>
         /// Plugin behavior applied to <paramref name="actor"/> instance before the actor is being recycled.
         /// </summary>
-        public virtual void BeforeActorTerminated(ActorBase actor, IActorContext context) { }
+        public virtual void BeforeIncarnated(ActorBase actor, IActorContext context) { }
     }
 
     /// <summary>
@@ -59,66 +60,54 @@ namespace Akka.Actor
         /// <summary>
         /// By default derivatives of this plugin will be applied to all actors inheriting from <typeparam name="TActor">actor generic type</typeparam>.
         /// </summary>
-        public virtual bool CanBeAppliedTo(ActorBase actor)
+        public virtual bool CanBeAppliedTo(Type actorType)
         {
-            return actor is TActor;
+            return typeof(TActor).IsAssignableFrom(actorType);
         }
 
-        void IActorProducerPlugin.AfterActorCreated(ActorBase actor, IActorContext context)
+        void IActorProducerPlugin.AfterIncarnated(ActorBase actor, IActorContext context)
         {
-            AfterActorCreated(actor as TActor, context);
+            AfterIncarnated(actor as TActor, context);
         }
 
-        void IActorProducerPlugin.BeforeActorTerminated(ActorBase actor, IActorContext context)
+        void IActorProducerPlugin.BeforeIncarnated(ActorBase actor, IActorContext context)
         {
-            BeforeActorTerminated(actor as TActor, context);
+            BeforeIncarnated(actor as TActor, context);
         }
 
         /// <summary>
         /// Plugin behavior applied to <paramref name="actor"/> instance when the new one is being created.
         /// </summary>
-        public virtual void AfterActorCreated(TActor actor, IActorContext context) { }
+        public virtual void AfterIncarnated(TActor actor, IActorContext context) { }
 
         /// <summary>
         /// Plugin behavior applied to <paramref name="actor"/> instance before the actor is being recycled.
         /// </summary>
-        public virtual void BeforeActorTerminated(TActor actor, IActorContext context) { }
+        public virtual void BeforeIncarnated(TActor actor, IActorContext context) { }
     }
 
-    internal class DefaultProducerPipeline : ActorProducerPipeline
+    /// <summary>
+    /// Class used to resolving actor producer pipelines depending on actor type.
+    /// </summary>
+    public class ActorProducerPipelineResolver
     {
-        public DefaultProducerPipeline(Func<LoggingAdapter> logBuilder)
-            : base(logBuilder, new ActorStashPlugin())
+        private readonly Lazy<LoggingAdapter> _log;
+        private readonly List<IActorProducerPlugin> _plugins = new List<IActorProducerPlugin>
+        {   
+            // collection of plugins loaded by default
+            new ActorStashPlugin()
+        };
+
+        private readonly ConcurrentDictionary<Type, ActorProducerPipeline> _pipelines = new ConcurrentDictionary<Type, ActorProducerPipeline>();
+
+        /// <summary>
+        /// Gets total number of unique plugins registered inside current resolver.
+        /// </summary>
+        public int TotalPluginCount { get { return _plugins.Count; } }
+
+        public ActorProducerPipelineResolver(Func<LoggingAdapter> logBuilder)
         {
-        }
-    }
-
-    public class ActorProducerPipeline : IEnumerable<IActorProducerPlugin>
-    {
-        private LoggingAdapter _log;
-        private readonly Func<LoggingAdapter> _logBuilder;
-        private readonly List<IActorProducerPlugin> _plugins;
-
-        public ActorProducerPipeline(Func<LoggingAdapter> logBuilder, params IActorProducerPlugin[] defaultPlugins)
-        {
-            _logBuilder = logBuilder;
-            _plugins = defaultPlugins != null && defaultPlugins.Length > 0
-                ? new List<IActorProducerPlugin>(defaultPlugins)
-                : new List<IActorProducerPlugin>();
-        }
-
-        public LoggingAdapter Log { get { return _log ?? (_log = _logBuilder()); } }
-
-        public int Count { get { return _plugins.Count; } }
-
-        public IEnumerator<IActorProducerPlugin> GetEnumerator()
-        {
-            return _plugins.GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
+            _log = new Lazy<LoggingAdapter>(logBuilder);
         }
 
         /// <summary>
@@ -167,21 +156,59 @@ namespace Akka.Actor
             return _plugins.Any(p => p.GetType() == plugin.GetType());
         }
 
+        internal ActorProducerPipeline ResolvePipeline(Type actorType)
+        {
+            return _pipelines.GetOrAdd(actorType, CreatePipeline);
+        }
+
+        private ActorProducerPipeline CreatePipeline(Type type)
+        {
+            return new ActorProducerPipeline(_log, PluginCollectionFor(type));
+        }
+
+        private IEnumerable<IActorProducerPlugin> PluginCollectionFor(Type actorType)
+        {
+            foreach (var plugin in _plugins)
+            {
+                if (plugin.CanBeAppliedTo(actorType))
+                {
+                    yield return plugin;
+                }
+            }
+        }
+
+        private bool AlreadyExists(IActorProducerPlugin plugin)
+        {
+            var pluginType = plugin.GetType();
+            var alreadyExists = _plugins.Any(p => p.GetType() == pluginType);
+            return alreadyExists;
+        }
+    }
+
+    public class ActorProducerPipeline : IEnumerable<IActorProducerPlugin>
+    {
+        private Lazy<LoggingAdapter> _log;
+        private readonly List<IActorProducerPlugin> _plugins;
+
+        public ActorProducerPipeline(Lazy<LoggingAdapter> log, IEnumerable<IActorProducerPlugin> plugins)
+        {
+            _log = log;
+            _plugins = new List<IActorProducerPlugin>(plugins);
+        }
+
+        public int Count { get { return _plugins.Count; } }
+
         /// <summary>
-        /// Resolves and applies all plugins valid to specified <paramref name="actor"/> 
+        /// Resolves and applies all plugins valid to specified underlying <paramref name="actor"/> 
         /// registered in current producer pipeline to newly created actor.
         /// </summary>
-        internal void AfterActorCreated(ActorBase actor, IActorContext context)
+        public void AfterActorIncarnated(ActorBase actor, IActorContext context)
         {
-            var pipeline = ResolvePipelineFor(actor).ToArray();
-
-            LogDebugPipeline(actor.GetType(), pipeline);
-
-            foreach (var plugin in pipeline)
+            foreach (var plugin in _plugins)
             {
                 try
                 {
-                    plugin.AfterActorCreated(actor, context);
+                    plugin.AfterIncarnated(actor, context);
                 }
                 catch (Exception cause)
                 {
@@ -192,42 +219,22 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Resolves and applies all plugins valid to specified <paramref name="actor"/> 
+        /// Resolves and applies all plugins valid to specified underlying <paramref name="actor"/> 
         /// registered in current producer pipeline before old actor would be recycled.
         /// </summary>
-        internal void BeforeActorTerminated(ActorBase actor, IActorContext context)
+        public void BeforeActorIncarnated(ActorBase actor, IActorContext context)
         {
-            var pipeline = ResolvePipelineFor(actor).ToArray();
-
-            LogDebugPipeline(actor.GetType(), pipeline);
-
-            foreach (var plugin in pipeline)
+            foreach (var plugin in _plugins)
             {
                 try
                 {
-                    plugin.BeforeActorTerminated(actor, context);
+                    plugin.BeforeIncarnated(actor, context);
                 }
                 catch (Exception cause)
                 {
                     const string fmt = "An exception occured while trying to apply plugin of type {0} to the actor before it's destruction (Type = {1}, Path = {2})";
                     LogException(actor, cause, fmt, plugin);
                 }
-            }
-        }
-
-        private IEnumerable<IActorProducerPlugin> ResolvePipelineFor(ActorBase actor)
-        {
-            return _plugins.Where(plugin => plugin.CanBeAppliedTo(actor));
-        }
-
-        private void LogDebugPipeline(Type actorType, IActorProducerPlugin[] pipeline)
-        {
-            if (pipeline.Length > 0 && Log != null && Log.IsDebugEnabled)
-            {
-                var debugMessage = string.Format("Resolved plugin pipeline for {0} actor: [{1}]", actorType,
-                    string.Join(", ", pipeline.Select(plug => plug.GetType())));
-
-                Log.Debug(debugMessage);
             }
         }
 
@@ -238,14 +245,17 @@ namespace Akka.Actor
                 ? internalActor.ActorContext.Self.Path.ToString()
                 : string.Empty;
 
-            Log.Error(e, errorMessageFormat, plugin.GetType(), actor.GetType(), actorPath);
+            _log.Value.Error(e, errorMessageFormat, plugin.GetType(), actor.GetType(), actorPath);
         }
 
-        private bool AlreadyExists(IActorProducerPlugin plugin)
+        public IEnumerator<IActorProducerPlugin> GetEnumerator()
         {
-            var pluginType = plugin.GetType();
-            var alreadyExists = _plugins.Any(p => p.GetType() == pluginType);
-            return alreadyExists;
+            return _plugins.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }
