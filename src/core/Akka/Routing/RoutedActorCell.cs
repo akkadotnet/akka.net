@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -24,10 +26,10 @@ namespace Akka.Routing
                 .With<Pool>(r =>
                 {
                     var routees = new List<Routee>();
-                    for(int i = 0; i < r.NrOfInstances; i++)
+                    for(var i = 0; i < r.NrOfInstances; i++)
                     {
-                        var routee = ActorOf(_routeeProps);
-                        routees.Add(new ActorRefRoutee(routee));
+                        var routee = r.NewRoutee(_routeeProps, this);
+                        routees.Add(routee);
                     }
                     AddRoutees(routees.ToArray());
                 })
@@ -87,7 +89,27 @@ namespace Akka.Routing
             _router = _router.WithRoutees(routees.ToArray());
             if (stopChild)
             {
-                //todo add stopchild support
+                foreach (var affectedRoutee in affectedRoutees)
+                {
+                    StopIfChild(affectedRoutee);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Used to stop child routees - typically used in resizable <see cref="Pool"/> routers
+        /// </summary>
+        /// <param name="routee"></param>
+        private void StopIfChild(Routee routee)
+        {
+            var actorRefRoutee = routee as ActorRefRoutee;
+            ChildStats childActorStats;
+            if (actorRefRoutee != null && TryGetChildStatsByName(actorRefRoutee.Actor.Path.Name, out childActorStats))
+            {
+                // The reason for the delay is to give concurrent
+                // messages a chance to be placed in mailbox before sending PoisonPill,
+                // best effort.
+                System.Scheduler.ScheduleOnce(TimeSpan.FromMilliseconds(100), actorRefRoutee.Actor, PoisonPill.Instance);
             }
         }
 

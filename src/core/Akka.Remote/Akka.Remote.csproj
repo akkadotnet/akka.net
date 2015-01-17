@@ -95,6 +95,7 @@
     <Compile Include="RemoteWatcher.cs" />
     <Compile Include="Remoting.cs" />
     <Compile Include="RemotingLifecycleEvent.cs" />
+    <Compile Include="Routing\RemoteRouterConfig.cs" />
     <Compile Include="Serialization\DaemonMsgCreateSerializer.cs" />
     <Compile Include="Serialization\MessageContainerSerializer.cs" />
     <Compile Include="Serialization\ProtobufSerializer.cs" />
