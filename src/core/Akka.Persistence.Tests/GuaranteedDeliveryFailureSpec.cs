@@ -168,7 +168,7 @@ namespace Akka.Persistence.Tests
                 return message.Match()
                     .With<int>(i =>
                     {
-                        var failureRate = IsRecoveryRunning ? _replayProcessingFailureRate : _liveProcessingFailureRate;
+                        var failureRate = IsRecovering ? _replayProcessingFailureRate : _liveProcessingFailureRate;
                         if (State.Contains(i))
                             Log.Debug(DebugMessage("ignored duplicate"));
                         else
@@ -219,7 +219,7 @@ namespace Akka.Persistence.Tests
             private string DebugMessage(string msg)
             {
                 return string.Format("[Sender] {0} (mode = {1}, seqNr = {2}, state = {3})",
-                    msg, IsRecoveryRunning ? "replay" : "live", LastSequenceNr, string.Join(", ", State));
+                    msg, IsRecovering ? "replay" : "live", LastSequenceNr, string.Join(", ", State));
             }
 
             private void Add(int i)

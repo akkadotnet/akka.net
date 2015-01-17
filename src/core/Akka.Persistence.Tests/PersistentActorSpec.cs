@@ -146,7 +146,7 @@ namespace Akka.Persistence.Tests
 
             var pref2 = ActorOf(Props.Create(() => new SnapshottingBecomingPersistentActor(Name, TestActor)));
             ExpectMsg("offered");
-            ExpectMsg("I am becoming");
+            ExpectMsg("I'm becoming");
             pref2.Tell(GetState.Instance);
             ExpectMsgInOrder("a-1", "a-2", "b-41", "b-42", "c-41", "c-42");
         }
@@ -325,8 +325,9 @@ namespace Akka.Persistence.Tests
             pref.Tell("boom");
             for (int i = 1; i < 20; i++)
             {
-                pref.Tell("done");
+                pref.Tell(new Cmd(i));
             }
+            pref.Tell(new Cmd("done"));
             ExpectMsg("done", TimeSpan.FromSeconds(5));
         }
 
@@ -437,8 +438,7 @@ namespace Akka.Persistence.Tests
             ExpectMsg("I am the stashed");
             ExpectMsg("I am the recovered");
             pref2.Tell(GetState.Instance);
-            ExpectMsgInOrder("a-1", "a-2", "b-41", "b-42", "c-41", "c-42");
-            ExpectMsg<RecoveryCompleted>();
+            ExpectMsgInOrder("a-1", "a-2", "b-41", "b-42", "c-41", "c-42", RecoveryCompleted.Instance);
         }
 
         [Fact(Skip = "not implemented yet")]
@@ -453,9 +453,12 @@ namespace Akka.Persistence.Tests
             throw new NotImplementedException();
         }
 
-        private void ExpectMsgInOrder(params string[] ordered)
+        private void ExpectMsgInOrder(params object[] ordered)
         {
-            ExpectMsg<object[]>().Select(x => x.ToString()).ShouldOnlyContainInOrder(ordered);
+            var msg = ExpectMsg<object[]>();
+            msg
+                //.Select(x => x.ToString())
+                .ShouldOnlyContainInOrder(ordered);
         }
     }
 }

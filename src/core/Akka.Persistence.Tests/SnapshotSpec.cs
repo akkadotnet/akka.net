@@ -130,9 +130,9 @@ namespace Akka.Persistence.Tests
         #endregion
 
         public SnapshotSpec()
-            : base(Configuration("local", "SnapshotSpec"))
+            : base(Configuration("inmem", "SnapshotSpec"))
         {
-            var pref = ActorOf(() => new LoadSnapshotTestActor(Name, TestActor));
+            var pref = ActorOf(() => new SaveSnapshotTestActor(Name, TestActor));
             pref.Tell("a");
             pref.Tell(TakeSnapshot.Instance);
             pref.Tell("b");
@@ -142,7 +142,7 @@ namespace Akka.Persistence.Tests
             pref.Tell(TakeSnapshot.Instance);
             pref.Tell("e");
             pref.Tell("f");
-            ExpectMsgAllOf(1, 2, 4);
+            ExpectMsgAllOf(1L, 2L, 4L);
         }
 
         [Fact]
@@ -154,7 +154,7 @@ namespace Akka.Persistence.Tests
             pref.Tell(Recover.Default);
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 4);
-            (offer.Snapshot as string[]).Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
+            (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
             (offer.Metadata.Timestamp > DateTime.MinValue).ShouldBeTrue();
 
             ExpectMsg("e-5");
@@ -170,7 +170,7 @@ namespace Akka.Persistence.Tests
 
             pref.Tell(new Recover(SnapshotSelectionCriteria.Latest, toSequenceNr: 3));
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 2);
-            (offer.Snapshot as string[]).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
+            (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
             (offer.Metadata.Timestamp > DateTime.MinValue).ShouldBeTrue();
 
             ExpectMsg("c-3");
@@ -187,7 +187,7 @@ namespace Akka.Persistence.Tests
             pref.Tell("done");
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 4);
-            (offer.Snapshot as string[]).Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
+            (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
             (offer.Metadata.Timestamp > DateTime.MinValue).ShouldBeTrue();
 
             ExpectMsg<RecoveryCompleted>();
@@ -203,7 +203,7 @@ namespace Akka.Persistence.Tests
             pref.Tell(new Recover(new SnapshotSelectionCriteria(maxSequenceNr: 2)));
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 2);
-            (offer.Snapshot as string[]).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
+            (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
             (offer.Metadata.Timestamp > DateTime.MinValue).ShouldBeTrue();
 
             ExpectMsg("c-3");
@@ -222,7 +222,7 @@ namespace Akka.Persistence.Tests
             pref.Tell(new Recover(new SnapshotSelectionCriteria(maxSequenceNr: 2), toSequenceNr: 3));
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 2);
-            (offer.Snapshot as string[]).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
+            (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
             (offer.Metadata.Timestamp > DateTime.MinValue).ShouldBeTrue();
 
             ExpectMsg("c-3");
@@ -255,7 +255,7 @@ namespace Akka.Persistence.Tests
             pref.Tell("done");
 
             var offer = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 4);
-            (offer.Snapshot as string[]).Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
+            (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
 
             ExpectMsg<RecoveryCompleted>();
             ExpectMsg("done");
@@ -267,7 +267,7 @@ namespace Akka.Persistence.Tests
             pref2.Tell(new Recover(SnapshotSelectionCriteria.Latest, toSequenceNr: 4));
 
             var offer2 = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 2);
-            (offer2.Snapshot as string[]).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
+            (offer2.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2");
 
             ExpectMsg("c-3");
             ExpectMsg("d-4");
@@ -284,11 +284,25 @@ namespace Akka.Persistence.Tests
             Sys.EventStream.Subscribe(delProbe.Ref, typeof(DeleteSnapshots));
 
             // recover persistentActor and the delete first three (= all) snapshots
-            pref.Tell(new Recover(SnapshotSelectionCriteria.None, toSequenceNr: 4));
-            pref.Tell(new Recover(new SnapshotSelectionCriteria(4, DateTime.MaxValue)));
+            pref.Tell(new Recover(SnapshotSelectionCriteria.Latest, toSequenceNr: 4));
+            pref.Tell(new DeleteMany(new SnapshotSelectionCriteria(4, DateTime.MaxValue)));
 
-            var snapshot = ExpectMsg<SnapshotOffer>(o => o.Metadata.PersistenceId == persistenceId && o.Metadata.SequenceNr == 4).Snapshot;
-            (snapshot as string[]).Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
+            ExpectMsgPf("offer", o =>
+            {
+                var offer = o as SnapshotOffer;
+                if (offer != null)
+                {
+                    var snapshot = offer.Snapshot as IEnumerable<string>;
+                    snapshot.Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
+
+                    Assert.Equal(persistenceId, offer.Metadata.PersistenceId);
+                    Assert.Equal(4, offer.Metadata.SequenceNr);
+
+                    return offer;
+                }
+                else return null;
+            });
+
             ExpectMsg<RecoveryCompleted>();
             delProbe.ExpectMsg<DeleteSnapshots>();
 

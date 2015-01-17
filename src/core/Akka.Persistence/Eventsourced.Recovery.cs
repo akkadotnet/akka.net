@@ -60,7 +60,7 @@ namespace Akka.Persistence
             Receive recoveryBehavior = message =>
             {
                 Receive receiveRecover = ReceiveRecover;
-                if (message is IPersistentRepresentation && IsRecoveryRunning)
+                if (message is IPersistentRepresentation && IsRecovering)
                     return receiveRecover((message as IPersistentRepresentation).Payload);
                 else if (message is SnapshotOffer)
                     return receiveRecover((SnapshotOffer)message);
@@ -237,7 +237,7 @@ namespace Akka.Persistence
             if (_pendingStashingPersistInvocations > 0 && _journalBatch.Count != 0)
                 FlushJournalBatch();
 
-            foreach (var p in Enumerable.Reverse(_eventBatch))
+            foreach (var p in _eventBatch.Reverse())
             {
                 var persistent = p as Persistent;
                 if (persistent != null)
@@ -255,7 +255,7 @@ namespace Akka.Persistence
                     FlushJournalBatch();
             }
 
-            _eventBatch = new List<IPersistentEnvelope>();
+            _eventBatch = new LinkedList<IPersistentEnvelope>();
         }
 
         /// <summary>

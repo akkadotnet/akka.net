@@ -18,13 +18,12 @@ namespace Akka.Persistence.TestKit.Snapshot
             ConfigurationFactory.ParseString("akka.persistence.publish-plugin-commands = on");
 
         private readonly TestProbe _senderProbe;
-        private readonly List<SnapshotMetadata> _metadata;
+        protected List<SnapshotMetadata> Metadata;
         
         protected SnapshotStoreSpec(Config config = null, string actorSystemName = null, string testActorName = null) 
             : base(FromConfig(config).WithFallback(Config), actorSystemName ?? "SnapshotStoreSpec", testActorName)
         {
             _senderProbe = CreateTestProbe();
-            _metadata = WriteSnapshots().ToList();
         }
 
         protected ActorRef SnapshotStore { get { return Extension.SnapshotStoreFor(null); } }
@@ -70,7 +69,7 @@ namespace Akka.Persistence.TestKit.Snapshot
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => 
                 result.ToSequenceNr == long.MaxValue 
                 && result.Snapshot != null 
-                && result.Snapshot.Metadata.Equals(_metadata[4])
+                && result.Snapshot.Metadata.Equals(Metadata[4])
                 && result.Snapshot.Snapshot.ToString() == "s-5");
         }
 
@@ -81,39 +80,39 @@ namespace Akka.Persistence.TestKit.Snapshot
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
                 result.ToSequenceNr == long.MaxValue
                 && result.Snapshot != null
-                && result.Snapshot.Metadata.Equals(_metadata[2])
+                && result.Snapshot.Metadata.Equals(Metadata[2])
                 && result.Snapshot.Snapshot.ToString() == "s-3");
 
             SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, 13), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
                 result.ToSequenceNr == 13
                 && result.Snapshot != null
-                && result.Snapshot.Metadata.Equals(_metadata[2])
+                && result.Snapshot.Metadata.Equals(Metadata[2])
                 && result.Snapshot.Snapshot.ToString() == "s-3");
         }
 
         [Fact]
         public void SnapshotStore_should_load_a_most_recent_snapshot_matching_an_upper_sequence_number_and_timestamp_bound()
         {
-            SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(13, _metadata[2].Timestamp), long.MaxValue), _senderProbe.Ref);
+            SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(13, Metadata[2].Timestamp), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
                 result.ToSequenceNr == long.MaxValue
                 && result.Snapshot != null
-                && result.Snapshot.Metadata.Equals(_metadata[2])
+                && result.Snapshot.Metadata.Equals(Metadata[2])
                 && result.Snapshot.Snapshot.ToString() == "s-3");
 
-            SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(long.MaxValue, _metadata[2].Timestamp), 13), _senderProbe.Ref);
+            SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(long.MaxValue, Metadata[2].Timestamp), 13), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
                 result.ToSequenceNr == 13
                 && result.Snapshot != null
-                && result.Snapshot.Metadata.Equals(_metadata[2])
+                && result.Snapshot.Metadata.Equals(Metadata[2])
                 && result.Snapshot.Snapshot.ToString() == "s-3");
         }
 
         [Fact]
         public void SnapshotStore_should_delete_a_single_snapshot_identified_by_snapshot_metadata()
         {
-            var md = _metadata[2];
+            var md = Metadata[2];
             var command = new DeleteSnapshot(md);
             var sub = CreateTestProbe();
 
@@ -125,14 +124,14 @@ namespace Akka.Persistence.TestKit.Snapshot
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
                 result.ToSequenceNr == 13
                 && result.Snapshot != null
-                && result.Snapshot.Metadata.Equals(_metadata[1])
+                && result.Snapshot.Metadata.Equals(Metadata[1])
                 && result.Snapshot.Snapshot.ToString() == "s-2");
         }
 
         [Fact]
         public void SnapshotStore_should_delete_all_snapshots_matching_upper_sequence_number_and_timestamp_bounds()
         {
-            var md = _metadata[2];
+            var md = Metadata[2];
             var command = new DeleteSnapshots(Pid, new SnapshotSelectionCriteria(md.SequenceNr, md.Timestamp));
             var sub = CreateTestProbe();
 
@@ -144,11 +143,11 @@ namespace Akka.Persistence.TestKit.Snapshot
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => result.Snapshot == null && result.ToSequenceNr == long.MaxValue);
 
 
-            SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(_metadata[3].SequenceNr, _metadata[3].Timestamp), long.MaxValue), _senderProbe.Ref);
+            SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(Metadata[3].SequenceNr, Metadata[3].Timestamp), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
                 result.ToSequenceNr == 13
                 && result.Snapshot != null
-                && result.Snapshot.Metadata.Equals(_metadata[3])
+                && result.Snapshot.Metadata.Equals(Metadata[3])
                 && result.Snapshot.Snapshot.ToString() == "s-4");
         }
     }

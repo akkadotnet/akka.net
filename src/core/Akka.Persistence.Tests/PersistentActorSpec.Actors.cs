@@ -18,6 +18,11 @@ namespace Akka.Persistence.Tests
             }
 
             public object Data { get; private set; }
+
+            public override string ToString()
+            {
+                return "Cmd(" + Data + ")";
+            }
         }
 
         internal class Evt
@@ -28,6 +33,11 @@ namespace Akka.Persistence.Tests
             }
 
             public object Data { get; private set; }
+
+            public override string ToString()
+            {
+                return "Evt(" + Data + ")";
+            }
         }
 
         internal class LatchCmd
@@ -63,7 +73,7 @@ namespace Akka.Persistence.Tests
             {
                 if (message is Evt)
                 {
-                    Events.AddLast((message as Evt).Data);
+                    Events.AddFirst((message as Evt).Data);
                     return true;
                 }
 
@@ -149,6 +159,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
+                if (CommonBehavior(message)) return true;
+
                 if (message is Cmd)
                 {
                     var cmd = message as Cmd;
@@ -186,6 +198,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
+                if (CommonBehavior(message)) return true;
+
                 if (message is Cmd)
                 {
                     var cmd = message as Cmd;
@@ -222,6 +236,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
+                if (CommonBehavior(message)) return true;
+                
                 if (message is Cmd)
                 {
                     var cmd = message as Cmd;
@@ -252,6 +268,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
+                if (CommonBehavior(message)) return true;
+                
                 if (message is Cmd)
                 {
                     var cmd = message as Cmd;
@@ -503,7 +521,7 @@ namespace Akka.Persistence.Tests
 
         internal class AsyncPersistSameEventTwiceActor : ExamplePersistentActor
         {
-            private AtomicCounter _sendMessageCounter = new AtomicCounter();
+            private AtomicCounter _sendMessageCounter = new AtomicCounter(0);
             public AsyncPersistSameEventTwiceActor(string name)
                 : base(name)
             {
@@ -609,8 +627,8 @@ namespace Akka.Persistence.Tests
                     {
                         PersistAsync(new Evt(cmd.Data), evt =>
                         {
-                            if (cmd.Data != evt.Data) Sender.Tell("Expected " + cmd.Data + " but got " + evt.Data);
-                            if ("done" != evt.Data) Sender.Tell("done");
+                            if (!cmd.Data.Equals(evt.Data)) Sender.Tell("Expected " + cmd.Data + " but got " + evt.Data);
+                            if ("done" != evt.Data.ToString()) Sender.Tell("done");
                         });
 
                         return true;
@@ -635,12 +653,12 @@ namespace Akka.Persistence.Tests
                     var cmd = message as Cmd;
                     if (cmd != null)
                     {
-                        if (cmd.Data == "b-2") throw new TestException("boom");
+                        if (cmd.Data.ToString() == "b-2") throw new TestException("boom");
 
                         Persist(new Evt(cmd.Data), evt =>
                         {
                             UpdateState(evt);
-                            if (cmd.Data == "a") Context.Become(OtherCommandHandler);
+                            if (cmd.Data.ToString() == "a") Context.Become(OtherCommandHandler);
                         });
 
                         return true;
@@ -653,8 +671,10 @@ namespace Akka.Persistence.Tests
             protected bool OtherCommandHandler(object message)
             {
                 var cmd = message as Cmd;
-                if (cmd != null && cmd.Data == "c")
+                if (cmd != null && cmd.Data.ToString() == "c")
                 {
+                    //FIXME: after persisting Evt(c) inner callback is never called during tests
+                    // therefore no context unbecome occurs and all Cmd(b-X) leave unprocessed
                     Persist(new Evt("c"), evt =>
                     {
                         UpdateState(evt);
@@ -677,9 +697,12 @@ namespace Akka.Persistence.Tests
             protected override bool ReceiveCommand(object message)
             {
                 var cmd = message as Cmd;
-                if (cmd != null && cmd.Data == "a")
+                if (cmd != null && cmd.Data.ToString() == "a")
                 {
-                    Persist(5, i => Sender.Tell(i));
+                    Persist(5, i =>
+                    {
+                        Sender.Tell(i);
+                    });
                     return true;
                 }
                 else return false;

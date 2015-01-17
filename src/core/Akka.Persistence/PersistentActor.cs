@@ -56,6 +56,11 @@ namespace Akka.Persistence
     {
         public static readonly RecoveryCompleted Instance = new RecoveryCompleted();
         private RecoveryCompleted(){}
+
+        public override bool Equals(object obj)
+        {
+            return obj is RecoveryCompleted;
+        }
     }
 
     /// <summary>

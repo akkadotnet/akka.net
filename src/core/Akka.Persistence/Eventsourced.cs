@@ -58,7 +58,7 @@ namespace Akka.Persistence
         private bool _isWriteInProgress = false;
         private long _sequenceNr = 0L;
         private EventsourcedState _currentState;
-        private List<IPersistentEnvelope> _eventBatch = new List<IPersistentEnvelope>(0);
+        private LinkedList<IPersistentEnvelope> _eventBatch = new LinkedList<IPersistentEnvelope>();
 
         /// Used instead of iterating `pendingInvocations` in order to check if safe to revert to processing commands
         private long _pendingStashingPersistInvocations = 0L;
@@ -102,14 +102,14 @@ namespace Akka.Persistence
         public string SnapshotterId { get { return PersistenceId; } }
 
         /// <summary>
-        /// Returns `true` if this persistent entity is currently recovering.
+        /// Returns true if this persistent entity is currently recovering.
         /// </summary>
-        public bool IsRecoveryRunning { get { return _currentState.IsRecoveryRunning; } }
+        public bool IsRecovering { get { return _currentState.IsRecoveryRunning; } }
 
         /// <summary>
-        /// Returns `true` if this persistent entity has successfully finished recovery.
+        /// Returns true if this persistent entity has successfully finished recovery.
         /// </summary>
-        public bool IsRecoveryFinished { get { return !IsRecoveryRunning; } }
+        public bool IsRecoveryFinished { get { return !IsRecovering; } }
 
         /// <summary>
         /// Highest received sequence number so far or `0L` if this actor 
@@ -182,7 +182,7 @@ namespace Akka.Persistence
         {
             _pendingStashingPersistInvocations++;
             _pendingInvocations.AddLast(new StashingHandlerInvocation(@event, o => handler((TEvent)o)));
-            _eventBatch.Add(new Persistent(@event));
+            _eventBatch.AddFirst(new Persistent(@event));
         }
 
         /// <summary>
@@ -196,7 +196,7 @@ namespace Akka.Persistence
             {
                 _pendingStashingPersistInvocations++;
                 _pendingInvocations.AddLast(new StashingHandlerInvocation(@event, inv));
-                _eventBatch.Add(new Persistent(@event));
+                _eventBatch.AddFirst(new Persistent(@event));
             }
         }
 
@@ -224,7 +224,7 @@ namespace Akka.Persistence
         protected void PersistAsync<TEvent>(TEvent @event, Action<TEvent> handler)
         {
             _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, o => handler((TEvent)o)));
-            _eventBatch.Add(new Persistent(@event));
+            _eventBatch.AddFirst(new Persistent(@event));
         }
 
         /// <summary>
@@ -237,7 +237,7 @@ namespace Akka.Persistence
             foreach (var @event in events)
             {
                 _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, inv));
-                _eventBatch.Add(new Persistent(@event));
+                _eventBatch.AddFirst(new Persistent(@event));
             }
         }
 
@@ -261,7 +261,7 @@ namespace Akka.Persistence
             else
             {
                 _pendingInvocations.AddLast(new AsyncHandlerInvocation(evt, o => handler((TEvent)o)));
-                _eventBatch.Add(new NonPersistentMessage(evt, Sender));
+                _eventBatch.AddFirst(new NonPersistentMessage(evt, Sender));
             }
         }
 

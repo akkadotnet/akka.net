@@ -21,6 +21,7 @@ namespace Akka.Persistence
         {
         }
 
+        [JsonConstructor]
         public SnapshotMetadata(string persistenceId, long sequenceNr, DateTime timestamp)
         {
             PersistenceId = persistenceId;

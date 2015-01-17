@@ -1,4 +1,5 @@
-﻿using Akka.Configuration;
+﻿using System.Linq;
+using Akka.Configuration;
 using Akka.Persistence.TestKit.Snapshot;
 
 namespace Akka.Persistence.TestKit.Tests
@@ -13,6 +14,9 @@ namespace Akka.Persistence.TestKit.Tests
             "LocalSnapshotStoreSpec")
         {
             Sys.DeleteStorageLocations("akka.persistence.snapshot-store.local.dir");
+            Sys.CreateStorageLocations("akka.persistence.snapshot-store.local.dir");
+            Metadata = WriteSnapshots().ToList();
         }
+
     }
 }

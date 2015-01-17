@@ -20,14 +20,14 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class GuaranteedDeliverySnapshot : IMessage
     {
-        public GuaranteedDeliverySnapshot(long deliveryId, IEnumerable<UnconfirmedDelivery> unconfirmedDeliveries)
+        public GuaranteedDeliverySnapshot(long deliveryId, UnconfirmedDelivery[] unconfirmedDeliveries)
         {
             DeliveryId = deliveryId;
             UnconfirmedDeliveries = unconfirmedDeliveries;
         }
 
         public long DeliveryId { get; private set; }
-        public IEnumerable<UnconfirmedDelivery> UnconfirmedDeliveries { get; private set; }
+        public UnconfirmedDelivery[] UnconfirmedDeliveries { get; private set; }
     }
 
     /// <summary>
@@ -36,12 +36,12 @@ namespace Akka.Persistence
     /// </summary>
     public sealed class UnconfirmedWarning
     {
-        public UnconfirmedWarning(IEnumerable<UnconfirmedDelivery> unconfirmedDeliveries)
+        public UnconfirmedWarning(UnconfirmedDelivery[] unconfirmedDeliveries)
         {
             UnconfirmedDeliveries = unconfirmedDeliveries;
         }
 
-        public IEnumerable<UnconfirmedDelivery> UnconfirmedDeliveries { get; set; }
+        public UnconfirmedDelivery[] UnconfirmedDeliveries { get; set; }
     }
 
     /// <summary>
@@ -88,6 +88,11 @@ namespace Akka.Persistence
         public static readonly RedeliveryTick Instance = new RedeliveryTick();
         private RedeliveryTick()
         {
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is RedeliveryTick;
         }
     }
 
@@ -192,10 +197,10 @@ namespace Akka.Persistence
             }
 
             var deliveryId = NextDeliverySequenceNr();
-            var now = IsRecoveryRunning ? DateTime.Now - RedeliverInterval : DateTime.Now;
+            var now = IsRecovering ? DateTime.Now - RedeliverInterval : DateTime.Now;
             var delivery = new Delivery(destination, deliveryMessageMapper(deliveryId), now, attempt: 0);
 
-            if (IsRecoveryRunning)
+            if (IsRecovering)
             {
                 _unconfirmed.AddOrUpdate(deliveryId, delivery, (id, d) => delivery);
             }
@@ -303,7 +308,7 @@ namespace Akka.Persistence
 
             if (warnings.Count != 0)
             {
-                Self.Tell(new UnconfirmedWarning(warnings));
+                Self.Tell(new UnconfirmedWarning(warnings.ToArray()));
             }
         }
 

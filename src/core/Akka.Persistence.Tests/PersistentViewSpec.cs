@@ -72,7 +72,7 @@ namespace Akka.Persistence.Tests
             _viewProbe.ExpectMsg("replicated-a-1");
             _viewProbe.ExpectMsg("replicated-b-2");
             _pref.Tell("c");
-            _viewProbe.ExpectMsg("replicated-c-3");
+            _prefProbe.ExpectMsg("c-3");
             _view.Tell(new Update(isAwait: false));
             _viewProbe.ExpectMsg("replicated-c-3");
         }
@@ -84,7 +84,7 @@ namespace Akka.Persistence.Tests
             _viewProbe.ExpectMsg("replicated-a-1");
             _viewProbe.ExpectMsg("replicated-b-2");
             _pref.Tell("c");
-            _viewProbe.ExpectMsg("replicated-c-3");
+            _prefProbe.ExpectMsg("c-3");
             _view.Tell(new Update(isAwait: false));
             _view.Tell("get");
             _viewProbe.ExpectMsg("replicated-c-3");
@@ -157,9 +157,9 @@ namespace Akka.Persistence.Tests
             _viewProbe.ExpectMsg("replicated-c-3");
             _viewProbe.ExpectMsg("replicated-d-4");
 
-            replayProbe.ExpectMsg<ReplayMessages>(m => m.FromSequenceNr == 1 && m.Max == 2);
-            replayProbe.ExpectMsg<ReplayMessages>(m => m.FromSequenceNr == 3 && m.Max == 2);
-            replayProbe.ExpectMsg<ReplayMessages>(m => m.FromSequenceNr == 5 && m.Max == 2);
+            replayProbe.ExpectMsg<ReplayMessages>(m => m.FromSequenceNr == 1L && m.Max == 2L);
+            replayProbe.ExpectMsg<ReplayMessages>(m => m.FromSequenceNr == 3L && m.Max == 2L);
+            replayProbe.ExpectMsg<ReplayMessages>(m => m.FromSequenceNr == 5L && m.Max == 2L);
         }
 
         [Fact]

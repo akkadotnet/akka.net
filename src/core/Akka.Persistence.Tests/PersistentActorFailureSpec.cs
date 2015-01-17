@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Linq;
 using Akka.Actor;
 using Akka.Persistence.Journal;
@@ -9,28 +7,29 @@ using Xunit;
 
 namespace Akka.Persistence.Tests
 {
+
+    internal class FailingMemoryJournal : AsyncWriteProxy
+    {
+        private readonly TimeSpan _timeout = TimeSpan.FromSeconds(5);
+
+        protected override void PreStart()
+        {
+            base.PreStart();
+            Self.Tell(new SetStore(Context.ActorOf(Props.Create<PersistentActorFailureSpec.FailingMemoryStore>())));
+        }
+    }
+
     public class PersistentActorFailureSpec : PersistenceSpec
     {
         #region internal test classes
-
-        internal class FailingMemoryJournal : AsyncWriteProxy
-        {
-            private readonly TimeSpan _timeout = TimeSpan.FromSeconds(5);
-
-            protected override void PreStart()
-            {
-                base.PreStart();
-                Self.Tell(new SetStore(Context.ActorOf(Props.Create<FailingMemoryStore>())));
-            }
-        }
 
         internal class FailingMemoryStore : MemoryStore
         {
             private bool FailingReceive(object message)
             {
-                if (message is ReplayMessages)
+                if (message is AsyncWriteTarget.ReplayMessages)
                 {
-                    var replay = message as ReplayMessages;
+                    var replay = message as AsyncWriteTarget.ReplayMessages;
                     var readFromStore = Read(replay.PersistenceId, replay.FromSequenceNr, replay.ToSequenceNr, replay.Max).ToArray();
 
                     if (readFromStore.Length == 0) Sender.Tell(AsyncWriteTarget.ReplaySuccess.Instance);
@@ -68,7 +67,8 @@ namespace Akka.Persistence.Tests
             protected override bool Receive(object message)
             {
                 var props = message as Props;
-                Sender.Tell(props != null ? Context.ActorOf(props) : message);
+                var aref = props != null ? Context.ActorOf(props) : message;
+                Sender.Tell(aref);
                 return true;
             }
         }
@@ -76,14 +76,14 @@ namespace Akka.Persistence.Tests
         #endregion
 
         public PersistentActorFailureSpec()
-            : base(PersistenceSpec.Configuration("inmem", "PersistentActorFailureSpec",
-                extraConfig: @"akka.persistence.journal.inmem.class = ""Akka.Persistence.Tests.PersistentActorFailureSpec.FailingMemoryJournal"""))
+            : base(Configuration("inmem", "PersistentActorFailureSpec",
+                extraConfig: @"akka.persistence.journal.inmem.class = ""Akka.Persistence.Tests.FailingMemoryJournal, Akka.Persistence.Tests"""))
         {
-            
+
             var pref = ActorOf(Props.Create(() => new PersistentActorSpec.BehaviorOneActor(Name)));
             pref.Tell(new PersistentActorSpec.Cmd("a"));
             pref.Tell(GetState.Instance);
-            ExpectMsg<IEnumerable<string>>().ShouldOnlyContainInOrder("a-1", "a-2");
+            ExpectMsg<object[]>().ShouldOnlyContainInOrder("a-1", "a-2");
         }
 
         [Fact]
@@ -91,7 +91,12 @@ namespace Akka.Persistence.Tests
         {
             var supervisor = ActorOf(() => new Supervisor(TestActor));
             supervisor.Tell(Props.Create(() => new PersistentActorSpec.BehaviorOneActor(Name)));
-            ExpectMsg<ActorRef>();
+
+            // serializer will return ActorRefSurrogate, which is not directly ActorRef
+            // but can be implicitly converted into ActorRef
+            ExpectMsg<ActorRefSurrogate>();
+
+            //FIXME: for some reason ActorCell throws ActorIntializationException here, investigate what actor is trying to be produced
             ExpectMsg<ActorKilledException>();
         }
     }

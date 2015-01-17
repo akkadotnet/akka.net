@@ -44,7 +44,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Journal\JournalPerformanceSpec.cs" />
     <Compile Include="Journal\JournalSpec.cs" />
     <Compile Include="PluginSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Akka.Persistence.TestKit.Journal
 {
-    public class JournalSpec : PluginSpec
+    public abstract class JournalSpec : PluginSpec
     {
         protected static readonly Config Config =
             ConfigurationFactory.ParseString("akka.persistence.publish-plugin-commands = on");
@@ -45,8 +45,9 @@ namespace Akka.Persistence.TestKit.Journal
             probe.ExpectMsg<WriteMessagesSuccessull>();
             for (int i = from; i <= to; i++)
             {
+                var n = i;
                 probe.ExpectMsg<WriteMessageSuccess>(m =>
-                        m.Persistent.Payload == "a-" + i && m.Persistent.SequenceNr == i &&
+                        m.Persistent.Payload.ToString() == ("a-" + n) && m.Persistent.SequenceNr == (long)n &&
                         m.Persistent.PersistenceId == Pid);
             }
         }
@@ -154,7 +155,10 @@ namespace Akka.Persistence.TestKit.Journal
             subscriber.ExpectMsg(command);
 
             Journal.Tell(new ReplayMessages(1, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref, replayDeleted: true));
-            for (int i = 1; i <= 3; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i, true));
+
+            _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 1, true));
+            _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 2, true));
+            _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 3, true));
             _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 4));
             _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 5));
         }

@@ -54,16 +54,16 @@ namespace Akka.Persistence.Serialization
         private GuaranteedDeliverySnapshot SnapshotFrom(byte[] bytes)
         {
             var snap = AtLeastOnceDeliverySnapshot.ParseFrom(bytes);
-            var unconfirmedDeliveries = new List<UnconfirmedDelivery>(snap.UnconfirmedDeliveriesCount);
+            var unconfirmedDeliveries = new UnconfirmedDelivery[snap.UnconfirmedDeliveriesCount];
 
-            foreach (var unconfirmed in snap.UnconfirmedDeliveriesList)
+            for (int i = 0; i < snap.UnconfirmedDeliveriesCount; i++)
             {
+                var unconfirmed = snap.UnconfirmedDeliveriesList[i];
                 var unconfirmedDelivery = new UnconfirmedDelivery(
                     deliveryId: unconfirmed.DeliveryId,
                     destination: ActorPath.Parse(unconfirmed.Destination),
                     message: PayloadFromProto(unconfirmed.Payload));
-
-                unconfirmedDeliveries.Add(unconfirmedDelivery);
+                unconfirmedDeliveries[i] = unconfirmedDelivery;
             }
 
             return new GuaranteedDeliverySnapshot(snap.CurrentDeliveryId, unconfirmedDeliveries);

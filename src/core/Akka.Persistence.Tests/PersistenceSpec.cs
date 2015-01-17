@@ -78,13 +78,13 @@ namespace Akka.Persistence.Tests
         {
             StorageLocations.ForEach(fi =>
             {
-                if (fi.Exists) fi.Delete();
+                if (fi.Exists) fi.Delete(true);
             });
         }
 
         public void Dispose()
         {
-            StorageLocations.ForEach(fi => fi.Delete());
+            StorageLocations.ForEach(fi => fi.Delete(true));
         }
     }
 
