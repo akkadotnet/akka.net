@@ -27,10 +27,10 @@
         public abstract InternalActorRef SystemGuardian { get; }
 
         /// <summary>
-        /// Gets the actor producer pipeline for current actor system. It may be used by
+        /// Gets the actor producer pipeline resolver for current actor system. It may be used by
         /// Akka plugins to inject custom behavior directly into actor creation chain.
         /// </summary>
-        public abstract ActorProducerPipeline ActorProducerPipeline { get; }
+        public abstract ActorProducerPipelineResolver ActorPipelineResolver { get; }
 
         /// <summary>Creates a new system actor in the "/system" namespace. This actor 
         /// will be shut down during system shutdown only after all user actors have

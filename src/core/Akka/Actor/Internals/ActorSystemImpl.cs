@@ -29,7 +29,7 @@ namespace Akka.Actor.Internals
         private Dispatchers _dispatchers;
         private Mailboxes _mailboxes;
         private Scheduler _scheduler;
-        private ActorProducerPipeline _actorProducerPipeline;
+        private ActorProducerPipelineResolver _actorProducerPipelineResolver;
 
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Load())
@@ -65,7 +65,8 @@ namespace Akka.Actor.Internals
         public override Mailboxes Mailboxes { get { return _mailboxes; } }
         public override Scheduler Scheduler { get { return _scheduler; } }
         public override LoggingAdapter Log { get { return _log; } }
-        public override ActorProducerPipeline ActorProducerPipeline { get { return _actorProducerPipeline; } }
+
+        public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
 
 
         public override InternalActorRef Guardian { get { return _provider.Guardian; } }
@@ -282,7 +283,7 @@ namespace Akka.Actor.Internals
         private void ConfigureActorProducerPipeline()
         {
             // we push Log in lazy manner since it may not be configured at point of pipeline initialization
-            _actorProducerPipeline = new DefaultProducerPipeline(() => Log);
+            _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
         }
 
         /// <summary>

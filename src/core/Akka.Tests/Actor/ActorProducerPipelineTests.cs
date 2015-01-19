@@ -38,7 +38,7 @@ namespace Akka.Tests.Actor
 
         internal class GenericPlugin<T> : ActorProducerPluginBase<T> where T : PlugActor
         {
-            public override void AfterActorCreated(T actor, IActorContext context)
+            public override void AfterIncarnated(T actor, IActorContext context)
             {
                 actor.PluginMessages.Add(typeof(T).ToString());
             }
@@ -46,7 +46,7 @@ namespace Akka.Tests.Actor
 
         internal class WorkingPlugin : ActorProducerPluginBase<PlugActor>
         {
-            public override void AfterActorCreated(PlugActor actor, IActorContext context)
+            public override void AfterIncarnated(PlugActor actor, IActorContext context)
             {
                 actor.PluginMessages.Add("working plugin");
             }
@@ -54,7 +54,7 @@ namespace Akka.Tests.Actor
 
         internal class FailingPlugin : ActorProducerPluginBase<PlugActor>
         {
-            public override void AfterActorCreated(PlugActor actor, IActorContext context)
+            public override void AfterIncarnated(PlugActor actor, IActorContext context)
             {
                 actor.PluginMessages.Add("failing plugin");
                 throw new TestException("plugin failed");
@@ -70,7 +70,7 @@ namespace Akka.Tests.Actor
                 _index = index;
             }
 
-            public override void AfterActorCreated(PlugActor actor, IActorContext context)
+            public override void AfterIncarnated(PlugActor actor, IActorContext context)
             {
                 actor.PluginMessages.Add("plugin-" + _index);
             }
@@ -110,19 +110,19 @@ namespace Akka.Tests.Actor
 
         #endregion
 
-        private ActorProducerPipeline _pipeline;
+        private ActorProducerPipelineResolver _resolver;
 
         public ActorProducerPipelineTests()
         {
             var extendedSystem = (ExtendedActorSystem)Sys;
-            _pipeline = extendedSystem.ActorProducerPipeline;
+            _resolver = extendedSystem.ActorPipelineResolver;
         }
 
         [Fact]
         public void Pipeline_application_should_survive_internal_plugin_exceptions()
         {
-            _pipeline.Register(new FailingPlugin());
-            _pipeline.Register(new WorkingPlugin());
+            _resolver.Register(new FailingPlugin());
+            _resolver.Register(new WorkingPlugin());
 
             EventFilter.Exception<TestException>("plugin failed").ExpectOne(() =>
             {
@@ -136,20 +136,20 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Pipeline_should_not_allow_to_register_the_same_plugin_twice()
         {
-            var pluginCount = _pipeline.Count;
+            var pluginCount = _resolver.TotalPluginCount;
 
-            _pipeline.Register(new WorkingPlugin()).ShouldBeTrue();
-            _pipeline.Register(new WorkingPlugin()).ShouldBeFalse();
+            _resolver.Register(new WorkingPlugin()).ShouldBeTrue();
+            _resolver.Register(new WorkingPlugin()).ShouldBeFalse();
 
-            Assert.Equal(pluginCount + 1, _pipeline.Count);
+            Assert.Equal(pluginCount + 1, _resolver.TotalPluginCount);
         }
 
         [Fact]
         public void Pipeline_should_allow_to_register_multiple_generic_plugins_with_different_generic_types()
         {
-            _pipeline.Register(new WorkingPlugin()).ShouldBeTrue();
-            _pipeline.Register(new GenericPlugin<PlugActorA>()).ShouldBeTrue();
-            _pipeline.Register(new GenericPlugin<PlugActorB>()).ShouldBeTrue();
+            _resolver.Register(new WorkingPlugin()).ShouldBeTrue();
+            _resolver.Register(new GenericPlugin<PlugActorA>()).ShouldBeTrue();
+            _resolver.Register(new GenericPlugin<PlugActorB>()).ShouldBeTrue();
 
             var plugA = ActorOf<PlugActorA>();
             var plugB = ActorOf<PlugActorB>();
@@ -161,9 +161,9 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Pipeline_application_should_apply_plugins_in_specified_order()
         {
-            _pipeline.Insert(0, new OrderedPlugin1()).ShouldBeTrue();
-            _pipeline.Insert(2, new OrderedPlugin3()).ShouldBeTrue();
-            _pipeline.Insert(1, new OrderedPlugin2()).ShouldBeTrue();
+            _resolver.Insert(0, new OrderedPlugin1()).ShouldBeTrue();
+            _resolver.Insert(2, new OrderedPlugin3()).ShouldBeTrue();
+            _resolver.Insert(1, new OrderedPlugin2()).ShouldBeTrue();
 
             var actor = ActorOf<PlugActor>();
             actor.Ask<string[]>("plugins", TimeSpan.FromSeconds(3)).Result.ShouldOnlyContainInOrder("plugin-1", "plugin-2", "plugin-3");

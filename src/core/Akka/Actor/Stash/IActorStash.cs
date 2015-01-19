@@ -1,3 +1,5 @@
+using System;
+
 namespace Akka.Actor
 {
     /// <summary>
@@ -21,15 +23,15 @@ namespace Akka.Actor
         /// <summary>
         /// Stash plugin is applied to all actors implementing <see cref="IActorStash"/> interface.
         /// </summary>
-        public override bool CanBeAppliedTo(ActorBase actor)
+        public override bool CanBeAppliedTo(Type actorType)
         {
-            return actor is IActorStash;
+            return typeof (IActorStash).IsAssignableFrom(actorType);
         }
 
         /// <summary>
         /// Creates a new stash for specified <paramref name="actor"/> if it has not been initialized already.
         /// </summary>
-        public override void AfterActorCreated(ActorBase actor, IActorContext context)
+        public override void AfterIncarnated(ActorBase actor, IActorContext context)
         {
             var stashed = actor as IActorStash;
             if (stashed != null && stashed.Stash == null)
@@ -41,7 +43,7 @@ namespace Akka.Actor
         /// <summary>
         /// Ensures, that all stashed messages inside <paramref name="actor"/> stash have been unstashed.
         /// </summary>
-        public override void BeforeActorTerminated(ActorBase actor, IActorContext context)
+        public override void BeforeIncarnated(ActorBase actor, IActorContext context)
         {
             var actorStash = actor as IActorStash;
             if (actorStash != null)
