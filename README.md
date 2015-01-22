@@ -1,5 +1,7 @@
 # Akka.NET
 
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/akkadotnet/akka.net?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 **Akka.NET** is a port of the popular Java/Scala framework Akka to .NET.
 
 This is a community driven port and is not affiliated with Typesafe who makes the original Java/Scala version.
