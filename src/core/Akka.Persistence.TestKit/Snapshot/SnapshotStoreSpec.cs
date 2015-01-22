@@ -30,7 +30,7 @@ namespace Akka.Persistence.TestKit.Snapshot
 
         protected IEnumerable<SnapshotMetadata> WriteSnapshots()
         {
-            for (int i = 0; i < 5; i++)
+            for (int i = 1; i <= 5; i++)
             {
                 var metadata = new SnapshotMetadata(Pid, i + 10);
                 SnapshotStore.Tell(new SaveSnapshot(metadata, "s-" + i), _senderProbe.Ref);
@@ -122,7 +122,7 @@ namespace Akka.Persistence.TestKit.Snapshot
 
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(md.SequenceNr, md.Timestamp), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
-                result.ToSequenceNr == 13
+                result.ToSequenceNr == long.MaxValue
                 && result.Snapshot != null
                 && result.Snapshot.Metadata.Equals(Metadata[1])
                 && result.Snapshot.Snapshot.ToString() == "s-2");
@@ -145,7 +145,7 @@ namespace Akka.Persistence.TestKit.Snapshot
 
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(Metadata[3].SequenceNr, Metadata[3].Timestamp), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
-                result.ToSequenceNr == 13
+                result.ToSequenceNr == long.MaxValue
                 && result.Snapshot != null
                 && result.Snapshot.Metadata.Equals(Metadata[3])
                 && result.Snapshot.Snapshot.ToString() == "s-4");

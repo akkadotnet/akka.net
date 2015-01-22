@@ -315,6 +315,8 @@ namespace Akka.Persistence
 
         private void FlushJournalBatch()
         {
+            //FIXME: GuaranteedActor for some reason gives here cyclic actor path (path parent is referencing to path)
+            //it catched by Json.NET serializer while trying to serialize the message
             Journal.Tell(new WriteMessages(_journalBatch.ToArray(), Self, _instanceId));
             _journalBatch = new List<IPersistentEnvelope>(0);
             _isWriteInProgress = true;

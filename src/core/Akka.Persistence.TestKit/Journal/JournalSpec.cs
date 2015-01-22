@@ -138,10 +138,11 @@ namespace Akka.Persistence.TestKit.Journal
 
             Subscribe<DeleteMessagesTo>(subscriber.Ref);
             Journal.Tell(command);
-            subscriber.ExpectMsg(command);
+            subscriber.ExpectMsg<DeleteMessagesTo>(cmd => cmd.PersistenceId == Pid && cmd.ToSequenceNr == 3 && cmd.IsPermanent);
 
             Journal.Tell(new ReplayMessages(1, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
-            for (int i = 4; i <= 5; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
+            _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 4));
+            _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 5));
         }
 
         [Fact]
@@ -152,7 +153,7 @@ namespace Akka.Persistence.TestKit.Journal
 
             Subscribe<DeleteMessagesTo>(subscriber.Ref);
             Journal.Tell(command);
-            subscriber.ExpectMsg(command);
+            subscriber.ExpectMsg<DeleteMessagesTo>(cmd => cmd.PersistenceId == Pid && cmd.ToSequenceNr == 3 && !cmd.IsPermanent);
 
             Journal.Tell(new ReplayMessages(1, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref, replayDeleted: true));
 
