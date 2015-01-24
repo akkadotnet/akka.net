@@ -208,6 +208,7 @@
     <Compile Include="Event\LogLevel.cs" />
     <Compile Include="Event\LogMessage.cs" />
     <Compile Include="Event\StandardOutLogger.cs" />
+    <Compile Include="Serialization\ActorPathSerializer.cs" />
     <Compile Include="Util\Internal\InterlockedSpin.cs" />
     <Compile Include="Util\Internal\Collections\EmptyReadOnlyCollections.cs" />
     <Compile Include="Util\Internal\Collections\IBinaryTreeNode.cs" />

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Serialization;
 using Xunit.Extensions;
 
 namespace Akka.Tests.Actor
@@ -214,6 +215,28 @@ namespace Akka.Tests.Actor
             var urlEncode = HttpUtility.UrlEncode(element);
             global::System.Diagnostics.Debug.WriteLine("Encoded \"{0}\" to \"{1}\"", element, urlEncode)  ;
             ActorPath.ElementRegex.IsMatch(urlEncode).ShouldBeTrue();
+        }
+
+        [Fact]
+        public void ActorPath_should_be_serializable_using_default_serializer()
+        {
+            var fullPath = ActorPathParse("akka.tcp://remotesystem@localhost:8080/user");
+            var localPath = ActorPathParse("akka://remotesystem/user");
+
+            using (var system = ActorSystem.Create("testSystem"))
+            {
+                AssertCanBeReserialized(system, fullPath);
+                AssertCanBeReserialized(system, localPath);
+            }
+        }
+
+        private static void AssertCanBeReserialized(ActorSystem system, ActorPath actorPath)
+        {
+            var serializer = system.Serialization.FindSerializerFor(actorPath);
+            var bytes = serializer.ToBinary(actorPath);
+            var deserializedPath = serializer.FromBinary(bytes, actorPath.GetType());
+
+            Assert.Equal(actorPath, deserializedPath);
         }
     }
 }
