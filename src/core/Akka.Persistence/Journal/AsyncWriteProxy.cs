@@ -9,6 +9,10 @@ namespace Akka.Persistence.Journal
     [Serializable]
     public class AsyncReplayTimeoutException : AkkaException
     {
+        public AsyncReplayTimeoutException()
+        {
+        }
+
         public AsyncReplayTimeoutException(string msg)
             : base(msg)
         {
@@ -20,6 +24,9 @@ namespace Akka.Persistence.Journal
     {
         public SetStore(ActorRef store)
         {
+            if (store == null)
+                throw new ArgumentNullException("store", "SetStore requires non-null reference to store actor");
+
             Store = store;
         }
 
@@ -36,6 +43,9 @@ namespace Akka.Persistence.Journal
         {
             public ReplayFailure(Exception cause)
             {
+                if(cause == null)
+                    throw new ArgumentNullException("cause", "AsyncWriteTarget.ReplayFailure cause exception cannot be null");
+
                 Cause = cause;
             }
 
@@ -43,12 +53,15 @@ namespace Akka.Persistence.Journal
         }
 
         [Serializable]
-        public sealed class ReplaySuccess
+        public sealed class ReplaySuccess : IEquatable<ReplaySuccess>
         {
             public static readonly ReplaySuccess Instance = new ReplaySuccess();
 
-            private ReplaySuccess()
+            private ReplaySuccess() { }
+
+            public bool Equals(ReplaySuccess other)
             {
+                return true;
             }
         }
 
@@ -64,7 +77,7 @@ namespace Akka.Persistence.Journal
         }
 
         [Serializable]
-        public sealed class ReplayMessages : IWithPersistenceId
+        public sealed class ReplayMessages : IWithPersistenceId, IEquatable<ReplayMessages>
         {
             public ReplayMessages(string persistenceId, long fromSequenceNr, long toSequenceNr, long max)
             {
@@ -78,10 +91,18 @@ namespace Akka.Persistence.Journal
             public long FromSequenceNr { get; private set; }
             public long ToSequenceNr { get; private set; }
             public long Max { get; private set; }
+            public bool Equals(ReplayMessages other)
+            {
+                if (other == null) return false;
+                return PersistenceId == other.PersistenceId
+                       && FromSequenceNr == other.FromSequenceNr
+                       && ToSequenceNr == other.ToSequenceNr
+                       && Max == other.Max;
+            }
         }
 
         [Serializable]
-        public sealed class ReadHighestSequenceNr : IWithPersistenceId
+        public sealed class ReadHighestSequenceNr : IWithPersistenceId, IEquatable<ReadHighestSequenceNr>
         {
             public ReadHighestSequenceNr(string persistenceId, long fromSequenceNr)
             {
@@ -91,10 +112,16 @@ namespace Akka.Persistence.Journal
 
             public string PersistenceId { get; private set; }
             public long FromSequenceNr { get; private set; }
+            public bool Equals(ReadHighestSequenceNr other)
+            {
+                if (other == null) return false;
+                return PersistenceId == other.PersistenceId
+                       && FromSequenceNr == other.FromSequenceNr;
+            }
         }
 
         [Serializable]
-        public sealed class DeleteMessagesTo
+        public sealed class DeleteMessagesTo: IEquatable<DeleteMessagesTo>
         {
             public DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent)
             {
@@ -106,6 +133,13 @@ namespace Akka.Persistence.Journal
             public string PersistenceId { get; private set; }
             public long ToSequenceNr { get; private set; }
             public bool IsPermanent { get; private set; }
+            public bool Equals(DeleteMessagesTo other)
+            {
+                if (other == null) return false;
+                return PersistenceId == other.PersistenceId
+                       && ToSequenceNr == other.ToSequenceNr
+                       && IsPermanent == other.IsPermanent;
+            }
         }
 
         #endregion

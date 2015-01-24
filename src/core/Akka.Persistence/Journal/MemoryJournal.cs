@@ -113,10 +113,13 @@ namespace Akka.Persistence.Journal
             {
                 if (node.Value.SequenceNr <= deleteCommand.ToSequenceNr)
                 {
-                    list.Remove(node);
-                }
+                    var deleted = node;
+                    node = node.Next;
 
-                node = node.Next;
+                    list.Remove(deleted);
+                }
+                else node = node.Next;
+
             }
         }
 

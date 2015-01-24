@@ -35,6 +35,9 @@ namespace Akka.Persistence
     {
         public DeleteMessagesFailure(Exception cause)
         {
+            if (cause == null)
+                throw new ArgumentNullException("cause", "DeleteMessagesFailure cause exception cannot be null");
+
             Cause = cause;
         }
 
@@ -44,7 +47,7 @@ namespace Akka.Persistence
     /// <summary>
     /// Request to delete all persistent messages with sequence numbers up to `toSequenceNr` (inclusive).  
     /// </summary>
-    public sealed class DeleteMessagesTo
+    public sealed class DeleteMessagesTo : IEquatable<DeleteMessagesTo>
     {
         public DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent)
         {
@@ -61,12 +64,23 @@ namespace Akka.Persistence
         /// otherwise they are permanently deleted from the journal.
         /// </summary>
         public bool IsPermanent { get; private set; }
+
+        public bool Equals(DeleteMessagesTo other)
+        {
+            if (other == null) return false;
+            return PersistenceId == other.PersistenceId &&
+                ToSequenceNr == other.ToSequenceNr &&
+                IsPermanent == other.IsPermanent;
+        }
     }
 
     internal sealed class WriteConfirmationsFailure
     {
         public WriteConfirmationsFailure(Exception cause)
         {
+            if (cause == null)
+                throw new ArgumentNullException("cause", "WriteConfirmationsFailure cause exception cannot be null");
+
             Cause = cause;
         }
 
@@ -93,12 +107,15 @@ namespace Akka.Persistence
     /// to the requestor before all subsequent <see cref="WriteMessageSuccess"/> replies.
     /// </summary>
     [Serializable]
-    public class WriteMessagesSuccessull
+    public class WriteMessagesSuccessull : IEquatable<WriteMessagesSuccessull>
     {
         public static readonly WriteMessagesSuccessull Instance = new WriteMessagesSuccessull();
 
-        private WriteMessagesSuccessull()
+        private WriteMessagesSuccessull() { }
+
+        public bool Equals(WriteMessagesSuccessull other)
         {
+            return true;
         }
     }
 
@@ -110,6 +127,9 @@ namespace Akka.Persistence
     {
         public WriteMessagesFailed(Exception cause)
         {
+            if (cause == null)
+                throw new ArgumentNullException("cause", "WriteMessagesFailed cause exception cannot be null");
+
             Cause = cause;
         }
 
@@ -144,6 +164,9 @@ namespace Akka.Persistence
     {
         public WriteMessageFailure(IPersistentRepresentation persistent, Exception cause, int actorInstanceId)
         {
+            if (cause == null)
+                throw new ArgumentNullException("cause", "WriteMessageFailure cause exception cannot be null");
+
             Persistent = persistent;
             Cause = cause;
             ActorInstanceId = actorInstanceId;
@@ -198,7 +221,7 @@ namespace Akka.Persistence
     /// <summary>
     /// Request to replay messages to the <see cref="PersistentActor"/>.
     /// </summary>
-    public sealed class ReplayMessages
+    public sealed class ReplayMessages : IEquatable<ReplayMessages>
     {
         public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId,
             ActorRef persistentActor, bool replayDeleted = false)
@@ -240,6 +263,17 @@ namespace Akka.Persistence
         /// If true, message marked as deleted shall be replayed.
         /// </summary>
         public bool ReplayDeleted { get; private set; }
+
+        public bool Equals(ReplayMessages other)
+        {
+            if (other == null) return false;
+            return PersistenceId == other.PersistenceId
+                   && PersistentActor == other.PersistentActor
+                   && FromSequenceNr == other.FromSequenceNr
+                   && ToSequenceNr == other.ToSequenceNr
+                   && Max == other.Max
+                   && ReplayDeleted == other.ReplayDeleted;
+        }
     }
 
     /// <summary>
@@ -259,12 +293,15 @@ namespace Akka.Persistence
     /// Reply message to a successful <see cref="ReplayMessages"/> request. This reply is sent 
     /// to the requestor after all <see cref="ReplayedMessage"/> have been sent (if any).
     /// </summary>
-    public class ReplayMessagesSuccess
+    public class ReplayMessagesSuccess : IEquatable<ReplayMessagesSuccess>
     {
         public static readonly ReplayMessagesSuccess Instance = new ReplayMessagesSuccess();
 
-        private ReplayMessagesSuccess()
+        private ReplayMessagesSuccess() { }
+
+        public bool Equals(ReplayMessagesSuccess other)
         {
+            return true;
         }
     }
 
@@ -272,13 +309,16 @@ namespace Akka.Persistence
     {
         public ReplayMessagesFailure(Exception cause)
         {
+            if (cause == null)
+                throw new ArgumentNullException("cause", "ReplayMessagesFailure cause exception cannot be null");
+
             Cause = cause;
         }
 
         public Exception Cause { get; private set; }
     }
 
-    public sealed class ReadHighestSequenceNr
+    public sealed class ReadHighestSequenceNr : IEquatable<ReadHighestSequenceNr>
     {
         public ReadHighestSequenceNr(long fromSequenceNr, string persistenceId, ActorRef persistentActor)
         {
@@ -288,24 +328,60 @@ namespace Akka.Persistence
         }
 
         public long FromSequenceNr { get; private set; }
+
         public string PersistenceId { get; private set; }
+
         public ActorRef PersistentActor { get; private set; }
+
+        public bool Equals(ReadHighestSequenceNr other)
+        {
+            if (other == null) return false;
+            return PersistenceId == other.PersistenceId
+                   && FromSequenceNr == other.FromSequenceNr
+                   && PersistentActor == other.PersistentActor;
+        }
     }
 
-    public sealed class ReadHighestSequenceNrSuccess
+    public sealed class ReadHighestSequenceNrSuccess : IEquatable<ReadHighestSequenceNrSuccess>, IComparable<ReadHighestSequenceNrSuccess>
     {
+
         public ReadHighestSequenceNrSuccess(long highestSequenceNr)
         {
             HighestSequenceNr = highestSequenceNr;
         }
 
         public long HighestSequenceNr { get; private set; }
+
+        public bool Equals(ReadHighestSequenceNrSuccess other)
+        {
+            return HighestSequenceNr == other.HighestSequenceNr;
+        }
+
+        public int CompareTo(ReadHighestSequenceNrSuccess other)
+        {
+            if (other == null) return 1;
+            return other.HighestSequenceNr.CompareTo(HighestSequenceNr);
+        }
+
+        public override bool Equals(object obj)
+        {
+            var other = obj as ReadHighestSequenceNrSuccess;
+            return other != null && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return HighestSequenceNr.GetHashCode();
+        }
     }
 
     public sealed class ReadHighestSequenceNrFailure
     {
         public ReadHighestSequenceNrFailure(Exception cause)
         {
+            if (cause == null) 
+                throw new ArgumentNullException("cause", "ReadHighestSequenceNrFailure cause exception cannot be null");
+
             Cause = cause;
         }
 

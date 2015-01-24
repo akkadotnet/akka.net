@@ -102,8 +102,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.VsTest.Tests",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Logger.Serilog", "contrib\loggers\Akka.Logger.Serilog\Akka.Logger.Serilog.csproj", "{53D9D2F0-4A35-4FCE-980C-8F7F3DCBDB2B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Serilog", "contrib\loggers\Akka.Serilog\Akka.Serilog.csproj", "{7DFE7F49-72DA-4179-BB48-D6B9FB0F1FFA}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster", "core\Akka.Cluster\Akka.Cluster.csproj", "{6AB00F61-269A-4501-B06A-026707F000A7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Tests", "core\Akka.Cluster.Tests\Akka.Cluster.Tests.csproj", "{C8D6A95C-50BF-4416-A212-86B18B87220D}"

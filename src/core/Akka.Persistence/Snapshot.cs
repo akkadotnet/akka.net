@@ -46,13 +46,12 @@ namespace Akka.Persistence
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            return obj is SnapshotMetadata && Equals((SnapshotMetadata)obj);
+            return Equals(obj as SnapshotMetadata);
         }
 
         public bool Equals(SnapshotMetadata other)
         {
-            return string.Equals(PersistenceId, other.PersistenceId) && SequenceNr == other.SequenceNr && Timestamp.Equals(other.Timestamp);
+            return other != null && string.Equals(PersistenceId, other.PersistenceId) && SequenceNr == other.SequenceNr && Timestamp.Equals(other.Timestamp);
         }
 
         public override int GetHashCode()
@@ -70,7 +69,7 @@ namespace Akka.Persistence
     /// <summary>
     /// Sent to <see cref="PersistentActor"/> after successful saving of a snapshot.
     /// </summary>
-    public sealed class SaveSnapshotSuccess
+    public sealed class SaveSnapshotSuccess : IEquatable<SaveSnapshotSuccess>
     {
         public SaveSnapshotSuccess(SnapshotMetadata metadata)
         {
@@ -78,6 +77,11 @@ namespace Akka.Persistence
         }
 
         public SnapshotMetadata Metadata { get; private set; }
+        
+        public bool Equals(SaveSnapshotSuccess other)
+        {
+            return other != null && other.Metadata.Equals(Metadata);
+        }
     }
 
     /// <summary>

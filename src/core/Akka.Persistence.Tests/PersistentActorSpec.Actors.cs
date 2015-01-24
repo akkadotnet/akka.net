@@ -388,14 +388,14 @@ namespace Akka.Persistence.Tests
                 if (message is Cmd)
                 {
                     var cmd = message as Cmd;
-                    if (cmd.Data == "a")
+                    if (cmd.Data.ToString() == "a")
                     {
                         if (!_stashed) Stash.Stash();
                         else Sender.Tell("a");
 
                     }
-                    else if (cmd.Data == "b") Persist(new Evt("b"), evt => Sender.Tell(evt.Data));
-                    else if (cmd.Data == "c")
+                    else if (cmd.Data.ToString() == "b") Persist(new Evt("b"), evt => Sender.Tell(evt.Data));
+                    else if (cmd.Data.ToString() == "c")
                     {
                         UnstashAll();
                         Sender.Tell("c");
@@ -673,8 +673,8 @@ namespace Akka.Persistence.Tests
                 var cmd = message as Cmd;
                 if (cmd != null && cmd.Data.ToString() == "c")
                 {
-                    //FIXME: after persisting Evt(c) inner callback is never called during tests
-                    // therefore no context unbecome occurs and all Cmd(b-X) leave unprocessed
+                    //FIXME: after persisting Evt(c) messages are unstashed onto actor cell mailbox,
+                    // but then actor becomes terminated and messages land inside death letters
                     Persist(new Evt("c"), evt =>
                     {
                         UpdateState(evt);

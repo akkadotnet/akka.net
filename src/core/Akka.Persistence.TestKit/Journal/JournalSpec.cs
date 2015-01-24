@@ -16,8 +16,8 @@ namespace Akka.Persistence.TestKit.Journal
         private readonly TestProbe _senderProbe;
         private readonly TestProbe _receiverProbe;
 
-        public JournalSpec(Config config = null, string actorSystemName = null, string testActorName = null)
-            : base(config, actorSystemName ?? "JournalSpec", testActorName)
+        protected JournalSpec(Config config = null, string actorSystemName = null, string testActorName = null)
+            : base(config ?? Config, actorSystemName ?? "JournalSpec", testActorName)
         {
             _senderProbe = CreateTestProbe();
             _receiverProbe = CreateTestProbe();
