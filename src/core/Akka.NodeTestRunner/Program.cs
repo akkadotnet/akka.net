@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using Akka.Remote.TestKit;
 using Xunit;
 
@@ -14,11 +15,14 @@ namespace Akka.NodeTestRunner
             var testName = CommandLine.GetProperty("multinode.test-method");
             var displayName = testName;
 
+            Thread.Sleep(TimeSpan.FromSeconds(10));
+
             using (var controller = new XunitFrontController(assemblyName))
             {
                 using (var sink = new Sink(nodeIndex))
                 {
-                    controller.RunTests(new[] { new Xunit1TestCase(assemblyName, null, typeName, testName, displayName) }, sink, new TestFrameworkOptions());
+                    Thread.Sleep(10000);
+                    controller.RunTests(new[] { new Xunit1TestCase(assemblyName, null, typeName, testName, displayName, null, "MultiNodeTest") }, sink, new TestFrameworkOptions());
                     sink.Finished.WaitOne();
                     Environment.Exit(sink.Passed ? 0 : 1);
                 }

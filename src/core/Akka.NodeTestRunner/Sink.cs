@@ -19,6 +19,11 @@ namespace Akka.NodeTestRunner
 
         public bool OnMessage(IMessageSinkMessage message)
         {
+            var resultMessage = message as ITestResultMessage;
+            if (resultMessage != null)
+            {
+                Console.WriteLine(resultMessage.Output);
+            }
             var testPassed = message as ITestPassed;
             if (testPassed != null)
             {

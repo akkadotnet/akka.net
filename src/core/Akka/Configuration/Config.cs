@@ -319,5 +319,14 @@ namespace Akka.Configuration
                 : ReferenceEquals(config,fallback) ? config 
                 : config.WithFallback(fallback);
         }
+
+        /// <summary>
+        /// Convenience method for determining if <see cref="Config"/> has any usable content period.
+        /// </summary>
+        /// <returns>true if the <see cref="Config"/> is null or <see cref="Config.IsEmpty"/> return true; false otherwise.</returns>
+        public static bool IsNullOrEmpty(this Config config)
+        {
+            return config == null || config.IsEmpty;
+        }
     }
 }

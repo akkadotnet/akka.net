@@ -136,6 +136,7 @@
     <Compile Include="TestUtils\PropsWithName.cs" />
     <Compile Include="TestUtils\Supervisor.cs" />
     <Compile Include="Util\CollectionExtensionsSpec.cs" />
+    <Compile Include="Util\ContinuousEnumeratorSpec.cs" />
     <Compile Include="Util\Internal\InterlockedSpinTests.cs" />
     <Compile Include="Util\Internal\Collections\ImmutableAvlTreeMapTests.cs" />
     <Compile Include="Util\Internal\Collections\ImmutableAvlTreeTests.cs" />

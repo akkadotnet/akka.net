@@ -54,6 +54,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\contrib\loggers\Akka.Logger.NLog\Akka.Logger.NLog.csproj">
+      <Project>{a8aa2d7e-3d35-44df-af92-80a2c39c1f4d}</Project>
+      <Name>Akka.Logger.NLog</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka.Cluster.Tests\Akka.Cluster.Tests.csproj">
       <Project>{c8d6a95c-50bf-4416-a212-86b18b87220d}</Project>
       <Name>Akka.Cluster.Tests</Name>

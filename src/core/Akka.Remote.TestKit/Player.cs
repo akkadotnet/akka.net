@@ -551,7 +551,7 @@ namespace Akka.Remote.TestKit
 
         public void OnConnect(INode remoteAddress, IConnection responseChannel)
         {
-            _log.Debug("connected to {}", responseChannel.RemoteHost);
+            _log.Debug("connected to {0}", responseChannel.RemoteHost);
             _fsm.Tell(new ClientFSM.Connected(new RemoteConnection(responseChannel, this)));
         }
 

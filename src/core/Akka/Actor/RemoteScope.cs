@@ -1,4 +1,5 @@
 ﻿using System;
+using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
@@ -15,5 +16,10 @@ namespace Akka.Actor
         }
 
         public Address Address { get; set; }
+
+        public override bool Equals(Scope other)
+        {
+            return base.Equals(other) && Address.Equals(other.AsInstanceOf<RemoteScope>().Address);
+        }
     }
 }

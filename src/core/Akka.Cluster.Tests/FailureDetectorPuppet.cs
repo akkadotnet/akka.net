@@ -1,4 +1,6 @@
-﻿using Akka.Remote;
+﻿using Akka.Configuration;
+using Akka.Event;
+using Akka.Remote;
 using Akka.Util;
 
 namespace Akka.Cluster.Tests
@@ -8,6 +10,10 @@ namespace Akka.Cluster.Tests
     /// </summary>
     public class FailureDetectorPuppet : FailureDetector
     {
+        public FailureDetectorPuppet(Config config, EventStream ev)
+        {
+        }
+
         public enum Status
         {
             Up,

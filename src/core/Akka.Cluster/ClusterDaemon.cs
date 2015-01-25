@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internals;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;

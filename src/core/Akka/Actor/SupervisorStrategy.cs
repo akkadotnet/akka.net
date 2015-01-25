@@ -242,6 +242,12 @@ namespace Akka.Actor
         {
         }
 
+        /// <summary>
+        /// Serialization-friendly constructor
+        /// </summary>
+        [Obsolete("For serialization purposes only!")]
+        public OneForOneStrategy() : this(DefaultDecider) { }
+
         protected override bool LoggingEnabled { get { return _loggingEnabled; } }
 
         /// <summary>
@@ -323,6 +329,13 @@ namespace Akka.Actor
         /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
         /// </summary>
         public AllForOneStrategy(Func<Exception, Directive> decider) : this(-1, -1, decider, true) { }
+
+      
+        /// <summary>
+        /// Serialization-friendly constructor
+        /// </summary>
+        [Obsolete("For serialization purposes only!")]
+        public AllForOneStrategy() : this(DefaultDecider) { }
 
         protected override bool LoggingEnabled { get { return _loggingEnabled; } }
 
