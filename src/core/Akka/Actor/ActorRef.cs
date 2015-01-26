@@ -8,6 +8,7 @@ using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using System.Threading;
 using Akka.Event;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Actor
@@ -111,7 +112,7 @@ namespace Akka.Actor
         }
     }
 
-    public class ActorRefSurrogate
+    public class ActorRefSurrogate : ISurrogate
     {
         public ActorRefSurrogate(string path)
         {
@@ -119,6 +120,11 @@ namespace Akka.Actor
         }
 
         public string Path { get; private set; }
+
+        public object Translate()
+        {
+            return (ActorRef) this;
+        }
     }
 
     internal static class ActorRefSender

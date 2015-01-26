@@ -105,10 +105,8 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var strPath = probe.ExpectMsg<ActorRefSurrogate>().Path;
-                ActorPath path;
-                Assert.True(ActorPath.TryParse(strPath, out path));
-                replies.Add(path);
+                var expected = probe.ExpectMsg<ActorRef>();
+                replies.Add(expected.Path);
             }
 
             Assert.Equal(2, replies.Count);
@@ -127,10 +125,8 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var strPath = probe.ExpectMsg<ActorRefSurrogate>().Path;
-                ActorPath path;
-                Assert.True(ActorPath.TryParse(strPath, out path));
-                replies.Add(path);
+                var expected = probe.ExpectMsg<ActorRef>();
+                replies.Add(expected.Path);
             }
 
             Assert.Equal(2, replies.Count);
@@ -149,10 +145,8 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5000; i++)
             {
                 router.Tell("", probe.Ref);
-                var strPath = probe.ExpectMsg<ActorRefSurrogate>().Path;
-                ActorPath path;
-                Assert.True(ActorPath.TryParse(strPath, out path));
-                replies.Add(path);
+                var expected = probe.ExpectMsg<ActorRef>();
+                replies.Add(expected.Path);
             }
 
             Assert.True(replies.Count >= 2);
@@ -172,10 +166,8 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var strPath = probe.ExpectMsg<ActorRefSurrogate>().Path;
-                ActorPath path;
-                Assert.True(ActorPath.TryParse(strPath, out path));
-                replies.Add(path);
+                var expected = probe.ExpectMsg<ActorRef>();
+                replies.Add(expected.Path);
             }
 
             Assert.Equal(2, replies.Count);
@@ -200,10 +192,8 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var strPath = probe.ExpectMsg<ActorRefSurrogate>().Path;
-                ActorPath path;
-                Assert.True(ActorPath.TryParse(strPath, out path));
-                replies.Add(path);
+                var expected = probe.ExpectMsg<ActorRef>();
+                replies.Add(expected.Path);
             }
 
             Assert.Equal(2, replies.Count);
@@ -227,10 +217,8 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var strPath = probe.ExpectMsg<ActorRefSurrogate>().Path;
-                ActorPath path;
-                Assert.True(ActorPath.TryParse(strPath, out path));
-                replies.Add(path);
+                var expected = probe.ExpectMsg<ActorRef>();
+                replies.Add(expected.Path);
             }
 
             Assert.Equal(2, replies.Count);
@@ -256,10 +244,8 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var strPath = probe.ExpectMsg<ActorRefSurrogate>().Path;
-                ActorPath path;
-                Assert.True(ActorPath.TryParse(strPath, out path));
-                replies.Add(path);
+                var expected = probe.ExpectMsg<ActorRef>();
+                replies.Add(expected.Path);
             }
 
             Assert.Equal(4, replies.Count);
@@ -284,10 +270,8 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var strPath = probe.ExpectMsg<ActorRefSurrogate>().Path;
-                ActorPath path;
-                Assert.True(ActorPath.TryParse(strPath, out path));
-                replies.Add(path);
+                var expected = probe.ExpectMsg<ActorRef>();
+                replies.Add(expected.Path);
             }
 
             Assert.Equal(4, replies.Count);
