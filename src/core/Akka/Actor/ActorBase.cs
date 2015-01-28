@@ -54,6 +54,7 @@ namespace Akka.Actor
     /// <summary>
     /// Interface used on Actors that have an explicit requirement for a logger
     /// </summary>
+    [Obsolete()]
     public interface IActorLogging
     {
         LoggingAdapter Log { get; }

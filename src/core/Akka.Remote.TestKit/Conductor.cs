@@ -307,8 +307,9 @@ namespace Akka.Remote.TestKit
     /// </summary>
     class ServerFSM : FSM<ServerFSM.State, ActorRef>, LoggingFSM
     {
+        private readonly LoggingAdapter _log = Context.GetLogger();
         readonly RemoteConnection _channel;
-        readonly ActorRef _controller;
+        readonly ActorRef _controller;        
         RoleName _roleName;
 
         public enum State
@@ -358,18 +359,18 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is INetworkOp)
                 {
-                    Log.Warning("client {0}, sent not Hello in first message (instead {1}), disconnecting", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
+                    _log.Warning("client {0}, sent not Hello in first message (instead {1}), disconnecting", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
                     _channel.Close();
                     return Stop();
                 }
                 if (@event.FsmEvent is IToClient)
                 {
-                    Log.Warning("cannot send {0} in state Initial", @event.FsmEvent);
+                    _log.Warning("cannot send {0} in state Initial", @event.FsmEvent);
                     return Stay();
                 }
                 if (@event.FsmEvent is StateTimeout)
                 {
-                    Log.Info("closing channel to {0} because of Hello timeout", _channel.RemoteHost.ToEndPoint());
+                    _log.Info("closing channel to {0} because of Hello timeout", _channel.RemoteHost.ToEndPoint());
                     _channel.Close();
                     return Stop();
                 }
@@ -390,7 +391,7 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is INetworkOp)
                 {
-                    Log.Warning("client {0} sent unsupported message {1}", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
+                    _log.Warning("client {0} sent unsupported message {1}", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
                     return Stop();
                 }
                 var toClient = @event.FsmEvent as IToClient;
@@ -407,7 +408,7 @@ namespace Akka.Remote.TestKit
                         return Stay().Using(Sender);
                     }
 
-                    Log.Warning("cannot send {0} while waiting for previous ACK", toClient.Msg);
+                    _log.Warning("cannot send {0} while waiting for previous ACK", toClient.Msg);
                     return Stay();
                 }
 
