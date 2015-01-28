@@ -30,7 +30,7 @@ namespace Akka.Cluster
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class ClusterHeartbeatSender : ReceiveActor, IActorLogging
+    internal sealed class ClusterHeartbeatSender : ReceiveActor
     {
         private readonly CancellationTokenSource _heartbeatTask;
 
@@ -45,13 +45,7 @@ namespace Akka.Cluster
 
         private readonly Cluster _cluster;
 
-        private readonly LoggingAdapter _logging = Context.GetLogger();
-
-        public LoggingAdapter Log
-        {
-            get { return _logging; }
-        }
-
+        private readonly LoggingAdapter _log = Context.GetLogger();
 
         public ClusterHeartbeatSender()
         {
@@ -145,10 +139,10 @@ namespace Akka.Cluster
             foreach (var to in _state.ActiveReceivers)
             {
                 if (FailureDetector.IsMonitoring(to.Address))
-                    Log.Debug("Cluster Node [{0}] - Heartbeat to [{1}]", _cluster.SelfAddress, to.Address);
+                    _log.Debug("Cluster Node [{0}] - Heartbeat to [{1}]", _cluster.SelfAddress, to.Address);
                 else
                 {
-                    Log.Debug("Cluster Node [{0}] - First Heartbeat to [{1}]", _cluster.SelfAddress, to.Address);
+                    _log.Debug("Cluster Node [{0}] - First Heartbeat to [{1}]", _cluster.SelfAddress, to.Address);
                     // schedule the expected first heartbeat for later, which will give the
                     // other side a chance to reply, and also trigger some resends if needed
                     Context.System.Scheduler.ScheduleOnce(_cluster.Settings.HeartbeatExpectedResponseAfter, Self,
@@ -160,7 +154,7 @@ namespace Akka.Cluster
 
         private void DoHeartbeatRsp(UniqueAddress from)
         {
-            Log.Debug("Cluster Node [{0}] - Heartbeat response from [{1}]", _cluster.SelfAddress, from.Address);
+            _log.Debug("Cluster Node [{0}] - Heartbeat response from [{1}]", _cluster.SelfAddress, from.Address);
             _state = _state.HeartbeatRsp(from);
         }
 
@@ -168,7 +162,7 @@ namespace Akka.Cluster
         {
             if (_state.ActiveReceivers.Contains(from) && !FailureDetector.IsMonitoring(from.Address))
             {
-                Log.Debug("Cluster Node [{0}] - Trigger extra expected heartbeat from [{1}]", _cluster.SelfAddress, from.Address);
+                _log.Debug("Cluster Node [{0}] - Trigger extra expected heartbeat from [{1}]", _cluster.SelfAddress, from.Address);
                 FailureDetector.Heartbeat(from.Address);
             }
         }

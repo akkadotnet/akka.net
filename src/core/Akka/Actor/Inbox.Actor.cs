@@ -6,7 +6,7 @@ using Akka.Event;
 
 namespace Akka.Actor
 {
-    internal class InboxActor : ActorBase, IActorLogging
+    internal class InboxActor : ActorBase
     {
         private readonly InboxQueue<object> _messages = new InboxQueue<object>();
         private readonly InboxQueue<IQuery> _clients = new InboxQueue<IQuery>();
@@ -18,13 +18,12 @@ namespace Akka.Actor
         private Select? _currentSelect;
         private Tuple<DateTime, CancellationTokenSource> _currentDeadline;
 
-        private int size;
-        private LoggingAdapter log = Context.GetLogger();
-        public LoggingAdapter Log { get { return log; } }
+        private int _size;
+        private LoggingAdapter _log = Context.GetLogger();
 
         public InboxActor(int size)
         {
-            this.size = size;
+            _size = size;
         }
 
         public void EnqueueQuery(IQuery q)
@@ -36,7 +35,7 @@ namespace Akka.Actor
 
         public void EnqueueMessage(object msg)
         {
-            if (_messages.Count < size)
+            if (_messages.Count < _size)
             {
                 _messages.Enqueue(msg);
             }
@@ -44,7 +43,7 @@ namespace Akka.Actor
             {
                 if (!_printedWarning)
                 {
-                    Log.Warning("Dropping message: Inbox size has been exceeded, use akka.actor.inbox.inbox-size to increase maximum allowed inbox size. Current is " + size);
+                    _log.Warning("Dropping message: Inbox size has been exceeded, use akka.actor.inbox.inbox-size to increase maximum allowed inbox size. Current is " + _size);
                     _printedWarning = true;
                 }
             }

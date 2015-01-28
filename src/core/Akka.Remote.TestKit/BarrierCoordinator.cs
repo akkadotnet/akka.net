@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Util.Internal;
+using Akka.Event;
 
 namespace Akka.Remote.TestKit
 {
@@ -375,6 +376,7 @@ namespace Akka.Remote.TestKit
 
         //this shall be set to true if all subsequent barriers shall fail
         private bool _failed = false;
+        private readonly LoggingAdapter _log = Context.GetLogger();
 
         protected override void PreRestart(Exception reason, object message) { }
         protected override void PostRestart(Exception reason)
@@ -516,7 +518,7 @@ namespace Akka.Remote.TestKit
 
         public State<State,Data> HandleBarrier(Data data)
         {
-            Log.Debug("handleBarrier({0})", data.Barrier);
+            _log.Debug("handleBarrier({0})", data.Barrier);
             if (data.Arrived.Count == 0)
             {
                 return GoTo(State.Idle).Using(data.Copy(barrier: string.Empty));

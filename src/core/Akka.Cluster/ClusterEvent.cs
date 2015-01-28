@@ -638,7 +638,7 @@ namespace Akka.Cluster
 
 
     //TODO: RequiresMessageQueue? 
-    sealed class ClusterDomainEventPublisher : UntypedActor, IActorLogging
+    sealed class ClusterDomainEventPublisher : UntypedActor
     {
         Gossip _latestGossip;
        
@@ -749,8 +749,6 @@ namespace Akka.Cluster
         {
             _latestGossip = Gossip.Empty;
         }
-
-        public LoggingAdapter Log { get; private set; }
     }
 }
 

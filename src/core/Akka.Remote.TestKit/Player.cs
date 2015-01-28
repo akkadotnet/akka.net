@@ -279,6 +279,7 @@ namespace Akka.Remote.TestKit
             }            
         }
 
+        private readonly LoggingAdapter _log = Context.GetLogger();
         readonly TestConductorSettings _settings;
         readonly PlayerHandler _handler;
         readonly RoleName _name;
@@ -316,7 +317,7 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is StateTimeout)
                 {
-                    Log.Error("connect timeout to TestConductor");
+                    _log.Error("connect timeout to TestConductor");
                     return GoTo(State.Failed);
                 }
 
@@ -327,12 +328,12 @@ namespace Akka.Remote.TestKit
             {
                 if (@event.FsmEvent is Done)
                 {
-                    Log.Debug("received Done: starting test");
+                    _log.Debug("received Done: starting test");
                     return GoTo(State.Connected);
                 }
                 if (@event.FsmEvent is INetworkOp)
                 {
-                    Log.Error("Received {0} instead of Done", @event.FsmEvent);
+                    _log.Error("Received {0} instead of Done", @event.FsmEvent);
                     return GoTo(State.Failed);
                 }
                 if (@event.FsmEvent is IServerOp)
@@ -341,7 +342,7 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is StateTimeout)
                 {
-                    Log.Error("connect timeout to TestConductor");
+                    _log.Error("connect timeout to TestConductor");
                     return GoTo(State.Failed);
                 }
                 return null;
@@ -351,7 +352,7 @@ namespace Akka.Remote.TestKit
             {
                 if (@event.FsmEvent is Disconnected)
                 {
-                    Log.Info("disconnected from TestConductor");
+                    _log.Info("disconnected from TestConductor");
                     throw new ConnectionFailure("disconnect");
                 }
                 if(@event.FsmEvent is ToServer<Done> && @event.StateData.Channel != null && @event.StateData.RunningOp == null)
@@ -377,7 +378,7 @@ namespace Akka.Remote.TestKit
                 if (toServer != null && @event.StateData.Channel != null &&
                     @event.StateData.RunningOp != null)
                 {
-                    Log.Error("cannot write {0} while waiting for {1}", toServer.Msg, @event.StateData.RunningOp);
+                    _log.Error("cannot write {0} while waiting for {1}", toServer.Msg, @event.StateData.RunningOp);
                     return Stay();
                 }
                 if (@event.FsmEvent is IClientOp && @event.StateData.Channel != null)
@@ -387,7 +388,7 @@ namespace Akka.Remote.TestKit
                     {
                         if (@event.StateData.RunningOp == null)
                         {
-                            Log.Warning("did not expect {1}", @event.FsmEvent);
+                            _log.Warning("did not expect {1}", @event.FsmEvent);
                         }
                         else
                         {
@@ -418,7 +419,7 @@ namespace Akka.Remote.TestKit
                     {
                         if (@event.StateData.RunningOp == null)
                         {
-                            Log.Warning("did not expect {0}", @event.FsmEvent);
+                            _log.Warning("did not expect {0}", @event.FsmEvent);
                         }
                         else
                         {
@@ -485,7 +486,7 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is INetworkOp)
                 {
-                    Log.Warning("ignoring network message {0} while Failed", @event.FsmEvent);
+                    _log.Warning("ignoring network message {0} while Failed", @event.FsmEvent);
                     return Stay();
                 }
                 return null;

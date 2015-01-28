@@ -245,10 +245,9 @@ namespace Akka.Remote
     /// forming any outbound associations.
     /// </remarks>
     /// </summary>
-    internal class ReliableDeliverySupervisor : UntypedActor, IActorLogging
+    internal class ReliableDeliverySupervisor : UntypedActor
     {
         private readonly LoggingAdapter _log = Context.GetLogger();
-        public LoggingAdapter Log { get { return _log; } }
 
         private AkkaProtocolHandle handleOrActive;
         private Address localAddress;
@@ -355,7 +354,7 @@ namespace Akka.Remote
                     .With<IAssociationProblem>(problem => directive = Directive.Escalate)
                     .Default(e =>
                     {
-                        Log.Warning("Association with remote system {0} has failed; address is now gated for {1} ms. Reason is: [{2}]", remoteAddress, settings.RetryGateClosedFor.TotalMilliseconds, ex.Message);
+                        _log.Warning("Association with remote system {0} has failed; address is now gated for {1} ms. Reason is: [{2}]", remoteAddress, settings.RetryGateClosedFor.TotalMilliseconds, ex.Message);
                         UidConfirmed = false;
                         Context.Become(Gated);
                         currentHandle = null;
@@ -625,7 +624,7 @@ namespace Akka.Remote
     /// <summary>
     /// Abstract base class for <see cref="EndpointReader"/> classes
     /// </summary>
-    internal abstract class EndpointActor : UntypedActor, IActorLogging
+    internal abstract class EndpointActor : UntypedActor
     {
         protected readonly Address LocalAddress;
         protected Address RemoteAddress;
@@ -633,7 +632,6 @@ namespace Akka.Remote
         protected Transport.Transport Transport;
 
         private readonly LoggingAdapter _log = Context.GetLogger();
-        public LoggingAdapter Log { get { return _log; } }
 
         protected readonly EventPublisher EventPublisher;
         protected bool Inbound { get; set; }
@@ -641,7 +639,7 @@ namespace Akka.Remote
         protected EndpointActor(Address localAddress, Address remoteAddress, Transport.Transport transport,
             RemoteSettings settings)
         {
-            EventPublisher = new EventPublisher(Context.System, Log, Logging.LogLevelFor(settings.RemoteLifecycleEventsLogLevel));
+            EventPublisher = new EventPublisher(Context.System, _log, Logging.LogLevelFor(settings.RemoteLifecycleEventsLogLevel));
             this.LocalAddress = localAddress;
             this.RemoteAddress = remoteAddress;
             this.Transport = transport;
@@ -683,6 +681,8 @@ namespace Akka.Remote
     /// </summary>
     internal abstract class EndpointActor<TS, TD> : FSM<TS, TD>
     {
+        private readonly LoggingAdapter _log = Context.GetLogger();
+
         protected readonly Address LocalAddress;
         protected Address RemoteAddress;
         protected RemoteSettings Settings;
@@ -695,7 +695,7 @@ namespace Akka.Remote
         protected EndpointActor(Address localAddress, Address remoteAddress, AkkaProtocolTransport transport,
             RemoteSettings settings)
         {
-            EventPublisher = new EventPublisher(Context.System, Log, Logging.LogLevelFor(settings.RemoteLifecycleEventsLogLevel));
+            EventPublisher = new EventPublisher(Context.System, _log, Logging.LogLevelFor(settings.RemoteLifecycleEventsLogLevel));
             LocalAddress = localAddress;
             RemoteAddress = remoteAddress;
             Transport = transport;
@@ -722,7 +722,7 @@ namespace Akka.Remote
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Unable to publish error event to EventStream");
+                _log.Error(ex, "Unable to publish error event to EventStream");
             }
         }
 
@@ -746,7 +746,7 @@ namespace Akka.Remote
             this.reliableDeliverySupervisor = reliableDeliverySupervisor;
             system = Context.System;
             provider = (RemoteActorRefProvider)((ExtendedActorSystem) Context.System).Provider;
-            _msgDispatcher = new DefaultMessageDispatcher(system, provider, Log);
+            _msgDispatcher = new DefaultMessageDispatcher(system, provider, _log);
             this.receiveBuffers = receiveBuffers;
             Inbound = handleOrActive != null;
             _ackDeadline = NewAckDeadline();
@@ -755,6 +755,7 @@ namespace Akka.Remote
             InitFSM();
         }
 
+        private readonly LoggingAdapter _log = Context.GetLogger();
         private AkkaProtocolHandle handleOrActive;
         private int? refuseUid;
         private AkkaPduCodec codec;
@@ -840,7 +841,7 @@ namespace Akka.Remote
                             {
                                 var msgLog = string.Format("RemoteMessage: {0} to [{1}]<+[{2}] from [{3}]", send.Message,
                                     send.Recipient, send.Recipient.Path, send.SenderOption ?? system.DeadLetters);
-                                Log.Debug(msgLog);
+                                _log.Debug(msgLog);
                             }
 
                             var pdu = codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
@@ -1052,7 +1053,7 @@ namespace Akka.Remote
 
         private State<EndpointWriter.State, bool> LogAndStay(Exception reason)
         {
-            Log.Error(reason, "Transient association error (association remains live)");
+            _log.Error(reason, "Transient association error (association remains live)");
             return Stay();
         }
 
@@ -1406,6 +1407,4 @@ namespace Akka.Remote
 
         #endregion
     }
-
-
 }
