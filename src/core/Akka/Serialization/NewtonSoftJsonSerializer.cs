@@ -1,5 +1,6 @@
 ﻿using Akka.Actor;
 using Akka.Actor.Internals;
+using Akka.Util;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -83,7 +84,13 @@ namespace Akka.Serialization
             Serialization.CurrentSystem = system;
             string data = Encoding.Default.GetString(bytes);
 
-            return JsonConvert.DeserializeObject(data, JsonSerializerSettings);
+            var res = JsonConvert.DeserializeObject(data, JsonSerializerSettings);
+            var surrogate = res as ISurrogate;
+            if (surrogate != null)
+            {
+                return surrogate.Translate();
+            }
+            return res;
         }
 
         /// <summary>
