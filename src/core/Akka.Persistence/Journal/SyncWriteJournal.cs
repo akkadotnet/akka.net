@@ -63,8 +63,8 @@ namespace Akka.Persistence.Journal
         {
             ReadHighestSequenceNrAsync(msg.PersistenceId, msg.FromSequenceNr)
                 .ContinueWith(t => t.IsFaulted
-                        ? (object)new ReadHighestSequenceNrSuccess(t.Result)
-                        : new ReadHighestSequenceNrFailure(t.Exception))
+                        ? (object)new ReadHighestSequenceNrFailure(t.Exception)
+                        : new ReadHighestSequenceNrSuccess(t.Result))
                 .PipeTo(msg.PersistentActor);
         }
 

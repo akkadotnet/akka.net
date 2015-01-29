@@ -33,6 +33,7 @@ namespace Akka.Serialization
             //TODO: we should use an instanced serializer to be threadsafe for other ActorSystems
             JsonConvert.DefaultSettings = () => new JsonSerializerSettings
             {
+                PreserveReferencesHandling = PreserveReferencesHandling.Objects,
                 Converters = new List<JsonConverter> { new ActorRefConverter() }
             };
         }

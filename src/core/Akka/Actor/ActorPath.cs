@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace Akka.Actor
 {
@@ -369,6 +370,7 @@ namespace Akka.Actor
             get { return null; }
         }
 
+        [JsonIgnore]
         public override ActorPath Root
         {
             get { return this; }

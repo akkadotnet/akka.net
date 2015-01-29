@@ -58,8 +58,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool Receive(object message)
             {
-                if (message == "get") _probe.Tell(_last);
-                else if (message == "boom") throw new TestException("boom");
+                if (message.ToString() == "get") _probe.Tell(_last);
+                else if (message.ToString() == "boom") throw new TestException("boom");
                 else if (IsPersistent && ShouldFail(message)) throw new TestException("boom");
                 else if (IsPersistent)
                 {

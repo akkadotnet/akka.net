@@ -3,6 +3,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Persistence.Journal;
 using Akka.TestKit;
+using Akka.TestKit.TestActors;
 using Xunit;
 
 namespace Akka.Persistence.Tests
@@ -67,8 +68,8 @@ namespace Akka.Persistence.Tests
             protected override bool Receive(object message)
             {
                 var props = message as Props;
-                var aref = props != null ? Context.ActorOf(props) : message;
-                Sender.Tell(aref);
+                var m = props != null ? Context.ActorOf(props) : message;
+                Sender.Tell(m);
                 return true;
             }
         }
@@ -77,11 +78,12 @@ namespace Akka.Persistence.Tests
 
         public PersistentActorFailureSpec()
             : base(Configuration("inmem", "PersistentActorFailureSpec",
-                extraConfig: @"akka.persistence.journal.inmem.class = ""Akka.Persistence.Tests.FailingMemoryJournal, Akka.Persistence.Tests"""))
+                extraConfig: @"akka.persistence.journal.inmem.class = ""Akka.Persistence.Tests.FailingMemoryJournal, Akka.Persistence.Tests""
+                    akka.actor.serialize-messages=off"))
         {
-
-            var pref = ActorOf(Props.Create(() => new PersistentActorSpec.BehaviorOneActor(Name)));
-            pref.Tell(new PersistentActorSpec.Cmd("a"));
+            //TODO: remove akka.actor.serialize-messages=off when Props serialization will be resolved (github issue: #569)
+            var pref = ActorOf(Props.Create(() => new BehaviorOneActor(Name)));
+            pref.Tell(new Cmd("a"));
             pref.Tell(GetState.Instance);
             ExpectMsg<object[]>().ShouldOnlyContainInOrder("a-1", "a-2");
         }
@@ -90,13 +92,9 @@ namespace Akka.Persistence.Tests
         public void PersistentActor_throws_ActorKilledException_if_recovery_from_persisted_events_fails()
         {
             var supervisor = ActorOf(() => new Supervisor(TestActor));
-            supervisor.Tell(Props.Create(() => new PersistentActorSpec.BehaviorOneActor(Name)));
+            supervisor.Tell(Props.Create(() => new BehaviorOneActor(Name)));
 
-            // serializer will return ActorRefSurrogate, which is not directly ActorRef
-            // but can be implicitly converted into ActorRef
-            ExpectMsg<ActorRefSurrogate>();
-
-            //FIXME: for some reason ActorCell throws ActorIntializationException here, investigate what actor is trying to be produced
+            ExpectMsg<ActorRef>();
             ExpectMsg<ActorKilledException>();
         }
     }

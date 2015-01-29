@@ -149,7 +149,6 @@ namespace Akka.Persistence
         /// This handler must be a pure function (no side effects allowed), it should not perform any actions that may fail. 
         /// If recovery fails this actor will be stopped. This can be customized in <see cref="RecoveryFailure"/>. 
         /// </summary>
-        [Pure]
         protected abstract bool ReceiveRecover(object message);
 
         /// <summary>

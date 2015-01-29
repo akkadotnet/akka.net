@@ -8,37 +8,59 @@ using Akka.Util.Internal;
 
 namespace Akka.Persistence.Tests
 {
+    internal class BehaviorOneActor : PersistentActorSpec.ExamplePersistentActor
+    {
+        public BehaviorOneActor(string name) : base(name) { }
+
+        protected override bool ReceiveCommand(object message)
+        {
+            return CommonBehavior(message) || Receiver(message);
+        }
+
+        protected bool Receiver(object message)
+        {
+            if (message is Cmd)
+            {
+                var cmd = message as Cmd;
+                Persist(new[] { new Evt(cmd.Data + "-1"), new Evt(cmd.Data + "-2") }, UpdateStateHandler);
+                return true;
+            }
+            return false;
+        }
+    }
+    internal class Cmd
+    {
+        public Cmd(object data)
+        {
+            Data = data;
+        }
+
+        public object Data { get; private set; }
+
+        public override string ToString()
+        {
+            return "Cmd(" + Data + ")";
+        }
+    }
+
+    internal class Evt
+    {
+        public Evt(object data)
+        {
+            Data = data;
+        }
+
+        public object Data { get; private set; }
+
+        public override string ToString()
+        {
+            return "Evt(" + Data + ")";
+        }
+    }
+
     public partial class PersistentActorSpec
     {
-        internal class Cmd
-        {
-            public Cmd(object data)
-            {
-                Data = data;
-            }
-
-            public object Data { get; private set; }
-
-            public override string ToString()
-            {
-                return "Cmd(" + Data + ")";
-            }
-        }
-
-        internal class Evt
-        {
-            public Evt(object data)
-            {
-                Data = data;
-            }
-
-            public object Data { get; private set; }
-
-            public override string ToString()
-            {
-                return "Evt(" + Data + ")";
-            }
-        }
+        
 
         internal class LatchCmd
         {
@@ -89,26 +111,6 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        internal class BehaviorOneActor : ExamplePersistentActor
-        {
-            public BehaviorOneActor(string name) : base(name) { }
-
-            protected override bool ReceiveCommand(object message)
-            {
-                return CommonBehavior(message) || Receiver(message);
-            }
-
-            protected bool Receiver(object message)
-            {
-                if (message is Cmd)
-                {
-                    var cmd = message as Cmd;
-                    Persist(new[] { new Evt(cmd.Data + "-1"), new Evt(cmd.Data + "-2") }, UpdateStateHandler);
-                    return true;
-                }
-                return false;
-            }
-        }
 
         internal class BehaviorTwoActor : ExamplePersistentActor
         {
@@ -390,14 +392,18 @@ namespace Akka.Persistence.Tests
                     var cmd = message as Cmd;
                     if (cmd.Data.ToString() == "a")
                     {
-                        if (!_stashed) Stash.Stash();
+                        if (!_stashed)
+                        {
+                            Stash.Stash();
+                            _stashed = true;
+                        }
                         else Sender.Tell("a");
 
                     }
                     else if (cmd.Data.ToString() == "b") Persist(new Evt("b"), evt => Sender.Tell(evt.Data));
                     else if (cmd.Data.ToString() == "c")
                     {
-                        UnstashAll();
+                        Stash.UnstashAll();
                         Sender.Tell("c");
                     }
                     else return false;
@@ -699,7 +705,7 @@ namespace Akka.Persistence.Tests
                 var cmd = message as Cmd;
                 if (cmd != null && cmd.Data.ToString() == "a")
                 {
-                    Persist(5, i =>
+                    Persist(5L, i =>
                     {
                         Sender.Tell(i);
                     });
