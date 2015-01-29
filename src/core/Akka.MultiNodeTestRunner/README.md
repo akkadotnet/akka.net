@@ -10,7 +10,7 @@ This README explains how to run the `Akka.MultiNodeTestRunner` to execute any `M
 
 Right now the only options for running the `MultiNodeTestRunner` is to build from the Akka.NET source and manually copy the binaries out of `src\core\Akka.MultiNodeTestRunner\bin\[Debug|Release]`:
 
-
+![MultiNodeTestRunner binaries](../../../documentation/wiki/images/multinode-teskit/multi-node-testrunner-binaries.png)
 
 The `Akka.MultiNodeTestRunner` process requires only one argument - the full path or name of the assembly containing `MultiNodeSpec` tests.
 
@@ -22,7 +22,13 @@ The `Akka.MultiNodeTestRunner` process requires only one argument - the full pat
 
     C:> Akka.MultiNodeTestRunner.exe "Akka.Cluster.Tests.dll"
 
+### Notes
+
+If your test assembly has any dependent DLLs, make sure all of those assemblies can be found in the current working directory of the test runner. Otherwise you might get `Could not load file or assembly` exceptions at run time.
+
 ## Sample Output
+
+*Working on cleaning this up now*
 
 
 
