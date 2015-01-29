@@ -137,8 +137,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.Ninject", "contrib\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RemoteDeploy", "RemoteDeploy", "{68D89B2A-6770-483E-B7B0-C7EDAE0C2A6D}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RemoteDeploy", "RemoteDeploy", "{68D89B2A-6770-483E-B7B0-C7EDAE0C2A6D}"
-EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Deploy.Remote", "examples\FSharp.Deploy.Remote\FSharp.Deploy.Remote.fsproj", "{F53B3F7C-6422-4AA7-AF87-B838D736DBAB}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Deploy.Local", "examples\FSharp.Deploy.Local\FSharp.Deploy.Local.fsproj", "{B65AAB66-A779-4A2C-AE6B-495C292551AE}"
