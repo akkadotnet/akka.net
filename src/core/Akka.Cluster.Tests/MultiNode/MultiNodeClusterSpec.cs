@@ -18,7 +18,7 @@ namespace Akka.Cluster.Tests.MultiNode
         public static Config ClusterConfigWithFailureDetectorPuppet()
         {
             return ConfigurationFactory.ParseString(
-                @"akka.cluster.failure-detector.implementation-class = ""Akka.Cluster.Tests.FailureDetectorPuppet""")
+                @"akka.cluster.failure-detector.implementation-class = ""Akka.Cluster.Tests.FailureDetectorPuppet, Akka.Cluster.Tests""")
                 .WithFallback(ClusterConfig());
         }
 
@@ -45,7 +45,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 #akka.remote.log-remote-lifecycle-events = off
                 #akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
                 akka.test {
-                    single-expect-default = 5 s
+                    single-expect-default = 15 s
                 }
             ");
         }

@@ -16,7 +16,7 @@ namespace Akka.Cluster
     /// 
     /// Receives <see cref="ClusterHeartbeatSender.Heartbeat"/> messages and replies.
     /// </summary>
-    internal sealed class ClusterHeartbeatReceiver : ReceiveActor, ILogReceive
+    internal sealed class ClusterHeartbeatReceiver : ReceiveActor
     {
         private readonly ClusterHeartbeatSender.HeartbeatRsp _selfHeartbeatRsp;
 

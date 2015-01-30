@@ -209,6 +209,7 @@
     <Compile Include="Event\LogMessage.cs" />
     <Compile Include="Event\StandardOutLogger.cs" />
     <Compile Include="Util\Guard.cs" />
+    <Compile Include="Util\ContinuousEnumerator.cs" />
     <Compile Include="Util\Internal\InterlockedSpin.cs" />
     <Compile Include="Util\Internal\Collections\EmptyReadOnlyCollections.cs" />
     <Compile Include="Util\Internal\Collections\IBinaryTreeNode.cs" />
@@ -220,6 +221,7 @@
     <Compile Include="Util\Internal\Collections\ImmutableAvlTreeMap.cs" />
     <Compile Include="Util\Internal\Collections\ImmutableTreeSet.cs" />
     <Compile Include="Util\Internal\StringBuilderExtensions.cs" />
+    <Compile Include="Util\ISurrogate.cs" />
     <Compile Include="Util\StandardOutWriter.cs" />
     <Compile Include="Event\Subscription.cs" />
     <Compile Include="Event\TraceLogger.cs" />

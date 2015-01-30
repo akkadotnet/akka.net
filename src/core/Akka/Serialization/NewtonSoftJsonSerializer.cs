@@ -1,5 +1,6 @@
 ﻿using Akka.Actor;
 using Akka.Actor.Internals;
+using Akka.Util;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -32,6 +33,7 @@ namespace Akka.Serialization
             //TODO: we should use an instanced serializer to be threadsafe for other ActorSystems
             JsonConvert.DefaultSettings = () => new JsonSerializerSettings
             {
+                PreserveReferencesHandling = PreserveReferencesHandling.Objects,
                 Converters = new List<JsonConverter> { new ActorRefConverter() }
             };
         }
@@ -83,7 +85,13 @@ namespace Akka.Serialization
             Serialization.CurrentSystem = system;
             string data = Encoding.Default.GetString(bytes);
 
-            return JsonConvert.DeserializeObject(data, JsonSerializerSettings);
+            var res = JsonConvert.DeserializeObject(data, JsonSerializerSettings);
+            var surrogate = res as ISurrogate;
+            if (surrogate != null)
+            {
+                return surrogate.Translate();
+            }
+            return res;
         }
 
         /// <summary>

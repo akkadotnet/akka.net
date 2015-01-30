@@ -347,7 +347,18 @@ namespace Akka.TestKit
         /// <returns></returns>
         public virtual TestProbe CreateTestProbe(string name=null)
         {
-            return new TestProbe(Sys, _assertions, name);
+            return CreateTestProbe(Sys, name);
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="TestProbe" />.
+        /// </summary>
+        /// <param name="system">For multi-actor system tests, you can specify which system the node is for.</param>
+        /// <param name="name">Optional: The name of the probe.</param>
+        /// <returns></returns>
+        public virtual TestProbe CreateTestProbe(ActorSystem system, string name = null)
+        {
+            return new TestProbe(system, _assertions, name);
         }
 
         /// <summary>

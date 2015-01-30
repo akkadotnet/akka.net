@@ -8,6 +8,7 @@ using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using System.Threading;
 using Akka.Event;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Actor
@@ -111,7 +112,7 @@ namespace Akka.Actor
         }
     }
 
-    public class ActorRefSurrogate
+    public class ActorRefSurrogate : ISurrogate
     {
         public ActorRefSurrogate(string path)
         {
@@ -119,6 +120,11 @@ namespace Akka.Actor
         }
 
         public string Path { get; private set; }
+
+        public object Translate()
+        {
+            return (ActorRef) this;
+        }
     }
 
     internal static class ActorRefSender
@@ -134,7 +140,6 @@ namespace Akka.Actor
     {
 
         public static readonly Nobody Nobody = Nobody.Instance;
-        public static readonly ReservedActorRef Reserved = ReservedActorRef.Instance;
         public static readonly ActorRef NoSender = Actor.NoSender.Instance; //In Akka this is just null
 
         public abstract ActorPath Path { get; }
@@ -312,30 +317,6 @@ namespace Akka.Actor
             get { throw new NotSupportedException("Nobody does not provide"); }
         }
 
-    }
-
-    public sealed class ReservedActorRef : MinimalActorRef      //TODO: This isn't really an ActorRef. When ActorCell uses a better ChildrensCollection we can remove this
-    {
-        public static ReservedActorRef Instance = new ReservedActorRef();
-        public override ActorPath Path { get { throw new NotSupportedException(); } }
-        private ReservedActorRef() { }
-
-        public override ActorRefProvider Provider
-        {
-            get { throw new NotSupportedException("Reserved does not provide"); }
-        }
-
-        public override bool Equals(object obj)
-        {
-            var reserveredActorRef = obj as ReservedActorRef;
-            if (reserveredActorRef == null) return false;
-            return reserveredActorRef == Instance;
-        }
-
-        public override int GetHashCode()
-        {
-            return 17;
-        }
     }
 
     public abstract class ActorRefWithCell : InternalActorRef

@@ -2,20 +2,35 @@
 using System.Linq;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
+using Akka.Remote.Transport;
 using Xunit;
 
 namespace Akka.Cluster.Tests.MultiNode
 {
-    /*public class InitialHeartbeatMultiNodeSpec : MultiNodeConfig
+    public class InitialHeartbeatMultiNodeConfig : MultiNodeConfig
     {
-        readonly RoleName _controller;
-        public RoleName Controller { get { return _controller; } }
-        readonly RoleName _first;
-        public RoleName First { get { return _first; } }
-        readonly RoleName _second;
-        public RoleName Second { get { return _second; } }
+        private readonly RoleName _controller;
 
-        public InitialHeartbeatMultiNodeSpec()
+        public RoleName Controller
+        {
+            get { return _controller; }
+        }
+
+        private readonly RoleName _first;
+
+        public RoleName First
+        {
+            get { return _first; }
+        }
+
+        private readonly RoleName _second;
+
+        public RoleName Second
+        {
+            get { return _second; }
+        }
+
+        public InitialHeartbeatMultiNodeConfig()
         {
             _controller = Role("controller");
             _first = Role("first");
@@ -30,7 +45,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             TestTransport = true;
         }
-
+        
         public class InitialHeartbeatMultiNode1 : InitialHeartbeatSpec
         {
         }
@@ -42,22 +57,22 @@ namespace Akka.Cluster.Tests.MultiNode
         public class InitialHeartbeatMultiNode3 : InitialHeartbeatSpec
         {
         }
-
+        
         public abstract class InitialHeartbeatSpec : MultiNodeClusterSpec
         {
-            private readonly InitialHeartbeatMultiNodeSpec _config;
+            private readonly InitialHeartbeatMultiNodeConfig _config;
 
-            protected InitialHeartbeatSpec() : this(new InitialHeartbeatMultiNodeSpec())
+            protected InitialHeartbeatSpec() : this(new InitialHeartbeatMultiNodeConfig())
             {
             }
 
-            private InitialHeartbeatSpec(InitialHeartbeatMultiNodeSpec spec)
-                : base(spec)
+            private InitialHeartbeatSpec(InitialHeartbeatMultiNodeConfig config)
+                : base(config)
             {
-                _config = spec;
+                _config = config;
             }
 
-            [Fact]
+            [MultiNodeFact]
             public void AMemberMustDetectFailureEvenThoughNoHeartbeatsHaveBeenReceived()
             {
                 var firstAddress = GetAddress(_config.First);
@@ -92,6 +107,9 @@ namespace Akka.Cluster.Tests.MultiNode
                 //TODO: Seem to be able to pass barriers once other node fails?
                 EnterBarrier("second-joined");
 
+                //TODO: Finish!
+                return;
+
                 // It is likely that second has not started heartbeating to first yet,
                 // and when it does the messages doesn't go through and the first extra heartbeat is triggered.
                 // If the first heartbeat arrives, it will detect the failure anyway but not really exercise the
@@ -106,9 +124,9 @@ namespace Akka.Cluster.Tests.MultiNode
                         () => !Cluster.FailureDetector.IsAvailable(GetAddress(_config.First))
                         , TimeSpan.FromSeconds(15))
                     , _config.Second);
-                
+
                 EnterBarrier("after-1");
             }
         }
-    */
+    }
 }

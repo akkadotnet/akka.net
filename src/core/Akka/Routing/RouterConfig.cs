@@ -8,12 +8,12 @@ using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
-    public abstract class RouterConfig
+    public abstract class RouterConfig : IEquatable<RouterConfig>
     {
         //  public abstract RoutingLogic GetLogic();
 
         public static readonly RouterConfig NoRouter = new NoRouter();
-        public string RouterDispatcher { get; protected set; }
+        public virtual string RouterDispatcher { get; protected set; }
 
         public virtual RouterConfig WithFallback(RouterConfig routerConfig)
         {
@@ -27,10 +27,16 @@ namespace Akka.Routing
 
         public virtual bool IsManagementMessage(object message)
         {
-            return 
-                message is AutoReceivedMessage || 
+            return
+                message is AutoReceivedMessage ||
                 // in akka.net this message is a subclass of AutoReceivedMessage - so removed condition that "message is Terminated ||"
                 message is RouterManagementMesssage;
+        }
+
+        public virtual bool Equals(RouterConfig other)
+        {
+            if (other == null) return false;
+            return GetType() == other.GetType() && String.Equals(RouterDispatcher, other.RouterDispatcher);
         }
     }
 
@@ -110,7 +116,15 @@ namespace Akka.Routing
         public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
         {
             if (paths == null) return new Routee[0];
-            return paths.Select(((ActorSystemImpl) routedActorCell.System).ActorSelection).Select(actor => new ActorSelectionRoutee(actor));
+            return paths.Select(((ActorSystemImpl)routedActorCell.System).ActorSelection).Select(actor => new ActorSelectionRoutee(actor));
+        }
+
+        public override bool Equals(RouterConfig other)
+        {
+            if (!base.Equals(other)) return false;
+            var otherGroup = other as Group;
+            if (otherGroup == null) return false; //should never be true due to the previous check
+            return Paths.Intersect(otherGroup.Paths).Count() == Paths.Length;
         }
     }
 
@@ -119,13 +133,17 @@ namespace Akka.Routing
     public abstract class Pool : RouterConfig
     {
         protected Pool() //for serialization
-        {            
+        {
         }
 
         protected Pool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher,
             bool usePoolDispatcher = false)
         {
+            // OMG, if every member in Java is virtual - you must never call any members in a constructor!!1!
+            // In all seriousness, without making these members virtual RemoteRouterConfig won't work
+            // ReSharper disable DoNotCallOverridableMethodsInConstructor
             NrOfInstances = nrOfInstances;
+
             Resizer = resizer;
             SupervisorStrategy = supervisorStrategy ?? Pool.DefaultStrategy;
             UsePoolDispatcher = usePoolDispatcher;
@@ -137,27 +155,28 @@ namespace Akka.Routing
             NrOfInstances = config.GetInt("nr-of-instances");
             Resizer = DefaultResizer.FromConfig(config);
             UsePoolDispatcher = config.HasPath("pool-dispatcher");
+            // ReSharper restore DoNotCallOverridableMethodsInConstructor
         }
 
         /// <summary>
         /// The number of instances in the pool.
         /// </summary>
-        public int NrOfInstances { get; set; }
+        public virtual int NrOfInstances { get; set; }
 
         /// <summary>
         /// Whether or not to use the pool dispatcher.
         /// </summary>
-        public bool UsePoolDispatcher { get; set; }
+        public virtual bool UsePoolDispatcher { get; set; }
 
         /// <summary>
         /// An instance of the resizer for this pool.
         /// </summary>
-        public Resizer Resizer { get; set; }
+        public virtual Resizer Resizer { get; set; }
 
         /// <summary>
         /// An instance of the supervisor strategy for this pool.
         /// </summary>
-        public SupervisorStrategy SupervisorStrategy { get; set; }
+        public virtual SupervisorStrategy SupervisorStrategy { get; set; }
 
         public virtual Routee NewRoutee(Props routeeProps, IActorContext context)
         {
@@ -165,7 +184,7 @@ namespace Akka.Routing
             return routee;
         }
 
-        protected Props EnrichWithPoolDispatcher(Props routeeProps, IActorContext context)
+        internal Props EnrichWithPoolDispatcher(Props routeeProps, IActorContext context)
         {
             //        if (usePoolDispatcher && routeeProps.dispatcher == Dispatchers.DefaultDispatcherId)
             //  routeeProps.withDispatcher("akka.actor.deployment." + context.self.path.elements.drop(1).mkString("/", "/", "")
@@ -198,7 +217,7 @@ namespace Akka.Routing
             for (int i = 0; i < NrOfInstances; i++)
             {
                 //TODO: where do we get props?
-                yield return NewRoutee(Akka.Actor.Props.Empty , routedActorCell);
+                yield return NewRoutee(Akka.Actor.Props.Empty, routedActorCell);
             }
         }
 
@@ -214,6 +233,21 @@ namespace Akka.Routing
         }
 
         #endregion
+
+        #region Overrides
+
+        public override bool Equals(RouterConfig other)
+        {
+            if (!base.Equals(other)) return false;
+            var otherPool = other as Pool;
+            if (otherPool == null) return false; //should never be true due to the previous check
+            return NrOfInstances == otherPool.NrOfInstances &&
+                   UsePoolDispatcher == otherPool.UsePoolDispatcher &&
+                   (Resizer == null && otherPool.Resizer == null || Resizer != null && otherPool.Resizer != null) &&
+                   SupervisorStrategy.GetType() == otherPool.SupervisorStrategy.GetType();
+        }
+
+        #endregion
     }
 
     public class FromConfig : RouterConfig
@@ -225,9 +259,10 @@ namespace Akka.Routing
             get { return _instance; }
         }
 
-        public FromConfig() : base()
+        public FromConfig()
+            : base()
         {
-            
+
         }
 
         public override Router CreateRouter(ActorSystem system)

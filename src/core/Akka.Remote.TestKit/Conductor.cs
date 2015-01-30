@@ -181,14 +181,14 @@ namespace Akka.Remote.TestKit
         {
             // the recover is needed to handle ClientDisconnectedException exception,
             // which is normal during shutdown
-            try
+            return Controller.Ask(new Terminate(node, new Right<bool, int>(exitValue))).ContinueWith(t =>
             {
-                return Controller.Ask<Done>(new Terminate(node, new Right<bool, int>(exitValue)));
-            }
-            catch (Controller.ClientDisconnectedException)
-            {
-                return Task.FromResult(Done.Instance);
-            }
+                if(t.Result is Done) return Done.Instance;
+                var failure = t.Result as FSMBase.Failure;
+                if (failure != null && failure.Cause is Controller.ClientDisconnectedException) return Done.Instance;
+
+                throw new InvalidOperationException(String.Format("Expected Done but received {0}", t.Result));
+            });
         }
 
         /// <summary>
@@ -203,14 +203,14 @@ namespace Akka.Remote.TestKit
         {
             // the recover is needed to handle ClientDisconnectedException exception,
             // which is normal during shutdown
-            try
+            return Controller.Ask(new Terminate(node, new Left<bool, int>(abort))).ContinueWith(t =>
             {
-                return Controller.Ask<Done>(new Terminate(node, new Left<bool, int>(abort)));
-            }
-            catch (Controller.ClientDisconnectedException)
-            {
-                return Task.FromResult(Done.Instance);
-            }
+                if (t.Result is Done) return Done.Instance;
+                var failure = t.Result as FSMBase.Failure;
+                if (failure != null && failure.Cause is Controller.ClientDisconnectedException) return Done.Instance;
+
+                throw new InvalidOperationException(String.Format("Expected Done but received {0}", t.Result));
+            });
         }
 
         /// <summary>

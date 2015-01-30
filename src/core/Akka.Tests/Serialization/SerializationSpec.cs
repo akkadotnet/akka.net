@@ -1,5 +1,6 @@
 ﻿using Akka.Serialization;
 using Akka.TestKit;
+using Akka.TestKit.TestActors;
 using Xunit;
 using System;
 using System.Collections.Generic;
@@ -51,6 +52,16 @@ namespace Akka.Tests.Serialization
             var deserialized = (Terminate)serializer.FromBinary(serialized, typeof(Terminate));
 
             Assert.NotNull(deserialized);
+        }
+
+        [Fact]
+        public void CanTranslateActorRefFromSurrogateType()
+        {
+            var aref = ActorOf<BlackHoleActor>();
+            var serializer = Sys.Serialization.FindSerializerFor(aref);
+            var bytes = serializer.ToBinary(aref);
+            var sref = (ActorRef)serializer.FromBinary(bytes, typeof(ActorRef));
+            Assert.NotNull(sref);
         }
 
         //TODO: find out why this fails on build server

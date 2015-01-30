@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
-    public class Scope
+    public class Scope : IEquatable<Scope>
     {
         public static readonly LocalScope Local = new LocalScope();
         private Scope _fallback;
@@ -24,6 +20,14 @@ namespace Akka.Actor
             {
                 _fallback = _fallback,
             };
+        }
+
+        public virtual bool Equals(Scope other)
+        {
+            if (other == null) return false;
+
+            //we don't do equality checks on fallbacks
+            return GetType() == other.GetType();
         }
     }
 }
