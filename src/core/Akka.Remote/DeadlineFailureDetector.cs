@@ -1,9 +1,9 @@
-﻿using System;
-using Akka.Configuration;
+﻿using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
-using Helios.Util;
+
+using System;
 using System.Threading;
 
 namespace Akka.Remote
@@ -30,7 +30,7 @@ namespace Akka.Remote
         {
             _acceptableHeartbeatPause = acceptableHeartbeatPause;
             _acceptableHeartbeatMillis = Convert.ToInt64(acceptableHeartbeatPause.TotalMilliseconds);
-            Guard.True(_acceptableHeartbeatPause > TimeSpan.Zero, "acceptable-heartbeat-pause must be greater than zero");
+            Guard.Assert(_acceptableHeartbeatPause > TimeSpan.Zero, "acceptable-heartbeat-pause must be greater than zero");
         }
 
         /// <summary>
