@@ -36,5 +36,7 @@ namespace Akka.Actor
         /// The stash is guaranteed to be empty afterwards.
         /// </summary>
         IEnumerable<Envelope> ClearStash();
+
+        void Prepend(IEnumerable<Envelope> envelopes);
     }
 }

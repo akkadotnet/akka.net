@@ -106,6 +106,16 @@ An (unbounded) deque-based mailbox can be configured as follows:
             return stashed;
         }
 
+        public void Prepend(IEnumerable<Envelope> envelopes)
+        {
+            // since we want to save the order of messages, but still prepending using AddFirst,
+            // we must enumerate envelopes in reversed order
+            foreach (var envelope in envelopes.Distinct().Reverse())
+            {
+                _theStash.AddFirst(envelope);
+            }
+        }
+
         /// <summary>
         /// Enqueues <paramref name="msg"/> at the first position in the mailbox. If the message contained in
         /// the envelope is a <see cref="Terminated"/> message, it will be ensured that it can be re-received
