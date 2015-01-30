@@ -1,7 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
+using System.Threading;
+using Akka.Actor;
+using Akka.MultiNodeTestRunner.Shared;
+using Akka.MultiNodeTestRunner.Shared.Reporting;
+using Akka.MultiNodeTestRunner.Shared.Sinks;
+using Akka.Remote.TestKit;
 using Xunit;
 
 namespace Akka.MultiNodeTestRunner
@@ -11,10 +18,16 @@ namespace Akka.MultiNodeTestRunner
     /// </summary>
     class Program
     {
+        protected static ActorSystem TestRunSystem;
+
+        protected static ActorRef SinkCoordinator;
+
+        
+
         /// <summary>
         /// MultiNodeTestRunner takes the following <see cref="args"/>:
         /// 
-        /// C:\> Akka.MultiNodeTestRunner.exe [assembly name]
+        /// C:\> Akka.MultiNodeTestRunner.exe [assembly name] [-Dmultinode.enable-filesink=on]
         /// 
         /// <list type="number">
         /// <listheader>
@@ -30,11 +43,22 @@ namespace Akka.MultiNodeTestRunner
         ///              "C:\akka.net\src\Akka.Cluster.Tests\bin\Debug\Akka.Cluster.Tests.dll"
         ///     </description>
         /// </item>
+        /// <item>
+        ///     <term>-Dmultinode.enable-filesink</term>
+        ///     <description>Having this flag set means that the contents of this test run will be saved in the
+        ///                 current working directory as a .JSON file.
+        ///     </description>
+        /// </item>
         /// </list>
         /// </summary>
         static void Main(string[] args)
         {
+            TestRunSystem = ActorSystem.Create("TestRunnerLogging");
+            SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>());
+
             var assemblyName = args[0];
+
+            EnableAllSinks(assemblyName);
 
             using (var controller = new XunitFrontController(assemblyName))
             {
@@ -45,9 +69,11 @@ namespace Akka.MultiNodeTestRunner
 
                     foreach (var test in discovery.Tests)
                     {
-                        Console.WriteLine("Starting test {0}", test.Value.First().MethodName);
+                        PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
 
                         var processes = new List<Process>();
+
+                        StartNewSpec(test.Value);
 
                         foreach (var nodeTest in test.Value)
                         {
@@ -55,14 +81,27 @@ namespace Akka.MultiNodeTestRunner
                             var process = new Process();
                             processes.Add(process);
                             process.StartInfo.UseShellExecute = false;
+                            process.StartInfo.RedirectStandardOutput = true;
                             process.StartInfo.FileName = "Akka.NodeTestRunner.exe";
                             process.StartInfo.Arguments = String.Format(@"-Dmultinode.test-assembly=""{0}"" -Dmultinode.test-class=""{1}"" -Dmultinode.test-method=""{2}"" -Dmultinode.max-nodes={3} -Dmultinode.server-host=""{4}"" -Dmultinode.host=""{5}"" -Dmultinode.index={6}",
                                 assemblyName, nodeTest.TypeName, nodeTest.MethodName, test.Value.Count, "localhost", "localhost", nodeTest.Node - 1);
                             var nodeIndex = nodeTest.Node;
                             process.OutputDataReceived +=
-                                (sender, line) => Console.WriteLine("[Node{0}]{1}", nodeIndex, line.Data);
+                                (sender, line) =>
+                                {
+                                    //ignore any trailing whitespace
+                                    if (string.IsNullOrEmpty(line.Data) || string.IsNullOrWhiteSpace(line.Data)) return;
+                                    string message = line.Data;
+                                    if (!message.StartsWith("[NODE", true, CultureInfo.InvariantCulture))
+                                    {
+                                        message = "[NODE" + nodeIndex + "]" + message;
+                                    }
+                                    PublishToAllSinks(message);
+                                };
                             process.Start();
-                            Console.WriteLine("Started node {0} on pid {1}", nodeTest.Node, process.Id);
+
+                            process.BeginOutputReadLine();
+                            PublishRunnerMessage(string.Format("Started node {0} on pid {1}", nodeTest.Node, process.Id));
                         }
 
                         foreach (var process in processes)
@@ -70,11 +109,55 @@ namespace Akka.MultiNodeTestRunner
                             process.WaitForExit();
                             process.Close();
                         }
+
+                        PublishRunnerMessage("Waiting 3 seconds for all messages from all processes to be collected.");
+                        Thread.Sleep(TimeSpan.FromSeconds(3));
+                        FinishSpec();
                     }
                 }
             }
             Console.WriteLine("Complete");
-            Console.ReadLine();
+            PublishRunnerMessage("Waiting 5 seconds for all messages from all processes to be collected.");
+            Thread.Sleep(TimeSpan.FromSeconds(5));
+            CloseAllSinks();
+            
+            //Block until all Sinks have been terminated.
+            TestRunSystem.AwaitTermination(TimeSpan.FromMinutes(1));
+
+            //Return the proper exit code
+            Environment.Exit(ExitCodeContainer.ExitCode);
+        }
+
+        static void EnableAllSinks(string assemblyName)
+        {
+            var fileSystemSink = CommandLine.GetProperty("multinode.enable-filesink");
+            if (!string.IsNullOrEmpty(fileSystemSink))
+                SinkCoordinator.Tell(new SinkCoordinator.EnableSink(new FileSystemMessageSink(assemblyName)));
+        }
+
+        static void CloseAllSinks()
+        {
+            SinkCoordinator.Tell(new SinkCoordinator.CloseAllSinks());
+        }
+
+        static void StartNewSpec(IList<NodeTest> tests)
+        {
+            SinkCoordinator.Tell(tests);
+        }
+
+        static void FinishSpec()
+        {
+           SinkCoordinator.Tell(new EndSpec());
+        }
+
+        static void PublishRunnerMessage(string message)
+        {
+            SinkCoordinator.Tell(new SinkCoordinator.RunnerMessage(message));
+        }
+
+        static void PublishToAllSinks(string message)
+        {
+            SinkCoordinator.Tell(message);
         }
     }
 }

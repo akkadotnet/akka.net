@@ -1,6 +1,6 @@
-﻿namespace Akka.MultiNodeTestRunner
+﻿namespace Akka.MultiNodeTestRunner.Shared
 {
-    class NodeTest
+    public class NodeTest
     {
         public int Node { get; set; }
         public string TestName { get; set; }

@@ -121,7 +121,9 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.FSharp"
       "core/Akka.TestKit"
       "core/Akka.Remote"
+      "core/Akka.Remote.TestKit"
       "core/Akka.Cluster"
+      "core/Akka.MultiNodeTestRunner"
       "contrib/loggers/Akka.Logger.slf4net"
       "contrib/loggers/Akka.Logger.NLog" 
       "contrib/loggers/Akka.Logger.Serilog" 
@@ -170,7 +172,18 @@ Target "RunTestsMono" <| fun _ ->
     xUnit
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
         xunitTestAssemblies
-        
+
+Target "MultiNodeTests" <| fun _ ->
+    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" "bin/core/Akka.MultiNodeTestRunner*"
+    printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
+
+
+    let args = "Akka.Cluster.Tests.dll -Dmultinode.enable-filesink=on"
+    let result = ExecProcess(fun info -> 
+        info.FileName <- multiNodeTestPath
+        info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
+        info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
+    if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
@@ -396,6 +409,7 @@ Target "HelpNuget" <| fun _ ->
 Target "All" DoNothing
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
+"BuildRelease" ==> "MultiNodeTests" //Invovles a lot of BIN copying.
 "Nuget" ==> "All"
 
 RunTargetOrDefault "Help"

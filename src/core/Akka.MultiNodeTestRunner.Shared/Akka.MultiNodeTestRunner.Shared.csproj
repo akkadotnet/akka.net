@@ -4,18 +4,17 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{C1113300-74F1-446A-9914-3020C842EDF1}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <ProjectGuid>{964F0EC5-FBE6-47C5-8AE6-145114D5DB8C}</ProjectGuid>
+    <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Akka.MultiNodeTestRunner</RootNamespace>
-    <AssemblyName>Akka.MultiNodeTestRunner</AssemblyName>
+    <RootNamespace>Akka.MultiNodeTestRunner.Shared</RootNamespace>
+    <AssemblyName>Akka.MultiNodeTestRunner.Shared</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -25,7 +24,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -34,54 +32,47 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Newtonsoft.Json.6.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="xunit.abstractions">
-      <HintPath>..\..\packages\xunit.abstractions.2.0.0-beta4-build2738\lib\net35\xunit.abstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="xunit.runner.utility">
-      <HintPath>..\..\packages\xunit.runner.utility.2.0.0-beta4-build2738\lib\net35\xunit.runner.utility.dll</HintPath>
-    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Akka.Remote.TestKit\CommandLine.cs">
-      <Link>CommandLine.cs</Link>
-    </Compile>
-    <Compile Include="Discovery.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="ExitCodeContainer.cs" />
+    <Compile Include="NodeTest.cs" />
+    <Compile Include="Persistence\IPersistentTestRunStore.cs" />
+    <Compile Include="Persistence\JsonPersistentTestRunStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Sinks\ConsoleMessageSinkActor.cs" />
+    <Compile Include="Sinks\FileSystemMessageSinkActor.cs" />
+    <Compile Include="Sinks\IMessageSink.cs" />
+    <Compile Include="Reporting\MultiNodeMessage.cs" />
+    <Compile Include="Reporting\TestRunTree.cs" />
+    <Compile Include="Sinks\Messages.cs" />
+    <Compile Include="Sinks\MessageSink.cs" />
+    <Compile Include="Sinks\MessageSinkActor.cs" />
+    <Compile Include="Reporting\NodeDataActor.cs" />
+    <Compile Include="Reporting\SpecRunCoordinator.cs" />
+    <Compile Include="Sinks\SinkCoordinator.cs" />
+    <Compile Include="Sinks\TestCoordinatorEnabledMessageSink.cs" />
+    <Compile Include="Reporting\TestRunCoordinator.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\contrib\loggers\Akka.Logger.NLog\Akka.Logger.NLog.csproj">
-      <Project>{a8aa2d7e-3d35-44df-af92-80a2c39c1f4d}</Project>
-      <Name>Akka.Logger.NLog</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Akka.Cluster.Tests\Akka.Cluster.Tests.csproj">
-      <Project>{c8d6a95c-50bf-4416-a212-86b18b87220d}</Project>
-      <Name>Akka.Cluster.Tests</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Akka.MultiNodeTestRunner.Shared\Akka.MultiNodeTestRunner.Shared.csproj">
-      <Project>{964f0ec5-fbe6-47c5-8ae6-145114d5db8c}</Project>
-      <Name>Akka.MultiNodeTestRunner.Shared</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Akka.NodeTestRunner\Akka.NodeTestRunner.csproj">
-      <Project>{28520f30-2868-4bd3-9cae-ac27226c24e3}</Project>
-      <Name>Akka.NodeTestRunner</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj">
-      <Project>{ea4ff8fd-7c53-49c8-b9aa-02e458b3e6a7}</Project>
-      <Name>Akka.Remote</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

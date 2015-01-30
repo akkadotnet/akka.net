@@ -36,7 +36,9 @@ namespace Akka.Cluster.Tests.MultiNode
             _first = Role("first");
             _second = Role("second");
 
-            CommonConfig = DebugConfig(false).WithFallback(
+            CommonConfig = DebugConfig(false)
+                .WithFallback(MultiNodeLoggingConfig.LoggingConfig)
+                .WithFallback(
                 ConfigurationFactory.ParseString(@"
                     akka.testconductor.barrier-timeout = 60 s
                     akka.stdout-loglevel = DEBUG

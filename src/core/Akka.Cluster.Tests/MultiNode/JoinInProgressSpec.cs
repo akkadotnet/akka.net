@@ -19,7 +19,7 @@ namespace Akka.Cluster.Tests.MultiNode
             _first = Role("first");
             _second = Role("second");
 
-            CommonConfig = ConfigurationFactory.ParseString(@"akka.loggers = [""Akka.Logger.NLog.NLogLogger, Akka.Logger.NLog""]").WithFallback(DebugConfig(true)).WithFallback(
+            CommonConfig = MultiNodeLoggingConfig.LoggingConfig.WithFallback(DebugConfig(true)).WithFallback(
                 ConfigurationFactory.ParseString(@"
                     akka.stdout-loglevel = DEBUG
                     akka.cluster {
