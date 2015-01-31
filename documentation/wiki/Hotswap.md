@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Hotswap
+---
 ```csharp
 public class GreetingActor : UntypedActor
 {

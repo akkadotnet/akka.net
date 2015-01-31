@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Licenses
+---
 ## Akka.NET License
 ```
 This software is licensed under the Apache 2 license, quoted below.

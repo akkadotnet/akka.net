@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Actor lifecycle
+---
 ## Actor Lifecycle
 
 ![Actor lifecycle](images/actor_lifecycle.png)

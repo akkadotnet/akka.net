@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Props
+---
 ## Props
 
 Props is a configuration class to specify options for the creation of actors, think of it as an immutable and thus freely shareable recipe for creating an actor including associated deployment information (e.g. which dispatcher to use, see more below). Here are some examples of how to create a Props instance.

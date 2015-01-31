@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Team
+---
 |Name               | Role |
 |-------------------|------|
 |Roger Alsing       | Founder |

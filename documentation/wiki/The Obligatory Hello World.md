@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: The Obligatory Hello World
+---
 #  The Obligatory Hello World
 This example shows how to define and consume actors in both C# and F#
 

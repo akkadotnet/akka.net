@@ -1,1 +1,5 @@
+---
+layout: wiki
+title: SupervisorStrategy
+---
 .

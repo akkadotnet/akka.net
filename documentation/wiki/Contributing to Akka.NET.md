@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Contributing to Akka.NET
+---
 Akka.NET exposes the Actor model to .NET in a way that has never been done before, and it's a large project that encompasses a big range of capabilities. Therefore, contributions are welcome and encouraged.
 
 ## How to Send Code Contributions to Akka.NET
