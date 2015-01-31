@@ -27,15 +27,17 @@ It's important to remember, that each actor returning point should point to the 
 
 Example:
 
-    let aref = 
-        spawn system "my-actor" 
-            (fun mailbox -> 
-                let rec loop() = actor {
-                    let! message = mailbox.Receive()
-                    // handle an incoming message
-                    return! loop()
-                }
-                loop())
+```fsharp
+let aref = 
+    spawn system "my-actor" 
+        (fun mailbox -> 
+            let rec loop() = actor {
+                let! message = mailbox.Receive()
+                // handle an incoming message
+                return! loop()
+            }
+            loop())
+```
 
 Since construct used in an example above is quite popular, you may also use following shorthand functions to define message handler's behavior:
 
@@ -44,13 +46,15 @@ Since construct used in an example above is quite popular, you may also use foll
 
 Example:
 
-    let handleMessage (mailbox: Actor<'a>) msg =
-        match msg with
-        | Some x -> printf "%A" x
-        | None -> ()
+```fsharp
+let handleMessage (mailbox: Actor<'a>) msg =
+    match msg with
+    | Some x -> printf "%A" x
+    | None -> ()
 
-    let aref = spawn system "my-actor" (actorOf2 handleMessage)
-    let blackHole = spawn system "black-hole" (actorOf (fun msg -> ()))
+let aref = spawn system "my-actor" (actorOf2 handleMessage)
+let blackHole = spawn system "black-hole" (actorOf (fun msg -> ()))
+```
 
 #### Spawning actors
 
@@ -74,10 +78,12 @@ To be able to specifiy more precise actor creation behavior, you may use `spawnO
 
 Example (deploy actor remotely):
 
-    open Akka.Actor
-    let remoteRef = 
-        spawne system "my-actor" <@ actorOf myFunc @> 
-            [SpawnOption.Deploy (Deploy(RemoteScope(Address.Parse "akka.tcp://remote-system@127.0.0.1:9000/")))]
+```fsharp
+open Akka.Actor
+let remoteRef = 
+    spawne system "my-actor" <@ actorOf myFunc @> 
+        [SpawnOption.Deploy (Deploy(RemoteScope(Address.Parse "akka.tcp://remote-system@127.0.0.1:9000/")))]
+```
 
 ### Ask and tell operators
 
@@ -85,8 +91,10 @@ While you may use traditional `ActorRef.Tell` and `ActorRef.Ask` methods, it's m
 
 Example:
 
-    aref <! message
-    async { let! response = aref <? request }
+```fsharp
+aref <! message
+async { let! response = aref <? request }
+```
 
 ### Actor selection
 
@@ -96,10 +104,12 @@ Actors may be referenced not only by `ActorRef`s, but also through actor path se
 
 Example:
 
-    let aref = spawn system "my-actor" (actorOf2 (fun mailbox m -> printfn "%A said %s" (mailbox.Self.Path) m))
-    aref <! "one"
-    let aref2 = select "akka://my-system/user/my-actor" system
-    aref2 <! "two"
+```fsharp
+let aref = spawn system "my-actor" (actorOf2 (fun mailbox m -> printfn "%A said %s" (mailbox.Self.Path) m))
+aref <! "one"
+let aref2 = select "akka://my-system/user/my-actor" system
+aref2 <! "two"
+```
 
 ### Inboxes
 
@@ -112,13 +122,15 @@ Inboxes are actor-like objects used to be listened by other actors. They are a g
 
 Inboxes may be configured to accept a limited number of incoming messages (default is 1000):
 
-    akka {
-        actor {
-            inbox {
-                inbox-size = 30
-            }
+```hocon
+akka {
+    actor {
+        inbox {
+            inbox-size = 30
         }
     }
+}
+```
 
 ### Monitoring
 
@@ -140,12 +152,14 @@ Actors have a place in their system's hierarchy trees. To manage failures done b
 
 Example:
 
-    let aref = 
-        spawnOpt system "my-actor" (actorOf myFunc) 
-            [ SpawnOption.SupervisorStrategy (Strategy.oneForOne (fun error -> 
-                match error with
-                | :? ArithmeticException -> Directive.Escalate
-                | _ -> SupervisorStrategy.DefaultDecider error )) ]
+```fsharp
+let aref = 
+    spawnOpt system "my-actor" (actorOf myFunc) 
+        [ SpawnOption.SupervisorStrategy (Strategy.oneForOne (fun error -> 
+            match error with
+            | :? ArithmeticException -> Directive.Escalate
+            | _ -> SupervisorStrategy.DefaultDecider error )) ]
+```
 
 ### Publish/Subscribe support
 
@@ -157,29 +171,31 @@ While you may use built-in set of the event stream methods (see: Event Streams),
 
 Example: 
 
-    type Message = 
-        | Subscribe 
-        | Unsubscribe
-        | Msg of ActorRef * string
+```fsharp
+type Message = 
+    | Subscribe 
+    | Unsubscribe
+    | Msg of ActorRef * string
 
-    let subscriber = 
-        spawn system "subscriber" 
-            (actorOf2 (fun mailbox msg -> 
-                let eventStream = mailbox.Context.System.EventStream
-                match msg with
-                | Msg (sender, content) -> printfn "%A says %s" (sender.Path) content
-                | Subscribe -> sub typeof<Message> mailbox.Self eventStream |> ignore
-                | Unsubscribe -> unsub typeof<Message> mailbox.Self eventStream |> ignore ))
-            
-    let publisher = 
-        spawn system "publisher" 
-            (actorOf2 (fun mailbox msg -> 
-                pub msg mailbox.Context.System.EventStream))
+let subscriber = 
+    spawn system "subscriber" 
+        (actorOf2 (fun mailbox msg -> 
+            let eventStream = mailbox.Context.System.EventStream
+            match msg with
+            | Msg (sender, content) -> printfn "%A says %s" (sender.Path) content
+            | Subscribe -> sub typeof<Message> mailbox.Self eventStream |> ignore
+            | Unsubscribe -> unsub typeof<Message> mailbox.Self eventStream |> ignore ))
+        
+let publisher = 
+    spawn system "publisher" 
+        (actorOf2 (fun mailbox msg -> 
+            pub msg mailbox.Context.System.EventStream))
 
-    subscriber <! Subscribe
-    publisher  <! Msg (publisher, "hello")
-    subscriber <! Unsubscribe
-    publisher  <! Msg (publisher, "hello again")
+subscriber <! Subscribe
+publisher  <! Msg (publisher, "hello")
+subscriber <! Unsubscribe
+publisher  <! Msg (publisher, "hello again")
+```
 
 ### Scheduling
 
@@ -201,15 +217,17 @@ F# API supports two groups of logging functions - one that operates directly on 
 
 Both groups support logging on various levels (DEBUG, &lt;default&gt; INFO, WARNING and ERROR). Actor system's logging level may be managed through configuration, i.e.:
 
-    akka {
-        actor {
-            # collection of loggers used inside actor system, specified by fully-qualified type name
-            loggers = [ "Akka.Event.DefaultLogger, Akka" ]
+```hocon
+akka {
+    actor {
+        # collection of loggers used inside actor system, specified by fully-qualified type name
+        loggers = [ "Akka.Event.DefaultLogger, Akka" ]
 
-            # Options: OFF, ERROR, WARNING, INFO, DEBUG
-            logLevel = "DEBUG"
-        }
+        # Options: OFF, ERROR, WARNING, INFO, DEBUG
+        logLevel = "DEBUG"
     }
+}
+```
 
 F# API provides following logging methods:
 
@@ -228,15 +246,17 @@ To operate directly between `Async` results and actors, use `pipeTo` function (a
 
 Example:
 
-    open System.IO
-    let handler (mailbox: Actor<obj>) msg = 
-        match box msg with
-        | :? FileInfo as fi -> 
-            let reader = new StreamReader(fi.OpenRead())
-            reader.AsyncReadToEnd() |!> mailbox.Self 
-        | :? string as content ->
-            printfn "File content: %s" content
-        | _ -> mailbox.Unhandled()
+```fsharp
+open System.IO
+let handler (mailbox: Actor<obj>) msg = 
+    match box msg with
+    | :? FileInfo as fi -> 
+        let reader = new StreamReader(fi.OpenRead())
+        reader.AsyncReadToEnd() |!> mailbox.Self 
+    | :? string as content ->
+        printfn "File content: %s" content
+    | _ -> mailbox.Unhandled()
 
-    let aref = spawn system "my-actor" (actorOf2 handler)
-    aref <! new FileInfo "Akka.xml"
+let aref = spawn system "my-actor" (actorOf2 handler)
+aref <! new FileInfo "Akka.xml"
+```
