@@ -10,8 +10,10 @@ Unlike default (C#) actor system, F#-aware systems should be created using `Akka
 
 Example:
 
-    open Akka.FSharp
-    use system = System.create "my-system" (Configuration.load())
+```fsharp
+open Akka.FSharp
+use system = System.create "my-system" (Configuration.load())
+```
 
 F# also gives you it's own actor system Configuration module with support of following functions:
 
