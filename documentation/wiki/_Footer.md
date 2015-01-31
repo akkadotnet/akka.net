@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: _Footer
+---
 Back to [[Documentation]]
 
 Copyright Akka.NET 2013-2014

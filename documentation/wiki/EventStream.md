@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: EventStream
+---
 ```csharp
 var system = ActorSystem.Create("MySystem");
 var subscriber = system.ActorOf<SomeActor>();

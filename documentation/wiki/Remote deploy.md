@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Remote deploy
+---
 
 ```csharp
 var scope = new RemoteScope(new Address("akka.tcp", "remote-system", "localhost", 8080));

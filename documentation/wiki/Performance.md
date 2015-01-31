@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Performance
+---
 Pigeon is extremely performant when it comes to sending and receiving messages.
 This is the output of the Ping-Pong benchmark example (Ported from Akka) when running on an 8 core machine:
 #####Message Throughput

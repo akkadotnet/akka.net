@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Message delivery reliability
+---
 # Message Delivery Reliability
 
 Akka helps you build reliable applications which make use of multiple processor

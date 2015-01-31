@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Sponsors
+---
 #Sponsors
 
 ![MarkedUp](images/sponsors/MarkedUp.png)

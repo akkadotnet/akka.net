@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Configuration
+---
 # HOCON Configuration
 
 Read more about the [[HOCON]] spec.

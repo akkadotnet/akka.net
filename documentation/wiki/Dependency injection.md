@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Dependency injection
+---
 ### Dependency Injection
 If your UntypedActor has a constructor that takes parameters then those need to be part of the Props as well, as described above. But there are cases when a factory method must be used, for example when the actual constructor arguments are determined by a dependency injection framework.
 ```chsarp

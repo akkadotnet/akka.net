@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Scheduler
+---
 # Scheduler
 
 Sometimes the need for making things happen in the future arises, and where do

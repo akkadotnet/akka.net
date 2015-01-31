@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Synchronizing workflows
+---
 # Synchronizing workflows
 
 ```csharp

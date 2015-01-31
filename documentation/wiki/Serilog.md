@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Serilog
+---
 # Using Serilog
 
 ## Setup

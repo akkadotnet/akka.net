@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: What is Akka
+---
 # What is Akka?
 
 ## Scalable, distributed real-time transaction processing

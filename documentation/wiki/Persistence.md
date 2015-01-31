@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Persistence
+---
 ## Persistence
 
 Akka.Persistence plugin enables to create a statefull actors, which internal state may be stored inside persistent data storage and used for recovery in case of restart, migration or VM crash. Core concept behind Akka persistence lays in storing not only actor state directly (in form of the snapshots) but also history of all of the changes of that actor's state. This is quite useful solution common in patterns such as eventsourcing. Changes are immutable by nature, as they describe facts already reported in the history, and can be stored inside event journal in append-only mode. While recovering, actor restores it's state from the latests snapshot available - which can reduce recovery time - and then recreates it further by replaying events stored inside journal. Among other features provided by persistence plugin is support for command query segregation model and point-to-point communication with at-least-once delivery semantics.

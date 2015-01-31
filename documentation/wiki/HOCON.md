@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: HOCON
+---
 # HOCON (Human-Optimized Config Object Notation)
 
 This is an informal spec, but hopefully it's clear.
