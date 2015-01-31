@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Dispatchers
+---
 # Dispatchers
 An Akka `MessageDispatcher` is what makes Akka Actors "tick", it is the engine of the machine so to speak. All `MessageDispatcher` implementations are also an `ExecutionContext`, which means that they can be used to execute arbitrary code, for instance `Futures`.
 

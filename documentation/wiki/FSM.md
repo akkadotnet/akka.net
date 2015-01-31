@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: FSM
+---
 Finite State Machine
 
 For more info see real Akka FSM documentation: http://doc.akka.io/docs/akka/snapshot/scala/fsm.html

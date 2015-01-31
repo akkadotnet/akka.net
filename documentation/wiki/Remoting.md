@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Remoting
+---
 The previous section describes how actor paths are used to enable location transparency. This special feature deserves some extra explanation, because the related term “transparent remoting” was used quite differently in the context of programming languages, platforms and technologies.
 
 ##Distributed by Default

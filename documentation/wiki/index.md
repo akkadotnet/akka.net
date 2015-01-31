@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: index
+---
 # Akka.NET WIKI
 
 ### Introduction

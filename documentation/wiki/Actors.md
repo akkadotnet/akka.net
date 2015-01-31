@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Actors
+---
 # Actors
 
 The previous section about [Actor Systems](ActorSystem) explained how actors form hierarchies and are the smallest unit when building an application. This section looks at one such actor in isolation, explaining the concepts you encounter while implementing it. For a more in depth reference with all the details please refer to F# API or C# API.

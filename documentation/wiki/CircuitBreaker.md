@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: CircuitBreaker
+---
 #Circuit Breaker
 
 ##Why are they used?

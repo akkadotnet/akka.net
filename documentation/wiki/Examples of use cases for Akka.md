@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Examples of use cases for Akka
+---
 >**Note**<br/>
 This describes how JVM Akka has been used.
 Akka.NET is still in Beta and production examples rare.

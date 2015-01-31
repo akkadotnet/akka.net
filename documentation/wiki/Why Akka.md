@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Why Akka
+---
 # Why Akka?
 
 ## What features can the Akka.NET platform offer, over the competition?

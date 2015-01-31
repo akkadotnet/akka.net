@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Use case and Deployment Scenarios
+---
 # Deployment Scenarios
 
 ### Console Application

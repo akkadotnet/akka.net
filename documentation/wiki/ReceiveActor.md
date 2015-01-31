@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: ReceiveActor
+---
 # Using Receive
 
 ## Inherit from ReceiveActor 

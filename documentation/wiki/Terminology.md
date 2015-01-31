@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Terminology
+---
 In this chapter we attempt to establish a common terminology to define a solid ground for communicating about concurrent, distributed systems which Akka targets. Please note that, for many of these terms, there is no single agreed definition. We simply seek to give working definitions that will be used in the scope of the Akka documentation.
 
 ##Concurrency vs. Parallelism

@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: EventBus
+---
 * Read more on http://doc.akka.io/docs/akka/snapshot/java/event-bus.html
 
 ```csharp

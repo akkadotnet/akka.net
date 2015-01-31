@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Fault tolerance
+---
 # Fault Tolerance
 
 As explained in [Actor Systems](ActorSystem) each actor is the supervisor of its

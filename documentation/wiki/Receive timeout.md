@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Receive timeout
+---
 ## Receive timeout
 The `IActorContext` `SetReceiveTimeout` defines the inactivity timeout after which the sending of a `ReceiveTimeout` message is triggered. When specified, the receive function should be able to handle an `Akka.Actor.ReceiveTimeout` message.
 

@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Getting started
+---
 # Getting started with Akka.NET
 
 This tutorial is intended to give an introduction to using Akka.NET by creating a simple greeter actor using C#.

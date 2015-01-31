@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Home
+---
 # Documentation
 
 Wiki guidelines:

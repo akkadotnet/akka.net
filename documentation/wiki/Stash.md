@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Stash
+---
 ## Stash
 The UntypedActorWithStash class enables an actor to temporarily stash away messages that can not or should not be handled using the actor's current behavior. Upon changing the actor's message handler, i.e., right before invoking getContext().become() or getContext().unbecome(), all stashed messages can be "unstashed", thereby prepending them to the actor's mailbox. This way, the stashed messages can be processed in the same order as they have been received originally. An actor that extends UntypedActorWithStash will automatically get a deque-based mailbox.
 

@@ -1,3 +1,7 @@
+---
+layout: wiki
+title: Contributor guidelines
+---
 # Contributor guidelines
 
 ## To be considered while porting Akka to Akka.NET
