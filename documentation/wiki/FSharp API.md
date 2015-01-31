@@ -1,7 +1,7 @@
-+---
-+layout: wiki
-+title: FSharp API
-+---
+---
+layout: wiki
+title: FSharp API
+---
 #   Akka.NET F# API
 
 ### Actor system and configuration
