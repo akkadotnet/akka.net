@@ -20,7 +20,8 @@ namespace Akka.Persistence
         public PersistenceExtension(ExtendedActorSystem system)
         {
             _system = system;
-            _config = system.Settings.Config.WithFallback(Persistence.DefaultConfig()).GetConfig("akka.persistence");
+            _system.Settings.InjectTopLevelFallback(Persistence.DefaultConfig());
+            _config = system.Settings.Config.GetConfig("akka.persistence");
             _journal = CreatePlugin("journal", type => typeof (AsyncWriteJournal).IsAssignableFrom(type)
                 ? Dispatchers.DefaultDispatcherId
                 : DefaultPluginDispatcherId);

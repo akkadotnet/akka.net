@@ -359,7 +359,7 @@ type SpawnOption =
     | Dispatcher of string
     | Mailbox of string
 
-let rec private applySpawnOptions (props : Props) (opt : SpawnOption list) : Props = 
+let rec applySpawnOptions (props : Props) (opt : SpawnOption list) : Props = 
     match opt with
     | [] -> props
     | h :: t -> 

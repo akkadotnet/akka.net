@@ -74,7 +74,7 @@ namespace Akka.Persistence
             _currentState = RecoveryPending();
         }
 
-        private ActorRef SnapshotStore
+        public ActorRef SnapshotStore
         {
             get { return _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotterId)); }
         }
@@ -131,7 +131,7 @@ namespace Akka.Persistence
         /// </summary>
         public long SnapshotSequenceNr { get { return LastSequenceNr; } }
 
-        private ActorRef Journal
+        public ActorRef Journal
         {
             get { return _journal ?? (_journal = Extension.JournalFor(PersistenceId)); }
         }
