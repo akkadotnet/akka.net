@@ -5,6 +5,10 @@ namespace Akka.Configuration.Hocon
 {
     public class HoconRoot
     {
+        protected HoconRoot()
+        {            
+        }
+
         public HoconRoot(HoconValue value, IEnumerable<HoconSubstitution> substitutions)
         {
             Value = value;

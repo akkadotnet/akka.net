@@ -8,17 +8,22 @@ namespace Akka.Configuration.Hocon
 {
     public class HoconValue : IMightBeAHoconObject
     {
-        private readonly List<IHoconElement> _values = new List<IHoconElement>();
+        public HoconValue()
+        {
+            Values = new List<IHoconElement>();
+        }
 
         public bool IsEmpty
         {
-            get { return _values.Count == 0; }
+            get { return Values.Count == 0; }
         }
+
+        public List<IHoconElement> Values { get; private set; }
 
         public HoconObject GetObject()
         {
             //TODO: merge objects?
-            IHoconElement raw = _values.FirstOrDefault();
+            IHoconElement raw = Values.FirstOrDefault();
             var o = raw as HoconObject;
             var sub = raw as IMightBeAHoconObject;
             if (o != null) return o;
@@ -33,28 +38,28 @@ namespace Akka.Configuration.Hocon
 
         public void AppendValue(IHoconElement value)
         {
-            _values.Add(value);
+            Values.Add(value);
         }
 
         public void Clear()
         {
-            _values.Clear();
+            Values.Clear();
         }
 
         public void NewValue(IHoconElement value)
         {
-            _values.Clear();
-            _values.Add(value);
+            Values.Clear();
+            Values.Add(value);
         }
 
         public bool IsString()
         {
-            return _values.Any() && _values.All(v => v.IsString());
+            return Values.Any() && Values.All(v => v.IsString());
         }
 
         private string ConcatString()
         {
-            string concat = string.Join("", _values.Select(l => l.GetString())).Trim();
+            string concat = string.Join("", Values.Select(l => l.GetString())).Trim();
 
             if (concat == "null")
                 return null;
@@ -166,7 +171,7 @@ namespace Akka.Configuration.Hocon
 
         public IList<HoconValue> GetArray()
         {
-            IEnumerable<HoconValue> x = from arr in _values
+            IEnumerable<HoconValue> x = from arr in Values
                 where arr.IsArray()
                 from e in arr.GetArray()
                 select e;

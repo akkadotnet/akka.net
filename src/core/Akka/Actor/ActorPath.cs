@@ -22,8 +22,29 @@ namespace Akka.Actor
     /// references are compared the unique id of the actor is not taken into account
     /// when comparing actor paths.
     /// </summary>
-    public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>
+    public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath> , ISurrogated
     {
+        public class Surrogate : ISurrogate
+        {
+            public Surrogate(string path)
+            {
+                Path = path;
+            }
+
+            public string Path { get; private set; }
+
+            public object FromSurrogate(ActorSystem system)
+            {
+                ActorPath path;
+                if (TryParse(Path, out path))
+                {
+                    return path;
+                }
+
+                return null;
+            }
+        }
+
         /// <summary> The regex that actor names must conform to RFC 2396, http://www.ietf.org/rfc/rfc2396.txt </summary>
         //Note that AKKA JVM does not allow parenthesis ( ) but, according to RFC 2396 those are allowed, and 
         //since we use URL Encode to create valid actor names, we must allow them
@@ -108,6 +129,9 @@ namespace Akka.Actor
         /// <returns> true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false. </returns>
         public bool Equals(ActorPath other)
         {
+            if (other == null)
+                return false;
+
             return Address.Equals(other.Address) && Elements.SequenceEqual(other.Elements);
         }
 
@@ -154,7 +178,7 @@ namespace Akka.Actor
             {
                 return actorPath;
             }
-            else throw new UriFormatException("Canno parse an ActorPath: " + path);
+            throw new UriFormatException("Can not parse an ActorPath: " + path);
         }
 
         /// <summary>
@@ -303,7 +327,8 @@ namespace Akka.Actor
         /// </returns>
         public override bool Equals(object obj)
         {
-            return Equals((ActorPath)obj);
+            var other = obj as ActorPath;
+            return Equals(other);
         }
 
         public static bool operator ==(ActorPath left, ActorPath right)
@@ -350,25 +375,9 @@ namespace Akka.Actor
             return String.Join("/", pathElements);
         }
 
-        public static implicit operator ActorPathSurrogate(ActorPath path)
+        public ISurrogate ToSurrogate(ActorSystem system)
         {
-            if (path != null)
-            {
-                return new ActorPathSurrogate(path.ToSerializationFormat());
-            }
-
-            return null;
-        }
-
-        public static implicit operator ActorPath(ActorPathSurrogate surrogate)
-        {
-            ActorPath path;
-            if (TryParse(surrogate.Path, out path))
-            {
-                return path;
-            }
-
-            return null;
+            return new Surrogate(ToSerializationFormat());
         }
     }
 
@@ -414,7 +423,7 @@ namespace Akka.Actor
         public override int CompareTo(ActorPath other)
         {
             if (other is ChildActorPath) return 1;
-            return System.String.Compare(ToString(), other.ToString(), StringComparison.Ordinal);
+            return String.Compare(ToString(), other.ToString(), StringComparison.Ordinal);
         }
     }
 
@@ -489,18 +498,5 @@ namespace Akka.Actor
             return InternalCompareTo(left.Parent, right.Parent);
         }
     }
-    public class ActorPathSurrogate : ISurrogate
-    {
-        public ActorPathSurrogate(string path)
-        {
-            Path = path;
-        }
-
-        public string Path { get; private set; }
-
-        public object Translate()
-        {
-            return (ActorPath)this;
-        }
-    }
+    
 }

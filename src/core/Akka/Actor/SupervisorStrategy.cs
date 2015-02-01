@@ -245,8 +245,7 @@ namespace Akka.Actor
         /// <summary>
         /// Serialization-friendly constructor
         /// </summary>
-        [Obsolete("For serialization purposes only!")]
-        public OneForOneStrategy() : this(DefaultDecider) { }
+        protected OneForOneStrategy() : this(DefaultDecider) { }
 
         protected override bool LoggingEnabled { get { return _loggingEnabled; } }
 
@@ -333,9 +332,8 @@ namespace Akka.Actor
       
         /// <summary>
         /// Serialization-friendly constructor
-        /// </summary>
-        [Obsolete("For serialization purposes only!")]
-        public AllForOneStrategy() : this(DefaultDecider) { }
+        /// </summary>]
+        protected AllForOneStrategy() : this(DefaultDecider) { }
 
         protected override bool LoggingEnabled { get { return _loggingEnabled; } }
 

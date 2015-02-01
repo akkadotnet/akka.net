@@ -1,12 +1,11 @@
-﻿using Akka.Actor;
-using Akka.Actor.Internals;
+﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Text;
+using Akka.Actor;
 using Akka.Util;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Newtonsoft.Json.Serialization;
 
 namespace Akka.Serialization
 {
@@ -15,13 +14,7 @@ namespace Akka.Serialization
     /// </summary>
     public class NewtonSoftJsonSerializer : Serializer
     {
-        /// <summary>
-        ///     The json serializer settings
-        /// </summary>
-        private static readonly JsonSerializerSettings JsonSerializerSettings = new JsonSerializerSettings
-        {
-            TypeNameHandling = TypeNameHandling.All
-        };
+        private readonly JsonSerializerSettings _settings;     
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="NewtonSoftJsonSerializer" /> class.
@@ -30,12 +23,38 @@ namespace Akka.Serialization
         public NewtonSoftJsonSerializer(ExtendedActorSystem system)
             : base(system)
         {
-            //TODO: we should use an instanced serializer to be threadsafe for other ActorSystems
-            JsonConvert.DefaultSettings = () => new JsonSerializerSettings
+            _settings = new JsonSerializerSettings
             {
                 PreserveReferencesHandling = PreserveReferencesHandling.Objects,
-                Converters = new List<JsonConverter> { new ActorRefConverter(), new ActorPathConverter() }
+                Converters = new List<JsonConverter> {new SurrogateConverter(system)},
+                NullValueHandling = NullValueHandling.Ignore,
+                DefaultValueHandling = DefaultValueHandling.Ignore,
+                MissingMemberHandling = MissingMemberHandling.Ignore,
+                ObjectCreationHandling = ObjectCreationHandling.Replace, //important: if reuse, the serializer will overwrite properties in default references, e.g. Props.DefaultDeploy or Props.noArgs
+                ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                TypeNameHandling = TypeNameHandling.All,
+                ContractResolver = new AkkaContractResolver(),
             };
+        }
+
+        public class AkkaContractResolver : DefaultContractResolver
+        {
+            protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
+            {
+                var prop = base.CreateProperty(member, memberSerialization);
+
+                if (!prop.Writable)
+                {
+                    var property = member as PropertyInfo;
+                    if (property != null)
+                    {
+                        var hasPrivateSetter = property.GetSetMethod(true) != null;
+                        prop.Writable = hasPrivateSetter;
+                    }
+                }
+
+                return prop;
+            }
         }
 
         /// <summary>
@@ -68,7 +87,7 @@ namespace Akka.Serialization
         public override byte[] ToBinary(object obj)
         {
             Serialization.CurrentSystem = system;
-            string data = JsonConvert.SerializeObject(obj, Formatting.None, JsonSerializerSettings);
+            string data = JsonConvert.SerializeObject(obj, Formatting.None, _settings);
             byte[] bytes = Encoding.Default.GetBytes(data);
             return bytes;
         }
@@ -85,41 +104,27 @@ namespace Akka.Serialization
             Serialization.CurrentSystem = system;
             string data = Encoding.Default.GetString(bytes);
 
-            var res = JsonConvert.DeserializeObject(data, JsonSerializerSettings);
-            var surrogate = res as ISurrogate;
+            object res = JsonConvert.DeserializeObject(data, _settings);
+            return TranslateSurrogate(res,system);
+        }
+
+        private static object TranslateSurrogate(object deserializedValue,ActorSystem system)
+        {
+            var surrogate = deserializedValue as ISurrogate;
             if (surrogate != null)
             {
-                return surrogate.Translate();
+                return surrogate.FromSurrogate(system);
             }
-            return res;
+            return deserializedValue;
         }
 
-        public class ActorPathConverter : JsonConverter
+        public class SurrogateConverter : JsonConverter
         {
-            public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+            private readonly ActorSystem _system;
+            public SurrogateConverter(ActorSystem system)
             {
-                var path = (ActorPath)value;
-                var surrogate = new ActorPathSurrogate(path.ToSerializationFormat());
-                serializer.Serialize(writer, surrogate);
+                _system = system;
             }
-
-            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-            {
-                var surrogate = serializer.Deserialize<ActorPathSurrogate>(reader);
-                return (ActorPath) surrogate;
-            }
-
-            public override bool CanConvert(Type objectType)
-            {
-                return (typeof(ActorPath).IsAssignableFrom(objectType));
-            }
-        }
-
-        /// <summary>
-        ///     Class ActorRefConverter.
-        /// </summary>
-        public class ActorRefConverter : JsonConverter
-        {
             /// <summary>
             ///     Determines whether this instance can convert the specified object type.
             /// </summary>
@@ -127,7 +132,7 @@ namespace Akka.Serialization
             /// <returns><c>true</c> if this instance can convert the specified object type; otherwise, <c>false</c>.</returns>
             public override bool CanConvert(Type objectType)
             {
-                return (typeof(ActorRef).IsAssignableFrom(objectType));
+                return (typeof(ISurrogated).IsAssignableFrom(objectType));
             }
 
             /// <summary>
@@ -141,8 +146,8 @@ namespace Akka.Serialization
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue,
                 JsonSerializer serializer)
             {
-                var surrogate = serializer.Deserialize<ActorRefSurrogate>(reader);
-                return ((ActorSystemImpl) Serialization.CurrentSystem).Provider.ResolveActorRef(surrogate.Path);
+                var surrogate = serializer.Deserialize<ISurrogate>(reader);
+                return TranslateSurrogate(surrogate, _system);
             }
 
             /// <summary>
@@ -153,8 +158,8 @@ namespace Akka.Serialization
             /// <param name="serializer">The calling serializer.</param>
             public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
             {
-                var @ref = (ActorRef)value;
-                var surrogate = new ActorRefSurrogate(Serialization.SerializedActorPath(@ref));
+                var surrogated = (ISurrogated)value;
+                var surrogate = surrogated.ToSurrogate(_system);
                 serializer.Serialize(writer, surrogate);
             }
         }
