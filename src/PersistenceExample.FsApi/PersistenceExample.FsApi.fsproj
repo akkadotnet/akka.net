@@ -5,15 +5,15 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>19993c0b-8f9d-4fe4-b047-45965ea66ba2</ProjectGuid>
+    <ProjectGuid>8c261ca2-3cad-42ff-b21c-c32e7d718f95</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Pigeon.FSharp.Api</RootNamespace>
-    <AssemblyName>FSharp.Api</AssemblyName>
+    <RootNamespace>PersistenceExample.FsApi</RootNamespace>
+    <AssemblyName>PersistenceExample.FsApi</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
-    <Name>FSharp.Api</Name>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
+    <Name>PersistenceExample.FsApi</Name>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -25,7 +25,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <DocumentationFile>bin\Debug\Pigeon.FSharp.Api.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\PersistenceExample.FsApi.XML</DocumentationFile>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -36,34 +36,11 @@
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <DocumentationFile>bin\Release\Pigeon.FSharp.Api.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\PersistenceExample.FsApi.XML</DocumentationFile>
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release Mono|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <Tailcalls>true</Tailcalls>
-    <DefineConstants>TRACE</DefineConstants>
-    <WarningLevel>3</WarningLevel>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DocumentationFile>bin\Release\Pigeon.FSharp.Api.XML</DocumentationFile>
-    <Prefer32Bit>true</Prefer32Bit>
-    <OutputPath>bin\Release Mono\</OutputPath>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug Mono|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <Tailcalls>false</Tailcalls>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <WarningLevel>3</WarningLevel>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DocumentationFile>bin\Debug\FSharp.Api.XML</DocumentationFile>
-    <Prefer32Bit>true</Prefer32Bit>
-    <OutputPath>bin\Debug Mono\</OutputPath>
   </PropertyGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '11.0'">
@@ -86,9 +63,6 @@
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
   <ItemGroup>
-    <Compile Include="MapReduce.fs" />
-    <Compile Include="Greeter.fs" />
-    <Compile Include="Supervisioning.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
     <Content Include="packages.config" />
@@ -99,18 +73,28 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-    <ProjectReference Include="..\..\core\Akka.FSharp\Akka.FSharp.fsproj">
+    <ProjectReference Include="..\Akka.Persistence.FSharp\Akka.Persistence.FSharp.fsproj">
+      <Name>Akka.Persistence.FSharp</Name>
+      <Project>{d22c316e-991e-432a-950c-29bc3c45c07b}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\core\Akka.FSharp\Akka.FSharp.fsproj">
       <Name>Akka.FSharp</Name>
       <Project>{81574240-bc31-4be4-b447-adf0d32f4246}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <ProjectReference Include="..\..\core\Akka\Akka.csproj">
+    <ProjectReference Include="..\core\Akka.Persistence\Akka.Persistence.csproj">
+      <Name>Akka.Persistence</Name>
+      <Project>{fca84dea-c118-424b-9eb8-34375dfef18a}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\core\Akka\Akka.csproj">
       <Name>Akka</Name>
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Private>True</Private>

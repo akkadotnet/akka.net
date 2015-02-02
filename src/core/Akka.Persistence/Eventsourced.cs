@@ -86,12 +86,12 @@ namespace Akka.Persistence
 
         public IStash Stash { get; set; }
 
-        protected ActorRef Journal
+        public ActorRef Journal
         {
             get { return _journal ?? (_journal = Extension.JournalFor(SnapshotterId)); }
         }
 
-        protected ActorRef SnapshotStore
+        public ActorRef SnapshotStore
         {
             get { return _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotterId)); }
         }
@@ -122,22 +122,22 @@ namespace Akka.Persistence
         /// </summary>
         public long SnapshotSequenceNr { get { return LastSequenceNr; } }
         
-        protected void LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
+        public void LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)
         {
             SnapshotStore.Tell(new LoadSnapshot(persistenceId, criteria, toSequenceNr));
         }
 
-        protected void SaveSnapshot(object snapshot)
+        public void SaveSnapshot(object snapshot)
         {
             SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(SnapshotterId, SnapshotSequenceNr), snapshot));
         }
 
-        protected void DeleteSnapshot(long sequenceNr, DateTime timestamp)
+        public void DeleteSnapshot(long sequenceNr, DateTime timestamp)
         {
             SnapshotStore.Tell(new DeleteSnapshot(new SnapshotMetadata(SnapshotterId, sequenceNr, timestamp)));
         }
 
-        protected void DeleteSnapshots(SnapshotSelectionCriteria criteria)
+        public void DeleteSnapshots(SnapshotSelectionCriteria criteria)
         {
             SnapshotStore.Tell(new DeleteSnapshots(SnapshotterId, criteria));
         }
@@ -177,7 +177,7 @@ namespace Akka.Persistence
         /// If persistence of an event fails, the persistent actor will be stopped. 
         /// This can be customized by handling <see cref="PersistenceFailure"/> in <see cref="ReceiveCommand"/> method. 
         /// </summary>
-        protected void Persist<TEvent>(TEvent @event, Action<TEvent> handler)
+        public void Persist<TEvent>(TEvent @event, Action<TEvent> handler)
         {
             _pendingStashingPersistInvocations++;
             _pendingInvocations.AddLast(new StashingHandlerInvocation(@event, o => handler((TEvent)o)));
@@ -188,7 +188,7 @@ namespace Akka.Persistence
         /// Asynchronously persists series of <paramref name="events"/> in specified order.
         /// This is equivalent of multiple calls of <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> calls.
         /// </summary>
-        protected void Persist<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
+        public void Persist<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
         {
             Action<object> inv = o => handler((TEvent)o);
             foreach (var @event in events)
@@ -220,7 +220,7 @@ namespace Akka.Persistence
         /// If persistence of an event fails, the persistent actor will be stopped. 
         /// This can be customized by handling <see cref="PersistenceFailure"/> in <see cref="ReceiveCommand"/> method. 
         /// </summary>
-        protected void PersistAsync<TEvent>(TEvent @event, Action<TEvent> handler)
+        public void PersistAsync<TEvent>(TEvent @event, Action<TEvent> handler)
         {
             _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, o => handler((TEvent)o)));
             _eventBatch.AddFirst(new Persistent(@event));
@@ -230,7 +230,7 @@ namespace Akka.Persistence
         /// Asynchronously persists series of <paramref name="events"/> in specified order.
         /// This is equivalent of multiple calls of <see cref="PersistAsync{TEvent}(TEvent,System.Action{TEvent})"/> calls.
         /// </summary>
-        protected void PersistAsync<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
+        public void PersistAsync<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
         {
             Action<object> inv = o => handler((TEvent)o);
             foreach (var @event in events)
@@ -251,7 +251,7 @@ namespace Akka.Persistence
         /// If there are not awaiting persist handler calls, the <paramref name="handler"/> will be invoced immediately.
         /// 
         /// </summary>
-        protected void Defer<TEvent>(TEvent evt, Action<TEvent> handler)
+        public void Defer<TEvent>(TEvent evt, Action<TEvent> handler)
         {
             if (_pendingInvocations.Count == 0)
             {
@@ -264,7 +264,7 @@ namespace Akka.Persistence
             }
         }
 
-        protected void Defer<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
+        public void Defer<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler)
         {
             foreach (var @event in events)
             {
@@ -272,7 +272,7 @@ namespace Akka.Persistence
             }
         }
 
-        protected void DeleteMessages(long toSequenceNr, bool permanent)
+        public void DeleteMessages(long toSequenceNr, bool permanent)
         {
             Journal.Tell(new DeleteMessagesTo(PersistenceId, toSequenceNr, permanent));
         }
