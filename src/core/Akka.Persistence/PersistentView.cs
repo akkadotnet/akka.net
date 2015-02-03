@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using Akka.Actor;
+using Newtonsoft.Json;
 
 namespace Akka.Persistence
 {
@@ -13,7 +14,20 @@ namespace Akka.Persistence
     [Serializable]
     public sealed class Update
     {
-        public Update(bool isAwait = false, long replayMax = long.MaxValue)
+        public Update()
+        {
+            IsAwait = false;
+            ReplayMax = long.MaxValue;
+        }
+
+        public Update(bool isAwait)
+        {
+            IsAwait = isAwait;
+            ReplayMax = long.MaxValue;
+        }
+
+        [JsonConstructor]
+        public Update(bool isAwait, long replayMax)
         {
             IsAwait = isAwait;
             ReplayMax = replayMax;

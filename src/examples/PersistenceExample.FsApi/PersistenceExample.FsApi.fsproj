@@ -79,22 +79,24 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-    <ProjectReference Include="..\Akka.Persistence.FSharp\Akka.Persistence.FSharp.fsproj">
-      <Name>Akka.Persistence.FSharp</Name>
-      <Project>{d22c316e-991e-432a-950c-29bc3c45c07b}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\core\Akka.FSharp\Akka.FSharp.fsproj">
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\core\Akka.FSharp\Akka.FSharp.fsproj">
       <Name>Akka.FSharp</Name>
       <Project>{81574240-bc31-4be4-b447-adf0d32f4246}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <ProjectReference Include="..\core\Akka.Persistence\Akka.Persistence.csproj">
+    <ProjectReference Include="..\..\core\Akka.Persistence.FSharp\Akka.Persistence.FSharp.fsproj">
+      <Name>Akka.Persistence.FSharp</Name>
+      <Project>{d22c316e-991e-432a-950c-29bc3c45c07b}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\core\Akka.Persistence\Akka.Persistence.csproj">
       <Name>Akka.Persistence</Name>
       <Project>{fca84dea-c118-424b-9eb8-34375dfef18a}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <ProjectReference Include="..\core\Akka\Akka.csproj">
+    <ProjectReference Include="..\..\core\Akka\Akka.csproj">
       <Name>Akka</Name>
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Private>True</Private>
