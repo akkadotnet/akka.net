@@ -43,6 +43,19 @@ namespace Akka.Tests.Serialization
         }
 
         [Fact]
+        public void CanSerializeActorPath()
+        {
+            var uri = "akka.tcp://sys@localhost:9000/user/actor";
+            var actorPath = ActorPath.Parse(uri);
+
+            var serializer = Sys.Serialization.FindSerializerFor(actorPath);
+            var serialized = serializer.ToBinary(actorPath);
+            var deserialized = (ActorPath) serializer.FromBinary(serialized, typeof (ActorPath));
+
+            Assert.Equal(actorPath, deserialized);
+        }
+
+        [Fact]
         public void CanSerializeSingletonMessages()
         {
             var message = Terminate.Instance;
