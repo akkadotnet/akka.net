@@ -132,7 +132,7 @@ namespace Akka.Remote.TestKit
                     _client.Tell(new ToServer<FailBarrier>(new FailBarrier(name)));
                     throw new TimeoutException("Client timed out while waiting for barrier " + name);
                 }
-                _system.Log.Debug("passed barrer {0}", name);
+                _system.Log.Debug("passed barrier {0}", name);
             }
         }
 

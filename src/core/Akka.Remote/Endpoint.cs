@@ -405,7 +405,7 @@ namespace Akka.Remote
                         {
                             throw new InvalidAssociationException(
                                 string.Format(
-                                    "Error encounted while processing system message acknowledgement {0} {1}",
+                                    "Error encountered while processing system message acknowledgement {0} {1}",
                                     _resendBuffer, ack), ex);
                         }
 
