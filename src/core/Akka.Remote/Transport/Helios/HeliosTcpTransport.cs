@@ -64,7 +64,7 @@ namespace Akka.Remote.Transport.Helios
         protected override void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
         {
             if(cause != null)
-                ChannelLocalActor.Notify(closedChannel, new UnderlyingTransportError(cause, "Undlerying transport closed."));
+                ChannelLocalActor.Notify(closedChannel, new UnderlyingTransportError(cause, "Underlying transport closed."));
             if (cause != null && cause.Type == ExceptionType.Closed)
                 ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Shutdown));
             else

@@ -94,7 +94,7 @@ namespace Akka.Util
             if (index < 0)
                 throw new ArgumentOutOfRangeException("index");
             if (index >= array.Length)
-                throw new ArgumentException("index is equals or greather than array length", "index");
+                throw new ArgumentException("index is equals or greater than array length", "index");
 
             var e = InternalGetEnumerator();
             var i = index;
@@ -102,7 +102,7 @@ namespace Akka.Util
             {
                 if (i == array.Length - index)
                     throw new ArgumentException(
-                        "The number of elememts in the collection exceeds the capacity of array", "array");
+                        "The number of elements in the collection exceeds the capacity of array", "array");
                 array[i++] = e.Current;
             }
         }

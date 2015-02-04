@@ -14,7 +14,7 @@ namespace Akka.Persistence.Snapshot
             _extension = Persistence.Instance.Apply(Context.System);
             if (_extension == null)
             {
-                throw new ArgumentException("Couldn't initialize SnapshotStore instance, because associated Persistance extension has not been used in current actor system context.");
+                throw new ArgumentException("Couldn't initialize SnapshotStore instance, because associated Persistence extension has not been used in current actor system context.");
             }
 
             _publish = _extension.Settings.Internal.PublishPluginCommands;

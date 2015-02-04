@@ -212,7 +212,7 @@ namespace Akka.Actor
                 }
                 catch (Exception cause)
                 {
-                    const string fmt = "An exception occured while trying to apply plugin of type {0} to the newly created actor (Type = {1}, Path = {2})";
+                    const string fmt = "An exception occurred while trying to apply plugin of type {0} to the newly created actor (Type = {1}, Path = {2})";
                     LogException(actor, cause, fmt, plugin);
                 }
             }
@@ -232,7 +232,7 @@ namespace Akka.Actor
                 }
                 catch (Exception cause)
                 {
-                    const string fmt = "An exception occured while trying to apply plugin of type {0} to the actor before it's destruction (Type = {1}, Path = {2})";
+                    const string fmt = "An exception occurred while trying to apply plugin of type {0} to the actor before it's destruction (Type = {1}, Path = {2})";
                     LogException(actor, cause, fmt, plugin);
                 }
             }

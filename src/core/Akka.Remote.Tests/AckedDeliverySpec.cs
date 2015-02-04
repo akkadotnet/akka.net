@@ -364,7 +364,7 @@ namespace Akka.Remote.Tests
             };
 
             //Dropping phase
-            global::System.Diagnostics.Debug.WriteLine("Starting unreliable delivery for {0} messages, with delivery probaboly P = {1}", msgCount, deliveryProbability);
+            global::System.Diagnostics.Debug.WriteLine("Starting unreliable delivery for {0} messages, with delivery probably P = {1}", msgCount, deliveryProbability);
             var nextSteps = msgCount*2;
             while (nextSteps > 0)
             {
