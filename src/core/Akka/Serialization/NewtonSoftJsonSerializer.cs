@@ -34,7 +34,7 @@ namespace Akka.Serialization
             JsonConvert.DefaultSettings = () => new JsonSerializerSettings
             {
                 PreserveReferencesHandling = PreserveReferencesHandling.Objects,
-                Converters = new List<JsonConverter> { new ActorRefConverter() }
+                Converters = new List<JsonConverter> { new ActorRefConverter(), new ActorPathConverter() }
             };
         }
 
@@ -92,6 +92,27 @@ namespace Akka.Serialization
                 return surrogate.Translate();
             }
             return res;
+        }
+
+        public class ActorPathConverter : JsonConverter
+        {
+            public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+            {
+                var path = (ActorPath)value;
+                var surrogate = new ActorPathSurrogate(path.ToSerializationFormat());
+                serializer.Serialize(writer, surrogate);
+            }
+
+            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+            {
+                var surrogate = serializer.Deserialize<ActorPathSurrogate>(reader);
+                return (ActorPath) surrogate;
+            }
+
+            public override bool CanConvert(Type objectType)
+            {
+                return (typeof(ActorPath).IsAssignableFrom(objectType));
+            }
         }
 
         /// <summary>

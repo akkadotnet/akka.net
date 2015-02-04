@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Akka.Util;
 using Newtonsoft.Json;
 
 namespace Akka.Actor
@@ -348,6 +349,27 @@ namespace Akka.Actor
         {
             return String.Join("/", pathElements);
         }
+
+        public static implicit operator ActorPathSurrogate(ActorPath path)
+        {
+            if (path != null)
+            {
+                return new ActorPathSurrogate(path.ToSerializationFormat());
+            }
+
+            return null;
+        }
+
+        public static implicit operator ActorPath(ActorPathSurrogate surrogate)
+        {
+            ActorPath path;
+            if (TryParse(surrogate.Path, out path))
+            {
+                return path;
+            }
+
+            return null;
+        }
     }
 
     /// <summary>
@@ -465,6 +487,20 @@ namespace Akka.Actor
             if (nameCompareResult != 0)
                 return nameCompareResult;
             return InternalCompareTo(left.Parent, right.Parent);
+        }
+    }
+    public class ActorPathSurrogate : ISurrogate
+    {
+        public ActorPathSurrogate(string path)
+        {
+            Path = path;
+        }
+
+        public string Path { get; private set; }
+
+        public object Translate()
+        {
+            return (ActorPath)this;
         }
     }
 }
