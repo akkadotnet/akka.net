@@ -57,6 +57,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SpecRunCoordinatorSpec.cs" />
     <Compile Include="TestRunCoordinatorSpec.cs" />
+    <Compile Include="TestRunShutdownSpec.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj">

@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
-using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
-using TCP;
 using Xunit;
 using Address = Akka.Actor.Address;
 

@@ -163,7 +163,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             var test = tests.First();
 
             foreach (var sink in Sinks)
-                sink.BeginTest(test.TypeName, test.MethodName, tests);
+                sink.BeginTest(test.TestName, test.MethodName, tests);
         }
 
         private void PublishToChildren(RunnerMessage message)

@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
@@ -118,12 +117,21 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         {
             if (UseTestCoordinator)
             {
-                //Ask the TestRunCoordinator to give us the latest state
-                TestCoordinatorActorRef.Tell(new TestRunCoordinator.RequestTestRunState());
-
-                TestCoordinatorActorRef.Tell(endTestRun);
-                
+                var sender = Sender;
+                TestCoordinatorActorRef.Ask<TestRunTree>(endTestRun)
+                    .ContinueWith(tr =>
+                    {
+                        var testRunTree = tr.Result;
+                        return new BeginSinkTerminate(testRunTree, sender);
+                    }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously)
+                    .PipeTo(Self);
             }
+        }
+
+        protected override void HandleSinkTerminate(BeginSinkTerminate terminate)
+        {
+            HandleTestRunTree(terminate.TestRun);
+            base.HandleSinkTerminate(terminate);
         }
     }
 }
