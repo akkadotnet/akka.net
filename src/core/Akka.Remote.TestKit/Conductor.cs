@@ -16,7 +16,7 @@ namespace Akka.Remote.TestKit
 {
     /// <summary>
     /// The conductor is the one orchestrating the test: it governs the
-    /// <see cref="Akka.Remote.TestKit.Controller">'s ports to which all
+    /// <see cref="Akka.Remote.TestKit.Controller"/>'s ports to which all
     /// Players connect, it issues commands to their
     /// <see cref="Akka.Remote.TestKit.NetworkFailureInjector"></see> and provides support
     /// for barriers using the <see cref="Akka.Remote.TestKit.BarrierCoordinator"></see>.
