@@ -36,8 +36,8 @@ namespace Akka.Cluster.Tests.MultiNode
             _second = Role("second");
             _third = Role("third");
 
-            CommonConfig = ConfigurationFactory.ParseString(
-                @"akka.loggers = [""Akka.Logger.NLog.NLogLogger, Akka.Logger.NLog""]").WithFallback(DebugConfig(true))
+            CommonConfig = MultiNodeLoggingConfig.LoggingConfig
+                .WithFallback(DebugConfig(true))
                 .WithFallback(@"akka.cluster.auto-down-unreachable-after = 0s
 akka.cluster.publish-stats-interval = 25 s")
                 .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());

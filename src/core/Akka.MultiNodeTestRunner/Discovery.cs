@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Akka.MultiNodeTestRunner.Shared;
 using Xunit.Abstractions;
 
 namespace Akka.MultiNodeTestRunner
