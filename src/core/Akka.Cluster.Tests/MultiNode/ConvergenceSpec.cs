@@ -107,7 +107,7 @@ namespace Akka.Cluster.Tests.MultiNode
         private ConvergenceSpec(ConvergenceSpecConfig config) : base(config)
         {
             _config = config;
-            //TODO: muteMarkingAsUnreachable()
+            MuteMarkingAsUnreachable();
         }
 
         [MultiNodeFact]

@@ -98,6 +98,15 @@ namespace Akka.MultiNodeTestRunner
                                     }
                                     PublishToAllSinks(message);
                                 };
+
+                            var closureTest = nodeTest;
+                            process.Exited += (sender, eventArgs) =>
+                            {
+                                if (process.ExitCode == 0)
+                                {
+                                    ReportSpecPassFromExitCode(nodeIndex, closureTest.TestName);
+                                }
+                            };
                             process.Start();
 
                             process.BeginOutputReadLine();
@@ -107,6 +116,7 @@ namespace Akka.MultiNodeTestRunner
                         foreach (var process in processes)
                         {
                             process.WaitForExit();
+                            var exitCode = process.ExitCode;
                             process.Close();
                         }
 
@@ -143,6 +153,11 @@ namespace Akka.MultiNodeTestRunner
         static void StartNewSpec(IList<NodeTest> tests)
         {
             SinkCoordinator.Tell(tests);
+        }
+
+        static void ReportSpecPassFromExitCode(int nodeIndex, string testName)
+        {
+            SinkCoordinator.Tell(new NodeCompletedSpecWithSuccess(nodeIndex, testName + " passed."));
         }
 
         static void FinishSpec()
