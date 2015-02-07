@@ -55,11 +55,12 @@ namespace Akka.Actor
             Scope = scope ?? NoScopeGiven;
         }
 
-        public Deploy(RouterConfig routerConfig)
+        public Deploy(RouterConfig routerConfig) : this()
         {
             RouterConfig = routerConfig;
         }
         public Deploy(string path, Config config, RouterConfig routerConfig, Scope scope, string dispatcher)
+            : this()
         {
             Path = path;
             Config = config;
@@ -69,6 +70,7 @@ namespace Akka.Actor
         }
 
         public Deploy(string path, Config config, RouterConfig routerConfig, Scope scope, string dispatcher, string mailbox)
+            : this()
         {
             Path = path;
             Config = config;
@@ -139,8 +141,7 @@ namespace Akka.Actor
                    string.Equals(Dispatcher, other.Dispatcher) &&
                    string.Equals(Path, other.Path) &&
                    RouterConfig.Equals(other.RouterConfig) &&
-                   // todo: need test for configuration equality
-                   //((Config.IsNullOrEmpty() && other.Config.IsNullOrEmpty()) || Config.ToString().Equals(other.Config.ToString())) &&
+                   ((Config.IsNullOrEmpty() && other.Config.IsNullOrEmpty()) || Config.ToString().Equals(other.Config.ToString())) &&
                    (Scope == null && other.Scope == null || (Scope != null && Scope.Equals(other.Scope)));
         }
     }

@@ -129,9 +129,37 @@ namespace Akka.Routing
     }
 
 
-    //TODO: ensure this can be serialized/deserialized fully
-    public abstract class Pool : RouterConfig
+    //TODO: ensure this can be serialized/deserialized fully    
+    public abstract class Pool : RouterConfig, IEquatable<Pool>
     {
+        //TODO: add supervisor strategy to the equality compare
+        public bool Equals(Pool other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(Resizer, other.Resizer) && UsePoolDispatcher.Equals(other.UsePoolDispatcher) && NrOfInstances == other.NrOfInstances;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((Pool) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hashCode = (Resizer != null ? Resizer.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ UsePoolDispatcher.GetHashCode();
+                hashCode = (hashCode*397) ^ NrOfInstances;
+                return hashCode;
+            }
+        }
+
+
         protected Pool() //for serialization
         {
         }
@@ -157,6 +185,8 @@ namespace Akka.Routing
             UsePoolDispatcher = config.HasPath("pool-dispatcher");
             // ReSharper restore DoNotCallOverridableMethodsInConstructor
         }
+
+        //TODO: do we want mutable props here ???
 
         /// <summary>
         /// The number of instances in the pool.
@@ -236,16 +266,16 @@ namespace Akka.Routing
 
         #region Overrides
 
-        public override bool Equals(RouterConfig other)
-        {
-            if (!base.Equals(other)) return false;
-            var otherPool = other as Pool;
-            if (otherPool == null) return false; //should never be true due to the previous check
-            return NrOfInstances == otherPool.NrOfInstances &&
-                   UsePoolDispatcher == otherPool.UsePoolDispatcher &&
-                   (Resizer == null && otherPool.Resizer == null || Resizer != null && otherPool.Resizer != null) &&
-                   SupervisorStrategy.GetType() == otherPool.SupervisorStrategy.GetType();
-        }
+        //public override bool Equals(RouterConfig other)
+        //{
+        //    if (!base.Equals(other)) return false;
+        //    var otherPool = other as Pool;
+        //    if (otherPool == null) return false; //should never be true due to the previous check
+        //    return NrOfInstances == otherPool.NrOfInstances &&
+        //           UsePoolDispatcher == otherPool.UsePoolDispatcher &&
+        //           (Resizer == null && otherPool.Resizer == null || Resizer != null && otherPool.Resizer != null) &&
+        //           SupervisorStrategy.GetType() == otherPool.SupervisorStrategy.GetType();
+        //}
 
         #endregion
     }

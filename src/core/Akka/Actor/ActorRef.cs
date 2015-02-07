@@ -56,7 +56,7 @@ namespace Akka.Actor
         public FutureActorRef(TaskCompletionSource<object> result, ActorRef sender, Action unregister, ActorPath path)
         {
             _result = result;
-            _sender = sender ?? ActorRef.NoSender;
+            _sender = sender ?? NoSender;
             _unregister = unregister;
             _path = path;
         }
@@ -112,20 +112,7 @@ namespace Akka.Actor
         }
     }
 
-    public class ActorRefSurrogate : ISurrogate
-    {
-        public ActorRefSurrogate(string path)
-        {
-            Path = path;
-        }
-
-        public string Path { get; private set; }
-
-        public object Translate()
-        {
-            return (ActorRef) this;
-        }
-    }
+    
 
     internal static class ActorRefSender
     {
@@ -136,8 +123,22 @@ namespace Akka.Actor
         }
     }
 
-    public abstract class ActorRef : ICanTell, IEquatable<ActorRef>, IComparable<ActorRef>
+    public abstract class ActorRef : ICanTell, IEquatable<ActorRef>, IComparable<ActorRef>, ISurrogated
     {
+        public class Surrogate : ISurrogate
+        {
+            public Surrogate(string path)
+            {
+                Path = path;
+            }
+
+            public string Path { get; private set; }
+
+            public object FromSurrogate(ActorSystem system)
+            {
+                return ((ActorSystemImpl)system).Provider.ResolveActorRef(Path);
+            }
+        }
 
         public static readonly Nobody Nobody = Nobody.Instance;
         public static readonly ActorRef NoSender = Actor.NoSender.Instance; //In Akka this is just null
@@ -172,21 +173,6 @@ namespace Akka.Actor
         public override string ToString()
         {
             return string.Format("[{0}]", Path);
-        }
-
-        public static implicit operator ActorRefSurrogate(ActorRef @ref)
-        {
-            if (@ref != null)
-            {
-                return new ActorRefSurrogate(Serialization.Serialization.SerializedActorPath(@ref));
-            }
-
-            return null;
-        }
-
-        public static implicit operator ActorRef(ActorRefSurrogate surrogate)
-        {
-            return ((ActorSystemImpl)Serialization.Serialization.CurrentSystem).Provider.ResolveActorRef(surrogate.Path);
         }
 
         public override bool Equals(object obj)
@@ -224,10 +210,15 @@ namespace Akka.Actor
 
         public int CompareTo(ActorRef other)
         {
-            var pathComparisonResult = this.Path.CompareTo(other.Path);
+            var pathComparisonResult = Path.CompareTo(other.Path);
             if (pathComparisonResult != 0) return pathComparisonResult;
             if (Path.Uid < other.Path.Uid) return -1;
             return Path.Uid == other.Path.Uid ? 0 : 1;
+        }
+
+        public ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new Surrogate(Serialization.Serialization.SerializedActorPath(this));
         }
     }
 

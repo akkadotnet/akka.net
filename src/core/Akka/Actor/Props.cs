@@ -7,6 +7,7 @@ using Akka.Util.Internal;
 using Akka.Util.Reflection;
 using Akka.Routing;
 using Akka.Util;
+using Newtonsoft.Json;
 
 namespace Akka.Actor
 {
@@ -22,8 +23,72 @@ namespace Akka.Actor
     ///   private Props otherProps = props.WithDeploy(deployment info);
     ///  </code>
     /// </summary>
-    public class Props
+    public class Props : IEquatable<Props>
     {
+        public bool Equals(Props other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return CompareDeploy(other) && CompareSupervisorStrategy(other) && CompareArguments(other) && CompareInputType(other);
+        }
+
+        private bool CompareInputType(Props other)
+        {
+            return inputType == other.inputType;
+        }
+
+        private bool CompareDeploy(Props other)
+        {
+            return Deploy.Equals(other.Deploy);
+        }
+
+        private bool CompareSupervisorStrategy(Props other)
+        {
+            return true;
+            return Equals(SupervisorStrategy, other.SupervisorStrategy);
+        }
+
+        private bool CompareArguments(Props other)
+        {
+            if (other == null)
+                return false;
+
+            if (Arguments == null && other.Arguments == null)
+                return true;
+
+            if (Arguments == null)
+                return false;
+
+            if (Arguments.Length != other.Arguments.Length)
+                return false;
+
+            //TODO: since arguments can be serialized, we can not compare by ref
+            //arguments may also not impement equality opertators, so we can not structurally compare either
+            //we can not just call a serializer and compare outputs either, since different args may require diff serializer mechanics
+
+            return true;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((Props) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hashCode = (Deploy != null ? Deploy.GetHashCode() : 0);
+              //  hashCode = (hashCode*397) ^ (SupervisorStrategy != null ? SupervisorStrategy.GetHashCode() : 0);
+              //  hashCode = (hashCode*397) ^ (Arguments != null ? Arguments.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (inputType != null ? inputType.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
+
         /// <summary>
         ///     The default deploy
         /// </summary>
@@ -32,7 +97,7 @@ namespace Akka.Actor
         /// <summary>
         ///     No args
         /// </summary>
-        private static readonly Object[] noArgs = new Object[] { };
+        private static readonly Object[] noArgs = { };
 
         /// <summary>
         ///     A Props instance whose creator will create an actor that doesn't respond to any message
@@ -67,7 +132,7 @@ namespace Akka.Actor
         /// <summary>
         ///     Initializes a new instance of the <see cref="Props" /> class.
         /// </summary>
-        protected Props()
+        protected Props() 
             : this(defaultDeploy, null, noArgs)
         {
         }
@@ -152,6 +217,7 @@ namespace Akka.Actor
         ///     Gets the type.
         /// </summary>
         /// <value>The type.</value>
+        [JsonIgnore]
         public Type Type
         {
             get
@@ -167,6 +233,7 @@ namespace Akka.Actor
         ///     Gets or sets the dispatcher.
         /// </summary>
         /// <value>The dispatcher.</value>
+        [JsonIgnore]
         public string Dispatcher
         {
             get
@@ -180,6 +247,7 @@ namespace Akka.Actor
         ///     Gets or sets the mailbox.
         /// </summary>
         /// <value>The mailbox.</value>
+        [JsonIgnore]
         public string Mailbox
         {
             get
@@ -188,10 +256,18 @@ namespace Akka.Actor
             }
         }
 
+        public string TypeName
+        {
+            get { return inputType.AssemblyQualifiedName; }
+            //for serialization
+            private set { inputType = Type.GetType(value); }
+        }
+
         /// <summary>
         ///     Gets or sets the router configuration.
         /// </summary>
         /// <value>The router configuration.</value>
+        [JsonIgnore]
         public RouterConfig RouterConfig
         {
             get { return Deploy.RouterConfig; }
@@ -465,13 +541,14 @@ namespace Akka.Actor
         {
             if (type == null) {
                 return defaultProducer;
-            } else if (typeof(IndirectActorProducer).IsAssignableFrom(type)) {
-                return Activator.CreateInstance(type, args).AsInstanceOf<IndirectActorProducer>();
-            } else if (typeof(ActorBase).IsAssignableFrom(type)) {
-                return new ActivatorProducer(type, args);
-            } else {
-                throw new ArgumentException(string.Format("Unknown actor producer [{0}]", type.FullName));
             }
+            if (typeof(IndirectActorProducer).IsAssignableFrom(type)) {
+                return Activator.CreateInstance(type, args).AsInstanceOf<IndirectActorProducer>();
+            }
+            if (typeof(ActorBase).IsAssignableFrom(type)) {
+                return new ActivatorProducer(type, args);
+            }
+            throw new ArgumentException(string.Format("Unknown actor producer [{0}]", type.FullName));
         }
     }
 

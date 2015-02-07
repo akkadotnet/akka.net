@@ -7,6 +7,10 @@ namespace Akka.Configuration.Hocon
     /// </summary>
     public class HoconSubstitution : IHoconElement, IMightBeAHoconObject
     {
+        protected HoconSubstitution()
+        {            
+        }
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="HoconSubstitution" /> class.
         /// </summary>

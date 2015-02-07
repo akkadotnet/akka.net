@@ -413,7 +413,7 @@ namespace Akka.Remote
         protected void ProcessUnwatchRemote(ActorRef watchee, ActorRef watcher)
         {
             //TODO: What to do about this. Remote actors seem to get 0 uid
-            // as ActorPathSurrogate doesn't contain the uid
+            // as Surrogate doesn't contain the uid
             /*if (watchee.Path.Uid == ActorCell.UndefinedUid)
                 LogActorForDeprecationWarning(watchee);
             else*/
