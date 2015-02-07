@@ -300,7 +300,7 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// Helper class that makes it easier to work with <see cref="AckedReceiveBuffer{T}" deliverables/>
+    /// Helper class that makes it easier to work with <see cref="AckedReceiveBuffer{T}"/> deliverables.
     /// </summary>
     sealed class AckReceiveDeliverable<T> where T:IHasSequenceNumber
     {
