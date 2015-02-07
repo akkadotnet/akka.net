@@ -146,9 +146,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 }
             });
             Receive<string>(s => PublishToChildren(s));
+            Receive<NodeCompletedSpecWithSuccess>(s => PublishToChildren(s));
             Receive<IList<NodeTest>>(tests => BeginSpec(tests));
             Receive<EndSpec>(spec => EndSpec());
             Receive<RunnerMessage>(runner => PublishToChildren(runner));
+        }
+
+        private void PublishToChildren(NodeCompletedSpecWithSuccess message)
+        {
+            foreach(var sink in Sinks)
+                sink.Success(message.NodeIndex, message.Message);
         }
 
 

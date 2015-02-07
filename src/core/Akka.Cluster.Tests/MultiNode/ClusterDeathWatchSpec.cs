@@ -74,7 +74,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void ConvergenceSpecTests()
+        public void ClusterDeathWatchSpecTests()
         {
         }
 
