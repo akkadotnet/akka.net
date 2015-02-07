@@ -57,11 +57,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         protected override void AdditionalReceives()
         {
-            Receive<TestRunTree>(tree => WriteToFile(tree));
             Receive<FactData>(data => ReceiveFactData(data));
         }
 
-        private void WriteToFile(TestRunTree tree)
+        protected override void HandleTestRunTree(TestRunTree tree)
         {
             Console.WriteLine("Writing test state to: {0}", Path.GetFullPath(FileName));
             FileStore.SaveTestRun(FileName, tree);

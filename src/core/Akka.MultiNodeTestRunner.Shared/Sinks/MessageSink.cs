@@ -56,10 +56,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             IsClosed = true;
 
             //Signal that the test run has ended
-            MessageSinkActorRef.Tell(new EndTestRun());
-
-            //Give the TestCoordinatorRef 10 seconds to shut down
-            return await MessageSinkActorRef.GracefulStop(TimeSpan.FromSeconds(10));
+            return await MessageSinkActorRef.Ask<MessageSinkActor.SinkCanBeTerminated>(new EndTestRun())
+                .ContinueWith(tr => MessageSinkActorRef.GracefulStop(TimeSpan.FromSeconds(2)), 
+                TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously).Unwrap();
         }
 
         #endregion
@@ -97,10 +96,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /*
          * Regular expressions - go big or go home. [Aaronontheweb]
          */
-        private const string NodeLogMessageRegexString = @"\[(\w){4}(?<node>[0-9]{1,2})\]\[(?<level>(\w)*)\]\[(?<time>\d{1,2}[- /.]\d{1,2}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}\s(AM|PM))\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|\^)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^)*)";
+        private const string NodeLogMessageRegexString = @"\[(\w){4}(?<node>[0-9]{1,2})\]\[(?<level>(\w)*)\]\[(?<time>\d{1,2}[- /.]\d{1,2}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}\s(AM|PM))\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|\^|@)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^|@)*)";
         protected static readonly Regex NodeLogMessageRegex = new Regex(NodeLogMessageRegexString);
 
-        private const string RunnerLogMessageRegexString = @"\[(?<level>(\w)*)\]\[(?<time>\d{1,2}[- /.]\d{1,2}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}\s(AM|PM))\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|\^)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^)*)";
+        private const string RunnerLogMessageRegexString = @"\[(?<level>(\w)*)\]\[(?<time>\d{1,2}[- /.]\d{1,2}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}\s(AM|PM))\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|\^|@)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^|@)*)";
         protected static readonly Regex RunnerLogMessageRegex = new Regex(RunnerLogMessageRegexString);
 
         private const string NodeLogFragmentRegexString = @"\[(\w){4}(?<node>[0-9]{1,2})\](?<message>(.)*)";

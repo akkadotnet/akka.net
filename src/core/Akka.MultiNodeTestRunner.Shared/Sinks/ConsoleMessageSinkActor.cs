@@ -22,14 +22,6 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         protected override void AdditionalReceives()
         {
             Receive<FactData>(data => ReceiveFactData(data));
-            Receive<TestRunTree>(tree => ReceiveTestRunTree(tree));
-        }
-
-        private void ReceiveTestRunTree(TestRunTree tree)
-        {
-            var passedSpecs = tree.Specs.Count(x => x.Passed.GetValueOrDefault(false));
-            WriteSpecMessage(string.Format("Test run completed in [{0}] with {1}/{2} specs passed.", tree.Elapsed, passedSpecs, tree.Specs.Count()));
-            
         }
 
         protected override void ReceiveFactData(FactData data)
@@ -64,6 +56,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                         {
                             WriteSpecMessage(String.Format(" --> {0}", resultMessage.Message));
                         }
+                        if(node.Value.ResultMessages == null || node.Value.ResultMessages.Count == 0)
+                            WriteSpecMessage("[received no messages - SILENT FAILURE].");
                         WriteSpecMessage(string.Format("<----------- END NODE {0} ----------->", node.Key));
                     }
                 }
@@ -82,6 +76,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             WriteSpecMessage("Test run complete.");
             
             base.HandleTestRunEnd(endTestRun);
+        }
+
+        protected override void HandleTestRunTree(TestRunTree tree)
+        {
+            var passedSpecs = tree.Specs.Count(x => x.Passed.GetValueOrDefault(false));
+            WriteSpecMessage(string.Format("Test run completed in [{0}] with {1}/{2} specs passed.", tree.Elapsed, passedSpecs, tree.Specs.Count()));
+            foreach (var factData in tree.Specs)
+            {
+                PrintSpecRunResults(factData);
+            }
         }
 
         protected override void HandleNewSpec(BeginNewSpec newSpec)
@@ -157,20 +161,20 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         private void WriteRunnerMessage(LogMessageForTestRunner nodeMessage)
         {
             Console.ForegroundColor = ColorForLogLevel(nodeMessage.Level);
-            Console.WriteLine("[RUNNER][{0}][{1}][{2}]: {3}", nodeMessage.When, nodeMessage.Level.ToString().Replace("Level", "").ToUpperInvariant(), nodeMessage.LogSource, nodeMessage.Message);
+            Console.WriteLine(nodeMessage.ToString());
             Console.ResetColor();
         }
 
         private void WriteNodeMessage(LogMessageForNode nodeMessage)
         {
             Console.ForegroundColor = ColorForLogLevel(nodeMessage.Level);
-            Console.WriteLine("[NODE{1}][{0}][{2}][{3}]: {4}", nodeMessage.When, nodeMessage.NodeIndex, nodeMessage.Level.ToString().Replace("Level", "").ToUpperInvariant(), nodeMessage.LogSource, nodeMessage.Message);
+            Console.WriteLine(nodeMessage.ToString());
             Console.ResetColor();
         }
 
         private void WriteNodeMessage(LogMessageFragmentForNode nodeMessage)
         {
-            Console.WriteLine("[NODE{1}][{0}]: {2}", nodeMessage.When, nodeMessage.NodeIndex, nodeMessage.Message);
+            Console.WriteLine(nodeMessage.ToString());
         }
 
         private static ConsoleColor ColorForLogLevel(LogLevel level)

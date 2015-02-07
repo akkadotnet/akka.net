@@ -79,6 +79,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         public DateTime When { get; private set; }
 
         public string Message { get; private set; }
+
+        public override string ToString()
+        {
+            return string.Format("[NODE{1}][{0}]: {2}", When, NodeIndex, Message);
+        }
     }
 
     /// <summary>
@@ -104,6 +109,13 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         public string LogSource { get; private set; }
 
         public LogLevel Level { get; private set; }
+
+        public override string ToString()
+        {
+            return string.Format("[NODE{1}][{0}][{2}][{3}]: {4}", When, NodeIndex,
+                Level.ToString().Replace("Level", "").ToUpperInvariant(), LogSource,
+                Message);
+        }
     }
 
     /// <summary>
@@ -126,6 +138,13 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         public string LogSource { get; private set; }
 
         public LogLevel Level { get; private set; }
+
+        public override string ToString()
+        {
+            return string.Format("[RUNNER][{0}][{1}][{2}]: {3}", When,
+                Level.ToString().Replace("Level", "").ToUpperInvariant(), LogSource,
+                Message);
+        }
     }
 
 
