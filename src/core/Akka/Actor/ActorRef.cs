@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using System.Threading;
+using Akka.Actor.Internal;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util.Internal;
@@ -80,7 +81,7 @@ namespace Akka.Actor
         private const int INITIATED = 0;
         private const int COMPLETED = 1;
         private int status = INITIATED;
-        private ActorRef _actorAwaitingResultSender;
+        private readonly ActorRef _actorAwaitingResultSender;
 
         protected override void TellInternal(object message, ActorRef sender)
         {
@@ -92,13 +93,24 @@ namespace Akka.Actor
             {
                 if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
                 {
-                    CallContext.LogicalSetData("akka.state", new AmbientState()
+                    //hide any potential local thread state
+                    var tmp = InternalCurrentActorCellKeeper.Current;
+                    InternalCurrentActorCellKeeper.Current = null;
+                    try
                     {
-                        Self = _actorAwaitingResult,
-                        Message = "",
-                        Sender = _actorAwaitingResultSender,
-                    });
-                    _result.TrySetResult(message); 
+                        CallContext.LogicalSetData("akka.state", new AmbientState()
+                        {
+                            Self = _actorAwaitingResult,
+                            Message = "",
+                            Sender = _actorAwaitingResultSender,
+                        });
+
+                        _result.TrySetResult(message);
+                    }
+                    finally
+                    {
+                        InternalCurrentActorCellKeeper.Current = tmp;
+                    }
                 }
             }
         }

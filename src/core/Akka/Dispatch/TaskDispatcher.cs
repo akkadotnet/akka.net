@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Remoting.Messaging;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 
 namespace Akka.Dispatch
@@ -19,7 +15,8 @@ namespace Akka.Dispatch
     {
         public override void Schedule(Action run)
         {
-            Task.Factory.StartNew(run,CancellationToken.None,TaskCreationOptions.LongRunning,ActorTaskScheduler.Instance);
+            Task.Factory.StartNew(run, CancellationToken.None, TaskCreationOptions.LongRunning,
+                ActorTaskScheduler.Instance);
         }
     }
 
@@ -82,17 +79,17 @@ namespace Akka.Dispatch
 
     public class ActorTaskScheduler : TaskScheduler
     {
-        private static readonly TaskScheduler _instance = new ActorTaskScheduler();
-        private const TaskCreationOptions _mailboxTaskCreationOptions = TaskCreationOptions.LongRunning;
+        private const TaskCreationOptions mailboxTaskCreationOptions = TaskCreationOptions.LongRunning;
+        private static readonly TaskScheduler instance = new ActorTaskScheduler();
 
         public static TaskCreationOptions MailboxTaskCreationOptions
         {
-            get { return _mailboxTaskCreationOptions; }
+            get { return mailboxTaskCreationOptions; }
         }
 
         public static TaskScheduler Instance
         {
-            get { return _instance; }
+            get { return instance; }
         }
 
         protected override IEnumerable<Task> GetScheduledTasks()
@@ -101,13 +98,12 @@ namespace Akka.Dispatch
         }
 
         protected override void QueueTask(Task task)
-        {            
+        {
+            var state = task.AsyncState;
+
             if (task.CreationOptions == MailboxTaskCreationOptions)
             {
-                ThreadPool.UnsafeQueueUserWorkItem(_ =>
-                {
-                    var res = TryExecuteTask(task);
-                },null);
+                ThreadPool.UnsafeQueueUserWorkItem(_ => { TryExecuteTask(task); }, null);
             }
             else
             {
@@ -119,10 +115,7 @@ namespace Akka.Dispatch
                     return;
                 }
 
-                s.Self.Tell( new CompleteTask(s, () =>
-                {
-                    TryExecuteTask(task);
-                }),ActorRef.NoSender);
+                s.Self.Tell(new CompleteTask(s, () => { TryExecuteTask(task); }), ActorRef.NoSender);
             }
         }
 

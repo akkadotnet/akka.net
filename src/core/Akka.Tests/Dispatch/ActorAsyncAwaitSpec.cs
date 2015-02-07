@@ -12,7 +12,7 @@ namespace Akka.Tests.Dispatch
         {
             Receive<string>(async _ =>
             {
-                await Task.Yield();
+           //     await Task.Yield();
                 await Task.Delay(TimeSpan.FromSeconds(1));
                 Sender.Tell("done");
             });

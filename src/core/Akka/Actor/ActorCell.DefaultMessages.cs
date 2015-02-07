@@ -61,6 +61,8 @@ namespace Akka.Actor
             ((InternalActorRef)child).Stop();
         }
 
+
+
         /// <summary>
         ///     Invokes the specified envelope.
         /// </summary>
@@ -74,7 +76,7 @@ namespace Akka.Actor
             //since each message can have a new sender
             //we have to apply the new sender to the current call context
 
-            //TODO: this should be moved to somewhere before an async action gets called instead if possible
+            ////TODO: this should be moved to somewhere before an async action gets called instead if possible
             CallContext.LogicalSetData("akka.state", new AmbientState()
             {
                 Sender = Sender,
