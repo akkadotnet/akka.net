@@ -74,7 +74,6 @@ namespace Akka.Actor
             //since each message can have a new sender
             //we have to apply the new sender to the current call context
 
-            SynchronizationContext.SetSynchronizationContext(ActorSynchronizationContext.Instance);
             CallContext.LogicalSetData("akka.state", new AmbientState()
             {
                 Sender = Sender,
@@ -199,17 +198,9 @@ namespace Akka.Actor
                         .Match()
                         .With<CompleteTask>(m =>
                         {
-                            //HACK system messages don't set sender
-                            //This is needed for ambient context when await continuation runs
-                            //Sideeffects?
-                            SynchronizationContext.SetSynchronizationContext(ActorSynchronizationContext.Instance);
-                            //CallContext.LogicalSetData("akka.state", new AmbientState()
-                            //{
-                            //    Sender = Sender,
-                            //    Self = Self,
-                            //    Message = CurrentMessage
-                            //});
-                            this.Sender = envelope.Sender;
+                            CurrentMessage = m.State.Message;
+                            Sender = m.State.Sender;
+                      
                             HandleCompleteTask(m);
                         })
                         .With<Failed>(HandleFailed)

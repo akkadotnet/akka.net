@@ -72,8 +72,8 @@ namespace Akka.Dispatch
         public override void Schedule(Action run)
         {
             var wc = new WaitCallback(_ => run());
-            //ThreadPool.UnsafeQueueUserWorkItem(wc, null);
-            ThreadPool.QueueUserWorkItem(wc, null);
+            ThreadPool.UnsafeQueueUserWorkItem(wc, null);
+            //ThreadPool.QueueUserWorkItem(wc, null);
         }
     }
 

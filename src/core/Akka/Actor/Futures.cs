@@ -64,7 +64,7 @@ namespace Akka.Actor
             TimeSpan? timeout)
         {
             var result = new TaskCompletionSource<object>(TaskContinuationOptions.AttachedToParent);
-            result.Task.ConfigureAwait(true);
+         //   result.Task.ConfigureAwait(true);
             if (timeout.HasValue)
             {
                 var cancellationSource = new CancellationTokenSource();

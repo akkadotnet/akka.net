@@ -19,32 +19,32 @@ namespace Akka.Dispatch
     {
         public override void Schedule(Action run)
         {
-            Task.Factory.StartNew(run,CancellationToken.None);
+            Task.Factory.StartNew(run,CancellationToken.None,TaskCreationOptions.LongRunning,ActorTaskScheduler.Instance);
         }
     }
 
-    public class MessageSynchronizationContext : SynchronizationContext
-    {
-        private readonly ActorRef _sender;
-        private readonly ActorRef _self;
-        public MessageSynchronizationContext(ActorRef self, ActorRef sender)
-        {
-            _self = self;
-            _sender = sender;
-        }
-        public override void Post(SendOrPostCallback d, object state)
-        {
-            try
-            {
-               //send the continuation as a message to self, and preserve sender from before await
-                _self.Tell(new CompleteTask(() => d(state)), _sender);
-            }
-            catch
-            {
+    //public class MessageSynchronizationContext : SynchronizationContext
+    //{
+    //    private readonly ActorRef _sender;
+    //    private readonly ActorRef _self;
+    //    public MessageSynchronizationContext(ActorRef self, ActorRef sender)
+    //    {
+    //        _self = self;
+    //        _sender = sender;
+    //    }
+    //    public override void Post(SendOrPostCallback d, object state)
+    //    {
+    //        try
+    //        {
+    //           //send the continuation as a message to self, and preserve sender from before await
+    //            _self.Tell(new CompleteTask(() => d(state)), _sender);
+    //        }
+    //        catch
+    //        {
 
-            }
-        }
-    }
+    //        }
+    //    }
+    //}
 
     public class AmbientState
     {
@@ -53,83 +53,82 @@ namespace Akka.Dispatch
         public object Message { get; set; }
     }
 
-    public class ActorSynchronizationContext : SynchronizationContext
-    {
-        private static readonly ActorSynchronizationContext _instance = new ActorSynchronizationContext();
 
-        public static ActorSynchronizationContext Instance
-        {
-            get { return _instance; }
-        }
-
-        public override void Post(SendOrPostCallback d, object state)
-        {
-            try
-            {
-                //This will only occur when a continuation is about to run
-                var s = CallContext.LogicalGetData("akka.state") as AmbientState;
-
-                //send the continuation as a message to self, and preserve sender from before await
-                s.Self.Tell(new CompleteTask(() => d(state)), s.Sender);
-            }
-            catch
-            {
-
-            }
-        }
-    }
-
-    //public class ActorTaskScheduler : TaskScheduler
+    //public class ActorSynchronizationContext : SynchronizationContext
     //{
-    //    private static readonly TaskScheduler _instance = new ActorTaskScheduler();
-    //    private static readonly TaskCreationOptions _mailboxTaskCreationOptions = TaskCreationOptions.LongRunning;
+    //    private static readonly ActorSynchronizationContext _instance = new ActorSynchronizationContext();
 
-    //    public static TaskCreationOptions MailboxTaskCreationOptions
-    //    {
-    //        get { return _mailboxTaskCreationOptions; }
-    //    }
-
-    //    public static TaskScheduler Instance
+    //    public static ActorSynchronizationContext Instance
     //    {
     //        get { return _instance; }
     //    }
 
-    //    protected override IEnumerable<Task> GetScheduledTasks()
+    //    public override void Post(SendOrPostCallback d, object state)
     //    {
-    //        return null;
-    //    }
-
-    //    protected override void QueueTask(Task task)
-    //    {
-    //        if (task.CreationOptions == MailboxTaskCreationOptions)
+    //        try
     //        {
-    //            ThreadPool.QueueUserWorkItem(_ =>
-    //            {
-    //                var res = TryExecuteTask(task);
-    //                Console.WriteLine(res);
-    //            });
+    //            //This will only occur when a continuation is about to run
+    //            var s = CallContext.LogicalGetData("akka.state") as AmbientState;
+
+    //            //send the continuation as a message to self, and preserve sender from before await
+    //            s.Self.Tell(new CompleteTask(() => d(state)), s.Sender);
     //        }
-    //        else
+    //        catch
     //        {
-    //            var currentContext = InternalCurrentActorCellKeeper.Current;
-    //            if (currentContext == null)
-    //            {
-    //                var res = TryExecuteTask(task);
-    //                Console.WriteLine(res);
-    //                return;
-    //            }
 
-    //            currentContext.Self.Tell(new CompleteTask(() =>
-    //            {
-    //                var res = TryExecuteTask(task);
-    //                Console.WriteLine(res);
-    //            }),currentContext.Sender);
     //        }
-    //    }
-
-    //    protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
-    //    {
-    //        return false;
     //    }
     //}
+
+    public class ActorTaskScheduler : TaskScheduler
+    {
+        private static readonly TaskScheduler _instance = new ActorTaskScheduler();
+        private const TaskCreationOptions _mailboxTaskCreationOptions = TaskCreationOptions.LongRunning;
+
+        public static TaskCreationOptions MailboxTaskCreationOptions
+        {
+            get { return _mailboxTaskCreationOptions; }
+        }
+
+        public static TaskScheduler Instance
+        {
+            get { return _instance; }
+        }
+
+        protected override IEnumerable<Task> GetScheduledTasks()
+        {
+            return null;
+        }
+
+        protected override void QueueTask(Task task)
+        {            
+            if (task.CreationOptions == MailboxTaskCreationOptions)
+            {
+                ThreadPool.UnsafeQueueUserWorkItem(_ =>
+                {
+                    var res = TryExecuteTask(task);
+                },null);
+            }
+            else
+            {
+                var s = CallContext.LogicalGetData("akka.state") as AmbientState;
+
+                if (s == null)
+                {
+                    TryExecuteTask(task);
+                    return;
+                }
+
+                s.Self.Tell( new CompleteTask(s, () =>
+                {
+                    TryExecuteTask(task);
+                }),ActorRef.NoSender);
+            }
+        }
+
+        protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
+        {
+            return false;
+        }
+    }
 }

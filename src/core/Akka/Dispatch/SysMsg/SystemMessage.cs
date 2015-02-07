@@ -230,11 +230,15 @@ namespace Akka.Dispatch.SysMsg
         /// <summary>
         ///     Initializes a new instance of the <see cref="CompleteTask" /> class.
         /// </summary>
+        /// <param name="ambientState"></param>
         /// <param name="action">The action.</param>
-        public CompleteTask(Action action)
+        public CompleteTask(AmbientState state, Action action)
         {
+            State = state;
             SetResult = action;
         }
+
+        public AmbientState State { get; private set; }
 
         /// <summary>
         ///     Gets the set result.
