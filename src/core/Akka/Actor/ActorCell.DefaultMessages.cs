@@ -74,6 +74,7 @@ namespace Akka.Actor
             //since each message can have a new sender
             //we have to apply the new sender to the current call context
 
+            //TODO: this should be moved to somewhere before an async action gets called instead if possible
             CallContext.LogicalSetData("akka.state", new AmbientState()
             {
                 Sender = Sender,
@@ -196,13 +197,7 @@ namespace Akka.Actor
                     envelope
                         .Message
                         .Match()
-                        .With<CompleteTask>(m =>
-                        {
-                            CurrentMessage = m.State.Message;
-                            Sender = m.State.Sender;
-                      
-                            HandleCompleteTask(m);
-                        })
+                        .With<CompleteTask>(HandleCompleteTask)
                         .With<Failed>(HandleFailed)
                         .With<DeathWatchNotification>(m => WatchedActorTerminated(m.Actor, m.ExistenceConfirmed, m.AddressTerminated))
                         .With<Create>(HandleCreate)
@@ -226,6 +221,8 @@ namespace Akka.Actor
 
         private void HandleCompleteTask(CompleteTask task)
         {
+            CurrentMessage = task.State.Message;
+            Sender = task.State.Sender;
             task.SetResult();
         }
 
