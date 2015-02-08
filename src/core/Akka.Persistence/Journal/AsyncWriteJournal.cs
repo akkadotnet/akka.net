@@ -112,7 +112,7 @@ namespace Akka.Persistence.Journal
                 }
             };
 
-            WriteMessagesAsync(CreatePersitentBatch(message.Messages)).ContinueWith(t =>
+            WriteMessagesAsync(CreatePersistentBatch(message.Messages)).ContinueWith(t =>
             {
                 if (!t.IsFaulted)
                 {

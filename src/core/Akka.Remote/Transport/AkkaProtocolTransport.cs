@@ -464,7 +464,7 @@ namespace Akka.Remote.Transport
             : this(new InboundUnassociated(associationEventListener, wrappedHandle), handshakeInfo, settings, codec, failureDetector, refuseUid: null) { }
 
         /// <summary>
-        /// Common constructor used by both the outbound and the inboud cases
+        /// Common constructor used by both the outbound and the inbound cases
         /// </summary>
         protected ProtocolStateActor(InitialProtocolStateData initialData, HandshakeInfo localHandshakeInfo, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, int? refuseUid)
         {

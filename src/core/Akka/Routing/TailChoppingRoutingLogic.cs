@@ -34,7 +34,7 @@ namespace Akka.Routing
         private readonly Scheduler scheduler;
 
         /// <summary>
-        /// Creates an instance of the TailChoopingRoutingLogic.
+        /// Creates an instance of the TailChoppingRoutingLogic.
         /// </summary>
         /// <param name="within">The time within which at least one response is expected.</param>
         /// <param name="interval">The duration after which the next routee will be picked.</param>

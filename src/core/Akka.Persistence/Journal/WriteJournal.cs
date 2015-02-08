@@ -6,12 +6,12 @@ namespace Akka.Persistence.Journal
 {
     public abstract class WriteJournalBase : ActorBase
     {
-        protected IEnumerable<IPersistentRepresentation> CreatePersitentBatch(IEnumerable<IPersistentEnvelope> resequencables)
+        protected IEnumerable<IPersistentRepresentation> CreatePersistentBatch(IEnumerable<IPersistentEnvelope> resequencables)
         {
-            return resequencables.Where(PreparePersitentWrite).Cast<IPersistentRepresentation>();
+            return resequencables.Where(PreparePersistentWrite).Cast<IPersistentRepresentation>();
         }
 
-        protected bool PreparePersitentWrite(IPersistentEnvelope persistentEnvelope)
+        protected bool PreparePersistentWrite(IPersistentEnvelope persistentEnvelope)
         {
             if (persistentEnvelope is IPersistentRepresentation)
             {

@@ -26,7 +26,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     }
 
     /// <summary>
-    /// Message type for indiciating that the current spec has ended.
+    /// Message type for indicating that the current spec has ended.
     /// </summary>
     public class EndSpec { }
 

@@ -149,7 +149,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Successfully writen message.
+        /// Successfully written message.
         /// </summary>
         public IPersistentRepresentation Persistent { get; private set; }
 

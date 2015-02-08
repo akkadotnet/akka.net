@@ -35,7 +35,7 @@ namespace Akka.Remote.Transport
         /// 
         /// The transport SHOULD try flushing pending writes before becoming completely closed.
         /// </summary>
-        /// <returns>Task signlaing the completion of the shutdown.</returns>
+        /// <returns>Task signaling the completion of the shutdown.</returns>
         public abstract Task<bool> Shutdown();
 
         /// <summary>
@@ -43,7 +43,7 @@ namespace Akka.Remote.Transport
         /// send appropriate commands to different transport implementations. Unknown commands will be ignored.
         /// </summary>
         /// <param name="message">Command message to send to the transport.</param>
-        /// <returns>A Task that succeeeds whent he command was handled or dropped.</returns>
+        /// <returns>A Task that succeeds when the command was handled or dropped.</returns>
         public virtual Task<bool> ManagementCommand(object message)
         {
             return Task.Run(() => true);

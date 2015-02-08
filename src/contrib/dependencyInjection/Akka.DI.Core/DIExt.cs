@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Akka.DI.Core
 {
     /// <summary>
-    /// Dependency Injection Extension used by the Actor System to Create the Prop conginfuration of DIActorProducer
+    /// Dependency Injection Extension used by the Actor System to Create the Prop configuration of DIActorProducer
     /// </summary>
     public class DIExt : IExtension
     {

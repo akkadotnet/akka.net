@@ -281,7 +281,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Recive a single message from <see cref="Receiver"/> actor with default timeout. 
+        /// Receive a single message from <see cref="Receiver"/> actor with default timeout. 
         /// NOTE: Timeout resolution depends on system's scheduler.
         /// </summary>
         /// <remarks>
@@ -293,7 +293,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Recive a single message from <see cref="Receiver"/> actor. 
+        /// Receive a single message from <see cref="Receiver"/> actor. 
         /// Provided <paramref name="timeout"/> is used for cleanup purposes.
         /// NOTE: <paramref name="timeout"/> resolution depends on system's scheduler.
         /// </summary>

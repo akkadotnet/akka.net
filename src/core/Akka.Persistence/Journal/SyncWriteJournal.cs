@@ -85,7 +85,7 @@ namespace Akka.Persistence.Journal
         {
             try
             {
-                var batch = CreatePersitentBatch(msg.Messages);
+                var batch = CreatePersistentBatch(msg.Messages);
                 WriteMessages(batch);
 
                 msg.PersistentActor.Tell(WriteMessagesSuccessull.Instance);

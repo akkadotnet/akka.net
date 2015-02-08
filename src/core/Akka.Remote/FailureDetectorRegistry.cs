@@ -6,7 +6,7 @@ using Akka.Event;
 namespace Akka.Remote
 {
     /// <summary>
-    /// Interface for a regisry of Akka <see cref="FailureDetector"/>s. New resources are implicitly registered when heartbeat is first
+    /// Interface for a registry of Akka <see cref="FailureDetector"/>s. New resources are implicitly registered when heartbeat is first
     /// called with the resource given as parameter.
     /// </summary>
     public interface IFailureDetectorRegistry<in T>

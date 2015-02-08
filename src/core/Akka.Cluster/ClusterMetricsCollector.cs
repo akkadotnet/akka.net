@@ -30,7 +30,7 @@ namespace Akka.Cluster
         private readonly LoggingAdapter _log = Context.GetLogger();
 
         /// <summary>
-        /// The node ring gossiped that conatins only members that are <see cref="MemberStatus.Up"/>
+        /// The node ring gossiped that contains only members that are <see cref="MemberStatus.Up"/>
         /// </summary>
         public ImmutableHashSet<Address> Nodes { get; private set; }
 
@@ -706,7 +706,7 @@ namespace Akka.Cluster
     }
 
     /// <summary>
-    /// Implementations of cluster syste metrics implement this interface
+    /// Implementations of cluster system metrics implement this interface
     /// </summary>
     public interface IMetricsCollector : IDisposable
     {

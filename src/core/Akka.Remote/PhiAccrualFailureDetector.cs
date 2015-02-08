@@ -86,7 +86,7 @@ namespace Akka.Remote
 
         /// <summary>
         /// Guess statistics for first heartbeat,
-        /// important so taht connections with only one heartbeat becomes unavailable
+        /// important so that connections with only one heartbeat becomes unavailable
         /// </summary>
         private HeartbeatHistory FirstHeartBeat
         {
