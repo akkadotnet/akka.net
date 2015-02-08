@@ -9,39 +9,29 @@ using Akka.Dispatch.SysMsg;
 namespace Akka.Dispatch
 {
     /// <summary>
-    ///     Task based dispatcher
+    /// Task based dispatcher
     /// </summary>
     public class TaskDispatcher : MessageDispatcher
     {
+        public const string CallContextKey = "akka.state";
+        public override void Dispatch(ActorCell cell, Envelope envelope)
+        {
+            CallContext.LogicalSetData(CallContextKey, new AmbientState()
+            {
+                Sender = envelope.Sender,
+                Self = cell.Self,
+                Message = envelope.Message
+            });
+
+            base.Dispatch(cell, envelope);
+        }
+
         public override void Schedule(Action run)
         {
             Task.Factory.StartNew(run, CancellationToken.None, TaskCreationOptions.LongRunning,
                 ActorTaskScheduler.Instance);
         }
     }
-
-    //public class MessageSynchronizationContext : SynchronizationContext
-    //{
-    //    private readonly ActorRef _sender;
-    //    private readonly ActorRef _self;
-    //    public MessageSynchronizationContext(ActorRef self, ActorRef sender)
-    //    {
-    //        _self = self;
-    //        _sender = sender;
-    //    }
-    //    public override void Post(SendOrPostCallback d, object state)
-    //    {
-    //        try
-    //        {
-    //           //send the continuation as a message to self, and preserve sender from before await
-    //            _self.Tell(new CompleteTask(() => d(state)), _sender);
-    //        }
-    //        catch
-    //        {
-
-    //        }
-    //    }
-    //}
 
     public class AmbientState
     {
@@ -50,32 +40,6 @@ namespace Akka.Dispatch
         public object Message { get; set; }
     }
 
-
-    //public class ActorSynchronizationContext : SynchronizationContext
-    //{
-    //    private static readonly ActorSynchronizationContext _instance = new ActorSynchronizationContext();
-
-    //    public static ActorSynchronizationContext Instance
-    //    {
-    //        get { return _instance; }
-    //    }
-
-    //    public override void Post(SendOrPostCallback d, object state)
-    //    {
-    //        try
-    //        {
-    //            //This will only occur when a continuation is about to run
-    //            var s = CallContext.LogicalGetData("akka.state") as AmbientState;
-
-    //            //send the continuation as a message to self, and preserve sender from before await
-    //            s.Self.Tell(new CompleteTask(() => d(state)), s.Sender);
-    //        }
-    //        catch
-    //        {
-
-    //        }
-    //    }
-    //}
 
     public class ActorTaskScheduler : TaskScheduler
     {
@@ -99,15 +63,15 @@ namespace Akka.Dispatch
 
         protected override void QueueTask(Task task)
         {
-            var state = task.AsyncState;
-
             if (task.CreationOptions == MailboxTaskCreationOptions)
             {
+                //TODO: can this be replaced by TryExecuteTask only?
+                //what thread are we on by default here?
                 ThreadPool.UnsafeQueueUserWorkItem(_ => { TryExecuteTask(task); }, null);
             }
             else
             {
-                var s = CallContext.LogicalGetData("akka.state") as AmbientState;
+                var s = CallContext.LogicalGetData(TaskDispatcher.CallContextKey) as AmbientState;
 
                 if (s == null)
                 {

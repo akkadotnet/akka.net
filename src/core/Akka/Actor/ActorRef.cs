@@ -63,7 +63,7 @@ namespace Akka.Actor
                 _actorAwaitingResultSender = ActorCell.Current.Sender;
             }
             _result = result;
-            _sender = sender ?? NoSender;
+            _actorAwaitingResult = actorAwaitingResult ?? NoSender;
             _unregister = unregister;
             _path = path;
         }
@@ -99,7 +99,7 @@ namespace Akka.Actor
                     InternalCurrentActorCellKeeper.Current = null;
                     try
                     {
-                        CallContext.LogicalSetData("akka.state", new AmbientState()
+                        CallContext.LogicalSetData(TaskDispatcher.CallContextKey, new AmbientState()
                         {
                             Self = _actorAwaitingResult,
                             Message = "",

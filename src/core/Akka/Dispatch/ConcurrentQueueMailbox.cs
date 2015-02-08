@@ -69,7 +69,7 @@ namespace Akka.Dispatch
                     Mailbox.DebugPrint(ActorCell.Self + " processing message " + envelope);
 
                     //run the receive handler
-                    ActorCell.Invoke(envelope);
+                    ActorCell.Dispatcher.Dispatch(ActorCell,envelope);
 
                     //check if any system message have arrived while processing user messages
                     if (_systemMessages.TryDequeue(out envelope))
@@ -77,7 +77,7 @@ namespace Akka.Dispatch
                         //handle system message
                         Mailbox.DebugPrint(ActorCell.Self + " processing system message " + envelope);
                         // TODO: Add + " with " + ActorCell.GetChildren());
-                        ActorCell.SystemInvoke(envelope);
+                        ActorCell.Dispatcher.SystemDispatch(ActorCell,envelope);
                         break;
                     }
                     left--;

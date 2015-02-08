@@ -33,9 +33,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-
-
-        ///     Invokes the specified envelope.
+        /// Invokes the specified envelope.
         /// </summary>
         /// <param name="envelope">The envelope.</param>
         public void Invoke(Envelope envelope)
@@ -44,18 +42,6 @@ namespace Akka.Actor
             CurrentMessage = message;
             Sender = envelope.Sender;
 
-            //since each message can have a new sender
-            //we have to apply the new sender to the current call context
-
-            ////TODO: this should be moved to somewhere before an async action gets called instead if possible
-            CallContext.LogicalSetData("akka.state", new AmbientState()
-            {
-                Sender = Sender,
-                Self = Self,
-                Message = CurrentMessage
-            });
-
-               
             try
             {
                 var autoReceivedMessage = message as AutoReceivedMessage;
@@ -165,9 +151,10 @@ namespace Akka.Actor
                 envelope
                     .Message
                     .Match()
-                        .With<CompleteTask>(HandleCompleteTask)
+                    .With<CompleteTask>(HandleCompleteTask)
                     .With<Failed>(HandleFailed)
-                    .With<DeathWatchNotification>(m => WatchedActorTerminated(m.Actor, m.ExistenceConfirmed, m.AddressTerminated))
+                    .With<DeathWatchNotification>(
+                        m => WatchedActorTerminated(m.Actor, m.ExistenceConfirmed, m.AddressTerminated))
                     .With<Create>(m => HandleCreate(m.Failure))
                     //TODO: see """final def init(sendSupervise: Boolean, mailboxType: MailboxType): this.type = {""" in dispatch.scala
                     //case Create(failure) ⇒ create(failure)
@@ -184,6 +171,8 @@ namespace Akka.Actor
             {
                 HandleInvokeFailure(cause);
             }
+        }
+
         private void HandleCompleteTask(CompleteTask task)
         {
             CurrentMessage = task.State.Message;
@@ -191,7 +180,7 @@ namespace Akka.Actor
             task.SetResult();
         }
 
-        }
+        
 
 
         public void SwapMailbox(DeadLetterMailbox mailbox)
