@@ -39,7 +39,7 @@ namespace Akka.Dispatch
             if (respondTo != ActorRef.NoSender)
             {
                 ((InternalActorRef)Self).Stop();
-                respondTo.Tell(new CompleteFuture(() => result.SetResult(message)));
+                result.SetResult(message);
                 Become(EmptyReceive);
             }
             else
