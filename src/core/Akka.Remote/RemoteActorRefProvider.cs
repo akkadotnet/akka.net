@@ -103,17 +103,15 @@ namespace Akka.Remote
             _remoteWatcher = CreateRemoteWatcher(system);
         }
 
-        protected virtual ActorRef CreateRemoteWatcher(ActorSystem system)
+        protected virtual ActorRef CreateRemoteWatcher(ActorSystemImpl system)
         {
             var failureDetector = CreateRemoteWatcherFailureDetector(system);
-            return
-                system.ActorOf(
-                    RemoteSettings.ConfigureDispatcher(
-                        RemoteWatcher.Props(
-                            failureDetector,
-                            RemoteSettings.WatchHeartBeatInterval,
-                            RemoteSettings.WatchUnreachableReaperInterval,
-                            RemoteSettings.WatchHeartbeatExpectedResponseAfter)), "remote-watcher");
+            return system.SystemActorOf(RemoteSettings.ConfigureDispatcher(
+                RemoteWatcher.Props(
+                    failureDetector,
+                    RemoteSettings.WatchHeartBeatInterval,
+                    RemoteSettings.WatchUnreachableReaperInterval,
+                    RemoteSettings.WatchHeartbeatExpectedResponseAfter)), "remote-watcher");
         }
 
         protected DefaultFailureDetectorRegistry<Address> CreateRemoteWatcherFailureDetector(ActorSystem system)

@@ -264,10 +264,13 @@ namespace Akka.Remote.TestKit
         public void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
         {
             _log.Debug("disconnect from {0}", closedChannel.RemoteHost);
-            var fsm = _clients[closedChannel];
-            fsm.Tell(new Controller.ClientDisconnected(new RoleName(null)));
-            ActorRef removedActor;
-            _clients.TryRemove(closedChannel, out removedActor);
+            ActorRef fsm;
+            if (_clients.TryGetValue(closedChannel, out fsm))
+            {
+                fsm.Tell(new Controller.ClientDisconnected(new RoleName(null)));
+                ActorRef removedActor;
+                _clients.TryRemove(closedChannel, out removedActor);
+            }
         }
 
         public void OnMessage(object message, IConnection responseChannel)

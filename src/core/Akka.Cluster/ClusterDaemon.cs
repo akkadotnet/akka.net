@@ -592,7 +592,7 @@ namespace Akka.Cluster
         {
             _publisher =
                 Context.ActorOf(Props.Create<ClusterDomainEventPublisher>().WithDispatcher(Context.Props.Dispatcher), "publisher");
-            _coreDaemon = Context.ActorOf(new Props(typeof(ClusterCoreDaemon), new object[]{_publisher}).WithDispatcher(Context.Props.Dispatcher), "daemon");
+            _coreDaemon = Context.ActorOf(Props.Create(() => new ClusterCoreDaemon(_publisher)).WithDispatcher(Context.Props.Dispatcher), "daemon");
             Context.Watch(_coreDaemon);
 
             Context.Parent.Tell(new InternalClusterAction.PublisherCreated(_publisher));

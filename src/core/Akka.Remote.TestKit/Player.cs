@@ -515,6 +515,7 @@ namespace Akka.Remote.TestKit
         readonly ActorRef _fsm;
         readonly LoggingAdapter _log;
         readonly Scheduler _scheduler;
+        private bool _loggedDisconnect = false;
         
         Deadline _nextAttempt;
         
@@ -558,7 +559,12 @@ namespace Akka.Remote.TestKit
 
         public void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
         {
-            _log.Debug("disconnected from {0}", closedChannel.RemoteHost);
+            if (!_loggedDisconnect) //added this to help mute log messages
+            {
+                _loggedDisconnect = true;
+                _log.Debug("disconnected from {0}", closedChannel.RemoteHost);
+                
+            }
             _fsm.Tell(PoisonPill.Instance);
             //TODO: Some logic here in JVM version to execute this on a different pool to the Netty IO pool
             RemoteConnection.Shutdown(closedChannel);

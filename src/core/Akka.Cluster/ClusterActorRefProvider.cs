@@ -36,13 +36,13 @@ namespace Akka.Cluster
             Cluster.Get(system);
         }
 
-        protected override ActorRef CreateRemoteWatcher(ActorSystem system)
+        protected override ActorRef CreateRemoteWatcher(ActorSystemImpl system)
         {
             // make sure Cluster extension is initialized/loaded from init thread
             Cluster.Get(system);
 
             var failureDetector = CreateRemoteWatcherFailureDetector(system);
-            return system.ActorOf(ClusterRemoteWatcher.Props(
+            return system.SystemActorOf(ClusterRemoteWatcher.Props(
                 failureDetector,
                 RemoteSettings.WatchHeartBeatInterval,
                 RemoteSettings.WatchUnreachableReaperInterval,

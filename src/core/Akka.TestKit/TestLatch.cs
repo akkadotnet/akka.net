@@ -54,6 +54,14 @@ namespace Akka.TestKit
                 string.Format("Timeout of {0}", atMost));
         }
 
+        /// <summary>
+        /// Uses the <see cref="DefaultTimeout"/>
+        /// </summary>
+        public void Ready()
+        {
+            Ready(DefaultTimeout);
+        }
+
         public void Result(TimeSpan atMost)
         {
             Ready(atMost);
