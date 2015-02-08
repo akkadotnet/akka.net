@@ -13,35 +13,24 @@ namespace Akka.Dispatch
     /// </summary>
     public class TaskDispatcher : MessageDispatcher
     {
+        public override void Dispatch(ActorCell cell, Envelope envelope)
+        {
+            CallContext.LogicalSetData("akka.state", new AmbientState
+            {
+                Sender = envelope.Sender,
+                Self = cell.Self,
+                Message = envelope.Message
+            });
+
+            base.Dispatch(cell, envelope);
+        }
+
         public override void Schedule(Action run)
         {
             Task.Factory.StartNew(run, CancellationToken.None, TaskCreationOptions.LongRunning,
                 ActorTaskScheduler.Instance);
         }
     }
-
-    //public class MessageSynchronizationContext : SynchronizationContext
-    //{
-    //    private readonly ActorRef _sender;
-    //    private readonly ActorRef _self;
-    //    public MessageSynchronizationContext(ActorRef self, ActorRef sender)
-    //    {
-    //        _self = self;
-    //        _sender = sender;
-    //    }
-    //    public override void Post(SendOrPostCallback d, object state)
-    //    {
-    //        try
-    //        {
-    //           //send the continuation as a message to self, and preserve sender from before await
-    //            _self.Tell(new CompleteTask(() => d(state)), _sender);
-    //        }
-    //        catch
-    //        {
-
-    //        }
-    //    }
-    //}
 
     public class AmbientState
     {
@@ -51,31 +40,6 @@ namespace Akka.Dispatch
     }
 
 
-    //public class ActorSynchronizationContext : SynchronizationContext
-    //{
-    //    private static readonly ActorSynchronizationContext _instance = new ActorSynchronizationContext();
-
-    //    public static ActorSynchronizationContext Instance
-    //    {
-    //        get { return _instance; }
-    //    }
-
-    //    public override void Post(SendOrPostCallback d, object state)
-    //    {
-    //        try
-    //        {
-    //            //This will only occur when a continuation is about to run
-    //            var s = CallContext.LogicalGetData("akka.state") as AmbientState;
-
-    //            //send the continuation as a message to self, and preserve sender from before await
-    //            s.Self.Tell(new CompleteTask(() => d(state)), s.Sender);
-    //        }
-    //        catch
-    //        {
-
-    //        }
-    //    }
-    //}
 
     public class ActorTaskScheduler : TaskScheduler
     {
@@ -99,7 +63,6 @@ namespace Akka.Dispatch
 
         protected override void QueueTask(Task task)
         {
-            var state = task.AsyncState;
 
             if (task.CreationOptions == MailboxTaskCreationOptions)
             {

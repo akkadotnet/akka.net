@@ -209,13 +209,10 @@ namespace Akka.Dispatch
         public MessageDispatcher FromConfig(string path)
         {
             //TODO: this should not exist, it is only here because we dont serialize dispathcer when doing remote deploy..
+            //TODO: @Aaron, we do now, should this be removed?
             if (string.IsNullOrEmpty(path))
             {
-                //var disp = new ThreadPoolDispatcher
-                //{
-                //    Throughput = 100
-                //};
-                var disp = new TaskDispatcher()
+                var disp = new ThreadPoolDispatcher
                 {
                     Throughput = 100
                 };

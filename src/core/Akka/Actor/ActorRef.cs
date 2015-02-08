@@ -94,23 +94,31 @@ namespace Akka.Actor
             {
                 if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
                 {
-                    //hide any potential local thread state
-                    var tmp = InternalCurrentActorCellKeeper.Current;
-                    InternalCurrentActorCellKeeper.Current = null;
-                    try
+                    _unregister();
+                    if (_actorAwaitingResult == NoSender || message is Terminated)
                     {
-                        CallContext.LogicalSetData("akka.state", new AmbientState()
-                        {
-                            Self = _actorAwaitingResult,
-                            Message = "",
-                            Sender = _actorAwaitingResultSender,
-                        });
-
                         _result.TrySetResult(message);
                     }
-                    finally
+                    else
                     {
-                        InternalCurrentActorCellKeeper.Current = tmp;
+                        //hide any potential local thread state
+                        var tmp = InternalCurrentActorCellKeeper.Current;
+                        InternalCurrentActorCellKeeper.Current = null;
+                        try
+                        {
+                            CallContext.LogicalSetData("akka.state", new AmbientState()
+                            {
+                                Self = _actorAwaitingResult,
+                                Message = "",
+                                Sender = _actorAwaitingResultSender,
+                            });
+
+                            _result.TrySetResult(message);
+                        }
+                        finally
+                        {
+                            InternalCurrentActorCellKeeper.Current = tmp;
+                        }
                     }
                 }
             }
@@ -165,7 +173,7 @@ namespace Akka.Actor
 
         public void Tell(object message, ActorRef sender)
         {
-            if (sender == null) throw new ArgumentNullException("sender", "A actorAwaitingResult must be specified");
+            if (sender == null) throw new ArgumentNullException("sender", "A sender must be specified");
 
             TellInternal(message, sender);
         }
