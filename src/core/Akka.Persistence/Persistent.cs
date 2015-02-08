@@ -42,7 +42,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// Representation of a persitent message in the journal plugin API.
+    /// Representation of a persistent message in the journal plugin API.
     /// </summary>
     public interface IPersistentRepresentation : IPersistentEnvelope, IWithPersistenceId, IMessage
     {

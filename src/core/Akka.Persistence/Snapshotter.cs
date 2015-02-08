@@ -18,7 +18,7 @@ namespace Akka.Persistence
         long SnapshotSequenceNr { get; }
 
         /// <summary>
-        /// Orders to load a snapshots related to persitent actor identified by <paramref name="persistenceId"/>
+        /// Orders to load a snapshots related to persistent actor identified by <paramref name="persistenceId"/>
         /// that match specified <paramref name="criteria"/> up to provided <paramref name="toSequenceNr"/> upper, inclusive bound.
         /// </summary>
         void LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr);

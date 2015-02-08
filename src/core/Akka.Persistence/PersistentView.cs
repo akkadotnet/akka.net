@@ -5,7 +5,7 @@ using Akka.Actor;
 namespace Akka.Persistence
 {
     /// <summary>
-    /// Insealed classs a <see cref="PersistentView"/> to update itself. This will run a single incremental message replay 
+    /// Instructs a <see cref="PersistentView"/> to update itself. This will run a single incremental message replay 
     /// with all messages from the corresponding persistent id's journal that have not yet been consumed by the view.  
     /// To update a view with messages that have been written after handling this request, another <see cref="Update"/> 
     /// request must be sent to the view.
@@ -104,8 +104,8 @@ namespace Akka.Persistence
         public bool IsPersistent { get { return _currentState.IsRecoveryRunning; } }
 
         /// <summary>
-        /// If true, this view will update itself automatically withing an interval specified by <see cref="AutoUpdateInterval"/>.
-        /// If false, application must update this view explicily with <see cref="Update"/> requests.
+        /// If true, this view will update itself automatically within an interval specified by <see cref="AutoUpdateInterval"/>.
+        /// If false, application must update this view explicitly with <see cref="Update"/> requests.
         /// </summary>
         public virtual bool IsAutoUpdate { get { return _viewSettings.AutoUpdate; } }
 
@@ -147,7 +147,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Orders to load a snapshots related to persitent actor identified by <paramref name="persistenceId"/>
+        /// Orders to load a snapshots related to persistent actor identified by <paramref name="persistenceId"/>
         /// that match specified <paramref name="criteria"/> up to provided <paramref name="toSequenceNr"/> upper, inclusive bound.
         /// </summary>
         public void LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr)

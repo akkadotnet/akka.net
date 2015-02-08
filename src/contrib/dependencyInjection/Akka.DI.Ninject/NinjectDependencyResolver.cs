@@ -10,7 +10,7 @@ using System.Text;
 namespace Akka.DI.Ninject
 {
     /// <summary>
-    /// Provide services to ActorSytem Extension system used to create Actor
+    /// Provide services to ActorSystem Extension system used to create Actor
     /// using the Ninject IOC Container to handle wiring up dependencies to
     /// Actors
     /// </summary>

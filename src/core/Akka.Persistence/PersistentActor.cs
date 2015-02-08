@@ -64,7 +64,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// Insealed classs a <see cref="PersistentActor"/> to recover itself. Recovery will start from the first previously saved snapshot
+    /// Instructs a <see cref="PersistentActor"/> to recover itself. Recovery will start from the first previously saved snapshot
     /// matching provided <see cref="FromSnapshot"/> selection criteria, if any. Otherwise it will replay all journaled messages.
     /// 
     /// If recovery starts from a snapshot, the <see cref="PersistentActor"/> is offered with that snapshot wrapped in 

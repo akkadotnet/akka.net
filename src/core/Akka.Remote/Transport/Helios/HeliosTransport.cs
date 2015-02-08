@@ -144,7 +144,7 @@ namespace Akka.Remote.Transport.Helios
     }
 
     /// <summary>
-    /// Abstract base class for HeliosTransport - has separate child implementations for TCP / UDP respsectively
+    /// Abstract base class for HeliosTransport - has separate child implementations for TCP / UDP respectively
     /// </summary>
     abstract class HeliosTransport : Transport
     {

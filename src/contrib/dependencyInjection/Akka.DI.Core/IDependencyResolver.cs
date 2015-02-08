@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Akka.DI.Core
 {
     /// <summary>
-    /// Contract used provide services to ActorSytem Extension system used to create
+    /// Contract used provide services to ActorSystem Extension system used to create
     /// Actors
     /// </summary>
     public interface IDependencyResolver

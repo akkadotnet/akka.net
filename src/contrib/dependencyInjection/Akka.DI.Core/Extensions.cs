@@ -12,10 +12,10 @@ namespace Akka.DI.Core
     public static class Extensions
     {
         /// <summary>
-        /// Method used to registrer the IDependencyResolver to the ActorSytem
+        /// Method used to register the IDependencyResolver to the ActorSystem
         /// </summary>
-        /// <param name="system">Instance of the AcotrSystem</param>
-        /// <param name="dependencyResolver">Contrete Instance of IDepenendcyResolver i.e. Akka.DI.AutoFac.AutoFacDependencyResolver</param>
+        /// <param name="system">Instance of the ActorSystem</param>
+        /// <param name="dependencyResolver">Concrete Instance of IDependencyResolver i.e. Akka.DI.AutoFac.AutoFacDependencyResolver</param>
         public static void AddDependencyResolver(this ActorSystem system, IDependencyResolver dependencyResolver)
         {
             if (system == null) throw new ArgumentNullException("system");

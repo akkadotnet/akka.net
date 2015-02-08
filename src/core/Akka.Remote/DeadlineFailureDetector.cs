@@ -18,7 +18,7 @@ namespace Akka.Remote
         private Clock _clock;
 
         /// <summary>
-        /// Procedural contructor for <see cref="DeadlineFailureDetector"/>
+        /// Procedural constructor for <see cref="DeadlineFailureDetector"/>
         /// </summary>
         /// <param name="acceptableHeartbeatPause">Duration corresponding to number of potentially lost/delayed
         /// heartbeats that will be accepted before considering it to be an anomaly.

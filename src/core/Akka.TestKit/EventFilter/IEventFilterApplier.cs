@@ -115,7 +115,7 @@ namespace Akka.TestKit
         void Mute(Action action);
 
         /// <summary>
-        /// Prevents events from beeing logged from now on. To allow events to be logged again, call 
+        /// Prevents events from being logged from now on. To allow events to be logged again, call 
         /// <see cref="UnmutableFilter.Unmute">Unmute</see> on the returned object.
         /// <example>
         /// <code>

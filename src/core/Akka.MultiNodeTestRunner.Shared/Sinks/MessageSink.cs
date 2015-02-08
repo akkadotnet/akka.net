@@ -66,7 +66,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         #region Static methods and constants
 
         /// <summary>
-        /// Constant used on calls where no message is procided by the caller.
+        /// Constant used on calls where no message is proceeded by the caller.
         /// </summary>
         public const string NoMessage = "[no message given.]";
 

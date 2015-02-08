@@ -183,7 +183,7 @@ namespace Akka.Persistence
     #region Internal API for Snapshot protocol
 
     /// <summary>
-    /// Insealed classs a snapshot store to load the snapshot.
+    /// Instructs a snapshot store to load the snapshot.
     /// </summary>
     public sealed class LoadSnapshot
     {
@@ -195,7 +195,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Persitent actor identifier.
+        /// Persistent actor identifier.
         /// </summary>
         public string PersistenceId { get; private set; }
 
@@ -229,7 +229,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// Insealed classs snapshot store to save a snapshot.
+    /// Instructs a snapshot store to save a snapshot.
     /// </summary>
     public sealed class SaveSnapshot
     {
@@ -244,7 +244,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// Insealed classs a snapshot store to save a snapshot.
+    /// Instructs a snapshot store to delete a snapshot.
     /// </summary>
     public sealed class DeleteSnapshot
     {
@@ -257,7 +257,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// Insealed classs a snapshot store to delete all snapshots that match provided criteria.
+    /// Instructs a snapshot store to delete all snapshots that match provided criteria.
     /// </summary>
     public sealed class DeleteSnapshots
     {

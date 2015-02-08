@@ -14,7 +14,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// Forces actor to stash incoming commands untill all invokations are handled.
+    /// Forces actor to stash incoming commands until all invocations are handled.
     /// </summary>
     public sealed class StashingHandlerInvocation : IPendingHandlerInvocation
     {
@@ -153,16 +153,16 @@ namespace Akka.Persistence
 
         /// <summary>
         /// Command handler. Typically validates commands against current state - possibly by communicating with other actors.
-        /// On successfull validation, one or more events are derived from command and persisted.
+        /// On successful validation, one or more events are derived from command and persisted.
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
         protected abstract bool ReceiveCommand(object message);
 
         /// <summary> 
-        /// Asynchronously persists an <paramref name="event"/>. On successfull persistence, the <paramref name="handler"/>
+        /// Asynchronously persists an <paramref name="event"/>. On successful persistence, the <paramref name="handler"/>
         /// is called with the persisted event. This method guarantees that no new commands will be received by a persistent actor
-        /// between a call to <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> and exection of it's handler. It also
+        /// between a call to <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> and execution of it's handler. It also
         /// holds multiple persist calls per received command. Internally this is done by stashing.
         /// 
         /// 

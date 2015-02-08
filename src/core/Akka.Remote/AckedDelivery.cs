@@ -256,7 +256,7 @@ namespace Akka.Remote
         public SeqNo MaxSeq { get; private set; }
 
         /// <summary>
-        /// Processes an incoming acknowledgement and returns a new buffre with only unacknowledged elements remaining.
+        /// Processes an incoming acknowledgement and returns a new buffer with only unacknowledged elements remaining.
         /// </summary>
         /// <param name="ack">The received acknowledgement</param>
         /// <exception cref="ResendUnfulfillableException">Thrown if we couldn't fit all of the nacks stored inside <see cref="Ack"/> onto the buffer.</exception>
@@ -369,7 +369,7 @@ namespace Akka.Remote
         /// Extract all messages that could be safely delivered, an updated ack to be sent to the sender(), and
         /// an updated buffer that has the messages removed that can be delivered.
         /// </summary>
-        /// <returns>Triplet of the updated buffer, messages that can be delivered, and the udpated acknowledgement.</returns>
+        /// <returns>Triplet of the updated buffer, messages that can be delivered, and the updated acknowledgement.</returns>
         public AckReceiveDeliverable<T> ExtractDeliverable
         {
             get
