@@ -72,6 +72,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 : base(config)
             {
                 _config = config;
+                MuteMarkingAsUnreachable();
             }
 
             [MultiNodeFact]
@@ -108,9 +109,6 @@ namespace Akka.Cluster.Tests.MultiNode
 
                 //TODO: Seem to be able to pass barriers once other node fails?
                 EnterBarrier("second-joined");
-
-                //TODO: Finish!
-                return;
 
                 // It is likely that second has not started heartbeating to first yet,
                 // and when it does the messages doesn't go through and the first extra heartbeat is triggered.
