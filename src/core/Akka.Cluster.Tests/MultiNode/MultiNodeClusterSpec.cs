@@ -58,48 +58,50 @@ namespace Akka.Cluster.Tests.MultiNode
             ");
         }
 
-        // sometimes we need to coordinate test shutdown with messages instead of barriers
-        sealed class SendEnd
-        {
-            private SendEnd() { }
-            private static readonly SendEnd _instance = new SendEnd();
-            public static SendEnd Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
-        }
-
-        sealed class End
-        {
-            private End() { }
-            private static readonly End _instance = new End();
-            public static End Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
-        }
-
-        sealed class EndAck
-        {
-            private EndAck() { }
-            private static readonly EndAck _instance = new EndAck();
-            public static EndAck Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
-        }
 
         public class EndActor : UntypedActor
         {
+
+            // sometimes we need to coordinate test shutdown with messages instead of barriers
+            public sealed class SendEnd
+            {
+                private SendEnd() { }
+                private static readonly SendEnd _instance = new SendEnd();
+                public static SendEnd Instance
+                {
+                    get
+                    {
+                        return _instance;
+                    }
+                }
+            }
+
+            public sealed class End
+            {
+                private End() { }
+                private static readonly End _instance = new End();
+                public static End Instance
+                {
+                    get
+                    {
+                        return _instance;
+                    }
+                }
+            }
+
+            public sealed class EndAck
+            {
+                private EndAck() { }
+                private static readonly EndAck _instance = new EndAck();
+                public static EndAck Instance
+                {
+                    get
+                    {
+                        return _instance;
+                    }
+                }
+            }
+
             readonly ActorRef _testActor;
             readonly Address _target;
 
@@ -237,6 +239,12 @@ namespace Akka.Cluster.Tests.MultiNode
             }
         }
 
+        /// <summary>
+        /// Initialize the cluster of the specified member nodes (<see cref="roles"/>)
+        /// and wait until all joined and <see cref="MemberStatus.Up"/>.
+        /// 
+        /// First node will be started firat and others will join the first.
+        /// </summary>
         public void AwaitClusterUp(params RoleName[] roles)
         {
             // make sure that the node-to-join is started before other join

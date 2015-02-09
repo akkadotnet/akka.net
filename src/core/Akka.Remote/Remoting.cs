@@ -26,6 +26,15 @@ namespace Akka.Remote
         }
     }
 
+    //TODO: needs to be implemented in Endpoint
+    /// <summary>
+    /// INTERNAL API
+    /// Messages marked with this interface will be sent before other messages when buffering is active.
+    /// This means that these messages don't obey normal message ordering.
+    /// It is used for failure detector heartbeat messages.
+    /// </summary>
+    internal interface IPriorityMessage { }
+
     /// <summary>
     /// INTERNAL API
     /// </summary>
