@@ -7,12 +7,21 @@ namespace Akka.Dispatch.MessageQueues
     /// <summary>An Bounded mailbox message queue.</summary>
     public class BoundedMessageQueue : MessageQueue, BoundedMessageQueueSemantics
     {
-        //TODO: Implement BoundedMessageQueue. Currently it's just a copy of UnboundedMessageQueue
-        private readonly ConcurrentQueue<Envelope> _queue = new ConcurrentQueue<Envelope>();
+        private readonly BlockingCollection<Envelope> _queue;
+
+        public BoundedMessageQueue()
+        {
+            _queue = new BlockingCollection<Envelope>();
+        }
+
+        public BoundedMessageQueue(int boundedCapacity)
+        {
+            _queue = new BlockingCollection<Envelope>(boundedCapacity);
+        }
 
         public void Enqueue(Envelope envelope)
         {
-            _queue.Enqueue(envelope);
+            _queue.Add(envelope);
         }
 
         public bool HasMessages
@@ -27,7 +36,7 @@ namespace Akka.Dispatch.MessageQueues
 
         public bool TryDequeue(out Envelope envelope)
         {
-            return _queue.TryDequeue(out envelope);
+            return _queue.TryTake(out envelope);
         }
 
         public TimeSpan PushTimeOut { get; set; }
