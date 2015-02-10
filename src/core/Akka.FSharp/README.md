@@ -129,16 +129,16 @@ Monitored actors will automatically send a `Terminated` message to their watcher
 
 Actors have a place in their system's hierarchy trees. To manage failures done by the child actors, their parents/supervisors may decide to use specific supervisor strategies (see: [Supervision](http://akkadotnet.github.io/wiki/Supervision)) in order to react to the specific types of errors. In F# this may be configured using functions of the `Strategy` module:
 
--   `Strategy.oneForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution.
--   `Strategy.oneForOne2 (retries : int) (timeout : TimeSpan) (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
--   `Strategy.allForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution.
--   `Strategy.allForOne2 (retries : int) (timeout : TimeSpan) (decider : exn -> Directive) : SupervisorStrategy` -  returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
+-   `Strategy.OneForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution.
+-   `Strategy.OneForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
+-   `Strategy.AllForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution.
+-   `Strategy.AllForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` -  returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
 
 Example:
 
     let aref = 
         spawnOpt system "my-actor" (actorOf myFunc) 
-            [ SpawnOption.SupervisorStrategy (Strategy.oneForOne (fun error -> 
+            [ SpawnOption.SupervisorStrategy (Strategy.OneForOne (fun error -> 
                 match error with
                 | :? ArithmeticException -> Directive.Escalate
                 | _ -> SupervisorStrategy.DefaultDecider error )) ]
@@ -147,9 +147,9 @@ Example:
 
 While you may use built-in set of the event stream methods (see: Event Streams), there is an option of using dedicated F# API functions:
 
--   `sub (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - subscribes an actor reference to target channel of the provided event stream. Channels are associated with specific types of a message emitted by the publishers.
--   `unsub (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - unsubscribes an actor reference from target channel of the provided event stream.
--   `pub (event: 'Event) (eventStream: Akka.Event.EventStream) : unit` - publishes an event on the provided event stream. Event channel is resolved from event's type.
+-   `subscribe (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - subscribes an actor reference to target channel of the provided event stream. Channels are associated with specific types of a message emitted by the publishers.
+-   `unsubscribe (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - unsubscribes an actor reference from target channel of the provided event stream.
+-   `publish (event: 'Event) (eventStream: Akka.Event.EventStream) : unit` - publishes an event on the provided event stream. Event channel is resolved from event's type.
 
 Example: 
 
@@ -164,13 +164,13 @@ Example:
                 let eventStream = mailbox.Context.System.EventStream
                 match msg with
                 | Msg (sender, content) -> printfn "%A says %s" (sender.Path) content
-                | Subscribe -> sub typeof<Message> mailbox.Self eventStream |> ignore
-                | Unsubscribe -> unsub typeof<Message> mailbox.Self eventStream |> ignore ))
+                | Subscribe -> subscribe typeof<Message> mailbox.Self eventStream |> ignore
+                | Unsubscribe -> unsubscribe typeof<Message> mailbox.Self eventStream |> ignore ))
             
     let publisher = 
         spawn system "publisher" 
             (actorOf2 (fun mailbox msg -> 
-                pub msg mailbox.Context.System.EventStream))
+                publish msg mailbox.Context.System.EventStream))
 
     subscriber <! Subscribe
     publisher  <! Msg (publisher, "hello")

@@ -175,7 +175,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Number of messages, that have not been confirmed yet.
         /// </summary>
-        protected int UnconfirmedCount { get { return _unconfirmed.Count; } }
+        public int UnconfirmedCount { get { return _unconfirmed.Count; } }
 
         /// <summary>
         /// Send the message created with <paramref name="deliveryMessageMapper"/> function to the <see cref="destination"/>
@@ -189,7 +189,7 @@ namespace Akka.Persistence
         /// <exception cref="MaxUnconfirmedMessagesExceededException">
         /// Thrown when <see cref="UnconfirmedCount"/> is greater than or equal to <see cref="MaxUnconfirmedMessages"/>.
         /// </exception>
-        protected void Deliver(ActorPath destination, Func<long, object> deliveryMessageMapper)
+        public void Deliver(ActorPath destination, Func<long, object> deliveryMessageMapper)
         {
             if (UnconfirmedCount >= MaxUnconfirmedMessages)
             {
@@ -215,7 +215,7 @@ namespace Akka.Persistence
         /// or to cancel redelivery attempts.
         /// </summary>
         /// <returns>True if delivery was confirmed first time, false for duplicate confirmations.</returns>
-        protected bool ConfirmDelivery(long deliveryId)
+        public bool ConfirmDelivery(long deliveryId)
         {
             Delivery delivery;
             return _unconfirmed.TryRemove(deliveryId, out delivery);
@@ -225,7 +225,7 @@ namespace Akka.Persistence
         /// Returns full state of the current delivery actor. Could be saved using <see cref="Eventsourced.SaveSnapshot"/> method.
         /// During recovery a snapshot received in <see cref="SnapshotOffer"/> should be set with <see cref="SetDeliverySnapshot"/>.
         /// </summary>
-        protected GuaranteedDeliverySnapshot GetDeliverySnapshot()
+        public GuaranteedDeliverySnapshot GetDeliverySnapshot()
         {
             var unconfirmedDeliveries = _unconfirmed
                 .Select(e => new UnconfirmedDelivery(e.Key, e.Value.Destination, e.Value.Message))
@@ -239,7 +239,7 @@ namespace Akka.Persistence
         /// <see cref="SnapshotOffer"/> meesage and should be set with this method.
         /// </summary>
         /// <param name="snapshot"></param>
-        protected void SetDeliverySnapshot(GuaranteedDeliverySnapshot snapshot)
+        public void SetDeliverySnapshot(GuaranteedDeliverySnapshot snapshot)
         {
             _deliverySequenceNr = snapshot.DeliveryId;
             var now = DateTime.Now;

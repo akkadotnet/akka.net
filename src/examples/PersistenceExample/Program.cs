@@ -14,11 +14,11 @@ namespace PersistenceExample
 
             using (var system = ActorSystem.Create("example",  config))
             {
-                BasicUsage(system);
+                //BasicUsage(system);
 
                 // FailingActorExample(system);
 
-                // SnapshotedActor(system);
+                SnapshotedActor(system);
 
                 //ViewExample(system);
 

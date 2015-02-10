@@ -33,7 +33,7 @@ let main() =
     
     // below we define OneForOneStrategy to handle specific exceptions incoming from child actors
     let strategy = 
-        Strategy.oneForOne (fun e -> 
+        Strategy.OneForOne (fun e -> 
             match e with
             | :? ArithmeticException -> Directive.Resume
             | :? ArgumentException -> Directive.Stop
