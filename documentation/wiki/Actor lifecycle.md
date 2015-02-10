@@ -20,51 +20,62 @@ In order to be notified when another actor terminates (i.e. stops permanently, n
 Registering a monitor is easy (see fourth line, the rest is for demonstrating the whole functionality):
 
 ```csharp
-import akka.actor.Terminated;
-public class WatchActor extends UntypedActor {
-  final ActorRef child = this.getContext().actorOf(Props.empty(), "child");
-  {
-    this.getContext().watch(child); // <-- the only call needed for registration
-  }
-  ActorRef lastSender = getContext().system().deadLetters();
- 
-  @Override
-  public void onReceive(Object message) {
-    if (message.equals("kill")) {
-      getContext().stop(child);
-      lastSender = getSender();
-    } else if (message instanceof Terminated) {
-      final Terminated t = (Terminated) message;
-      if (t.getActor() == child) {
-        lastSender.tell("finished", getSelf());
-      }
-    } else {
-      unhandled(message);
+public class WatchActor : UntypedActor
+{
+    public WatchActor()
+    {
+        Context.Watch(child);
     }
-  }
+
+    ActorRef child = Context.ActorOf(Props.Empty, "child");
+    ActorRef lastSender = Context.System.DeadLetters;
+
+    protected override void OnReceive(object message)
+    {
+        if (message.Equals("kill"))
+        {
+            Context.Stop(child);
+            lastSender = Sender;
+        }
+        else if (message is Terminated)
+        {
+            var t = (Terminated)message;
+
+            if (t.ActorRef == child)
+            {
+                lastSender.Tell("finished");
+            }
+        }
+        else
+        {
+            Unhandled(message);
+        }
+    }
 }
 ```
+
 It should be noted that the Terminated message is generated independent of the order in which registration and termination occur. In particular, the watching actor will receive a Terminated message even if the watched actor has already been terminated at the time of registration.
 
 Registering multiple times does not necessarily lead to multiple messages being generated, but there is no guarantee that only exactly one such message is received: if termination of the watched actor has generated and queued the message, and another registration is done before this message has been processed, then a second message will be queued, because registering for monitoring of an already terminated actor leads to the immediate generation of the Terminated message.
 
-It is also possible to deregister from watching another actor’s liveliness using getContext().unwatch(target). This works even if the Terminated message has already been enqueued in the mailbox; after calling unwatch no Terminated message for that actor will be processed anymore.
+It is also possible to deregister from watching another actor’s liveliness using Context.Unwatch(target). This works even if the Terminated message has already been enqueued in the mailbox; after calling unwatch no Terminated message for that actor will be processed anymore.
 
 ### Start Hook
-Right after starting the actor, its preStart method is invoked.
+Right after starting the actor, its PreStart method is invoked.
 
 ```csharp
-@Override
-public void preStart() {
-  child = getContext().actorOf(Props.empty());
+protected override void PreStart()
+{
+    child = Context.ActorOf(Props.Empty);
 }
 ```
+
 This method is called when the actor is first created. During restarts it is called by the default implementation of postRestart, which means that by overriding that method you can choose whether the initialization code in this method is called only exactly once for this actor or for every restart. Initialization code which is part of the actor’s constructor will always be called when an instance of the actor class is created, which happens at every restart.
 
 ### Restart Hooks
 All actors are supervised, i.e. linked to another actor with a fault handling strategy. Actors may be restarted in case an exception is thrown while processing a message (see Supervision and Monitoring). This restart involves the hooks mentioned above:
 
-The old actor is informed by calling preRestart with the exception which caused the restart and the message which triggered that exception; the latter may be None if the restart was not caused by processing a message, e.g. when a supervisor does not trap the exception and is restarted in turn by its supervisor, or if an actor is restarted due to a sibling’s failure. If the message is available, then that message’s sender is also accessible in the usual way (i.e. by calling getSender()).
+The old actor is informed by calling preRestart with the exception which caused the restart and the message which triggered that exception; the latter may be None if the restart was not caused by processing a message, e.g. when a supervisor does not trap the exception and is restarted in turn by its supervisor, or if an actor is restarted due to a sibling’s failure. If the message is available, then that message’s sender is also accessible in the usual way (i.e. by calling the Sender property).
 
 This method is the best place for cleaning up, preparing hand-over to the fresh actor instance, etc. By default it stops all children and calls postStop.
 

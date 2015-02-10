@@ -43,7 +43,7 @@ Akka.Persistence is currently in beta and is under very active development. [Fol
 
 <!--
 TODO
-Messages received by an actor can optionally be persisted and replayed when the actor is started or restarted. This allows actors to recover their state, even after JVM crashes or when being migrated to another node.
+Messages received by an actor can optionally be persisted and replayed when the actor is started or restarted. This allows actors to recover their state, even after the CLR crashes or when being migrated to another node.
 
 You can find more details in the respective chapter for Java or Scala.
 
