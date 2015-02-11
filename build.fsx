@@ -19,7 +19,7 @@ cd __SOURCE_DIRECTORY__
 
 let product = "Akka.NET"
 let authors = [ "Akka.NET Team" ]
-let copyright = "Copyright © 2013-2014 Akka.NET Team"
+let copyright = "Copyright © 2013-2015 Akka.NET Team"
 let company = "Akka.NET Team"
 let description = "Akka.NET is a port of the popular Java/Scala framework Akka to .NET"
 let tags = ["akka";"actors";"actor";"model";"Akka";"concurrency"]
@@ -124,9 +124,16 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.Remote.TestKit"
       "core/Akka.Cluster"
       "core/Akka.MultiNodeTestRunner"
+      "core/Akka.Persistence"
+      "core/Akka.Persistence.FSharp"
+      "core/Akka.Persistence.TestKit"
       "contrib/loggers/Akka.Logger.slf4net"
       "contrib/loggers/Akka.Logger.NLog" 
       "contrib/loggers/Akka.Logger.Serilog" 
+      "contrib/dependencyinjection/Akka.DI.Core"
+      "contrib/dependencyinjection/Akka.DI.AutoFac"
+      "contrib/dependencyinjection/Akka.DI.CastleWindsor"
+      "contrib/dependencyinjection/Akka.DI.Ninject"
       "contrib/testkits/Akka.TestKit.Xunit" 
       ]
     |> List.iter copyOutput
@@ -195,6 +202,9 @@ module Nuget =
         match project with
         | "Akka" -> []
         | "Akka.Cluster" -> ["Akka.Remote", release.NugetVersion]
+        | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion]
+        | "Akka.Persistence.FSharp" -> ["Akka.Persistence", preReleaseVersion]
+        | di when (di.StartsWith("Akka.DI.") && not (di.EndsWith("Core"))) -> ["Akka.DI.Core", release.NugetVersion]
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
 
@@ -202,6 +212,7 @@ module Nuget =
     let getProjectVersion project =
       match project with
       | "Akka.Cluster" -> preReleaseVersion
+      | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | _ -> release.NugetVersion
 
 open Nuget
