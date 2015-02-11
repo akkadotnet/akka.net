@@ -44,6 +44,7 @@
   <ItemGroup>
     <Compile Include="FsApi.fs" />
     <None Include="Script.fsx" />
+    <None Include="Akka.Persistence.FSharp.nuspec" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka.FSharp\Akka.FSharp.fsproj">

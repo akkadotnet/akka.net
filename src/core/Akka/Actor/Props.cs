@@ -44,7 +44,7 @@ namespace Akka.Actor
 
         private bool CompareSupervisorStrategy(Props other)
         {
-            return true;
+            return true; //TODO: fix https://github.com/akkadotnet/akka.net/issues/599
             return Equals(SupervisorStrategy, other.SupervisorStrategy);
         }
 
