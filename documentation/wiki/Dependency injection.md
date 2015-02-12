@@ -71,7 +71,7 @@ var system = ActorSystem.Create("MySystem");
 var propsResolver = new NinjectDependencyResolver(container,system);
 ``` 
 
-Support for additional dependency injection frameworks may be added in the future, but you can easily implement your own by implementing an [Actor Producer Extension](https://github.com/akkadotnet/akka.net/tree/dev/src/contrib/dependencyInjection/Akka.DI.Core).
+Support for additional dependency injection frameworks may be added in the future, but you can easily implement your own by implementing an [Actor Producer Extension](DI Core).
 
 > **Warning** You might be tempted at times to use an IndirectActorProducer which always returns the same instance, e.g. by using a static field. This is not supported, as it goes against the meaning of an actor restart, which is described here: [[What Restarting Means]].
 
