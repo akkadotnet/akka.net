@@ -12,7 +12,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="cause">The cause.</param>
         /// <param name="message">The message.</param>
-        public void AroundPreRestart(Exception cause, object message)
+        public virtual void AroundPreRestart(Exception cause, object message)
         {
             PreRestart(cause, message);
         }
@@ -20,7 +20,7 @@ namespace Akka.Actor
         /// <summary>
         ///     Can be overridden to intercept calls to `preStart`. Calls `preStart` by default.
         /// </summary>
-        public void AroundPreStart()
+        public virtual void AroundPreStart()
         {
             PreStart();
         }
@@ -41,7 +41,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="cause">The cause.</param>
         /// <param name="message">The message.</param>
-        public void AroundPostRestart(Exception cause, object message)
+        public virtual void AroundPostRestart(Exception cause, object message)
         {
             PostRestart(cause);
         }
@@ -78,7 +78,7 @@ namespace Akka.Actor
         /// <summary>
         ///     Can be overridden to intercept calls to `postStop`. Calls `postStop` by default..
         /// </summary>
-        public void AroundPostStop()
+        public virtual void AroundPostStop()
         {
             PostStop();
         }

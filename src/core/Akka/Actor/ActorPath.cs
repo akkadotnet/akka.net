@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Akka.Util;
+using Newtonsoft.Json;
 
 namespace Akka.Actor
 {
@@ -20,11 +22,81 @@ namespace Akka.Actor
     /// references are compared the unique id of the actor is not taken into account
     /// when comparing actor paths.
     /// </summary>
-    public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>
+    public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>, ISurrogated
     {
-        /// <summary> The regex that actor names must conform to RFC 2396, http://www.ietf.org/rfc/rfc2396.txt </summary>
-        //Note that AKKA JVM does not allow parenthesis ( ) but, according to RFC 2396 those are allowed, and 
-        //since we use URL Encode to create valid actor names, we must allow them
+        public class Surrogate : ISurrogate, IEquatable<Surrogate>, IEquatable<ActorPath>
+        {
+            public Surrogate(string path)
+            {
+                Path = path;
+            }
+
+            public string Path { get; private set; }
+
+            public object FromSurrogate(ActorSystem system)
+            {
+                ActorPath path;
+                if (TryParse(Path, out path))
+                {
+                    return path;
+                }
+
+                return null;
+            }
+
+            #region Implicit conversion operators
+
+            public static implicit operator ActorPath(Surrogate surrogate)
+            {
+                ActorPath parse;
+                TryParse(surrogate.Path, out parse);
+                return parse;
+            }
+
+            public static implicit operator Surrogate(ActorPath path)
+            {
+                return (Surrogate)path.ToSurrogate(null);
+            }
+
+            #endregion
+
+            #region Equality
+
+            public bool Equals(Surrogate other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return string.Equals(Path, other.Path);
+            }
+
+            public bool Equals(ActorPath other)
+            {
+                if (other == null) return false;
+                return Equals(other.ToSurrogate(null));
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                var actorPath = obj as ActorPath;
+                if (actorPath != null) return Equals(actorPath);
+                return Equals((Surrogate) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return Path.GetHashCode();
+            }
+
+            #endregion
+        }
+
+        /// <summary> 
+        /// The regex that actor names must conform to RFC 2396, http://www.ietf.org/rfc/rfc2396.txt
+        /// Note that AKKA JVM does not allow parenthesis ( ) but, according to RFC 2396 those are allowed, and 
+        /// since we use URL Encode to create valid actor names, we must allow them.
+        /// </summary>
         public static readonly Regex ElementRegex =
             new Regex(@"^(?:[-a-zA-Z0-9:@&=+,.!~*'_;\(\)]|%[0-9a-fA-F]{2})(?:[-a-zA-Z0-9:@&=+,.!~*'\$_;\(\)]|%[0-9a-fA-F]{2})*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
@@ -106,6 +178,9 @@ namespace Akka.Actor
         /// <returns> true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false. </returns>
         public bool Equals(ActorPath other)
         {
+            if (other == null)
+                return false;
+
             return Address.Equals(other.Address) && Elements.SequenceEqual(other.Elements);
         }
 
@@ -145,6 +220,15 @@ namespace Akka.Actor
             return a;
         }
 
+        public static ActorPath Parse(string path)
+        {
+            ActorPath actorPath;
+            if (TryParse(path, out actorPath))
+            {
+                return actorPath;
+            }
+            throw new UriFormatException("Can not parse an ActorPath: " + path);
+        }
 
         /// <summary>
         /// Tries to parse the uri, which should be a full uri, i.e containing protocol.
@@ -292,8 +376,15 @@ namespace Akka.Actor
         /// </returns>
         public override bool Equals(object obj)
         {
-            return Equals((ActorPath)obj);
+            var other = obj as ActorPath;
+            return Equals(other);
         }
+
+        //public bool Equals(Surrogate other)
+        //{
+        //    if (other == null) return false;
+        //    return other.Equals(ToSurrogate(null));
+        //}
 
         public static bool operator ==(ActorPath left, ActorPath right)
         {
@@ -338,6 +429,11 @@ namespace Akka.Actor
         {
             return String.Join("/", pathElements);
         }
+
+        public ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new Surrogate(ToSerializationFormat());
+        }
     }
 
     /// <summary>
@@ -360,6 +456,7 @@ namespace Akka.Actor
             get { return null; }
         }
 
+        [JsonIgnore]
         public override ActorPath Root
         {
             get { return this; }
@@ -381,7 +478,7 @@ namespace Akka.Actor
         public override int CompareTo(ActorPath other)
         {
             if (other is ChildActorPath) return 1;
-            return System.String.Compare(ToString(), other.ToString(), StringComparison.Ordinal);
+            return String.Compare(ToString(), other.ToString(), StringComparison.Ordinal);
         }
     }
 
@@ -456,4 +553,5 @@ namespace Akka.Actor
             return InternalCompareTo(left.Parent, right.Parent);
         }
     }
+
 }

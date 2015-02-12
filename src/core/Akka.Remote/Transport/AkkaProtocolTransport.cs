@@ -7,6 +7,7 @@ using Akka.Actor.Internals;
 using Akka.Util;
 using Google.ProtocolBuffers;
 using Akka.Util.Internal;
+using Akka.Event;
 
 namespace Akka.Remote.Transport
 {
@@ -434,6 +435,7 @@ namespace Akka.Remote.Transport
 
     internal class ProtocolStateActor : FSM<AssociationState, ProtocolStateData>
     {
+        private readonly LoggingAdapter _log = Context.GetLogger();
         private InitialProtocolStateData _initialData;
         private HandshakeInfo _localHandshakeInfo;
         private int? _refuseUid;
@@ -462,7 +464,7 @@ namespace Akka.Remote.Transport
             : this(new InboundUnassociated(associationEventListener, wrappedHandle), handshakeInfo, settings, codec, failureDetector, refuseUid: null) { }
 
         /// <summary>
-        /// Common constructor used by both the outbound and the inboud cases
+        /// Common constructor used by both the outbound and the inbound cases
         /// </summary>
         protected ProtocolStateActor(InitialProtocolStateData initialData, HandshakeInfo localHandshakeInfo, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, int? refuseUid)
         {
@@ -574,7 +576,7 @@ namespace Akka.Remote.Transport
                                     })
                                     .Default(d =>
                                     {
-                                        Log.Debug(string.Format("Exepcted message of type Associate; instead received {0}", d));
+                                        _log.Debug(string.Format("Expected message of type Associate; instead received {0}", d));
                                         //Expect handshake to be finished, dropping connection
                                         SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
                                         nextState = Stop();
@@ -780,7 +782,7 @@ namespace Akka.Remote.Transport
                 failure.Cause.Match()
                     .With<DisassociateInfo>(() => { }) //no logging
                     .With<ForbiddenUidReason>(() => { }) //no logging
-                    .With<TimeoutReason>(timeoutReason => Log.Info(timeoutReason.ErrorMessage));
+                    .With<TimeoutReason>(timeoutReason => _log.Info(timeoutReason.ErrorMessage));
             }
             else
                 base.LogTermination(reason);
@@ -917,7 +919,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         private void PublishError(UnderlyingTransportError transportError)
         {
-            Log.Error(transportError.Cause, transportError.Message);
+            _log.Error(transportError.Cause, transportError.Message);
         }
 
         #endregion

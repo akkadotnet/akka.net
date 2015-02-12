@@ -118,6 +118,14 @@ namespace Akka.TestKit
             return InternalExpectMsg<T>(RemainingOrDilated(timeout), actual => _assertions.AssertEqual(expected, actual, comparer, hint), hint);
         }
 
+        public T ExpectMsgPf<T>(string hint, Func<object, T> pf)
+        {
+            var t = ExpectMsg<T>();
+            //TODO: Check if this really is needed:
+            _assertions.AssertTrue(pf.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
+            return pf.Invoke(t);
+        }
+
         /// <summary>
         /// Receive one message from the test actor and assert that it is the Terminated message of the given ActorRef.
         /// 

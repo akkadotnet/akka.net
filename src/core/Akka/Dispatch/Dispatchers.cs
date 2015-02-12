@@ -198,7 +198,7 @@ namespace Akka.Dispatch
 
         public MessageDispatcher Lookup(string dispatcherName)
         {
-            return FromConfig(string.Format("akka.actor.{0}", dispatcherName));
+            return FromConfig(dispatcherName);
         }
 
         /// <summary>

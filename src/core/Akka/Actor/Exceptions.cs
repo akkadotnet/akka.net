@@ -97,7 +97,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// IllegalActorStateException is thrown when a core invariant in the Actor implementation has been voilated.
+    /// IllegalActorStateException is thrown when a core invariant in the Actor implementation has been violated.
     /// For instance, if you try to create an Actor that doesn't inherit from <see cref="ActorBase"/>.
     /// </summary>
     public class IllegalActorStateException : AkkaException

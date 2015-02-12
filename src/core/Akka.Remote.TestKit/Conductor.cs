@@ -16,7 +16,7 @@ namespace Akka.Remote.TestKit
 {
     /// <summary>
     /// The conductor is the one orchestrating the test: it governs the
-    /// <see cref="Akka.Remote.TestKit.Controller">'s ports to which all
+    /// <see cref="Akka.Remote.TestKit.Controller"/>'s ports to which all
     /// Players connect, it issues commands to their
     /// <see cref="Akka.Remote.TestKit.NetworkFailureInjector"></see> and provides support
     /// for barriers using the <see cref="Akka.Remote.TestKit.BarrierCoordinator"></see>.
@@ -181,14 +181,14 @@ namespace Akka.Remote.TestKit
         {
             // the recover is needed to handle ClientDisconnectedException exception,
             // which is normal during shutdown
-            try
+            return Controller.Ask(new Terminate(node, new Right<bool, int>(exitValue))).ContinueWith(t =>
             {
-                return Controller.Ask<Done>(new Terminate(node, new Right<bool, int>(exitValue)));
-            }
-            catch (Controller.ClientDisconnectedException)
-            {
-                return Task.FromResult(Done.Instance);
-            }
+                if(t.Result is Done) return Done.Instance;
+                var failure = t.Result as FSMBase.Failure;
+                if (failure != null && failure.Cause is Controller.ClientDisconnectedException) return Done.Instance;
+
+                throw new InvalidOperationException(String.Format("Expected Done but received {0}", t.Result));
+            });
         }
 
         /// <summary>
@@ -203,14 +203,14 @@ namespace Akka.Remote.TestKit
         {
             // the recover is needed to handle ClientDisconnectedException exception,
             // which is normal during shutdown
-            try
+            return Controller.Ask(new Terminate(node, new Left<bool, int>(abort))).ContinueWith(t =>
             {
-                return Controller.Ask<Done>(new Terminate(node, new Left<bool, int>(abort)));
-            }
-            catch (Controller.ClientDisconnectedException)
-            {
-                return Task.FromResult(Done.Instance);
-            }
+                if (t.Result is Done) return Done.Instance;
+                var failure = t.Result as FSMBase.Failure;
+                if (failure != null && failure.Cause is Controller.ClientDisconnectedException) return Done.Instance;
+
+                throw new InvalidOperationException(String.Format("Expected Done but received {0}", t.Result));
+            });
         }
 
         /// <summary>
@@ -264,10 +264,13 @@ namespace Akka.Remote.TestKit
         public void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
         {
             _log.Debug("disconnect from {0}", closedChannel.RemoteHost);
-            var fsm = _clients[closedChannel];
-            fsm.Tell(new Controller.ClientDisconnected(new RoleName(null)));
-            ActorRef removedActor;
-            _clients.TryRemove(closedChannel, out removedActor);
+            ActorRef fsm;
+            if (_clients.TryGetValue(closedChannel, out fsm))
+            {
+                fsm.Tell(new Controller.ClientDisconnected(new RoleName(null)));
+                ActorRef removedActor;
+                _clients.TryRemove(closedChannel, out removedActor);
+            }
         }
 
         public void OnMessage(object message, IConnection responseChannel)
@@ -307,8 +310,9 @@ namespace Akka.Remote.TestKit
     /// </summary>
     class ServerFSM : FSM<ServerFSM.State, ActorRef>, LoggingFSM
     {
+        private readonly LoggingAdapter _log = Context.GetLogger();
         readonly RemoteConnection _channel;
-        readonly ActorRef _controller;
+        readonly ActorRef _controller;        
         RoleName _roleName;
 
         public enum State
@@ -358,18 +362,18 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is INetworkOp)
                 {
-                    Log.Warning("client {0}, sent not Hello in first message (instead {1}), disconnecting", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
+                    _log.Warning("client {0}, sent not Hello in first message (instead {1}), disconnecting", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
                     _channel.Close();
                     return Stop();
                 }
                 if (@event.FsmEvent is IToClient)
                 {
-                    Log.Warning("cannot send {0} in state Initial", @event.FsmEvent);
+                    _log.Warning("cannot send {0} in state Initial", @event.FsmEvent);
                     return Stay();
                 }
                 if (@event.FsmEvent is StateTimeout)
                 {
-                    Log.Info("closing channel to {0} because of Hello timeout", _channel.RemoteHost.ToEndPoint());
+                    _log.Info("closing channel to {0} because of Hello timeout", _channel.RemoteHost.ToEndPoint());
                     _channel.Close();
                     return Stop();
                 }
@@ -390,7 +394,7 @@ namespace Akka.Remote.TestKit
                 }
                 if (@event.FsmEvent is INetworkOp)
                 {
-                    Log.Warning("client {0} sent unsupported message {1}", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
+                    _log.Warning("client {0} sent unsupported message {1}", _channel.RemoteHost.ToEndPoint(), @event.FsmEvent);
                     return Stop();
                 }
                 var toClient = @event.FsmEvent as IToClient;
@@ -407,7 +411,7 @@ namespace Akka.Remote.TestKit
                         return Stay().Using(Sender);
                     }
 
-                    Log.Warning("cannot send {0} while waiting for previous ACK", toClient.Msg);
+                    _log.Warning("cannot send {0} while waiting for previous ACK", toClient.Msg);
                     return Stay();
                 }
 

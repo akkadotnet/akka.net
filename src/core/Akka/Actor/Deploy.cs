@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
-    public class Deploy
+    public class Deploy : IEquatable<Deploy>
     {
         public static readonly Deploy Local = new Deploy(Scope.Local);
 
@@ -55,11 +55,12 @@ namespace Akka.Actor
             Scope = scope ?? NoScopeGiven;
         }
 
-        public Deploy(RouterConfig routerConfig)
+        public Deploy(RouterConfig routerConfig) : this()
         {
             RouterConfig = routerConfig;
         }
         public Deploy(string path, Config config, RouterConfig routerConfig, Scope scope, string dispatcher)
+            : this()
         {
             Path = path;
             Config = config;
@@ -69,6 +70,7 @@ namespace Akka.Actor
         }
 
         public Deploy(string path, Config config, RouterConfig routerConfig, Scope scope, string dispatcher, string mailbox)
+            : this()
         {
             Path = path;
             Config = config;
@@ -130,6 +132,17 @@ namespace Akka.Actor
             var copy = Copy();
             copy.RouterConfig = routerConfig;
             return copy;
+        }
+
+        public bool Equals(Deploy other)
+        {
+            if (other == null) return false;
+            return ((string.IsNullOrEmpty(Mailbox) && string.IsNullOrEmpty(other.Mailbox)) || string.Equals(Mailbox, other.Mailbox)) &&
+                   string.Equals(Dispatcher, other.Dispatcher) &&
+                   string.Equals(Path, other.Path) &&
+                   RouterConfig.Equals(other.RouterConfig) &&
+                   ((Config.IsNullOrEmpty() && other.Config.IsNullOrEmpty()) || Config.ToString().Equals(other.Config.ToString())) &&
+                   (Scope == null && other.Scope == null || (Scope != null && Scope.Equals(other.Scope)));
         }
     }
 }

@@ -25,13 +25,12 @@ namespace Akka.Cluster
     /// Smoothing of the data for each monitored process is delegated to the
     /// <see cref="EWMA"/> for exponential weighted moving average.
     /// </summary>
-    internal class ClusterMetricsCollector : ReceiveActor, IActorLogging
+    internal class ClusterMetricsCollector : ReceiveActor
     {
-        private readonly LoggingAdapter _logging = Context.GetLogger();
-        public LoggingAdapter Log { get { return _logging; } }
+        private readonly LoggingAdapter _log = Context.GetLogger();
 
         /// <summary>
-        /// The node ring gossiped that conatins only members that are <see cref="MemberStatus.Up"/>
+        /// The node ring gossiped that contains only members that are <see cref="MemberStatus.Up"/>
         /// </summary>
         public ImmutableHashSet<Address> Nodes { get; private set; }
 
@@ -707,7 +706,7 @@ namespace Akka.Cluster
     }
 
     /// <summary>
-    /// Implementations of cluster syste metrics implement this interface
+    /// Implementations of cluster system metrics implement this interface
     /// </summary>
     public interface IMetricsCollector : IDisposable
     {

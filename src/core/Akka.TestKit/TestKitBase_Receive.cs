@@ -140,7 +140,7 @@ namespace Akka.TestKit
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {
-                ConditionalLog(shouldLog, "Trying to receive message from TestActor queue. Will wait indefinately.");
+                ConditionalLog(shouldLog, "Trying to receive message from TestActor queue. Will wait indefinitely.");
                 didTake = _queue.TryTake(out envelope, -1, cancellationToken);
             }
             else
@@ -158,7 +158,7 @@ namespace Akka.TestKit
                 _lastMessage = envelope;
                 return true;
             }
-            ConditionalLog(shouldLog, "Received no message after {0}.{1}", Now - start, cancellationToken.IsCancellationRequested ? " Was cancelled" : "");
+            ConditionalLog(shouldLog, "Received no message after {0}.{1}", Now - start, cancellationToken.IsCancellationRequested ? " Was canceled" : "");
             envelope = NullMessageEnvelope.Instance;
             _lastMessage = envelope;
             return false;

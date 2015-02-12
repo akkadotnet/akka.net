@@ -7,7 +7,7 @@ namespace Akka.Util
     /// <summary>
     /// A Murmur3 implementation in .NET that doesn't suck. Imported from https://github.com/markedup-mobi/openmetrics
     /// 
-    /// This is a C# port of the cannonical algorithm in C++, with some helper functions
+    /// This is a C# port of the canonical algorithm in C++, with some helper functions
     /// designed to make it easier to work with POCOs and .NET primitives.
     /// </summary>
     public static class Murmur3

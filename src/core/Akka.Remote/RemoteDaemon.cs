@@ -64,7 +64,7 @@ namespace Akka.Remote
     /// 
     /// Internal system "daemon" actor for remote internal communication.
     /// 
-    /// It acts as the brain of the remote that respons to system remote messages and executes actions accordingly.
+    /// It acts as the brain of the remote that response to system remote messages and executes actions accordingly.
     /// </summary>
     internal class RemoteDaemon : VirtualPathContainer
     {

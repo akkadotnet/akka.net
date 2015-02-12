@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Akka.Actor
 {
     /// <summary>
-    /// Public interface used to expose stash capabilites to user-level actors
+    /// Public interface used to expose stash capabilities to user-level actors
     /// </summary>
     public interface IStash
     {
@@ -36,5 +36,7 @@ namespace Akka.Actor
         /// The stash is guaranteed to be empty afterwards.
         /// </summary>
         IEnumerable<Envelope> ClearStash();
+
+        void Prepend(IEnumerable<Envelope> envelopes);
     }
 }

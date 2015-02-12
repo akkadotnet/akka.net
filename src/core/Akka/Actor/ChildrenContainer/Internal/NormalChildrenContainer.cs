@@ -6,7 +6,7 @@ namespace Akka.Actor.Internal
 {
     /// <summary>
     /// Normal children container: we do have at least one child, but none of our
-    /// children are currently terminating (which is the time period betweencalling 
+    /// children are currently terminating (which is the time period between calling
     /// context.stop(child) and processing the ChildTerminated() system message).
     /// </summary>
     public class NormalChildrenContainer : ChildrenContainerBase

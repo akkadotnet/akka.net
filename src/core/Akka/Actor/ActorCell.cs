@@ -183,14 +183,10 @@ namespace Akka.Actor
         {
             var actor = _props.NewActor();
 
-            //Check if the actor needs a stash
-            var actorStash = actor as IActorStash;
-            if(actorStash != null && actorStash.Stash==null)
-            {
-                //Only assign a new stash if one hasn't been created by the actor already
-                actorStash.Stash = StashFactory.CreateStash(this, actorStash);
-            }
-
+            // Apply default of custom behaviors to actor.
+            var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
+            pipeline.AfterActorIncarnated(actor, this);
+            
             var initializableActor = actor as InitializableActor;
             if(initializableActor != null)
             {
@@ -261,6 +257,23 @@ namespace Akka.Actor
         {
             if (actor != null)
             {
+                var disposable = actor as IDisposable;
+                if (disposable != null)
+                {
+                    try
+                    {
+                        disposable.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        if (_systemImpl.Log != null)
+                        {
+                            _systemImpl.Log.Error(e, "An error occurred while disposing {0} actor. Reason: {1}", 
+                                actor.GetType(), e.Message);
+                        }
+                    }
+                }
+
                 actor.Clear(_systemImpl.DeadLetters);
             }
             _actorHasBeenCleared = true;

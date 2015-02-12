@@ -59,7 +59,7 @@
     </Reference>
     <Reference Include="Helios, Version=1.3.5.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Helios.1.3.5.0\lib\net45\Helios.dll</HintPath>
+      <HintPath>..\..\packages\Helios.1.3.6.0\lib\net45\Helios.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -95,6 +95,7 @@
     <Compile Include="RemoteWatcher.cs" />
     <Compile Include="Remoting.cs" />
     <Compile Include="RemotingLifecycleEvent.cs" />
+    <Compile Include="Routing\RemoteRouterConfig.cs" />
     <Compile Include="Serialization\DaemonMsgCreateSerializer.cs" />
     <Compile Include="Serialization\MessageContainerSerializer.cs" />
     <Compile Include="Serialization\ProtobufSerializer.cs" />

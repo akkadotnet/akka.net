@@ -120,7 +120,7 @@ namespace Akka.TestKit.Internal
                         else
                         {
                             var tooMany = actualNumberOfEvents - expectedNumberOfEvents;
-                            msg = string.Format("Received {0} {1} too many. Expected {2} {3} but recieved {4} that matched filter [{5}]", tooMany, GetMessageString(tooMany), expectedNumberOfEvents, GetMessageString(expectedNumberOfEvents), actualNumberOfEvents, string.Join(",", _filters));
+                            msg = string.Format("Received {0} {1} too many. Expected {2} {3} but received {4} that matched filter [{5}]", tooMany, GetMessageString(tooMany), expectedNumberOfEvents, GetMessageString(expectedNumberOfEvents), actualNumberOfEvents, string.Join(",", _filters));
                         }
                     }
                     else

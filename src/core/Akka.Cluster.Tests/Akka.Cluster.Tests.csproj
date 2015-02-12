@@ -79,10 +79,14 @@
     <Compile Include="MetricsCollectorSpec.cs" />
     <Compile Include="MetricsGossipSpec.cs" />
     <Compile Include="MetricValuesSpec.cs" />
+    <Compile Include="MultiNode\ClusterDeathWatchSpec.cs" />
+    <Compile Include="MultiNode\ConvergenceSpec.cs" />
     <Compile Include="MultiNode\InitialHeartbeatSpec.cs" />
     <Compile Include="MultiNode\JoinInProgressSpec.cs" />
+    <Compile Include="MultiNode\LeaderLeavingSpec.cs" />
     <Compile Include="MultiNode\MultiNodeClusterSpec.cs" />
     <Compile Include="MultiNode\MultiNodeFact.cs" />
+    <Compile Include="MultiNode\MultiNodeLoggingConfig.cs" />
     <Compile Include="NodeMetricsSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Proto\ClusterMessageSerializerSpec.cs" />

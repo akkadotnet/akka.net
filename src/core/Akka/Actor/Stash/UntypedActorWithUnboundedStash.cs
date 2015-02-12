@@ -4,7 +4,7 @@ using Akka.Actor.Internal;
 namespace Akka.Actor
 {
     /// <summary>
-    /// An UntypedActor with Unbounded Stash capabilites
+    /// An UntypedActor with Unbounded Stash capabilities
     /// </summary>
     [Obsolete("Inherit from UntypedActor and WithBoundedStash instead. This class will be removed in a future release.")]
     public abstract class UntypedActorWithUnboundedStash : UntypedActor, WithUnboundedStash

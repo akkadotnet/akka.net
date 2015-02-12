@@ -10,7 +10,7 @@ type Msg =
     | Respond
 
 /// worker function
-let workerFun (mailbox : Actor<'msg>) = 
+let workerFun (mailbox : Actor<_>) = 
     let state = ref 0 // we store value in a reference cell
     
     let rec loop() = 
@@ -18,10 +18,10 @@ let workerFun (mailbox : Actor<'msg>) =
             let! msg = mailbox.Receive()
             // worker should save state only for positive integers, and respond on demand, all other options causes exceptions
             match msg with
-            | Value num when num > 0-> 
+            | Value num when num > 0 -> 
                 state := num
             | Value num ->
-                logError mailbox (sprintf "Received an error-prone value %d" num)
+                logErrorf mailbox "Received an error-prone value %d" num
                 raise (ArithmeticException "values equal or less than 0")
             | Respond -> mailbox.Sender() <! !state
             return! loop()
@@ -33,7 +33,7 @@ let main() =
     
     // below we define OneForOneStrategy to handle specific exceptions incoming from child actors
     let strategy = 
-        Strategy.oneForOne (fun e -> 
+        Strategy.OneForOne (fun e -> 
             match e with
             | :? ArithmeticException -> Directive.Resume
             | :? ArgumentException -> Directive.Stop
@@ -58,16 +58,17 @@ let main() =
     async { 
         // this one should be handled gently
         supervisor <! Value 5
-        System.Threading.Thread.Sleep 500
+        do! Async.Sleep 500
         let! r = supervisor <? Respond
         printfn "value received %d" (r :?> int)
     }
     |> Async.RunSynchronously
+
     async { 
         // this one should cause ArithmeticException in worker actor, handled by it's parent (supervisor)
         // according to SupervisorStrategy, it should resume system work
         supervisor <! Value -11
-        System.Threading.Thread.Sleep 500
+        do! Async.Sleep 500
         // since -11 thrown an exception and didn't saved a state, a previous value (5) should be returned
         let! r = supervisor <? Respond
         printfn "value received %d" (r :?> int)

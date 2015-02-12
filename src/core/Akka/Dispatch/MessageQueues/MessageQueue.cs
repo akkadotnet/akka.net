@@ -8,7 +8,7 @@ namespace Akka.Dispatch.MessageQueues
     public interface MessageQueue
     {
         /// <summary> 
-        /// Tests if the messagequeue contains any messages 
+        /// Tests if the message queue contains any messages 
         /// </summary>
         bool HasMessages { get; }
 

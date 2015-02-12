@@ -91,9 +91,8 @@ namespace Akka.Routing
     }
 
     public class ConsistentHashingGroup : Group
-    {
-        [Obsolete("For serialization only",true)]
-        public ConsistentHashingGroup()
+    {        
+        protected ConsistentHashingGroup()
         {
         }
 
@@ -124,8 +123,11 @@ namespace Akka.Routing
 
     public class ConsistentHashingPool : Pool
     {
+        protected ConsistentHashingPool()
+        {            
+        }
 
-                /// <summary>
+        /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHashingPool"/> class.
         /// </summary>
         /// <param name="config">The configuration.</param>

@@ -26,6 +26,12 @@
         /// </summary>
         public abstract InternalActorRef SystemGuardian { get; }
 
+        /// <summary>
+        /// Gets the actor producer pipeline resolver for current actor system. It may be used by
+        /// Akka plugins to inject custom behavior directly into actor creation chain.
+        /// </summary>
+        public abstract ActorProducerPipelineResolver ActorPipelineResolver { get; }
+
         /// <summary>Creates a new system actor in the "/system" namespace. This actor 
         /// will be shut down during system shutdown only after all user actors have
         /// terminated.</summary>
@@ -35,7 +41,6 @@
         /// will be shut down during system shutdown only after all user actors have
         /// terminated.</summary>
         public abstract ActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase, new();
-
 
         //TODO: Missing threadFactory, dynamicAccess, printTree
         //  /**

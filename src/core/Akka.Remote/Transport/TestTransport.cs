@@ -283,7 +283,7 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// Test utility to make bhavior of functions that return some Task controllable form tests.
+    /// Test utility to make behavior of functions that return some Task controllable form tests.
     /// 
     /// This tool is able to override default behavior with any generic behavior, including failure, and exposes
     /// control to the timing of completion of the associated Task.
@@ -458,7 +458,7 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// Indicates if all given transports were successfully registered. No assications can be established between
+        /// Indicates if all given transports were successfully registered. No associations can be established between
         /// transports that are not yet registered.
         /// </summary>
         /// <param name="addresses">The listen addresses of transports that participate in the test case.</param>
@@ -504,7 +504,7 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// Returns the event handler corresponding to the remote endpoint of the givne local handle. In other words
+        /// Returns the event handler corresponding to the remote endpoint of the given local handle. In other words
         /// it returns the listener that will receive <see cref="InboundPayload"/> events when <seealso cref="AssociationHandle.Write"/> is called.
         /// </summary>
         /// <param name="localHandle">The handle</param>

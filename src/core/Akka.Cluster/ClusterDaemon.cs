@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internals;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
@@ -540,7 +539,7 @@ namespace Akka.Cluster
     /// <summary>
     /// Supervisor managing the different Cluster daemons.
     /// </summary>
-    internal sealed class ClusterDaemon : UntypedActor, IActorLogging
+    internal sealed class ClusterDaemon : UntypedActor
     {
         readonly ActorRef _coreSupervisor;
         readonly ClusterSettings _settings;
@@ -576,26 +575,24 @@ namespace Akka.Cluster
         }
 
         private readonly LoggingAdapter _log = Context.GetLogger();
-        public LoggingAdapter Log { get { return _log; } }
     }
 
     /// <summary>
     /// ClusterCoreDaemon and ClusterDomainEventPublisher can't be restarted because the state
     /// would be obsolete. Shutdown the member if any those actors crashed.
     /// </summary>
-    class ClusterCoreSupervisor : ReceiveActor, IActorLogging
+    class ClusterCoreSupervisor : ReceiveActor
     {
         readonly ActorRef _publisher;
         readonly ActorRef _coreDaemon;
 
         private readonly LoggingAdapter _log = Context.GetLogger();
-        public LoggingAdapter Log { get { return _log; } }
 
         public ClusterCoreSupervisor()
         {
             _publisher =
                 Context.ActorOf(Props.Create<ClusterDomainEventPublisher>().WithDispatcher(Context.Props.Dispatcher), "publisher");
-            _coreDaemon = Context.ActorOf(new Props(typeof(ClusterCoreDaemon), new object[]{_publisher}).WithDispatcher(Context.Props.Dispatcher), "daemon");
+            _coreDaemon = Context.ActorOf(Props.Create(() => new ClusterCoreDaemon(_publisher)).WithDispatcher(Context.Props.Dispatcher), "daemon");
             Context.Watch(_coreDaemon);
 
             Context.Parent.Tell(new InternalClusterAction.PublisherCreated(_publisher));
@@ -608,7 +605,7 @@ namespace Akka.Cluster
             return new OneForOneStrategy(e =>
             {
                 //TODO: JVM version matches NonFatal. Can / should we do something similar? 
-                Log.Error(e, "Cluster node [{0}] crashed, [{1}] - shutting down...",
+                _log.Error(e, "Cluster node [{0}] crashed, [{1}] - shutting down...",
                     Cluster.Get(Context.System).SelfAddress, e);
                 Self.Tell(PoisonPill.Instance);
                 return Directive.Stop;
@@ -622,7 +619,7 @@ namespace Akka.Cluster
         
     }
 
-    class ClusterCoreDaemon : UntypedActor, IActorLogging
+    class ClusterCoreDaemon : UntypedActor
     {
         readonly Cluster _cluster = Cluster.Get(Context.System);
         protected readonly UniqueAddress SelfUniqueAddress;
@@ -717,7 +714,7 @@ namespace Akka.Cluster
 
             if (_cluster.Settings.SeedNodes.IsEmpty)
             {
-                Log.Info("No seed-nodes configured, manual cluster join required");
+                _log.Info("No seed-nodes configured, manual cluster join required");
             }
             else
             {
@@ -808,10 +805,10 @@ namespace Akka.Cluster
                 .With<InternalClusterAction.ISubscriptionMessage>(m => _publisher.Forward(m))
                 .With<QuarantinedEvent>(m => Quarantined(new UniqueAddress(m.Address, m.Uid)))
                 .With<ClusterUserAction.JoinTo>(
-                    m => Log.Info("Trying to join [{0}] when already part of a cluster, ignoring", m.Address))
+                    m => _log.Info("Trying to join [{0}] when already part of a cluster, ignoring", m.Address))
                 .With<InternalClusterAction.JoinSeedNodes>(
                     m =>
-                        Log.Info("Trying to join seed nodes [{0}] when already part of a cluster, ignoring",
+                        _log.Info("Trying to join seed nodes [{0}] when already part of a cluster, ignoring",
                             m.SeedNodes.Select(a => a.ToString()).Aggregate((a, b) => a + ", " + b)));
         }
 
@@ -868,12 +865,12 @@ namespace Akka.Cluster
         {
             if (address.Protocol != _cluster.SelfAddress.Protocol)
             {
-                Log.Warning("Trying to join member with wrong protocol, but was ignored, expected [{0}] but was [{1}]",
+                _log.Warning("Trying to join member with wrong protocol, but was ignored, expected [{0}] but was [{1}]",
                     _cluster.SelfAddress.Protocol, address.Protocol);
             }
             else if (address.System != _cluster.SelfAddress.System)
             {
-                Log.Warning(
+                _log.Warning(
                     "Trying to join member with wrong ActorSystem name, but was ignored, expected [{0}] but was [{1}]",
                     _cluster.SelfAddress.System, address.System);
             }
@@ -919,12 +916,12 @@ namespace Akka.Cluster
         {
             if(node.Address.Protocol != _cluster.SelfAddress.Protocol)
             {
-                Log.Warning("Member with wrong protocol tried to join, but was ignored, expected [{0}] but was [{1}]",
+                _log.Warning("Member with wrong protocol tried to join, but was ignored, expected [{0}] but was [{1}]",
                     _cluster.SelfAddress.Protocol, node.Address.Protocol);
             }
             else if (node.Address.System != _cluster.SelfAddress.System)
             {
-                Log.Warning(
+                _log.Warning(
                     "Member with wrong ActorSystem name tried to join, but was ignored, expected [{0}] but was [{1}]",
                     _cluster.SelfAddress.System, node.Address.System);
             }
@@ -937,8 +934,8 @@ namespace Akka.Cluster
                 var alreadyMember = localMembers.Any(m => m.Address == node.Address);
                 var isUnreachable = !_latestGossip.Overview.Reachability.IsReachable(node);
 
-                if (alreadyMember) Log.Info("Existing member [{0}] is trying to join, ignoring", node);
-                else if (isUnreachable) Log.Info("Unreachable member [{0}] is trying to join, ignoring", node);
+                if (alreadyMember) _log.Info("Existing member [{0}] is trying to join, ignoring", node);
+                else if (isUnreachable) _log.Info("Unreachable member [{0}] is trying to join, ignoring", node);
                 else
                 {
                     // remove the node from the failure detector
@@ -954,7 +951,7 @@ namespace Akka.Cluster
 
                     UpdateLatestGossip(newGossip);
 
-                    Log.Info("Node [{0}] is JOINING, roles [{1}]", node.Address,
+                    _log.Info("Node [{0}] is JOINING, roles [{1}]", node.Address,
                         roles.Select(r => r.ToString()).Aggregate("", (a, b) => a + ", " + b));
 
                     if (!node.Equals(SelfUniqueAddress))
@@ -973,11 +970,11 @@ namespace Akka.Cluster
             if(!_latestGossip.Members.IsEmpty) throw new InvalidOperationException("Welcome can only be done from an empty state");
             if (!joinWith.Equals(from.Address))
             {
-                Log.Info("Ignoring welcome from [{0}] when trying to join with [{1}]", from.Address, joinWith);
+                _log.Info("Ignoring welcome from [{0}] when trying to join with [{1}]", from.Address, joinWith);
             }
             else
             {
-                Log.Info("Welcome from [{0}]", from.Address);
+                _log.Info("Welcome from [{0}]", from.Address);
                 _latestGossip = gossip.Seen(SelfUniqueAddress);
                 Publish(_latestGossip);
                 if(!from.Equals(SelfUniqueAddress))
@@ -1003,7 +1000,7 @@ namespace Akka.Cluster
 
                 UpdateLatestGossip(newGossip);
 
-                Log.Info("Marked address [{0}] as Leaving]", address);
+                _log.Info("Marked address [{0}] as Leaving]", address);
                 Publish(_latestGossip);
             }
         }
@@ -1033,15 +1030,15 @@ namespace Akka.Cluster
             var member = localMembers.FirstOrDefault(m => m.Address == address);
             if (member == null)
             {
-                Log.Info("Ignoring down of unknown node [{0}]", address); 
+                _log.Info("Ignoring down of unknown node [{0}]", address); 
             }
             else
             {
                 var m = member.Copy(MemberStatus.Down);
                 if (localReachability.IsReachable(m.UniqueAddress))
-                    Log.Info("Marking node [{0}] as Down", m.Address);
+                    _log.Info("Marking node [{0}] as Down", m.Address);
                 else
-                    Log.Info("Marking unreachable node [{0}] as Down", MemberStatus.Down);
+                    _log.Info("Marking unreachable node [{0}] as Down", MemberStatus.Down);
 
                 // replace member (changed status)
                 var newMembers = localMembers.Remove(m).Add(m);
@@ -1066,7 +1063,7 @@ namespace Akka.Cluster
                 var newOverview = localGossip.Overview.Copy(reachability: newReachability);
                 var newGossip = localGossip.Copy(overview: newOverview);
                 UpdateLatestGossip(newGossip);
-                Log.Warn("Cluster Node [{0}] - Marking node as TERMINATED [{1}], due to quarantine",
+                _log.Warn("Cluster Node [{0}] - Marking node as TERMINATED [{1}], due to quarantine",
                     Self, node.Address);
                 Publish(_latestGossip);
                 Downing(node.Address);
@@ -1077,9 +1074,9 @@ namespace Akka.Cluster
         {
             var from = status.From;
             if(!_latestGossip.Overview.Reachability.IsReachable(SelfUniqueAddress, from))
-                Log.Info("Ignoring received gossip status from unreachable [{0}]", from);
+                _log.Info("Ignoring received gossip status from unreachable [{0}]", from);
             else if (_latestGossip.Members.All(m => !m.UniqueAddress.Equals(from)))
-                Log.Debug("Cluster Node [{0}] - Ignoring received gossip status from unknown [{1}]",
+                _log.Debug("Cluster Node [{0}] - Ignoring received gossip status from unknown [{1}]",
                     _cluster.SelfAddress, from);
             else
             {
@@ -1123,34 +1120,34 @@ namespace Akka.Cluster
 
             if (remoteGossip.Equals(Gossip.Empty))
             {
-                Log.Debug("Cluster Node [{0}] - Ignoring received gossip from [{1}] to protect against overload",
+                _log.Debug("Cluster Node [{0}] - Ignoring received gossip from [{1}] to protect against overload",
                     _cluster.SelfAddress, from);
                  return ReceiveGossipType.Ignored;
             }          
             if (!envelope.To.Equals(SelfUniqueAddress))
             {
-                Log.Info("Ignoring received gossip intended for someone else, from [{0}] to [{1}]", 
+                _log.Info("Ignoring received gossip intended for someone else, from [{0}] to [{1}]", 
                     from.Address, envelope.To);
                 return ReceiveGossipType.Ignored;
             }
             if (!remoteGossip.Overview.Reachability.IsReachable(SelfUniqueAddress))
             {
-                Log.Info("Ignoring received gossip with myself as unreachable, from [{0}]", from.Address);
+                _log.Info("Ignoring received gossip with myself as unreachable, from [{0}]", from.Address);
                 return ReceiveGossipType.Ignored;
             }
             if (!localGossip.Overview.Reachability.IsReachable(SelfUniqueAddress, from))
             {
-                Log.Info("Ignoring received gossip from unreachable [{0}]", from);
+                _log.Info("Ignoring received gossip from unreachable [{0}]", from);
                 return ReceiveGossipType.Ignored;
             }
             if(localGossip.Members.All(m => !m.UniqueAddress.Equals(from)))
             {
-                Log.Debug("Cluster Node [{0}] - Ignoring received gossip from unknown [{1}]", _cluster.SelfAddress, from);
+                _log.Debug("Cluster Node [{0}] - Ignoring received gossip from unknown [{1}]", _cluster.SelfAddress, from);
                 return ReceiveGossipType.Ignored;
             }
             if(remoteGossip.Members.All(m => !m.UniqueAddress.Equals(SelfUniqueAddress)))
             {
-                Log.Debug("Ignoring received gossip that does not contain myself, from [{0}]", from);
+                _log.Debug("Ignoring received gossip that does not contain myself, from [{0}]", from);
                 return ReceiveGossipType.Ignored;
             }
 
@@ -1197,11 +1194,11 @@ namespace Akka.Cluster
                     _cluster.FailureDetector.Remove(node.Address);
             }
 
-            Log.Debug("Cluster Node [{0}] - Receiving gossip from [{1}]", _cluster.SelfAddress, from);
+            _log.Debug("Cluster Node [{0}] - Receiving gossip from [{1}]", _cluster.SelfAddress, from);
 
             if (comparison == VectorClock.Ordering.Concurrent)
             {
-                Log.Debug(@"""Couldn't establish a causal relationship between ""remote"" gossip and ""local"" gossip - Remote[{0}] - Local[{1}] - merged them into [{2}]""",
+                _log.Debug(@"""Couldn't establish a causal relationship between ""remote"" gossip and ""local"" gossip - Remote[{0}] - Local[{1}] - merged them into [{2}]""",
                     remoteGossip, localGossip, winningGossip);
             }
 
@@ -1432,7 +1429,7 @@ namespace Akka.Cluster
 
                 // log status changes
                 foreach (var m in changedMembers)
-                    Log.Info("Leader is moving node [{0}] to [{1}]", m.Address, m.Status);
+                    _log.Info("Leader is moving node [{0}] to [{1}]", m.Address, m.Status);
 
                 Publish(_latestGossip);
 
@@ -1505,15 +1502,15 @@ namespace Akka.Cluster
                         var nonExiting = partitioned.Item2;
 
                         if (nonExiting.Any())
-                            Log.Warn("Cluster Node [{0}] - Marking node(s) as UNREACHABLE [{1}]",
+                            _log.Warn("Cluster Node [{0}] - Marking node(s) as UNREACHABLE [{1}]",
                                 _cluster.SelfAddress, nonExiting.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b));
 
                         if (exiting.Any())
-                            Log.Warn("Marking exiting node(s) as UNREACHABLE [{0}]. This is expected and they will be removed.",
+                            _log.Warn("Marking exiting node(s) as UNREACHABLE [{0}]. This is expected and they will be removed.",
                                 _cluster.SelfAddress, exiting.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b));
 
                         if (newlyDetectedReachableMembers.Any())
-                            Log.Info("Marking node(s) as REACHABLE [{0}]", newlyDetectedReachableMembers.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b));
+                            _log.Info("Marking node(s) as REACHABLE [{0}]", newlyDetectedReachableMembers.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b));
 
                         Publish(_latestGossip);
                     }
@@ -1598,7 +1595,6 @@ namespace Akka.Cluster
         }
 
         readonly LoggingAdapter _log = Context.GetLogger();
-        public LoggingAdapter Log { get { return _log; } }
     }
 
     /// <summary>
@@ -1625,10 +1621,9 @@ namespace Akka.Cluster
     ///  4. seed2 retries the join procedure and gets an ack from seed1, and then joins to seed1
     ///  5. seed3 retries the join procedure and gets acks from seed2 first, and then joins to seed2
     /// </summary>
-    internal sealed class JoinSeedNodeProcess : UntypedActor, IActorLogging
+    internal sealed class JoinSeedNodeProcess : UntypedActor
     {
         readonly LoggingAdapter _log = Context.GetLogger();
-        public LoggingAdapter Log { get { return _log; } }
 
         readonly ImmutableList<Address> _seeds;
         readonly Address _selfAddress;
@@ -1700,10 +1695,9 @@ namespace Akka.Cluster
     /// <see cref="InternalClusterAction.InitJoinAck"/> and then the first seed node will
     /// join that other seed node to join the existing cluster.
     /// </summary>
-    internal sealed class FirstSeedNodeProcess : UntypedActor, IActorLogging
+    internal sealed class FirstSeedNodeProcess : UntypedActor
     {
         readonly LoggingAdapter _log = Context.GetLogger();
-        public LoggingAdapter Log { get { return _log; } }
 
         private ImmutableList<Address> _remainingSeeds;
         readonly Address _selfAddress;
@@ -1860,12 +1854,11 @@ namespace Akka.Cluster
     /// 
     /// The supplied callback will be run once when the current cluster member is <see cref="MemberStatus.Up"/>
     /// </summary>
-    class OnMemberUpListener : ReceiveActor, IActorLogging
+    class OnMemberUpListener : ReceiveActor
     {
         readonly Action _callback;
         readonly LoggingAdapter _log = Context.GetLogger();
         readonly Cluster _cluster;
-        public LoggingAdapter Log { get { return _log; } }
 
         public OnMemberUpListener(Action callback)
         {
@@ -1902,7 +1895,7 @@ namespace Akka.Cluster
             }
             catch(Exception ex)
             {
-                Log.Error(ex, "OnMemberUp callback failed with [{0}]", ex.Message);
+                _log.Error(ex, "OnMemberUp callback failed with [{0}]", ex.Message);
             }
             finally
             {

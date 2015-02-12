@@ -3,7 +3,13 @@ using System.Collections.Generic;
 
 namespace Akka.Actor
 {
-    public interface IActorContext : ActorRefFactory
+    public interface ICanWatch
+    {
+        ActorRef Watch(ActorRef subject);
+        ActorRef Unwatch(ActorRef subject);
+    }
+
+    public interface IActorContext : ActorRefFactory, ICanWatch
     {
         ActorRef Self { get; }
         Props Props { get; }
@@ -14,8 +20,6 @@ namespace Akka.Actor
         void Unbecome();
         ActorRef Child(string name);
         IEnumerable<ActorRef> GetChildren();
-        ActorRef Watch(ActorRef subject);
-        ActorRef Unwatch(ActorRef subject);
 
         /// <summary>
         /// <para>

@@ -2,8 +2,21 @@
 using System.Collections.Specialized;
 
 namespace Akka.Remote.TestKit
-{
+{   
     //TODO: Needs some work
+    /// <summary>
+    /// Command line argument parser for individual node tests during a <see cref="MultiNodeSpec"/>.
+    /// 
+    /// Parses arguments from <see cref="Environment.GetCommandLineArgs"/> using the same conventions as cannonical Akka.
+    /// 
+    /// For example (from the Akka.NodeTestRunner source):
+    /// <code>
+    ///     var nodeIndex = CommandLine.GetInt32("multinode.index");
+    ///     var assemblyName = CommandLine.GetProperty("multinode.test-assembly");
+    ///     var typeName = CommandLine.GetProperty("multinode.test-class");
+    ///     var testName = CommandLine.GetProperty("multinode.test-method");
+    /// </code>
+    /// </summary>
     public class CommandLine
     {
         private readonly static Lazy<StringDictionary> Values = new Lazy<StringDictionary>(() =>

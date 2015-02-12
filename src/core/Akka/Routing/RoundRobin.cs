@@ -43,8 +43,7 @@ namespace Akka.Routing
     /// </summary>
     public class RoundRobinGroup : Group
     {
-        [Obsolete("For serialization only",true)]
-        public RoundRobinGroup()
+        protected RoundRobinGroup()
         {
             
         }
@@ -116,8 +115,7 @@ namespace Akka.Routing
             
         }
 
-        [Obsolete("for serialization only",true)]
-        public RoundRobinPool()
+        protected RoundRobinPool()
         {
             
         }

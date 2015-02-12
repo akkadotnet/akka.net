@@ -44,8 +44,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Akka.Remote.TestKit\CommandLine.cs">
+      <Link>CommandLine.cs</Link>
+    </Compile>
     <Compile Include="Discovery.cs" />
-    <Compile Include="NodeTest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -54,15 +56,32 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\contrib\loggers\Akka.Logger.NLog\Akka.Logger.NLog.csproj">
+      <Project>{a8aa2d7e-3d35-44df-af92-80a2c39c1f4d}</Project>
+      <Name>Akka.Logger.NLog</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka.Cluster.Tests\Akka.Cluster.Tests.csproj">
       <Project>{c8d6a95c-50bf-4416-a212-86b18b87220d}</Project>
       <Name>Akka.Cluster.Tests</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.MultiNodeTestRunner.Shared\Akka.MultiNodeTestRunner.Shared.csproj">
+      <Project>{964f0ec5-fbe6-47c5-8ae6-145114d5db8c}</Project>
+      <Name>Akka.MultiNodeTestRunner.Shared</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka.NodeTestRunner\Akka.NodeTestRunner.csproj">
       <Project>{28520f30-2868-4bd3-9cae-ac27226c24e3}</Project>
       <Name>Akka.NodeTestRunner</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj">
+      <Project>{ea4ff8fd-7c53-49c8-b9aa-02e458b3e6a7}</Project>
+      <Name>Akka.Remote</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka\Akka.csproj">
+      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Name>Akka</Name>
+    </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

@@ -23,6 +23,10 @@ namespace Akka.Routing
     /// </summary>
     public class BroadcastPool : Pool
     {
+        protected BroadcastPool()
+        {           
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="BroadcastPool"/> class.
         /// </summary>
@@ -63,9 +67,8 @@ namespace Akka.Routing
     }
 
     public class BroadcastGroup : Group
-    {
-        [Obsolete("For serialization only",true)]
-        public BroadcastGroup()
+    {        
+        protected BroadcastGroup()
         {
             
         }

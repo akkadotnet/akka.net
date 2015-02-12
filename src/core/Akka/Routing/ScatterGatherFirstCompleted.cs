@@ -50,9 +50,7 @@ namespace Akka.Routing
 
     public class ScatterGatherFirstCompletedGroup : Group
     {
-        private TimeSpan _within;
-        [Obsolete("For serialization only",true)]
-        public ScatterGatherFirstCompletedGroup()
+        protected ScatterGatherFirstCompletedGroup()
         {
             
         }
@@ -63,7 +61,7 @@ namespace Akka.Routing
         public ScatterGatherFirstCompletedGroup(Config config)
             : base(config.GetStringList("routees.paths"))
         {
-            _within = config.GetTimeSpan("within");
+            Within = config.GetTimeSpan("within");
         }
 
         /// <summary>
@@ -73,7 +71,7 @@ namespace Akka.Routing
         public ScatterGatherFirstCompletedGroup(TimeSpan within,params string[] paths)
             : base(paths)
         {
-            _within = within;
+            Within = within;
         }
 
         /// <summary>
@@ -82,7 +80,7 @@ namespace Akka.Routing
         /// <param name="paths">The paths.</param>
         public ScatterGatherFirstCompletedGroup(IEnumerable<string> paths,TimeSpan within) : base(paths)
         {
-            _within = within;
+            Within = within;
         }
 
         /// <summary>
@@ -91,8 +89,10 @@ namespace Akka.Routing
         /// <param name="routees">The routees.</param>
         public ScatterGatherFirstCompletedGroup(IEnumerable<ActorRef> routees,TimeSpan within) : base(routees)
         {
-            _within = within;
+            Within = within;
         }
+
+        public TimeSpan Within { get;private set; }
 
         /// <summary>
         ///     Creates the router.
@@ -100,7 +100,7 @@ namespace Akka.Routing
         /// <returns>Router.</returns>
         public override Router CreateRouter(ActorSystem system)
         {
-            return new Router(new ScatterGatherFirstCompletedRoutingLogic(_within));
+            return new Router(new ScatterGatherFirstCompletedRoutingLogic(Within));
         }
     }
 
@@ -129,8 +129,7 @@ namespace Akka.Routing
             _within = config.GetTimeSpan("within");
         }
 
-        [Obsolete("for serialization only",true)]
-        public ScatterGatherFirstCompletedPool()
+        protected ScatterGatherFirstCompletedPool()
         {
             
         }

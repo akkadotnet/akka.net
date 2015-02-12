@@ -13,7 +13,7 @@ namespace Akka.Event
     /// <see cref="LogEvent"/> when the string representation was supplied directly.
     /// </summary>
     public class DummyClassForStringSources { }
-
+    
     /// <summary>
     ///     Class Logging.
     /// </summary>

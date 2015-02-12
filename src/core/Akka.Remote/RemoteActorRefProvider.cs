@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -23,11 +24,11 @@ namespace Akka.Remote
 
         public RemoteActorRefProvider(string systemName, Settings settings, EventStream eventStream)
         {
-            settings.InjectTopLevelFallback(RemoteConfigFactory.Default());            
+            settings.InjectTopLevelFallback(RemoteConfigFactory.Default());
 
             var remoteDeployer = new RemoteDeployer(settings);
             Func<ActorPath, InternalActorRef> deadLettersFactory = path => new RemoteDeadLetterActorRef(this, path, eventStream);
-            _local = new LocalActorRefProvider(systemName, settings, eventStream, remoteDeployer, deadLettersFactory);            
+            _local = new LocalActorRefProvider(systemName, settings, eventStream, remoteDeployer, deadLettersFactory);
             RemoteSettings = new RemoteSettings(settings.Config);
             Deployer = remoteDeployer;
             _log = _local.Log;
@@ -70,7 +71,7 @@ namespace Akka.Remote
         public Address DefaultAddress { get { return Transport.DefaultAddress; } }
         public Settings Settings { get { return _local.Settings; } }
         public Task TerminationTask { get { return _local.TerminationTask; } }
-        private InternalActorRef InternalDeadLetters { get { return (InternalActorRef) _local.DeadLetters; } }
+        private InternalActorRef InternalDeadLetters { get { return (InternalActorRef)_local.DeadLetters; } }
 
         public ActorPath TempPath()
         {
@@ -102,33 +103,62 @@ namespace Akka.Remote
             _remoteWatcher = CreateRemoteWatcher(system);
         }
 
-        protected virtual ActorRef CreateRemoteWatcher(ActorSystem system)
+        protected virtual ActorRef CreateRemoteWatcher(ActorSystemImpl system)
         {
             var failureDetector = CreateRemoteWatcherFailureDetector(system);
-            return
-                system.ActorOf(
-                    RemoteSettings.ConfigureDispatcher(
-                        RemoteWatcher.Props(
-                            failureDetector,
-                            RemoteSettings.WatchHeartBeatInterval, 
-                            RemoteSettings.WatchUnreachableReaperInterval,
-                            RemoteSettings.WatchHeartbeatExpectedResponseAfter)), "remote-watcher");
+            return system.SystemActorOf(RemoteSettings.ConfigureDispatcher(
+                RemoteWatcher.Props(
+                    failureDetector,
+                    RemoteSettings.WatchHeartBeatInterval,
+                    RemoteSettings.WatchUnreachableReaperInterval,
+                    RemoteSettings.WatchHeartbeatExpectedResponseAfter)), "remote-watcher");
         }
 
         protected DefaultFailureDetectorRegistry<Address> CreateRemoteWatcherFailureDetector(ActorSystem system)
         {
-            return new DefaultFailureDetectorRegistry<Address>(() => 
+            return new DefaultFailureDetectorRegistry<Address>(() =>
                 FailureDetectorLoader.Load(RemoteSettings.WatchFailureDetectorImplementationClass,
                 RemoteSettings.WatchFailureDetectorConfig, _system));
         }
 
         public InternalActorRef ActorOf(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
-            if(systemService) return LocalActorOf(system, props, supervisor, path, true, deploy, lookupDeploy, async);
+            if (systemService) return LocalActorOf(system, props, supervisor, path, true, deploy, lookupDeploy, async);
 
-            Deploy configDeploy = system.Provider.Deployer.Lookup(path);
+            /*
+            * This needs to deal with "mangled" paths, which are created by remote
+            * deployment, also in this method. The scheme is the following:
+            *
+            * Whenever a remote deployment is found, create a path on that remote
+            * address below "remote", including the current system’s identification
+            * as "sys@host:port" (typically; it will use whatever the remote
+            * transport uses). This means that on a path up an actor tree each node
+            * change introduces one layer or "remote/scheme/sys@host:port/" within the URI.
+            *
+            * Example:
+            *
+            * akka.tcp://sys@home:1234/remote/akka/sys@remote:6667/remote/akka/sys@other:3333/user/a/b/c
+            *
+            * means that the logical parent originates from "akka.tcp://sys@other:3333" with
+            * one child (may be "a" or "b") being deployed on "akka.tcp://sys@remote:6667" and
+            * finally either "b" or "c" being created on "akka.tcp://sys@home:1234", where
+            * this whole thing actually resides. Thus, the logical path is
+            * "/user/a/b/c" and the physical path contains all remote placement
+            * information.
+            *
+            * Deployments are always looked up using the logical path, which is the
+            * purpose of the lookupRemotes internal method.
+            */
+
+            var elements = path.Elements;
+            Deploy configDeploy = null;
+            if (lookupDeploy)
+            {
+                if (elements.Head().Equals("user")) configDeploy = Deployer.Lookup(elements.Drop(1));
+                else if (elements.Head().Equals("remote")) configDeploy = LookUpRemotes(elements);
+            }
             deploy = configDeploy ?? props.Deploy ?? Deploy.None;
-            if(deploy.Mailbox != null)
+            if (deploy.Mailbox != null)
                 props = props.WithMailbox(deploy.Mailbox);
             if (deploy.Dispatcher != null)
                 props = props.WithDispatcher(deploy.Dispatcher);
@@ -141,7 +171,20 @@ namespace Akka.Remote
 
             return CreateWithRouter(system, props, supervisor, path, deploy, async);
 
-            
+
+        }
+
+        /// <summary>
+        /// Looks up local overrides for remote deployments
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns></returns>
+        private Deploy LookUpRemotes(IEnumerable<string> p)
+        {
+            if (p == null || !p.Any()) return Deploy.None;
+            if (p.Head().Equals("remote")) return LookUpRemotes(p.Drop(3));
+            if (p.Head().Equals("user")) return Deployer.Lookup(p.Drop(1));
+            return Deploy.None;
         }
 
         private InternalActorRef CreateNoRouter(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, Deploy deploy, bool async)
@@ -159,6 +202,12 @@ namespace Akka.Remote
                 if (HasAddress(addr))
                 {
                     return LocalActorOf(system, deployProps, supervisor, path, false, null, false, async);     //TODO: replace deploy:null with deployment.headOption
+                }
+
+                //check for correct scope configuration
+                if (props.Deploy.Scope is LocalScope)
+                {
+                    throw new ConfigurationException(string.Format("configuration requested remote deployment for local-only Props at {0}", path));
                 }
 
                 return RemoteActorOf(system, deployProps, supervisor, path);
@@ -185,6 +234,12 @@ namespace Akka.Remote
                 if (HasAddress(addr))
                 {
                     return LocalActorOf(system, deployProps, supervisor, path, false, null, false, async);     //TODO: replace deploy:null with deployment.headOption
+                }
+
+                //check for correct scope configuration
+                if (props.Deploy.Scope is LocalScope)
+                {
+                    throw new ConfigurationException(string.Format("configuration requested remote deployment for local-only Props at {0}", path));
                 }
 
                 return RemoteActorOf(system, deployProps, supervisor, path);
@@ -215,13 +270,13 @@ namespace Akka.Remote
         private InternalActorRef RemoteActorOf(ActorSystemImpl system, Props props, InternalActorRef supervisor,
             ActorPath path)
         {
-            var scope = (RemoteScope) props.Deploy.Scope;
+            var scope = (RemoteScope)props.Deploy.Scope;
             var d = props.Deploy;
             var addr = scope.Address;
 
             var localAddress = Transport.LocalAddressForRemote(addr);
 
-            var rpath = (new RootActorPath(addr)/"remote"/localAddress.Protocol/localAddress.HostPort()/
+            var rpath = (new RootActorPath(addr) / "remote" / localAddress.Protocol / localAddress.HostPort() /
                                path.Elements.ToArray()).
                 WithUid(path.Uid);
             var remoteRef = new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, d);
@@ -244,12 +299,12 @@ namespace Akka.Remote
         internal InternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
             ActorPath actorPath;
-            if(ActorPath.TryParse(path, out actorPath))
+            if (ActorPath.TryParse(path, out actorPath))
             {
                 //the actor's local address was already included in the ActorPath
-                if(HasAddress(actorPath.Address)) 
+                if (HasAddress(actorPath.Address))
                     return (InternalActorRef)ResolveActorRef(actorPath);
-                return new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address) / actorPath.Elements, ActorRef.Nobody, Props.None, Deploy.None);                
+                return new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address) / actorPath.Elements, ActorRef.Nobody, Props.None, Deploy.None);
             }
             _log.Debug("resolve of unknown path [{0}] failed", path);
             return InternalDeadLetters;
@@ -257,11 +312,11 @@ namespace Akka.Remote
 
         public ActorRef ResolveActorRef(string path)
         {
-            if(path == "")
+            if (path == "")
                 return ActorRef.NoSender;
 
             ActorPath actorPath;
-            if(ActorPath.TryParse(path,out actorPath))
+            if (ActorPath.TryParse(path, out actorPath))
                 return ResolveActorRef(actorPath);
 
             _log.Debug("resolve of unknown path [{0}] failed", path);
@@ -271,7 +326,7 @@ namespace Akka.Remote
 
         public ActorRef ResolveActorRef(ActorPath actorPath)
         {
-            if(HasAddress(actorPath.Address))
+            if (HasAddress(actorPath.Address))
             {
                 var elements = actorPath.Elements;
                 if (elements.Head() == "remote")
@@ -292,7 +347,7 @@ namespace Akka.Remote
                 }
                 //standard
                 var rootGuardian = RootGuardian;
-                if(actorPath.ToStringWithoutAddress() == "/")
+                if (actorPath.ToStringWithoutAddress() == "/")
                 {
                     return rootGuardian;
                 }
@@ -438,7 +493,7 @@ namespace Akka.Remote
                     // the dead letter status
                     //TODO: Seems to have started causing endless cycle of messages (and stack overflow)
                     //if (send.Seq == null) Tell(message, sender);
-                    return;                    
+                    return;
                 }
                 var deadLetter = message as DeadLetter;
                 if (deadLetter != null)

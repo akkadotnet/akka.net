@@ -91,10 +91,8 @@ namespace Akka.Routing
             
         }
 
-        [Obsolete("for serialization only",true)]
-        public SmallestMailboxPool()
-        {
-            
+        protected SmallestMailboxPool()
+        {            
         }
 
         public SmallestMailboxPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null) { }

@@ -11,6 +11,7 @@ using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Xunit;
+using Akka.Util;
 using Akka.Util.Internal;
 using Helios.Topology;
 
@@ -69,7 +70,7 @@ namespace Akka.Remote.TestKit
 
         public RoleName Role(string name)
         {
-            if(_roles.Exists(r => r.Name == name)) throw new ArgumentException("non-unique role name " + name);
+            if (_roles.Exists(r => r.Name == name)) throw new ArgumentException("non-unique role name " + name);
             var roleName = new RoleName(name);
             _roles = _roles.Add(roleName);
             return roleName;
@@ -119,13 +120,13 @@ namespace Akka.Remote.TestKit
             get
             {
                 //TODO: Equivalent in Helios?
-                var transportConfig = _testTransport ? 
+                var transportConfig = _testTransport ?
                     ConfigurationFactory.ParseString("akka.remote.helios.tcp.applied-adapters = []")
-                        :  ConfigurationFactory.Empty;
+                        : ConfigurationFactory.Empty;
 
                 var builder = ImmutableList.CreateBuilder<Config>();
                 Config nodeConfig;
-                if(_nodeConf.TryGetValue(Myself, out nodeConfig)) builder.Add(nodeConfig);
+                if (_nodeConf.TryGetValue(Myself, out nodeConfig)) builder.Add(nodeConfig);
                 builder.Add(_commonConf);
                 builder.Add(transportConfig);
                 builder.Add(MultiNodeSpec.NodeConfig);
@@ -157,17 +158,35 @@ namespace Akka.Remote.TestKit
     /// `AskTimeoutException: sending to terminated ref breaks promises`. Using lazy
     /// val is fine.
     /// </summary>
-    public class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks
+    public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks
     {
         //TODO: Sort out references to Java classes in 
+
+        /// <summary>
+        /// Marker used to indicate that <see cref="MaxNodes"/> has not been set yet.
+        /// </summary>
+        private const int MaxNodesUnset = -1;
+        private static int _maxNodes = MaxNodesUnset;
 
         /// <summary>
         /// Number of nodes node taking part in this test.
         /// -Dmultinode.max-nodes=4
         /// </summary>
-        public static int MaxNodes {
-            get { return CommandLine.GetInt32("multinode.max-nodes"); }
+        public static int MaxNodes
+        {
+            get
+            {
+                if (_maxNodes == MaxNodesUnset)
+                {
+                    _maxNodes = CommandLine.GetInt32("multinode.max-nodes");
+                }
+
+                Guard.Assert(_maxNodes > 0, "multinode.max-nodes must be greater than 0");
+                return _maxNodes;
+            }
         }
+
+        private static string _multiNodeHost;
 
         /// <summary>
         /// Name (or IP address; must be resolvable)
@@ -178,46 +197,125 @@ namespace Akka.Remote.TestKit
         /// InetAddress.getLocalHost.getHostAddress is used if empty or "localhost"
         /// is defined as system property "multinode.host".
         /// </summary>
-        public static string SelfName { get { return CommandLine.GetProperty("multinode.host"); } }
+        public static string SelfName
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_multiNodeHost))
+                {
+                    _multiNodeHost = CommandLine.GetProperty("multinode.host");
+                }
 
-        //TODO: require(selfName != "", "multinode.host must not be empty")
+                //Run this assertion every time. Consistency is more important than performance.
+                Guard.Assert(!string.IsNullOrEmpty(_multiNodeHost), "multinode.host must not be empty");
+                return _multiNodeHost;
+            }
+        }
+
+        /// <summary>
+        /// Marker used to indicate what the "not been set" value of <see cref="SelfPort"/> is.
+        /// </summary>
+        private const int SelfPortUnsetValue = -1;
+        private static int _selfPort = SelfPortUnsetValue;
+
 
         /// <summary>
         /// Port number of this node. Defaults to 0 which means a random port.
         /// 
         /// <code>-Dmultinode.port=0</code>
         /// </summary>
-        public static int SelfPort { get { return 0; } }
+        public static int SelfPort
+        {
+            get
+            {
+                if (_selfPort == SelfPortUnsetValue) //unset
+                {
+                    var selfPortStr = CommandLine.GetProperty("multinode.port");
+                    _selfPort = string.IsNullOrEmpty(selfPortStr) ? 0 : Int32.Parse(selfPortStr);
+                }
 
-        //TODO: require(selfPort >= 0 && selfPort < 65535, "multinode.port is out of bounds: " + selfPort)
+                Guard.Assert(_selfPort >= 0 && _selfPort < 65535, "multinode.port is out of bounds: " + _selfPort);
+                return _selfPort;
+            }
+        }
 
+        private static string _serverName;
         /// <summary>
         /// Name (or IP address; must be resolvable using InetAddress.getByName)
         /// of the host that the server node is running on.
         /// 
         /// <code>-Dmultinode.server-host=server.example.com</code>
         /// </summary>
-        public static string ServerName { get { return CommandLine.GetProperty("multinode.server-host"); } }
+        public static string ServerName
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_serverName))
+                {
+                    _serverName = CommandLine.GetProperty("multinode.server-host");
+                }
+                Guard.Assert(!string.IsNullOrEmpty(_serverName), "multinode.server-host must not be empty");
+                return _serverName;
+            }
+        }
 
-        //TODO: require(serverName != "", "multinode.server-host must not be empty")
+        /// <summary>
+        /// Marker used to indicate what the "not been set" value of <see cref="ServerPort"/> is.
+        /// </summary>
+        private const int ServerPortUnsetValue = -1;
+
+        /// <summary>
+        /// Default value for <see cref="ServerPort"/>
+        /// </summary>
+        private const int ServerPortDefault = 4711;
+
+        private static int _serverPort = ServerPortUnsetValue;
 
         /// <summary>
         /// Port number of the node that's running the server system. Defaults to 4711.
         /// 
         /// <code>-Dmultinode.server-port=4711</code>
         /// </summary>
-        public static int ServerPort { get { return 4711; } }
+        public static int ServerPort
+        {
+            get
+            {
+                if (_serverPort == ServerPortUnsetValue)
+                {
+                    var serverPortStr = CommandLine.GetProperty("multinode.server-port");
+                    _serverPort = string.IsNullOrEmpty(serverPortStr) ? ServerPortDefault : Int32.Parse(serverPortStr);
+                }
 
-        //TODO: require(serverPort > 0 && serverPort < 65535, "multinode.server-port is out of bounds: " + serverPort)
-        
+                Guard.Assert(_serverPort > 0 && _serverPort < 65535, "multinode.server-port is out of bounds: " + _serverPort);
+                return _serverPort;
+            }
+        }
+
+        /// <summary>
+        /// Marker value used to indicate that <see cref="SelfIndex"/> has not been set yet.
+        /// </summary>
+        private const int SelfIndexUnset = -1;
+
+        private static int _selfIndex = SelfIndexUnset;
+
         /// <summary>
         /// Index of this node in the roles sequence. The TestConductor
         /// is started in “controller” mode on selfIndex 0, i.e. there you can inject
         /// failures and shutdown other nodes etc.
         /// </summary>
-        public static int SelfIndex { get { return CommandLine.GetInt32("multinode.index"); } }
+        public static int SelfIndex
+        {
+            get
+            {
+                if (_selfIndex == SelfIndexUnset)
+                {
+                    _selfIndex = CommandLine.GetInt32("multinode.index");
+                }
 
-        //TODO: require(selfIndex >= 0 && selfIndex < maxNodes, "multinode.index is out of bounds: " + selfIndex)
+                Guard.Assert(_selfIndex >= 0 && _selfIndex < MaxNodes, "multinode.index is out of bounds: " + _selfIndex);
+                return _selfIndex;
+            }
+        }
 
         public static Config NodeConfig
         {
@@ -225,8 +323,8 @@ namespace Akka.Remote.TestKit
             {
                 const string config = @"
                 akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                helios.tcp.hostname = ""{0}""
-                helios.tcp.port = {1}";
+                akka.remote.helios.tcp.hostname = ""{0}""
+                akka.remote.helios.tcp.port = {1}";
 
                 return ConfigurationFactory.ParseString(String.Format(config, SelfName, SelfPort));
             }
@@ -278,16 +376,17 @@ namespace Akka.Remote.TestKit
         readonly ImmutableDictionary<RoleName, Replacement> _replacements;
         readonly Address _myAddress;
 
-        public MultiNodeSpec(MultiNodeConfig config) :
+        protected MultiNodeSpec(MultiNodeConfig config) :
             this(config.Myself, ActorSystem.Create(GetCallerName(), config.Config), config.Roles, config.Deployments)
-        {   
+        {
         }
 
-        public MultiNodeSpec(
-            RoleName myself, 
-            ActorSystem system, 
-            ImmutableList<RoleName> roles, 
-            Func<RoleName, ImmutableList<string>> deployments) : base(new XunitAssertions() , system)
+        protected MultiNodeSpec(
+            RoleName myself,
+            ActorSystem system,
+            ImmutableList<RoleName> roles,
+            Func<RoleName, ImmutableList<string>> deployments)
+            : base(new XunitAssertions(), system)
         {
             _myself = myself;
             _log = Logging.GetLogger(Sys, this);
@@ -322,21 +421,21 @@ namespace Akka.Remote.TestKit
             if (SelfIndex == 0)
             {
                 TestConductor.RemoveNode(_myself);
-                //TODO: Async stuff here
-                AwaitCondition(() => TestConductor.GetNodes().Result.Any(n => !n.Equals(_myself))
-                    , TestConductor.Settings.BarrierTimeout);
+                Within(TestConductor.Settings.BarrierTimeout, () => 
+                    AwaitCondition(() => TestConductor.GetNodes().Result.Any(n => !n.Equals(_myself))));
+              
             }
             Shutdown(Sys);
             AfterTermination();
         }
 
-        protected virtual TimeSpan ShutdownTimeout { get{return TimeSpan.FromSeconds(5);} }
+        protected virtual TimeSpan ShutdownTimeout { get { return TimeSpan.FromSeconds(5); } }
 
         /// <summary>
         /// Override this and return `true` to assert that the
         /// shutdown of the `ActorSystem` was done properly.
         /// </summary>
-        protected virtual bool VerifySystemShutdown{get { return false; }}
+        protected virtual bool VerifySystemShutdown { get { return false; } }
 
         //Test Class Interface
 
@@ -359,10 +458,28 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public ImmutableList<RoleName> Roles { get { return _roles; } }
 
-        public virtual int InitialParticipants { get { throw new NotImplementedException();} }
+        /// <summary>
+        /// MUST BE DEFINED BY USER.
+        /// 
+        /// Defines the number of participants required for starting the test. This
+        /// might not be equals to the number of nodes available to the test.
+        /// </summary>
+        public int InitialParticipants
+        {
+            get
+            {
+                var initialParticipants = InitialParticipantsValueFactory;
+                Guard.Assert(initialParticipants > 0, "InitialParticipantsValueFactory must be populated early on, and it must be greater zero");
+                Guard.Assert(initialParticipants <= MaxNodes, "not enough nodes to run this test");
+                return initialParticipants;
+            }
 
-        //TODO: require(initialParticipants > 0, "initialParticipants must be a 'def' or early initializer, and it must be greater zero")
-        //TODO: require(initialParticipants <= maxNodes, "not enough nodes to run this test")
+        }
+
+        /// <summary>
+        /// Must be defined by user. Creates the values used by <see cref="InitialParticipants"/>
+        /// </summary>
+        protected abstract int InitialParticipantsValueFactory { get; }
 
         protected TestConductor TestConductor;
 
@@ -372,7 +489,7 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public void RunOn(Action thunk, params RoleName[] nodes)
         {
-            if(nodes.Length == 0) throw new ArgumentException("No node given to run on.");
+            if (nodes.Length == 0) throw new ArgumentException("No node given to run on.");
             if (IsNode(nodes)) thunk();
         }
 
@@ -428,7 +545,7 @@ namespace Akka.Remote.TestKit
             try
             {
                 //TODO: Async stuff
-                if(SelfIndex == 0)
+                if (SelfIndex == 0)
                     tc.StartController(InitialParticipants, _myself, _controllerAddr).Wait(timeout);
                 else
                     tc.StartClient(_myself, _controllerAddr).Wait(timeout);
@@ -458,7 +575,7 @@ namespace Akka.Remote.TestKit
                 _addr = new Lazy<string>(() => spec.Node(role).Address.ToString());
             }
         }
-        
+
         protected void InjectDeployments(ActorSystem system, RoleName role)
         {
             var deployer = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.Deployer;
@@ -473,7 +590,7 @@ namespace Akka.Remote.TestKit
                     {
                         replaceWith = r.Addr;
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         // might happen if all test cases are ignored (excluded) and
                         // controller node is finished/exited before r.addr is run
@@ -494,7 +611,7 @@ namespace Akka.Remote.TestKit
                     }
                     else
                     {
-                        throw new ArgumentException(String.Format("key {0} must map to deployment section, not simple value {1}", 
+                        throw new ArgumentException(String.Format("key {0} must map to deployment section, not simple value {1}",
                             pair.Key, pair.Value));
                     }
                 }
@@ -505,7 +622,7 @@ namespace Akka.Remote.TestKit
         {
             var config =
                 ConfigurationFactory
-                .ParseString(String.Format(@"helios.tcp{port={0}\nhostname=""{1}""", 
+                .ParseString(String.Format(@"helios.tcp{port={0}\nhostname=""{1}""",
                     _myAddress.Host,
                     _myAddress.Port))
                 .WithFallback(Sys.Settings.Config);
@@ -519,9 +636,9 @@ namespace Akka.Remote.TestKit
 
     //TODO: Improve docs
     /// <summary>
-    /// Use this to hook MultiNodeSpec into your test framework lifecycle
+    /// Use this to hook <see cref="MultiNodeSpec"/> into your test framework lifecycle
     /// </summary>
-    interface IMultiNodeSpecCallbacks
+    public interface IMultiNodeSpecCallbacks
     {
         /// <summary>
         /// Call this before the start of the test run. NOT before every test case.

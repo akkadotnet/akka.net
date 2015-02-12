@@ -1,7 +1,9 @@
 ﻿using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Remote.Routing;
 using Akka.Routing;
+using Akka.Util.Internal;
 
 namespace Akka.Remote
 {
@@ -27,16 +29,27 @@ namespace Akka.Remote
             if(ActorPath.TryParse(remote, out actorPath))
             {
                 var address = actorPath.Address;
-                return deploy.Copy(scope: new RemoteScope(address));
+                //can have remotely deployed routers that remotely deploy routees
+                return CheckRemoteRouterConfig(deploy.Copy(scope: new RemoteScope(address)));
             }
             
             if (!string.IsNullOrWhiteSpace(remote))
                 throw new ConfigurationException(string.Format("unparseable remote node name [{0}]", remote));
 
-            var nodes = deploy.Config.GetStringList("target.nodes").Select(Address.Parse);
+            return CheckRemoteRouterConfig(deploy);
+        }
+
+        /// <summary>
+        /// Used to determine if a given <see cref="deploy"/> is an instance of <see cref="RemoteRouterConfig"/>.
+        /// </summary>
+        private static Deploy CheckRemoteRouterConfig(Deploy deploy)
+        {
+            var nodes = deploy.Config.GetStringList("target.nodes").Select(Address.Parse).ToList();
             if (nodes.Any() && deploy.RouterConfig != RouterConfig.NoRouter)
             {
-                //if(deploy.RouterConfig == RouterConfig.Pool) return deploy.Copy(routerConfig: new RemoteRouterConfig(deploy.RouterConfig, nodes);
+                if (deploy.RouterConfig is Pool)
+                    return
+                        deploy.Copy().WithRouterConfig(new RemoteRouterConfig(deploy.RouterConfig.AsInstanceOf<Pool>(), nodes));
                 return deploy.Copy(scope: Deploy.NoScopeGiven);
             }
             else

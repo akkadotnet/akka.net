@@ -29,6 +29,7 @@ namespace Akka.Actor.Internals
         private Dispatchers _dispatchers;
         private Mailboxes _mailboxes;
         private Scheduler _scheduler;
+        private ActorProducerPipelineResolver _actorProducerPipelineResolver;
 
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Load())
@@ -42,6 +43,7 @@ namespace Akka.Actor.Internals
                     "], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')");
             if(config == null)
                 throw new ArgumentNullException("config");
+
             _name = name;
             ConfigureScheduler();
             ConfigureSettings(config);
@@ -50,6 +52,7 @@ namespace Akka.Actor.Internals
             ConfigureSerialization();
             ConfigureMailboxes();
             ConfigureDispatchers();
+            ConfigureActorProducerPipeline();
         }
 
         public override ActorRefProvider Provider { get { return _provider; } }
@@ -63,9 +66,12 @@ namespace Akka.Actor.Internals
         public override Scheduler Scheduler { get { return _scheduler; } }
         public override LoggingAdapter Log { get { return _log; } }
 
+        public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
+
 
         public override InternalActorRef Guardian { get { return _provider.Guardian; } }
         public override InternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
+
 
         /// <summary>Creates a new system actor.</summary>
         public override ActorRef SystemActorOf(Props props, string name = null)
@@ -272,6 +278,15 @@ namespace Akka.Actor.Internals
         }
 
         /// <summary>
+        /// Configures the actor producer pipeline.
+        /// </summary>
+        private void ConfigureActorProducerPipeline()
+        {
+            // we push Log in lazy manner since it may not be configured at point of pipeline initialization
+            _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
+        }
+
+        /// <summary>
         ///     Stop this actor system. This will stop the guardian actor, which in turn
         ///     will recursively stop all its child actors, then the system guardian
         ///     (below which the logging actors reside) and the execute all registered
@@ -282,7 +297,6 @@ namespace Akka.Actor.Internals
             Log.Debug("System shutdown initiated");
             _provider.Guardian.Stop();
         }
-
 
         public override Task TerminationTask { get { return _provider.TerminationTask; } }
 

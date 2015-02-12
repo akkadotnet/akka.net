@@ -1,6 +1,5 @@
 ﻿module Greeter
 
-open Akka.Actor
 open Akka.FSharp
 open Akka.Configuration
 open System
@@ -12,11 +11,11 @@ type SomeActorMessages =
 type SomeActor() =    
     inherit Actor()
 
-    override x.OnReceive message =
+    override __.OnReceive message =
         match message with
         | :? SomeActorMessages as m ->  
             match m with
-            | Greet(name) -> Console.WriteLine("Hello {0}",name)
+            | Greet(name) -> Console.WriteLine("Hello {0}", name)
             | Hi -> Console.WriteLine("Hello from F#!")
         | _ -> failwith "unknown message"
 

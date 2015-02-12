@@ -375,9 +375,9 @@ namespace Akka.Actor
     /// </summary>
     /// <typeparam name="TState">The state name type</typeparam>
     /// <typeparam name="TData">The state data type</typeparam>
-    public abstract class FSM<TState, TData> : FSMBase, IActorLogging, IListeners, InternalSupportsTestFSMRef<TState,TData>
+    public abstract class FSM<TState, TData> : FSMBase, IListeners, InternalSupportsTestFSMRef<TState,TData>
     {
-        private readonly LoggingAdapter _logAdapter = Context.GetLogger();
+        private readonly LoggingAdapter _log = Context.GetLogger();
         protected FSM()
         {
             if(this is LoggingFSM)
@@ -387,11 +387,6 @@ namespace Akka.Actor
         public delegate State<TState, TData> StateFunction(Event<TData> fsmEvent);
 
         public delegate void TransitionHandler(TState initialState, TState nextState);
-
-        [Obsolete("Use Log instead")]
-        protected LoggingAdapter _log { get { return _logAdapter; } }   //When removing this rename _logAdapter to _log
-
-        public LoggingAdapter Log { get { return _logAdapter; } }
 
         #region Finite State Machine Domain Specific Language (FSM DSL if you like acronyms)
 
@@ -503,10 +498,10 @@ namespace Akka.Actor
         public void SetTimer(string name, object msg, TimeSpan timeout, bool repeat = false)
         {
             if(DebugEvent)
-                _logAdapter.Debug("setting " + (repeat ? "repeating" : "") + "timer '{0}' / {1}: {2}", name, timeout, msg);
+                _log.Debug("setting " + (repeat ? "repeating" : "") + "timer '{0}' / {1}: {2}", name, timeout, msg);
             if(_timers.ContainsKey(name))
                 _timers[name].Cancel();
-            var timer = new Timer(name, msg, repeat, _timerGen.Next(), Context, DebugEvent ? _logAdapter : null);
+            var timer = new Timer(name, msg, repeat, _timerGen.Next(), Context, DebugEvent ? _log : null);
             timer.Schedule(Self, timeout);
 
             if (!_timers.ContainsKey(name))
@@ -523,7 +518,7 @@ namespace Akka.Actor
         {
             if (DebugEvent)
             {
-                _logAdapter.Debug("Cancelling timer {0}", name);
+                _log.Debug("Cancelling timer {0}", name);
             }
 
             if (_timers.ContainsKey(name))
@@ -688,7 +683,7 @@ namespace Akka.Actor
             {
                 return delegate(Event<TData> @event)
                 {
-                    _logAdapter.Warning(String.Format("unhandled event {0} in state {1}", @event.FsmEvent, StateName));
+                    _log.Warning(String.Format("unhandled event {0} in state {1}", @event.FsmEvent, StateName));
                     return Stay();
                 };
             }
@@ -824,7 +819,7 @@ namespace Akka.Actor
             if(DebugEvent)
             {
                 var srcStr = GetSourceString(source);
-                _logAdapter.Debug("processing {0} from {1}", fsmEvent, srcStr);
+                _log.Debug("processing {0} from {1}", fsmEvent, srcStr);
             }
             var stateFunc = _stateFunctions[_currentState.StateName];
             var oldState = _currentState;
@@ -843,7 +838,7 @@ namespace Akka.Actor
             ApplyState(upcomingState);
             if(DebugEvent && !Equals(oldState, upcomingState))
             {
-                _logAdapter.Debug("transition {0} -> {1}", oldState, upcomingState);
+                _log.Debug("transition {0} -> {1}", oldState, upcomingState);
             }
         }
 
@@ -961,11 +956,11 @@ namespace Akka.Actor
                 {
                     if (f.Cause is Exception)
                     {
-                        _logAdapter.Error(f.Cause.AsInstanceOf<Exception>(), "terminating due to Failure");
+                        _log.Error(f.Cause.AsInstanceOf<Exception>(), "terminating due to Failure");
                     }
                     else
                     {
-                        _logAdapter.Error(f.Cause.ToString());
+                        _log.Error(f.Cause.ToString());
                     }
                 });
         }
