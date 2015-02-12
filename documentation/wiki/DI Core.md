@@ -41,10 +41,10 @@ public class WindsorDependencyResolver : IDependencyResolver
 
 Add a constructor and private fields.
 
-		private IWindsorContainer container;
-        private ActorSystem system;
-
 ```csharp
+private IWindsorContainer container;
+private ActorSystem system;
+
 public WindsorDependencyResolver(IWindsorContainer container, ActorSystem system)
 {
     if (system == null) throw new ArgumentNullException("system");
