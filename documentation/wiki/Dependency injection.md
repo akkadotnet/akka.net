@@ -23,9 +23,11 @@ system.ActorOf(propsResolver.Create<TypedWorker>(), "Worker2");
 
 ``` 
 
-As of Akka.NET 0.8, the following Dependency Injection plugins exist:
+Currenty, the following Akka.NET Dependency Injection plugins are available:
 
-* AutoFac
+* **AutoFac**
+
+In order to use this plugin, install the Nuget package with `Install-Package Akka.DI.AutoFac`, then follow the instructions:
 
 ```csharp
 // Create and build your container
@@ -39,7 +41,9 @@ var system = ActorSystem.Create("MySystem");
 var propsResolver = new AutoFacDependencyResolver(container, system);
 ```
 
-* CastleWindsor
+* **CastleWindsor**
+
+In order to use this plugin, install the Nuget package with `Install-Package Akka.DI.CastleWindsor`, then follow the instructions:
 
 ```csharp
 // Create and build your container
@@ -52,7 +56,10 @@ var system = ActorSystem.Create("MySystem");
 var propsResolver = new WindsorDependencyResolver(container, system);
 ```
 
-* Ninject
+* **Ninject**
+
+In order to use this plugin, install the Nuget package with `Install-Package Akka.DI.Ninject`, then follow the instructions:
+
 ```csharp
 // Create and build your container
 var container = new Ninject.StandardKernel();
