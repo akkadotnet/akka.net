@@ -52,6 +52,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\SharedAssemblyInfo.cs">
+      <Link>Properties\SharedAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Eventsourced.Lifecycle.cs" />
     <Compile Include="GuaranteedDelivery.cs" />
     <Compile Include="Eventsourced.cs" />
@@ -86,6 +89,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Akka.Persistence.nuspec" />
     <None Include="packages.config" />
     <EmbeddedResource Include="persistence.conf" />
     <None Include="README.md" />
