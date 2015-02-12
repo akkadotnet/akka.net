@@ -19,37 +19,41 @@ title: DI Core
 
 Let's walk through the process of creating one for CastleWindsor container. You need to create  a new project named Akka.DI.CastleWindsor with all the necessary references including Akka.DI.Core, Akka and CastleWindosor. Name the initial class WindsorDependencyResolver.
 
-    public class WindsorDependencyResolver : IDependencyResolver
+```csharp
+public class WindsorDependencyResolver : IDependencyResolver
+{
+	Type GetType(string ActorName)
 	{
-		Type GetType(string ActorName)
-        {
-            throw new NotImplementedException();
-        }
-
-        Func<ActorBase> CreateActorFactory(string ActorName)
-        {
-            throw new NotImplementedException();
-        }
-
-        Props Create<TActor>()
-        {
-            throw new NotImplementedException();
-        }
+	    throw new NotImplementedException();
 	}
+	
+	Func<ActorBase> CreateActorFactory(string ActorName)
+	{
+	    throw new NotImplementedException();
+	}
+	
+	Props Create<TActor>()
+	{
+	    throw new NotImplementedException();
+	}
+}
+```
 
 Add a constructor and private fields.
 
 		private IWindsorContainer container;
         private ActorSystem system;
 
-        public WindsorDependencyResolver(IWindsorContainer container, ActorSystem system)
-        {
-            if (system == null) throw new ArgumentNullException("system");
-            if (container == null) throw new ArgumentNullException("container");
-            this.container = container;
-            this.system = system;
-            this.system.AddDependencyResolver(this);
-        }
+```csharp
+public WindsorDependencyResolver(IWindsorContainer container, ActorSystem system)
+{
+    if (system == null) throw new ArgumentNullException("system");
+    if (container == null) throw new ArgumentNullException("container");
+    this.container = container;
+    this.system = system;
+    this.system.AddDependencyResolver(this);
+}
+```
 
 You have defined three private fields
 
@@ -60,58 +64,65 @@ You have defined three private fields
 
 First you need to implement GetType. This is a basic implementation and is just from demonstration purposes. Essentially this is used by the Extension to get the Type of the Actor from it's type name.
 
-        Type GetType(string actorName)
-        {
-            var firstTry = Type.GetType(actorName);
-            Func<Type> searchForType = () =>
-            {
-                return
-                AppDomain.
-                    CurrentDomain.
-                    GetAssemblies().
-                    SelectMany(x => x.GetTypes()).
-                    Where(t => t.Name.Equals(actorName)).
-                    FirstOrDefault();
-            };
-            return firstTry ?? searchForType();
-        }
+```csharp
+Type GetType(string actorName)
+{
+    var firstTry = Type.GetType(actorName);
+    Func<Type> searchForType = () =>
+    {
+        return
+        AppDomain.
+            CurrentDomain.
+            GetAssemblies().
+            SelectMany(x => x.GetTypes()).
+            Where(t => t.Name.Equals(actorName)).
+            FirstOrDefault();
+    };
+    return firstTry ?? searchForType();
+}
+```
 	
 Secondly you need to implement the CreateActorFactory method which will be used by the extension to create the Actor. This implementation will depend upon the API of the container.
 
-		public Func<ActorBase> CreateActorFactory(string actorName)
-        {
-            return () => (ActorBase)container.Resolve(GetType(actorName));
-        }
+```csharp
+public Func<ActorBase> CreateActorFactory(string actorName)
+{
+    return () => (ActorBase)container.Resolve(GetType(actorName));
+}
+```
 
 Lastly, you implement the Create<TActor> which is used register the Props configuration for the referenced Actor Type with the ActorSystem. This method will always be the same implementation. 
 
-        public Props Create<TActor>() where TActor : ActorBase
-        {
-            return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
-        }
+```csharp
+public Props Create<TActor>() where TActor : ActorBase
+{
+    return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
+}
+```
 
 So with that you can do something like the following code example:
 
-	IWindsorContainer container = new WindsorContainer();
-    container.Register(Component.For<IWorkerService>().ImplementedBy<WorkerService>());
-    container.Register(Component.For<TypedWorker>().Named("TypedWorker").LifestyleTransient());
+```csharp
+IWindsorContainer container = new WindsorContainer();
+container.Register(Component.For<IWorkerService>().ImplementedBy<WorkerService>());
+container.Register(Component.For<TypedWorker>().Named("TypedWorker").LifestyleTransient());
 
-    //Create ActorSystem
-    using (var system = ActorSystem.Create("MySystem"))
-        {
-           //Create the dependency resolver
-           IDependencyResolver propsResolver = 
-        		new WindsorDependencyResolver(container,system);
+//Create ActorSystem
+using (var system = ActorSystem.Create("MySystem"))
+{
+   //Create the dependency resolver
+   IDependencyResolver propsResolver = 
+		new WindsorDependencyResolver(container,system);
 
-			system.ActorOf(propsResolver.Create<TypedWorker>(), "Worker1");
-			system.ActorOf(propsResolver.Create<TypedWorker>(), "Worker2");
+		system.ActorOf(propsResolver.Create<TypedWorker>(), "Worker1");
+		system.ActorOf(propsResolver.Create<TypedWorker>(), "Worker2");
 
-            var hashGroup = 
-                system.ActorOf(Props.Empty.WithRouter(new ConsistentHashingGroup(config)));
- 
-            TypedActorMessage msg = 
-               new TypedActorMessage { Id = 1, 
-                                       Name = Guid.NewGuid().ToString() };
-             hashGroup.Tell(msg);
+    var hashGroup = 
+        system.ActorOf(Props.Empty.WithRouter(new ConsistentHashingGroup(config)));
 
-		}
+    TypedActorMessage msg = 
+       new TypedActorMessage { Id = 1, 
+                               Name = Guid.NewGuid().ToString() };
+     hashGroup.Tell(msg);
+}
+```
