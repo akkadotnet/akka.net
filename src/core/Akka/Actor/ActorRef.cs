@@ -106,14 +106,18 @@ namespace Akka.Actor
                         InternalCurrentActorCellKeeper.Current = null;
                         try
                         {
-                            CallContext.LogicalSetData("akka.state", new AmbientState()
+                            var state = new AmbientState()
                             {
                                 Self = _actorAwaitingResult,
                                 Message = "",
                                 Sender = _actorAwaitingResultSender,
-                            });
+                            };
 
-                            _result.TrySetResult(message);
+                            _actorAwaitingResult.Tell(new CompleteTask(state, () =>
+                            {
+                                CallContext.LogicalSetData("akka.state", state);
+                                _result.TrySetResult(message);
+                            }));
                         }
                         finally
                         {
