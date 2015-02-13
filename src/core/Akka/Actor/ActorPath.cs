@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Akka.Util;
 using Newtonsoft.Json;
 
@@ -92,13 +91,42 @@ namespace Akka.Actor
             #endregion
         }
 
+         /** INTERNAL API */
+        internal static char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
+
         /// <summary> 
-        /// The regex that actor names must conform to RFC 2396, http://www.ietf.org/rfc/rfc2396.txt
+        /// Method that checks if actor name conforms to RFC 2396, http://www.ietf.org/rfc/rfc2396.txt
         /// Note that AKKA JVM does not allow parenthesis ( ) but, according to RFC 2396 those are allowed, and 
         /// since we use URL Encode to create valid actor names, we must allow them.
         /// </summary>
-        public static readonly Regex ElementRegex =
-            new Regex(@"^(?:[-a-zA-Z0-9:@&=+,.!~*'_;\(\)]|%[0-9a-fA-F]{2})(?:[-a-zA-Z0-9:@&=+,.!~*'\$_;\(\)]|%[0-9a-fA-F]{2})*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        public static bool IsValidPathElement(string s)
+        {
+            return s.Length > 0 && !s.StartsWith("$") && Validate(s.ToCharArray(), s.Length);
+        }
+
+        private static bool Validate(IReadOnlyList<char> chars, int len)
+        {
+            Func<char, bool> isValidChar = c => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || ValidSymbols.Contains(c);
+            Func<char, bool> isHexChar = c => (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || (c >= '0' && c <= '9');
+
+            var pos = 0;
+            while (pos < len)
+            {
+                if (isValidChar(chars[pos]))
+                {
+                    pos = pos + 1;
+                }
+                else if (chars[pos] == '%' && pos + 2 < len && isHexChar(chars[pos + 1]) && isHexChar(chars[pos + 2]))
+                {
+                    pos = pos + 3;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
 
         private readonly string _name;
 
