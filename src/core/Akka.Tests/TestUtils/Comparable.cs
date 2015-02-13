@@ -16,7 +16,7 @@
 
         public override string ToString()
         {
-            var res = fastJSON.JSON.Instance.ToJSON(this);
+            var res = fastJSON.JSON.ToJSON(this);
             return res;
         }
     }

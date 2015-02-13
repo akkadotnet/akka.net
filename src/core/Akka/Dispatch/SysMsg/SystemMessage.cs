@@ -233,19 +233,20 @@ namespace Akka.Dispatch.SysMsg
         public Task Task { get; private set; }
     }
 
-    /// <summary>
-    ///     Class CompleteFuture.
-    /// </summary>
-    public sealed class CompleteFuture : SystemMessage
+    public sealed class CompleteTask : SystemMessage
     {
         /// <summary>
-        ///     Initializes a new instance of the <see cref="CompleteFuture" /> class.
+        ///     Initializes a new instance of the <see cref="CompleteTask" /> class.
         /// </summary>
+        /// <param name="ambientState"></param>
         /// <param name="action">The action.</param>
-        public CompleteFuture(Action action)
+        public CompleteTask(AmbientState state, Action action)
         {
+            State = state;
             SetResult = action;
         }
+
+        public AmbientState State { get; private set; }
 
         /// <summary>
         ///     Gets the set result.
