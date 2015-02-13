@@ -200,7 +200,7 @@ namespace Akka.Tests.Actor
         [InlineData("EscapingWithOtherNumberCharacters-%Ⅷ⅓", false)]
         public void Validate_element_parts(string element, bool matches)
         {
-            ActorPath.ElementRegex.IsMatch(element).ShouldBe(matches);
+            ActorPath.IsValidPathElement(element).ShouldBe(matches);
         }
 
         [Theory]
@@ -213,7 +213,7 @@ namespace Akka.Tests.Actor
         {
             var urlEncode = HttpUtility.UrlEncode(element);
             global::System.Diagnostics.Debug.WriteLine("Encoded \"{0}\" to \"{1}\"", element, urlEncode)  ;
-            ActorPath.ElementRegex.IsMatch(urlEncode).ShouldBeTrue();
+            ActorPath.IsValidPathElement(urlEncode).ShouldBeTrue();
         }
     }
 }
