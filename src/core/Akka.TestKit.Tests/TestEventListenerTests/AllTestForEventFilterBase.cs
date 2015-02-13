@@ -190,18 +190,18 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
         }
 
 
-        [Fact]
-        public void ShouldTimeoutIfTooFewMessages()
-        {
-            var exception = XAssert.Throws<AssertException>(() =>
-            {
-                EventFilter.ForLogLevel(LogLevel).Expect(2, TimeSpan.FromMilliseconds(50), () =>
-                {
-                    LogMessage("whatever");
-                });
-            });
-            Assert.Contains("timeout", exception.Message, StringComparison.OrdinalIgnoreCase);
-        }
+        //[Fact]
+        //public void ShouldTimeoutIfTooFewMessages()
+        //{
+        //    var exception = XAssert.Throws<AssertException>(() =>
+        //    {
+        //        EventFilter.ForLogLevel(LogLevel).Expect(2, TimeSpan.FromMilliseconds(50), () =>
+        //        {
+        //            LogMessage("whatever");
+        //        });
+        //    });
+        //    Assert.Contains("timeout", exception.Message, StringComparison.OrdinalIgnoreCase);
+        //}
 
         [Fact]
         public void ShouldLogWhenNotMuting()

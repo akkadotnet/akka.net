@@ -17,7 +17,7 @@ namespace Akka.TestKit.Xunit.Internals
         }
 
         public AkkaEqualException(object expected, object actual, bool skipPositionCheck, string format = "", params object[] args)
-            : base(expected, actual, skipPositionCheck)
+            : base(expected, actual)
         {
             _format = format;
             _args = args;

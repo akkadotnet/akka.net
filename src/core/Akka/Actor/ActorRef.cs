@@ -101,10 +101,7 @@ namespace Akka.Actor
                     }
                     else
                     {
-                        //hide any potential local thread state
-                        var tmp = InternalCurrentActorCellKeeper.Current;
-                        InternalCurrentActorCellKeeper.Current = null;
-                        try
+                        if (TaskScheduler.Current is ActorTaskScheduler)
                         {
                             var state = new AmbientState()
                             {
@@ -119,9 +116,10 @@ namespace Akka.Actor
                                 _result.TrySetResult(message);
                             }));
                         }
-                        finally
+                        else
                         {
-                            InternalCurrentActorCellKeeper.Current = tmp;
+                            //preserve original behavior for non async await dispatchers 
+                            _result.TrySetResult(message);
                         }
                     }
                 }

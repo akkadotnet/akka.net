@@ -100,7 +100,7 @@ namespace SymbolLookup.Actors
                 var quoteStrTask = _client.GetStringAsync(StockUriHelper.CreateStockQuoteUri(symboldata.Symbol));
                 quoteStrTask.Wait();
                 var quoteStr = quoteStrTask.Result;
-                var quoteData = fastJSON.JSON.Instance.ToObject<RootObject>(quoteStr);
+                var quoteData = fastJSON.JSON.ToObject<RootObject>(quoteStr);
                 if (quoteData == null || quoteData.query == null || quoteData.query.results == null)
                 {
                     //request failed for whatever reason, 

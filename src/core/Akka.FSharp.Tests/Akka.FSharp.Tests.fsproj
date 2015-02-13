@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\..\packages\xunit.core.2.0.0-rc1-build2826\build\portable-net45+aspnetcore50+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.core.props" Condition="Exists('..\..\packages\xunit.core.2.0.0-rc1-build2826\build\portable-net45+aspnetcore50+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.core.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -14,7 +15,7 @@
     <Name>Akka.FSharp.Tests</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
-    <NuGetPackageImportStamp>df5083dd</NuGetPackageImportStamp>
+    <NuGetPackageImportStamp>0172dc00</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -65,6 +66,7 @@
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+    <Error Condition="!Exists('..\..\packages\xunit.core.2.0.0-rc1-build2826\build\portable-net45+aspnetcore50+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.core.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\xunit.core.2.0.0-rc1-build2826\build\portable-net45+aspnetcore50+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.core.props'))" />
   </Target>
   <ItemGroup>
     <Compile Include="Tests.fs" />
@@ -74,11 +76,11 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FsCheck">
-      <HintPath>..\..\packages\FsCheck.0.9.4.0\lib\net40-Client\FsCheck.dll</HintPath>
+      <HintPath>..\..\packages\FsCheck.1.0.4\lib\net45\FsCheck.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="FsCheck.Xunit">
-      <HintPath>..\..\packages\FsCheck.Xunit.0.4.1.0\lib\net40-Client\FsCheck.Xunit.dll</HintPath>
+      <HintPath>..\..\packages\FsCheck.Xunit.1.0.4\lib\net45\FsCheck.Xunit.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="mscorlib" />
@@ -88,10 +90,6 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-    <Reference Include="xunit">
-      <HintPath>..\..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj">
       <Name>Akka.TestKit.Xunit</Name>
       <Project>{11f4d4b8-7e07-4457-abf2-609b3e7b2649}</Project>
@@ -112,6 +110,18 @@
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Private>True</Private>
     </ProjectReference>
+    <Reference Include="xunit.abstractions">
+      <HintPath>..\..\packages\xunit.abstractions.2.0.0-rc1-build2826\lib\net35\xunit.abstractions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="xunit.assert">
+      <HintPath>..\..\packages\xunit.assert.2.0.0-rc1-build2826\lib\portable-net45+aspnetcore50+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.assert.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="xunit.core">
+      <HintPath>..\..\packages\xunit.extensibility.core.2.0.0-rc1-build2826\lib\portable-net45+aspnetcore50+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

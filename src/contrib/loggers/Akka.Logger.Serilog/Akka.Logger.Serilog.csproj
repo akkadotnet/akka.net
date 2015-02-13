@@ -33,11 +33,13 @@
     <DocumentationFile>bin\Release\Akka.Logger.Serilog.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Serilog">
-      <HintPath>..\..\..\packages\Serilog.1.3.43\lib\net45\Serilog.dll</HintPath>
+    <Reference Include="Serilog, Version=1.4.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\packages\Serilog.1.4.168\lib\net45\Serilog.dll</HintPath>
     </Reference>
-    <Reference Include="Serilog.FullNetFx">
-      <HintPath>..\..\..\packages\Serilog.1.3.43\lib\net45\Serilog.FullNetFx.dll</HintPath>
+    <Reference Include="Serilog.FullNetFx, Version=1.4.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\packages\Serilog.1.4.168\lib\net45\Serilog.FullNetFx.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
