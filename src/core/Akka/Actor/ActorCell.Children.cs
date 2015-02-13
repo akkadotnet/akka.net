@@ -47,7 +47,7 @@ namespace Akka.Actor
         {
             return ActorOf(props, name, true, isSystemService);
         }
-
+        
         public virtual ActorRef ActorOf(Props props, string name = null)
         {
             return ActorOf(props, name, false, false);
@@ -327,9 +327,9 @@ namespace Akka.Actor
         {
             if (name == null) throw new InvalidActorNameException("Actor name must not be null.");
             if (name.Length == 0) throw new InvalidActorNameException("Actor name must not be empty.");
-            if (!ActorPath.ElementRegex.IsMatch(name))
+            if (!ActorPath.IsValidPathElement(name))
             {
-                throw new InvalidActorNameException(string.Format("Illegal actor name \"{0}\", must conform to {1}", name, ActorPath.ElementRegex));
+                throw new InvalidActorNameException(string.Format("Illegal actor name [{0}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${1}.", name, new String(ActorPath.ValidSymbols)));
             }
         }
 
