@@ -47,18 +47,12 @@ namespace Akka.Actor.Internal
         public bool RequestRestartPermission(int maxNrOfRetries, int withinTimeMilliseconds)
         {
             if (maxNrOfRetries == 0) return false;
-            var retriesIsDefined = maxNrOfRetries > 0;
-            var windowIsDefined = withinTimeMilliseconds > 0;
-            if (retriesIsDefined && !windowIsDefined)
+            if (withinTimeMilliseconds == 0)
             {
                 _maxNrOfRetriesCount++;
                 return _maxNrOfRetriesCount <= maxNrOfRetries;
             }
-            if (windowIsDefined)
-            {
-                return RetriesInWindowOkay(retriesIsDefined ? maxNrOfRetries : 1, withinTimeMilliseconds);
-            }
-            return true;
+            return RetriesInWindowOkay(maxNrOfRetries, withinTimeMilliseconds);
             //retriesWindow match {
             //  case (Some(retries), _) if retries < 1 ⇒ false
             //  case (Some(retries), None)             ⇒ { maxNrOfRetriesCount += 1; maxNrOfRetriesCount <= retries }
@@ -84,7 +78,7 @@ namespace Akka.Actor.Internal
             {
                 windowStart = _restartTimeWindowStartTicks;
             }
-            var windowInTicks = windowInMilliseconds * TimeSpan.TicksPerMillisecond;
+            var windowInTicks = windowInMilliseconds*TimeSpan.TicksPerMillisecond;
             var insideWindow = (now - windowStart) <= windowInTicks;
 
             if (insideWindow)
@@ -96,7 +90,5 @@ namespace Akka.Actor.Internal
             _restartTimeWindowStartTicks = now;
             return true;
         }
-
-
     }
 }
