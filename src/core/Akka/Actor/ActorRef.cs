@@ -175,7 +175,7 @@ namespace Akka.Actor
 
         public void Tell(object message, ActorRef sender)
         {
-            if (sender == null) throw new ArgumentNullException("sender", "A actorAwaitingResult must be specified");
+            if (sender == null) throw new ArgumentNullException("sender", "A sender must be specified");
 
             TellInternal(message, sender);
         }
