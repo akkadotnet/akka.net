@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,7 +9,6 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-
 
 namespace Akka.Actor.Internals
 {
@@ -18,12 +18,11 @@ namespace Akka.Actor.Internals
     public class ActorSystemImpl : ExtendedActorSystem
     {
         private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
-
-        private LoggingAdapter _log;
-        private ActorRefProvider _provider;
-        private Settings _settings;
+        private readonly LoggingAdapter _log;
+        private readonly ActorRefProvider _provider;
+        private readonly Settings _settings;
         private readonly string _name;
-        private Serialization.Serialization _serialization;
+        private readonly Serialization.Serialization _serialization;
         private readonly EventStream _eventStream;
         private readonly Dispatchers _dispatchers;
         private readonly Mailboxes _mailboxes;
@@ -49,7 +48,10 @@ namespace Akka.Actor.Internals
             _eventStream = new EventStream(_settings.DebugEventStream);
             _eventStream.StartStdoutLogger(_settings);
             _serialization = new Serialization.Serialization(this);
-            ConfigureProvider();
+            _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), new DefaultLogMessageFormatter());
+            var providerType = Type.GetType(_settings.ProviderClass);
+            System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
+            _provider = (ActorRefProvider)Activator.CreateInstance(providerType, _name, _settings, _eventStream);
             _mailboxes = new Mailboxes(this);
             _dispatchers = new Dispatchers(this);
             // we push Log in lazy manner since it may not be configured at point of pipeline initialization
@@ -66,13 +68,9 @@ namespace Akka.Actor.Internals
         public override Mailboxes Mailboxes { get { return _mailboxes; } }
         public override Scheduler Scheduler { get { return _scheduler; } }
         public override LoggingAdapter Log { get { return _log; } }
-
         public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
-
-
         public override InternalActorRef Guardian { get { return _provider.Guardian; } }
         public override InternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
-
 
         /// <summary>Creates a new system actor.</summary>
         public override ActorRef SystemActorOf(Props props, string name = null)
@@ -90,7 +88,7 @@ namespace Akka.Actor.Internals
         public void Start()
         {
             _provider.Init(this);
-            ConfigureLoggers();
+            
             LoadExtensions();
 
             if(_settings.LogDeadLetters > 0)
@@ -105,9 +103,8 @@ namespace Akka.Actor.Internals
 
         public override ActorRef ActorOf(Props props, string name = null)
         {
-            return _provider.Guardian.Cell.ActorOf(props, name: name);
+            return _provider.Guardian.Cell.ActorOf(props, name);
         }
-
 
         public override ActorSelection ActorSelection(ActorPath actorPath)
         {
@@ -143,29 +140,16 @@ namespace Akka.Actor.Internals
                 {
                     _log.Error(ex, "While trying to load extension [{0}], skipping...", extensionFqn);
                 }
-
             }
-
-            ConfigureExtensions(extensions);
-        }
-
-        private void ConfigureExtensions(IEnumerable<IExtensionId> extensionIdProviders)
-        {
-            foreach(var extensionId in extensionIdProviders)
-            {
+            foreach (var extensionId in extensions)
                 RegisterExtension(extensionId);
-            }
         }
 
         public override object RegisterExtension(IExtensionId extension)
         {
             if(extension == null) return null;
-            if(!_extensions.ContainsKey(extension.ExtensionType))
-            {
-                _extensions.TryAdd(extension.ExtensionType, new Lazy<object>(() => extension.CreateExtension(this)));
-            }
-
-            return extension.Get(this);
+            _extensions.TryAdd(extension.ExtensionType, new Lazy<object>(() => extension.CreateExtension(this)));
+            return GetExtension(extension);
         }
 
         public override object GetExtension(IExtensionId extensionId)
@@ -200,11 +184,7 @@ namespace Akka.Actor.Internals
 
         public override bool HasExtension(Type t)
         {
-            if(typeof(IExtension).IsAssignableFrom(t))
-            {
-                return _extensions.ContainsKey(t);
-            }
-            return false;
+            return typeof(IExtension).IsAssignableFrom(t) && _extensions.ContainsKey(t);
         }
 
         public override bool HasExtension<T>()
@@ -212,24 +192,6 @@ namespace Akka.Actor.Internals
             return _extensions.ContainsKey(typeof(T));
         }
 
-        /// <summary>
-        ///     Configures the provider.
-        /// </summary>
-        private void ConfigureProvider()
-        {
-            Type providerType = Type.GetType(_settings.ProviderClass);
-            global::System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
-            var provider = (ActorRefProvider)Activator.CreateInstance(providerType, _name, _settings, _eventStream);
-            _provider = provider;
-        }
-
-        /// <summary>
-        /// Extensions depends on loggers being configured before Start() is called
-        /// </summary>
-        private void ConfigureLoggers()
-        {
-            _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), new DefaultLogMessageFormatter());
-        }
         /// <summary>
         ///     Stop this actor system. This will stop the guardian actor, which in turn
         ///     will recursively stop all its child actors, then the system guardian
