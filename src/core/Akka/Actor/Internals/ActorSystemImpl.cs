@@ -17,7 +17,6 @@ namespace Akka.Actor.Internals
     /// </summary>
     public class ActorSystemImpl : ExtendedActorSystem
     {
-        private ActorRef _logDeadLetterListener;
         private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
 
         private LoggingAdapter _log;
@@ -25,11 +24,11 @@ namespace Akka.Actor.Internals
         private Settings _settings;
         private readonly string _name;
         private Serialization.Serialization _serialization;
-        private EventStream _eventStream;
-        private Dispatchers _dispatchers;
-        private Mailboxes _mailboxes;
-        private Scheduler _scheduler;
-        private ActorProducerPipelineResolver _actorProducerPipelineResolver;
+        private readonly EventStream _eventStream;
+        private readonly Dispatchers _dispatchers;
+        private readonly Mailboxes _mailboxes;
+        private readonly Scheduler _scheduler;
+        private readonly ActorProducerPipelineResolver _actorProducerPipelineResolver;
 
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Load())
@@ -45,14 +44,16 @@ namespace Akka.Actor.Internals
                 throw new ArgumentNullException("config");
 
             _name = name;
-            ConfigureScheduler();
-            ConfigureSettings(config);
-            ConfigureEventStream();
+            _scheduler = new Scheduler();
+            _settings = new Settings(this, config);
+            _eventStream = new EventStream(_settings.DebugEventStream);
+            _eventStream.StartStdoutLogger(_settings);
+            _serialization = new Serialization.Serialization(this);
             ConfigureProvider();
-            ConfigureSerialization();
-            ConfigureMailboxes();
-            ConfigureDispatchers();
-            ConfigureActorProducerPipeline();
+            _mailboxes = new Mailboxes(this);
+            _dispatchers = new Dispatchers(this);
+            // we push Log in lazy manner since it may not be configured at point of pipeline initialization
+            _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
         }
 
         public override ActorRefProvider Provider { get { return _provider; } }
@@ -93,7 +94,7 @@ namespace Akka.Actor.Internals
             LoadExtensions();
 
             if(_settings.LogDeadLetters > 0)
-                _logDeadLetterListener = SystemActorOf<DeadLetterListener>("deadLetterListener");
+                SystemActorOf<DeadLetterListener>("deadLetterListener");
 
 
             if(_settings.LogConfigOnStart)
@@ -116,11 +117,6 @@ namespace Akka.Actor.Internals
         public override ActorSelection ActorSelection(string actorPath)
         {
             return ActorRefFactoryShared.ActorSelection(actorPath, this, _provider.RootGuardian);
-        }
-
-        private void ConfigureScheduler()
-        {
-            _scheduler = new Scheduler();
         }
 
         /// <summary>
@@ -217,40 +213,6 @@ namespace Akka.Actor.Internals
         }
 
         /// <summary>
-        ///     Configures the settings.
-        /// </summary>
-        /// <param name="config">The configuration.</param>
-        private void ConfigureSettings(Config config)
-        {
-            _settings = new Settings(this, config);
-        }
-
-        /// <summary>
-        ///     Configures the event stream.
-        /// </summary>
-        private void ConfigureEventStream()
-        {
-            _eventStream = new EventStream(_settings.DebugEventStream);
-            _eventStream.StartStdoutLogger(_settings);
-        }
-
-        /// <summary>
-        ///     Configures the serialization.
-        /// </summary>
-        private void ConfigureSerialization()
-        {
-            _serialization = new Serialization.Serialization(this);
-        }
-
-        /// <summary>
-        ///     Configures the mailboxes.
-        /// </summary>
-        private void ConfigureMailboxes()
-        {
-            _mailboxes = new Mailboxes(this);
-        }
-
-        /// <summary>
         ///     Configures the provider.
         /// </summary>
         private void ConfigureProvider()
@@ -268,24 +230,6 @@ namespace Akka.Actor.Internals
         {
             _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), new DefaultLogMessageFormatter());
         }
-
-        /// <summary>
-        ///     Configures the dispatchers.
-        /// </summary>
-        private void ConfigureDispatchers()
-        {
-            _dispatchers = new Dispatchers(this);
-        }
-
-        /// <summary>
-        /// Configures the actor producer pipeline.
-        /// </summary>
-        private void ConfigureActorProducerPipeline()
-        {
-            // we push Log in lazy manner since it may not be configured at point of pipeline initialization
-            _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
-        }
-
         /// <summary>
         ///     Stop this actor system. This will stop the guardian actor, which in turn
         ///     will recursively stop all its child actors, then the system guardian
@@ -334,7 +278,5 @@ namespace Akka.Actor.Internals
             else
                 ((InternalActorRef)actor).Stop();
         }
-
-
     }
 }
