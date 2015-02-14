@@ -121,28 +121,27 @@ namespace Akka.Actor.Internals
         /// </summary>
         private void LoadExtensions()
         {
-            var extensions = new List<IExtensionId>();
             foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions"))
             {
                 var extensionType = Type.GetType(extensionFqn);
-                if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.IsAbstract || !extensionType.IsClass)
+                if (extensionType == null || !typeof (IExtensionId).IsAssignableFrom(extensionType) ||
+                    extensionType.IsAbstract || !extensionType.IsClass)
                 {
                     _log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
-                    continue;
                 }
-
-                try
+                else
                 {
-                    var extension = (IExtensionId)Activator.CreateInstance(extensionType);
-                    extensions.Add(extension);
-                }
-                catch(Exception ex)
-                {
-                    _log.Error(ex, "While trying to load extension [{0}], skipping...", extensionFqn);
+                    try
+                    {
+                        var extension = (IExtensionId)Activator.CreateInstance(extensionType);
+                        _extensions.TryAdd(extension.ExtensionType, new Lazy<object>(() => extension.CreateExtension(this)));
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Error(ex, "While trying to load extension [{0}], skipping...", extensionFqn);
+                    }
                 }
             }
-            foreach (var extensionId in extensions)
-                RegisterExtension(extensionId);
         }
 
         public override object RegisterExtension(IExtensionId extension)
