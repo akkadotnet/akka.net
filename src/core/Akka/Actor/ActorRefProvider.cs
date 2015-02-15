@@ -69,7 +69,6 @@ namespace Akka.Actor
         /// <param name="path">A path returned by <see cref="TempPath"/>. Do NOT pass in any other path!</param>
         void UnregisterTempActor(ActorPath path);
 
-
         /// <summary>
         /// Actor factory with create-only semantics: will create an actor as
         /// described by <paramref name="props"/> with the given <paramref name="supervisor"/> and <paramref name="path"/> (may be different

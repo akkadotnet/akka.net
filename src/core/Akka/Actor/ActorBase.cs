@@ -1,6 +1,5 @@
 ﻿using System;
 using Akka.Actor.Internal;
-using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
 namespace Akka.Actor
@@ -106,7 +105,7 @@ namespace Akka.Actor
         ///     Gets the self ActorRef
         /// </summary>
         /// <value>Self ActorRef</value>
-        protected ActorRef Self { get { return HasBeenCleared?  _clearedSelf : Context.Self; } }
+        protected ActorRef Self { get { return HasBeenCleared ? _clearedSelf : Context.Self; } }
 
         /// <summary>
         ///     Gets the context.
@@ -163,7 +162,7 @@ namespace Akka.Actor
         /// <summary>
         /// EmptyReceive is a Receive-delegate that matches no messages at all, ever.
         /// </summary>
-        protected static Receive EmptyReceive { get { return _=> false; } }
+        protected static Receive EmptyReceive { get { return _ => false; } }
 
         /// <summary>
         /// Is called when a message isn't handled by the current behavior of the actor
@@ -181,7 +180,6 @@ namespace Akka.Actor
             }
             Context.System.EventStream.Publish(new UnhandledMessage(message, Sender, Self));
         }
-
 
         /// <summary>
         /// Changes the Actor's behavior to become the new <see cref="Actor.Receive"/> handler.
