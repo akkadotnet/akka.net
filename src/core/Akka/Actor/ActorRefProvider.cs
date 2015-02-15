@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor.Internals;
 using Akka.Dispatch;
@@ -43,7 +42,6 @@ namespace Akka.Actor
 
         /// <summary>Gets the settings.</summary>
         Settings Settings { get; }
-
 
         /// <summary>
         /// Initialization of an ActorRefProvider happens in two steps: first
