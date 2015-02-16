@@ -36,21 +36,12 @@ namespace Akka.Dispatch
         /// <param name="message">The message.</param>
         protected override bool Receive(object message)
         {
-            if (respondTo != ActorRef.NoSender)
-            {
-                ((InternalActorRef)Self).Stop();
-                respondTo.Tell(new CompleteFuture(() => result.SetResult(message)));
-                Become(EmptyReceive);
-            }
-            else
-            {
-                //if there is no listening actor asking,
-                //just eval the result directly
-                ((InternalActorRef)Self).Stop();
-                Become(EmptyReceive);
+            //if there is no listening actor asking,
+            //just eval the result directly
+            ((InternalActorRef)Self).Stop();
+            Become(EmptyReceive);
 
-                result.SetResult(message);
-            }
+            result.SetResult(message);
 
             return true;
         }

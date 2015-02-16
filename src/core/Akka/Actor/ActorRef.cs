@@ -54,16 +54,14 @@ namespace Akka.Actor
         private readonly TaskCompletionSource<object> _result;
         private readonly Action _unregister;
         private readonly ActorPath _path;
-        private readonly ActorRef _actorAwaitingResult;
 
-        public FutureActorRef(TaskCompletionSource<object> result, ActorRef actorAwaitingResult, Action unregister, ActorPath path)
+        public FutureActorRef(TaskCompletionSource<object> result, Action unregister, ActorPath path)
         {
             if (ActorCell.Current != null)
             {
                 _actorAwaitingResultSender = ActorCell.Current.Sender;
             }
             _result = result;
-            _actorAwaitingResult = actorAwaitingResult ?? NoSender;
             _unregister = unregister;
             _path = path;
         }
@@ -96,32 +94,7 @@ namespace Akka.Actor
                 if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
                 {
                     _unregister();
-                    if (_actorAwaitingResult == NoSender || message is Terminated)
-                    {
-                        _result.TrySetResult(message);
-                    }
-                    else
-                    {
-                        if (TaskScheduler.Current is ActorTaskScheduler)
-                        {
-                            var tmp = InternalCurrentActorCellKeeper.Current;
-                            InternalCurrentActorCellKeeper.Current = null;
-                            try
-                            {
-                                ActorTaskScheduler.SetCurrentState(_actorAwaitingResult, _actorAwaitingResultSender, "");
-
-                                _result.TrySetResult(message);
-                            }
-                            finally
-                            {
-                                InternalCurrentActorCellKeeper.Current = tmp;
-                            }
-                        }
-                        else
-                        {
-                            _actorAwaitingResult.Tell(new CompleteFuture(() => _result.TrySetResult(message)));
-                        }
-                    }
+                    _result.TrySetResult(message);
                 }
             }
         }
