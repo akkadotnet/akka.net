@@ -3,10 +3,13 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Threading.Tasks;
 using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using System.Threading;
+using Akka.Actor.Internal;
+using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -51,12 +54,16 @@ namespace Akka.Actor
         private readonly TaskCompletionSource<object> _result;
         private readonly Action _unregister;
         private readonly ActorPath _path;
-        private ActorRef _sender;
+        private readonly ActorRef _actorAwaitingResult;
 
-        public FutureActorRef(TaskCompletionSource<object> result, ActorRef sender, Action unregister, ActorPath path)
+        public FutureActorRef(TaskCompletionSource<object> result, ActorRef actorAwaitingResult, Action unregister, ActorPath path)
         {
+            if (ActorCell.Current != null)
+            {
+                _actorAwaitingResultSender = ActorCell.Current.Sender;
+            }
             _result = result;
-            _sender = sender ?? NoSender;
+            _actorAwaitingResult = actorAwaitingResult ?? NoSender;
             _unregister = unregister;
             _path = path;
         }
@@ -75,8 +82,11 @@ namespace Akka.Actor
         private const int INITIATED = 0;
         private const int COMPLETED = 1;
         private int status = INITIATED;
+        private readonly ActorRef _actorAwaitingResultSender;
+
         protected override void TellInternal(object message, ActorRef sender)
         {
+
             if (message is SystemMessage) //we have special handling for system messages
             {
                 SendSystemMessage(message.AsInstanceOf<SystemMessage>(), sender);
@@ -86,13 +96,31 @@ namespace Akka.Actor
                 if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
                 {
                     _unregister();
-                    if (_sender == NoSender || message is Terminated)
+                    if (_actorAwaitingResult == NoSender || message is Terminated)
                     {
                         _result.TrySetResult(message);
                     }
                     else
                     {
-                        _sender.Tell(new CompleteFuture(() => _result.TrySetResult(message)));
+                        if (TaskScheduler.Current is ActorTaskScheduler)
+                        {
+                            var tmp = InternalCurrentActorCellKeeper.Current;
+                            InternalCurrentActorCellKeeper.Current = null;
+                            try
+                            {
+                                ActorTaskScheduler.SetCurrentState(_actorAwaitingResult, _actorAwaitingResultSender, "");
+
+                                _result.TrySetResult(message);
+                            }
+                            finally
+                            {
+                                InternalCurrentActorCellKeeper.Current = tmp;
+                            }
+                        }
+                        else
+                        {
+                            _actorAwaitingResult.Tell(new CompleteFuture(() => _result.TrySetResult(message)));
+                        }
                     }
                 }
             }
@@ -112,7 +140,7 @@ namespace Akka.Actor
         }
     }
 
-    
+
 
     internal static class ActorRefSender
     {

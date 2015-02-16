@@ -32,7 +32,10 @@ namespace Akka.Actor
 
             ActorRef replyTo = ResolveReplyTo();
 
-            return Ask(self, replyTo, message, provider, timeout).ContinueWith(t => (T) t.Result);
+            var task = Ask(self, replyTo, message, provider, timeout).ContinueWith(t => (T) t.Result);
+            task.ConfigureAwait(true);
+
+            return task;
         }
 
         internal static ActorRef ResolveReplyTo()
@@ -60,7 +63,7 @@ namespace Akka.Actor
         private static Task<object> Ask(ICanTell self, ActorRef replyTo, object message, ActorRefProvider provider,
             TimeSpan? timeout)
         {
-            var result = new TaskCompletionSource<object>();
+            var result = new TaskCompletionSource<object>(TaskContinuationOptions.AttachedToParent);
             if (timeout.HasValue)
             {
                 var cancellationSource = new CancellationTokenSource();
