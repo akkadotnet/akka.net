@@ -50,7 +50,7 @@ namespace Akka.Actor
             //callback to unregister from tempcontainer
             Action unregister = () => provider.UnregisterTempActor(path);
 
-            var fref = new FutureActorRef(promise, ActorRef.NoSender, unregister, path);
+            var fref = new FutureActorRef(promise, unregister, path);
             internalTarget.Tell(new Watch(internalTarget, fref));
             target.Tell(stopMessage, ActorRef.NoSender);
             return promise.Task.ContinueWith(t =>

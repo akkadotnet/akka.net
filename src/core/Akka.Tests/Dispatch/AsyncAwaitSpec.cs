@@ -12,10 +12,12 @@ namespace Akka.Tests.Dispatch
         {
             Receive<string>(async _ =>
             {
-                var sender = Sender;                
+                var sender = Sender;
+                var self = Self;
                 await Task.Yield();
                 await Task.Delay(TimeSpan.FromSeconds(1));
                 Assert.Same(sender,Sender);
+                Assert.Same(self, Self);
                 Sender.Tell("done");
             });
         }
@@ -27,7 +29,11 @@ namespace Akka.Tests.Dispatch
         {
             Receive<string>(async _ =>
             {
+                var sender = Sender;
+                var self = Self;
                 var res = await other.Ask("start");
+                Assert.Same(sender, Sender);
+                Assert.Same(self, Self);
                 Sender.Tell(res);
             });
         }

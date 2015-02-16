@@ -150,7 +150,6 @@ namespace Akka.Actor
                 envelope
                     .Message
                     .Match()
-                    .With<CompleteFuture>(HandleCompleteFuture)
                     .With<CompleteTask>(HandleCompleteTask)
                     .With<Failed>(HandleFailed)
                     .With<DeathWatchNotification>(m => WatchedActorTerminated(m.Actor, m.ExistenceConfirmed, m.AddressTerminated))
@@ -345,15 +344,6 @@ namespace Akka.Actor
         private void Kill()
         {
             throw new ActorKilledException("Kill");
-        }
-
-        /// <summary>
-        ///     Handles the complete future.
-        /// </summary>
-        /// <param name="m">The m.</param>
-        private void HandleCompleteFuture(CompleteFuture m)
-        {
-            m.SetResult();
         }
     }
 }
