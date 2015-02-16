@@ -55,9 +55,9 @@ namespace Akka.Persistence.Tests
         public string NamePrefix { get { return Sys.Name; } }
         public string Name { get { return _name; } }
 
-        protected override void AfterTest()
+        protected override void AfterAll()
         {
-            base.AfterTest();
+            base.AfterAll();
             Clean.Dispose();
         }
     }

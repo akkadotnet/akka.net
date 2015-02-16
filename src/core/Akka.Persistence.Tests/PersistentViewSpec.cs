@@ -27,14 +27,14 @@ namespace Akka.Persistence.Tests
             _prefProbe.ExpectMsg("b-2");
         }
 
-        protected override void AfterTest()
+        protected override void AfterAll()
         {
             if (Sys != null)
             {
                 Sys.Stop(_pref);
                 Sys.Stop(_view);
             }
-            base.AfterTest();
+            base.AfterAll();
         }
 
         [Fact]

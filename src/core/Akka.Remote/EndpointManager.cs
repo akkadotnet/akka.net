@@ -397,7 +397,7 @@ namespace Akka.Remote
                     {
                         return new ListensResult(listen.AddressesPromise, listens.Result);
                     }
-                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent)
+                }, TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
                     .PipeTo(Self))
                 .With<ListensResult>(listens =>
                 {
@@ -441,11 +441,15 @@ namespace Akka.Remote
             message.Match()
                 .With<ManagementCommand>(mc =>
                 {
-                    var allStatuses = _transportMapping.Values.Select(x => x.ManagementCommand(mc));
+                    var sender = Sender;
+                    var allStatuses = _transportMapping.Values.Select(x => x.ManagementCommand(mc.Cmd));
                     Task.WhenAll(allStatuses)
-                        .ContinueWith(x => new ManagementCommandAck(x.Result.All(y => y)),
-                            TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent)
-                        .PipeTo(Self);
+                        .ContinueWith(x =>
+                        {
+                            return new ManagementCommandAck(x.Result.All(y => y));
+                        },
+                            TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
+                        .PipeTo(sender);
                 })
                 .With<Quarantine>(quarantine =>
                 {
@@ -525,7 +529,7 @@ namespace Akka.Remote
                     // The construction of the Task for shutdownStatus has to happen after the flushStatus future has been finished
                     // so that endpoints are shut down before transports.
                     var shutdownStatus = Task.WhenAll(endpoints.AllEndpoints.Select(
-                            x => x.GracefulStop(settings.FlushWait, new EndpointWriter.FlushAndStop()))).ContinueWith(
+                            x => x.GracefulStop(settings.FlushWait, EndpointWriter.FlushAndStop.Instance))).ContinueWith(
                                 result =>
                                 {
                                     if (result.IsFaulted)
@@ -696,7 +700,7 @@ namespace Akka.Remote
                         //The chain at this point:
                         //  Adapter <-- .. <-- Adapter <-- Driver
                         var wrappedTransport = transportSettings.Adapters.Select(x => TransportAdaptersExtension.For(Context.System).GetAdapterProvider(x)).Aggregate(driver,
-                            (transport, provider) => provider.Create(transport, Context.System));
+                            (transport, provider) => provider.Create(transport, (ExtendedActorSystem)Context.System));
 
                         //Apply AkkaProtocolTransport wrapper to the end of the chain
                         //The chain at this point:

@@ -43,7 +43,26 @@ namespace Akka.TestKit
         public AkkaSpec(Config config = null)
             : base(config.SafeWithFallback(_akkaSpecConfig), GetCallerName())
         {
+            BeforeAll();
         }
+
+        private void BeforeAll()
+        {
+            AtStartup();
+        }
+
+        protected override void AfterAll()
+        {
+            BeforeTermination();
+            base.AfterAll();
+            AfterTermination();
+        }
+
+        protected virtual void AtStartup() { }
+
+        protected virtual void BeforeTermination() { }
+
+        protected virtual void AfterTermination() { }
 
         private static string GetCallerName()
         {
