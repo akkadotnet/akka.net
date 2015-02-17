@@ -96,6 +96,11 @@ namespace Akka.Remote.Tests
                 .Replace("${port}", port.ToString()));
         }
 
+        protected override void AfterTermination()
+        {
+            Shutdown(masterActorSystem);
+        }
+
         [Fact]
         public void RemoteRouter_must_deploy_its_children_on_remote_host_driven_by_configuration()
         {

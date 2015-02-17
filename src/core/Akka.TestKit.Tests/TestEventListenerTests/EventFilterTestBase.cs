@@ -27,14 +27,14 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
 
         protected abstract void SendRawLogEventMessage(object message);
 
-        protected override void AfterTest()
+        protected override void AfterAll()
         {
             //After every test we make sure no uncatched messages have been logged
             if(TestSuccessful)
             {
                 EnsureNoMoreLoggedMessages();
             }
-            base.AfterTest();
+            base.AfterAll();
         }
 
         private void EnsureNoMoreLoggedMessages()

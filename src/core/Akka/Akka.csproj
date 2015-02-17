@@ -211,6 +211,7 @@
     <Compile Include="Event\StandardOutLogger.cs" />
     <Compile Include="Util\Guard.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
+    <Compile Include="Util\Internal\ImmutabilityUtils.cs" />
     <Compile Include="Util\Internal\InterlockedSpin.cs" />
     <Compile Include="Util\Internal\Collections\EmptyReadOnlyCollections.cs" />
     <Compile Include="Util\Internal\Collections\IBinaryTreeNode.cs" />

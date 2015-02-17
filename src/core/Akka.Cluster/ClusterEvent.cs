@@ -661,12 +661,40 @@ namespace Akka.Cluster
 
         protected override void OnReceive(object message)
         {
-            message.Match()
-                .With<InternalClusterAction.PublishChanges>(m => PublishChanges(m.NewGossip))
-                .With<ClusterEvent.CurrentInternalStats>(PublishInternalStats)
-                .With<InternalClusterAction.SendCurrentClusterState>(m => SendCurrentClusterState(m.Receiver))
-                .With<InternalClusterAction.Subscribe>(m => Subscribe(m.Subscriber, m.InitialStateMode, m.To))
-                .With<InternalClusterAction.PublishEvent>(Publish);
+            if (message is InternalClusterAction.PublishChanges)
+            {
+                var p = message as InternalClusterAction.PublishChanges;
+                PublishChanges(p.NewGossip);
+            }
+            else if (message is ClusterEvent.CurrentInternalStats)
+            {
+                var i = message as ClusterEvent.CurrentInternalStats;
+                PublishInternalStats(i);
+            }
+            else if (message is InternalClusterAction.SendCurrentClusterState)
+            {
+                var sc = message as InternalClusterAction.SendCurrentClusterState;
+                SendCurrentClusterState(sc.Receiver);
+            }
+            else if (message is InternalClusterAction.Subscribe)
+            {
+                var sub = message as InternalClusterAction.Subscribe;
+                Subscribe(sub.Subscriber, sub.InitialStateMode, sub.To);
+            }
+            else if (message is InternalClusterAction.PublishEvent)
+            {
+                var pub = message as InternalClusterAction.PublishEvent;
+                Publish(pub);
+            }
+            else if (message is InternalClusterAction.Unsubscribe)
+            {
+                var unsub = message as InternalClusterAction.Unsubscribe;
+                Unsubscribe(unsub.Subscriber, unsub.To);
+            }
+            else
+            {
+                Unhandled(message);
+            }
         }
 
         readonly EventStream _eventStream;

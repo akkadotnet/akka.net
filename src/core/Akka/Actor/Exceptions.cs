@@ -45,6 +45,18 @@ namespace Akka.Actor
     }
 
     /// <summary>
+    /// Thrown when an Ask operation times out
+    /// </summary>
+    public class AskTimeoutException : AkkaException
+    {
+        public AskTimeoutException(string message)
+            : base(message)
+        {
+            //Intentionally left blank
+        }
+    }
+
+    /// <summary>
     /// </summary>
     public class ActorInitializationException : AkkaException
     {

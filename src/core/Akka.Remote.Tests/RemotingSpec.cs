@@ -129,11 +129,11 @@ namespace Akka.Remote.Tests
         private ICanTell here;
 
 
-        protected override void AfterTest()
+        protected override void AfterAll()
         {
             remoteSystem.Shutdown();
             AssociationRegistry.Clear();
-            base.AfterTest();
+            base.AfterAll();
         }
 
 

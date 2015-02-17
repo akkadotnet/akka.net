@@ -58,6 +58,17 @@ namespace Akka.Util
         /// </summary>
         public bool CompareAndSet(T expected, T newValue)
         {
+            //special handling for null values
+            if (Value == null)
+            {
+                if (expected == null)
+                {
+                    Value = newValue;
+                    return true;
+                }
+                return false;
+            }
+
             if (Value.Equals(expected))
             {
                 Value = newValue;

@@ -92,7 +92,7 @@ namespace Akka.Remote
             }
         }
 
-        public sealed class Heartbeat //TODO: : IPriorityMessage
+        public sealed class Heartbeat : IPriorityMessage
         {
             private Heartbeat()
             {
@@ -109,7 +109,7 @@ namespace Akka.Remote
             }
         }
 
-        public class HeartbeatRsp//TODO: : IPriorityMessage
+        public class HeartbeatRsp : IPriorityMessage
         {
             readonly int _addressUid;
 

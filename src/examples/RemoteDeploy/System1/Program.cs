@@ -22,7 +22,7 @@ namespace System1
 akka {  
     log-config-on-start = on
     stdout-loglevel = DEBUG
-    loglevel = ERROR
+    loglevel = DEBUG
     actor {
         provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
         

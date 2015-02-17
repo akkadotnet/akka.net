@@ -22,7 +22,6 @@ namespace Akka.Remote
         {
             System = system;
             Provider = provider;
-            Addresses = null;
         }
 
         protected ExtendedActorSystem System { get; private set; }
@@ -31,13 +30,13 @@ namespace Akka.Remote
         /// <summary>
         /// Addresses to be used in <see cref="RootActorPath"/> of refs generated for this transport.
         /// </summary>
-        public ISet<Address> Addresses { get; protected set; }
+        public abstract ISet<Address> Addresses { get; }
 
         /// <summary>
         /// The default transport address of the <see cref="ActorSystem"/>. 
         /// This is the listen address of the default transport.
         /// </summary>
-        public Address DefaultAddress { get; protected set; }
+        public abstract Address DefaultAddress { get; }
 
         /// <summary>
         /// When true, some functionality will be turned off for security purposes
