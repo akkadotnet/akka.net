@@ -88,8 +88,7 @@ namespace Akka.Actor
         public Task Schedule(TimeSpan initialDelay, TimeSpan interval, Action action,
             CancellationToken cancellationToken)
         {
-            Action wrapped = WrapActionInActorSafeAction(action);
-            return InternalSchedule(initialDelay, interval, wrapped, cancellationToken);
+            return InternalSchedule(initialDelay, interval, action, cancellationToken);
         }
 
         /// <summary>
@@ -112,8 +111,7 @@ namespace Akka.Actor
         /// <returns>Task.</returns>
         public Task ScheduleOnce(TimeSpan initialDelay, Action action, CancellationToken cancellationToken)
         {
-            Action wrapped = WrapActionInActorSafeAction(action);
-            return InternalScheduleOnce(initialDelay, wrapped, cancellationToken);
+            return InternalScheduleOnce(initialDelay, action, cancellationToken);
         }
 
         /// <summary>
@@ -130,7 +128,7 @@ namespace Akka.Actor
                 await Task.Delay(initialDelay, token);
             }
             catch (OperationCanceledException) { }
-            if(!token.IsCancellationRequested)
+            if (!token.IsCancellationRequested)
                 action();
         }
 
@@ -154,24 +152,8 @@ namespace Akka.Actor
                     await Task.Delay(interval, token);
                 }
                 catch (TaskCanceledException) { }
-                catch (OperationCanceledException) {}
+                catch (OperationCanceledException) { }
             }
-        }
-
-        /// <summary>
-        /// Wraps the action in an actor safe action.
-        /// </summary>
-        /// <param name="action">The action.</param>
-        /// <returns>Action.</returns>
-        private static Action WrapActionInActorSafeAction(Action action)
-        {
-            Action wrapped = action;
-            if (ActorCell.Current != null)
-            {
-                var self = ActorCell.Current.Self;
-                wrapped = () => self.Tell(new CompleteFuture(action));
-            }
-            return wrapped;
         }
     }
 }

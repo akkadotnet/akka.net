@@ -67,10 +67,18 @@ namespace Akka.Tests.Actor
 
         [Theory]
         [InlineData("", "empty")]
-        [InlineData("$hello", "conform")]
-        [InlineData("a%", "conform")]
-        [InlineData("a?", "conform")]
-        [InlineData("åäö", "conform")]
+        [InlineData("$hello", "not start with `$`")]
+        [InlineData("a%", "Illegal actor name")]
+        [InlineData("%3","Illegal actor name")]
+        [InlineData("%xx","Illegal actor name")]
+        [InlineData("%0G","Illegal actor name")]
+        [InlineData("%gg","Illegal actor name")]
+        [InlineData("%","Illegal actor name")]
+        [InlineData("%1t","Illegal actor name")]
+        [InlineData("a?","Illegal actor name")]
+        [InlineData("üß","include only ASCII")]
+        [InlineData("a?", "Illegal actor name")]
+        [InlineData("åäö", "Illegal actor name")]
         public void An_ActorRefFactory_must_throw_suitable_exceptions_for_malformed_actor_names(string name, string expectedExceptionMessageSubstring)
         {
             var exception = Assert.Throws<InvalidActorNameException>(() =>

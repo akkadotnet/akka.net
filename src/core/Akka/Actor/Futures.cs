@@ -15,24 +15,18 @@ namespace Akka.Actor
         //when asking from outside of an actor, we need to pass a system, so the FutureActor can register itself there and be resolvable for local and remote calls
         public static Task<object> Ask(this ICanTell self, object message, TimeSpan? timeout = null)
         {
-            ActorRefProvider provider = ResolveProvider(self);
-            if (provider == null)
-                throw new NotSupportedException("Unable to resolve the target Provider");
-
-            ActorRef replyTo = ResolveReplyTo();
-
-            return Ask(self, replyTo, message, provider, timeout);
+            return self.Ask<object>(message, timeout);
         }
 
-        public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout = null)
+        public static async Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout = null)
         {
             ActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new NotSupportedException("Unable to resolve the target Provider");
 
-            ActorRef replyTo = ResolveReplyTo();
-
-            return Ask(self, replyTo, message, provider, timeout).ContinueWith(t => (T) t.Result);
+            ResolveReplyTo();
+            var result = (T)await Ask(self, message, provider, timeout);
+            return result;
         }
 
         internal static ActorRef ResolveReplyTo()
@@ -57,10 +51,10 @@ namespace Akka.Actor
             return null;
         }
 
-        private static Task<object> Ask(ICanTell self, ActorRef replyTo, object message, ActorRefProvider provider,
+        private static Task<object> Ask(ICanTell self, object message, ActorRefProvider provider,
             TimeSpan? timeout)
         {
-            var result = new TaskCompletionSource<object>();
+            var result = new TaskCompletionSource<object>(TaskContinuationOptions.AttachedToParent);
             if (timeout.HasValue)
             {
                 var cancellationSource = new CancellationTokenSource();
@@ -72,7 +66,7 @@ namespace Akka.Actor
             ActorPath path = provider.TempPath();
             //callback to unregister from tempcontainer
             Action unregister = () => provider.UnregisterTempActor(path);
-            var future = new FutureActorRef(result, replyTo, unregister, path);
+            var future = new FutureActorRef(result, unregister, path);
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
             self.Tell(message, future);

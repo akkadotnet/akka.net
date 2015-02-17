@@ -100,7 +100,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool Receive(object message)
             {
-                if (message == "get") _probe.Tell(_last);
+                if (message.ToString() == "get") _probe.Tell(_last);
                 else if (IsPersistent && ShouldFail(message)) throw new TestException("boom");
                 else
                 {
@@ -111,6 +111,16 @@ namespace Akka.Persistence.Tests
 
             public override string ViewId { get { return _name + "-view"; } }
             public override string PersistenceId { get { return _name; } }
+
+            public override bool IsAutoUpdate
+            {
+                get { return false; }
+            }
+
+            public override long AutoUpdateReplayMax
+            {
+                get { return 0L; }
+            }
 
             protected override void PostRestart(Exception reason)
             {

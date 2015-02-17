@@ -13,12 +13,12 @@ chapter.
 
 In order to give some context to the discussion below, consider an application
 which spans multiple network hosts. The basic mechanism for communication is
-the same whether sending to an actor on the local JVM or to a remote actor, but
+the same whether sending to an actor on the local application or to a remote actor, but
 of course there will be observable differences in the latency of delivery
 (possibly also depending on the bandwidth of the network link and the message
 size) and the reliability. In case of a remote message send there are obviously
 more steps involved which means that more can go wrong. Another aspect is that
-local sending will just pass a reference to the message inside the same JVM,
+local sending will just pass a reference to the message inside the same application,
 without any restrictions on the underlying object which is sent, whereas a
 remote transport will place a limit on the message size.
 
@@ -27,7 +27,7 @@ safe, pessimistic bet. It means to only rely on those properties which are
 always guaranteed and which are discussed in detail below.  This has of course
 some overhead in the actor’s implementation. If you are willing to sacrifice full
 location transparency—for example in case of a group of closely collaborating
-actors—you can place them always on the same JVM and enjoy stricter guarantees
+actors—you can place them always on the same local application and enjoy stricter guarantees
 on message delivery. The details of this trade-off are discussed further below.
 
 As a supplementary part we give a few pointers at how to build stronger
@@ -175,7 +175,7 @@ particular:
 The reason for this is that internal system messages has their own mailboxes therefore the ordering of enqueue calls of
 a user and system message cannot guarantee the ordering of their dequeue times.
 
-##The Rules for In-JVM (Local) Message Sends
+##The Rules for In-App (Local) Message Sends
 
 ### Be careful what you do with this section!
 
@@ -192,11 +192,11 @@ The Akka test suite relies on not losing messages in the local context (and for
 non-error condition tests also for remote deployment), meaning that we
 actually do apply the best effort to keep our tests stable. A local ``tell``
 operation can however fail for the same reasons as a normal method call can on
-the JVM:
+the CLR:
 
-- `StackOverflowError`
-- `OutOfMemoryError`
-- other :`VirtualMachineError`
+- `StackOverflowException`
+- `OutOfMemoryException`
+- other :`SystemException`
 
 In addition, local sends can fail in Akka-specific ways:
 
@@ -223,7 +223,7 @@ possibly non-exhaustive list of counter-indications is:
   implication is that enqueue requests from different senders which arrive
   during the actor’s construction (figuratively, the details are more involved)
   may be reordered depending on low-level thread scheduling. Since completely
-  fair locks do not exist on the JVM this is unfixable.
+  fair locks do not exist on the CLR this is unfixable.
 
 - The same mechanism is used during the construction of a Router, more
   precisely the routed ActorRef, hence the same problem exists for actors
@@ -305,7 +305,7 @@ at the receiving actor’s end in order to handle temporary failures. This
 pattern is mostly useful in the local communication context where delivery
 guarantees are otherwise sufficient to fulfill the application’s requirements.
 
-Please note that the caveats for `The Rules for In-JVM (Local) Message Sends`_
+Please note that the caveats for `The Rules for In-App (Local) Message Sends`_
 do apply.
 
 An example implementation of this pattern is shown at :ref:`mailbox-acking`.
@@ -314,7 +314,7 @@ An example implementation of this pattern is shown at :ref:`mailbox-acking`.
 
 Messages which cannot be delivered (and for which this can be ascertained) will
 be delivered to a synthetic actor called ``/deadLetters``. This delivery
-happens on a best-effort basis; it may fail even within the local JVM (e.g.
+happens on a best-effort basis; it may fail even within a single application in the local machine (e.g.
 during actor termination). Messages sent via unreliable network transports will
 be lost without turning up as dead letters.
 

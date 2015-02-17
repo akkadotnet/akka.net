@@ -150,7 +150,7 @@ namespace Akka.Actor
                 envelope
                     .Message
                     .Match()
-                    .With<CompleteFuture>(HandleCompleteFuture)
+                    .With<CompleteTask>(HandleCompleteTask)
                     .With<Failed>(HandleFailed)
                     .With<DeathWatchNotification>(m => WatchedActorTerminated(m.Actor, m.ExistenceConfirmed, m.AddressTerminated))
                     .With<Create>(m => HandleCreate(m.Failure))
@@ -171,7 +171,12 @@ namespace Akka.Actor
             }
         }
 
-
+        private void HandleCompleteTask(CompleteTask task)
+        {
+            CurrentMessage = task.State.Message;
+            Sender = task.State.Sender;
+            task.SetResult();
+        }
         public void SwapMailbox(DeadLetterMailbox mailbox)
         {
             Mailbox.DebugPrint("{0} Swapping mailbox to DeadLetterMailbox",Self);
@@ -339,15 +344,6 @@ namespace Akka.Actor
         private void Kill()
         {
             throw new ActorKilledException("Kill");
-        }
-
-        /// <summary>
-        ///     Handles the complete future.
-        /// </summary>
-        /// <param name="m">The m.</param>
-        private void HandleCompleteFuture(CompleteFuture m)
-        {
-            m.SetResult();
         }
     }
 }

@@ -5,16 +5,13 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>8c261ca2-3cad-42ff-b21c-c32e7d718f95</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>PersistenceExample.FsApi</RootNamespace>
-    <AssemblyName>PersistenceExample.FsApi</AssemblyName>
+    <ProjectGuid>d22c316e-991e-432a-950c-29bc3c45c07b</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Akka.Persistence.FSharp</RootNamespace>
+    <AssemblyName>Akka.Persistence.FSharp</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
-    <Name>PersistenceExample.FsApi</Name>
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
-    <RestorePackages>true</RestorePackages>
+    <Name>Akka.Persistence.FSharp</Name>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -24,9 +21,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DocumentationFile>bin\Debug\PersistenceExample.FsApi.XML</DocumentationFile>
-    <Prefer32Bit>true</Prefer32Bit>
+    <DocumentationFile>bin\Debug\Akka.Persistence.FSharp.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -35,9 +30,7 @@
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DocumentationFile>bin\Release\PersistenceExample.FsApi.XML</DocumentationFile>
-    <Prefer32Bit>true</Prefer32Bit>
+    <DocumentationFile>bin\Release\Akka.Persistence.FSharp.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
@@ -55,46 +48,31 @@
     </Otherwise>
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
-  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
-  </Target>
   <ItemGroup>
-    <Compile Include="Program.fs" />
-    <None Include="App.config" />
-    <Content Include="packages.config" />
+    <Compile Include="FsApi.fs" />
+    <None Include="Script.fsx" />
+    <None Include="Akka.Persistence.FSharp.nuspec" />
+    <Content Include="app.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>True</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-    <ProjectReference Include="..\Akka.Persistence.FSharp\Akka.Persistence.FSharp.fsproj">
-      <Name>Akka.Persistence.FSharp</Name>
-      <Project>{d22c316e-991e-432a-950c-29bc3c45c07b}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\core\Akka.FSharp\Akka.FSharp.fsproj">
+    <ProjectReference Include="..\Akka.FSharp\Akka.FSharp.fsproj">
       <Name>Akka.FSharp</Name>
       <Project>{81574240-bc31-4be4-b447-adf0d32f4246}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <ProjectReference Include="..\core\Akka.Persistence\Akka.Persistence.csproj">
+    <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj">
       <Name>Akka.Persistence</Name>
       <Project>{fca84dea-c118-424b-9eb8-34375dfef18a}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <ProjectReference Include="..\core\Akka\Akka.csproj">
+    <ProjectReference Include="..\Akka\Akka.csproj">
       <Name>Akka</Name>
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Private>True</Private>

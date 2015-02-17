@@ -57,6 +57,16 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="run">The run.</param>
         public abstract void Schedule(Action run);
+
+        public virtual void Dispatch(ActorCell cell, Envelope envelope)
+        {
+            cell.Invoke(envelope);
+        }
+
+        public virtual void SystemDispatch(ActorCell cell, Envelope envelope)
+        {
+            cell.SystemInvoke(envelope);
+        }
     }
 
     /// <summary>
@@ -72,17 +82,7 @@ namespace Akka.Dispatch
         {
             var wc = new WaitCallback(_ => run());
             ThreadPool.UnsafeQueueUserWorkItem(wc, null);
-        }
-    }
-
-    /// <summary>
-    ///     Task based dispatcher
-    /// </summary>
-    public class TaskDispatcher : MessageDispatcher
-    {
-        public override void Schedule(Action run)
-        {
-            Task.Factory.StartNew(run, TaskCreationOptions.PreferFairness);
+            //ThreadPool.QueueUserWorkItem(wc, null);
         }
     }
 
@@ -243,14 +243,14 @@ namespace Akka.Dispatch
                     dispatcher = new CurrentSynchronizationContextDispatcher();
                     break;
                 case null:
-                    throw new NotSupportedException("Could not resolve dispatcher for path " + path+". type is null");
+                    throw new NotSupportedException("Could not resolve dispatcher for path " + path + ". type is null");
                 default:
                     Type dispatcherType = Type.GetType(type);
                     if (dispatcherType == null)
                     {
-                        throw new NotSupportedException("Could not resolve dispatcher type " + type+" for path "+ path);
+                        throw new NotSupportedException("Could not resolve dispatcher type " + type + " for path " + path);
                     }
-                    dispatcher = (MessageDispatcher) Activator.CreateInstance(dispatcherType);
+                    dispatcher = (MessageDispatcher)Activator.CreateInstance(dispatcherType);
                     break;
             }
 
