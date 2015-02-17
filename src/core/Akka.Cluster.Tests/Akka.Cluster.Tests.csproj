@@ -83,6 +83,7 @@
     <Compile Include="MultiNode\ConvergenceSpec.cs" />
     <Compile Include="MultiNode\InitialHeartbeatSpec.cs" />
     <Compile Include="MultiNode\JoinInProgressSpec.cs" />
+    <Compile Include="MultiNode\JoinSeedNodeSpec.cs" />
     <Compile Include="MultiNode\LeaderLeavingSpec.cs" />
     <Compile Include="MultiNode\MultiNodeClusterSpec.cs" />
     <Compile Include="MultiNode\MultiNodeFact.cs" />

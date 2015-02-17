@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Akka.Actor;
 using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
@@ -106,7 +107,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             });
             Receive<BeginNewSpec>(spec => ReceiveBeginSpecRun(spec));
             Receive<EndSpec>(spec => ReceiveEndSpecRun(spec));
-            Receive<RequestTestRunState>(state => Sender.Tell(TestRunData.Copy()));
+            Receive<RequestTestRunState>(state => Sender.Tell(TestRunData.Copy(TestRunPassed(TestRunData))));
             Receive<SubscribeFactCompletionMessages>(messages => AddSubscriber(messages));
             Receive<UnsubscribeFactCompletionMessages>(messages => RemoveSubscriber(messages));
             Receive<EndTestRun>(run =>
@@ -168,6 +169,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
             //Ready to begin the next spec
             _currentSpecRunActor = null;
+        }
+
+        private static bool TestRunPassed(TestRunTree tree)
+        {
+            return tree.Specs.All(x => x.Passed.HasValue && x.Passed.Value);
         }
 
         #endregion

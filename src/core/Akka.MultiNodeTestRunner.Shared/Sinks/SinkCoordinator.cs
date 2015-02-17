@@ -145,7 +145,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                         .PipeTo(Self);
                 }
             });
-            Receive<string>(s => PublishToChildren(s));
+            Receive<string>(s =>
+            {
+                PublishToChildren(s);
+            });
             Receive<NodeCompletedSpecWithSuccess>(s => PublishToChildren(s));
             Receive<IList<NodeTest>>(tests => BeginSpec(tests));
             Receive<EndSpec>(spec => EndSpec());

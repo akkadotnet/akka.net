@@ -22,9 +22,12 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 if (UseTestCoordinator)
                 {
                     TestCoordinatorActorRef.Ask<TestRunTree>(new TestRunCoordinator.RequestTestRunState())
-                        .ContinueWith(task => new SinkCoordinator.RecommendedExitCode(task.Result.Passed.GetValueOrDefault(false)
-                            ? 0
-                            : 1), TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
+                        .ContinueWith(task =>
+                        {
+                            return new SinkCoordinator.RecommendedExitCode(task.Result.Passed.GetValueOrDefault(false)
+                                ? 0
+                                : 1);
+                        }, TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
                             .PipeTo(Sender, Self);
                 }
             });
