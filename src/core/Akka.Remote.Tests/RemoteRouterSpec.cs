@@ -111,7 +111,7 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<ActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -131,7 +131,7 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<ActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -151,7 +151,7 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5000; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<ActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -172,7 +172,7 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<ActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -198,7 +198,7 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<ActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -223,7 +223,7 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<ActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -250,7 +250,7 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<ActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -276,7 +276,7 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<ActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
