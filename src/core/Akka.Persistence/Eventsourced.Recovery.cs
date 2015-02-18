@@ -318,7 +318,7 @@ namespace Akka.Persistence
                     TryFirstInvocationHandler(m.Message, onWriteMessageComplete);
                 }
             }
-            else if (message is WriteMessagesSuccessull || message is WriteMessagesFailed)
+            else if (message is WriteMessagesSuccessful || message is WriteMessagesFailed)
             {
                 if (_journalBatch.Count == 0) _isWriteInProgress = false;
                 else FlushJournalBatch();
