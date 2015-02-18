@@ -147,7 +147,7 @@ namespace Akka.Tests.Routing
 
             //first message should create the minimum number of routees
             router.Tell("echo", TestActor);
-            ExpectMsg("reply", TimeSpan.FromSeconds(1));
+            ExpectMsg("reply");
 
             (RouteeSize(router)).ShouldBe(resizer.LowerBound);
 
@@ -160,7 +160,7 @@ namespace Akka.Tests.Routing
                     Thread.Sleep(TimeSpan.FromMilliseconds(20));
                 }
                 Within(
-                    TimeSpan.FromMilliseconds(span.TotalMilliseconds * loops / resizer.LowerBound) + TimeSpan.FromSeconds(2.5),
+                    TimeSpan.FromMilliseconds((span.TotalMilliseconds * loops) / resizer.LowerBound) + TimeSpan.FromSeconds(2),
                     () =>
                     {
                         for (var i = 0; i < loops; i++) ExpectMsg("done");
