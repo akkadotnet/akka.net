@@ -3,9 +3,15 @@ using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
-    public class ResizablePoolActor : RouterActor
+    /// <summary>
+    /// INTERNAL API.
+    /// 
+    /// Defines <see cref="Pool"/> routers who can resize the number of routees
+    /// they use based on a defined <see cref="Resizer"/>
+    /// </summary>
+    internal class ResizablePoolActor : RouterActor
     {
-   //     private SupervisorStrategy supervisorStrategy;
+        //     private SupervisorStrategy supervisorStrategy;
 
         public ResizablePoolActor(SupervisorStrategy supervisorStrategy)
         {
@@ -19,12 +25,10 @@ namespace Akka.Routing
 
         protected override void OnReceive(object message)
         {
-            if (message is Resize)
+            if (message is Resize && ResizerCell != null)
             {
-                if (ResizerCell != null)
-                {
-                    ResizerCell.Resize(false);
-                }
+
+                ResizerCell.Resize(false);
             }
             else
             {

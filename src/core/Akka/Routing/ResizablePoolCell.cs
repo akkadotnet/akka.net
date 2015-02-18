@@ -12,29 +12,16 @@ using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
-    public class ResizablePoolCell : RoutedActorCell
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal class ResizablePoolCell : RoutedActorCell
     {
-        /// <summary>
-        /// State of the resize in progress. Since I can't use bool for interlocked ops I choose to use ints.
-        /// </summary>
-        private static class ResizeInProgressState
-        {
-            /// <summary>
-            /// True
-            /// </summary>
-            public static int True = 1;
-            
-            /// <summary>
-            /// False
-            /// </summary>
-            public static int False = 0;
-        }
-
         private Resizer resizer;
         /// <summary>
         /// must always use ResizeInProgressState static class to compare or assign values
         /// </summary>
-        private int _resizeInProgress;
+        private AtomicBoolean _resizeInProgress;
         private AtomicCounterLong _resizeCounter;
         private readonly Props _routerProps;
         private Pool _pool;
@@ -42,14 +29,14 @@ namespace Akka.Routing
         public ResizablePoolCell(ActorSystemImpl system, InternalActorRef self, Props routerProps, MessageDispatcher dispatcher, Props routeeProps, InternalActorRef supervisor, Pool pool)
             : base(system,self, routerProps,dispatcher, routeeProps, supervisor)
         {
-            if (pool.Resizer == null)
-                throw new ArgumentException("RouterConfig must be a Pool with defined resizer");
+
+            Guard.Assert(pool.Resizer != null, "RouterConfig must be a Pool with defined resizer");
 
             resizer = pool.Resizer;
             _routerProps = routerProps;
             _pool = pool;
             _resizeCounter = new AtomicCounterLong(0);
-            _resizeInProgress = ResizeInProgressState.False;
+            _resizeInProgress = new AtomicBoolean();
         }
 
         protected override void PreStart()
@@ -66,7 +53,7 @@ namespace Akka.Routing
         {
             if(!(_routerProps.RouterConfig.IsManagementMessage(message)) &&
                 resizer.IsTimeForResize(_resizeCounter.GetAndIncrement()) &&
-                Interlocked.Exchange(ref _resizeInProgress, ResizeInProgressState.True) == ResizeInProgressState.False)
+                _resizeInProgress.CompareAndSet(false, true))
             {
                 base.Post(Self, new Resize());
                 
@@ -76,7 +63,7 @@ namespace Akka.Routing
 
         internal void Resize(bool initial)
         {
-            if (_resizeInProgress == ResizeInProgressState.True || initial)
+            if (_resizeInProgress.Value || initial)
                 try
                 {
                     var requestedCapacity = resizer.Resize(Router.Routees);
@@ -99,7 +86,7 @@ namespace Akka.Routing
                 }
                 finally
                 {
-                    _resizeInProgress = ResizeInProgressState.False;
+                    _resizeInProgress = false;
                 }
         }
     }

@@ -137,7 +137,7 @@ namespace Akka.Tests.Routing
             }
         }
 
-        [Fact(Skip = "weird resizer behavior causes build server to fail")]
+        [Fact]
         public void DefaultResizer_must_grow_as_needed_under_pressure()
         {
             var resizer = new DefaultResizer(3, 5, pressureThreshold: 1, rampupRate: 0.1d, backoffRate: 0.0d,
