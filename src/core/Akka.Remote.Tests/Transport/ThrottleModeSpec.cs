@@ -91,7 +91,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         [Fact]
-        public void ThrottleMode_must_allow_oversized_packets_throuh_by_loaning()
+        public void ThrottleMode_must_allow_oversized_packets_through_by_loaning()
         {
             var bucket = new TokenBucket(100, 100, 0L, 20);
             var bucket1 = bucket.TryConsumeTokens(0L, 30);

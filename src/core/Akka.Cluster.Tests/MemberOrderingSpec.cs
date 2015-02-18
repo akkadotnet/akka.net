@@ -67,7 +67,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MemberOrderingMustConsitentOrderingAndEquals()
+        public void MemberOrderingMustConsistentOrderingAndEquals()
         {
             var address1 = new Address("akka.tcp", "sys1", "host1", 9001);
             var address2 = address1.Copy(port: 9002);

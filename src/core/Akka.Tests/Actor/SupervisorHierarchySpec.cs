@@ -232,7 +232,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void A_supervisor_hierarchy_must_handle_failure_in_creation_when_supervision_startegy_returns_Resume_and_Restart()
+        public void A_supervisor_hierarchy_must_handle_failure_in_creation_when_supervision_strategy_returns_Resume_and_Restart()
         {
             var createAttempt = new AtomicCounter(0);
             var preStartCalled = new AtomicCounter(0);

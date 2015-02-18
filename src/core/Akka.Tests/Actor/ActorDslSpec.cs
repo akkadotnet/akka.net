@@ -10,7 +10,7 @@ namespace Akka.Tests.Actor
     public class ActorDslSpec : AkkaSpec
     {
         [Fact]
-        public void A_ligthweight_creator_must_support_creating_regular_actors()
+        public void A_lightweight_creator_must_support_creating_regular_actors()
         {
             var a = Sys.ActorOf(Props.Create(() => new Act(c =>
                 c.Receive<string>(msg => msg == "hello", (msg, ctx) => TestActor.Tell("hi")))));
@@ -51,7 +51,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void A_ligthweight_creator_must_support_actor_setup_and_teardown()
+        public void A_lightweight_creator_must_support_actor_setup_and_teardown()
         {
             const string started = "started";
             const string stopped = "stopped";
@@ -68,19 +68,19 @@ namespace Akka.Tests.Actor
         }
 
         [Fact(Skip = "TODO: requires event filters")]
-        public void A_ligthweight_creator_must_support_restart()
+        public void A_lightweight_creator_must_support_restart()
         {
             //TODO: requires event filters
         }
 
         [Fact(Skip = "TODO: requires event filters")]
-        public void A_ligthweight_creator_must_support_supervising()
+        public void A_lightweight_creator_must_support_supervising()
         {
             //TODO: requires event filters
         }
 
         [Fact]
-        public void A_ligthweight_creator_must_support_nested_declarations()
+        public void A_lightweight_creator_must_support_nested_declarations()
         {
             var a = Sys.ActorOf(act =>
             {
@@ -96,7 +96,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact(Skip = "TODO: requires proven and tested stash implementation")]
-        public void A_ligthweight_creator_must_support_stash()
+        public void A_lightweight_creator_must_support_stash()
         {
             //TODO: requires proven and tested stash implementation
         }

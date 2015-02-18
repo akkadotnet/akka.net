@@ -57,7 +57,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void CanResolveWildcardQuestionmark()
+        public void CanResolveWildcardQuestionMark()
         {
             Sys.ActorSelection("user/t?st").Tell("hello2");
             ExpectMsg("hello2");
