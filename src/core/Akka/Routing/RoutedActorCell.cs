@@ -9,10 +9,13 @@ using Akka.Dispatch.SysMsg;
 
 namespace Akka.Routing
 {
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     public class RoutedActorCell : ActorCell
     {
         private readonly RouterConfig _routerConfig;
-        private Router _router;
+        private volatile Router _router;
         private readonly Props _routeeProps;
 
 
@@ -21,23 +24,6 @@ namespace Akka.Routing
         {
             _routeeProps = routeeProps;
             _routerConfig = routerProps.RouterConfig;
-            _router = _routerConfig.CreateRouter(system);
-            _routerConfig.Match()
-                .With<Pool>(r =>
-                {
-                    var routees = new List<Routee>();
-                    for(var i = 0; i < r.NrOfInstances; i++)
-                    {
-                        var routee = r.NewRoutee(_routeeProps, this);
-                        routees.Add(routee);
-                    }
-                    AddRoutees(routees.ToArray());
-                })
-                .With<Group>(r =>
-                {
-                    var routees = _routerConfig.GetRoutees(this).ToArray();
-                    AddRoutees(routees);
-                });
         }
 
         public Router Router { get { return _router; } }
@@ -112,6 +98,36 @@ namespace Akka.Routing
                 System.Scheduler.ScheduleOnce(TimeSpan.FromMilliseconds(100), actorRefRoutee.Actor, PoisonPill.Instance);
             }
         }
+
+        public override void Start()
+        {
+            // create the initial routees before scheduling the Router actor
+            _router = _routerConfig.CreateRouter(System);
+            _routerConfig.Match()
+                .With<Pool>(r =>
+                {
+                    var routees = new List<Routee>();
+                    for (var i = 0; i < r.NrOfInstances; i++)
+                    {
+                        var routee = r.NewRoutee(_routeeProps, this);
+                        routees.Add(routee);
+                    }
+                    AddRoutees(routees.ToArray());
+                })
+                .With<Group>(r =>
+                {
+                    var routees = _routerConfig.GetRoutees(this).ToArray();
+                    AddRoutees(routees);
+                });
+            PreSuperStart();
+            base.Start();
+        }
+
+        /// <summary>
+        /// Called when <see cref="Router"/> is initialized but before the base class' <see cref="Start"/> to
+        /// be able to do extra initialization in a subclass.
+        /// </summary>
+        protected virtual void PreSuperStart() { }
 
         internal void RemoveRoutee(Routee routee, bool stopChild)
         {

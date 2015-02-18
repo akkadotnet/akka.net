@@ -236,7 +236,7 @@ namespace Akka.Routing
                                 return
                                     PressureThreshold == 1
                                         ? cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
-                                          cell.Mailbox.HasUnscheduledMessages
+                                          cell.Mailbox.HasMessages
                                         : (PressureThreshold < 1
                                             ? cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
                                               cell.CurrentMessage != null

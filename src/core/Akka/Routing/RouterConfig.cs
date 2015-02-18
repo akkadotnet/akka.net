@@ -8,6 +8,9 @@ using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
+    /// <summary>
+    /// Configuration for router actors
+    /// </summary>
     public abstract class RouterConfig : IEquatable<RouterConfig>
     {
         //  public abstract RoutingLogic GetLogic();
@@ -21,7 +24,7 @@ namespace Akka.Routing
         }
 
         public abstract Router CreateRouter(ActorSystem system);
-        public abstract RouterActor CreateRouterActor();
+        internal abstract RouterActor CreateRouterActor();
 
         public abstract IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell);
 
@@ -48,9 +51,12 @@ namespace Akka.Routing
         }
     }
 
+    /// <summary>
+    /// Signals that no Router is to be used with a given <see cref="Props"/>
+    /// </summary>
     public class NoRouter : RouterConfig
     {
-        public override RouterActor CreateRouterActor()
+        internal override RouterActor CreateRouterActor()
         {
             throw new NotImplementedException();
         }
@@ -66,6 +72,9 @@ namespace Akka.Routing
         }
     }
 
+    /// <summary>
+    /// Base class for defining Group routers.
+    /// </summary>
     public abstract class Group : RouterConfig
     {
         private string[] paths;
@@ -103,7 +112,7 @@ namespace Akka.Routing
             return Akka.Actor.Props.Empty.WithRouter(this);
         }
 
-        public override RouterActor CreateRouterActor()
+        internal override RouterActor CreateRouterActor()
         {
             return new RouterActor();
         }
@@ -129,7 +138,10 @@ namespace Akka.Routing
     }
 
 
-    //TODO: ensure this can be serialized/deserialized fully    
+    //TODO: ensure this can be serialized/deserialized fully   
+    /// <summary>
+    /// Base class for defining Pool routers
+    /// </summary>
     public abstract class Pool : RouterConfig, IEquatable<Pool>
     {
         //TODO: add supervisor strategy to the equality compare
@@ -235,7 +247,7 @@ namespace Akka.Routing
             return routeeProps.WithRouter(this);
         }
 
-        public override RouterActor CreateRouterActor()
+        internal override RouterActor CreateRouterActor()
         {
             if (Resizer == null)
                 return new RouterPoolActor(SupervisorStrategy);
@@ -300,7 +312,7 @@ namespace Akka.Routing
             throw new NotSupportedException();
         }
 
-        public override RouterActor CreateRouterActor()
+        internal override RouterActor CreateRouterActor()
         {
             throw new NotSupportedException();
         }

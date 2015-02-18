@@ -105,7 +105,7 @@ namespace Akka.Cluster.Routing
             return Local.CreateRouter(system);
         }
 
-        public override RouterActor CreateRouterActor()
+        internal override RouterActor CreateRouterActor()
         {
             return new ClusterRouterGroupActor((ClusterRouterGroupSettings) Settings);
         }
@@ -159,7 +159,7 @@ namespace Akka.Cluster.Routing
             return Local.CreateRouter(system);
         }
 
-        public override RouterActor CreateRouterActor()
+        internal override RouterActor CreateRouterActor()
         {
             return new ClusterRouterPoolActor(((Pool) Local).SupervisorStrategy, (ClusterRouterPoolSettings) Settings);
         }
