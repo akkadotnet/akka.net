@@ -20,7 +20,7 @@ private class MyActor : ReceiveActor
 }
 ```
 
-Whenever a message of typ `string` is sent to **MyActor** the first handler is invoked and for messages of type `int` the second handler is used.
+Whenever a message of type `string` is sent to **MyActor** the first handler is invoked and for messages of type `int` the second handler is used.
 
 ## Handler priority
 If more than one handler matches, the one that appears first is used, and the others are not called.

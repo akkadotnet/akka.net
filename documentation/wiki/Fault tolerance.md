@@ -95,7 +95,7 @@ by overriding the `logFailure` method.
 
 ## Supervision of Top-Level Actors
 
-Toplevel actors means those which are created using `system.ActorOf()`, and
+Top-level actors means those which are created using `system.ActorOf()`, and
 they are children of the [User Guardian](User guardian). There are no
 special rules applied in this case, the guardian simply applies the configured
 strategy.

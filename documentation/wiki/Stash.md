@@ -13,7 +13,7 @@ In Akka.NET, this functionality is provided by two interfaces:
 
 When an actor implements one of these interfaces, it will automatically get a deque-based mailbox.
 
-These interfaces require you to provide a Stash property on your actor. The proerty will be automatically populated with an appropriated implementation during the actor's creation:
+These interfaces require you to provide a Stash property on your actor. The property will be automatically populated with an appropriated implementation during the actor's creation:
 
 ```csharp
 public class MyActorWithStash : UntypedActor, WithUnboundedStash
