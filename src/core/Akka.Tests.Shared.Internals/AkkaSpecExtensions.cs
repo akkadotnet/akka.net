@@ -47,7 +47,7 @@ namespace Akka.TestKit
 
         public static void ShouldOnlyContainInOrder<T>(this IEnumerable<T> actual, params T[] expected)
         {
-            ShouldBe(actual, (IEnumerable<T>)expected);
+            ShouldBe(actual, expected);
         }
 
         public static async Task ThrowsAsync<TException>(Func<Task> func)

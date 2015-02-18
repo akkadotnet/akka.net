@@ -11,7 +11,7 @@ namespace Akka.Util.Internal
     {
         public static StringBuilder AppendJoin<T>(this StringBuilder sb, string separator, IEnumerable<T> values)
         {
-            return AppendJoin<T>(sb, separator, values, (Action<StringBuilder, T, int>)null);
+            return AppendJoin(sb, separator, values, null);
         }
 
         public static StringBuilder AppendJoin<T>(this StringBuilder sb, string separator, IEnumerable<T> values, Action<StringBuilder, T, int> valueAppender)
