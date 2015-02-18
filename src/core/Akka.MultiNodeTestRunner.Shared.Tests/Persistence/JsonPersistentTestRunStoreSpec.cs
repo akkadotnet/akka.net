@@ -61,10 +61,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.Persistence
             var allMessages = NodeMessageHelpers.GenerateMessageSequence(nodeIndexes, 300);
             var runnerMessages = NodeMessageHelpers.GenerateTestRunnerMessageSequence(20);
             var successMessages = NodeMessageHelpers.GenerateResultMessage(nodeIndexes, true);
-            var messsageFragments = NodeMessageHelpers.GenerateMessageFragmentSequence(nodeIndexes, 100);
+            var messageFragments = NodeMessageHelpers.GenerateMessageFragmentSequence(nodeIndexes, 100);
             allMessages.UnionWith(runnerMessages);
             allMessages.UnionWith(successMessages);
-            allMessages.UnionWith(messsageFragments);
+            allMessages.UnionWith(messageFragments);
 
             foreach (var message in allMessages)
                 testRunCoordinator.Tell(message);
@@ -78,9 +78,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.Persistence
             testRunStore.SaveTestRun(file, testRunData).ShouldBeTrue("Should have been able to save test run");
 
             //retrieve the test run from file
-            var retreivedFile = testRunStore.FetchTestRun(file);
-            Assert.NotNull(retreivedFile);
-            Assert.True(testRunData.Equals(retreivedFile));
+            var retrievedFile = testRunStore.FetchTestRun(file);
+            Assert.NotNull(retrievedFile);
+            Assert.True(testRunData.Equals(retrievedFile));
         }
     }
 }

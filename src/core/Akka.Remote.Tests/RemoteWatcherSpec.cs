@@ -332,7 +332,7 @@ namespace Akka.Remote.Tests
 
         [Fact]
         public void
-            ARemoteWatcherMustGenerateAddressTerminatedForNewWatchAfterBrokenConnectionWasRestablishedAndBrokenAgain()
+            ARemoteWatcherMustGenerateAddressTerminatedForNewWatchAfterBrokenConnectionWasReestablishedAndBrokenAgain()
         {
             var p = CreateTestProbe();
             var q = CreateTestProbe();

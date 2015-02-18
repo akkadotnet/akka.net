@@ -180,9 +180,9 @@ __Breaking Change to the internal api: The `Next` property on `IAtomicCounter<T>
 __Akka.Serilog__ `SerilogLogMessageFormatter` has been moved to the namespace `Akka.Logger.Serilog` (it used to be in `Akka.Serilog.Event.Serilog`).
 Update your `using` statements from `using Akka.Serilog.Event.Serilog;` to `using Akka.Logger.Serilog;`.
 
-__Breaking Change to the internal api: Changed signatures in the abstract class `SupervisorStrategy`__. The following methods has new signatures: `HandleFailure`, `ProcessFailure`. If you've inherited from `SupervisorStrategy`, `OneForOneStrategy` or `AllForOneStrategy` and overriden the aforementioned methods you need to update their signatures.
+__Breaking Change to the internal api: Changed signatures in the abstract class `SupervisorStrategy`__. The following methods has new signatures: `HandleFailure`, `ProcessFailure`. If you've inherited from `SupervisorStrategy`, `OneForOneStrategy` or `AllForOneStrategy` and overridden the aforementioned methods you need to update their signatures.
 
-__TestProbe can be implicitly casted to ActorRef__. New feature. Tests requring the `ActorRef` of a `TestProbe` can now be simplified:
+__TestProbe can be implicitly casted to ActorRef__. New feature. Tests requiring the `ActorRef` of a `TestProbe` can now be simplified:
 ``` C#
 var probe = CreateTestProbe();
 var sut = ActorOf<GreeterActor>();
@@ -292,7 +292,7 @@ If you need to print to stdout directly use `Akka.Util.StandardOutWriter.Write()
 
 #### 0.6.4 Sep 9 2014
 * Introduced `TailChoppingRouter`
-* All `ActorSystem` extensions now take an `ExtendedActorSystem` as a dependency - all thirdy party actor system extensions will need to update accordingly.
+* All `ActorSystem` extensions now take an `ExtendedActorSystem` as a dependency - all third party actor system extensions will need to update accordingly.
 * Fixed numerous bugs with remote deployment of actors.
 * Fixed a live-lock issue for high-traffic connections on Akka.Remote and introduced softer heartbeat failure deadlines.
 * Changed the configuration chaining process.

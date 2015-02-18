@@ -25,7 +25,7 @@ namespace Akka.Persistence
 
         protected override void PostStop()
         {
-            if (_scheduleCancelation != null) _scheduleCancelation.Cancel();
+            if (_scheduleCancellation != null) _scheduleCancellation.Cancel();
             base.PostStop();
         }
 

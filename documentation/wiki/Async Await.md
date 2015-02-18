@@ -5,7 +5,7 @@ title: Async Await
 
 # Akka.NET and Async Await
 
-To enable Async Await support in an Akka.NET actor, you will need to configure your arctor to use the `task-dispatcher`.
+To enable Async Await support in an Akka.NET actor, you will need to configure your actor to use the `task-dispatcher`.
 This can be accomplished like this:
 
 ```csharp

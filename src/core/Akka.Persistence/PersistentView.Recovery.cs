@@ -143,8 +143,8 @@ namespace Akka.Persistence
             ChangeState(Idle());
             if (IsAutoUpdate)
             {
-                _scheduleCancelation = new CancellationTokenSource();
-                Context.System.Scheduler.ScheduleOnce(AutoUpdateInterval, Self, new Update(false, AutoUpdateReplayMax), _scheduleCancelation.Token);
+                _scheduleCancellation = new CancellationTokenSource();
+                Context.System.Scheduler.ScheduleOnce(AutoUpdateInterval, Self, new Update(false, AutoUpdateReplayMax), _scheduleCancellation.Token);
             }
             if (shouldAwait)
             {

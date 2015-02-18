@@ -117,7 +117,7 @@ namespace Akka.Persistence.Journal
             {
                 if (!t.IsFaulted)
                 {
-                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessull.Instance, counter, message.PersistentActor, Self));
+                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, Self));
                     resequence(x => new WriteMessageSuccess(x, message.ActorInstanceId));
                 }
                 else

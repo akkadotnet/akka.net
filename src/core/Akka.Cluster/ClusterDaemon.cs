@@ -775,7 +775,7 @@ namespace Akka.Cluster
             else if (message is ClusterUserAction.JoinTo)
             {
                 var jt = message as ClusterUserAction.JoinTo;
-                BecomeUnitialized();
+                BecomeUninitialized();
                 Join(jt.Address);
             }
             else if (message is InternalClusterAction.ISubscriptionMessage)
@@ -787,7 +787,7 @@ namespace Akka.Cluster
             {
                 if (deadline != null && deadline.IsOverdue)
                 {
-                    BecomeUnitialized();
+                    BecomeUninitialized();
                     if (_cluster.Settings.SeedNodes.Any()) JoinSeedNodes(_cluster.Settings.SeedNodes);
                     else Join(joinWith);
                 }
@@ -798,7 +798,7 @@ namespace Akka.Cluster
             }
         }
 
-        private void BecomeUnitialized()
+        private void BecomeUninitialized()
         {
             // make sure that join process is stopped
             StopSeedNodeProcess();

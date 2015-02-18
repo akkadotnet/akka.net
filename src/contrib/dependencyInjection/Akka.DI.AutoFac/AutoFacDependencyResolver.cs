@@ -51,7 +51,7 @@ namespace Akka.DI.AutoFac
                        Registrations.
                        Where(registration => registration.Activator.LimitType.
                                  Name.Equals(actorName, StringComparison.InvariantCultureIgnoreCase)).
-                        Select(regisration => regisration.Activator.LimitType).
+                        Select(registration => registration.Activator.LimitType).
                         FirstOrDefault());
 
             return typeCache[actorName];

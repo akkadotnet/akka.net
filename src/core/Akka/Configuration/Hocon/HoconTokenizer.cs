@@ -389,7 +389,7 @@ namespace Akka.Configuration.Hocon
         ///     Determines whether [is start of triple quoted text].
         /// </summary>
         /// <returns><c>true</c> if [is start of triple quoted text]; otherwise, <c>false</c>.</returns>
-        public bool IsStartOfTrippleQuotedText()
+        public bool IsStartOfTripleQuotedText()
         {
             return Matches("\"\"\"");
         }
@@ -450,7 +450,7 @@ namespace Akka.Configuration.Hocon
         ///     Pulls the triple quoted text.
         /// </summary>
         /// <returns>Token.</returns>
-        public Token PullTrippleQuotedText()
+        public Token PullTripleQuotedText()
         {
             var sb = new StringBuilder();
             Take(3);
@@ -578,9 +578,9 @@ namespace Akka.Configuration.Hocon
                 return PullStartOfObject();
             }
 
-            if (IsStartOfTrippleQuotedText())
+            if (IsStartOfTripleQuotedText())
             {
-                return PullTrippleQuotedText();
+                return PullTripleQuotedText();
             }
 
             if (IsStartOfQuotedText())
@@ -732,7 +732,7 @@ namespace Akka.Configuration.Hocon
                 return true;
             if (IsObjectStart())
                 return true;
-            if (IsStartOfTrippleQuotedText())
+            if (IsStartOfTripleQuotedText())
                 return true;
             if (IsSubstitutionStart())
                 return true;

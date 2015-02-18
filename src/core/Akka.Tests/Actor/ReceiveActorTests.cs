@@ -43,7 +43,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Given_an_EchoActor_When_receiveing_messages_Then_messages_should_be_sent_back()
+        public void Given_an_EchoActor_When_receiving_messages_Then_messages_should_be_sent_back()
         {
             //Given
             var system = ActorSystem.Create("test");

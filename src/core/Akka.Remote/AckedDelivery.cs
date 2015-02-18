@@ -330,12 +330,12 @@ namespace Akka.Remote
         /// <summary>
         /// Constructor
         /// </summary>
-        /// <param name="lastDelviered">Sequence number of the last message that has been delivered.</param>
+        /// <param name="lastDelivered">Sequence number of the last message that has been delivered.</param>
         /// <param name="cumulativeAck">The highest sequence number received so far</param>
         /// <param name="buffer">Buffer of messages that are waiting for delivery.</param>
-        public AckedReceiveBuffer(SeqNo lastDelviered, SeqNo cumulativeAck, SortedSet<T> buffer)
+        public AckedReceiveBuffer(SeqNo lastDelivered, SeqNo cumulativeAck, SortedSet<T> buffer)
         {
-            LastDelivered = lastDelviered ?? new SeqNo(-1);
+            LastDelivered = lastDelivered ?? new SeqNo(-1);
             CumulativeAck = cumulativeAck ?? new SeqNo(-1);
             Buf = buffer;
         }
@@ -406,7 +406,7 @@ namespace Akka.Remote
                 }
 
                 Buf.ExceptWith(deliver);
-                return new AckReceiveDeliverable<T>(Copy(lastDelviered: updatedLastDelivered, buffer: Buf), deliver, ack);
+                return new AckReceiveDeliverable<T>(Copy(lastDelivered: updatedLastDelivered, buffer: Buf), deliver, ack);
             }
             
         }
@@ -427,9 +427,9 @@ namespace Akka.Remote
 
         #region Copy methods
 
-        public AckedReceiveBuffer<T> Copy(SeqNo lastDelviered = null, SeqNo cumulativeAck = null, SortedSet<T> buffer = null)
+        public AckedReceiveBuffer<T> Copy(SeqNo lastDelivered = null, SeqNo cumulativeAck = null, SortedSet<T> buffer = null)
         {
-            return new AckedReceiveBuffer<T>(lastDelviered ?? LastDelivered, cumulativeAck ?? CumulativeAck, buffer ?? new SortedSet<T>(Buf, Comparer));
+            return new AckedReceiveBuffer<T>(lastDelivered ?? LastDelivered, cumulativeAck ?? CumulativeAck, buffer ?? new SortedSet<T>(Buf, Comparer));
         }
 
         #endregion

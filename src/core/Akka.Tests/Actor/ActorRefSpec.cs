@@ -160,7 +160,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActorRef_should_suppport_reply_via_Sender()
+        public void An_ActorRef_should_support_reply_via_Sender()
         {
             var latch = new TestLatch(Sys, 4);
             var serverRef = Sys.ActorOf(Props.Create<ReplyActor>());

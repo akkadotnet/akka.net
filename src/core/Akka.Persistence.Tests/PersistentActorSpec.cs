@@ -172,7 +172,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact(Skip = "not implemented yet")]
-        public void PersistentActor_should_support_user_stash_operations_with_serveral_stashed_messages()
+        public void PersistentActor_should_support_user_stash_operations_with_several_stashed_messages()
         {
             var pref = ActorOf(Props.Create(() => new UserStashManyActor(Name)));
             var n = 10;
@@ -360,7 +360,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void PersistentActor_should_invoke_deffered_handlers_in_presence_of_mixed_a_long_series_Persist_and_PersistAsync_calls()
+        public void PersistentActor_should_invoke_deferred_handlers_in_presence_of_mixed_a_long_series_Persist_and_PersistAsync_calls()
         {
             var pref = ActorOf(Props.Create(() => new DeferringMixedCallsPPADDPADPersistActor(Name)));
             var p1 = CreateTestProbe();
@@ -386,7 +386,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void PersistentActor_should_invoke_deffered_handlers_right_away_if_there_are_no_persist_handlers_registered()
+        public void PersistentActor_should_invoke_deferred_handlers_right_away_if_there_are_no_persist_handlers_registered()
         {
             var pref = ActorOf(Props.Create(() => new DeferringWithNoPersistCallsPersistActor(Name)));
             pref.Tell(new Cmd("a"));
@@ -399,7 +399,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void PersistentActor_should_invoke_deffered_handlers_preserving_the_original_sender_reference()
+        public void PersistentActor_should_invoke_deferred_handlers_preserving_the_original_sender_reference()
         {
             var pref = ActorOf(Props.Create(() => new DeferringWithAsyncPersistActor(Name)));
             var p1 = CreateTestProbe();

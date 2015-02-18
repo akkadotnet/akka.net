@@ -17,7 +17,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         }
 
         [Fact]
-        public void ExpectMsgAllOf_should_fail_when_receiveing_unexpected()
+        public void ExpectMsgAllOf_should_fail_when_receiving_unexpected()
         {
             TestActor.Tell("1");
             TestActor.Tell("2");

@@ -20,7 +20,7 @@ namespace Akka.Tools.MatchHandler
         public IReadOnlyList<Argument> Arguments { get; private set; }
         public bool HandlerFirstArgumentShouldBeBaseType { get { return _handlerFirstArgumentShouldBeBaseType; } }
 
-        public Expression ActionOrFuncExpresssion { get; set; }
+        public Expression ActionOrFuncExpression { get; set; }
         public Expression PredicateExpression { get; set; }        
         public static PredicateAndHandler CreateAction(object action, object predicate = null, bool handlerFirstArgumentShouldBeBaseType=false)
         {
