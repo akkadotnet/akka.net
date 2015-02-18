@@ -140,14 +140,14 @@ namespace Akka.Remote.Tests
         #region Tests
 
 
-        [Fact(Skip = "Fails on buildserver")]
+        [Fact()]
         public void Remoting_must_support_remote_lookups()
         {
             here.Tell("ping", TestActor);
             ExpectMsg(Tuple.Create("pong", TestActor), TimeSpan.FromSeconds(1.5));
         }
 
-        [Fact(Skip = "Fails on buildserver")]
+        [Fact()]
         public async Task Remoting_must_support_Ask()
         {
             //TODO: using smaller numbers for the cancellation here causes a bug.
@@ -178,7 +178,7 @@ namespace Akka.Remote.Tests
             }
         }
 
-        [Fact(Skip = "Fails on buildserver")]
+        [Fact()]
         public void Remoting_must_create_by_IndirectActorProducer_and_ping()
         {
             try {
