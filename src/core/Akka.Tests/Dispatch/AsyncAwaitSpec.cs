@@ -45,6 +45,7 @@ namespace Akka.Tests.Dispatch
         {
             Receive<string>( _ =>
             {
+                //not async, blocking wait
                 var res = other.Ask("start").Result;
                 Sender.Tell(res);
             });
@@ -66,6 +67,71 @@ namespace Akka.Tests.Dispatch
                 //ask and block
                 var res = Self.Ask(123).Result;
                 Sender.Tell(res);
+            });
+        }
+    }
+
+    public class AsyncExceptionActor : ReceiveActor
+    {
+        private readonly ActorRef _callback;
+
+        protected override void PostRestart(Exception reason)
+        {
+            _callback.Tell("done");
+            base.PostRestart(reason);
+        }
+
+        public AsyncExceptionActor(ActorRef callback)
+        {
+            _callback = callback;
+            Receive<string>(async _ =>
+            {
+                await Task.Yield();
+                ThrowException();
+            });
+        }
+
+        private static void ThrowException()
+        {
+            throw new Exception("should be handled by supervisor");
+        }
+    }
+
+    public class AsyncTplActor : ReceiveActor
+    {
+        public AsyncTplActor()
+        {
+            Receive<string>(m =>
+            {
+                //this is also safe, all tasks complete in the actor context
+                Task.Delay(TimeSpan.FromSeconds(1))
+                    .ContinueWith(t =>
+                    {
+                        Sender.Tell("done");
+                    });
+            });
+        }
+    }
+
+    public class AsyncTplExceptionActor : ReceiveActor
+    {
+        private readonly ActorRef _callback;
+        protected override void PostRestart(Exception reason)
+        {
+            _callback.Tell("done");
+            base.PostRestart(reason);
+        }
+
+        public AsyncTplExceptionActor(ActorRef callback)
+        {
+            _callback = callback;
+            Receive<string>(m =>
+            {
+                Task.Delay(TimeSpan.FromSeconds(1))
+                    .ContinueWith(t =>
+                    {
+                        throw new Exception("foo");
+                    });
             });
         }
     }
@@ -116,6 +182,30 @@ namespace Akka.Tests.Dispatch
             var task = asker.Ask("start", TimeSpan.FromSeconds(55));
             var res = await task;
             Assert.Equal("done", res);
+        }
+
+        [Fact]
+        public void Actors_should_be_able_to_supervise_async_exceptions()
+        {
+            var asker = Sys.ActorOf(Props.Create(() => new AsyncExceptionActor(TestActor)).WithDispatcher("akka.actor.task-dispatcher"));
+            asker.Tell("start");
+            ExpectMsg("done", TimeSpan.FromSeconds(5));
+        }
+
+        [Fact]
+        public async Task Actors_should_be_able_to_use_ContinueWith()
+        {
+            var asker = Sys.ActorOf(Props.Create<AsyncTplActor>().WithDispatcher("akka.actor.task-dispatcher"));
+            var res = await asker.Ask("start",TimeSpan.FromSeconds(5));
+            Assert.Equal("done", res);
+        }
+
+        [Fact]
+        public void Actors_should_be_able_to_supervise_exception_ContinueWith()
+        {
+            var asker = Sys.ActorOf(Props.Create(() => new AsyncTplExceptionActor(TestActor)).WithDispatcher("akka.actor.task-dispatcher"));
+            asker.Tell("start");
+            ExpectMsg( "done", TimeSpan.FromSeconds(5));
         }
     }
 }

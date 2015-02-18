@@ -21,9 +21,12 @@ namespace Akka.Dispatch
 
         public override void Schedule(Action run)
         {
+            
             ActorTaskScheduler.Schedule(run);        
         }
     }
+
+
 
     public class AmbientState
     {
@@ -70,13 +73,13 @@ namespace Akka.Dispatch
             {
                 var s = CallContext.LogicalGetData(StateKey) as AmbientState;
 
-                if (s == null)
-                {
+                s.Self.Tell(new CompleteTask(s, () => 
+                { 
                     TryExecuteTask(task);
-                    return;
-                }
+                    if (task.IsFaulted)
+                        throw task.Exception;
 
-                s.Self.Tell(new CompleteTask(s, () => { TryExecuteTask(task); }), ActorRef.NoSender);
+                }), ActorRef.NoSender);
             }
         }
 
