@@ -178,7 +178,8 @@ namespace Akka.Dispatch
 
         protected override int GetNumberOfMessages()
         {
-            return _systemMessages.Count + _userMessages.Count;
+            //We only count user messages in the mailbox, otherwise Resizers and ReceiveTimeouts explode
+            return _userMessages.Count;
         }
 
         public override void CleanUp()

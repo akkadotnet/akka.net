@@ -9,13 +9,12 @@ namespace Akka.Routing
     /// Defines <see cref="Pool"/> routers who can resize the number of routees
     /// they use based on a defined <see cref="Resizer"/>
     /// </summary>
-    internal class ResizablePoolActor : RouterActor
+    internal class ResizablePoolActor : RouterPoolActor
     {
         //     private SupervisorStrategy supervisorStrategy;
 
-        public ResizablePoolActor(SupervisorStrategy supervisorStrategy)
+        public ResizablePoolActor(SupervisorStrategy supervisorStrategy) : base(supervisorStrategy)
         {
-            SupervisorStrategyInternal = supervisorStrategy;
         }
 
         protected ResizablePoolCell ResizerCell
@@ -34,6 +33,11 @@ namespace Akka.Routing
             {
                 base.OnReceive(message);
             }
+        }
+
+        protected override void StopIfAllRouteesRemoved()
+        {
+            //we don't care if routees are removed
         }
     }
 
