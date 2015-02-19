@@ -12,7 +12,7 @@ Like in an economic organization, actors naturally form hierarchies. One actor, 
 
 The quintessential feature of actor systems is that tasks are split up and delegated until they become small enough to be handled in one piece. In doing so, not only is the task itself clearly structured, but the resulting actors can be reasoned about in terms of which messages they should process, how they should react normally and how failure should be handled. If one actor does not have the means for dealing with a certain situation, it sends a corresponding failure message to its supervisor, asking for help. The recursive structure then allows to handle failure at the right level.
 
-[!ErrorKernel](/images/ErrorKernel.png)
+![ErrorKernel](/images/ErrorKernel.png)
 
 Compare this to layered software design which easily devolves into defensive programming with the aim of not leaking any failure out: if the problem is communicated to the right person, a better solution can be found than if trying to keep everything “under the carpet”.
 
