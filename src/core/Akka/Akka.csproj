@@ -70,6 +70,7 @@
     </Compile>
     <Compile Include="Actor\ActorCell.DeathWatch.cs" />
     <Compile Include="Actor\ActorProducerPipeline.cs" />
+    <Compile Include="Actor\AsyncUntypedActor.cs" />
     <Compile Include="Actor\ChildrenContainer\Internal\ChildrenContainer.cs" />
     <Compile Include="Actor\ChildrenContainer\Internal\ChildrenContainerBase.cs" />
     <Compile Include="Actor\ChildrenContainer\Internal\ChildStats.cs" />
