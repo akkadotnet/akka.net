@@ -46,6 +46,7 @@ namespace Akka.Routing
             {
                 Resize(true);
             }
+
         }
 
         public override void Post(ActorRef sender, object message)

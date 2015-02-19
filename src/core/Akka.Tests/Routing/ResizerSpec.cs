@@ -194,32 +194,35 @@ namespace Akka.Tests.Routing
             }
         }
 
-        [Fact(Timeout = 10000)]
-        public void DefaultResizer_must_backoff_within_10_seconds()
+        [Fact]
+        public void DefaultResizer_must_backoff()
         {
-            var resizer = new DefaultResizer(2, 5, pressureThreshold: 1, rampupRate: 1.0d, backoffRate: 1.0d,
+            Within(TimeSpan.FromSeconds(10), () =>
+            {   
+               var resizer = new DefaultResizer(2, 5, pressureThreshold: 1, rampupRate: 1.0d, backoffRate: 1.0d,
                messagesPerResize: 2, backoffThreshold: 0.4d);
 
-            var router = Sys.ActorOf(Props.Create<BackoffActor>().WithRouter(new RoundRobinPool(0, resizer)));
+                var router = Sys.ActorOf(Props.Create<BackoffActor>().WithRouter(new RoundRobinPool(0, resizer)));
 
-            // put some pressure on the router
-            for (var i = 0; i < 15; i++)
-            {
-                router.Tell(150);
-                Thread.Sleep(20);
-            }
+                // put some pressure on the router
+                for (var i = 0; i < 15; i++)
+                {
+                    router.Tell(150);
+                    Thread.Sleep(20);
+                }
 
-            var z = RouteeSize(router);
-            Assert.True(z > 2);
-            Thread.Sleep(300);
+                var z = RouteeSize(router);
+                Assert.True(z > 2);
+                Thread.Sleep(300);
 
-            // let it cool down
-            AwaitCondition(() =>
-            {
-                router.Tell(0); //trigger resize
-                Thread.Sleep(20);
-                return RouteeSize(router) < z;
-            }, TimeSpan.FromMilliseconds(500));
+                // let it cool down
+                AwaitCondition(() =>
+                {
+                    router.Tell(0); //trigger resize
+                    Thread.Sleep(20);
+                    return RouteeSize(router) < z;
+                }, null, TimeSpan.FromMilliseconds(500));
+            });
         }
 
         #region Internal methods
