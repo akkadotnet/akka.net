@@ -154,7 +154,7 @@ namespace Akka.Actor
             }
         }
 
-        protected abstract bool LoggingEnabled { get;}
+        protected bool LoggingEnabled { get; set; }
 
         private void Publish(IActorContext context, LogEvent logEvent)
         {
@@ -174,10 +174,7 @@ namespace Akka.Actor
         ///     <see cref="DefaultDecider" />.
         /// </summary>
         /// <value>The default.</value>
-        public static SupervisorStrategy DefaultStrategy
-        {
-            get { return new OneForOneStrategy(DefaultDecider); }
-        }
+        public static readonly SupervisorStrategy DefaultStrategy = new OneForOneStrategy(DefaultDecider);    
 
         /// <summary>
         /// This method is called after the child has been removed from the set of children.
@@ -193,10 +190,9 @@ namespace Akka.Actor
     /// </summary>
     public class OneForOneStrategy : SupervisorStrategy
     {
-        private readonly int _maxNumberOfRetries;
-        private readonly int _withinTimeRangeMilliseconds;
-        private readonly Func<Exception, Directive> _decider;
-        private readonly bool _loggingEnabled;
+        public int MaxNumberOfRetries { get; private set; }
+        public int WithinTimeRangeMilliseconds { get; private set; }
+        public IDecider Decider { get; private set; }
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
@@ -208,11 +204,28 @@ namespace Akka.Actor
         ///     if the limit is exceeded the child actor is stopped.
         /// </param>
         /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, Duration.Inf means no window.</param>
-        /// <param name="decider">mapping from Exception to <see cref="Directive" /></param>
-        public OneForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> decider)
-            : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, decider)
+        /// <param name="localOnlyDecider">mapping from Exception to <see cref="Directive" /></param>
+        public OneForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> localOnlyDecider)
+            : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, localOnlyDecider)
         {
+            //Intentionally left blank
+        }
 
+        /// <summary>
+        ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
+        ///     to all children when one fails, as opposed to <see cref="OneForOneStrategy" /> that applies
+        ///     it only to the child actor that failed.
+        /// </summary>
+        /// <param name="maxNrOfRetries">
+        ///     the number of times a child actor is allowed to be restarted, negative value means no limit,
+        ///     if the limit is exceeded the child actor is stopped.
+        /// </param>
+        /// <param name="withinTimeMilliseconds">duration in milliseconds of the time window for <paramref name="maxNrOfRetries"/>, negative values means no window.</param>
+        /// <param name="localOnlyDecider">Mapping from an <see cref="Exception"/> to <see cref="Directive"/></param>
+        /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
+        public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> localOnlyDecider, bool loggingEnabled = true) : this(maxNrOfRetries,withinTimeMilliseconds,new LocalOnlyDecider(localOnlyDecider),loggingEnabled)
+        {
+            //Intentionally left blank
         }
 
         /// <summary>
@@ -227,27 +240,38 @@ namespace Akka.Actor
         /// <param name="withinTimeMilliseconds">duration in milliseconds of the time window for <paramref name="maxNrOfRetries"/>, negative values means no window.</param>
         /// <param name="decider">Mapping from an <see cref="Exception"/> to <see cref="Directive"/></param>
         /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
-        public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> decider, bool loggingEnabled = true)
+        public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, IDecider decider, bool loggingEnabled = true)
         {
-            _maxNumberOfRetries = maxNrOfRetries;
-            _withinTimeRangeMilliseconds = withinTimeMilliseconds;
-            _decider = decider;
-            _loggingEnabled = loggingEnabled;
+            MaxNumberOfRetries = maxNrOfRetries;
+            WithinTimeRangeMilliseconds = withinTimeMilliseconds;
+            Decider = decider;
+            LoggingEnabled = loggingEnabled;
         }
 
         /// <summary>
         /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
         /// </summary>
-        public OneForOneStrategy(Func<Exception, Directive> decider) : this(-1, -1, decider, true)
+        public OneForOneStrategy(Func<Exception, Directive> localOnlyDecider) : this(-1, -1, localOnlyDecider, true)
         {
+            //Intentionally left blank
+        }
+
+        /// <summary>
+        /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
+        /// </summary>
+        public OneForOneStrategy(IDecider decider)
+            : this(-1, -1, decider, true)
+        {
+            //Intentionally left blank
         }
 
         /// <summary>
         /// Serialization-friendly constructor
         /// </summary>
-        protected OneForOneStrategy() : this(DefaultDecider) { }
-
-        protected override bool LoggingEnabled { get { return _loggingEnabled; } }
+        protected OneForOneStrategy() : this(DefaultDecider)
+        {
+            //Intentionally left blank
+        }
 
         /// <summary>
         ///     Handles the specified child.
@@ -257,14 +281,14 @@ namespace Akka.Actor
         /// <returns>Directive.</returns>
         protected override Directive Handle(ActorRef child, Exception x)
         {
-            return _decider(x);
+            return Decider.Decide(x);
         }
 
         protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
         {
             var failedChild = failedChildStats.Child;
 
-            if (restart && failedChildStats.RequestRestartPermission(_maxNumberOfRetries, _withinTimeRangeMilliseconds))
+            if (restart && failedChildStats.RequestRestartPermission(MaxNumberOfRetries, WithinTimeRangeMilliseconds))
                 RestartChild(failedChild, cause, suspendFirst: false);
             else
                 context.Stop(failedChild);
@@ -282,10 +306,26 @@ namespace Akka.Actor
     /// </summary>
     public class AllForOneStrategy : SupervisorStrategy
     {
-        private readonly int _maxNumberOfRetries;
-        private readonly int _withinTimeRangeMilliseconds;
-        private readonly Func<Exception, Directive> _decider;
-        private readonly bool _loggingEnabled;
+        public int MaxNumberOfRetries { get; private set; }
+        public int WithinTimeRangeMilliseconds { get; private set; }
+        public IDecider Decider { get; private set; }
+
+        /// <summary>
+        ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
+        ///     to all children when one fails, as opposed to <see cref="AllForOneStrategy" /> that applies
+        ///     it only to the child actor that failed.
+        /// </summary>
+        /// <param name="maxNrOfRetries">
+        ///     the number of times a child actor is allowed to be restarted, negative value and null means no limit,
+        ///     if the limit is exceeded the child actor is stopped.
+        /// </param>
+        /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, <see cref="Timeout.InfiniteTimeSpan"/> means no window.</param>
+        /// <param name="localOnlyDecider">mapping from Exception to <see cref="Directive"/></param>
+        public AllForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> localOnlyDecider)
+            : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, localOnlyDecider)
+        {
+            //Intentionally left blank
+        }
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
@@ -298,8 +338,25 @@ namespace Akka.Actor
         /// </param>
         /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, <see cref="Timeout.InfiniteTimeSpan"/> means no window.</param>
         /// <param name="decider">mapping from Exception to <see cref="Directive"/></param>
-        public AllForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> decider)
+        public AllForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, IDecider decider)
             : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, decider)
+        {
+            //Intentionally left blank
+        }
+
+        /// <summary>
+        ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
+        ///     to all children when one fails, as opposed to <see cref="AllForOneStrategy" /> that applies
+        ///     it only to the child actor that failed.
+        /// </summary>
+        /// <param name="maxNrOfRetries">
+        ///     the number of times a child actor is allowed to be restarted, negative value means no limit,
+        ///     if the limit is exceeded the child actor is stopped.
+        /// </param>
+        /// <param name="withinTimeMilliseconds">duration in milliseconds of the time window for <paramref name="maxNrOfRetries"/>, negative values means no window.</param>
+        /// <param name="localOnlyDecider">Mapping from an <see cref="Exception"/> to <see cref="Directive"/></param>
+        /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
+        public AllForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> localOnlyDecider, bool loggingEnabled=true) : this(maxNrOfRetries,withinTimeMilliseconds,new LocalOnlyDecider(localOnlyDecider),loggingEnabled)
         {
             //Intentionally left blank
         }
@@ -316,27 +373,41 @@ namespace Akka.Actor
         /// <param name="withinTimeMilliseconds">duration in milliseconds of the time window for <paramref name="maxNrOfRetries"/>, negative values means no window.</param>
         /// <param name="decider">Mapping from an <see cref="Exception"/> to <see cref="Directive"/></param>
         /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
-        public AllForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> decider, bool loggingEnabled=true)
+        public AllForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, IDecider decider, bool loggingEnabled = true)
         {
-            _maxNumberOfRetries = maxNrOfRetries;
-            _withinTimeRangeMilliseconds = withinTimeMilliseconds;
-            _decider = decider;
-            _loggingEnabled = loggingEnabled;
+            MaxNumberOfRetries = maxNrOfRetries;
+            WithinTimeRangeMilliseconds = withinTimeMilliseconds;
+            Decider = decider;
+            LoggingEnabled = loggingEnabled;
         }
 
         /// <summary>
         /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
         /// </summary>
-        public AllForOneStrategy(Func<Exception, Directive> decider) : this(-1, -1, decider, true) { }
+        public AllForOneStrategy(Func<Exception, Directive> localOnlyDecider)
+            : this(-1, -1, localOnlyDecider, true)
+        {
+            //Intentionally left blank
+        }
 
-      
+        /// <summary>
+        /// Constructor that accepts only a decider and uses reasonable defaults for the other settings
+        /// </summary>
+        public AllForOneStrategy(IDecider decider)
+            : this(-1, -1, decider, true)
+        {
+            //Intentionally left blank
+        }
+
+
         /// <summary>
         /// Serialization-friendly constructor
         /// </summary>]
-        protected AllForOneStrategy() : this(DefaultDecider) { }
-
-        protected override bool LoggingEnabled { get { return _loggingEnabled; } }
-
+        protected AllForOneStrategy() : this(DefaultDecider)
+        {
+            //Intentionally left blank
+        }
+  
         /// <summary>
         ///     Determines what to do with the child when the given exception occurs.
         /// </summary>
@@ -345,7 +416,7 @@ namespace Akka.Actor
         /// <returns>Directive.</returns>
         protected override Directive Handle(ActorRef child, Exception x)
         {
-            return _decider(x);
+            return Decider.Decide(x);
         }
 
         protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
@@ -354,7 +425,7 @@ namespace Akka.Actor
             {
                 var failedChild = failedChildStats.Child;
 
-                if (restart && allChildren.All(c => c.RequestRestartPermission(_maxNumberOfRetries, _withinTimeRangeMilliseconds)))
+                if (restart && allChildren.All(c => c.RequestRestartPermission(MaxNumberOfRetries, WithinTimeRangeMilliseconds)))
                 {
                     foreach (var crs in allChildren)
                     {
@@ -442,5 +513,75 @@ namespace Akka.Actor
         ///     Stops the Actor
         /// </summary>
         Stop,
+    }
+
+    public static class DirectiveExtensions
+    {
+        public static KeyValuePair<Type, Directive> When<TException>(this Directive self) where TException : Exception
+        {
+            return new KeyValuePair<Type, Directive>(typeof(TException),self);
+        }
+    }
+
+    public interface IDecider
+    {
+        Directive Decide(Exception cause);        
+    }
+
+    public static class Decider
+    {
+        public static DeployableDecider From(Directive defaultDirective, params KeyValuePair<Type, Directive>[] pairs)
+        {
+            return new DeployableDecider(defaultDirective,pairs);
+        }
+
+        public static LocalOnlyDecider From(Func<Exception, Directive> localOnlyDecider)
+        {
+            return new LocalOnlyDecider(localOnlyDecider);
+        }
+    }
+
+    public class LocalOnlyDecider : IDecider
+    {
+        private readonly Func<Exception, Directive> _decider;
+        public LocalOnlyDecider(Func<Exception, Directive> decider)
+        {
+            _decider = decider;
+        }
+
+        public Directive Decide(Exception cause)
+        {
+            return _decider(cause);
+        }
+    }
+
+    public class DeployableDecider : IDecider
+    {
+        public DeployableDecider(Directive defaultDirective, params KeyValuePair<Type, Directive>[] pairs)
+        {
+            DefaultDirective = defaultDirective;
+            Pairs = pairs;
+        }
+
+        public Directive DefaultDirective { get; private set; }
+
+        public KeyValuePair<Type, Directive>[] Pairs { get; private set; }
+
+        public Directive Decide(Exception cause)
+        {
+            if (Pairs != null)
+            {
+                foreach (var kvp in Pairs)
+                {
+                    //emulate if (cause is SomeType)
+                    if (kvp.Key.IsInstanceOfType(cause))
+                    {
+                        return kvp.Value;
+                    }
+                }
+            }
+
+            return DefaultDirective;
+        }
     }
 }
