@@ -4,7 +4,7 @@ title: Configuration
 ---
 # HOCON Configuration
 
-Read more about the [[HOCON]] spec.
+Read more about the [HOCON](HOCON) spec.
 
 ## Example config
 ```hocon
