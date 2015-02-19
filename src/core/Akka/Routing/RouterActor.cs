@@ -5,7 +5,10 @@ using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
-    public class RouterActor : UntypedActor
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal class RouterActor : UntypedActor
     {
         public RouterActor()
         {
@@ -22,6 +25,7 @@ namespace Akka.Routing
 
         protected override void PreRestart(Exception cause, object message)
         {
+            //do not scrap children
         }
 
         protected override void OnReceive(object message)
@@ -29,6 +33,17 @@ namespace Akka.Routing
             if (message is GetRoutees)
             {
                 Sender.Tell(new Routees(Cell.Router.Routees));
+            }
+            else if (message is AddRoutee)
+            {
+                var addRoutee = message as AddRoutee;
+                Cell.AddRoutee(addRoutee.Routee);
+            }
+            else if (message is RemoveRoutee)
+            {
+                var removeRoutee = message as RemoveRoutee;
+                Cell.RemoveRoutee(removeRoutee.Routee, true);
+                StopIfAllRouteesRemoved();
             }
         }
 
