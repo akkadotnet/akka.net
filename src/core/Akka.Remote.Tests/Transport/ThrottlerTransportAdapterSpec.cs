@@ -23,6 +23,7 @@ namespace Akka.Remote.Tests.Transport
             {
                 return ConfigurationFactory.ParseString(@"
                 akka {
+                  akka.test.single-expect-default = 6s #to help overcome issues with gated connections
                   actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
                   remote.helios.tcp.hostname = ""localhost""
                   remote.log-remote-lifecycle-events = off

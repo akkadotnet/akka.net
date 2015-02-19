@@ -9,14 +9,14 @@ namespace Akka.Util
     /// without any explicit locking. .NET's strong memory on write guarantees might already enforce
     /// this ordering, but the addition of the MemoryBarrier guarantees it.
     /// </summary>
-    public class AtomicBoolean
+    internal class AtomicBoolean
     {
         private const int _falseValue = 0;
         private const int _trueValue = 1;
 
         private int _value;
         /// <summary>
-        /// Sets the initial value of this <see cref="AtomicBoolean"/> to <see cref="originalValue"/>.
+        /// Sets the initial value of this <see cref="AtomicBoolean"/> to <see cref="initialValue"/>.
         /// </summary>
         public AtomicBoolean(bool initialValue = false)
         {

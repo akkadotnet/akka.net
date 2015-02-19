@@ -176,10 +176,9 @@ namespace Akka.Dispatch
             _isClosed = true;
         }
 
-        //TODO: should we only check userMessages? not system messages?
         protected override int GetNumberOfMessages()
         {
-            return _userMessages.Count;
+            return _systemMessages.Count + _userMessages.Count;
         }
 
         public override void CleanUp()

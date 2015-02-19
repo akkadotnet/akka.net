@@ -48,6 +48,7 @@ namespace Akka.TestKit
 
         private void BeforeAll()
         {
+            GC.Collect();
             AtStartup();
         }
 

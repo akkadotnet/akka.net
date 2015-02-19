@@ -73,7 +73,7 @@ namespace Akka.Remote.Routing
 
         #region Trivial method overrides
 
-        public override RouterActor CreateRouterActor()
+        internal override RouterActor CreateRouterActor()
         {
             return Local.CreateRouterActor();
         }
