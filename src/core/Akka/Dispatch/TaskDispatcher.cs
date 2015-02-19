@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,7 +40,7 @@ namespace Akka.Dispatch
     {
         public static readonly TaskScheduler Instance = new ActorTaskScheduler();
         public static readonly TaskFactory TaskFactory = new TaskFactory(Instance);
-        public static readonly object RootScheduler = new object();
+        public static readonly object ScheduleMailboxRun = new object();
         public static readonly string StateKey = "akka.state";
 
         public static void SetCurrentState(ActorRef self,ActorRef sender,object message)
@@ -54,7 +55,7 @@ namespace Akka.Dispatch
 
         public static void Schedule(Action run)
         {
-            TaskFactory.StartNew(_ => run(), RootScheduler);
+            TaskFactory.StartNew(_ => run(), ScheduleMailboxRun);
         }
 
         protected override IEnumerable<Task> GetScheduledTasks()
@@ -65,7 +66,7 @@ namespace Akka.Dispatch
         protected override void QueueTask(Task task)
         {
 
-            if (task.AsyncState == RootScheduler)
+            if (task.AsyncState == ScheduleMailboxRun)
             {
                 ThreadPool.UnsafeQueueUserWorkItem(_ => { TryExecuteTask(task); }, null);
             }
@@ -77,7 +78,7 @@ namespace Akka.Dispatch
                 { 
                     TryExecuteTask(task);
                     if (task.IsFaulted)
-                        throw task.Exception;
+                        ExceptionDispatchInfo.Capture(task.Exception.InnerException).Throw();
 
                 }), ActorRef.NoSender);
             }

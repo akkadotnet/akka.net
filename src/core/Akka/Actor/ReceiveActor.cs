@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using Akka.Actor.Internals;
 using Akka.Tools.MatchHandler;
@@ -84,7 +85,7 @@ namespace Akka.Actor
                     {
                         if (x.IsFaulted)
                         {
-                            throw x.Exception;
+                            ExceptionDispatchInfo.Capture(task.Exception.InnerException).Throw();
                         }
 
                     }, TaskContinuationOptions.None);
