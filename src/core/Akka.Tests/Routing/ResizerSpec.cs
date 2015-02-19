@@ -55,6 +55,7 @@ namespace Akka.Tests.Routing
                 new ActorRefRoutee(Sys.ActorOf<ResizerTestActor>()),
                 new ActorRefRoutee(Sys.ActorOf<ResizerTestActor>())
             };
+            Thread.Sleep(100);
             var c2 = resizer.Capacity(current);
             c2.ShouldBe(0);
         }
