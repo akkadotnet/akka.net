@@ -39,14 +39,13 @@ namespace Akka.Routing
             _resizeInProgress = new AtomicBoolean();
         }
 
-        protected override void PreStart()
+        protected override void PreSuperStart()
         {
             // initial resize, before message send
             if (resizer.IsTimeForResize(_resizeCounter.GetAndIncrement()))
             {
                 Resize(true);
             }
-            base.PreStart();
         }
 
         public override void Post(ActorRef sender, object message)

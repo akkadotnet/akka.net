@@ -287,7 +287,7 @@ namespace Akka.Actor
         /// <summary>
         ///     Starts this instance.
         /// </summary>
-        public void Start()
+        public virtual void Start()
         {
             PreStart();
             Mailbox.Start();
