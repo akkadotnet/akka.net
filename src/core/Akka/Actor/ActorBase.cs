@@ -89,7 +89,7 @@ namespace Akka.Actor
         protected ActorBase()
         {
             if (ActorCell.Current == null)
-                throw new Exception("Do not create actors using 'new', always create them using an ActorContext/System");
+                throw new ActorInitializationException("Do not create actors using 'new', always create them using an ActorContext/System");
             Context.Become(Receive);
         }
 
