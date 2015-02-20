@@ -171,9 +171,10 @@ namespace Akka.Dispatch
         /// <summary>
         /// Disposes this instance.
         /// </summary>
-        public override void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            _isClosed = true;
+            if (disposing)
+                _isClosed = true;
         }
 
         protected override int GetNumberOfMessages()
