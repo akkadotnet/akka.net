@@ -190,7 +190,7 @@ namespace Akka.Actor
         //}
 
         /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
-        void IDisposable.Dispose()
+        public void Dispose()
         {
             Dispose(true);
             //Take this object off the finalization queue and prevent finalization code for this object

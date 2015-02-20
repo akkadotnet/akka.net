@@ -329,7 +329,14 @@ namespace Akka.Actor
 
         public void Dispose()
         {
-            _system.Stop(Receiver);
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+                _system.Stop(Receiver);
         }
 
         private object AwaitResult(Task<object> task, TimeSpan timeout)

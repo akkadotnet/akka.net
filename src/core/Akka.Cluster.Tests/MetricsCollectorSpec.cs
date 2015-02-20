@@ -113,10 +113,19 @@ namespace Akka.Cluster.Tests
 
         #region IDisposable members
 
-        public new void Dispose()
+        public void Dispose()
         {
-            _collector.Dispose();
-            base.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _collector.Dispose();
+                base.Dispose();
+            }
         }
 
         #endregion

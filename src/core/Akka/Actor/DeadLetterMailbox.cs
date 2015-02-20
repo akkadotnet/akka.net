@@ -35,10 +35,6 @@ namespace Akka.Actor
             }
         }
 
-        public override void Dispose()
-        {            
-        }
-
         public override void BecomeClosed()
         {
             

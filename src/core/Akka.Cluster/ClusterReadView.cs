@@ -260,8 +260,17 @@ namespace Akka.Cluster
 
         public void Dispose()
         {
-            //shutdown
-            _eventBusListener.Tell(PoisonPill.Instance);
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                //shutdown
+                _eventBusListener.Tell(PoisonPill.Instance);
+            }
         }
     }
 }
