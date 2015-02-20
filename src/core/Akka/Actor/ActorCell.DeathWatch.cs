@@ -52,7 +52,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// When this actor is watching the subject of [[akka.actor.Terminated]] message
+        /// When this actor is watching the subject of <see cref="Terminated"/> message
         /// it will be propagated to user's receive.
         /// </summary>
         protected void WatchedActorTerminated(ActorRef actor, bool existenceConfirmed, bool addressTerminated)

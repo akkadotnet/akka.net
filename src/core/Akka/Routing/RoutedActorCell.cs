@@ -38,18 +38,14 @@ namespace Akka.Routing
 
         internal void AddRoutee(Routee routee)
         {
-            AddRoutees(new []{routee});
+            AddRoutees(new[] { routee });
         }
 
         internal void AddRoutees(Routee[] routees)
         {
-            foreach(var routee in routees)
+            foreach (var routee in routees)
             {
-                if(routee is ActorRefRoutee)
-                {
-                    var @ref = ((ActorRefRoutee)routee).Actor;
-                    Watch(@ref);
-                }
+                Watch(routee);
             }
             _router = _router.WithRoutees(_router.Routees.Concat(routees).ToArray());
         }
@@ -60,8 +56,15 @@ namespace Akka.Routing
             return instance;
         }
 
+        /// <summary>
+        /// Remove routees from <see cref="Router"/>. Messages in flight may still
+        /// be routed to the old <see cref="Router"/> instance containing the old routees.
+        /// </summary>
+        /// <param name="affectedRoutees"></param>
+        /// <param name="stopChild"></param>
         internal void RemoveRoutees(IEnumerable<Routee> affectedRoutees, bool stopChild)
         {
+            var oldRouter = _router;
             var routees = _router.Routees.ToList();
             routees.RemoveAll(r =>
             {
@@ -72,14 +75,26 @@ namespace Akka.Routing
                 }
                 return false;
             });
-            _router = _router.WithRoutees(routees.ToArray());
-            if (stopChild)
+            _router = oldRouter.WithRoutees(routees.ToArray());
+            foreach (var affectedRoutee in affectedRoutees)
             {
-                foreach (var affectedRoutee in affectedRoutees)
-                {
+                Unwatch(affectedRoutee);
+                if(stopChild)
                     StopIfChild(affectedRoutee);
-                }
             }
+
+        }
+
+        private void Unwatch(Routee routee)
+        {
+            var actorRef = routee as ActorRefRoutee;
+            if (actorRef != null) base.Unwatch(actorRef.Actor);
+        }
+
+        private void Watch(Routee routee)
+        {
+            var actorRef = routee as ActorRefRoutee;
+            if (actorRef != null) base.Watch(actorRef.Actor);
         }
 
         /// <summary>
@@ -136,14 +151,14 @@ namespace Akka.Routing
 
         public override void Post(ActorRef sender, object message)
         {
-            if(message is SystemMessage) base.Post(sender, message);
+            if (message is SystemMessage) base.Post(sender, message);
             else SendMessage(sender, message);
         }
 
         private void SendMessage(ActorRef sender, object message)
         {
             //Route the message via the router to the selected destination.
-            if(_routerConfig.IsManagementMessage(message))
+            if (_routerConfig.IsManagementMessage(message))
                 base.Post(sender, message);
             else
                 _router.Route(message, sender);

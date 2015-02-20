@@ -47,7 +47,7 @@ namespace Akka.Routing
             }
         }
 
-        protected void StopIfAllRouteesRemoved()
+        protected virtual void StopIfAllRouteesRemoved()
         {
             if (!Cell.Router.Routees.Any())
             {
