@@ -532,12 +532,12 @@ namespace Akka.Actor
     {
         public static DeployableDecider From(Directive defaultDirective, params KeyValuePair<Type, Directive>[] pairs)
         {
-            return new DeployableDecider(defaultDirective,pairs);
+            return new DeployableDecider(defaultDirective, pairs);     
         }
 
         public static DeployableDecider From(Directive defaultDirective, IEnumerable<KeyValuePair<Type, Directive>> pairs)
         {
-            return From(defaultDirective, pairs.ToArray());
+            return new DeployableDecider(defaultDirective, pairs);
         }
 
         public static LocalOnlyDecider From(Func<Exception, Directive> localOnlyDecider)
@@ -562,7 +562,17 @@ namespace Akka.Actor
 
     public class DeployableDecider : IDecider
     {
-        public DeployableDecider(Directive defaultDirective, params KeyValuePair<Type, Directive>[] pairs)
+        //Json .net can not decide which of the other ctors are the correct one to use
+        //so we fall back to default ctor and property injection for deserializer
+        protected DeployableDecider()
+        {            
+        }
+
+        public DeployableDecider(Directive defaultDirective, IEnumerable<KeyValuePair<Type, Directive>> pairs) : this(defaultDirective,pairs.ToArray())
+        {
+        }
+
+        public DeployableDecider(Directive defaultDirective,params KeyValuePair<Type, Directive>[] pairs)
         {
             DefaultDirective = defaultDirective;
             Pairs = pairs;
