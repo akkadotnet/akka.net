@@ -535,6 +535,11 @@ namespace Akka.Actor
             return new DeployableDecider(defaultDirective,pairs);
         }
 
+        public static DeployableDecider From(Directive defaultDirective, IEnumerable<KeyValuePair<Type, Directive>> pairs)
+        {
+            return From(defaultDirective, pairs.ToArray());
+        }
+
         public static LocalOnlyDecider From(Func<Exception, Directive> localOnlyDecider)
         {
             return new LocalOnlyDecider(localOnlyDecider);
