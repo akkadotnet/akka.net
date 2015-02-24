@@ -77,7 +77,9 @@ namespace Akka.Actor
         /// <summary>
         ///     Creates a new ActorSystem with the specified name, and the specified Config
         /// </summary>
-        /// <param name="name">Name of the ActorSystem</param>
+        /// <param name="name">Name of the ActorSystem
+        /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
+        /// </param>
         /// <param name="config">Configuration of the ActorSystem</param>
         /// <returns>ActorSystem.</returns>
         public static ActorSystem Create(string name, Config config)
@@ -89,7 +91,9 @@ namespace Akka.Actor
         /// <summary>
         ///     Creates the specified name.
         /// </summary>
-        /// <param name="name">The name.</param>
+        /// <param name="name">The name. The name must be uri friendly.
+        /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
+        /// </param>
         /// <returns>ActorSystem.</returns>
         public static ActorSystem Create(string name)
         {
