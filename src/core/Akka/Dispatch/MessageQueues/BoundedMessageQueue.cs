@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using Akka.Actor;
+using Akka.Configuration;
 
 namespace Akka.Dispatch.MessageQueues
 {
@@ -14,15 +15,38 @@ namespace Akka.Dispatch.MessageQueues
             _queue = new BlockingCollection<Envelope>();
         }
 
-        public BoundedMessageQueue(int boundedCapacity)
+        public BoundedMessageQueue(Settings settings, Config config) 
+            : this(config.GetInt("mailbox-capacity"), config.GetTimeSpan("mailbox-push-timeout-time"))
         {
-            _queue = new BlockingCollection<Envelope>(boundedCapacity);
+        }
+
+        public BoundedMessageQueue(int boundedCapacity, TimeSpan pushTimeOut)
+        {
+            if (boundedCapacity < 0)
+            {
+                throw new ArgumentException("The capacity for BoundedMessageQueue can not be negative");
+            }
+            else if (boundedCapacity == 0)
+            {
+                _queue = new BlockingCollection<Envelope>();
+            }
+            else
+            {
+                _queue = new BlockingCollection<Envelope>(boundedCapacity);
+            }
         }
 
         public void Enqueue(Envelope envelope)
         {
-            _queue.Add(envelope);
-        }
+            if (PushTimeOut.Milliseconds >= 0)
+            {
+                _queue.TryAdd(envelope, PushTimeOut);
+            }
+            else
+            {
+                _queue.Add(envelope);
+            }
+       }
 
         public bool HasMessages
         {
