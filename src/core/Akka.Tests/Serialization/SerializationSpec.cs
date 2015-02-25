@@ -5,6 +5,7 @@ using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Xunit;
 using System;
+using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 
@@ -263,6 +264,46 @@ namespace Akka.Tests.Serialization
             var sref = (ActorRef)serializer.FromBinary(bytes, typeof(ActorRef));
             Assert.NotNull(sref);
         }
+
+        [Fact]
+        public void CanSerializeDecider()
+        {
+            var decider = Decider.From(
+                Directive.Restart,
+                Directive.Stop.When<ArgumentException>(),
+                Directive.Stop.When<NullReferenceException>());
+
+            var serializer = Sys.Serialization.FindSerializerFor(decider);
+            var bytes = serializer.ToBinary(decider);
+            var sref = (DeployableDecider)serializer.FromBinary(bytes, typeof(DeployableDecider));
+            Assert.NotNull(sref);
+            Assert.Equal(decider.Pairs[0],sref.Pairs[0]);
+            Assert.Equal(decider.Pairs[1], sref.Pairs[1]);
+            Assert.Equal(decider.DefaultDirective, sref.DefaultDirective);            
+        }
+
+        [Fact]
+        public void CanSerializeSupervisor()
+        {
+            var decider = Decider.From(
+                Directive.Restart,
+                Directive.Stop.When<ArgumentException>(),
+                Directive.Stop.When<NullReferenceException>());
+
+            var supervisor = new OneForOneStrategy(decider);
+
+            var serializer = Sys.Serialization.FindSerializerFor(supervisor);
+            var bytes = serializer.ToBinary(supervisor);
+            var sref = (OneForOneStrategy)serializer.FromBinary(bytes, typeof(OneForOneStrategy));
+            Assert.NotNull(sref);
+            var sdecider = sref.Decider as DeployableDecider;
+            Assert.Equal(decider.Pairs[0], sdecider.Pairs[0]);
+            Assert.Equal(decider.Pairs[1], sdecider.Pairs[1]);
+            Assert.Equal(supervisor.MaxNumberOfRetries, sref.MaxNumberOfRetries);
+            Assert.Equal(supervisor.WithinTimeRangeMilliseconds, sref.WithinTimeRangeMilliseconds);
+            Assert.Equal(decider.DefaultDirective, sdecider.DefaultDirective);
+        }
+
 
         //TODO: find out why this fails on build server
 
