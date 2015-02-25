@@ -14,7 +14,7 @@ namespace Akka.Cluster.Tests
         public ClusterConfigSpec() : base(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""") { }
 
         [Fact]
-        public void ClusteringMustBeAbleToPareseGenericClusterConfigElements()
+        public void ClusteringMustBeAbleToParseGenericClusterConfigElements()
         {
             var settings = new ClusterSettings(Sys.Settings.Config, Sys.Name);
             Assert.True(settings.LogInfo);

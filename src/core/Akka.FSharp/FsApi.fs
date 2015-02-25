@@ -525,7 +525,7 @@ module EventStreaming =
     /// <summary>
     /// Publishes an event on the provided event stream. Event channel is resolved from event's type.
     /// </summary>
-    let pubblish (event: 'Event) (eventStream: Akka.Event.EventStream) : unit = eventStream.Publish event
+    let publish (event: 'Event) (eventStream: Akka.Event.EventStream) : unit = eventStream.Publish event
 
 [<AutoOpen>]
 module Scheduler =

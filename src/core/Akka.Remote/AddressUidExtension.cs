@@ -3,6 +3,9 @@ using Akka.Util;
 
 namespace Akka.Remote
 {
+    /// <summary>
+    /// <see cref="IExtension"/> provider for <see cref="AddressUid"/>
+    /// </summary>
     public class AddressUidExtension : ExtensionIdProvider<AddressUid>
     {
         public override AddressUid CreateExtension(ExtendedActorSystem system)

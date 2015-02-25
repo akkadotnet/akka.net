@@ -70,7 +70,7 @@ All of these functions may be used with either actor system or actor itself. In 
 
 ### Actor spawning options
 
-To be able to specifiy more precise actor creation behavior, you may use `spawnOpt` and `spawne` methods, both taking a list of `SpawnOption` values. Each specific option should be present only once in the collection. When a conflict occurs (more than one option of specified type has been found), the latest value found inside the list will be chosen.
+To be able to specify more precise actor creation behavior, you may use `spawnOpt` and `spawne` methods, both taking a list of `SpawnOption` values. Each specific option should be present only once in the collection. When a conflict occurs (more than one option of specified type has been found), the latest value found inside the list will be chosen.
 
 -   `SpawnOption.Deploy(Akka.Actor.Deploy)` - defines deployment strategy for created actors (see: Deploy). This option may be used along with `spawne` function to enable remote actors deployment.
 -   `SpawnOption.Router(Akka.Routing.RouterConfig)` - defines an actor to be a router as well as it's routing specifics (see: [Routing](http://akkadotnet.github.io/wiki/Routing)).
@@ -215,7 +215,7 @@ F# API provides following scheduling functions:
 
 ### Logging
 
-F# API supports two groups of logging functions - one that operates directly on strings and second (which may be recognized by *f* suffix in function names) which operates using F# string formating features. Major difference is performance - first one is less powerful, but it's also faster than the second one.
+F# API supports two groups of logging functions - one that operates directly on strings and second (which may be recognized by *f* suffix in function names) which operates using F# string formatting features. Major difference is performance - first one is less powerful, but it's also faster than the second one.
 
 Both groups support logging on various levels (DEBUG, &lt;default&gt; INFO, WARNING and ERROR). Actor system's logging level may be managed through configuration, i.e.:
 

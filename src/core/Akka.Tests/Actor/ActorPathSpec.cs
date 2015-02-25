@@ -87,7 +87,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void ReturnFalsUponMalformedPath()
+        public void ReturnFalseUponMalformedPath()
         {
             ActorPath ignored;
             ActorPath.TryParse("", out ignored).ShouldBe(false);

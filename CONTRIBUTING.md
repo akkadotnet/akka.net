@@ -11,7 +11,7 @@ Submit only relevant commits. We don't mind many commits in a pull request, but 
 If you have commits that looks like this _"Merge branch 'my-branch' into dev"_ or _"Merge branch 'dev' of github .com/akkadotnet/akka.net into dev"_ you're probaly using merge instead of [rebase](https://help.github.com/articles/about-git-rebase) locally. See below on _Handling updates from upstream_. 
 - __Squash commits__ Often we create temporary commits like _"Started implementing feature x"_ and then _"Did a bit more on feature x"_. Squash these commits together using [interactive rebase](https://help.github.com/articles/about-git-rebase). Also see [Squashing commits with rebase](http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html).
 - __Descriptive commit messages__ If a commit's message isn't descriptive, change it using [interactive rebase](https://help.github.com/articles/about-git-rebase). Refer to issues using `#issue`. Example of a bad message ~~"Small cleanup"~~. Example of good message: _"Removed Security.Claims header from FSM, which broke Mono build per #62"_. Don't be afraid to write long messages, if needed. Try to explain _why_ you've done the changes. The Erlang repo has some info on [writing good commit messages](https://github.com/erlang/otp/wiki/Writing-good-commit-messages).
-- __No one-commit-to-rule-them-all__ Large commits that changes too many things at the same time are very hard to review. Split large commits into smaller. See this [StackOverflow question](http://stackoverflow.com/questions/6217156/break-a-previous-commit-into-multiple-commits) for informatin on how to do this.
+- __No one-commit-to-rule-them-all__ Large commits that changes too many things at the same time are very hard to review. Split large commits into smaller. See this [StackOverflow question](http://stackoverflow.com/questions/6217156/break-a-previous-commit-into-multiple-commits) for information on how to do this.
 - __Tests__ Add relevant tests and make sure all existing ones still passes. Tests can be run using the command
 - __No Warnings__ Make sure your code do not produce any build warnings.
 
@@ -97,8 +97,8 @@ This ensures that your history is "clean" i.e. you have one branch off from _dev
 If you're working on a long running feature then you may want to do this quite often, rather than run the risk of potential merge issues further down the line.
 
 ### Making changes to a Pull request
-If you realize you've missed something after submitting a Pull request, just commit to your local branch and push the branch just like you did the first time. This commit wil automatically be included in the Pull request.
-If we ask you to change already published commits using interactive reabse (like squashing or splitting commits or  rewriting commit messages) you need to force push using `-f`:
+If you realize you've missed something after submitting a Pull request, just commit to your local branch and push the branch just like you did the first time. This commit will automatically be included in the Pull request.
+If we ask you to change already published commits using interactive rebase (like squashing or splitting commits or  rewriting commit messages) you need to force push using `-f`:
 ```
 git push -f origin my-new-branch-123
 ```

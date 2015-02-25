@@ -88,7 +88,7 @@ namespace Akka.Persistence.Journal
                 var batch = CreatePersistentBatch(msg.Messages);
                 WriteMessages(batch);
 
-                msg.PersistentActor.Tell(WriteMessagesSuccessull.Instance);
+                msg.PersistentActor.Tell(WriteMessagesSuccessful.Instance);
                 foreach (var message in msg.Messages)
                 {
                     if (message is IPersistentRepresentation)

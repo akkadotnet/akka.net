@@ -73,7 +73,7 @@ namespace Akka.Remote.Routing
 
         #region Trivial method overrides
 
-        public override RouterActor CreateRouterActor()
+        internal override RouterActor CreateRouterActor()
         {
             return Local.CreateRouterActor();
         }
@@ -124,7 +124,7 @@ namespace Akka.Remote.Routing
 
         public RouterConfig Copy(Pool local = null, IEnumerable<Address> nodes = null)
         {
-            return new RemoteRouterConfig(local ?? (Pool)Local, nodes ?? Nodes);
+            return new RemoteRouterConfig(local ?? Local, nodes ?? Nodes);
         }
 
         #endregion

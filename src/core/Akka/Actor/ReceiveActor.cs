@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
+using System.Threading;
 using Akka.Actor.Internals;
 using Akka.Tools.MatchHandler;
+using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
@@ -71,7 +74,24 @@ namespace Akka.Actor
         }
 
 
+        protected void Receive<T>(Func<T,Task> handler)
+        {
+            EnsureMayConfigureMessageHandlers();
+            _matchHandlerBuilders.Peek().Match<T>( m =>
+            {
+                var task = handler(m);
 
+                    task.ContinueWith(x =>
+                    {
+                        if (x.IsFaulted)
+                        {
+                            ExceptionDispatchInfo.Capture(task.Exception.InnerException).Throw();
+                        }
+
+                    }, TaskContinuationOptions.None);
+
+            });
+        }
 
         /// <summary>
         /// Registers a handler for incoming messages of the specified type <typeparamref name="T"/>.

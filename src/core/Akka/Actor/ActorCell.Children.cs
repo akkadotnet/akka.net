@@ -207,7 +207,7 @@ namespace Akka.Actor
                 foreach (var stats in ChildrenContainer.Stats)
                 {
                     var child = stats.Child;
-                    ((InternalActorRef)child).Suspend();
+                    child.Suspend();
                 }
             }
             else
@@ -216,7 +216,7 @@ namespace Akka.Actor
                 {
                     var child = stats.Child;
                     if (!exceptFor.Contains(child))
-                        ((InternalActorRef)stats.Child).Suspend();
+                        child.Suspend();
                 }
             }
         }
@@ -230,7 +230,7 @@ namespace Akka.Actor
             {
                 var child = stats.Child;
                 var cause = child.Equals(perpetrator) ? causedByFailure : null;
-                ((InternalActorRef)child).Resume(cause);
+                child.Resume(cause);
             }
         }
 
@@ -288,7 +288,7 @@ namespace Akka.Actor
                 ChildRestartStats stats;
                 if (TryGetChildRestartStatsByName(name, out stats))
                 {
-                    child = (InternalActorRef)stats.Child;
+                    child = stats.Child;
                     return true;
                 }
             }
@@ -301,7 +301,7 @@ namespace Akka.Actor
                     var uid = nameAndUid.Uid;
                     if (uid == ActorCell.UndefinedUid || uid == stats.Uid)
                     {
-                        child = (InternalActorRef)stats.Child;
+                        child = stats.Child;
                         return true;
                     }
                 }

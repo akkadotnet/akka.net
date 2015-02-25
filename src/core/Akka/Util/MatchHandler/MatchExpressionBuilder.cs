@@ -166,7 +166,7 @@ namespace Akka.Tools.MatchHandler
                 var parameter = Expression.Parameter(argumentValue.GetType(), "arg" + iPlus1);
                 parameters[iPlus1] = parameter;
                 if(argument.ValueIsActionOrFunc)
-                    argument.PredicateAndHandler.ActionOrFuncExpresssion = parameter;
+                    argument.PredicateAndHandler.ActionOrFuncExpression = parameter;
                 else
                     argument.PredicateAndHandler.PredicateExpression = parameter;
             }
@@ -180,7 +180,7 @@ namespace Akka.Tools.MatchHandler
                     extraArgsValues[i] = argumentValue;
                     var expression = Expression.Convert(Expression.ArrayIndex(_extraArgsArrayParameter, Expression.Constant(i)), argumentValue.GetType());
                     if(argument.ValueIsActionOrFunc)
-                        argument.PredicateAndHandler.ActionOrFuncExpresssion = expression;
+                        argument.PredicateAndHandler.ActionOrFuncExpression = expression;
                     else
                         argument.PredicateAndHandler.PredicateExpression = expression;
                 }
@@ -261,7 +261,7 @@ namespace Akka.Tools.MatchHandler
             //Adds this code to the body:
             //    action(arg);
             //    return true;
-            body.Add(Expression.Invoke(handler.ActionOrFuncExpresssion, argumentExpression));
+            body.Add(Expression.Invoke(handler.ActionOrFuncExpression, argumentExpression));
             body.Add(Expression.Return(returnTarget, Expression.Constant(true)));
         }
 
@@ -278,7 +278,7 @@ namespace Akka.Tools.MatchHandler
                 Expression.IfThen(
                     Expression.Invoke(handler.PredicateExpression, argumentExpression),
                     Expression.Block(
-                        Expression.Invoke(handler.ActionOrFuncExpresssion, argumentExpression),
+                        Expression.Invoke(handler.ActionOrFuncExpression, argumentExpression),
                         Expression.Return(returnTarget, Expression.Constant(true))
                         )));
         }
@@ -292,7 +292,7 @@ namespace Akka.Tools.MatchHandler
             //    }
             body.Add(
                 Expression.IfThen(
-                    Expression.Invoke(handler.ActionOrFuncExpresssion, argumentExpression),
+                    Expression.Invoke(handler.ActionOrFuncExpression, argumentExpression),
                         Expression.Return(returnTarget, Expression.Constant(true))
                         ));
         }

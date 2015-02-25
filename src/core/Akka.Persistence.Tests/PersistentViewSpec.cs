@@ -27,14 +27,14 @@ namespace Akka.Persistence.Tests
             _prefProbe.ExpectMsg("b-2");
         }
 
-        protected override void AfterTest()
+        protected override void AfterAll()
         {
             if (Sys != null)
             {
                 Sys.Stop(_pref);
                 Sys.Stop(_view);
             }
-            base.AfterTest();
+            base.AfterAll();
         }
 
         [Fact]
@@ -114,7 +114,7 @@ namespace Akka.Persistence.Tests
             _viewProbe.ExpectMsg("replicated-c-3");
         }
 
-        [Fact]
+        [Fact(Skip = "FIXME")]
         public void PersistentView_should_run_size_limited_updates_on_user_request()
         {
             _pref.Tell("c");
@@ -140,7 +140,7 @@ namespace Akka.Persistence.Tests
             _viewProbe.ExpectMsg("replicated-f-6");
         }
 
-        [Fact(Skip = "FIXME")]
+        [Fact]
         public void PersistentView_should_run_size_limited_updates_automatically()
         {
             var replayProbe = CreateTestProbe();

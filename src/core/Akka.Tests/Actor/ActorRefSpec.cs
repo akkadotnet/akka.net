@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Threading;
 using Akka.Actor;
+using Akka.Serialization;
 using Akka.TestKit;
-using Akka.TestKit.Internal;
 using Akka.TestKit.TestActors;
 using Xunit;
 
 namespace Akka.Tests.Actor
 {
-    public class ActorRefSpec : AkkaSpec
+    public class ActorRefSpec : AkkaSpec, NoImplicitSender
     {
-        //TODO: A lot is missing in ActorRefSpec
-
         [Fact]
         public void An_ActorRef_should_equal_itself()
         {
@@ -67,25 +65,53 @@ namespace Akka.Tests.Actor
         [Fact]
         public void An_ActorRef_should_not_allow_actors_to_be_created_outside_an_ActorOf()
         {
-            //TODO: requires EventFilters implemented
+            Shutdown();
+            Intercept<ActorInitializationException>(() =>
+            {
+                new BlackHoleActor();
+            });
         }
 
+
         [Fact]
-        public void An_ActorRef_should_be_serializable_using_default_binary_serialization_on_local_mode()
+        public void An_ActorRef_should_be_serializable_using_default_serialization_on_local_node()
         {
-            //TODO: Default serializer need to be specified
+            var aref = ActorOf<BlackHoleActor>();
+            var serializer = Sys.Serialization.FindSerializerFor(aref);
+            var binary = serializer.ToBinary(aref);
+            var bref = serializer.FromBinary(binary, typeof(ActorRef));
+
+            bref.ShouldBe(aref);
         }
 
         [Fact]
         public void An_ActorRef_should_throw_an_exception_on_deserialize_if_no_system_in_scope()
         {
-            //TODO: Default serializer need to be specified
+            var aref = ActorOf<BlackHoleActor>();
+
+            var serializer = new NewtonSoftJsonSerializer(null);
+            Intercept(() =>
+            {
+                var binary = serializer.ToBinary(aref);
+                var bref = serializer.FromBinary(binary, typeof(ActorRef));
+            });
         }
 
         [Fact]
         public void An_ActoRef_should_return_EmptyLocalActorRef_on_deserialize_if_not_present_in_actor_hierarchy_and_remoting_is_not_enabled()
         {
-            //TODO: Default serializer need to be specified
+            var aref = ActorOf<BlackHoleActor>("non-existing");
+            var aserializer = Sys.Serialization.FindSerializerForType(typeof(ActorRef));
+            var binary = aserializer.ToBinary(aref);
+
+            aref.Tell(PoisonPill.Instance);
+            VerifyActorTermination(aref);
+
+            var bserializer = Sys.Serialization.FindSerializerForType(typeof (ActorRef));
+            var bref = (ActorRef)bserializer.FromBinary(binary, typeof(ActorRef));
+
+            bref.GetType().ShouldBe(typeof(EmptyLocalActorRef));
+            bref.Path.ShouldBe(aref.Path);
         }
 
         [Fact]
@@ -160,7 +186,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActorRef_should_suppport_reply_via_Sender()
+        public void An_ActorRef_should_support_reply_via_Sender()
         {
             var latch = new TestLatch(Sys, 4);
             var serverRef = Sys.ActorOf(Props.Create<ReplyActor>());

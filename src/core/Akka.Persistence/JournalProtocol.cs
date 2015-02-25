@@ -107,13 +107,13 @@ namespace Akka.Persistence
     /// to the requestor before all subsequent <see cref="WriteMessageSuccess"/> replies.
     /// </summary>
     [Serializable]
-    public class WriteMessagesSuccessull : IEquatable<WriteMessagesSuccessull>
+    public class WriteMessagesSuccessful : IEquatable<WriteMessagesSuccessful>
     {
-        public static readonly WriteMessagesSuccessull Instance = new WriteMessagesSuccessull();
+        public static readonly WriteMessagesSuccessful Instance = new WriteMessagesSuccessful();
 
-        private WriteMessagesSuccessull() { }
+        private WriteMessagesSuccessful() { }
 
-        public bool Equals(WriteMessagesSuccessull other)
+        public bool Equals(WriteMessagesSuccessful other)
         {
             return true;
         }

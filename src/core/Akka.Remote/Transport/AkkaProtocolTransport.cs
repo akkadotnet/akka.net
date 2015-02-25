@@ -94,7 +94,7 @@ namespace Akka.Remote.Transport
             manager.Tell(new AssociateUnderlyingRefuseUid(SchemeAugmenter.RemoveScheme(remoteAddress), statusPromise, refuseUid));
 
             return statusPromise.Task.ContinueWith(result => ((AkkaProtocolHandle) result.Result),
-                TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously);
+                TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
         }
 
         #region Static properties
@@ -496,9 +496,9 @@ namespace Akka.Remote.Transport
                     .With<AssociationHandle>(h => fsmEvent.StateData.Match()
                         .With<OutboundUnassociated>(ou =>
                         {
-                            var wrappedHandle = h;
+                            AssociationHandle wrappedHandle = h;
                             var statusPromise = ou.StatusCompletionSource;
-                            wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(Self));
+                            wrappedHandle.ReadHandlerSource.TrySetResult(new ActorHandleEventListener(Self));
                             if (SendAssociate(wrappedHandle, _localHandshakeInfo))
                             {
                                 _failureDetector.HeartBeat();
@@ -587,7 +587,10 @@ namespace Akka.Remote.Transport
                                 var associationHandler = iu.AssociationEventListener;
                                 var wrappedHandle = iu.WrappedHandle;
                                 pdu.Match()
-                                    .With<Disassociate>(d => nextState = Stop(new Failure(d.Reason)))
+                                    .With<Disassociate>(d =>
+                                    {
+                                        nextState = Stop(new Failure(d.Reason));
+                                    })
                                     .With<Associate>(a =>
                                     {
                                         SendAssociate(wrappedHandle, _localHandshakeInfo);
@@ -631,7 +634,10 @@ namespace Akka.Remote.Transport
                     {
                         var pdu = DecodePdu(ip.Payload);
                         pdu.Match()
-                            .With<Disassociate>(d => nextState = Stop(new Failure(d.Reason)))
+                            .With<Disassociate>(d =>
+                            {
+                                nextState = Stop(new Failure(d.Reason));
+                            })
                             .With<Heartbeat>(h =>
                             {
                                 _failureDetector.HeartBeat();

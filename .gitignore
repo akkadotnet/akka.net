@@ -202,3 +202,4 @@ FakesAssemblies/
 /src/.Akka.boltdata/NCover/Projects/Name/0.jf
 /src/.Akka.boltdata/Settings.json
 /src/.Akka.boltdata/TestResults.json
+resetdev.bat

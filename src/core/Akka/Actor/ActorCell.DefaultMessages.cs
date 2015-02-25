@@ -44,12 +44,12 @@ namespace Akka.Actor
             try
             {
                 var autoReceivedMessage = message as AutoReceivedMessage;
-                if(autoReceivedMessage!=null)
+                if (autoReceivedMessage != null)
                     AutoReceiveMessage(envelope);
                 else
                     ReceiveMessage(message);
             }
-            catch(Exception cause)
+            catch (Exception cause)
             {
                 HandleInvokeFailure(cause);
             }
@@ -83,17 +83,16 @@ namespace Akka.Actor
             var actor = _actor;
             var actorType = actor != null ? actor.GetType() : null;
 
-            if(System.Settings.DebugAutoReceive)
+            if (System.Settings.DebugAutoReceive)
                 Publish(new Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));
 
-            envelope.Message
-                .Match()
-                .With<Terminated>(ReceivedTerminated)
-                .With<AddressTerminated>(a => AddressTerminated(a.Address))
-                .With<Kill>(Kill)
-                .With<PoisonPill>(HandlePoisonPill)
-                .With<ActorSelectionMessage>(ReceiveSelection)
-                .With<Identify>(HandleIdentity);
+            var m = envelope.Message;
+            if (m is Terminated) ReceivedTerminated(m as Terminated);
+            else if (m is AddressTerminated) AddressTerminated((m as AddressTerminated).Address);
+            else if (m is Kill) Kill();
+            else if (m is PoisonPill) HandlePoisonPill();
+            else if (m is ActorSelectionMessage) ReceiveSelection(m as ActorSelectionMessage);
+            else if (m is Identify) HandleIdentity(m as Identify);
         }
 
         /// <summary>
@@ -120,7 +119,7 @@ namespace Akka.Actor
         {
             var wasHandled = _actor.AroundReceive(behaviorStack.Peek(), message);
 
-            if(System.Settings.AddLoggingReceive && _actor is ILogReceive)
+            if (System.Settings.AddLoggingReceive && _actor is ILogReceive)
             {
                 //TODO: akka alters the receive handler for logging, but the effect is the same. keep it this way?
                 Publish(new Debug(Self.Path.ToString(), _actor.GetType(),
@@ -147,23 +146,39 @@ namespace Akka.Actor
 
             try
             {
-                envelope
-                    .Message
-                    .Match()
-                    .With<CompleteTask>(HandleCompleteTask)
-                    .With<Failed>(HandleFailed)
-                    .With<DeathWatchNotification>(m => WatchedActorTerminated(m.Actor, m.ExistenceConfirmed, m.AddressTerminated))
-                    .With<Create>(m => HandleCreate(m.Failure))
-                    //TODO: see """final def init(sendSupervise: Boolean, mailboxType: MailboxType): this.type = {""" in dispatch.scala
-                    //case Create(failure) ⇒ create(failure)
-                    .With<Watch>(m => AddWatcher(m.Watchee, m.Watcher))
-                    .With<Unwatch>(m => RemWatcher(m.Watchee, m.Watcher))
-                    .With<Recreate>(m => FaultRecreate(m.Cause))
-                    .With<Suspend>(m => FaultSuspend())
-                    .With<Resume>(m => FaultResume(m.CausedByFailure))
-                    .With<Terminate>(Terminate)
-                    .With<Supervise>(s => Supervise(s.Child, s.Async))
-                    .Default(m => { throw new NotSupportedException("Unknown message " + m.GetType().Name); });
+                var m = envelope.Message;
+
+                if (m is CompleteTask) HandleCompleteTask(m as CompleteTask);
+                else if (m is Failed) HandleFailed(m as Failed);
+                else if (m is DeathWatchNotification)
+                {
+                    var msg = m as DeathWatchNotification;
+                    WatchedActorTerminated(msg.Actor, msg.ExistenceConfirmed, msg.AddressTerminated);
+                }
+                else if (m is Create) HandleCreate((m as Create).Failure);
+                else if (m is Watch)
+                {
+                    var watch = m as Watch;
+                    AddWatcher(watch.Watchee, watch.Watcher);
+                }
+                else if (m is Unwatch)
+                {
+                    var unwatch = m as Unwatch;
+                    RemWatcher(unwatch.Watchee, unwatch.Watcher);
+                }
+                else if (m is Recreate) FaultRecreate((m as Recreate).Cause);
+                else if (m is Suspend) FaultSuspend();
+                else if (m is Resume) FaultResume((m as Resume).CausedByFailure);
+                else if (m is Terminate) Terminate();
+                else if (m is Supervise)
+                {
+                    var supervise = m as Supervise;
+                    Supervise(supervise.Child, supervise.Async);
+                }
+                else
+                {
+                    throw new NotSupportedException("Unknown message " + m.GetType().Name);
+                }
             }
             catch (Exception cause)
             {
@@ -179,7 +194,7 @@ namespace Akka.Actor
         }
         public void SwapMailbox(DeadLetterMailbox mailbox)
         {
-            Mailbox.DebugPrint("{0} Swapping mailbox to DeadLetterMailbox",Self);
+            Mailbox.DebugPrint("{0} Swapping mailbox to DeadLetterMailbox", Self);
             Interlocked.Exchange(ref _mailbox, mailbox);
         }
 
@@ -204,7 +219,7 @@ namespace Akka.Actor
             //TODO: complete this
             if (!IsTerminating)
             {
-                var childRestartStats = InitChild((InternalActorRef) child);
+                var childRestartStats = InitChild((InternalActorRef)child);
                 if (childRestartStats != null)
                 {
                     HandleSupervise(child, async);
@@ -222,7 +237,7 @@ namespace Akka.Actor
 
         private void HandleSupervise(ActorRef child, bool async)
         {
-            if(async && child is RepointableActorRef)
+            if (async && child is RepointableActorRef)
             {
                 ((RepointableActorRef)child).Point();
             }
@@ -274,7 +289,7 @@ namespace Akka.Actor
                     Publish(new Debug(Self.Path.ToString(), created.GetType(), "Started (" + created + ")"));
             }
             catch (Exception e)
-            {                
+            {
                 if (_actor != null)
                 {
                     ClearActor(_actor);
@@ -287,7 +302,7 @@ namespace Akka.Actor
         /// <summary>
         ///     Starts this instance.
         /// </summary>
-        public void Start()
+        public virtual void Start()
         {
             PreStart();
             Mailbox.Start();

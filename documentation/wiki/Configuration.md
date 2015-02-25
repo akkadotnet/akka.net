@@ -4,7 +4,7 @@ title: Configuration
 ---
 # HOCON Configuration
 
-Read more about the [[HOCON]] spec.
+Read more about the [HOCON](HOCON) spec.
 
 ## Example config
 ```hocon
@@ -125,7 +125,7 @@ var fluentConfig = FluentConfig.Begin()
 var system = ActorSystem.Create("MyServer", fluentConfig);
 ```
 
-The fluent configuration support is a simple builder ontop of the HOCON configuration.
+The fluent configuration support is a simple builder on top of the HOCON configuration.
 This is because Akka.NET uses HOCON internally inside most of it's modules, such as routers and remoting.
 
 Fluent configuration is based on extension methods on the `FluentConfig` class, this makes it possible to supply new config methods for different modules w/o altering the configuration API.

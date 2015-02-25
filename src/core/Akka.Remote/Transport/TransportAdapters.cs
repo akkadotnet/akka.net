@@ -12,7 +12,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// Create a transport adapter that wraps the underlying transport
         /// </summary>
-        Transport Create(Transport wrappedTransport, ActorSystem system);
+        Transport Create(Transport wrappedTransport, ExtendedActorSystem system);
     }
 
     internal class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
@@ -75,7 +75,7 @@ namespace Akka.Remote.Transport
 
         public ITransportAdapterProvider GetAdapterProvider(string name)
         {
-            if (_adaptersTable.ContainsKey(name))
+            if (AdaptersTable().ContainsKey(name))
             {
                 return _adaptersTable[name];
             }
@@ -84,7 +84,7 @@ namespace Akka.Remote.Transport
         }
     }
 
-    internal class SchemeAugmenter
+    public class SchemeAugmenter
     {
         public SchemeAugmenter(string addedSchemeIdentifier)
         {
@@ -119,7 +119,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// An adapter that wraps a transport and provides interception capabilities
     /// </summary>
-    internal abstract class AbstractTransportAdapter : Transport
+    public abstract class AbstractTransportAdapter : Transport
     {
         protected AbstractTransportAdapter(Transport wrappedTransport)
         {
@@ -178,6 +178,9 @@ namespace Akka.Remote.Transport
 
     internal abstract class AbstractTransportAdapterHandle : AssociationHandle
     {
+        protected AbstractTransportAdapterHandle(AssociationHandle wrappedHandle, string addedSchemeIdentifier)
+            : this(wrappedHandle.LocalAddress, wrappedHandle.RemoteAddress, wrappedHandle, addedSchemeIdentifier) { }
+
         protected AbstractTransportAdapterHandle(Address originalLocalAddress, Address originalRemoteAddress, AssociationHandle wrappedHandle, string addedSchemeIdentifier) : base(originalLocalAddress, originalRemoteAddress)
         {
             WrappedHandle = wrappedHandle;
@@ -275,17 +278,18 @@ namespace Akka.Remote.Transport
         public DisassociateInfo Info { get; private set; }
     }
 
-    internal abstract class ActorTransportAdapter : AbstractTransportAdapter
+    public abstract class ActorTransportAdapter : AbstractTransportAdapter
     {
         protected ActorTransportAdapter(Transport wrappedTransport, ActorSystem system) : base(wrappedTransport)
         {
             System = system;
         }
 
-        protected new ActorSystem System;       //TODO: Is it supposed to hide base? Explain why, or remove
-
         protected abstract string ManagerName { get; }
         protected abstract Props ManagerProps { get; }
+
+
+        public static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(5);
 
         protected volatile ActorRef manager;
 

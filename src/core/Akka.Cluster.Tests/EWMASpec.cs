@@ -74,7 +74,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void DataStream_must_calcualte_sane_alpha_from_short_halflife()
+        public void DataStream_must_calculate_sane_alpha_from_short_halflife()
         {
             var alpha = EWMA.CalculateAlpha(TimeSpan.FromMilliseconds(1), TimeSpan.FromSeconds(3));
             Assert.True(alpha <= 1.0d);
@@ -83,7 +83,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void DataStream_must_calcualte_sane_alpha_from_long_halflife()
+        public void DataStream_must_calculate_sane_alpha_from_long_halflife()
         {
             var alpha = EWMA.CalculateAlpha(TimeSpan.FromDays(1), TimeSpan.FromSeconds(3));
             Assert.True(alpha <= 1.0d);
@@ -122,10 +122,19 @@ namespace Akka.Cluster.Tests
 
         #region IDisposable members
 
-        public new void Dispose()
+        public void Dispose()
         {
-            _collector.Dispose();
-            base.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _collector.Dispose();
+                base.Dispose();
+            }
         }
 
         #endregion

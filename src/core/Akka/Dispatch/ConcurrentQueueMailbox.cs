@@ -171,14 +171,15 @@ namespace Akka.Dispatch
         /// <summary>
         /// Disposes this instance.
         /// </summary>
-        public override void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            _isClosed = true;
+            if (disposing)
+                _isClosed = true;
         }
 
-        //TODO: should we only check userMessages? not system messages?
         protected override int GetNumberOfMessages()
         {
+            //We only count user messages in the mailbox, otherwise Resizers and ReceiveTimeouts explode
             return _userMessages.Count;
         }
 
