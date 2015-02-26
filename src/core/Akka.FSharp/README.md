@@ -58,6 +58,24 @@ Paragraph above already has shown, how actors may be created with help of the sp
 
 All of these functions may be used with either actor system or actor itself. In the first case spawned actor will be placed under */user* root guardian of the current actor system hierarchy. In second option spawned actor will become child of the actor used as [actorFactory] parameter of the spawning function.
 
+#### Dealing with disposable resources
+
+When executing application logic inside receive function, be aware of a constant threat of stopping a current actor at any time for various reasons. This is an especially problematic situation when you're using a resource allocation - when actor will be stopped suddenly, you may be left with potentially heavy resources still waiting for being released.
+
+Use `mailbox.Defer (deferredFunc)` in situations when you must ensure operation to be executed at the end of the actor lifecycle.
+
+Example:
+
+    let disposableActor (mailbox:Actor<_>) =
+        let resource = new DisposableResource()
+        mailbox.Defer ((resource :> IDisposable).Dispose)
+        let rec loop () = 
+            actor {
+                let! msg = mailbox.Receive()
+                return! loop ()   
+            }
+        loop()
+
 ### Actor spawning options
 
 To be able to specifiy more precise actor creation behavior, you may use `spawnOpt` and `spawne` methods, both taking a list of `SpawnOption` values. Each specific option should be present only once in the collection. When a conflict occurs (more than one option of specified type has been found), the latest value found inside the list will be chosen.

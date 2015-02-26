@@ -74,6 +74,11 @@ module Actors =
         /// </summary>
         abstract Log : Lazy<Akka.Event.LoggingAdapter>
 
+        /// <summary>
+        /// Defers provided function to be invoked when actor stops, regardless of reasons.
+        /// </summary>
+        abstract Defer : (unit -> unit) -> unit
+
     [<AbstractClass>]
     type Actor() = 
         inherit UntypedActor()
@@ -180,6 +185,7 @@ module Actors =
     type FunActor<'Message, 'Returned>(actor : Actor<'Message> -> Cont<'Message, 'Returned>) as this = 
         inherit Actor()
     
+        let mutable deferables = []
         let mutable state = 
             let self' = this.Self
             let context = UntypedActor.Context :> IActorContext
@@ -194,7 +200,8 @@ module Actors =
                         member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
                         member __.Watch(aref:ActorRef) = context.Watch aref
                         member __.Unwatch(aref:ActorRef) = context.Unwatch aref
-                        member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) }
+                        member __.Log = lazy (Akka.Event.Logging.GetLogger(context))
+                        member __.Defer fn = deferables <- fn::deferables }
     
         new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile () ())
         member __.Sender() : ActorRef = base.Sender
@@ -203,9 +210,13 @@ module Actors =
             match state with
             | Func f -> state <- f (msg :?> 'Message)
             | Return _ -> x.PostStop()
+        override x.PostStop() =
+            base.PostStop ()
+            List.iter (fun fn -> fn()) deferables
+            
 
     /// Builds an actor message handler using an actor expression syntax.
-    let actor = ActorBuilder()
+    let actor = ActorBuilder()                
     
 [<AutoOpen>]
 module Logging = 
