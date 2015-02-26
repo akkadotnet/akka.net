@@ -3,7 +3,7 @@ using Akka.Routing;
 
 namespace Samples.Cluster.ConsistentHashRouting
 {
-    public class FrontendCommand : ConsistentHashable {
+    public class FrontendCommand : IConsistentHashable {
         public string Message { get; set; }
 
         public string JobId { get; set; }

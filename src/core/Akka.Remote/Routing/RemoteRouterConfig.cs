@@ -19,8 +19,8 @@ namespace Akka.Remote.Routing
     /// </summary>
     public sealed class RemoteRouterConfig : Pool
     {
-        internal readonly Pool Local;
-        internal readonly IList<Address> Nodes;
+        public readonly Pool Local;
+        public readonly IList<Address> Nodes;
 
         /// <summary>
         /// Used for distributing routees to <see cref="Nodes"/>. Needs to be an instance variable since <see cref="Resizer"/> may call <see cref="RoutedActorCell.AddRoutees"/> several times.
@@ -58,10 +58,21 @@ namespace Akka.Remote.Routing
             set { Local.Resizer = value; }
         }
 
+        public override int GetNrOfInstances(ActorSystem system)
+        {
+            return Local.GetNrOfInstances(system);
+        }
+
         public override int NrOfInstances
         {
-            get { return Local.NrOfInstances; }
-            set { Local.NrOfInstances = value; }
+            get
+            {
+                return Local.NrOfInstances;
+            }
+            set
+            {
+                Local.NrOfInstances = value;
+            }
         }
 
         public override string RouterDispatcher
@@ -76,6 +87,16 @@ namespace Akka.Remote.Routing
         internal override RouterActor CreateRouterActor()
         {
             return Local.CreateRouterActor();
+        }
+
+        public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
+        {
+            return new RemoteRouterConfig(Local.WithSupervisorStrategy(strategy), Nodes);
+        }
+
+        public override Pool WithResizer(Resizer resizer)
+        {
+            return new RemoteRouterConfig(Local.WithResizer(resizer), Nodes);
         }
 
         public override Router CreateRouter(ActorSystem system)

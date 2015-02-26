@@ -1,11 +1,6 @@
 ﻿using Akka.Configuration;
-using Akka.Dispatch;
 using Akka.Routing;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
@@ -15,8 +10,8 @@ namespace Akka.Actor
 
         public static readonly string NoDispatcherGiven = string.Empty;
         public static readonly string NoMailboxGiven = string.Empty;
-        public static readonly Scope NoScopeGiven = null;
-        public static readonly Deploy None = null;
+        public static readonly Scope NoScopeGiven = Actor.NoScopeGiven.Instance;
+        public static readonly Deploy None = new Deploy();
         /*
          path: String = "",
   config: Config = ConfigFactory.empty,
@@ -92,7 +87,7 @@ namespace Akka.Actor
             return new Deploy
             {
                 Path = Path,
-                Config = Config.WithFallback(other.Config),
+                Config = Config == other.Config ? Config : Config.WithFallback(other.Config),
                 RouterConfig = RouterConfig.WithFallback(other.RouterConfig),
                 Scope = Scope.WithFallback(other.Scope),
                 Dispatcher = Dispatcher == NoDispatcherGiven ? other.Dispatcher : Dispatcher,

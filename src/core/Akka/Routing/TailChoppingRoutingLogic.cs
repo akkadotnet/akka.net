@@ -204,10 +204,9 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="strategy">The strategy to use.</param>
         /// <returns>The tail chopping pool.</returns>
-        public TailChoppingPool WithSupervisorStrategy(SupervisorStrategy strategy)
+        public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
         {
-            SupervisorStrategy = strategy;
-            return this;
+            return new TailChoppingPool(NrOfInstances, Resizer, strategy, RouterDispatcher, _within, _interval, UsePoolDispatcher);
         }
 
         /// <summary>
@@ -215,10 +214,9 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="resizer">The resizer to use.</param>
         /// <returns>The tail chopping pool.</returns>
-        public TailChoppingPool WithResizer(Resizer resizer)
+        public override Pool WithResizer(Resizer resizer)
         {
-            Resizer = resizer;
-            return this;
+            return new TailChoppingPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, _within, _interval, UsePoolDispatcher);
         }
 
         /// <summary>
@@ -240,6 +238,11 @@ namespace Akka.Routing
         public override Router CreateRouter(ActorSystem system)
         {
             return new Router(new TailChoppingRoutingLogic(_within, _interval, system.Scheduler));
+        }
+
+        public override RouterConfig WithFallback(RouterConfig routerConfig)
+        {
+            return OverrideUnsetConfig(routerConfig);
         }
     }
 

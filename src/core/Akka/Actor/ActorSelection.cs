@@ -72,6 +72,11 @@ namespace Akka.Actor
         public SelectionPathElement[] Elements { get; set; }
 
         /// <summary>
+        /// <see cref="string"/> representation of all of the elements in the <see cref="ActorSelection"/> path.
+        /// </summary>
+        public string PathString { get { return string.Join("/", Elements.Select(x => x.ToString())); } }
+
+        /// <summary>
         ///     Posts a message to this ActorSelection.
         /// </summary>
         /// <param name="message">The message.</param>

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Threading;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Remote.TestKit;
 
 namespace Akka.Cluster.Tests.MultiNode
@@ -31,6 +32,7 @@ namespace Akka.Cluster.Tests.MultiNode
             _ordinary2 = Role("ordinary2");
 
             CommonConfig = MultiNodeLoggingConfig.LoggingConfig.WithFallback(DebugConfig(true))
+                .WithFallback(ConfigurationFactory.ParseString(@"akka.cluster.publish-stats-interval = 25s"))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }

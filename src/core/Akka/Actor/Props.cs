@@ -415,14 +415,23 @@ namespace Akka.Actor
             // TODO: this is a hack designed to preserve explicit router deployments https://github.com/akkadotnet/akka.net/issues/546
             // in reality, we should be able to do copy.Deploy = deploy.WithFallback(copy.Deploy); but that blows up at the moment
             // - Aaron Stannard
-            if (!(original.RouterConfig is NoRouter || original.RouterConfig is FromConfig) && deploy.RouterConfig is NoRouter)
-            {
-                copy.Deploy = deploy.WithRouterConfig(original.RouterConfig);
-            }
-            else
-            {
-                copy.Deploy = deploy;
-            }
+            copy.Deploy = deploy.WithFallback(copy.Deploy);
+            //if (!(original.RouterConfig is NoRouter || original.RouterConfig is FromConfig) && deploy.RouterConfig is NoRouter)
+            //{
+            //    copy.Deploy = deploy.WithFallback(copy.Deploy);
+            //    copy.Deploy = deploy.WithRouterConfig(original.RouterConfig);
+            //}
+            ////both configs describe valid, programmatically defined routers (usually clustered routers)
+            //else if (!(original.RouterConfig is NoRouter || original.RouterConfig is FromConfig) &&
+            //         !(deploy.RouterConfig is FromConfig))
+            //{
+            //    var deployedRouter = deploy.RouterConfig.WithFallback(original.RouterConfig);
+            //    copy.Deploy = copy.Deploy.WithRouterConfig(deployedRouter);
+            //}
+            //else
+            //{
+            //    copy.Deploy = deploy;
+            //}
             
             return copy;
         }

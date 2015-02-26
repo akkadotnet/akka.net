@@ -7,6 +7,7 @@ using Akka.Actor.Internals;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Pattern;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Routing;
@@ -157,20 +158,64 @@ namespace Akka.Remote
                 if (elements.Head().Equals("user")) configDeploy = Deployer.Lookup(elements.Drop(1));
                 else if (elements.Head().Equals("remote")) configDeploy = LookUpRemotes(elements);
             }
-            deploy = configDeploy ?? props.Deploy ?? Deploy.None;
-            if (deploy.Mailbox != null)
-                props = props.WithMailbox(deploy.Mailbox);
-            if (deploy.Dispatcher != null)
-                props = props.WithDispatcher(deploy.Dispatcher);
 
+            //merge all of the fallbacks together
+            var deployment = new List<Deploy>() { deploy, configDeploy }.Where(x => x != null).Aggregate(Deploy.None, (deploy1, deploy2) => deploy2.WithFallback(deploy1));
+            var propsDeploy = new List<Deploy>() {props.Deploy, deployment}.Where(x => x != null)
+                .Aggregate(Deploy.None, (deploy1, deploy2) => deploy2.WithFallback(deploy1));
 
-            if (props.RouterConfig.NoRouter())
+            //match for remote scope
+            if (propsDeploy.Scope is RemoteScope)
             {
-                return CreateNoRouter(system, props, supervisor, path, deploy, async);
+                var addr = propsDeploy.Scope.AsInstanceOf<RemoteScope>().Address;
+
+                //Even if this actor is in RemoteScope, it might still be a local address
+                if (HasAddress(addr))
+                {
+                    return LocalActorOf(system, props, supervisor, path, false, deployment, false, async);
+                }
+
+                //check for correct scope configuration
+                if (props.Deploy.Scope is LocalScope)
+                {
+                    throw new ConfigurationException(
+                        string.Format("configuration requested remote deployment for local-only Props at {0}", path));
+                }
+
+                try
+                {
+                    try
+                    {
+                        // for consistency we check configuration of dispatcher and mailbox locally
+                        var dispatcher = _system.Dispatchers.Lookup(props.Dispatcher);
+                        var mailboxType = _system.Mailboxes.GetMailboxType(props, ConfigurationFactory.Empty);
+                        //TODO: dispatcher need configurators
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new ConfigurationException(
+                            string.Format(
+                                "Configuration problem while creating {0} with dispatcher [{1}] and mailbox [{2}]", path,
+                                props.Dispatcher, props.Mailbox), ex);
+                    }
+                    var localAddress = Transport.LocalAddressForRemote(addr);
+                    var rpath = (new RootActorPath(addr)/"remote"/localAddress.Protocol/localAddress.HostPort()/
+                                 path.Elements.ToArray()).
+                        WithUid(path.Uid);
+                    var remoteRef = new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, deployment);
+                    remoteRef.Start();
+                    return remoteRef;
+                }
+                catch (Exception ex)
+                {
+                    throw new ActorInitializationException(string.Format("Remote deployment failed for [{0}]", path), ex);
+                }
+
             }
-
-            return CreateWithRouter(system, props, supervisor, path, deploy, async);
-
+            else
+            {
+                return LocalActorOf(system, props, supervisor, path, false, deployment, false, async);
+            }
 
         }
 
@@ -185,66 +230,6 @@ namespace Akka.Remote
             if (p.Head().Equals("remote")) return LookUpRemotes(p.Drop(3));
             if (p.Head().Equals("user")) return Deployer.Lookup(p.Drop(1));
             return Deploy.None;
-        }
-
-        private InternalActorRef CreateNoRouter(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, Deploy deploy, bool async)
-        {
-            //remove the router config from the deploy since props does not contain FromConfig / nor any other router info
-            deploy = deploy.WithRouterConfig(props.RouterConfig);
-            //apply other information, e.g. remote deploy
-            var deployProps = props.WithDeploy(deploy);
-
-            if (deployProps.Deploy != null && deployProps.Deploy.Scope is RemoteScope)
-            {
-                var addr = deployProps.Deploy.Scope.AsInstanceOf<RemoteScope>().Address;
-
-                //Even if this actor is in RemoteScope, it might still be a local address
-                if (HasAddress(addr))
-                {
-                    return LocalActorOf(system, deployProps, supervisor, path, false, null, false, async);     //TODO: replace deploy:null with deployment.headOption
-                }
-
-                //check for correct scope configuration
-                if (props.Deploy.Scope is LocalScope)
-                {
-                    throw new ConfigurationException(string.Format("configuration requested remote deployment for local-only Props at {0}", path));
-                }
-
-                return RemoteActorOf(system, deployProps, supervisor, path);
-            }
-            return LocalActorOf(system, deployProps, supervisor, path, false, null, false, async);        //TODO: replace deploy:null with deployment.headOption
-        }
-
-        private InternalActorRef CreateWithRouter(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, Deploy deploy, bool async)
-        {
-            //if no router info is in the deployment
-            if (deploy.RouterConfig.NoRouter())
-            {
-                //apply the props router to the deploy
-                deploy = deploy.WithRouterConfig(props.RouterConfig);
-            }
-
-            var deployProps = props.WithDeploy(deploy);
-
-            if (deployProps.Deploy != null && deployProps.Deploy.Scope is RemoteScope)
-            {
-                var addr = deployProps.Deploy.Scope.AsInstanceOf<RemoteScope>().Address;
-
-                //Even if this actor is in RemoteScope, it might still be a local address
-                if (HasAddress(addr))
-                {
-                    return LocalActorOf(system, deployProps, supervisor, path, false, null, false, async);     //TODO: replace deploy:null with deployment.headOption
-                }
-
-                //check for correct scope configuration
-                if (props.Deploy.Scope is LocalScope)
-                {
-                    throw new ConfigurationException(string.Format("configuration requested remote deployment for local-only Props at {0}", path));
-                }
-
-                return RemoteActorOf(system, deployProps, supervisor, path);
-            }
-            return LocalActorOf(system, deployProps, supervisor, path, false, null, false, async);        //TODO: replace deploy:null with deployment.headOption
         }
 
         private bool HasAddress(Address address)
