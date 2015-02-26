@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -37,8 +38,8 @@ namespace Akka.Configuration
         /// <returns>Config.</returns>
         public static Config Load()
         {
-            var section = new AkkaConfigurationSection();
-            Config config = section.AkkaConfig;
+            var section = (AkkaConfigurationSection)ConfigurationManager.GetSection("akka") ?? new AkkaConfigurationSection();
+            var config = section.AkkaConfig;
 
             return config;
         }
