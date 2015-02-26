@@ -96,10 +96,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /*
          * Regular expressions - go big or go home. [Aaronontheweb]
          */
-        private const string NodeLogMessageRegexString = @"\[(\w){4}(?<node>[0-9]{1,2})\]\[(?<level>(\w)*)\]\[(?<time>\d{1,2}[- /.]\d{1,2}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}\s(AM|PM))\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|\^|@)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^|@)*)";
+        private const string NodeLogMessageRegexString = @"\[(\w){4}(?<node>[0-9]{1,2})\]\[(?<level>(\w)*)\]\[(?<time>\d{1,4}[- /.]\d{1,4}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}(\s(AM|PM)){0,1})\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|\^|@)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^|@)*)";
         protected static readonly Regex NodeLogMessageRegex = new Regex(NodeLogMessageRegexString);
 
-        private const string RunnerLogMessageRegexString = @"\[(?<level>(\w)*)\]\[(?<time>\d{1,2}[- /.]\d{1,2}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}\s(AM|PM))\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|\^|@)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^|@)*)";
+        private const string RunnerLogMessageRegexString = @"\[(?<level>(\w)*)\]\[(?<time>\d{1,4}[- /.]\d{1,4}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}(\s(AM|PM)){0,1})\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|\^|@)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^|@)*)";
         protected static readonly Regex RunnerLogMessageRegex = new Regex(RunnerLogMessageRegexString);
 
         private const string NodeLogFragmentRegexString = @"\[(\w){4}(?<node>[0-9]{1,2})\](?<message>(.)*)";

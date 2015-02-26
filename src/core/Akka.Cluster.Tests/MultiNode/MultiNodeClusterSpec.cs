@@ -351,14 +351,14 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         foreach (var a in canNotBePartOfMemberRing)
-                            _assertions.AssertFalse(ClusterView.Members.Select(m => m.Address).Contains(a));
+                            ClusterView.Members.Select(m => m.Address).Contains(a).ShouldBeFalse();
                     });
-                AwaitAssert(() => _assertions.AssertEqual(numbersOfMembers, ClusterView.Members.Count));
-                AwaitAssert(() => _assertions.AssertTrue(ClusterView.Members.All(m => m.Status == MemberStatus.Up)));
+                AwaitAssert(() => ClusterView.Members.Count.ShouldBe(numbersOfMembers));
+                AwaitAssert(() => ClusterView.Members.All(m => m.Status == MemberStatus.Up).ShouldBeTrue("All members should be up"));
                 // clusterView.leader is updated by LeaderChanged, await that to be updated also
                 var firstMember = ClusterView.Members.FirstOrDefault();
                 var expectedLeader = firstMember == null ? null : firstMember.Address;
-                AwaitAssert(() => _assertions.AssertEqual(expectedLeader, ClusterView.Leader));
+                AwaitAssert(() => ClusterView.Leader.ShouldBe(expectedLeader));
             });
         }
 
