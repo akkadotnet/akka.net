@@ -108,6 +108,13 @@ Target "BuildMono" <| fun _ ->
     |> ignore
 
 //--------------------------------------------------------------------------------
+// Build the docs
+Target "Docs" <| fun _ ->
+    !! "documentation/akkadoc.shfbproj"
+    |> MSBuildRelease "" "Rebuild"
+    |> ignore
+
+//--------------------------------------------------------------------------------
 // Copy the build output to bin directory
 //--------------------------------------------------------------------------------
 
@@ -419,6 +426,9 @@ Target "HelpNuget" <| fun _ ->
 // nuget dependencies
 "CleanNuget" ==> "CreateNuget"
 "CleanNuget" ==> "BuildRelease" ==> "Nuget"
+
+//docs dependencies
+"BuildRelease" ==> "Docs"
 
 Target "All" DoNothing
 "BuildRelease" ==> "All"

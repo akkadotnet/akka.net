@@ -36,6 +36,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Akka.Remote.TestKit.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Helios, Version=1.3.5.0, Culture=neutral, processorArchitecture=MSIL">
