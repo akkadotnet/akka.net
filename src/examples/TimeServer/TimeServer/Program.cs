@@ -10,62 +10,13 @@ namespace TimeServer
     {
         static void Main(string[] args)
         {
-            using (var system = ActorSystem.Create("TimeServer", Config))
+            using (var system = ActorSystem.Create("TimeServer"))
             {
                 Console.Title = "Server";
                 var server = system.ActorOf<TimeServerActor>("time");
                 Console.ReadLine();
                 Console.WriteLine("Shutting down...");
                 Console.WriteLine("Terminated");
-            }
-        }
-
-        public static Config Config
-        {
-            get
-            {
-                return ConfigurationFactory.ParseString(@"
-akka {  
-    log-config-on-start = on
-    stdout-loglevel = DEBUG
-    loglevel = ERROR
-    actor {
-        provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-        
-        debug {  
-          receive = on 
-          autoreceive = on
-          lifecycle = on
-          event-stream = on
-          unhandled = on
-        }
-    }
-
-    deployment{
-        /user/time{
-            router = round-robin-pool
-            nr-of-instances = 10
-        }
-    }
-
-    remote {
-		log-received-messages = off
-		log-sent-messages = off
-
-        #this is the new upcoming remoting support, which enables multiple transports
-       helios.tcp {
-            transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
-		    applied-adapters = []
-		    transport-protocol = tcp
-		    port = 9391
-		    hostname = 0.0.0.0 #listens on ALL ips for this machine
-            public-hostname = localhost #but only accepts connections on localhost (usually 127.0.0.1)
-        }
-        log-remote-lifecycle-events = INFO
-    }
-
-}
-");
             }
         }
 
