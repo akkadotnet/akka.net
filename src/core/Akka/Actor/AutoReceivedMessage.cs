@@ -7,7 +7,7 @@ namespace Akka.Actor
     {
     }
 
-    public sealed class 
+    public sealed class
         Terminated : AutoReceivedMessage, PossiblyHarmful
     {
         public Terminated(ActorRef actorRef, bool existenceConfirmed, bool addressTerminated)
@@ -26,7 +26,7 @@ namespace Akka.Actor
 
         public override string ToString()
         {
-            return string.Format("Terminated - ActorRef: {0} - ExistenceConfirmed: {1}", ActorRef,ExistenceConfirmed);
+            return "<Terminated>: " + ActorRef + " - ExistenceConfirmed=" + ExistenceConfirmed;
         }
     }
 
@@ -39,6 +39,11 @@ namespace Akka.Actor
         }
 
         public object MessageId { get; private set; }
+
+        public override string ToString()
+        {
+            return "<Identify>: " + MessageId.ToString();
+        }
     }
 
     //response to the Identity message, get identity by Sender
@@ -52,6 +57,11 @@ namespace Akka.Actor
 
         public object MessageId { get; private set; }
         public ActorRef Subject { get; private set; }
+
+        public override string ToString()
+        {
+            return "<ActorIdentity>: " + Subject + " - MessageId=" + MessageId;
+        }
     }
 
     /// <summary>
@@ -62,7 +72,7 @@ namespace Akka.Actor
     /// it processes the message, which gets handled using the normal supervisor mechanism, and
     /// <see cref="IActorContext.Stop"/> which causes the actor to stop without processing any more messages. </para>
     /// </summary>
-    public sealed class PoisonPill : AutoReceivedMessage 
+    public sealed class PoisonPill : AutoReceivedMessage
     {
         private PoisonPill() { }
         private static readonly PoisonPill _instance = new PoisonPill();
@@ -72,6 +82,11 @@ namespace Akka.Actor
             {
                 return _instance;
             }
+        }
+
+        public override string ToString()
+        {
+            return "<PoisonPill>";
         }
     }
 
@@ -95,6 +110,11 @@ namespace Akka.Actor
                 return _instance;
             }
         }
+
+        public override string ToString()
+        {
+            return "<Kill>";
+        }
     }
 
 
@@ -117,5 +137,10 @@ namespace Akka.Actor
         }
 
         public Address Address { get; private set; }
+
+        public override string ToString()
+        {
+            return "<AddressTerminated>: " + Address;
+        }
     }
 }
