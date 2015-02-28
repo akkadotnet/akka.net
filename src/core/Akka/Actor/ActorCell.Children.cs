@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Util;
@@ -10,6 +11,7 @@ namespace Akka.Actor
     public partial class ActorCell
     {
         private ChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
+        private long _nextRandomNameDoNotCallMeDirectly;
 
         [Obsolete("Use ChildrenContainer instead", true)]
         private ChildrenContainer ChildrenRefs
@@ -58,16 +60,11 @@ namespace Akka.Actor
             if (name == null)
                 name = GetRandomActorName();
             else
-            {
                 CheckName(name);
-            }
 
             return MakeChild(props, name, isAsync, isSystemService);
         }
-
-
-        private long _nextRandomNameDoNotCallMeDirectly;
-
+        
         private string GetRandomActorName()
         {
             var id = Interlocked.Increment(ref _nextRandomNameDoNotCallMeDirectly);
@@ -110,7 +107,7 @@ namespace Akka.Actor
         /// <returns>The third value of the tuple that <paramref name="updater"/> returned.</returns>
         private TReturn UpdateChildrenRefs<TReturn>(Func<ChildrenContainer, Tuple<bool, ChildrenContainer, TReturn>> updater)
         {
-            return InterlockedSpin.ConditionallySwap<ChildrenContainer, TReturn>(ref _childrenContainerDoNotCallMeDirectly, updater);
+            return InterlockedSpin.ConditionallySwap(ref _childrenContainerDoNotCallMeDirectly, updater);
         }
 
         /// <summary>
@@ -140,7 +137,7 @@ namespace Akka.Actor
         /// <summary>This should only be used privately or when creating the root actor. </summary>
         public ChildRestartStats InitChild(InternalActorRef actor)
         {
-            return UpdateChildrenRefs<ChildRestartStats>(cc =>
+            return UpdateChildrenRefs(cc =>
             {
                 ChildStats stats;
                 var name = actor.Path.Name;
@@ -167,14 +164,13 @@ namespace Akka.Actor
 
         protected bool SetChildrenTerminationReason(SuspendReason reason)
         {
-            return UpdateChildrenRefs<bool>(cc =>
+            return UpdateChildrenRefs(cc =>
             {
                 var c = cc as TerminatingChildrenContainer;
                 if (c != null)
-                {
                     //The arguments says: Update; with a new reason; and return true
                     return new Tuple<bool, ChildrenContainer, bool>(true, c.CreateCopyWithReason(reason), true);
-                }
+                
                 //The arguments says:Do NOT update; any container will do since it wont be updated; return false 
                 return new Tuple<bool, ChildrenContainer, bool>(false, cc, false);
             });
@@ -202,23 +198,12 @@ namespace Akka.Actor
         /// </summary>
         private void SuspendChildren(List<ActorRef> exceptFor = null)
         {
-            if (exceptFor == null)
-            {
-                foreach (var stats in ChildrenContainer.Stats)
-                {
-                    var child = stats.Child;
-                    child.Suspend();
-                }
-            }
-            else
-            {
-                foreach (var stats in ChildrenContainer.Stats)
-                {
-                    var child = stats.Child;
-                    if (!exceptFor.Contains(child))
-                        child.Suspend();
-                }
-            }
+            var except = exceptFor ?? Enumerable.Empty<ActorRef>();
+            (from s in ChildrenContainer.Stats
+             where !except.Contains(s.Child)
+             select s.Child)
+            .ToList()
+            .ForEach(c => c.Suspend());
         }
 
         /// <summary>
@@ -254,9 +239,7 @@ namespace Akka.Actor
             {
                 child = stats as ChildRestartStats;
                 if (child != null)
-                {
                     return true;
-                }
             }
             child = null;
             return false;
