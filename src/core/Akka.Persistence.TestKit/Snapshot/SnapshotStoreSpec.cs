@@ -16,6 +16,15 @@ namespace Akka.Persistence.TestKit.Snapshot
         protected static readonly Config Config =
             ConfigurationFactory.ParseString("akka.persistence.publish-plugin-commands = on");
 
+        private static readonly string _specConfigTemplate = @"
+            akka.persistence.snapshot-store {
+                plugin = ""akka.persistence.snapshot-store.my""
+                my {
+                    class = ""TestPersistencePlugin.MySnapshotStore, TestPersistencePlugin""
+                    plugin-dispatcher = ""akka.persistence.dispatchers.default-plugin-dispatcher""
+                }
+            }";
+
         private readonly TestProbe _senderProbe;
         protected List<SnapshotMetadata> Metadata;
         
@@ -25,7 +34,17 @@ namespace Akka.Persistence.TestKit.Snapshot
             _senderProbe = CreateTestProbe();
         }
 
+        protected SnapshotStoreSpec(Type snapshotStoreType, string actorSystemName = null)
+            : base(ConfigFromTemplate(snapshotStoreType), actorSystemName)
+        {
+        }
+
         protected ActorRef SnapshotStore { get { return Extension.SnapshotStoreFor(null); } }
+
+        private static Config ConfigFromTemplate(Type snapshotStoreType)
+        {
+            return ConfigurationFactory.ParseString(string.Format(_specConfigTemplate, snapshotStoreType.FullName));
+        }
 
         protected IEnumerable<SnapshotMetadata> WriteSnapshots()
         {

@@ -130,7 +130,7 @@ namespace Akka.Persistence.Tests
 
             private bool ShouldFail(object msg)
             {
-                return _failAt == msg.ToString();
+                return _failAt != null && _failAt.Equals(msg.ToString());
             }
         }
 

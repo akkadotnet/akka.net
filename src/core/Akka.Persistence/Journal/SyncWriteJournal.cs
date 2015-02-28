@@ -29,14 +29,14 @@ namespace Akka.Persistence.Journal
         /// Synchronously writes a batch of a persistent messages to the journal. The batch must be atomic,
         /// i.e. all persistent messages in batch are written at once or none of them.
         /// </summary>
-        protected abstract void WriteMessages(IEnumerable<IPersistentRepresentation> messages);
+        public abstract void WriteMessages(IEnumerable<IPersistentRepresentation> messages);
 
         /// <summary>
         /// Synchronously deletes all persistent messages up to inclusive <paramref name="toSequenceNr"/>
         /// bound. If <paramref name="isPermanent"/> flag is clear, the persistent messages are marked as
         /// deleted, otherwise they're permanently deleted.
         /// </summary>
-        protected abstract void DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent);
+        public abstract void DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent);
 
         protected override bool Receive(object message)
         {

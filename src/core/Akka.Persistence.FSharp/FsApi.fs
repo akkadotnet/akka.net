@@ -46,22 +46,28 @@ type Eventsourced<'Command, 'Event, 'State> =
     abstract Log : Lazy<Akka.Event.LoggingAdapter>
 
     /// <summary>
+    /// Defers a function execution to the moment, when actor is suposed to end it's lifecycle.
+    /// Provided function is guaranteed to be invoked no matter of actor stop reason.
+    /// </summary>
+    abstract Defer : (unit -> unit) -> unit
+
+    /// <summary>
     /// Persists sequence of events in the event journal. Use second argument to define 
     /// function which will update state depending on events.
     /// </summary>
-    abstract Persist: ('Event -> 'State) -> 'Event seq -> unit
+    abstract PersistEvent: ('Event -> 'State) -> 'Event seq -> unit
     
     /// <summary>
     /// Asynchronously persists sequence of events in the event journal. Use second argument 
     /// to define function which will update state depending on events.
     /// </summary>
-    abstract AsyncPersist: ('Event -> 'State) -> 'Event seq -> unit
+    abstract AsyncPersistEvent: ('Event -> 'State) -> 'Event seq -> unit
 
     /// <summary>
     /// Defers a second argument (update state callback) to be called after persisting target
     /// event will be confirmed.
     /// </summary>
-    abstract Defer: ('Event -> 'State) -> 'Event seq -> unit
+    abstract DeferEvent: ('Event -> 'State) -> 'Event seq -> unit
 
     /// <summary>
     /// Returns currently attached journal actor reference.
@@ -97,6 +103,7 @@ type Aggregate<'Command, 'Event, 'State> = {
 type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command, 'Event, 'State>, name: PersistenceId) as this =
     inherit UntypedPersistentActor()
 
+    let mutable deferables = []
     let mutable state: 'State = aggregate.state
     let mailbox = 
         let self' = this.Self
@@ -115,9 +122,10 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.Watch(aref:ActorRef) = context.Watch aref
             member __.Unwatch(aref:ActorRef) = context.Unwatch aref
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
-            member __.Defer callback events = this.Defer(events, Action<_>(updateState callback))
-            member __.Persist callback events = this.Persist(events, Action<_>(updateState callback))
-            member __.AsyncPersist callback events = this.PersistAsync(events, Action<_>(updateState callback)) 
+            member __.Defer fn = deferables <- fn::deferables
+            member __.DeferEvent callback events = this.Defer(events, Action<_>(updateState callback))
+            member __.PersistEvent callback events = this.Persist(events, Action<_>(updateState callback))
+            member __.AsyncPersistEvent callback events = this.PersistAsync(events, Action<_>(updateState callback)) 
             member __.Journal() = this.Journal
             member __.SnapshotStore() = this.SnapshotStore
             member __.PersistenceId() = this.PersistenceId
@@ -138,6 +146,9 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
         match msg with
         | :? 'Event as e -> state <- aggregate.apply mailbox state e
         | _ -> ()   // ignore?        
+    override x.PostStop () =
+        base.PostStop ()
+        List.iter (fun fn -> fn()) deferables
     default x.PersistenceId = name
 
 
@@ -171,6 +182,12 @@ type View<'Event, 'State> =
     /// Lazy logging adapter. It won't be initialized until logging function will be called. 
     /// </summary>
     abstract Log : Lazy<Akka.Event.LoggingAdapter>
+
+    /// <summary>
+    /// Defers a function execution to the moment, when actor is suposed to end it's lifecycle.
+    /// Provided function is guaranteed to be invoked no matter of actor stop reason.
+    /// </summary>
+    abstract Defer : (unit -> unit) -> unit
     
     /// <summary>
     /// Returns currently attached journal actor reference.
@@ -205,6 +222,7 @@ type Perspective<'Event, 'State> = {
 type FunPersistentView<'Event, 'State>(perspective: Perspective<'Event, 'State>, name: PersistenceId, viewId: PersistenceId) as this =
     inherit PersistentView()
 
+    let mutable deferables = []
     let mutable state: 'State = perspective.state
     let mailbox = 
         let self' = this.Self
@@ -223,6 +241,7 @@ type FunPersistentView<'Event, 'State>(perspective: Perspective<'Event, 'State>,
             member __.Watch(aref:ActorRef) = context.Watch aref
             member __.Unwatch(aref:ActorRef) = context.Unwatch aref
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
+            member __.Defer fn = deferables <- fn::deferables
             member __.Journal() = this.Journal
             member __.SnapshotStore() = this.SnapshotStore
             member __.PersistenceId() = this.PersistenceId
@@ -241,6 +260,9 @@ type FunPersistentView<'Event, 'State>(perspective: Perspective<'Event, 'State>,
             state <- perspective.apply mailbox state e
             true
         | _ -> false   // ignore?        
+    override x.PostStop () =
+        base.PostStop ()
+        List.iter (fun fn -> fn()) deferables
     default x.PersistenceId = name
     default x.ViewId = viewId
 
@@ -263,6 +285,7 @@ type DeliveryAggregate<'Command, 'Event, 'State> = {
 type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 'Event, 'State>, name: PersistenceId) as this =
     inherit GuaranteedDeliveryActor()
     
+    let mutable deferables = []
     let mutable state: 'State = aggregate.state
     let mailbox = 
         let self' = this.Self
@@ -281,9 +304,10 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
             member __.Watch(aref:ActorRef) = context.Watch aref
             member __.Unwatch(aref:ActorRef) = context.Unwatch aref
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
-            member __.Defer callback events = this.Defer(events, Action<_>(updateState callback))
-            member __.Persist callback events = this.Persist(events, Action<_>(updateState callback))
-            member __.AsyncPersist callback events = this.PersistAsync(events, Action<_>(updateState callback)) 
+            member __.Defer fn = deferables <- fn::deferables
+            member __.DeferEvent callback events = this.Defer(events, Action<_>(updateState callback))
+            member __.PersistEvent callback events = this.Persist(events, Action<_>(updateState callback))
+            member __.AsyncPersistEvent callback events = this.PersistAsync(events, Action<_>(updateState callback)) 
             member __.Journal() = this.Journal
             member __.SnapshotStore() = this.SnapshotStore
             member __.PersistenceId() = this.PersistenceId
@@ -311,6 +335,9 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
         | :? 'Event as e -> state <- aggregate.apply mailbox state e
         | _ -> ()   // ignore?        
         true
+    override x.PostStop () =
+        base.PostStop ()
+        List.iter (fun fn -> fn()) deferables
     default x.PersistenceId = name
 
     

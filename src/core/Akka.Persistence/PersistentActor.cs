@@ -46,9 +46,19 @@ namespace Akka.Persistence
         public RecoveryFailure(Exception cause)
         {
             Cause = cause;
+            SequenceNr = -1;
+        }
+
+        public RecoveryFailure(Exception cause, long sequenceNr, object payload)
+        {
+            Cause = cause;
+            SequenceNr = sequenceNr;
+            Payload = payload;
         }
 
         public Exception Cause { get; private set; }
+        public long SequenceNr { get; set; }
+        public object Payload { get; set; }
     }
 
     [Serializable]

@@ -254,17 +254,18 @@ namespace Akka.Persistence
             _unconfirmed = new ConcurrentDictionary<long, Delivery>(unconfirmedDeliveries);
         }
 
-        protected override void PreRestart(Exception reason, object message)
+        public override void AroundPostRestart(Exception cause, object message)
         {
             _redeliverScheduleCancelable.Cancel();
-            base.PreRestart(reason, message);
+            base.AroundPostRestart(cause, message);
         }
 
-        protected override void PostStop()
+        public override void AroundPostStop()
         {
             _redeliverScheduleCancelable.Cancel();
-            base.PostStop();
+            base.AroundPostStop();
         }
+
 
         protected override void OnReplaySuccess()
         {
