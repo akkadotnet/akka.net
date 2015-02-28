@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor.Internals;
 using Akka.Dispatch;
@@ -44,7 +43,6 @@ namespace Akka.Actor
         /// <summary>Gets the settings.</summary>
         Settings Settings { get; }
 
-
         /// <summary>
         /// Initialization of an ActorRefProvider happens in two steps: first
         /// construction of the object with settings, eventStream, etc.
@@ -70,7 +68,6 @@ namespace Akka.Actor
         /// <summary>Unregister a temporary actor (i.e. obtained from <see cref="TempPath"/>); do NOT pass in any other path.</summary>
         /// <param name="path">A path returned by <see cref="TempPath"/>. Do NOT pass in any other path!</param>
         void UnregisterTempActor(ActorPath path);
-
 
         /// <summary>
         /// Actor factory with create-only semantics: will create an actor as

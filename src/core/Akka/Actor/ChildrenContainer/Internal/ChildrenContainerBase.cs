@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using Akka.Util.Internal.Collections;
@@ -23,40 +22,36 @@ namespace Akka.Actor.Internal
         public abstract ChildrenContainer ShallDie(ActorRef actor);
         public abstract ChildrenContainer Unreserve(string name);
 
-        public  IReadOnlyList<InternalActorRef> Children
+        public IReadOnlyList<InternalActorRef> Children
         {
             get
             {
-                var children = (from stat in InternalChildren.AllValuesMinToMax
-                                let childRestartStats = stat as ChildRestartStats
-                                where childRestartStats != null
-                                select childRestartStats.Child).ToList();
-                return children;
+                return (from stat in InternalChildren.AllValuesMinToMax
+                        let childRestartStats = stat as ChildRestartStats
+                        where childRestartStats != null
+                        select childRestartStats.Child).ToList();
             }
         }
 
-        public  IReadOnlyList<ChildRestartStats> Stats
+        public IReadOnlyList<ChildRestartStats> Stats
         {
             get
             {
-                var children = (from stat in InternalChildren.AllValuesMinToMax
-                                let childRestartStat = stat as ChildRestartStats
-                                where childRestartStat != null
-                                select childRestartStat).ToList();
-                return children;
+                return (from stat in InternalChildren.AllValuesMinToMax
+                        let childRestartStats = stat as ChildRestartStats
+                        where childRestartStats != null
+                        select childRestartStats).ToList();
             }
         }
 
         protected IImmutableMap<string, ChildStats> InternalChildren { get { return _children; } }
 
-       
-        public  bool TryGetByName(string name, out ChildStats stats)
+        public bool TryGetByName(string name, out ChildStats stats)
         {
             if (InternalChildren.TryGet(name, out stats)) return true;
             stats = null;
             return false;
         }
-
 
         public bool TryGetByRef(ActorRef actor, out ChildRestartStats childRestartStats)
         {
