@@ -33,6 +33,24 @@ namespace Akka.Routing
     /// </summary>
     public class RandomGroup : Group
     {
+        public class RandomGroupSurrogate : ISurrogate
+        {
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new RandomGroup(Paths);
+            }
+
+            public string[] Paths { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new RandomGroupSurrogate
+            {                
+                Paths = Paths,
+            };
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RandomGroup"/> class.
         /// </summary>
@@ -70,8 +88,34 @@ namespace Akka.Routing
         }
     }
 
-    public class RandomPool : Pool
+    public class RandomPool : Pool 
     {
+        public class RandomPoolSurrogate : ISurrogate
+        {
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+            }
+
+            public int NrOfInstances { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Resizer Resizer { get; set; }
+            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public string RouterDispatcher { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new RandomPoolSurrogate
+            {
+                NrOfInstances = NrOfInstances,
+                UsePoolDispatcher = UsePoolDispatcher,
+                Resizer = Resizer,
+                SupervisorStrategy = SupervisorStrategy,
+                RouterDispatcher = RouterDispatcher,
+            };
+        }
+
         /// <summary>
 
         /// </summary>
@@ -119,5 +163,7 @@ namespace Akka.Routing
         {
             return new Router(new RoundRobinRoutingLogic());
         }
+
+
     }
 }

@@ -23,8 +23,29 @@ namespace Akka.Actor
     ///   private Props otherProps = props.WithDeploy(deployment info);
     ///  </code>
     /// </summary>
-    public class Props : IEquatable<Props>
+    public class Props : IEquatable<Props> , ISurrogated
     {
+        public class PropsSurrogate : ISurrogate
+        {
+            public Type Type { get; set; }
+            public Deploy Deploy { get; set; }
+            public object[] Arguments { get; set; }
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new Props(Deploy, Type, Arguments);
+            }
+        }
+
+        public ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new PropsSurrogate()
+            {
+                Arguments = Arguments,
+                Type = Type,
+                Deploy = Deploy,
+            };
+        }
+
         public bool Equals(Props other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -88,6 +109,8 @@ namespace Akka.Actor
                 return hashCode;
             }
         }
+
+
 
         /// <summary>
         ///     The default deploy

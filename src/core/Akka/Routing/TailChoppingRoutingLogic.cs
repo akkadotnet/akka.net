@@ -145,6 +145,36 @@ namespace Akka.Routing
     /// </summary>
     public sealed class TailChoppingPool : Pool
     {
+        public class TailChoppingPoolSurrogate : ISurrogate
+        {
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new TailChoppingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, Within, Interval, UsePoolDispatcher);
+            }
+
+            public TimeSpan Interval { get; set; }
+            public TimeSpan Within { get; set; }
+            public int NrOfInstances { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Resizer Resizer { get; set; }
+            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public string RouterDispatcher { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new TailChoppingPoolSurrogate
+            {
+                Interval = _interval,
+                Within = _within,
+                NrOfInstances = NrOfInstances,
+                UsePoolDispatcher = UsePoolDispatcher,
+                Resizer = Resizer,
+                SupervisorStrategy = SupervisorStrategy,
+                RouterDispatcher = RouterDispatcher,
+            };
+        }
+
         /// <summary>
         /// The amount of time to wait for a response.
         /// </summary>
@@ -249,6 +279,28 @@ namespace Akka.Routing
     /// </summary>
     public sealed class TailChoppingGroup : Group
     {
+        public class TailChoppingGroupSurrogate : ISurrogate
+        {
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new TailChoppingGroup(Paths, Within,Interval);
+            }
+
+            public TimeSpan Within { get; set; }
+            public string[] Paths { get; set; }
+            public TimeSpan Interval { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new TailChoppingGroupSurrogate
+            {
+                Paths = Paths,
+                Within = _within,
+                Interval = _interval,
+            };
+        }
+
         /// <summary>
         /// The amount of time to wait for a response.
         /// </summary>

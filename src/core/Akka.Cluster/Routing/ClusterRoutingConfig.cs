@@ -5,6 +5,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Routing;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Cluster.Routing
@@ -115,6 +116,11 @@ namespace Akka.Cluster.Routing
             return message is ClusterEvent.IClusterDomainEvent || message is ClusterEvent.CurrentClusterState || base.IsManagementMessage(message);
         }
 
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            throw new NotImplementedException();
+        }
+
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
             var localFallback = (ClusterRouterGroup) routerConfig;
@@ -168,6 +174,11 @@ namespace Akka.Cluster.Routing
         public override bool IsManagementMessage(object message)
         {
             return message is IClusterMessage || message is ClusterEvent.CurrentClusterState || base.IsManagementMessage(message);
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            throw new NotImplementedException();
         }
 
         public override Routee NewRoutee(Props routeeProps, IActorContext context)

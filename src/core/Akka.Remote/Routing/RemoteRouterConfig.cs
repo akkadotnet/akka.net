@@ -19,6 +19,11 @@ namespace Akka.Remote.Routing
     /// </summary>
     public sealed class RemoteRouterConfig : Pool
     {
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+           throw  new NotImplementedException();
+        }
+
         internal readonly Pool Local;
         internal readonly IList<Address> Nodes;
 

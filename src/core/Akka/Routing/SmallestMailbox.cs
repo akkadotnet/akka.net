@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util;
 
 namespace Akka.Routing
 {
@@ -73,6 +74,32 @@ namespace Akka.Routing
 
     public class SmallestMailboxPool : Pool
     {
+        public class SmallestMailboxPoolSurrogate : ISurrogate
+        {
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new SmallestMailboxPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+            }
+
+            public int NrOfInstances { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Resizer Resizer { get; set; }
+            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public string RouterDispatcher { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new SmallestMailboxPoolSurrogate
+            {
+                NrOfInstances = NrOfInstances,
+                UsePoolDispatcher = UsePoolDispatcher,
+                Resizer = Resizer,
+                SupervisorStrategy = SupervisorStrategy,
+                RouterDispatcher = RouterDispatcher,
+            };
+        }
+
         /// <summary>
         /// </summary>
         /// <param name="nrOfInstances">The nr of instances.</param>

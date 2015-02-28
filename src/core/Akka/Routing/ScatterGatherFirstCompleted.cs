@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util;
 
 namespace Akka.Routing
 {
@@ -50,6 +51,26 @@ namespace Akka.Routing
 
     public class ScatterGatherFirstCompletedGroup : Group
     {
+        public class ScatterGatherFirstCompletedGroupSurrogate : ISurrogate
+        {
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new ScatterGatherFirstCompletedGroup(Paths,Within);
+            }
+
+            public TimeSpan Within { get; set; }
+            public string[] Paths { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new ScatterGatherFirstCompletedGroupSurrogate
+            {
+                Paths = Paths,
+                Within = Within,
+            };
+        }
+
         protected ScatterGatherFirstCompletedGroup()
         {
             
@@ -109,6 +130,34 @@ namespace Akka.Routing
     /// </summary>
     public class ScatterGatherFirstCompletedPool : Pool
     {
+        public class ScatterGatherFirstCompletedPoolSurrogate : ISurrogate
+        {
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new ScatterGatherFirstCompletedPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher,Within, UsePoolDispatcher);
+            }
+
+            public TimeSpan Within { get; set; }
+            public int NrOfInstances { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Resizer Resizer { get; set; }
+            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public string RouterDispatcher { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new ScatterGatherFirstCompletedPoolSurrogate
+            {
+                Within = _within,
+                NrOfInstances = NrOfInstances,
+                UsePoolDispatcher = UsePoolDispatcher,
+                Resizer = Resizer,
+                SupervisorStrategy = SupervisorStrategy,
+                RouterDispatcher = RouterDispatcher,
+            };
+        }
+
         private  TimeSpan _within;
         /// <summary>
         /// </summary>

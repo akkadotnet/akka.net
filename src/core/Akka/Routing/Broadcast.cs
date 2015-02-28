@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util;
 
 namespace Akka.Routing
 {
@@ -23,6 +24,32 @@ namespace Akka.Routing
     /// </summary>
     public class BroadcastPool : Pool
     {
+        public class BroadcastPoolSurrogate : ISurrogate
+        {
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new BroadcastPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+            }
+
+            public int NrOfInstances { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Resizer Resizer { get; set; }
+            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public string RouterDispatcher { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new BroadcastPoolSurrogate
+            {
+                NrOfInstances = NrOfInstances,
+                UsePoolDispatcher = UsePoolDispatcher,
+                Resizer = Resizer,
+                SupervisorStrategy = SupervisorStrategy,
+                RouterDispatcher = RouterDispatcher,
+            };
+        }
+
         protected BroadcastPool()
         {           
         }
@@ -67,7 +94,25 @@ namespace Akka.Routing
     }
 
     public class BroadcastGroup : Group
-    {        
+    {
+        public class BroadcastGroupSurrogate : ISurrogate
+        {
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new BroadcastGroup(Paths);
+            }
+
+            public string[] Paths { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new BroadcastGroupSurrogate
+            {
+                Paths = Paths,
+            };
+        }
+
         protected BroadcastGroup()
         {
             

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Dispatch;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Routing
@@ -11,7 +13,7 @@ namespace Akka.Routing
     /// <summary>
     /// Configuration for router actors
     /// </summary>
-    public abstract class RouterConfig : IEquatable<RouterConfig>
+    public abstract class RouterConfig : IEquatable<RouterConfig> , ISurrogated
     {
         //  public abstract RoutingLogic GetLogic();
 
@@ -41,6 +43,8 @@ namespace Akka.Routing
             if (other == null) return false;
             return GetType() == other.GetType() && String.Equals(RouterDispatcher, other.RouterDispatcher);
         }
+
+        public abstract ISurrogate ToSurrogate(ActorSystem system);
     }
 
     public static class RouterConfigExtensions
@@ -69,6 +73,20 @@ namespace Akka.Routing
         public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
         {
             throw new NotImplementedException();
+        }
+
+        public class NoRouterSurrogate : ISurrogate
+        {
+
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new NoRouter();
+            }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new NoRouterSurrogate();
         }
     }
 
@@ -320,6 +338,20 @@ namespace Akka.Routing
         public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
         {
             throw new NotSupportedException();
+        }
+
+        public class FromConfigSurrogate : ISurrogate
+        {
+
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new FromConfig();
+            }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new FromConfigSurrogate();
         }
     }
 }

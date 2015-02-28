@@ -1,15 +1,11 @@
 ﻿using Akka.Configuration;
-using Akka.Dispatch;
 using Akka.Routing;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.Util;
 
 namespace Akka.Actor
 {
-    public class Deploy : IEquatable<Deploy>
+    public class Deploy : IEquatable<Deploy> , ISurrogated
     {
         public static readonly Deploy Local = new Deploy(Scope.Local);
 
@@ -25,6 +21,35 @@ namespace Akka.Actor
   dispatcher: String = Deploy.NoDispatcherGiven,
   mailbox: String = Deploy.NoMailboxGiven)
          */
+
+        public class DeploySurrogate : ISurrogate
+        {
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new Deploy(Path, Config, RouterConfig, Scope, Dispatcher);
+            }
+
+            public Scope Scope { get; set; }
+
+            public RouterConfig RouterConfig { get; set; }
+            public string Path { get; set; }
+            public Config Config { get; set; }
+            public string Mailbox { get; set; }
+            public string Dispatcher { get; set; }
+        }
+
+        public ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new DeploySurrogate
+            {
+                RouterConfig = RouterConfig,
+                Scope = Scope,
+                Path = Path,
+                Config = Config,
+                Mailbox = Mailbox,
+                Dispatcher = Dispatcher,
+            };
+        }
 
         public Deploy()
         {

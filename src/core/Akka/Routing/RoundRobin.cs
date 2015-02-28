@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util;
 
 namespace Akka.Routing
 {
@@ -43,6 +44,24 @@ namespace Akka.Routing
     /// </summary>
     public class RoundRobinGroup : Group
     {
+        public class RoundRobinGroupSurrogate : ISurrogate
+        {
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new RandomGroup(Paths);
+            }
+
+            public string[] Paths { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new RoundRobinGroupSurrogate
+            {
+                Paths = Paths,
+            };
+        }
+
         protected RoundRobinGroup()
         {
             
@@ -96,6 +115,32 @@ namespace Akka.Routing
     /// </summary>
     public class RoundRobinPool : Pool
     {
+        public class RoundRobinPoolSurrogate : ISurrogate
+        {
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+            }
+
+            public int NrOfInstances { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Resizer Resizer { get; set; }
+            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public string RouterDispatcher { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new RoundRobinPoolSurrogate
+            {
+                NrOfInstances = NrOfInstances,
+                UsePoolDispatcher = UsePoolDispatcher,
+                Resizer = Resizer,
+                SupervisorStrategy = SupervisorStrategy,
+                RouterDispatcher = RouterDispatcher,
+            };
+        }
+
         /// <summary>
 
         /// </summary>

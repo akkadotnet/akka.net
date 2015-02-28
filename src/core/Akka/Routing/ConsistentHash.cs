@@ -91,7 +91,25 @@ namespace Akka.Routing
     }
 
     public class ConsistentHashingGroup : Group
-    {        
+    {
+        public class ConsistentHashingGroupSurrogate : ISurrogate
+        {
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new ConsistentHashingGroup(Paths);
+            }
+
+            public string[] Paths { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new ConsistentHashingGroupSurrogate
+            {
+                Paths = Paths,
+            };
+        }
+
         protected ConsistentHashingGroup()
         {
         }
@@ -123,6 +141,32 @@ namespace Akka.Routing
 
     public class ConsistentHashingPool : Pool
     {
+        public class ConsistentHashingPoolSurrogate : ISurrogate
+        {
+            public object FromSurrogate(ActorSystem system)
+            {
+                return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+            }
+
+            public int NrOfInstances { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Resizer Resizer { get; set; }
+            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public string RouterDispatcher { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new ConsistentHashingPoolSurrogate
+            {
+                NrOfInstances = NrOfInstances,
+                UsePoolDispatcher = UsePoolDispatcher,
+                Resizer = Resizer,
+                SupervisorStrategy = SupervisorStrategy,
+                RouterDispatcher = RouterDispatcher,
+            };
+        }
+
         protected ConsistentHashingPool()
         {            
         }
