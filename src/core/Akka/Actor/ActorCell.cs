@@ -13,7 +13,7 @@ using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
-    public partial class ActorCell : IActorContext, IUntypedActorContext, Cell 
+    public partial class ActorCell : IUntypedActorContext, Cell 
     {
         /// <summary>NOTE! Only constructor and ClearActorFields is allowed to update this</summary>
         private InternalActorRef _self;
