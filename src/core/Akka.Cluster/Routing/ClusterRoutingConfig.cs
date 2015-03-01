@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
@@ -90,16 +89,25 @@ namespace Akka.Cluster.Routing
     /// </summary>
     public sealed class ClusterRouterGroup : Group, IClusterRouterConfigBase
     {
+        private readonly RouterConfig _local;
+        private readonly ClusterRouterSettingsBase _settings;
+
         public ClusterRouterGroup(Group local, ClusterRouterGroupSettings settings)
+            : base(settings.AllowLocalRoutees ? settings.RouteesPaths.ToArray() : null,local.RouterDispatcher)
         {
-            Settings = settings;
-            Local = local;
-            Paths = settings.AllowLocalRoutees ? settings.RouteesPaths.ToArray() : null;
-            RouterDispatcher = local.RouterDispatcher;
+            _settings = settings;
+            _local = local;
         }
 
-        public RouterConfig Local { get; private set; }
-        public ClusterRouterSettingsBase Settings { get; private set; }
+        public RouterConfig Local
+        {
+            get { return _local; }
+        }
+
+        public ClusterRouterSettingsBase Settings
+        {
+            get { return _settings; }
+        }
 
         public override Router CreateRouter(ActorSystem system)
         {
@@ -144,21 +152,31 @@ namespace Akka.Cluster.Routing
     public sealed class ClusterRouterPool : Pool, IClusterRouterConfigBase
     {
         public ClusterRouterPool(Pool local, ClusterRouterPoolSettings settings)
+            : base(settings.AllowLocalRoutees ? settings.MaxInstancesPerNode : 0,
+            local.Resizer,
+            local.SupervisorStrategy,
+             local.RouterDispatcher,false
+            )
         {
-            Settings = settings;
-            Local = local;
-            RouterDispatcher = local.RouterDispatcher;
-
-            if(local.Resizer != null) throw new ConfigurationException("Resizer can't be used together with cluster router.");
-            NrOfInstances = Settings.AllowLocalRoutees ? settings.MaxInstancesPerNode : 0;
-            Resizer = local.Resizer;
-            SupervisorStrategy = local.SupervisorStrategy;
+            if (local.Resizer != null) 
+                throw new ConfigurationException("Resizer can't be used together with cluster router.");
+            _settings = settings;
+            _local = local;
         }
 
         private readonly AtomicCounter _childNameCounter = new AtomicCounter(0);
+        private readonly RouterConfig _local;
+        private readonly ClusterRouterSettingsBase _settings;
 
-        public RouterConfig Local { get; private set; }
-        public ClusterRouterSettingsBase Settings { get; private set; }
+        public RouterConfig Local
+        {
+            get { return _local; }
+        }
+
+        public ClusterRouterSettingsBase Settings
+        {
+            get { return _settings; }
+        }
 
         public override Router CreateRouter(ActorSystem system)
         {
