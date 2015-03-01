@@ -30,7 +30,7 @@ namespace Akka.Remote
             {
                 var address = actorPath.Address;
                 //can have remotely deployed routers that remotely deploy routees
-                return CheckRemoteRouterConfig(deploy.Copy(scope: new RemoteScope(address)));
+                return CheckRemoteRouterConfig(deploy.WithScope(scope: new RemoteScope(address)));
             }
             
             if (!string.IsNullOrWhiteSpace(remote))
@@ -49,13 +49,13 @@ namespace Akka.Remote
             {
                 if (deploy.RouterConfig is Pool)
                     return
-                        deploy.Copy().WithRouterConfig(new RemoteRouterConfig(deploy.RouterConfig.AsInstanceOf<Pool>(), nodes));
-                return deploy.Copy(scope: Deploy.NoScopeGiven);
+                        deploy.WithRouterConfig(new RemoteRouterConfig(deploy.RouterConfig.AsInstanceOf<Pool>(), nodes));
+                return deploy.WithScope(scope: Deploy.NoScopeGiven);
             }
             else
             {
                 //TODO: return deploy;
-                return deploy.Copy(scope: Deploy.NoScopeGiven);
+                return deploy.WithScope(scope: Deploy.NoScopeGiven);
             }
         }
     }

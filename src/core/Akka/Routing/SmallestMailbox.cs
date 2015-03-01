@@ -76,7 +76,7 @@ namespace Akka.Routing
     {
         public class SmallestMailboxPoolSurrogate : ISurrogate
         {
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new SmallestMailboxPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
             }

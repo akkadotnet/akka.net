@@ -147,7 +147,7 @@ namespace Akka.Routing
     {
         public class TailChoppingPoolSurrogate : ISurrogate
         {
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new TailChoppingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, Within, Interval, UsePoolDispatcher);
             }
@@ -281,7 +281,7 @@ namespace Akka.Routing
     {
         public class TailChoppingGroupSurrogate : ISurrogate
         {
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new TailChoppingGroup(Paths, Within,Interval);
             }

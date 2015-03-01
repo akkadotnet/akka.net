@@ -78,7 +78,7 @@ namespace Akka.Routing
         public class NoRouterSurrogate : ISurrogate
         {
 
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new NoRouter();
             }
@@ -343,7 +343,7 @@ namespace Akka.Routing
         public class FromConfigSurrogate : ISurrogate
         {
 
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new FromConfig();
             }

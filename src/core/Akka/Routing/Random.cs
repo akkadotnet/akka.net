@@ -35,7 +35,7 @@ namespace Akka.Routing
     {
         public class RandomGroupSurrogate : ISurrogate
         {
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new RandomGroup(Paths);
             }
@@ -92,7 +92,7 @@ namespace Akka.Routing
     {
         public class RandomPoolSurrogate : ISurrogate
         {
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
             }

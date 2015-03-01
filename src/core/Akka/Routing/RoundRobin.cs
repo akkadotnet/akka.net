@@ -46,7 +46,7 @@ namespace Akka.Routing
     {
         public class RoundRobinGroupSurrogate : ISurrogate
         {
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new RandomGroup(Paths);
             }
@@ -117,7 +117,7 @@ namespace Akka.Routing
     {
         public class RoundRobinPoolSurrogate : ISurrogate
         {
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
             }

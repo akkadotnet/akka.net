@@ -9,7 +9,7 @@ namespace Akka.Util
 {
     public interface ISurrogate
     {
-        object FromSurrogate(ActorSystem system);
+        ISurrogated FromSurrogate(ActorSystem system);
     }
 
     public interface ISurrogated

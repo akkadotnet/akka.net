@@ -53,7 +53,7 @@ namespace Akka.Routing
     {
         public class ScatterGatherFirstCompletedGroupSurrogate : ISurrogate
         {
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new ScatterGatherFirstCompletedGroup(Paths,Within);
             }
@@ -132,7 +132,7 @@ namespace Akka.Routing
     {
         public class ScatterGatherFirstCompletedPoolSurrogate : ISurrogate
         {
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new ScatterGatherFirstCompletedPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher,Within, UsePoolDispatcher);
             }

@@ -26,7 +26,7 @@ namespace Akka.Routing
     {
         public class BroadcastPoolSurrogate : ISurrogate
         {
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new BroadcastPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
             }
@@ -97,7 +97,7 @@ namespace Akka.Routing
     {
         public class BroadcastGroupSurrogate : ISurrogate
         {
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new BroadcastGroup(Paths);
             }

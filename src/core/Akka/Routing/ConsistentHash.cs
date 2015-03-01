@@ -94,7 +94,7 @@ namespace Akka.Routing
     {
         public class ConsistentHashingGroupSurrogate : ISurrogate
         {
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new ConsistentHashingGroup(Paths);
             }
@@ -143,7 +143,7 @@ namespace Akka.Routing
     {
         public class ConsistentHashingPoolSurrogate : ISurrogate
         {
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
             }

@@ -30,7 +30,7 @@ namespace Akka.Actor
             public Type Type { get; set; }
             public Deploy Deploy { get; set; }
             public object[] Arguments { get; set; }
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return new Props(Deploy, Type, Arguments);
             }
