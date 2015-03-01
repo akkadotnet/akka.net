@@ -83,7 +83,7 @@ namespace Akka.Dispatch
                 var left = dispatcher.Throughput;
 
                 //try dequeue a user message
-                while (!_isSuspended && !_isClosed && _userMessages.TryDequeue(out envelope))
+                while (!IsSuspended && !_isClosed && _userMessages.TryDequeue(out envelope))
                 {
                     Mailbox.DebugPrint(ActorCell.Self + " processing message " + envelope);
 
@@ -121,7 +121,7 @@ namespace Akka.Dispatch
                 Interlocked.Exchange(ref status, MailboxStatus.Idle);
 
                 //there are still messages that needs to be processed
-                if (_systemMessages.Count > 0 || (!_isSuspended && _userMessages.Count > 0))
+                if (_systemMessages.Count > 0 || (!IsSuspended && _userMessages.Count > 0))
                 {
                     //we still need has unscheduled messages for external info.
                     //e.g. repointable actor ref uses it
