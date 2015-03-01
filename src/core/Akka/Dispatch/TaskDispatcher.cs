@@ -34,6 +34,11 @@ namespace Akka.Dispatch
         public ActorRef Self { get; set; }
         public ActorRef Sender { get; set; }
         public object Message { get; set; }
+
+        public override string ToString()
+        {
+            return string.Format("(Sender: {0}, Self: {1}, Message: {2})", Sender, Self, Message);
+        }
     }
 
     public class ActorTaskScheduler : TaskScheduler
