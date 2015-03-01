@@ -118,10 +118,6 @@ namespace Akka.Routing
             
         }
 
-        protected SmallestMailboxPool()
-        {            
-        }
-
         public SmallestMailboxPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null) { }
 
         public override Router CreateRouter(ActorSystem system)

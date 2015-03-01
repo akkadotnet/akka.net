@@ -110,10 +110,6 @@ namespace Akka.Routing
             };
         }
 
-        protected ConsistentHashingGroup()
-        {
-        }
-
         public ConsistentHashingGroup(Config config)
             : base(config.GetStringList("routees.paths"))
         {
@@ -165,10 +161,6 @@ namespace Akka.Routing
                 SupervisorStrategy = SupervisorStrategy,
                 RouterDispatcher = RouterDispatcher,
             };
-        }
-
-        protected ConsistentHashingPool()
-        {            
         }
 
         /// <summary>

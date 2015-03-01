@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -36,7 +34,7 @@ namespace Akka.Routing
             _within = within;
         }
 
-        public override void Send(object message, Actor.ActorRef sender)
+        public override void Send(object message, ActorRef sender)
         {
             var tasks = new List<Task>();
             foreach(var routee in _routees)
@@ -71,10 +69,6 @@ namespace Akka.Routing
             };
         }
 
-        protected ScatterGatherFirstCompletedGroup()
-        {
-            
-        }
         /// <summary>
         ///     Initializes a new instance of the <see cref="ScatterGatherFirstCompletedGroup" /> class.
         /// </summary>
@@ -88,6 +82,7 @@ namespace Akka.Routing
         /// <summary>
         ///     Initializes a new instance of the <see cref="ScatterGatherFirstCompletedGroup" /> class.
         /// </summary>
+        /// <param name="within">Expect a response within the given timespan</param>
         /// <param name="paths">The paths.</param>
         public ScatterGatherFirstCompletedGroup(TimeSpan within,params string[] paths)
             : base(paths)
@@ -99,6 +94,7 @@ namespace Akka.Routing
         ///     Initializes a new instance of the <see cref="ScatterGatherFirstCompletedGroup" /> class.
         /// </summary>
         /// <param name="paths">The paths.</param>
+        /// <param name="within">Expect a response within the given timespan</param>
         public ScatterGatherFirstCompletedGroup(IEnumerable<string> paths,TimeSpan within) : base(paths)
         {
             Within = within;
@@ -108,6 +104,7 @@ namespace Akka.Routing
         ///     Initializes a new instance of the <see cref="ScatterGatherFirstCompletedGroup" /> class.
         /// </summary>
         /// <param name="routees">The routees.</param>
+        /// <param name="within">Expect a response within the given timespan</param>
         public ScatterGatherFirstCompletedGroup(IEnumerable<ActorRef> routees,TimeSpan within) : base(routees)
         {
             Within = within;
@@ -165,6 +162,7 @@ namespace Akka.Routing
         /// <param name="resizer">The resizer.</param>
         /// <param name="supervisorStrategy">The supervisor strategy.</param>
         /// <param name="routerDispatcher">The router dispatcher.</param>
+        /// <param name="within">Expect a response within the given timespan</param>
         /// <param name="usePoolDispatcher">if set to <c>true</c> [use pool dispatcher].</param>
         public ScatterGatherFirstCompletedPool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy,
             string routerDispatcher,TimeSpan within, bool usePoolDispatcher = false)
@@ -178,16 +176,11 @@ namespace Akka.Routing
             _within = config.GetTimeSpan("within");
         }
 
-        protected ScatterGatherFirstCompletedPool()
-        {
-            
-        }
-
         /// <summary>
         /// Simple form of RoundRobin constructor
         /// </summary>
         /// <param name="nrOfInstances">The nr of instances.</param>
-        public ScatterGatherFirstCompletedPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null) { }
+        public ScatterGatherFirstCompletedPool(int nrOfInstances) : base(nrOfInstances, null, DefaultStrategy, null) { }
 
         /// <summary>
         ///     Creates the router.

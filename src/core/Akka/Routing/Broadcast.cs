@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Util;
@@ -50,10 +47,6 @@ namespace Akka.Routing
             };
         }
 
-        protected BroadcastPool()
-        {           
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="BroadcastPool"/> class.
         /// </summary>
@@ -80,7 +73,7 @@ namespace Akka.Routing
         /// Simple form of BroadcastPool constructor
         /// </summary>
         /// <param name="nrOfInstances">The nr of instances.</param>
-        public BroadcastPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null) { }
+        public BroadcastPool(int nrOfInstances) : base(nrOfInstances, null, DefaultStrategy, null) { }
 
         /// <summary>
         /// Creates the router.
@@ -113,10 +106,6 @@ namespace Akka.Routing
             };
         }
 
-        protected BroadcastGroup()
-        {
-            
-        }
         /// <summary>
         ///     Initializes a new instance of the <see cref="BroadcastGroup" /> class.
         /// </summary>

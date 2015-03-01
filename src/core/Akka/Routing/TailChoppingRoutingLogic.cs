@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Akka.Util;
-using Akka.Actor;
 using System.Threading;
+using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Routing
@@ -38,6 +36,7 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="within">The time within which at least one response is expected.</param>
         /// <param name="interval">The duration after which the next routee will be picked.</param>
+        /// <param name="scheduler">The scheduler to use</param>
         public TailChoppingRoutingLogic(TimeSpan within, TimeSpan interval, Scheduler scheduler)
         {
             _within = within;
@@ -130,7 +129,7 @@ namespace Akka.Routing
             }, token);
 
             var request = completion.Task;
-            completion.Task.ContinueWith((task) => 
+            completion.Task.ContinueWith(task => 
             {
                 tokenSource.Cancel(false);
             });
@@ -208,12 +207,15 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="config">The configuration to use with this instance.</param>
         public TailChoppingPool(Config config)
+            : this(config.GetInt("nr-of-instances"),
+            DefaultResizer.FromConfig(config),
+            null,
+            null,   //TODO: what are our defaults? null?
+            config.GetTimeSpan("within"),
+            config.GetTimeSpan("tail-chopping-router.interval"),
+            config.HasPath("pool-dispatcher")
+            )
         {
-            NrOfInstances = config.GetInt("nr-of-instances");
-            _within = config.GetTimeSpan("within");
-            _interval = config.GetTimeSpan("tail-chopping-router.interval");
-            Resizer = DefaultResizer.FromConfig(config);
-            UsePoolDispatcher = config.HasPath("pool-dispatcher");
         }
 
         /// <summary>
@@ -222,11 +224,9 @@ namespace Akka.Routing
         /// <param name="nrOfInstances">The initial number of routees in the pool.</param>
         /// <param name="within">The amount of time to wait for a response.</param>
         /// <param name="interval">The interval to wait before sending to the next routee.</param>
-        public TailChoppingPool(int nrOfInstances, TimeSpan within, TimeSpan interval)
+        public TailChoppingPool(int nrOfInstances, TimeSpan within, TimeSpan interval) : this(nrOfInstances,null,null,null,within,interval)
         {
-            NrOfInstances = nrOfInstances;
-            _within = within;
-            _interval = interval;
+            //TODO: what are our defaults? null?
         }
 
         /// <summary>
@@ -236,8 +236,7 @@ namespace Akka.Routing
         /// <returns>The tail chopping pool.</returns>
         public TailChoppingPool WithSupervisorStrategy(SupervisorStrategy strategy)
         {
-            SupervisorStrategy = strategy;
-            return this;
+            return new TailChoppingPool(NrOfInstances, Resizer, strategy, RouterDispatcher, _within, _interval, UsePoolDispatcher);
         }
 
         /// <summary>
@@ -247,19 +246,17 @@ namespace Akka.Routing
         /// <returns>The tail chopping pool.</returns>
         public TailChoppingPool WithResizer(Resizer resizer)
         {
-            Resizer = resizer;
-            return this;
+            return new TailChoppingPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, _within, _interval, UsePoolDispatcher);          
         }
 
         /// <summary>
         /// Sets the router dispatcher to use for the pool.
         /// </summary>
-        /// <param name="dispatcherId">The router dispatcher to use.</param>
+        /// <param name="routerDispatcher">The router dispatcher to use.</param>
         /// <returns>The tail chopping pool.</returns>
-        public TailChoppingPool WithDispatcher(string dispatcherId)
+        public TailChoppingPool WithDispatcher(string routerDispatcher)
         {
-            RouterDispatcher = dispatcherId;
-            return this;
+            return new TailChoppingPool(NrOfInstances, Resizer, SupervisorStrategy, routerDispatcher, _within, _interval, UsePoolDispatcher);          
         }
 
         /// <summary>
@@ -316,8 +313,8 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="config">The configuration to use with this instance.</param>
         public TailChoppingGroup(Config config)
+            : base(config.GetStringList("routees.paths").ToArray())
         {
-            Paths = config.GetStringList("routees.paths").ToArray();
             _within = config.GetTimeSpan("within");
             _interval = config.GetTimeSpan("tail-chopping-router.interval");
         }
@@ -328,9 +325,8 @@ namespace Akka.Routing
         /// <param name="routeePaths">The configured routee paths to use with this instance.</param>
         /// <param name="within">The amount of time to wait for a response.</param>
         /// <param name="interval">The interval to wait before sending to the next routee.</param>
-        public TailChoppingGroup(string[] routeePaths, TimeSpan within, TimeSpan interval)
+        public TailChoppingGroup(string[] routeePaths, TimeSpan within, TimeSpan interval) : base(routeePaths)
         {
-            Paths = routeePaths;
             _within = within;
             _interval = interval;
         }

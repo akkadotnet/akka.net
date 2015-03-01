@@ -93,7 +93,7 @@ namespace Akka.Cluster.Routing
         private readonly ClusterRouterSettingsBase _settings;
 
         public ClusterRouterGroup(Group local, ClusterRouterGroupSettings settings)
-            : base(settings.AllowLocalRoutees ? settings.RouteesPaths.ToArray() : null,local.RouterDispatcher)
+            : base(settings.AllowLocalRoutees ? settings.RouteesPaths.ToArray() : Enumerable.Empty<string>(),local.RouterDispatcher)
         {
             _settings = settings;
             _local = local;

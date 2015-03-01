@@ -113,7 +113,7 @@ namespace Akka.Routing
         {
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+                return new RoundRobinPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
             }
 
             public int NrOfInstances { get; set; }
