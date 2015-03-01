@@ -42,7 +42,7 @@ namespace Akka.Actor
 
         public override string ToString()
         {
-            return "<Identify>: " + MessageId.ToString();
+            return "<Identify>: " + MessageId;
         }
     }
 
