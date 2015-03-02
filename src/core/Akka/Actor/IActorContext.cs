@@ -5,7 +5,23 @@ namespace Akka.Actor
 {
     public interface ICanWatch
     {
+		/// <summary>
+		/// Monitors the specified actor for termination. When the <paramref name="subject"/> terminates
+		/// the instance watching will receive a <see cref="Terminated"/> message.
+		/// <remarks>Note that if the <see cref="Terminated"/> message isn't handled by the actor,
+		/// by default the actor will crash by throwing a <see cref="DeathPactException"/>. To change
+		/// the default behavior, override <see cref="ActorBase.Unhandled"/>.
+		/// </remarks>
+		/// </summary>
+		/// <param name="subject">The actor to monitor for termination.</param>
+		/// <returns>Returns the provided subject</returns>
         ActorRef Watch(ActorRef subject);
+
+		/// <summary>
+		/// Stops monitoring the <paramref name="subject"/> for termination.
+		/// </summary>
+		/// <param name="subject">The actor to stop monitor for termination.</param>
+		/// <returns>Returns the provided subject</returns>
         ActorRef Unwatch(ActorRef subject);
     }
 
