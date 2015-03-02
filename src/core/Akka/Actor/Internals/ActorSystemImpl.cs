@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,7 +10,6 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
-
 namespace Akka.Actor.Internals
 {
     /// <summary>
@@ -17,19 +17,17 @@ namespace Akka.Actor.Internals
     /// </summary>
     public class ActorSystemImpl : ExtendedActorSystem
     {
-        private ActorRef _logDeadLetterListener;
         private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
-
-        private LoggingAdapter _log;
-        private ActorRefProvider _provider;
-        private Settings _settings;
+        private readonly LoggingAdapter _log;
+        private readonly ActorRefProvider _provider;
+        private readonly Settings _settings;
         private readonly string _name;
-        private Serialization.Serialization _serialization;
-        private EventStream _eventStream;
-        private Dispatchers _dispatchers;
-        private Mailboxes _mailboxes;
-        private Scheduler _scheduler;
-        private ActorProducerPipelineResolver _actorProducerPipelineResolver;
+        private readonly Serialization.Serialization _serialization;
+        private readonly EventStream _eventStream;
+        private readonly Dispatchers _dispatchers;
+        private readonly Mailboxes _mailboxes;
+        private readonly Scheduler _scheduler;
+        private readonly ActorProducerPipelineResolver _actorProducerPipelineResolver;
 
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Load())
@@ -45,14 +43,19 @@ namespace Akka.Actor.Internals
                 throw new ArgumentNullException("config");
 
             _name = name;
-            ConfigureScheduler();
-            ConfigureSettings(config);
-            ConfigureEventStream();
-            ConfigureProvider();
-            ConfigureSerialization();
-            ConfigureMailboxes();
-            ConfigureDispatchers();
-            ConfigureActorProducerPipeline();
+            _scheduler = new Scheduler();
+            _settings = new Settings(this, config);
+            _eventStream = new EventStream(_settings.DebugEventStream);
+            _eventStream.StartStdoutLogger(_settings);
+            _serialization = new Serialization.Serialization(this);
+            _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), new DefaultLogMessageFormatter());
+            var providerType = Type.GetType(_settings.ProviderClass);
+            System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
+            _provider = (ActorRefProvider)Activator.CreateInstance(providerType, _name, _settings, _eventStream);
+            _mailboxes = new Mailboxes(this);
+            _dispatchers = new Dispatchers(this);
+            // we push Log in lazy manner since it may not be configured at point of pipeline initialization
+            _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
         }
 
         public override ActorRefProvider Provider { get { return _provider; } }
@@ -65,13 +68,9 @@ namespace Akka.Actor.Internals
         public override Mailboxes Mailboxes { get { return _mailboxes; } }
         public override Scheduler Scheduler { get { return _scheduler; } }
         public override LoggingAdapter Log { get { return _log; } }
-
         public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
-
-
         public override InternalActorRef Guardian { get { return _provider.Guardian; } }
         public override InternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
-
 
         /// <summary>Creates a new system actor.</summary>
         public override ActorRef SystemActorOf(Props props, string name = null)
@@ -89,11 +88,11 @@ namespace Akka.Actor.Internals
         public void Start()
         {
             _provider.Init(this);
-            ConfigureLoggers();
+            
             LoadExtensions();
 
             if(_settings.LogDeadLetters > 0)
-                _logDeadLetterListener = SystemActorOf<DeadLetterListener>("deadLetterListener");
+                SystemActorOf<DeadLetterListener>("deadLetterListener");
 
 
             if(_settings.LogConfigOnStart)
@@ -104,9 +103,8 @@ namespace Akka.Actor.Internals
 
         public override ActorRef ActorOf(Props props, string name = null)
         {
-            return _provider.Guardian.Cell.ActorOf(props, name: name);
+            return _provider.Guardian.Cell.ActorOf(props, name);
         }
-
 
         public override ActorSelection ActorSelection(ActorPath actorPath)
         {
@@ -118,58 +116,39 @@ namespace Akka.Actor.Internals
             return ActorRefFactoryShared.ActorSelection(actorPath, this, _provider.RootGuardian);
         }
 
-        private void ConfigureScheduler()
-        {
-            _scheduler = new Scheduler();
-        }
-
         /// <summary>
         /// Load all of the extensions registered in the <see cref="ActorSystem.Settings"/>
         /// </summary>
         private void LoadExtensions()
         {
-            var extensions = new List<IExtensionId>();
             foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions"))
             {
                 var extensionType = Type.GetType(extensionFqn);
-                if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.IsAbstract || !extensionType.IsClass)
+                if (extensionType == null || !typeof (IExtensionId).IsAssignableFrom(extensionType) ||
+                    extensionType.IsAbstract || !extensionType.IsClass)
                 {
                     _log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
-                    continue;
                 }
-
-                try
+                else
                 {
-                    var extension = (IExtensionId)Activator.CreateInstance(extensionType);
-                    extensions.Add(extension);
+                    try
+                    {
+                        var extension = (IExtensionId)Activator.CreateInstance(extensionType);
+                        _extensions.TryAdd(extension.ExtensionType, new Lazy<object>(() => extension.CreateExtension(this)));
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Error(ex, "While trying to load extension [{0}], skipping...", extensionFqn);
+                    }
                 }
-                catch(Exception ex)
-                {
-                    _log.Error(ex, "While trying to load extension [{0}], skipping...", extensionFqn);
-                }
-
-            }
-
-            ConfigureExtensions(extensions);
-        }
-
-        private void ConfigureExtensions(IEnumerable<IExtensionId> extensionIdProviders)
-        {
-            foreach(var extensionId in extensionIdProviders)
-            {
-                RegisterExtension(extensionId);
             }
         }
 
         public override object RegisterExtension(IExtensionId extension)
         {
             if(extension == null) return null;
-            if(!_extensions.ContainsKey(extension.ExtensionType))
-            {
-                _extensions.TryAdd(extension.ExtensionType, new Lazy<object>(() => extension.CreateExtension(this)));
-            }
-
-            return extension.Get(this);
+            _extensions.TryAdd(extension.ExtensionType, new Lazy<object>(() => extension.CreateExtension(this)));
+            return GetExtension(extension);
         }
 
         public override object GetExtension(IExtensionId extensionId)
@@ -204,86 +183,12 @@ namespace Akka.Actor.Internals
 
         public override bool HasExtension(Type t)
         {
-            if(typeof(IExtension).IsAssignableFrom(t))
-            {
-                return _extensions.ContainsKey(t);
-            }
-            return false;
+            return typeof(IExtension).IsAssignableFrom(t) && _extensions.ContainsKey(t);
         }
 
         public override bool HasExtension<T>()
         {
             return _extensions.ContainsKey(typeof(T));
-        }
-
-        /// <summary>
-        ///     Configures the settings.
-        /// </summary>
-        /// <param name="config">The configuration.</param>
-        private void ConfigureSettings(Config config)
-        {
-            _settings = new Settings(this, config);
-        }
-
-        /// <summary>
-        ///     Configures the event stream.
-        /// </summary>
-        private void ConfigureEventStream()
-        {
-            _eventStream = new EventStream(_settings.DebugEventStream);
-            _eventStream.StartStdoutLogger(_settings);
-        }
-
-        /// <summary>
-        ///     Configures the serialization.
-        /// </summary>
-        private void ConfigureSerialization()
-        {
-            _serialization = new Serialization.Serialization(this);
-        }
-
-        /// <summary>
-        ///     Configures the mailboxes.
-        /// </summary>
-        private void ConfigureMailboxes()
-        {
-            _mailboxes = new Mailboxes(this);
-        }
-
-        /// <summary>
-        ///     Configures the provider.
-        /// </summary>
-        private void ConfigureProvider()
-        {
-            Type providerType = Type.GetType(_settings.ProviderClass);
-            global::System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
-            var provider = (ActorRefProvider)Activator.CreateInstance(providerType, _name, _settings, _eventStream);
-            _provider = provider;
-        }
-
-        /// <summary>
-        /// Extensions depends on loggers being configured before Start() is called
-        /// </summary>
-        private void ConfigureLoggers()
-        {
-            _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), new DefaultLogMessageFormatter());
-        }
-
-        /// <summary>
-        ///     Configures the dispatchers.
-        /// </summary>
-        private void ConfigureDispatchers()
-        {
-            _dispatchers = new Dispatchers(this);
-        }
-
-        /// <summary>
-        /// Configures the actor producer pipeline.
-        /// </summary>
-        private void ConfigureActorProducerPipeline()
-        {
-            // we push Log in lazy manner since it may not be configured at point of pipeline initialization
-            _actorProducerPipelineResolver = new ActorProducerPipelineResolver(() => Log);
         }
 
         /// <summary>
@@ -334,7 +239,5 @@ namespace Akka.Actor.Internals
             else
                 ((InternalActorRef)actor).Stop();
         }
-
-
     }
 }

@@ -63,7 +63,5 @@ namespace Akka.Actor.Internal
             sb.Append("Children:\n    ").AppendJoin("\n    ", InternalChildren.AllMinToMax, ChildStatsAppender);
             return sb.ToString();
         }
-
-
     }
 }
