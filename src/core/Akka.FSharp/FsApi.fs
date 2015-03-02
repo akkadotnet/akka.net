@@ -436,7 +436,7 @@ module Spawn =
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used to create a new instance of the actor</param>
     /// <param name="options">List of options used to configure actor creation</param>
-    let spawnObjOpt<'Actor when 'Actor :> ActorBase> (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> 'Actor)>)
+    let spawnObjOpt (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) 
         (options : SpawnOption list) : ActorRef = 
         let e = Linq.Expression.ToExpression<'Actor> f
         let props = applySpawnOptions (Props.Create e) options
@@ -449,8 +449,7 @@ module Spawn =
     /// <param name="actorFactory">Either actor system or parent actor</param>
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used to create a new instance of the actor</param>
-    let spawnObj<'Actor when 'Actor :> ActorBase> (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> 'Actor)>) 
-        : ActorRef = 
+    let spawnObj (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : ActorRef = 
         spawnObjOpt actorFactory name f []
 
     /// <summary>
