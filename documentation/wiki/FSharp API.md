@@ -65,6 +65,8 @@ Paragraph above already has shown, how actors may be created with help of the sp
 -   `spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : ActorRef` - spawns an actor using specified actor computation expression. The actor can only be used locally. 
 -   `spawnOpt (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, with custom spawn option settings. The actor can only be used locally. 
 -   `spawne (actorFactory : ActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, using an Expression AST. The actor code can be deployed remotely.
+-   `spawnObj<'Actor when 'Actor :> ActorBase> (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> 'Actor)>) : ActorRef` - spawns an actor using specified actor quotation. The actor can only be used locally.
+-   `spawnObjOpt<'Actor when 'Actor :> ActorBase> (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> 'Actor)>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor quotation, with custom spawn option settings. The actor can only be used locally.
 
 All of these functions may be used with either actor system or actor itself. In the first case spawned actor will be placed under */user* root guardian of the current actor system hierarchy. In second option spawned actor will become child of the actor used as [actorFactory] parameter of the spawning function.
 
