@@ -73,7 +73,6 @@ namespace Akka.Remote.Transport.Helios
             Backlog = Config.GetInt("backlog");
             TcpNoDelay = Config.GetBoolean("tcp-nodelay");
             TcpKeepAlive = Config.GetBoolean("tcp-keepalive");
-            TcpReuseAddr = Config.GetBoolean("tcp-reuse-addr");
             var configHost = Config.GetString("hostname");
             var publicConfigHost = Config.GetString("public-hostname");
             Hostname = string.IsNullOrEmpty(configHost) ? IPAddress.Any.ToString() : configHost;
@@ -106,8 +105,6 @@ namespace Akka.Remote.Transport.Helios
         public bool TcpNoDelay { get; private set; }
 
         public bool TcpKeepAlive { get; private set; }
-
-        public bool TcpReuseAddr { get; private set; }
 
         /// <summary>
         /// The hostname that this server binds to
@@ -209,7 +206,6 @@ namespace Akka.Remote.Transport.Helios
                     .WorkerThreads(Settings.ClientSocketWorkerPoolSize)
                     .SetOption("receiveBufferSize", Settings.ReceiveBufferSize)
                     .SetOption("sendBufferSize", Settings.SendBufferSize)
-                    .SetOption("reuseAddress", Settings.TcpReuseAddr)
                     .SetOption("keepAlive", Settings.TcpKeepAlive)
                     .SetOption("tcpNoDelay", Settings.TcpNoDelay)
                     .SetOption("connectTimeout", Settings.ConnectTimeout)
@@ -239,7 +235,6 @@ namespace Akka.Remote.Transport.Helios
                     .WorkerThreads(Settings.ClientSocketWorkerPoolSize)
                     .SetOption("receiveBufferSize", Settings.ReceiveBufferSize)
                     .SetOption("sendBufferSize", Settings.SendBufferSize)
-                    .SetOption("reuseAddress", Settings.TcpReuseAddr)
                     .SetOption("keepAlive", Settings.TcpKeepAlive)
                     .SetOption("tcpNoDelay", Settings.TcpNoDelay)
                     .SetOption("connectTimeout", Settings.ConnectTimeout)
