@@ -266,6 +266,7 @@ module Logging =
 
 module Linq = 
     open System.Linq.Expressions
+    open Microsoft.FSharp.Linq
     
     let (|Lambda|_|) (e : Expression) = 
         match e with
@@ -285,13 +286,17 @@ module Linq =
         | _ -> None
     
     let (|Ar|) (p : System.Collections.ObjectModel.ReadOnlyCollection<Expression>) = Array.ofSeq p
-    
-    type Expression = 
-        static member ToExpression(f : System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>) = 
+
+    let toExpression<'Actor>(f : System.Linq.Expressions.Expression) = 
             match f with
-            | Lambda(_, Invoke(Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]))) -> 
-                Expression.Lambda(p, [||]) :?> System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>
+            | Lambda(_, Invoke(Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]))) 
+            | Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]) -> 
+                Expression.Lambda(p, [||]) :?> System.Linq.Expressions.Expression<System.Func<'Actor>>
             | _ -> failwith "Doesn't match"
+ 
+    type Expression = 
+        static member ToExpression(f : System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>) = toExpression<FunActor<'Message, 'v>> f
+        static member ToExpression<'Actor>(f : Quotations.Expr<(unit -> 'Actor)>) = toExpression<'Actor> (QuotationEvaluator.ToLinqExpression f)  
 
 module Serialization = 
     open Nessos.FsPickler
@@ -411,7 +416,7 @@ module Spawn =
         actorFactory.ActorOf(props, name)
 
     /// <summary>
-    /// Spawns an actor using specified actor computation expression, with custom actor Props settings.
+    /// Spawns an actor using specified actor computation expression, with custom spawn option settings.
     /// The actor can only be used locally. 
     /// </summary>
     /// <param name="actorFactory">Either actor system or parent actor</param>
@@ -433,6 +438,30 @@ module Spawn =
     /// <param name="f">Used by actor for handling response for incoming request</param>
     let spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : ActorRef = 
         spawnOpt actorFactory name f []
+
+    /// <summary>
+    /// Spawns an actor using specified actor quotation, with custom spawn option settings.
+    /// The actor can only be used locally. 
+    /// </summary>
+    /// <param name="actorFactory">Either actor system or parent actor</param>
+    /// <param name="name">Name of spawned child actor</param>
+    /// <param name="f">Used to create a new instance of the actor</param>
+    /// <param name="options">List of options used to configure actor creation</param>
+    let spawnObjOpt (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) 
+        (options : SpawnOption list) : ActorRef = 
+        let e = Linq.Expression.ToExpression<'Actor> f
+        let props = applySpawnOptions (Props.Create e) options
+        actorFactory.ActorOf(props, name)
+
+    /// <summary>
+    /// Spawns an actor using specified actor quotation.
+    /// The actor can only be used locally. 
+    /// </summary>
+    /// <param name="actorFactory">Either actor system or parent actor</param>
+    /// <param name="name">Name of spawned child actor</param>
+    /// <param name="f">Used to create a new instance of the actor</param>
+    let spawnObj (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : ActorRef = 
+        spawnObjOpt actorFactory name f []
 
     /// <summary>
     /// Wraps provided function with actor behavior. 
