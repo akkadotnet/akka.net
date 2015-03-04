@@ -78,7 +78,7 @@ namespace PersistenceExample
         {
             ExampleState state;
             if (message is Event)
-                UpdateState(message as Event);
+                UpdateState((Event)message);
             else if (message is SnapshotOffer && (state = ((SnapshotOffer) message).Snapshot as ExampleState) != null)
                 State = state;
             else return false;
@@ -89,7 +89,7 @@ namespace PersistenceExample
         {
             if (message is Command)
             {
-                var cmd = message as Command;
+                var cmd = (Command)message;
                 Persist(new Event(cmd.Data + "-" + EventsCount), UpdateState);
             }
             else if (message == "snap")

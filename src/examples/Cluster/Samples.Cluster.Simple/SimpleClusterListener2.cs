@@ -29,12 +29,12 @@ namespace Samples.Cluster.Simple
         {
             if (message is ClusterEvent.CurrentClusterState)
             {
-                var state = (ClusterEvent.CurrentClusterState) message;
+                var state = (ClusterEvent.CurrentClusterState)message;
                 Log.Info("Current members: {0}", state.Members);
             }
             else if (message is ClusterEvent.MemberUp)
             {
-                var up = message as ClusterEvent.MemberUp;
+                var up = (ClusterEvent.MemberUp)message;
                 var mem = up;
                 Log.Info("Member is Up: {0}", mem.Member);
             }

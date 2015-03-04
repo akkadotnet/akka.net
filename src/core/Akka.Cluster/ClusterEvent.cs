@@ -663,32 +663,32 @@ namespace Akka.Cluster
         {
             if (message is InternalClusterAction.PublishChanges)
             {
-                var p = message as InternalClusterAction.PublishChanges;
+                var p = (InternalClusterAction.PublishChanges)message;
                 PublishChanges(p.NewGossip);
             }
             else if (message is ClusterEvent.CurrentInternalStats)
             {
-                var i = message as ClusterEvent.CurrentInternalStats;
+                var i = (ClusterEvent.CurrentInternalStats)message;
                 PublishInternalStats(i);
             }
             else if (message is InternalClusterAction.SendCurrentClusterState)
             {
-                var sc = message as InternalClusterAction.SendCurrentClusterState;
+                var sc = (InternalClusterAction.SendCurrentClusterState)message;
                 SendCurrentClusterState(sc.Receiver);
             }
             else if (message is InternalClusterAction.Subscribe)
             {
-                var sub = message as InternalClusterAction.Subscribe;
+                var sub = (InternalClusterAction.Subscribe)message;
                 Subscribe(sub.Subscriber, sub.InitialStateMode, sub.To);
             }
             else if (message is InternalClusterAction.PublishEvent)
             {
-                var pub = message as InternalClusterAction.PublishEvent;
+                var pub = (InternalClusterAction.PublishEvent)message;
                 Publish(pub);
             }
             else if (message is InternalClusterAction.Unsubscribe)
             {
-                var unsub = message as InternalClusterAction.Unsubscribe;
+                var unsub = (InternalClusterAction.Unsubscribe)message;
                 Unsubscribe(unsub.Subscriber, unsub.To);
             }
             else

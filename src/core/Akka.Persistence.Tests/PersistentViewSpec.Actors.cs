@@ -238,7 +238,7 @@ namespace Akka.Persistence.Tests
                     _probe.Tell("snapped");
                 else if (message is SnapshotOffer)
                 {
-                    var offer = message as SnapshotOffer;
+                    var offer = (SnapshotOffer)message;
                     _last = offer.Snapshot.ToString();
                     _probe.Tell(_last);
                 }

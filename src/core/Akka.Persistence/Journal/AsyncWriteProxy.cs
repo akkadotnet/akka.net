@@ -162,9 +162,9 @@ namespace Akka.Persistence.Journal
 
         protected override bool Receive(object message)
         {
-            if (message is SetStore)
+            var setStore = message as SetStore;
+            if (setStore != null)
             {
-                var setStore = message as SetStore;
                 _store = setStore.Store;
                 Stash.UnstashAll();
                 Context.Become(_initialized);
@@ -218,7 +218,7 @@ namespace Akka.Persistence.Journal
 
         protected override bool Receive(object message)
         {
-            if (message is IPersistentRepresentation) _replayCallback(message as IPersistentRepresentation);
+            if (message is IPersistentRepresentation) _replayCallback((IPersistentRepresentation)message);
             else if (message is AsyncWriteTarget.ReplaySuccess)
             {
                 _replayCompletionPromise.SetResult(new object());
@@ -226,7 +226,7 @@ namespace Akka.Persistence.Journal
             }
             else if (message is AsyncWriteTarget.ReplayFailure)
             {
-                var failure = message as AsyncWriteTarget.ReplayFailure;
+                var failure = (AsyncWriteTarget.ReplayFailure)message;
                 _replayCompletionPromise.SetException(failure.Cause);
                 Context.Stop(Self);
             }

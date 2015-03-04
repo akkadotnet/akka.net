@@ -37,8 +37,8 @@ namespace Akka.Persistence.Serialization
 
         public override byte[] ToBinary(object obj)
         {
-            if (obj is IPersistentRepresentation) return PersistentToProto(obj as IPersistentRepresentation).Build().ToByteArray();
-            if (obj is GuaranteedDeliverySnapshot) return SnapshotToProto(obj as GuaranteedDeliverySnapshot).Build().ToByteArray();
+            if (obj is IPersistentRepresentation) return PersistentToProto((IPersistentRepresentation)obj).Build().ToByteArray();
+            if (obj is GuaranteedDeliverySnapshot) return SnapshotToProto((GuaranteedDeliverySnapshot)obj).Build().ToByteArray();
 
             throw new ArgumentException(typeof(MessageSerializer) + " cannot serialize object of type " + obj.GetType());
         }

@@ -97,8 +97,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is Message) Persist(message as Message, _ => Send());
-                else if (message is CrashMessage) Persist(message as CrashMessage, _ => { });
+                if (message is Message) Persist((Message)message, _ => Send());
+                else if (message is CrashMessage) Persist((CrashMessage)message, _ => { });
                 else return false;
                 return true;
             }

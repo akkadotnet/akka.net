@@ -128,14 +128,14 @@ namespace Akka.Remote.Transport
         {
             if (message is All)
             {
-                var all = message as All;
+                var all = (All)message;
                 _allMode = all.Mode;
                 return Task.FromResult(true);
             }
             
             if (message is One)
             {
-                var one = message as One;
+                var one = (One)message;
                 //  don't care about the protocol part - we are injected in the stack anyway!
                 addressChaosTable.AddOrUpdate(NakedAddress(one.RemoteAddress), address => one.Mode, (address, mode) => one.Mode);
                 return Task.FromResult(true);

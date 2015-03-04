@@ -20,7 +20,7 @@ namespace Akka.Routing
             {
                 if (Cell.RouterConfig is Pool)
                 {
-                    return Cell.RouterConfig as Pool;
+                    return (Pool)Cell.RouterConfig;
                 }
                 else
                 {
@@ -54,7 +54,7 @@ namespace Akka.Routing
             }
             else if (message is AdjustPoolSize)
             {
-                var poolSize = message as AdjustPoolSize;
+                var poolSize = (AdjustPoolSize)message;
                 if (poolSize.Change > 0)
                 {
                     var newRoutees = Enumerable.Repeat(Pool.NewRoutee(Cell.RouteeProps, Context), poolSize.Change).ToArray();

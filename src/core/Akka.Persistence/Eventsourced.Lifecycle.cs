@@ -38,9 +38,9 @@ namespace Akka.Persistence
             finally
             {
                 object inner;
-                if (message is WriteMessageSuccess) inner = (message as WriteMessageSuccess).Persistent;
-                else if (message is LoopMessageSuccess) inner = (message as LoopMessageSuccess).Message;
-                else if (message is ReplayedMessage) inner = (message as ReplayedMessage).Persistent;
+                if (message is WriteMessageSuccess) inner = ((WriteMessageSuccess)message).Persistent;
+                else if (message is LoopMessageSuccess) inner = ((LoopMessageSuccess)message).Message;
+                else if (message is ReplayedMessage) inner = ((ReplayedMessage)message).Persistent;
                 else inner = null;
 
                 FlushJournalBatch();
@@ -67,13 +67,13 @@ namespace Akka.Persistence
             else if (message is RecoveryFailure)
             {
                 var msg = string.Format("{0} was killed after recovery failure (persistence id = {1}). To avoid killing persistent actors on recovery failure, a PersistentActor must handle RecoveryFailure messages. Recovery failure was caused by: {2}", 
-                    GetType().Name, PersistenceId, (message as RecoveryFailure).Cause.Message);
+                    GetType().Name, PersistenceId, ((RecoveryFailure)message).Cause.Message);
 
                 throw new ActorKilledException(msg);
             }
             else if (message is PersistenceFailure)
             {
-                var fail = message as PersistenceFailure;
+                var fail = (PersistenceFailure)message;
                 var msg = string.Format("{0} was killed after persistence failure (persistence id = {1}, sequence nr: {2}, payload type: {3}). To avoid killing persistent actors on recovery failure, a PersistentActor must handle RecoveryFailure messages. Persistence failure was caused by: {4}",
                     GetType().Name, PersistenceId, fail.SequenceNr, fail.Payload.GetType().Name, fail.Cause.Message);
                 throw new ActorKilledException(msg);

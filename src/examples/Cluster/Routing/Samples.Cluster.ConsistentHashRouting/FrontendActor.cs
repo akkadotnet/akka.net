@@ -51,7 +51,7 @@ namespace Samples.Cluster.ConsistentHashRouting
         {
             if (message is StartCommand)
             {
-                var sc = message as StartCommand;
+                var sc = (StartCommand)message;
                 BackendRouter.Tell(new FrontendCommand()
                 {
                     Message = string.Format("message {0}", jobCount++),

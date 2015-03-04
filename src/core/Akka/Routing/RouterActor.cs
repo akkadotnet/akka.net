@@ -36,12 +36,12 @@ namespace Akka.Routing
             }
             else if (message is AddRoutee)
             {
-                var addRoutee = message as AddRoutee;
+                var addRoutee = (AddRoutee)message;
                 Cell.AddRoutee(addRoutee.Routee);
             }
             else if (message is RemoveRoutee)
             {
-                var removeRoutee = message as RemoveRoutee;
+                var removeRoutee = (RemoveRoutee)message;
                 Cell.RemoveRoutee(removeRoutee.Routee, true);
                 StopIfAllRouteesRemoved();
             }

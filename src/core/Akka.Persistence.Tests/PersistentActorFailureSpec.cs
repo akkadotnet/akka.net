@@ -28,9 +28,9 @@ namespace Akka.Persistence.Tests
         {
             private bool FailingReceive(object message)
             {
-                if (message is AsyncWriteTarget.ReplayMessages)
+                var replay = message as AsyncWriteTarget.ReplayMessages;
+                if (replay != null)
                 {
-                    var replay = message as AsyncWriteTarget.ReplayMessages;
                     var readFromStore = Read(replay.PersistenceId, replay.FromSequenceNr, replay.ToSequenceNr, replay.Max).ToArray();
 
                     if (readFromStore.Length == 0) Sender.Tell(AsyncWriteTarget.ReplaySuccess.Instance);

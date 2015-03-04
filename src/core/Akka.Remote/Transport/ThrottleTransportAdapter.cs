@@ -220,13 +220,13 @@ namespace Akka.Remote.Transport
         {
             if (message is InboundAssociation)
             {
-                var ia = message as InboundAssociation;
+                var ia = (InboundAssociation)message;
                 var wrappedHandle = WrapHandle(ia.Association, associationListener, true);
                 wrappedHandle.ThrottlerActor.Tell(new Handle(wrappedHandle));
             }
             else if (message is AssociateUnderlying)
             {
-                var ua = message as AssociateUnderlying;
+                var ua = (AssociateUnderlying)message;
 
                 // Slight modification of PipeTo, only success is sent, failure is propagated to a separate Task
                 var associateTask = WrappedTransport.Associate(ua.RemoteAddress);
@@ -248,7 +248,7 @@ namespace Akka.Remote.Transport
             }
             else if (message is AssociateResult) // Finished outbound association and got back the handle
             {
-                var ar = message as AssociateResult;
+                var ar = (AssociateResult)message;
                 var wrappedHandle = WrapHandle(ar.AssociationHandle, associationListener, false);
                 var naked = NakedAddress(ar.AssociationHandle.RemoteAddress);
                 var inMode = GetInboundMode(naked);
@@ -260,7 +260,7 @@ namespace Akka.Remote.Transport
             }
             else if (message is SetThrottle)
             {
-                var st = message as SetThrottle;
+                var st = (SetThrottle)message;
                 var naked = NakedAddress(st.Address);
                 _throttlingModes[naked] = new Tuple<ThrottleMode, ThrottleTransportAdapter.Direction>(st.Mode, st.Direction);
                 var ok = Task.FromResult(SetThrottleAck.Instance);
@@ -281,7 +281,7 @@ namespace Akka.Remote.Transport
             }
             else if (message is ForceDisassociate)
             {
-                var fd = message as ForceDisassociate;
+                var fd = (ForceDisassociate)message;
                 var naked = NakedAddress(fd.Address);
                 foreach (var handle in _handleTable)
                 {
@@ -310,7 +310,7 @@ namespace Akka.Remote.Transport
             }
             else if (message is ForceDisassociateExplicitly)
             {
-                var fde = message as ForceDisassociateExplicitly;
+                var fde = (ForceDisassociateExplicitly)message;
                 var naked = NakedAddress(fde.Address);
                 foreach (var handle in _handleTable)
                 {
@@ -339,7 +339,7 @@ namespace Akka.Remote.Transport
             }
             else if (message is Checkin)
             {
-                var chkin = message as Checkin;
+                var chkin = (Checkin)message;
                 var naked = NakedAddress(chkin.Origin);
                 _handleTable.Add(new Tuple<Address, ThrottlerHandle>(naked, chkin.ThrottlerHandle));
                 SetMode(naked, chkin.ThrottlerHandle);
