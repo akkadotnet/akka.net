@@ -742,17 +742,17 @@ namespace Akka.Cluster
             }
             else if (message is ClusterUserAction.JoinTo)
             {
-                var jt = message as ClusterUserAction.JoinTo;
+                var jt = (ClusterUserAction.JoinTo)message;
                 Join(jt.Address);
             }
             else if (message is InternalClusterAction.JoinSeedNodes)
             {
-                var js = message as InternalClusterAction.JoinSeedNodes;
+                var js = (InternalClusterAction.JoinSeedNodes)message;
                 JoinSeedNodes(js.SeedNodes);
             }
             else if (message is InternalClusterAction.ISubscriptionMessage)
             {
-                var isub = message as InternalClusterAction.ISubscriptionMessage;
+                var isub = (InternalClusterAction.ISubscriptionMessage)message;
                 _publisher.Forward(isub);
             }
             else
@@ -765,7 +765,7 @@ namespace Akka.Cluster
         {
             if (message is InternalClusterAction.Welcome)
             {
-                var w = message as InternalClusterAction.Welcome;
+                var w = (InternalClusterAction.Welcome)message;
                 Welcome(joinWith, w.From, w.Gossip);
             }
             else if (message is InternalClusterAction.InitJoin)
@@ -774,13 +774,13 @@ namespace Akka.Cluster
             }
             else if (message is ClusterUserAction.JoinTo)
             {
-                var jt = message as ClusterUserAction.JoinTo;
+                var jt = (ClusterUserAction.JoinTo)message;
                 BecomeUninitialized();
                 Join(jt.Address);
             }
             else if (message is InternalClusterAction.ISubscriptionMessage)
             {
-                var isub = message as InternalClusterAction.ISubscriptionMessage;
+                var isub = (InternalClusterAction.ISubscriptionMessage)message;
                 _publisher.Forward(isub);
             }
             else if (message is InternalClusterAction.ITick)
@@ -820,12 +820,12 @@ namespace Akka.Cluster
         {
             if (message is GossipEnvelope)
             {
-                var ge = message as GossipEnvelope;
+                var ge = (GossipEnvelope)message;
                 ReceiveGossip(ge);
             }
             else if (message is GossipStatus)
             {
-                var gs = message as GossipStatus;
+                var gs = (GossipStatus)message;
                 ReceiveGossipStatus(gs);
             }
             else if (message is InternalClusterAction.GossipTick)
@@ -854,17 +854,17 @@ namespace Akka.Cluster
             }
             else if (message is InternalClusterAction.Join)
             {
-                var join = message as InternalClusterAction.Join;
+                var join = (InternalClusterAction.Join)message;
                 Joining(join.Node, join.Roles);
             }
             else if (message is ClusterUserAction.Down)
             {
-                var down = message as ClusterUserAction.Down;
+                var down = (ClusterUserAction.Down)message;
                 Downing(down.Address);
             }
             else if (message is ClusterUserAction.Leave)
             {
-                var leave = message as ClusterUserAction.Leave;
+                var leave = (ClusterUserAction.Leave)message;
                 Leaving(leave.Address);
             }
             else if (message is InternalClusterAction.ISubscriptionMessage)
@@ -873,17 +873,17 @@ namespace Akka.Cluster
             }
             else if (message is QuarantinedEvent)
             {
-                var q = message as QuarantinedEvent;
+                var q = (QuarantinedEvent)message;
                 Quarantined(new UniqueAddress(q.Address, q.Uid));
             }
             else if (message is ClusterUserAction.JoinTo)
             {
-                var jt = message as ClusterUserAction.JoinTo;
+                var jt = (ClusterUserAction.JoinTo)message;
                 _log.Info("Trying to join [{0}] when already part of a cluster, ignoring", jt.Address);
             }
             else if (message is InternalClusterAction.JoinSeedNodes)
             {
-                var joinSeedNodes = message as InternalClusterAction.JoinSeedNodes;
+                var joinSeedNodes = (InternalClusterAction.JoinSeedNodes)message;
                 _log.Info("Trying to join seed nodes [{0}] when already part of a cluster, ignoring",
                     joinSeedNodes.SeedNodes.Select(a => a.ToString()).Aggregate((a, b) => a + ", " + b));
             }

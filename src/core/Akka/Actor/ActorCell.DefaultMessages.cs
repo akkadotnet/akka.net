@@ -87,12 +87,12 @@ namespace Akka.Actor
                 Publish(new Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));
 
             var m = envelope.Message;
-            if (m is Terminated) ReceivedTerminated(m as Terminated);
-            else if (m is AddressTerminated) AddressTerminated((m as AddressTerminated).Address);
+            if (m is Terminated) ReceivedTerminated((Terminated)m);
+            else if (m is AddressTerminated) AddressTerminated(((AddressTerminated)m).Address);
             else if (m is Kill) Kill();
             else if (m is PoisonPill) HandlePoisonPill();
-            else if (m is ActorSelectionMessage) ReceiveSelection(m as ActorSelectionMessage);
-            else if (m is Identify) HandleIdentity(m as Identify);
+            else if (m is ActorSelectionMessage) ReceiveSelection((ActorSelectionMessage)m);
+            else if (m is Identify) HandleIdentity((Identify)m);
         }
 
         /// <summary>
@@ -148,17 +148,17 @@ namespace Akka.Actor
             {
                 var m = envelope.Message;
 
-                if (m is CompleteTask) HandleCompleteTask(m as CompleteTask);
-                else if (m is Failed) HandleFailed(m as Failed);
+                if (m is CompleteTask) HandleCompleteTask((CompleteTask)m);
+                else if (m is Failed) HandleFailed((Failed)m);
                 else if (m is DeathWatchNotification)
                 {
-                    var msg = m as DeathWatchNotification;
+                    var msg = (DeathWatchNotification)m;
                     WatchedActorTerminated(msg.Actor, msg.ExistenceConfirmed, msg.AddressTerminated);
                 }
-                else if (m is Create) HandleCreate((m as Create).Failure);
+                else if (m is Create) HandleCreate(((Create)m).Failure);
                 else if (m is Watch)
                 {
-                    var watch = m as Watch;
+                    var watch = (Watch)m;
                     AddWatcher(watch.Watchee, watch.Watcher);
                 }
                 else if (m is Unwatch)
@@ -166,13 +166,13 @@ namespace Akka.Actor
                     var unwatch = m as Unwatch;
                     RemWatcher(unwatch.Watchee, unwatch.Watcher);
                 }
-                else if (m is Recreate) FaultRecreate((m as Recreate).Cause);
+                else if (m is Recreate) FaultRecreate(((Recreate)m).Cause);
                 else if (m is Suspend) FaultSuspend();
-                else if (m is Resume) FaultResume((m as Resume).CausedByFailure);
+                else if (m is Resume) FaultResume(((Resume)m).CausedByFailure);
                 else if (m is Terminate) Terminate();
                 else if (m is Supervise)
                 {
-                    var supervise = m as Supervise;
+                    var supervise = (Supervise)m;
                     Supervise(supervise.Child, supervise.Async);
                 }
                 else

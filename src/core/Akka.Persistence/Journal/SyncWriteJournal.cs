@@ -40,10 +40,10 @@ namespace Akka.Persistence.Journal
 
         protected override bool Receive(object message)
         {
-            if (message is WriteMessages) HandleWriteMessages(message as WriteMessages);
-            else if (message is ReplayMessages) HandleReplayMessages(message as ReplayMessages);
-            else if (message is ReadHighestSequenceNr) HandleReadHighestSequenceNr(message as ReadHighestSequenceNr);
-            else if (message is DeleteMessagesTo) HandleDeleteMessagesTo(message as DeleteMessagesTo);
+            if (message is WriteMessages) HandleWriteMessages((WriteMessages)message);
+            else if (message is ReplayMessages) HandleReplayMessages((ReplayMessages)message);
+            else if (message is ReadHighestSequenceNr) HandleReadHighestSequenceNr((ReadHighestSequenceNr)message);
+            else if (message is DeleteMessagesTo) HandleDeleteMessagesTo((DeleteMessagesTo)message);
             else return false;
             return true;
         }

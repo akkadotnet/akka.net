@@ -346,9 +346,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         public void Put(MultiNodeMessage message)
         {
             //Check for passed messages
-            if (!Passed.HasValue && message is MultiNodeResultMessage)
+            var resultMessage = message as MultiNodeResultMessage;
+            if (!Passed.HasValue && resultMessage != null)
             {
-                var resultMessage = message as MultiNodeResultMessage;
                 Passed = resultMessage.Passed;
                 EndTime = DateTime.UtcNow.Ticks;
             }

@@ -37,10 +37,10 @@ namespace Akka.Persistence.Journal
 
         protected override bool Receive(object message)
         {
-            if (message is AsyncWriteTarget.WriteMessages) Add(message as AsyncWriteTarget.WriteMessages);
-            else if (message is AsyncWriteTarget.DeleteMessagesTo) Delete(message as AsyncWriteTarget.DeleteMessagesTo);
-            else if (message is AsyncWriteTarget.ReplayMessages) Read(message as AsyncWriteTarget.ReplayMessages);
-            else if (message is AsyncWriteTarget.ReadHighestSequenceNr) GetHighestSequenceNumber(message as AsyncWriteTarget.ReadHighestSequenceNr);
+            if (message is AsyncWriteTarget.WriteMessages) Add((AsyncWriteTarget.WriteMessages)message);
+            else if (message is AsyncWriteTarget.DeleteMessagesTo) Delete((AsyncWriteTarget.DeleteMessagesTo)message);
+            else if (message is AsyncWriteTarget.ReplayMessages) Read((AsyncWriteTarget.ReplayMessages)message);
+            else if (message is AsyncWriteTarget.ReadHighestSequenceNr) GetHighestSequenceNumber((AsyncWriteTarget.ReadHighestSequenceNr)message);
             else return false;
             return true;
         }

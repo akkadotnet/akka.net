@@ -19,9 +19,9 @@ namespace Akka.Persistence.Tests
 
         protected bool Receiver(object message)
         {
-            if (message is Cmd)
+            var cmd = message as Cmd;
+            if (cmd != null)
             {
-                var cmd = message as Cmd;
                 Persist(new[] { new Evt(cmd.Data + "-1"), new Evt(cmd.Data + "-2") }, UpdateStateHandler);
                 return true;
             }
@@ -93,9 +93,10 @@ namespace Akka.Persistence.Tests
 
             protected bool UpdateState(object message)
             {
-                if (message is Evt)
+                var evt = message as Evt;
+                if (evt != null)
                 {
-                    Events.AddFirst((message as Evt).Data);
+                    Events.AddFirst(evt.Data);
                     return true;
                 }
 
@@ -123,9 +124,9 @@ namespace Akka.Persistence.Tests
 
             protected bool Receiver(object message)
             {
-                if (message is Cmd)
+                var cmd = message as Cmd;
+                if (cmd != null)
                 {
-                    var cmd = message as Cmd;
                     Persist(new[] { new Evt(cmd.Data + "-1"), new Evt(cmd.Data + "-2") }, UpdateStateHandler);
                     Persist(new[] { new Evt(cmd.Data + "-3"), new Evt(cmd.Data + "-4") }, UpdateStateHandler);
                     return true;
@@ -144,9 +145,9 @@ namespace Akka.Persistence.Tests
 
             protected bool Receiver(object message)
             {
-                if (message is Cmd)
+                var cmd = message as Cmd;
+                if (cmd != null)
                 {
-                    var cmd = message as Cmd;
                     Persist(new[] { new Evt(cmd.Data + "-11"), new Evt(cmd.Data + "-12") }, UpdateStateHandler);
                     UpdateState(new Evt(cmd.Data + "-10"));
                     return true;
@@ -163,9 +164,9 @@ namespace Akka.Persistence.Tests
             {
                 if (CommonBehavior(message)) return true;
 
-                if (message is Cmd)
+                var cmd = message as Cmd;
+                if (cmd != null)
                 {
-                    var cmd = message as Cmd;
                     Persist(new Evt(cmd.Data + "-0"), evt =>
                     {
                         UpdateState(evt);
@@ -178,10 +179,9 @@ namespace Akka.Persistence.Tests
 
             protected bool NewBehavior(object message)
             {
-                if (message is Cmd)
+                var cmd = message as Cmd;
+                if (cmd != null)
                 {
-                    var cmd = message as Cmd;
-
                     Persist(new Evt(cmd.Data + "-21"), UpdateStateHandler);
                     Persist(new Evt(cmd.Data + "-22"), evt =>
                     {
@@ -202,9 +202,9 @@ namespace Akka.Persistence.Tests
             {
                 if (CommonBehavior(message)) return true;
 
-                if (message is Cmd)
+                var cmd = message as Cmd;
+                if (cmd != null)
                 {
-                    var cmd = message as Cmd;
                     Persist(new Evt(cmd.Data + "-0"), evt =>
                     {
                         UpdateState(evt);
@@ -217,10 +217,9 @@ namespace Akka.Persistence.Tests
 
             protected bool NewBehavior(object message)
             {
-                if (message is Cmd)
+                var cmd = message as Cmd;
+                if (cmd != null)
                 {
-                    var cmd = message as Cmd;
-
                     Persist(new Evt(cmd.Data + "-21"), evt =>
                     {
                         UpdateState(evt);
@@ -239,10 +238,10 @@ namespace Akka.Persistence.Tests
             protected override bool ReceiveCommand(object message)
             {
                 if (CommonBehavior(message)) return true;
-                
-                if (message is Cmd)
+
+                var cmd = message as Cmd;
+                if (cmd != null)
                 {
-                    var cmd = message as Cmd;
                     Context.Become(NewBehavior);
                     Persist(new Evt(cmd.Data + "-0"), UpdateStateHandler);
                     return true;
@@ -271,10 +270,10 @@ namespace Akka.Persistence.Tests
             protected override bool ReceiveCommand(object message)
             {
                 if (CommonBehavior(message)) return true;
-                
-                if (message is Cmd)
+
+                var cmd = message as Cmd;
+                if (cmd != null)
                 {
-                    var cmd = message as Cmd;
                     Persist(new Evt(cmd.Data + "-0"), UpdateStateHandler);
                     Context.Become(NewBehavior);
                     return true;
@@ -284,9 +283,9 @@ namespace Akka.Persistence.Tests
 
             protected bool NewBehavior(object message)
             {
-                if (message is Cmd)
+                var cmd = message as Cmd;
+                if (cmd != null)
                 {
-                    var cmd = message as Cmd;
                     Persist(new[] { new Evt(cmd.Data + "-31"), new Evt(cmd.Data + "-32") }, UpdateStateHandler);
                     UpdateState(new Evt(cmd.Data + "-30"));
                     Context.Unbecome();
@@ -309,10 +308,11 @@ namespace Akka.Persistence.Tests
             {
                 if (!base.ReceiveRecover(message))
                 {
-                    if (message is SnapshotOffer)
+                    var snapshotOffer = message as SnapshotOffer;
+                    if (snapshotOffer != null)
                     {
                         Probe.Tell("offered");
-                        Events = (message as SnapshotOffer).Snapshot as LinkedList<object>;
+                        Events = snapshotOffer.Snapshot as LinkedList<object>;
                     }
                     else return false;
                 }
@@ -322,7 +322,7 @@ namespace Akka.Persistence.Tests
             protected override bool ReceiveCommand(object message)
             {
                 if (CommonBehavior(message)) ;
-                else if (message is Cmd) HandleCmd(message as Cmd);
+                else if (message is Cmd) HandleCmd((Cmd)message);
                 else if (message is SaveSnapshotSuccess) Probe.Tell("saved");
                 else if (message.ToString() == "snap") SaveSnapshot(Events);
                 else return false;
@@ -387,9 +387,9 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (message is Cmd)
+                var cmd = message as Cmd;
+                if (cmd != null)
                 {
-                    var cmd = message as Cmd;
                     if (cmd.Data.ToString() == "a")
                     {
                         if (!_stashed)
@@ -857,14 +857,14 @@ namespace Akka.Persistence.Tests
             {
                 if (message is LatchCmd)
                 {
-                    var latchCmd = message as LatchCmd;
+                    var latchCmd = (LatchCmd)message;
                     Sender.Tell(latchCmd.Data);
                     latchCmd.Latch.Ready(TimeSpan.FromSeconds(5));
                     PersistAsync(latchCmd.Data, _ => { });
                 }
                 else if (message is Cmd)
                 {
-                    var cmd = message as Cmd;
+                    var cmd = (Cmd)message;
                     Sender.Tell(cmd.Data);
                     PersistAsync(cmd.Data, _ => { });
                 }

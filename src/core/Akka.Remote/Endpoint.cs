@@ -867,7 +867,7 @@ namespace Akka.Remote
             }
             else if (message is Status.Failure)
             {
-                var failure = message as Status.Failure;
+                var failure = (Status.Failure)message;
                 if (failure.Cause is InvalidAssociationException)
                 {
                     PublishAndThrow(new InvalidAssociation(LocalAddress, RemoteAddress, failure.Cause),
@@ -882,7 +882,7 @@ namespace Akka.Remote
             }
             else if (message is Handle)
             {
-                var inboundHandle = message as Handle;
+                var inboundHandle = (Handle)message;
                 Context.Parent.Tell(
                     new ReliableDeliverySupervisor.GotUid((int)inboundHandle.ProtocolHandle.HandshakeInfo.Uid));
                 _handle = inboundHandle.ProtocolHandle;
@@ -925,7 +925,7 @@ namespace Akka.Remote
         {
             if (message is EndpointManager.Send)
             {
-                var s = message as EndpointManager.Send;
+                var s = (EndpointManager.Send)message;
                 if (!WriteSend(s))
                 {
                     if (s.Seq == null) EnqueueInBuffer(s);
@@ -971,7 +971,7 @@ namespace Akka.Remote
         {
             if (message is Terminated)
             {
-                var t = message as Terminated;
+                var t = (Terminated)message;
                 if (_reader == null || t.ActorRef.Equals(_reader))
                 {
                     PublishAndThrow(new EndpointDisassociatedException("Disassociated"), LogLevel.DebugLevel);
@@ -979,7 +979,7 @@ namespace Akka.Remote
             }
             else if (message is StopReading)
             {
-                var stop = message as StopReading;
+                var stop = (StopReading)message;
                 if (_reader != null)
                 {
                     _reader.Tell(stop, stop.ReplyTo);
@@ -992,7 +992,7 @@ namespace Akka.Remote
             }
             else if (message is TakeOver)
             {
-                var takeover = message as TakeOver;
+                var takeover = (TakeOver)message;
 
                 // Shutdown old reader
                 _handle.Disassociate();
@@ -1007,7 +1007,7 @@ namespace Akka.Remote
             }
             else if (message is OutboundAck)
             {
-                var ack = message as OutboundAck;
+                var ack = (OutboundAck)message;
                 _lastAck = ack.Ack;
                 if (_ackDeadline.IsOverdue)
                     TrySendPureAck();
@@ -1229,7 +1229,7 @@ namespace Akka.Remote
             {
                 if (msg is EndpointManager.Send)
                 {
-                    return WriteSend(msg as EndpointManager.Send);
+                    return WriteSend((EndpointManager.Send)msg);
                 }
                 else if (msg is FlushAndStop)
                 {
@@ -1238,7 +1238,7 @@ namespace Akka.Remote
                 }
                 else if (msg is StopReading)
                 {
-                    var s = msg as StopReading;
+                    var s = (StopReading)msg;
                     if (_reader != null) _reader.Tell(s, s.ReplyTo);
                 }
                 return true;
@@ -1499,11 +1499,11 @@ namespace Akka.Remote
         {
             if (message is Disassociated)
             {
-                HandleDisassociated((message as Disassociated).Info);
+                HandleDisassociated(((Disassociated)message).Info);
             }
             else if (message is InboundPayload)
             {
-                var payload = message as InboundPayload;
+                var payload = (InboundPayload)message;
                 var ackAndMessage = TryDecodeMessageAndAck(payload.Payload);
                 if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
                     _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
@@ -1525,7 +1525,7 @@ namespace Akka.Remote
             }
             else if (message is EndpointWriter.StopReading)
             {
-                var stop = message as EndpointWriter.StopReading;
+                var stop = (EndpointWriter.StopReading)message;
                 SaveState();
                 Context.Become(NotReading);
                 stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer));
@@ -1540,15 +1540,15 @@ namespace Akka.Remote
         {
             if (message is Disassociated)
             {
-                HandleDisassociated((message as Disassociated).Info);
+                HandleDisassociated(((Disassociated)message).Info);
             }
             else if (message is EndpointWriter.StopReading)
             {
-                var stop = message as EndpointWriter.StopReading;
+                var stop = (EndpointWriter.StopReading)message;
                 Sender.Tell(new EndpointWriter.StoppedReading(stop.Writer));
             } else if (message is InboundPayload)
             {
-                var payload = message as InboundPayload;
+                var payload = (InboundPayload)message;
                 var ackAndMessage = TryDecodeMessageAndAck(payload.Payload);
                 if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
                     _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);

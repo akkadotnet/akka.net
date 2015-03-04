@@ -61,7 +61,7 @@ namespace Akka.Persistence
             {
                 Receive receiveRecover = ReceiveRecover;
                 if (message is IPersistentRepresentation && IsRecovering)
-                    return receiveRecover((message as IPersistentRepresentation).Payload);
+                    return receiveRecover(((IPersistentRepresentation)message).Payload);
                 else if (message is SnapshotOffer)
                     return receiveRecover((SnapshotOffer)message);
                 else if (message is RecoveryFailure)
