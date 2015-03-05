@@ -90,7 +90,6 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         protected Routees CurrentRoutees(ActorRef router)
         {
             var routerAsk = router.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
-            routerAsk.Wait();
             return routerAsk.Result;
         }
 
@@ -263,8 +262,6 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         /// </summary>
         protected void AClusterRouterWithConsistentHashingPoolMustRemoveRouteesFromDownedNode()
         {
-            
-
             RunOn(() =>
             {
                 Cluster.Down(GetAddress(_config.Third));

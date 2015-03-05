@@ -378,7 +378,6 @@ namespace Akka.Actor
                     // for consistency we check configuration of dispatcher and mailbox locally
                     var dispatcher = _system.Dispatchers.Lookup(props2.Dispatcher);
                     var mailboxType = _system.Mailboxes.GetMailboxType(props2, ConfigurationFactory.Empty);
-                    var mailbox = _system.Mailboxes.CreateMailbox(props2, ConfigurationFactory.Empty);
                     //TODO: dispatcher need configurators
 
                     if (async)
@@ -400,7 +399,7 @@ namespace Akka.Actor
             else //routers!!!
             {
                 var lookup = (lookupDeploy ? Deployer.Lookup(path) : null) ?? Deploy.None;
-                var fromProps = new List<Deploy>() { props.Deploy.WithRouterConfig(props.Deploy.RouterConfig.WithFallback(props.Deploy.RouterConfig)), deploy, lookup };
+                var fromProps = new List<Deploy>() { props.Deploy.Copy(), deploy, lookup };
                 var d = fromProps.Where(x => x != null).Aggregate((deploy1, deploy2) => deploy2.WithFallback(deploy1));
                 var p = props.WithRouter(d.RouterConfig);
 

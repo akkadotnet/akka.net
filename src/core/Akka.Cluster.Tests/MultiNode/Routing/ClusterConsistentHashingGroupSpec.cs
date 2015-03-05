@@ -73,12 +73,14 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
     {
         private readonly ClusterConsistentHashingGroupSpecConfig _config;
 
-        protected ClusterConsistentHashingGroupSpec() : this(new ClusterConsistentHashingGroupSpecConfig())
+        protected ClusterConsistentHashingGroupSpec()
+            : this(new ClusterConsistentHashingGroupSpecConfig())
         {
-            
+
         }
 
-        protected ClusterConsistentHashingGroupSpec(ClusterConsistentHashingGroupSpecConfig config) : base(config)
+        protected ClusterConsistentHashingGroupSpec(ClusterConsistentHashingGroupSpecConfig config)
+            : base(config)
         {
             _config = config;
         }
@@ -86,7 +88,6 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         protected Routees CurrentRoutees(ActorRef router)
         {
             var routerAsk = router.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
-            routerAsk.Wait();
             return routerAsk.Result;
         }
 
@@ -101,28 +102,19 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         }
 
         [MultiNodeFact]
-        public void ClusterConsistentHashingGroupSpecs()
-        {
-            AClusterRouterWithConsitentHashingGroupMustStartClusterWith3Nodes();
-            AClusterRouterWithConsistentHashingGroupMustSendToSameDestinationsFromDifferentNodes();
-        }
-
-        protected void AClusterRouterWithConsitentHashingGroupMustStartClusterWith3Nodes()
+        public void AClusterRouterWithConsistentHashingGroupMustSendToSameDestinationsFromDifferentNodes()
         {
             Sys.ActorOf(Props.Create<ClusterConsistentHashingGroupSpecConfig.Destination>(), "dest");
             AwaitClusterUp(_config.First, _config.Second, _config.Third);
             EnterBarrier("after-1");
-        }
 
-        protected void AClusterRouterWithConsistentHashingGroupMustSendToSameDestinationsFromDifferentNodes()
-        {
             ConsistentHashMapping hashMapping = msg =>
             {
                 if (msg is string) return msg;
                 return null;
             };
 
-            var paths = new List<string>() {"/user/dest"};
+            var paths = new List<string>() { "/user/dest" };
             var router =
                 Sys.ActorOf(
                     new ClusterRouterGroup(new ConsistentHashingGroup(paths).WithHashMapping(hashMapping),
@@ -135,7 +127,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 var members = CurrentRoutees(router).Members;
                 members.Count().ShouldBe(3);
             });
-            var keys = new[] {"A", "B", "C", "D", "E", "F", "G"};
+            var keys = new[] { "A", "B", "C", "D", "E", "F", "G" };
             foreach (var key in Enumerable.Range(1, 10).SelectMany(i => keys))
             {
                 router.Tell(key, TestActor);
