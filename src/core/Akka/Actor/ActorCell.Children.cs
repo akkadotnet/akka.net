@@ -275,28 +275,15 @@ namespace Akka.Actor
 
         public bool TryGetSingleChild(string name, out InternalActorRef child)
         {
-            if (name.IndexOf('#') < 0)
+            var nameAndUid = SplitNameAndUid(name);
+            ChildRestartStats stats;
+            if (TryGetChildRestartStatsByName(nameAndUid.Name, out stats))
             {
-                // optimization for the non-uid case
-                ChildRestartStats stats;
-                if (TryGetChildRestartStatsByName(name, out stats))
+                var uid = nameAndUid.Uid;
+                if (uid == ActorCell.UndefinedUid || uid == stats.Uid)
                 {
                     child = stats.Child;
                     return true;
-                }
-            }
-            else
-            {
-                var nameAndUid = SplitNameAndUid(name);
-                ChildRestartStats stats;
-                if (TryGetChildRestartStatsByName(nameAndUid.Name, out stats))
-                {
-                    var uid = nameAndUid.Uid;
-                    if (uid == ActorCell.UndefinedUid || uid == stats.Uid)
-                    {
-                        child = stats.Child;
-                        return true;
-                    }
                 }
             }
             child = ActorRef.Nobody;
@@ -321,9 +308,7 @@ namespace Akka.Actor
             if (name == null) throw new InvalidActorNameException("Actor name must not be null.");
             if (name.Length == 0) throw new InvalidActorNameException("Actor name must not be empty.");
             if (!ActorPath.IsValidPathElement(name))
-            {
                 throw new InvalidActorNameException(string.Format("Illegal actor name [{0}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${1}.", name, new String(ActorPath.ValidSymbols)));
-            }
         }
 
         private InternalActorRef MakeChild(Props props, string name, bool async, bool systemService)
