@@ -6,6 +6,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Persistence.Serialization;
+using System.Runtime.Serialization;
 
 namespace Akka.Persistence
 {
@@ -105,6 +106,11 @@ namespace Akka.Persistence
     {
         public MaxUnconfirmedMessagesExceededException(string message, Exception cause = null)
             : base(message, cause)
+        {
+        }
+
+        protected MaxUnconfirmedMessagesExceededException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
         {
         }
     }
