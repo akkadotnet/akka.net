@@ -244,8 +244,7 @@ namespace Akka.Remote.Tests
                 .WithDeploy(
                 new Deploy(new RemoteScope(intendedRemoteAddress.Copy()))), "local-blub2");
 
-            // This line was subject to a bug in the original Akka - this router should be locally-deployed.
-            router.Path.Address.ToString().ShouldBe(string.Format("akka://{0}", masterActorSystem.Name));
+            router.Path.Address.ShouldBe(intendedRemoteAddress);
 
             var replies = new HashSet<ActorPath>();
             for (var i = 0; i < 5; i++)

@@ -70,6 +70,11 @@ namespace Akka.Routing
         {
             throw new NotImplementedException();
         }
+
+        public override RouterConfig WithFallback(RouterConfig routerConfig)
+        {
+            return routerConfig;
+        }
     }
 
     /// <summary>
@@ -206,6 +211,16 @@ namespace Akka.Routing
         public virtual int NrOfInstances { get; set; }
 
         /// <summary>
+        /// Used by the <see cref="RoutedActorCell"/> to determine the initial number of routees.
+        /// 
+        /// Needs to be connected to an <see cref="ActorSystem"/> for clustered deployment scenarios.
+        /// </summary>
+        public virtual int GetNrOfInstances(ActorSystem system)
+        {
+            return NrOfInstances;
+        }
+
+        /// <summary>
         /// Whether or not to use the pool dispatcher.
         /// </summary>
         public virtual bool UsePoolDispatcher { get; set; }
@@ -256,12 +271,46 @@ namespace Akka.Routing
 
         public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
         {
-            for (int i = 0; i < NrOfInstances; i++)
+            for (var i = 0; i < NrOfInstances; i++)
             {
                 //TODO: where do we get props?
                 yield return NewRoutee(Akka.Actor.Props.Empty, routedActorCell);
             }
         }
+
+        protected RouterConfig OverrideUnsetConfig(RouterConfig other)
+        {
+            if (other is NoRouter) return this; // NoRouter is thedefault, hence "neutral"
+            if (other is Pool)
+            {
+                Pool wssConf;
+                var p = other as Pool;
+                if (SupervisorStrategy == null || (SupervisorStrategy.Equals(Pool.DefaultStrategy) &&
+                    !p.SupervisorStrategy.Equals(Pool.DefaultStrategy)))
+                    wssConf = this.WithSupervisorStrategy(p.SupervisorStrategy);
+                else
+                    wssConf = this;
+
+                if (wssConf.Resizer == null && p.Resizer != null)
+                    return wssConf.WithResizer(p.Resizer);
+                return wssConf;
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Returns a new instance of the <see cref="Pool"/> router with a new <see cref="SupervisorStrategy"/>.
+        /// 
+        /// NOTE: this method is immutable and returns a new instance of the <see cref="Pool"/>.
+        /// </summary>
+        public abstract Pool WithSupervisorStrategy(SupervisorStrategy strategy);
+
+        /// <summary>
+        /// Returns a new instance of the <see cref="Pool"/> router with a new <see cref="Resizer"/>.
+        /// 
+        /// NOTE: this method is immutable and returns a new instance of the <see cref="Pool"/>.
+        /// </summary>
+        public abstract Pool WithResizer(Resizer resizer);
 
         #region Static methods
 
@@ -292,6 +341,14 @@ namespace Akka.Routing
         #endregion
     }
 
+    /// <summary>
+    /// Used to tell <see cref="ActorRefProvider"/> to create router based on what's stored in configuration.
+    /// 
+    /// For example:
+    /// <code>
+    ///      ActorRef router1 = Sys.ActorOf(Props.Create{Echo}().WithRouter(FromConfig.Instance), "router1");
+    /// </code>
+    /// </summary>
     public class FromConfig : RouterConfig
     {
         private static readonly FromConfig _instance = new FromConfig();

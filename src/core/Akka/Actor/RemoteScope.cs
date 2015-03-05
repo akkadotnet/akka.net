@@ -3,6 +3,9 @@ using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// Used to deploy actors on remote nodes at the specified <see cref="Address"/>.
+    /// </summary>
     public class RemoteScope : Scope, IEquatable<RemoteScope>
     {
         protected RemoteScope()
@@ -34,6 +37,16 @@ namespace Akka.Actor
         public override int GetHashCode()
         {
             return (Address != null ? Address.GetHashCode() : 0);
+        }
+
+        public override Scope WithFallback(Scope other)
+        {
+            return this;
+        }
+
+        public override Scope Copy()
+        {
+            return new RemoteScope(Address.Copy());
         }
     }
 }

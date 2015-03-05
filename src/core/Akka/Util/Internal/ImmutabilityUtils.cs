@@ -12,6 +12,8 @@ namespace Akka.Util.Internal
     /// </summary>
     internal static class ImmutabilityUtils
     {
+        #region HashSet<T>
+
         public static HashSet<T> CopyAndAdd<T>(this HashSet<T> set, T item)
         {
             Guard.Assert(set != null, "set cannot be null");
@@ -32,5 +34,29 @@ namespace Akka.Util.Internal
             copyList.Remove(item);
             return new HashSet<T>(copyList);
         }
+
+        #endregion
+
+        #region IDictionary<T>
+
+        public static SortedDictionary<TKey, TValue> CopyAndAdd<TKey, TValue>(this SortedDictionary<TKey, TValue> dict,
+            IEnumerable<KeyValuePair<TKey, TValue>> values)
+        {
+            var newDict = new SortedDictionary<TKey, TValue>();
+            foreach(var item in dict.Concat(values))
+                newDict.Add(item.Key, item.Value);
+            return newDict;
+        }
+
+        public static SortedDictionary<TKey, TValue> CopyAndRemove<TKey, TValue>(this SortedDictionary<TKey, TValue> dict,
+            IEnumerable<KeyValuePair<TKey, TValue>> values)
+        {
+            var newDict = new SortedDictionary<TKey, TValue>();
+            foreach (var item in dict.Except(values))
+                newDict.Add(item.Key, item.Value);
+            return newDict;
+        }
+
+        #endregion
     }
 }

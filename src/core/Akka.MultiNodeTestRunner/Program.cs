@@ -67,7 +67,7 @@ namespace Akka.MultiNodeTestRunner
                     controller.Find(false, discovery, new TestFrameworkOptions());
                     discovery.Finished.WaitOne();
 
-                    foreach (var test in discovery.Tests)
+                    foreach (var test in discovery.Tests.Reverse())
                     {
                         PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
 
