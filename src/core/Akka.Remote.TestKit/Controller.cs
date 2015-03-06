@@ -4,6 +4,7 @@ using Akka.Actor;
 using Akka.Event;
 using Helios.Net;
 using Helios.Topology;
+using System.Runtime.Serialization;
 
 namespace Akka.Remote.TestKit
 {
@@ -66,6 +67,10 @@ namespace Akka.Remote.TestKit
         public class ClientDisconnectedException : AkkaException
         {
             public ClientDisconnectedException(string msg) : base(msg){}
+
+            protected ClientDisconnectedException(SerializationInfo info, StreamingContext context) : base(info, context)
+            {
+            }
         }
 
         public class GetNodes

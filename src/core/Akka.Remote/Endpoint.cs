@@ -140,6 +140,11 @@ namespace Akka.Remote
     internal class EndpointException : AkkaException
     {
         public EndpointException(string msg, Exception cause = null) : base(msg, cause) { }
+
+        protected EndpointException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /// <summary>

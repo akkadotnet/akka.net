@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Google.ProtocolBuffers;
+using System.Runtime.Serialization;
 
 namespace Akka.Remote.Transport
 {
@@ -57,6 +58,11 @@ namespace Akka.Remote.Transport
     {
         public InvalidAssociationException(string message, Exception cause = null)
             : base(message, cause)
+        {
+        }
+
+        protected InvalidAssociationException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
         {
         }
     }

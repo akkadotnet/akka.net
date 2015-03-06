@@ -6,6 +6,7 @@ using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
 using Google.ProtocolBuffers;
+using System.Runtime.Serialization;
 
 namespace Akka.Remote.Transport
 {
@@ -28,6 +29,11 @@ namespace Akka.Remote.Transport
         public FailureInjectorException(string msg)
         {
             Msg = msg;
+        }
+
+        protected FailureInjectorException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
         }
 
         public string Msg { get; private set; }
