@@ -1010,7 +1010,6 @@ namespace Akka.Cluster
                         : Deadline.Now + _cluster.Settings.RetryUnsuccessfulJoinAfter;
 
                     Context.Become(m => TryingToJoin(m, address, joinDeadline));
-                    Self.Tell("testing"); //TODO: remove when done debugging
                     ClusterCore(address).Tell(new InternalClusterAction.Join(_cluster.SelfUniqueAddress, _cluster.SelfRoles));
                 }
             }
