@@ -108,14 +108,14 @@ namespace Akka.Actor
         public bool Equals(Deploy other)
         {
             if (other == null) return false;
-            return ((string.IsNullOrEmpty(Mailbox) && string.IsNullOrEmpty(other.Mailbox)) ||
-                    string.Equals(Mailbox, other.Mailbox)) &&
-                   string.Equals(Dispatcher, other.Dispatcher) &&
-                   string.Equals(Path, other.Path) &&
-                   RouterConfig.Equals(other.RouterConfig) &&
-                   ((Config.IsNullOrEmpty() && other.Config.IsNullOrEmpty()) ||
-                    Config.ToString().Equals(other.Config.ToString())) &&
-                   (Scope == null && other.Scope == null || (Scope != null && Scope.Equals(other.Scope)));
+            return ((string.IsNullOrEmpty(_mailbox) && string.IsNullOrEmpty(other._mailbox)) ||
+                    string.Equals(_mailbox, other._mailbox)) &&
+                   string.Equals(_dispatcher, other._dispatcher) &&
+                   string.Equals(_path, other._path) &&
+                   _routerConfig.Equals(other._routerConfig) &&
+                   ((_config.IsNullOrEmpty() && other._config.IsNullOrEmpty()) ||
+                    _config.ToString().Equals(other._config.ToString())) &&
+                   (_scope == null && other._scope == null || (_scope != null && _scope.Equals(other._scope)));
         }
 
         public ISurrogate ToSurrogate(ActorSystem system)
