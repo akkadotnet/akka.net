@@ -55,7 +55,7 @@ namespace Akka.Remote
             else
             {
                 //TODO: return deploy;
-                return deploy.WithScope(scope: Deploy.NoScopeGiven);
+                return deploy;
             }
         }
     }

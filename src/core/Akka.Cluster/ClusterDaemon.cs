@@ -125,6 +125,12 @@ namespace Akka.Cluster
                     return (_node.GetHashCode() * 397) ^ _roles.GetHashCode();
                 }
             }
+
+            public override string ToString()
+            {
+                return string.Format("{0}: {1} wants to join on Roles [{2}]", GetType(), Node,
+                    string.Join(",", Roles ?? ImmutableHashSet<string>.Empty));
+            }
         }
 
         /// <summary>
@@ -640,6 +646,7 @@ namespace Akka.Cluster
         GossipStats _gossipStats = new GossipStats();
         ActorRef _seedNodeProcess;
         int _seedNodeProcessCounter = 0; //for unique names
+        private bool _logInfo;
 
         readonly ActorRef _publisher;
 
@@ -648,9 +655,13 @@ namespace Akka.Cluster
             _publisher = publisher;
             SelfUniqueAddress = _cluster.SelfUniqueAddress;
             _vclockNode = new VectorClock.Node(VclockName(SelfUniqueAddress));
-            //TODO: _statsEnabled = PublishStatsInternal.IsFinite;
+            
             var settings = _cluster.Settings;
             var scheduler = _cluster.Scheduler;
+
+            _statsEnabled = settings.PublishStatsInterval.HasValue
+                            && settings.PublishStatsInterval >= TimeSpan.Zero
+                            && settings.PublishStatsInterval != TimeSpan.MaxValue;
 
             _gossipTaskCancellable = new CancellationTokenSource();
             _gossipTask =
@@ -679,7 +690,7 @@ namespace Akka.Cluster
                     InternalClusterAction.LeaderActionsTick.Instance,
                     _leaderActionsTaskCancellable.Token);
 
-            if (settings.PublishStatsInterval != null)
+            if (settings.PublishStatsInterval != null && settings.PublishStatsInterval > TimeSpan.Zero && settings.PublishStatsInterval != TimeSpan.MaxValue)
             {
                 _publishStatsTaskTaskCancellable = new CancellationTokenSource();
                 _publishStatsTask =
@@ -690,6 +701,8 @@ namespace Akka.Cluster
                                 InternalClusterAction.PublishStatsTick.Instance,
                                 _publishStatsTaskTaskCancellable.Token);
             }
+
+            _logInfo = settings.LogInfo;
         }
 
         ActorSelection ClusterCore(Address address)
@@ -736,6 +749,11 @@ namespace Akka.Cluster
 
         private void Uninitialized(object message)
         {
+            if (_logInfo && !(message is InternalClusterAction.ITick))
+            {
+                _log.Debug("[Uninitialized] Received {0}", message);
+            }
+
             if (message is InternalClusterAction.InitJoin)
             {
                 Sender.Tell(new InternalClusterAction.InitJoinNack(_cluster.SelfAddress));
@@ -763,6 +781,11 @@ namespace Akka.Cluster
 
         private void TryingToJoin(object message, Address joinWith, Deadline deadline)
         {
+            if (_logInfo && !(message is InternalClusterAction.ITick))
+            {
+                _log.Debug("[TryingToJoin] Received {0}", message);
+            }
+
             if (message is InternalClusterAction.Welcome)
             {
                 var w = message as InternalClusterAction.Welcome;
@@ -818,6 +841,11 @@ namespace Akka.Cluster
 
         private void Initialized(object message)
         {
+            if (_logInfo && !(message is InternalClusterAction.ITick))
+            {
+                _log.Debug("[Initialized] Received {0}", message);
+            }
+
             if (message is GossipEnvelope)
             {
                 var ge = message as GossipEnvelope;
@@ -906,6 +934,10 @@ namespace Akka.Cluster
             }
             else
             {
+                if (_logInfo)
+                {
+                    _log.Debug("[Unhandled] Received {0}", message);
+                }
                 base.Unhandled(message);
             }
         }
@@ -1147,7 +1179,7 @@ namespace Akka.Cluster
                 var newOverview = localGossip.Overview.Copy(reachability: newReachability);
                 var newGossip = localGossip.Copy(overview: newOverview);
                 UpdateLatestGossip(newGossip);
-                _log.Warn("Cluster Node [{0}] - Marking node as TERMINATED [{1}], due to quarantine",
+                _log.Warning("Cluster Node [{0}] - Marking node as TERMINATED [{1}], due to quarantine",
                     Self, node.Address);
                 Publish(_latestGossip);
                 Downing(node.Address);
@@ -1482,7 +1514,7 @@ namespace Akka.Cluster
                     return m.CopyUp(upNumber);
                 }
 
-                if (m.Status == MemberStatus.Leaving && hasPartionHandoffCompletedSuccessfully)
+                if (m.Status == MemberStatus.Leaving)
                 {
                     // Move LEAVING => EXITING (once we have a convergence on LEAVING
                     // *and* if we have a successful partition handoff)
@@ -1514,6 +1546,13 @@ namespace Akka.Cluster
                 // log status changes
                 foreach (var m in changedMembers)
                     _log.Info("Leader is moving node [{0}] to [{1}]", m.Address, m.Status);
+
+                //log the removal of unreachable nodes
+                foreach (var m in removedUnreachable)
+                {
+                    var status = m.Status == MemberStatus.Exiting ? "exiting" : "unreachable";
+                    _log.Info("Leader is removing {0} node [{1}]", status, m.Address);
+                }
 
                 Publish(_latestGossip);
 

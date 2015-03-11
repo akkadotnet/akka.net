@@ -160,5 +160,20 @@ namespace Akka.Routing
                 return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
             }
         }
+
+        public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
+        {
+            return new RandomPool(NrOfInstances, Resizer, strategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        public override Pool WithResizer(Resizer resizer)
+        {
+            return new RandomPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        public override RouterConfig WithFallback(RouterConfig routerConfig)
+        {
+            return OverrideUnsetConfig(routerConfig);
+        }
     }
 }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
+using System.Runtime.Serialization;
 
 namespace Akka.Remote
 {
@@ -97,6 +98,11 @@ namespace Akka.Remote
     {
         public RemoteTransportException(string message, Exception cause = null)
             : base(message, cause)
+        {
+        }
+
+        protected RemoteTransportException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
         {
         }
     }

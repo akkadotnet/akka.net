@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Security.Policy;
 using Akka.Actor;
+using System.Runtime.Serialization;
 
 namespace Akka.Remote
 {
@@ -219,6 +220,10 @@ namespace Akka.Remote
         {
         }
 
+        protected ResendBufferCapacityReachedException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     class ResendUnfulfillableException : AkkaException

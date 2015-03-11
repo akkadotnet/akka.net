@@ -42,11 +42,53 @@ namespace Akka.Remote.Routing
             _nodeAddrEnumerator = Nodes.GetContinuousEnumerator();
         }
 
+        #region Property overrides
+
+        public override SupervisorStrategy SupervisorStrategy
+        {
+            get { return Local.SupervisorStrategy; }
+        }
+
+        public override Resizer Resizer
+        {
+            get { return Local.Resizer; }
+        }
+
+        public override int GetNrOfInstances(ActorSystem system)
+        {
+            return Local.GetNrOfInstances(system);
+        }
+
+        public override int NrOfInstances
+        {
+            get
+            {
+                return Local.NrOfInstances;
+            }
+        }
+
+        public override string RouterDispatcher
+        {
+            get { return Local.RouterDispatcher; }
+        }
+
+        #endregion
+
         #region Trivial method overrides
 
         internal override RouterActor CreateRouterActor()
         {
             return Local.CreateRouterActor();
+        }
+
+        public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
+        {
+            return new RemoteRouterConfig(Local.WithSupervisorStrategy(strategy), Nodes);
+        }
+
+        public override Pool WithResizer(Resizer resizer)
+        {
+            return new RemoteRouterConfig(Local.WithResizer(resizer), Nodes);
         }
 
         public override Router CreateRouter(ActorSystem system)

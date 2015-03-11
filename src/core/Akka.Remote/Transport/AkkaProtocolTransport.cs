@@ -8,6 +8,7 @@ using Akka.Util;
 using Google.ProtocolBuffers;
 using Akka.Util.Internal;
 using Akka.Event;
+using System.Runtime.Serialization;
 
 namespace Akka.Remote.Transport
 {
@@ -27,6 +28,11 @@ namespace Akka.Remote.Transport
     public class AkkaProtocolException : AkkaException
     {
         public AkkaProtocolException(string message, Exception cause = null) : base(message, cause) { }
+
+        protected AkkaProtocolException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /// <summary>

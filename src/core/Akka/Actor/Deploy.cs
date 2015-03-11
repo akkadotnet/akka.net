@@ -10,8 +10,8 @@ namespace Akka.Actor
         public static readonly Deploy Local = new Deploy(Scope.Local);
         public static readonly string NoDispatcherGiven = string.Empty;
         public static readonly string NoMailboxGiven = string.Empty;
-        public static readonly Scope NoScopeGiven = null;
-        public static readonly Deploy None = null;
+        public static readonly Scope NoScopeGiven = Actor.NoScopeGiven.Instance;
+        public static readonly Deploy None = new Deploy();
         private readonly Config _config;
         private readonly string _dispatcher;
         private readonly string _mailbox;

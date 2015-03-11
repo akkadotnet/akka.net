@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Util;
@@ -198,12 +197,23 @@ namespace Akka.Actor
         /// </summary>
         private void SuspendChildren(List<ActorRef> exceptFor = null)
         {
-            var except = exceptFor ?? Enumerable.Empty<ActorRef>();
-            (from s in ChildrenContainer.Stats
-             where !except.Contains(s.Child)
-             select s.Child)
-            .ToList()
-            .ForEach(c => c.Suspend());
+            if (exceptFor == null)
+            {
+                foreach (var stats in ChildrenContainer.Stats)
+                {
+                    var child = stats.Child;
+                    child.Suspend();
+                }
+            }
+            else
+            {
+                foreach (var stats in ChildrenContainer.Stats)
+                {
+                    var child = stats.Child;
+                    if (!exceptFor.Contains(child))
+                        child.Suspend();
+                }
+            }
         }
 
         /// <summary>

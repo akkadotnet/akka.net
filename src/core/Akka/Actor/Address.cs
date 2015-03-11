@@ -1,13 +1,21 @@
 ﻿using System;
+using System.CodeDom;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
 namespace Akka.Actor
 {
     /// <summary>
-    ///     Class Address.
+    ///  The address specifies the physical location under which an Actor can be
+    ///  reached. Examples are local addresses, identified by the <see cref="ActorSystem"/>'s
+    /// name, and remote addresses, identified by protocol, host and port.
+    ///  
+    /// This class is sealed to allow use as a case class (copy method etc.); if
+    /// for example a remote transport would want to associate additional
+    /// information with an address, then this must be done externally.
     /// </summary>
-    public class Address : ICloneable, IEquatable<Address>
+    public sealed class Address : ICloneable, IEquatable<Address>
     {
         /// <summary>
         ///     Pseudo address for all systems
@@ -66,9 +74,9 @@ namespace Akka.Actor
             {
                 var sb = new StringBuilder();
                 sb.AppendFormat("{0}://{1}", Protocol, System);
-                if(!string.IsNullOrWhiteSpace(Host))
+                if (!string.IsNullOrWhiteSpace(Host))
                     sb.AppendFormat("@{0}", Host);
-                if(Port.HasValue)
+                if (Port.HasValue)
                     sb.AppendFormat(":{0}", Port.Value);
 
                 return sb.ToString();
@@ -86,17 +94,17 @@ namespace Akka.Actor
 
         public bool Equals(Address other)
         {
-            if(ReferenceEquals(null, other)) return false;
-            if(ReferenceEquals(this, other)) return true;
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
             return string.Equals(Host, other.Host) && Port == other.Port && string.Equals(System, other.System) && string.Equals(Protocol, other.Protocol);
         }
 
         public override bool Equals(object obj)
         {
-            if(ReferenceEquals(null, obj)) return false;
-            if(ReferenceEquals(this, obj)) return true;
-            if(obj.GetType() != this.GetType()) return false;
-            return Equals((Address) obj);
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((Address)obj);
         }
 
         public override int GetHashCode()
@@ -104,9 +112,9 @@ namespace Akka.Actor
             unchecked
             {
                 var hashCode = (Host != null ? Host.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ Port.GetHashCode();
-                hashCode = (hashCode*397) ^ (System != null ? System.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (Protocol != null ? Protocol.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ Port.GetHashCode();
+                hashCode = (hashCode * 397) ^ (System != null ? System.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Protocol != null ? Protocol.GetHashCode() : 0);
                 return hashCode;
             }
         }
@@ -157,7 +165,7 @@ namespace Akka.Actor
             //if (!protocol.ToLowerInvariant().StartsWith("akka"))
             //    protocol = string.Format("akka.{0}", protocol);
 
-            if(string.IsNullOrEmpty(uri.UserInfo))
+            if (string.IsNullOrEmpty(uri.UserInfo))
             {
                 string systemName = uri.Host;
                 return new Address(protocol, systemName, null, null);
@@ -172,5 +180,39 @@ namespace Akka.Actor
         }
 
         #endregion
+    }
+
+
+    /// <summary>
+    /// Extractor class for so-called "relative actor paths" - as in "relative URI", not
+    /// "relative to some other actors."
+    /// 
+    /// Examples:
+    /// 
+    ///  * "grand/child"
+    ///  * "/user/hello/world"
+    /// </summary>
+    public static class RelativeActorPath
+    {
+        public static IEnumerable<string> Unapply(string addr)
+        {
+            try
+            {
+                var finalAddr = addr;
+                if (!Uri.IsWellFormedUriString(addr, UriKind.RelativeOrAbsolute))
+                {
+                    //hack to cause the URI not to explode when we're only given an actor name
+                    finalAddr = "/" + addr;
+                }
+                var uri = new Uri(finalAddr, UriKind.RelativeOrAbsolute);
+                if (uri.IsAbsoluteUri) return null;
+
+                return finalAddr.Split('/').SkipWhile(string.IsNullOrEmpty);
+            }
+            catch (UriFormatException ex)
+            {
+                return null;
+            }
+        }
     }
 }

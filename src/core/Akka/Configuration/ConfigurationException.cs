@@ -1,5 +1,6 @@
 ﻿using System;
 using Akka.Actor;
+using System.Runtime.Serialization;
 
 namespace Akka.Configuration
 {
@@ -11,7 +12,11 @@ namespace Akka.Configuration
 
         public ConfigurationException(string message, Exception exception): base(message, exception)
         {
-            
+        }
+
+        protected ConfigurationException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
         }
     }
 }

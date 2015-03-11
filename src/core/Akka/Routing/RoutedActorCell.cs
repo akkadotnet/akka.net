@@ -122,7 +122,7 @@ namespace Akka.Routing
                 .With<Pool>(r =>
                 {
                     var routees = new List<Routee>();
-                    for (var i = 0; i < r.NrOfInstances; i++)
+                    for (var i = 0; i < r.GetNrOfInstances(System); i++)
                     {
                         var routee = r.NewRoutee(_routeeProps, this);
                         routees.Add(routee);

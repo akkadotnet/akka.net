@@ -1,97 +1,133 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Akka.Actor;
-using Akka.Configuration;
-using Akka.Event;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
     /// <summary>
-    /// Marks a given class as consistently hashable, for use with <see cref="ConsistentHashingGroup"/>
-    /// or <see cref="ConsistentHashingPool"/> routers.
+    /// Consistent Hashing node ring implementaiton.
+    /// 
+    ///  A good explanation of Consistent Hashing:
+    /// http://weblogs.java.net/blog/tomwhite/archive/2007/11/consistent_hash.html
+    /// 
+    /// Note that toString of the ring nodes are used for the node
+    /// hash, i.e. make sure it is different for different nodes.
     /// </summary>
-    public interface ConsistentHashable
+    public class ConsistentHash<T>
     {
-        object ConsistentHashKey { get; }
-    }
+        private readonly SortedDictionary<int, T> _nodes;
+        private readonly int _virtualNodesFactor;
 
-    /// <summary>
-    /// Envelope you can wrap around a message in order to make it hashable for use with <see cref="ConsistentHashingGroup"/>
-    /// or <see cref="ConsistentHashingPool"/> routers.
-    /// </summary>
-    public class ConsistentHashableEnvelope : RouterEnvelope,  ConsistentHashable
-    {
-        public ConsistentHashableEnvelope(object message,object hashKey) : base(message)
+        internal ConsistentHash(SortedDictionary<int, T> nodes, int virtualNodesFactor)
         {
-            HashKey = hashKey;
+            _nodes = nodes;
+
+            Guard.Assert(virtualNodesFactor >= 1, "virtualNodesFactor must be >= 1");
+
+            _virtualNodesFactor = virtualNodesFactor;
         }
-        public object HashKey { get;private set; }
 
-        public object ConsistentHashKey
+        /// <summary>
+        /// arrays for fast binary search access
+        /// </summary>
+        private Tuple<int[], T[]> _ring = null;
+        private Tuple<int[], T[]> RingTuple
         {
-            get { return HashKey; }
+            get { return _ring ?? (_ring = Tuple.Create(_nodes.Keys.ToArray(), _nodes.Values.ToArray())); }
         }
-    }
 
-    public class ConsistentHashingRoutingLogic : RoutingLogic
-    {
-        private readonly Lazy<LoggingAdapter> _log;
-        private Dictionary<Type, Func<object, object>> _hashMapping;
-        private ActorSystem _system;
-        public override Routee Select(object message, Routee[] routees)
+        /// <summary>
+        /// Sorted hash values of the nodes
+        /// </summary>
+        private int[] NodeHashRing
         {
-            if (message == null || routees == null || routees.Length == 0)
-                return NoRoutee.NoRoutee;
+            get { return RingTuple.Item1; }
+        }
 
-            if (_hashMapping.ContainsKey(message.GetType()))
-            {
-                var key = _hashMapping[message.GetType()](message);
-                if (key == null)
-                    return NoRoutee.NoRoutee;
+        /// <summary>
+        /// NodeRing is the nodes sorted in the same order as <see cref="NodeHashRing"/>, i.e. same index
+        /// </summary>
+        private T[] NodeRing
+        {
+            get { return RingTuple.Item2; }
+        }
 
-                var hash = Murmur3.Hash(key);
-                return routees[Math.Abs(hash) % routees.Length]; //The hash might be negative, so we have to make sure it's positive
-            }
-            else if (message is ConsistentHashable)
-            {
-                var hashable = (ConsistentHashable) message;
-                int hash = Murmur3.Hash(hashable.ConsistentHashKey);
-                return routees[Math.Abs(hash) % routees.Length]; //The hash might be negative, so we have to make sure it's positive
-            }
+        /// <summary>
+        /// Add a node to the hash ring.
+        /// 
+        /// Note that <see cref="ConsistentHash{T}"/> is immutable and
+        /// this operation returns a new instance.
+        /// </summary>
+        public ConsistentHash<T> Add(T node)
+        {
+            return this + node;
+        }
+
+        /// <summary>
+        /// Removes a node from the hash ring.
+        /// 
+        /// Note that <see cref="ConsistentHash{T}"/> is immutable and
+        /// this operation returns a new instance.
+        /// </summary>
+        public ConsistentHash<T> Remove(T node)
+        {
+            return this - node;
+        }
+
+        /// <summary>
+        /// Converts the result of <see cref="Array.BinarySearch(T[], T)"/> into an index in the 
+        /// <see cref="RingTuple"/> array.
+        /// </summary>
+        /// <param name="i"></param>
+        /// <returns></returns>
+        private int Idx(int i)
+        {
+            if (i >= 0) return i; //exact match
             else
             {
-                _log.Value.Warning("Message [{0}] must be handled by hashMapping, or implement [{1}] or be wrapped in [{2}]", message.GetType().Name, typeof(ConsistentHashable).Name, typeof(ConsistentHashableEnvelope).Name);
-                return Routee.NoRoutee;
+                var j = Math.Abs(i + 1);
+                if (j >= NodeHashRing.Length) return 0; //after last, use first
+                else return j; //next node clockwise
             }
         }
 
-        public ConsistentHashingRoutingLogic(ActorSystem system) : this(system,new Dictionary<Type,Func<object,object>>())
+        /// <summary>
+        /// Get the node responsible for the data key.
+        /// Can only be used if nodes exist in the node ring.
+        /// Otherwise throws <see cref="ArgumentException"/>.
+        /// </summary>
+        public T NodeFor(byte[] key)
         {
+            Guard.Assert(!IsEmpty, string.Format("Can't get node for [{0}] from an empty node ring", key));
+
+            return NodeRing[Idx(Array.BinarySearch(NodeHashRing, ConsistentHash.HashFor(key)))];
         }
 
-        private ConsistentHashingRoutingLogic(ActorSystem system, Dictionary<Type, Func<object, object>> hashMapping)
-        {            
-            _system = system;
-            _log = new Lazy<LoggingAdapter>(() => Logging.GetLogger(_system, this), true);
-            _hashMapping = hashMapping;
-        }
-   
-
-        public ConsistentHashingRoutingLogic WithHashMapping<T>(Func<T,object> mapping)
+        /// <summary>
+        /// Get the node responsible for the data key.
+        /// Can only be used if nodes exist in the node ring.
+        /// Otherwise throws <see cref="ArgumentException"/>.
+        /// </summary>
+        public T NodeFor(string key)
         {
-            if (mapping == null)
-                throw new ArgumentNullException("mapping");
+            Guard.Assert(!IsEmpty, string.Format("Can't get node for [{0}] from an empty node ring", key));
 
-            var copy = new Dictionary<Type, Func<object, object>>(_hashMapping);
-            copy.Add(typeof(T), o => mapping((T)o));
-            return new ConsistentHashingRoutingLogic(_system,copy);
+            return NodeRing[Idx(Array.BinarySearch(NodeHashRing, ConsistentHash.HashFor(key)))];
         }
-    }
 
-    public class ConsistentHashingGroup : Group
-    {
+        /// <summary>
+        /// Is the node ring empty? i.e. no nodes added or all removed
+        /// </summary>
+        public bool IsEmpty
+        {
+            get { return !_nodes.Any(); }
+        }
+        
         public class ConsistentHashingGroupSurrogate : ISurrogate
         {
             public ISurrogated FromSurrogate(ActorSystem system)
@@ -102,41 +138,74 @@ namespace Akka.Routing
             public string[] Paths { get; set; }
         }
 
-        public override ISurrogate ToSurrogate(ActorSystem system)
+
+
+        #region Operator overloads
+
+        /// <summary>
+        /// Add a node to the hash ring.
+        /// 
+        /// Note that <see cref="ConsistentHash{T}"/> is immutable and
+        /// this operation returns a new instance.
+        /// </summary>s
+        public static ConsistentHash<T> operator +(ConsistentHash<T> hash, T node)
         {
-            return new ConsistentHashingGroupSurrogate
-            {
-                Paths = Paths,
-            };
+            var nodeHash = ConsistentHash.HashFor(node.ToString());
+            return new ConsistentHash<T>(hash._nodes.CopyAndAdd(Enumerable.Range(1, hash._virtualNodesFactor).Select(r => new KeyValuePair<int, T>(ConsistentHash.ConcatenateNodeHash(nodeHash, r), node))),
+                hash._virtualNodesFactor);
         }
 
-        public ConsistentHashingGroup(Config config)
-            : base(config.GetStringList("routees.paths"))
+        /// <summary>
+        /// Removes a node from the hash ring.
+        /// 
+        /// Note that <see cref="ConsistentHash{T}"/> is immutable and
+        /// this operation returns a new instance.
+        /// </summary>
+        public static ConsistentHash<T> operator -(ConsistentHash<T> hash, T node)
         {
+            var nodeHash = ConsistentHash.HashFor(node.ToString());
+            return new ConsistentHash<T>(hash._nodes.CopyAndRemove(Enumerable.Range(1, hash._virtualNodesFactor).Select(r => new KeyValuePair<int, T>(ConsistentHash.ConcatenateNodeHash(nodeHash, r), node))),
+                hash._virtualNodesFactor);
         }
 
-        public ConsistentHashingGroup(params string[] paths)
-            : base(paths)
-        {
-        }
-
-        public ConsistentHashingGroup(IEnumerable<string> paths)
-            : base(paths)
-        {
-        }
-
-        public ConsistentHashingGroup(IEnumerable<ActorRef> routees) : base(routees)
-        {
-        }
-
-        public override Router CreateRouter(ActorSystem system)
-        {
-            return new Router(new ConsistentHashingRoutingLogic(system));
-        }
+        #endregion
     }
 
-    public class ConsistentHashingPool : Pool
+    /// <summary>
+    /// Static helper class for creating <see cref="ConsistentHash{T}"/> instances.
+    /// </summary>
+    public static class ConsistentHash
     {
+        /// <summary>
+        /// Factory method to create a <see cref="ConsistentHash{T}"/> instance.
+        /// </summary>
+        public static ConsistentHash<T> Create<T>(IEnumerable<T> nodes, int virtualNodesFactor)
+        {
+            var sortedDict = new SortedDictionary<int, T>();
+            foreach (var node in nodes)
+            {
+                var nodeHash = HashFor(node.ToString());
+                var vnodes = Enumerable.Range(1, virtualNodesFactor)
+                    .Select(x => ConcatenateNodeHash(nodeHash, x)).ToList();
+                foreach(var vnode in vnodes)
+                    sortedDict.Add(vnode, node);
+            }
+
+            return new ConsistentHash<T>(sortedDict, virtualNodesFactor);
+        }
+
+        #region Hashing methods
+
+        internal static int ConcatenateNodeHash(int nodeHash, int vnode)
+        {
+            unchecked
+            {
+                var h = MurmurHash.StartHash((uint)nodeHash);
+                h = MurmurHash.ExtendHash(h, (uint)vnode, MurmurHash.StartMagicA, MurmurHash.StartMagicB);
+                return (int)MurmurHash.FinalizeHash(h);
+            }
+        }
+        
         public class ConsistentHashingPoolSurrogate : ISurrogate
         {
             public ISurrogated FromSurrogate(ActorSystem system)
@@ -151,49 +220,55 @@ namespace Akka.Routing
             public string RouterDispatcher { get; set; }
         }
 
-        public override ISurrogate ToSurrogate(ActorSystem system)
+        /// <summary>
+        /// Translate the offered object into a byte array, or returns the original object
+        /// if it needs to be serialized first.
+        /// </summary>
+        /// <param name="obj">An arbitrary .NET object</param>
+        /// <returns>The object encoded into bytes - in the case of custom classes, the hashcode may be used.</returns>
+        internal static object ToBytesOrObject(object obj)
         {
-            return new ConsistentHashingPoolSurrogate
-            {
-                NrOfInstances = NrOfInstances,
-                UsePoolDispatcher = UsePoolDispatcher,
-                Resizer = Resizer,
-                SupervisorStrategy = SupervisorStrategy,
-                RouterDispatcher = RouterDispatcher,
-            };
+                if (obj == null)
+                    return new byte[] { 0 };
+                if (obj is byte[])
+                    return (byte[])obj;
+                if (obj is int)
+                    return BitConverter.GetBytes((int)obj);
+                if (obj is uint)
+                    return BitConverter.GetBytes((uint)obj);
+                if (obj is short)
+                    return BitConverter.GetBytes((short)obj);
+                if (obj is ushort)
+                    return BitConverter.GetBytes((ushort)obj);
+                if (obj is bool)
+                    return BitConverter.GetBytes((bool)obj);
+                if (obj is long)
+                    return BitConverter.GetBytes((long)obj);
+                if (obj is ulong)
+                    return BitConverter.GetBytes((ulong)obj);
+                if (obj is char)
+                    return BitConverter.GetBytes((char)obj);
+                if (obj is float)
+                    return BitConverter.GetBytes((float)obj);
+                if (obj is double)
+                    return BitConverter.GetBytes((double)obj);
+                if (obj is decimal)
+                    return new BitArray(decimal.GetBits((decimal)obj)).ToBytes();
+                if (obj is Guid)
+                    return ((Guid)obj).ToByteArray();
+            return obj;
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ConsistentHashingPool"/> class.
-        /// </summary>
-        /// <param name="config">The configuration.</param>
-        public ConsistentHashingPool(Config config) : base(config)
+        internal static int HashFor(byte[] bytes)
         {
-            
-        }
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ConsistentHashingPool"/> class.
-        /// </summary>
-        /// <param name="nrOfInstances">The nr of instances.</param>
-        /// <param name="resizer">The resizer.</param>
-        /// <param name="supervisorStrategy">The supervisor strategy.</param>
-        /// <param name="routerDispatcher">The router dispatcher.</param>
-        /// <param name="usePoolDispatcher">if set to <c>true</c> [use pool dispatcher].</param>
-        public ConsistentHashingPool(int nrOfInstances, Resizer resizer,SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = false)
-            : base(nrOfInstances, resizer, supervisorStrategy, routerDispatcher, usePoolDispatcher)
-        {
-            
+            return MurmurHash.ByteHash(bytes);
         }
 
-        /// <summary>
-        /// Simple form of ConsistentHashingPool constructor
-        /// </summary>
-        /// <param name="nrOfInstances">The nr of instances.</param>
-        public ConsistentHashingPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null) { }
-
-        public override Router CreateRouter(ActorSystem system)
+        internal static int HashFor(string hashKey)
         {
-            return new Router(new ConsistentHashingRoutingLogic(system));
+            return MurmurHash.StringHash(hashKey);
         }
+
+        #endregion
     }
 }

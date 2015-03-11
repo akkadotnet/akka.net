@@ -1,3 +1,7 @@
+#### 1.0.0 Mar 15 2015
+
+TBD
+
 #### 0.8.0 Feb 11 2015
 
 __Dependency Injection support for Ninject, Castle Windsor, and AutoFac__. Thanks to some amazing effort from individual contributor (**[@jcwrequests](https://github.com/jcwrequests "@jcwrequests")**), Akka.NET now has direct dependency injection support for [Ninject](http://www.ninject.org/), [Castle Windsor](http://docs.castleproject.org/Default.aspx?Page=MainPage&NS=Windsor&AspxAutoDetectCookieSupport=1), and [AutoFac](https://github.com/autofac/Autofac).

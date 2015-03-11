@@ -5,20 +5,81 @@ namespace Akka.Actor
 {
     public interface ICanWatch
     {
+		/// <summary>
+		/// Monitors the specified actor for termination. When the <paramref name="subject"/> terminates
+		/// the instance watching will receive a <see cref="Terminated"/> message.
+		/// <remarks>Note that if the <see cref="Terminated"/> message isn't handled by the actor,
+		/// by default the actor will crash by throwing a <see cref="DeathPactException"/>. To change
+		/// the default behavior, override <see cref="ActorBase.Unhandled"/>.
+		/// </remarks>
+		/// </summary>
+		/// <param name="subject">The actor to monitor for termination.</param>
+		/// <returns>Returns the provided subject</returns>
         ActorRef Watch(ActorRef subject);
+
+		/// <summary>
+		/// Stops monitoring the <paramref name="subject"/> for termination.
+		/// </summary>
+		/// <param name="subject">The actor to stop monitor for termination.</param>
+		/// <returns>Returns the provided subject</returns>
         ActorRef Unwatch(ActorRef subject);
     }
 
     public interface IActorContext : ActorRefFactory, ICanWatch
     {
+        /// <summary>
+        /// Gets the <see cref="ActorRef"/> belonging to the current actor.
+        /// </summary>
         ActorRef Self { get; }
         Props Props { get; }
+
+        /// <summary>
+        /// Gets the <see cref="ActorRef"/> of the actor who sent the current message.
+        /// 
+        /// If the message was not sent by an actor (i.e. some external non-actor code
+        /// sent this actor a message) then this value will default to <see cref="ActorRef.NoSender"/>.
+        /// </summary>
         ActorRef Sender { get; }
+
+        /// <summary>
+        /// Gets a reference to the <see cref="ActorSystem"/> to which this actor belongs.
+        /// 
+        /// <remarks>
+        /// This property is how you can get access to the <see cref="Scheduler"/> and other parts
+        /// of Akka.NET from within an actor instance.
+        /// </remarks>
+        /// </summary>
         ActorSystem System { get; }
+
+        /// <summary>
+        /// Gets the <see cref="ActorRef"/> of the parent of the current actor.
+        /// </summary>
         ActorRef Parent { get; }
         void Become(Receive receive, bool discardOld = true);
         void Unbecome();
+
+        /// <summary>
+        /// Retrieves a child actor with the specified name, if it exists.
+        /// 
+        /// If the child with the given name cannot be found, 
+        /// then <see cref="ActorRef.Nobody"/> will be returned instead.
+        /// </summary>
+        /// <param name="name">
+        /// The name of the child actor.
+        /// 
+        /// e.g. "child1", "foo"
+        /// 
+        /// Not the path, just the name of the child at the time it was created by this parent.
+        /// </param>
+        /// <returns>The <see cref="ActorRef"/> belonging to the child if found, <see cref="ActorRef.Nobody"/> otherwise.</returns>
         ActorRef Child(string name);
+
+        /// <summary>
+        /// Gets all of the children that belong to this actor.
+        /// 
+        /// If this actor has no children, 
+        /// an empty collection of <see cref="ActorRef"/> is returned instead.
+        /// </summary>
         IEnumerable<ActorRef> GetChildren();
 
         /// <summary>
@@ -57,6 +118,10 @@ namespace Akka.Actor
   def unwatch(subject: ActorRef): ActorRef
          */
 
+        /// <summary>
+        /// Issues a stop command to the provided <see cref="ActorRef"/>, which will cause that actor
+        /// to terminate.
+        /// </summary>
         void Stop(ActorRef child);
     }
 }

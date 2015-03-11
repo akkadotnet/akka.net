@@ -22,6 +22,10 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class NoMessage : SystemMessage
     {
+        public override string ToString()
+        {
+            return "NoMessage";
+        }
     }
 
     /// <summary>
@@ -253,6 +257,11 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <value>The set result.</value>
         public Action SetResult { get; private set; }
+
+        public override string ToString()
+        {
+            return "CompleteTask - AmbientState: " + State;
+        }
     }
 
     /// <summary>
@@ -337,6 +346,11 @@ namespace Akka.Dispatch.SysMsg
                 return _instance;
             }
         }
+
+        public override string ToString()
+        {
+            return "<Suspend>";
+        }
     }
 
     /// <summary>
@@ -352,6 +366,11 @@ namespace Akka.Dispatch.SysMsg
             {
                 return _instance;
             }
+        }
+
+        public override string ToString()
+        {
+            return "<Stop>";
         }
     }
 
@@ -423,6 +442,11 @@ namespace Akka.Dispatch.SysMsg
             {
                 return _instance;
             }
+        }
+
+        public override string ToString()
+        {
+            return "<Terminate>";
         }
     }
 

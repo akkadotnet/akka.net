@@ -64,6 +64,7 @@ namespace Akka.Remote.TestKit
                         fsm = on
                     }
                     akka.remote.log-remote-lifecycle-events = on
+                    akka.log-dead-letters = on
                 ");
             return ConfigurationFactory.Empty;
         }
