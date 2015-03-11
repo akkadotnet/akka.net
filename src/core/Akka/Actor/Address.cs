@@ -1,8 +1,8 @@
 ﻿using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Akka.Util;
 
 namespace Akka.Actor
 {
@@ -15,7 +15,7 @@ namespace Akka.Actor
     /// for example a remote transport would want to associate additional
     /// information with an address, then this must be done externally.
     /// </summary>
-    public sealed class Address : ICloneable, IEquatable<Address>
+    public sealed class Address : ICloneable, IEquatable<Address>, ISurrogated
     {
         /// <summary>
         ///     Pseudo address for all systems
@@ -27,6 +27,11 @@ namespace Akka.Actor
         /// </summary>
         private readonly Lazy<string> _toString;
 
+        private readonly string _host;
+        private readonly int? _port;
+        private readonly string _system;
+        private readonly string _protocol;
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="Address" /> class.
         /// </summary>
@@ -36,10 +41,10 @@ namespace Akka.Actor
         /// <param name="port">The port.</param>
         public Address(string protocol, string system, string host = null, int? port = null)
         {
-            Protocol = protocol;
-            System = system;
-            Host = host;
-            Port = port;
+            _protocol = protocol;
+            _system = system;
+            _host = host;
+            _port = port;
             _toString = CreateLazyToString();
         }
 
@@ -47,25 +52,37 @@ namespace Akka.Actor
         ///     Gets the host.
         /// </summary>
         /// <value>The host.</value>
-        public string Host { get; private set; }
+        public string Host
+        {
+            get { return _host; }
+        }
 
         /// <summary>
         ///     Gets the port.
         /// </summary>
         /// <value>The port.</value>
-        public int? Port { get; private set; }
+        public int? Port
+        {
+            get { return _port; }
+        }
 
         /// <summary>
         ///     Gets the system.
         /// </summary>
         /// <value>The system.</value>
-        public string System { get; private set; }
+        public string System
+        {
+            get { return _system; }
+        }
 
         /// <summary>
         ///     Gets the protocol.
         /// </summary>
         /// <value>The protocol.</value>
-        public string Protocol { get; private set; }
+        public string Protocol
+        {
+            get { return _protocol; }
+        }
 
 
         private Lazy<string> CreateLazyToString()
@@ -180,6 +197,29 @@ namespace Akka.Actor
         }
 
         #endregion
+
+        public class AddressSurrogate : ISurrogate
+        {
+            public string Protocol { get; set; }
+            public string System { get; set; }
+            public string Host { get; set; }
+            public int? Port { get; set; }
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new Address(Protocol,System,Host,Port);
+            }
+        }
+
+        public ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new AddressSurrogate()
+            {
+                Host = Host,
+                Port = Port,
+                System = System,
+                Protocol = Protocol
+            };
+        }
     }
 
 

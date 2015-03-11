@@ -136,7 +136,7 @@ namespace Akka.Actor
             return new Deploy
                 (
                 Path,
-                Config.WithFallback(other.Config),
+                Config.Equals(other.Config) ? Config: Config.WithFallback(other.Config),
                 RouterConfig.WithFallback(other.RouterConfig),
                 Scope.WithFallback(other.Scope),
                 Dispatcher == NoDispatcherGiven ? other.Dispatcher : Dispatcher,

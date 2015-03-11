@@ -242,7 +242,7 @@ namespace Akka.Remote.Tests
             var probe = CreateTestProbe(masterActorSystem);
             var router = masterActorSystem.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>())
                 .WithDeploy(
-                new Deploy(new RemoteScope(intendedRemoteAddress.Copy()))), "local-blub2");
+                new Deploy(new RemoteScope(intendedRemoteAddress))), "local-blub2");
 
             router.Path.Address.ShouldBe(intendedRemoteAddress);
 
