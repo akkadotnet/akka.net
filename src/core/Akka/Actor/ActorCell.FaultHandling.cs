@@ -316,12 +316,18 @@ namespace Akka.Actor
 
                                 ClearActor(a);
                                 ClearActorCell();
+                                ReleaseAcotr(a);
                                 _actor = null;
                             }
                         }
                     }
                 }
             }
+        }
+
+        private void ReleaseAcotr(ActorBase a)
+        {
+            _props.Release(a);
         }
 
         private void FinishRecreate(Exception cause, ActorBase failedActor)

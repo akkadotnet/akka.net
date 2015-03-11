@@ -31,5 +31,7 @@ namespace Akka.DI.Core
         /// <typeparam name="TActor"></typeparam>
         /// <returns>Props configuration instance</returns>
         Props Create<TActor>() where TActor : ActorBase;
+
+        void Release(ActorBase actor);
     }
 }
