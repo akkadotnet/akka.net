@@ -128,7 +128,7 @@ namespace FaultTolerance
             if (message.Equals("Start") && progressListener == null)
             {
                 progressListener = Sender;
-                Context.System.Scheduler.Schedule(TimeSpan.Zero, TimeSpan.FromSeconds(1), Self, "Do");
+                Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.Zero, TimeSpan.FromSeconds(1), Self, "Do", Self);
             }
             else if (message.Equals("Do"))
             {
@@ -280,7 +280,7 @@ namespace FaultTolerance
                 counter.Tell(new UseStorage(null));
 
                 // Try to re-establish storage after while
-                Context.System.Scheduler.ScheduleOnce(TimeSpan.FromSeconds(10), Self, "Reconnect");
+                Context.System.Scheduler.ScheduleTellOnceCancelable(TimeSpan.FromSeconds(10), Self, "Reconnect", Self);
             }
             else if (message.Equals("Reconnect"))
             {

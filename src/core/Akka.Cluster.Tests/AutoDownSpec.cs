@@ -47,7 +47,7 @@ namespace Akka.Cluster.Tests
                 get { return MemberA.Address; }
             }
 
-            public override Scheduler Scheduler
+            public override IScheduler Scheduler
             {
                 get { return Context.System.Scheduler; }
             }

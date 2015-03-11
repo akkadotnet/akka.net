@@ -304,7 +304,7 @@ namespace Akka.Remote
             get { return Deadline.Now + settings.InitialSysMsgDeliveryTimeout; }
         }
 
-        private CancellationTokenSource _autoResendTimer = null;
+        private ICancelable _autoResendTimer = null;
         private AckedSendBuffer<EndpointManager.Send> _resendBuffer = null;
         private SeqNo _lastCumulativeAck = null;
         private long _seqCounter;
@@ -325,9 +325,8 @@ namespace Akka.Remote
         {
             if (_autoResendTimer == null)
             {
-                _autoResendTimer = new CancellationTokenSource();
-                Context.System.Scheduler.ScheduleOnce(settings.SysResendTimeout, Self, new AttemptSysMsgRedelivery(),
-                    _autoResendTimer.Token);
+                _autoResendTimer = Context.System.Scheduler.ScheduleTellOnceCancelable(settings.SysResendTimeout, Self, new AttemptSysMsgRedelivery(),
+                    Self);
             }
         }
 
@@ -442,8 +441,8 @@ namespace Akka.Remote
                     currentHandle = null;
                     Context.Parent.Tell(new EndpointWriter.StoppedReading(Self));
                     if (_resendBuffer.NonAcked.Count > 0 || _resendBuffer.Nacked.Count > 0)
-                        Context.System.Scheduler.ScheduleOnce(settings.SysResendTimeout, Self,
-                            new AttemptSysMsgRedelivery());
+                        Context.System.Scheduler.ScheduleTellOnce(settings.SysResendTimeout, Self, 
+                            new AttemptSysMsgRedelivery(), Self);
                     Context.Become(Idle);
                 })
                 .With<GotUid>(g =>
@@ -465,7 +464,7 @@ namespace Akka.Remote
         {
             message.Match()
                 .With<Terminated>(
-                    terminated => Context.System.Scheduler.ScheduleOnce(settings.RetryGateClosedFor, Self, new Ungate()))
+                    terminated => Context.System.Scheduler.ScheduleTellOnce(settings.RetryGateClosedFor, Self, new Ungate(), Self))
                 .With<Ungate>(ungate =>
                 {
                     if (_resendBuffer.NonAcked.Count > 0 || _resendBuffer.Nacked.Count > 0)
@@ -769,8 +768,6 @@ namespace Akka.Remote
             {
                 Context.Become(Writing);
             }
-
-            _ackIdleTimer = new CancellationTokenSource();
         }
 
         private readonly LoggingAdapter _log = Context.GetLogger();
@@ -791,7 +788,7 @@ namespace Akka.Remote
         private Deadline _ackDeadline;
         private AkkaProtocolHandle _handle;
 
-        private readonly CancellationTokenSource _ackIdleTimer;
+        private ICancelable _ackIdleTimerCancelable;
 
         // Use an internal buffer instead of Stash for efficiency
         // stash/unstashAll is slow when many messages are stashed
@@ -833,13 +830,12 @@ namespace Akka.Remote
             }
 
             var ackIdleInterval = new TimeSpan(Settings.SysMsgAckTimeout.Ticks / 2);
-            Context.System.Scheduler.Schedule(ackIdleInterval, ackIdleInterval, Self, AckIdleCheckTimer.Instance,
-                _ackIdleTimer.Token);
+            _ackIdleTimerCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(ackIdleInterval, ackIdleInterval, Self, AckIdleCheckTimer.Instance, Self);
         }
 
         protected override void PostStop()
         {
-            _ackIdleTimer.Cancel();
+            _ackIdleTimerCancelable.CancelIfNotNull();
             while (_prioBuffer.Any())
             {
                 _system.DeadLetters.Tell(_prioBuffer.First);
@@ -913,7 +909,7 @@ namespace Akka.Remote
             else if (message is FlushAndStop)
             {
                 _buffer.AddLast(message); //Flushing is postponed after the pending writes
-                Context.System.Scheduler.ScheduleOnce(Settings.FlushWait, Self, FlushAndStopTimeout.Instance);
+                Context.System.Scheduler.ScheduleTellOnce(Settings.FlushWait, Self, FlushAndStopTimeout.Instance, Self);
             }
             else if (message is FlushAndStopTimeout)
             {
@@ -1103,7 +1099,7 @@ namespace Akka.Remote
             {
                 _fullBackoffCount += 1;
                 _fullBackoff = false;
-                Context.System.Scheduler.ScheduleOnce(Settings.BackoffPeriod, Self, BackoffTimer.Instance);
+                Context.System.Scheduler.ScheduleTellOnce(Settings.BackoffPeriod, Self, BackoffTimer.Instance, Self, null);
             }
             else
             {

@@ -271,16 +271,13 @@ namespace Akka.Remote
             if (systemProvider != null) _remoteProvider = systemProvider;
             else throw new ConfigurationException(String.Format("ActorSystem {0} needs to have a 'RemoteActorRefProvider' enabled in the configuration, current uses {1}", Context.System, Context.System.AsInstanceOf<ExtendedActorSystem>().Provider.GetType().FullName));
 
-            _heartbeatCancellable = new CancellationTokenSource();
-            _heartbeatTask = Context.System.Scheduler.Schedule(heartbeatInterval, heartbeatInterval, Self, HeartbeatTick.Instance, _heartbeatCancellable.Token);
-            _failureDetectorReaperCancellable = new CancellationTokenSource();
-            _failureDetectorReaperTask = Context.System.Scheduler.Schedule(unreachableReaperInterval,
-                unreachableReaperInterval, Self, ReapUnreachableTick.Instance, _failureDetectorReaperCancellable.Token);
+            _heartbeatCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(heartbeatInterval, heartbeatInterval, Self, HeartbeatTick.Instance, Self);
+            _failureDetectorReaperCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(unreachableReaperInterval, unreachableReaperInterval, Self, ReapUnreachableTick.Instance, Self);
         }
 
         readonly IFailureDetectorRegistry<Address> _failureDetector;
         readonly TimeSpan _heartbeatExpectedResponseAfter;
-        readonly Scheduler _scheduler = Context.System.Scheduler;
+        readonly IScheduler _scheduler = Context.System.Scheduler;
         readonly RemoteActorRefProvider _remoteProvider;
         readonly HeartbeatRsp _selfHeartbeatRspMsg = new HeartbeatRsp(AddressUidExtension.Uid(Context.System));
         readonly HashSet<Tuple<ActorRef, ActorRef>> _watching = new HashSet<Tuple<ActorRef, ActorRef>>();
@@ -290,16 +287,14 @@ namespace Akka.Remote
         protected HashSet<Address> Unreachable { get { return _unreachable; } }
         readonly Dictionary<Address, int> _addressUids = new Dictionary<Address, int>();
 
-        readonly CancellationTokenSource _heartbeatCancellable;
-        readonly Task _heartbeatTask;
-        readonly CancellationTokenSource _failureDetectorReaperCancellable;
-        readonly Task _failureDetectorReaperTask;
+        readonly ICancelable _heartbeatCancelable;
+        readonly ICancelable _failureDetectorReaperCancelable;
 
         protected override void PostStop()
         {
             base.PostStop();
-            _heartbeatCancellable.Cancel();
-            _failureDetectorReaperCancellable.Cancel();
+            _heartbeatCancelable.Cancel();
+            _failureDetectorReaperCancelable.Cancel();
         }
 
         protected override void OnReceive(object message)
@@ -492,7 +487,7 @@ namespace Akka.Remote
                         _log.Debug("Sending first Heartbeat to [{0}]", a);
                         // schedule the expected first heartbeat for later, which will give the
                         // other side a chance to reply, and also trigger some resends if needed
-                        _scheduler.ScheduleOnce(_heartbeatExpectedResponseAfter, Self, new ExpectedFirstHeartbeat(a));
+                        _scheduler.ScheduleTellOnce(_heartbeatExpectedResponseAfter, Self, new ExpectedFirstHeartbeat(a), Self);
                     }
                     Context.ActorSelection(new RootActorPath(a) / Self.Path.Elements).Tell(Heartbeat.Instance);
                 }

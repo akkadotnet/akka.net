@@ -32,8 +32,8 @@ namespace PersistenceExample
             var pref = system.ActorOf(Props.Create<ViewExampleActor>());
             var view = system.ActorOf(Props.Create<ExampleView>());
 
-            system.Scheduler.Schedule(TimeSpan.Zero, TimeSpan.FromSeconds(2), pref, "scheduled");
-            system.Scheduler.Schedule(TimeSpan.Zero, TimeSpan.FromSeconds(5), view, "snap");
+            system.Scheduler.ScheduleTellRepeatedly(TimeSpan.Zero, TimeSpan.FromSeconds(2), pref, "scheduled", ActorRef.NoSender);
+            system.Scheduler.ScheduleTellRepeatedly(TimeSpan.Zero, TimeSpan.FromSeconds(5), view, "snap", ActorRef.NoSender);
         }
 
         private static void SnapshotedActor(ActorSystem system)

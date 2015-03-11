@@ -28,7 +28,7 @@ namespace Akka.Actor.Internals
         private EventStream _eventStream;
         private Dispatchers _dispatchers;
         private Mailboxes _mailboxes;
-        private Scheduler _scheduler;
+        private IScheduler _scheduler;
         private ActorProducerPipelineResolver _actorProducerPipelineResolver;
 
         public ActorSystemImpl(string name)
@@ -63,7 +63,7 @@ namespace Akka.Actor.Internals
         public override ActorRef DeadLetters { get { return Provider.DeadLetters; } }
         public override Dispatchers Dispatchers { get { return _dispatchers; } }
         public override Mailboxes Mailboxes { get { return _mailboxes; } }
-        public override Scheduler Scheduler { get { return _scheduler; } }
+        public override IScheduler Scheduler { get { return _scheduler; } }
         public override LoggingAdapter Log { get { return _log; } }
 
         public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
@@ -120,7 +120,7 @@ namespace Akka.Actor.Internals
 
         private void ConfigureScheduler()
         {
-            _scheduler = new Scheduler();
+            _scheduler = new TaskBasedScheduler();
         }
 
         /// <summary>

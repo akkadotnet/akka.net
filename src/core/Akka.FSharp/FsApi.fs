@@ -568,12 +568,7 @@ module EventStreaming =
     let publish (event: 'Event) (eventStream: Akka.Event.EventStream) : unit = eventStream.Publish event
 
 [<AutoOpen>]
-module Scheduler =
-
-    let private taskContinuation (task: System.Threading.Tasks.Task) : unit =
-        match task.IsFaulted with
-        | true -> raise task.Exception
-        | _ -> ()
+module Scheduler = //TODO: Mimic the c# api for scheduler?
 
     /// <summary>
     /// Schedules a function to be invoked repeatedly in the provided time intervals. 
@@ -582,9 +577,20 @@ module Scheduler =
     /// <param name="every">Interval.</param>
     /// <param name="fn">Function called by the scheduler.</param>
     /// <param name="scheduler"></param>
-    let schedule (after: TimeSpan) (every: TimeSpan) (fn: unit -> unit) (scheduler: Scheduler): Async<unit> =
+    let schedule (after: TimeSpan) (every: TimeSpan) (fn: unit -> unit) (scheduler: IScheduler): unit =
         let action = Action fn
-        Async.AwaitTask (scheduler.Schedule(after, every, action).ContinueWith taskContinuation)
+        scheduler.Advanced.ScheduleRepeatedly(after, every, action)
+    
+    /// <summary>
+    /// Schedules a function to be invoked repeatedly in the provided time intervals. 
+    /// </summary>
+    /// <param name="after">Initial delay to first function call.</param>
+    /// <param name="every">Interval.</param>
+    /// <param name="fn">Function called by the scheduler.</param>
+    /// <param name="scheduler"></param>
+    let scheduleRepeatedly (after: TimeSpan) (every: TimeSpan) (fn: unit -> unit) (scheduler: IScheduler): unit =
+        let action = Action fn
+        scheduler.Advanced.ScheduleRepeatedly(after, every, action)
     
     /// <summary>
     /// Schedules a single function call using specified sheduler.
@@ -592,9 +598,9 @@ module Scheduler =
     /// <param name="after">Delay before calling the function.</param>
     /// <param name="fn">Function called by the scheduler.</param>
     /// <param name="scheduler"></param>
-    let scheduleOnce (after: TimeSpan) (fn: unit -> unit) (scheduler: Scheduler): Async<unit> =
+    let scheduleOnce (after: TimeSpan) (fn: unit -> unit) (scheduler: IScheduler): unit =
         let action = Action fn
-        Async.AwaitTask (scheduler.ScheduleOnce(after, action).ContinueWith taskContinuation)
+        scheduler.Advanced.ScheduleOnce(after, action)
 
     /// <summary>
     /// Schedules a <paramref name="message"/> to be sent to the provided <paramref name="receiver"/> in specified time intervals.
@@ -604,8 +610,20 @@ module Scheduler =
     /// <param name="message">Message to be sent to the receiver by the scheduler.</param>
     /// <param name="receiver">Message receiver.</param>
     /// <param name="scheduler"></param>
-    let scheduleTell (after: TimeSpan) (every: TimeSpan) (message: 'Message) (receiver: ActorRef) (scheduler: Scheduler): Async<unit> =
-        Async.AwaitTask (scheduler.Schedule(after, every, receiver, message).ContinueWith taskContinuation)
+    let scheduleTell (after: TimeSpan) (every: TimeSpan) (message: 'Message) (receiver: ActorRef) (scheduler: IScheduler): unit =
+         DeprecatedSchedulerExtensions.Schedule(scheduler, after, every, receiver, message)
+    
+    
+    /// <summary>
+    /// Schedules a <paramref name="message"/> to be sent to the provided <paramref name="receiver"/> in specified time intervals.
+    /// </summary>
+    /// <param name="after">Initial delay to first function call.</param>
+    /// <param name="every">Interval.</param>
+    /// <param name="message">Message to be sent to the receiver by the scheduler.</param>
+    /// <param name="receiver">Message receiver.</param>
+    /// <param name="scheduler"></param>
+    let scheduleTellRepeatedly (after: TimeSpan) (every: TimeSpan) (message: 'Message) (receiver: ActorRef) (scheduler: IScheduler): unit =
+        scheduler.ScheduleTellRepeatedly(after, every, receiver, message, ActorCell.GetCurrentSelfOrNoSender())
     
     /// <summary>
     /// Schedules a single <paramref name="message"/> send to the provided <paramref name="receiver"/>.
@@ -614,5 +632,5 @@ module Scheduler =
     /// <param name="message">Message to be sent to the receiver by the scheduler.</param>
     /// <param name="receiver">Message receiver.</param>
     /// <param name="scheduler"></param>
-    let scheduleTellOnce (after: TimeSpan) (message: 'Message) (receiver: ActorRef) (scheduler: Scheduler): Async<unit> =
-        Async.AwaitTask (scheduler.ScheduleOnce(after, receiver, message).ContinueWith taskContinuation)
+    let scheduleTellOnce (after: TimeSpan) (message: 'Message) (receiver: ActorRef) (scheduler: IScheduler): unit =
+        scheduler.ScheduleTellOnce(after, receiver, message, ActorCell.GetCurrentSelfOrNoSender())

@@ -231,6 +231,14 @@ namespace Akka.TestKit
             InternalExpectNoMsg(Dilated(duration));
         }
 
+        /// <summary>
+        /// Assert that no message is received for the specified time in milliseconds.
+        /// </summary>
+        public void ExpectNoMsg(int milliseconds)
+        {
+            ExpectNoMsg(TimeSpan.FromMilliseconds(milliseconds));
+        }
+
         private void InternalExpectNoMsg(TimeSpan duration)
         {
             MessageEnvelope t;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
@@ -50,10 +51,10 @@ namespace Samples.Cluster.Transformation
             var interval = TimeSpan.FromSeconds(2);
             var timeout = TimeSpan.FromSeconds(5);
             var counter = new AtomicCounter();
-            system.Scheduler.Schedule(interval, interval, 
+            system.Scheduler.Advanced.ScheduleRepeatedly(interval, interval, 
                 () => frontend.Ask(new TransformationMessages.TransformationJob("hello-" + counter.GetAndIncrement()), timeout)
-                .ContinueWith(
-                    r => Console.WriteLine(r.Result)));
+                    .ContinueWith(
+                        r => Console.WriteLine(r.Result)));
         }
     }
 }

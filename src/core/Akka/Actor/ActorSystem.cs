@@ -69,7 +69,7 @@ namespace Akka.Actor
 
         /// <summary>Gets the scheduler.</summary>
         /// <value>The scheduler.</value>
-        public abstract Scheduler Scheduler { get; }
+        public abstract IScheduler Scheduler { get; }
 
         /// <summary>Gets the log</summary>
         public abstract LoggingAdapter Log { get; }

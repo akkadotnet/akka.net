@@ -16,7 +16,7 @@ namespace Akka.Actor
 
         private object _currentMessage;
         private Select? _currentSelect;
-        private Tuple<DateTime, CancellationTokenSource> _currentDeadline;
+        private Tuple<DateTime, ICancelable> _currentDeadline;
 
         private int _size;
         private LoggingAdapter _log = Context.GetLogger();
@@ -163,11 +163,9 @@ namespace Akka.Actor
                     {
                         _currentDeadline.Item2.Cancel();
                     }
-                    var cancellationTokenSource = new CancellationTokenSource();
-                    Context.System.Scheduler.ScheduleOnce(next.Deadline - DateTime.Now, Self, new Kick(),
-                        cancellationTokenSource.Token);
+                    var cancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(next.Deadline - DateTime.Now, Self, new Kick(), Self);
 
-                    _currentDeadline = Tuple.Create(next.Deadline, cancellationTokenSource);
+                    _currentDeadline = Tuple.Create(next.Deadline, cancelable);
                 }
             }
 

@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Configuration;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Routing;
@@ -59,7 +60,7 @@ namespace Samples.Cluster.ConsistentHashRouting
             var frontend = system.ActorOf(Props.Create(() => new FrontendActor(backendRouter)), "frontend");
             var interval = TimeSpan.FromSeconds(12);
             var counter = new AtomicCounter();
-            system.Scheduler.Schedule(interval, interval,() => frontend.Tell(new StartCommand("hello-" + counter.GetAndIncrement())));
+            system.Scheduler.Advanced.ScheduleRepeatedly(interval, interval,() => frontend.Tell(new StartCommand("hello-" + counter.GetAndIncrement())));
         }
     }
 }

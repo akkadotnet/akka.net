@@ -110,7 +110,7 @@ namespace Akka.Routing
                 // The reason for the delay is to give concurrent
                 // messages a chance to be placed in mailbox before sending PoisonPill,
                 // best effort.
-                System.Scheduler.ScheduleOnce(TimeSpan.FromMilliseconds(100), actorRefRoutee.Actor, PoisonPill.Instance);
+                System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(100), actorRefRoutee.Actor, PoisonPill.Instance, Self);
             }
         }
 

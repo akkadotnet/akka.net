@@ -84,7 +84,7 @@ namespace Akka.Remote.Tests.Transport
                     _remote.Tell(NextSeq);
                     NextSeq++;
                     if (NextSeq%2000 == 0)
-                        Context.System.Scheduler.ScheduleOnce(TimeSpan.FromMilliseconds(500), Self, "sendNext");
+                        Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(500), Self, "sendNext", Self);
                     else
                         Self.Tell("sendNext");
                 }
@@ -104,8 +104,8 @@ namespace Akka.Remote.Tests.Transport
                         if (seq > Limit*0.5)
                         {
                             _controller.Tell(Tuple.Create(MaxSeq, Losses));
-                            Context.System.Scheduler.Schedule(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), Self,
-                                ResendFinal.Instance);
+                            Context.System.Scheduler.ScheduleTellRepeatedly(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), Self,
+                                ResendFinal.Instance, Self);
                             Context.Become(Done);
                         }
                     }
