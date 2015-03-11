@@ -14,9 +14,44 @@ namespace Akka.Tests.Serialization
     
     public class SerializationSpec : AkkaSpec
     {
-        public class UntypedContainerMessage
+        public class UntypedContainerMessage : IEquatable<UntypedContainerMessage>
         {
+            public bool Equals(UntypedContainerMessage other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Equals(Contents, other.Contents);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != this.GetType()) return false;
+                return Equals((UntypedContainerMessage) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return (Contents != null ? Contents.GetHashCode() : 0);
+            }
+
+            public static bool operator ==(UntypedContainerMessage left, UntypedContainerMessage right)
+            {
+                return Equals(left, right);
+            }
+
+            public static bool operator !=(UntypedContainerMessage left, UntypedContainerMessage right)
+            {
+                return !Equals(left, right);
+            }
+
             public object Contents { get; set; }
+
+            public override string ToString()
+            {
+                return string.Format("<UntypedContainerMessage {0}>", Contents);
+            }
         }
         public class ContainerMessage<T>
         {
@@ -117,6 +152,41 @@ namespace Akka.Tests.Serialization
         public void CanSerializeDecimal()
         {
             var message = 123.456m;
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void CanSerializeDecimalMessage()
+        {
+            var message = new UntypedContainerMessage { Contents = 123.456m };
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void CanSerializeFloatMessage()
+        {
+            var message = new UntypedContainerMessage {Contents = 123.456f};
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void CanSerializeLongMessage()
+        {
+            var message = new UntypedContainerMessage { Contents = 123L };
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void CanSerializeDoubleMessage()
+        {
+            var message = new UntypedContainerMessage { Contents = 123.456d };
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void CanSerializeIntMessage()
+        {
+            var message = new UntypedContainerMessage { Contents = 123};
             AssertEqual(message);
         }
 
@@ -267,6 +337,7 @@ namespace Akka.Tests.Serialization
             var serialized = serializer.ToBinary(message);
             var deserialized = (T)serializer.FromBinary(serialized, typeof(T));
 
+       //     Assert.True(message.Equals(deserialized));
             Assert.Equal(message, deserialized);
         }
 

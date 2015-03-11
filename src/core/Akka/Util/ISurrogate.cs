@@ -56,5 +56,10 @@ namespace Akka.Util
 
             throw new NotSupportedException();
         }
+
+        public override string ToString()
+        {
+            return string.Format("<PrimitiveSurrogate {0}>", GetValue());
+        }
     }  
 }

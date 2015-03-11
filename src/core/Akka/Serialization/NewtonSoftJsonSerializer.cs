@@ -26,7 +26,7 @@ namespace Akka.Serialization
             _settings = new JsonSerializerSettings
             {
                 PreserveReferencesHandling = PreserveReferencesHandling.Objects,
-                Converters = new List<JsonConverter> {new SurrogateConverter(system), new PrimitiveTypeConverter()},
+                Converters = new List<JsonConverter> {new PrimitiveTypeConverter(),new SurrogateConverter(system)},
                 NullValueHandling = NullValueHandling.Ignore,
                 DefaultValueHandling = DefaultValueHandling.Ignore,
                 MissingMemberHandling = MissingMemberHandling.Ignore,
@@ -135,6 +135,11 @@ namespace Akka.Serialization
             {
                 var surrogate = serializer.Deserialize<PrimitiveSurrogate>(reader);
                 return surrogate.GetValue();
+            }
+
+            public override bool CanRead
+            {
+                get { return true; }
             }
 
             public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
