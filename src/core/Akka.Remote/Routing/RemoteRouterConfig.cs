@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Remoting.Contexts;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Routing;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -17,10 +13,30 @@ namespace Akka.Remote.Routing
     /// routees on defined target nodes. Delegates other duties to the local <see cref="Pool"/>,
     /// which makes it possible to mix this with built-in routers such as <see cref="RoundRobinGroup"/> or custom routers.
     /// </summary>
-    public sealed class RemoteRouterConfig : Pool
+    public sealed class RemoteRouterConfig : Pool 
     {
-        public readonly Pool Local;
-        public readonly IList<Address> Nodes;
+        public class RemoteRouterConfigSurrogate : ISurrogate
+        {
+            public Pool Local { get; set; }
+            public Address[] Nodes { get; set; }
+
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new RemoteRouterConfig(Local,Nodes);
+            }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new RemoteRouterConfigSurrogate
+            {
+                Local = Local,
+                Nodes = Nodes.ToArray(),
+            };
+        }
+
+        internal readonly Pool Local;
+        internal readonly IList<Address> Nodes;
 
         /// <summary>
         /// Used for distributing routees to <see cref="Nodes"/>. Needs to be an instance variable since <see cref="Resizer"/> may call <see cref="RoutedActorCell.AddRoutees"/> several times.
@@ -32,7 +48,7 @@ namespace Akka.Remote.Routing
         /// </summary>
         private readonly AtomicCounter _childNameCounter = new AtomicCounter();
 
-        public RemoteRouterConfig(Pool local, IEnumerable<Address> nodes)
+        public RemoteRouterConfig(Pool local, IEnumerable<Address> nodes) : base(local.NrOfInstances,local.Resizer,local.SupervisorStrategy,local.RouterDispatcher,local.UsePoolDispatcher)
         {
             
             Local = local;
@@ -46,16 +62,11 @@ namespace Akka.Remote.Routing
         public override SupervisorStrategy SupervisorStrategy
         {
             get { return Local.SupervisorStrategy; }
-            set
-            {
-                Local.SupervisorStrategy = value;
-            }
         }
 
         public override Resizer Resizer
         {
             get { return Local.Resizer; }
-            set { Local.Resizer = value; }
         }
 
         public override int GetNrOfInstances(ActorSystem system)
@@ -68,10 +79,6 @@ namespace Akka.Remote.Routing
             get
             {
                 return Local.NrOfInstances;
-            }
-            set
-            {
-                Local.NrOfInstances = value;
             }
         }
 

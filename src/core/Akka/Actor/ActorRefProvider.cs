@@ -399,7 +399,7 @@ namespace Akka.Actor
             else //routers!!!
             {
                 var lookup = (lookupDeploy ? Deployer.Lookup(path) : null) ?? Deploy.None;
-                var fromProps = new List<Deploy>() { props.Deploy.Copy(), deploy, lookup };
+                var fromProps = new List<Deploy>() { props.Deploy, deploy, lookup };
                 var d = fromProps.Where(x => x != null).Aggregate((deploy1, deploy2) => deploy2.WithFallback(deploy1));
                 var p = props.WithRouter(d.RouterConfig);
 
@@ -409,7 +409,7 @@ namespace Akka.Actor
                 //if (!system.Dispatchers.HasDispatcher(d.RouterConfig.d))
                 //    throw new ConfigurationException(string.Format("Dispatcher [{0}] not configured for router of path {1}", p.RouterConfig.RouterDispatcher, path));
 
-                var routerProps = Props.Empty.WithRouter(p.Deploy.Copy().RouterConfig).WithDispatcher(p.RouterConfig.RouterDispatcher);
+                var routerProps = Props.Empty.WithRouter(p.Deploy.RouterConfig).WithDispatcher(p.RouterConfig.RouterDispatcher);
                 var routeeProps = props.WithRouter(RouterConfig.NoRouter);
 
                 try

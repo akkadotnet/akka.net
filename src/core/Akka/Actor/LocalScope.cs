@@ -1,10 +1,21 @@
-﻿namespace Akka.Actor
+﻿using Akka.Util;
+
+namespace Akka.Actor
 {
     /// <summary>
     /// Used to deploy actors in local scope
     /// </summary>
-    public class LocalScope : Scope
+    public class LocalScope : Scope , ISurrogated
     {
+        public class LocalScopeSurrogate : ISurrogate
+        {
+
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return Instance;
+            }
+        }
+
         private LocalScope() { }
         private static readonly LocalScope _instance = new LocalScope();
 
@@ -21,6 +32,11 @@
         public override Scope Copy()
         {
             return Instance;
+        }
+
+        public ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new LocalScopeSurrogate();
         }
     }
 }

@@ -32,7 +32,7 @@ namespace Akka.Actor
 
             public string Path { get; private set; }
 
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 ActorPath path;
                 if (TryParse(Path, out path))

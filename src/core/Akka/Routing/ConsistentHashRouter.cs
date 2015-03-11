@@ -42,6 +42,7 @@ namespace Akka.Routing
         {
             HashKey = hashKey;
         }
+
         public object HashKey { get; private set; }
 
         public object ConsistentHashKey
@@ -88,7 +89,9 @@ namespace Akka.Routing
         private ConsistentHashMapping _hashMapping;
         private readonly ActorSystem _system;
 
-        private readonly AtomicReference<Tuple<Routee[], ConsistentHash<ConsistentRoutee>>> _consistentHashRef = new AtomicReference<Tuple<Routee[], ConsistentHash<ConsistentRoutee>>>(Tuple.Create<Routee[], ConsistentHash<ConsistentRoutee>>(null, null));
+        private readonly AtomicReference<Tuple<Routee[], ConsistentHash<ConsistentRoutee>>> _consistentHashRef =
+            new AtomicReference<Tuple<Routee[], ConsistentHash<ConsistentRoutee>>>(
+                Tuple.Create<Routee[], ConsistentHash<ConsistentRoutee>>(null, null));
 
         private readonly Address _selfAddress;
         private readonly int _vnodes;
@@ -98,7 +101,8 @@ namespace Akka.Routing
         {
         }
 
-        public ConsistentHashingRoutingLogic(ActorSystem system, int virtualNodesFactor, ConsistentHashMapping hashMapping)
+        public ConsistentHashingRoutingLogic(ActorSystem system, int virtualNodesFactor,
+            ConsistentHashMapping hashMapping)
         {
             _system = system;
             _log = new Lazy<LoggingAdapter>(() => Logging.GetLogger(_system, this), true);
@@ -154,7 +158,8 @@ namespace Akka.Routing
                 catch (Exception ex)
                 {
                     //serializationfailed
-                    _log.Value.Warning("Couldn't route message with consistent hash key [{0}] due to [{1}]", hashData, ex.Message);
+                    _log.Value.Warning("Couldn't route message with consistent hash key [{0}] due to [{1}]", hashData,
+                        ex.Message);
                     return Routee.NoRoutee;
                 }
             };
@@ -165,12 +170,14 @@ namespace Akka.Routing
             }
             else if (message is IConsistentHashable)
             {
-                var hashable = (IConsistentHashable)message;
+                var hashable = (IConsistentHashable) message;
                 return target(ConsistentHash.ToBytesOrObject(hashable.ConsistentHashKey));
             }
             else
             {
-                _log.Value.Warning("Message [{0}] must be handled by hashMapping, or implement [{1}] or be wrapped in [{2}]", message.GetType().Name, typeof(IConsistentHashable).Name, typeof(ConsistentHashableEnvelope).Name);
+                _log.Value.Warning(
+                    "Message [{0}] must be handled by hashMapping, or implement [{1}] or be wrapped in [{2}]",
+                    message.GetType().Name, typeof (IConsistentHashable).Name, typeof (ConsistentHashableEnvelope).Name);
                 return Routee.NoRoutee;
             }
         }
@@ -179,7 +186,7 @@ namespace Akka.Routing
         {
             if (mapping == null)
                 throw new ArgumentNullException("mapping");
-           
+
             return new ConsistentHashingRoutingLogic(_system, _vnodes, mapping);
         }
 
@@ -237,16 +244,22 @@ namespace Akka.Routing
     /// </summary>
     public class ConsistentHashingGroup : Group
     {
+        public class ConsistentHashingGroupSurrogate : ISurrogate
+        {
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new ConsistentHashingGroup(Paths);
+            }
+
+            public string[] Paths { get; set; }
+        }
+
         /// <summary>
         /// Virtual nodes used in the <see cref="ConsistentHash{T}"/>.
         /// </summary>
         public int VirtualNodesFactor { get; private set; }
 
         protected ConsistentHashMapping HashMapping;
-
-        protected ConsistentHashingGroup()
-        {
-        }
 
         public ConsistentHashingGroup(Config config)
             : base(config.GetStringList("routees.paths"))
@@ -259,14 +272,16 @@ namespace Akka.Routing
         {
         }
 
-        public ConsistentHashingGroup(IEnumerable<string> paths, int virtualNodesFactor = 0, ConsistentHashMapping hashMapping = null)
+        public ConsistentHashingGroup(IEnumerable<string> paths, int virtualNodesFactor = 0,
+            ConsistentHashMapping hashMapping = null)
             : base(paths)
         {
             VirtualNodesFactor = virtualNodesFactor;
             HashMapping = hashMapping;
         }
 
-        public ConsistentHashingGroup(IEnumerable<ActorRef> routees, int virtualNodesFactor = 0, ConsistentHashMapping hashMapping = null)
+        public ConsistentHashingGroup(IEnumerable<ActorRef> routees, int virtualNodesFactor = 0,
+            ConsistentHashMapping hashMapping = null)
             : base(routees)
         {
             VirtualNodesFactor = virtualNodesFactor;
@@ -295,7 +310,9 @@ namespace Akka.Routing
 
         public override Router CreateRouter(ActorSystem system)
         {
-            return new Router(new ConsistentHashingRoutingLogic(system, VirtualNodesFactor, HashMapping ?? ConsistentHashingRouter.EmptyConsistentHashMapping));
+            return
+                new Router(new ConsistentHashingRoutingLogic(system, VirtualNodesFactor,
+                    HashMapping ?? ConsistentHashingRouter.EmptyConsistentHashMapping));
         }
 
         public override RouterConfig WithFallback(RouterConfig routerConfig)
@@ -311,8 +328,17 @@ namespace Akka.Routing
             }
             else
             {
-                throw new ArgumentException(string.Format("Expected ConsistentHashingGroup, got {0}", routerConfig), "routerConfig");
+                throw new ArgumentException(string.Format("Expected ConsistentHashingGroup, got {0}", routerConfig),
+                    "routerConfig");
             }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new ConsistentHashingGroupSurrogate
+            {
+                Paths = Paths,
+            };
         }
     }
 
@@ -330,11 +356,7 @@ namespace Akka.Routing
         /// </summary>
         public int VirtualNodesFactor { get; private set; }
 
-        private ConsistentHashMapping HashMapping;
-
-        protected ConsistentHashingPool()
-        {
-        }
+        private readonly ConsistentHashMapping _hashMapping;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHashingPool"/> class.
@@ -356,11 +378,13 @@ namespace Akka.Routing
         /// <param name="usePoolDispatcher">if set to <c>true</c> [use pool dispatcher].</param>
         /// <param name="virtualNodesFactor">The number of virtual nodes to use on the hash ring</param>
         /// <param name="hashMapping">The consistent hash mapping function to use on incoming messages</param>
-        public ConsistentHashingPool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = false, int virtualNodesFactor = 0, ConsistentHashMapping hashMapping = null)
+        public ConsistentHashingPool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy,
+            string routerDispatcher, bool usePoolDispatcher = false, int virtualNodesFactor = 0,
+            ConsistentHashMapping hashMapping = null)
             : base(nrOfInstances, resizer, supervisorStrategy, routerDispatcher, usePoolDispatcher)
         {
             VirtualNodesFactor = virtualNodesFactor;
-            HashMapping = hashMapping;
+            _hashMapping = hashMapping;
         }
 
         /// <summary>
@@ -370,7 +394,8 @@ namespace Akka.Routing
         /// </summary>
         public ConsistentHashingPool WithVirtualNodesFactor(int vnodes)
         {
-            return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher, vnodes, HashMapping);
+            return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher,
+                UsePoolDispatcher, vnodes, _hashMapping);
         }
 
         /// <summary>
@@ -380,28 +405,35 @@ namespace Akka.Routing
         /// </summary>
         public ConsistentHashingPool WithHashMapping(ConsistentHashMapping mapping)
         {
-            return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher, VirtualNodesFactor, mapping);
+            return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher,
+                UsePoolDispatcher, VirtualNodesFactor, mapping);
         }
 
         /// <summary>
         /// Simple form of ConsistentHashingPool constructor
         /// </summary>
         /// <param name="nrOfInstances">The nr of instances.</param>
-        public ConsistentHashingPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null) { }
+        public ConsistentHashingPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null)
+        {
+        }
 
         public override Router CreateRouter(ActorSystem system)
         {
-            return new Router(new ConsistentHashingRoutingLogic(system, VirtualNodesFactor, HashMapping ?? ConsistentHashingRouter.EmptyConsistentHashMapping));
+            return
+                new Router(new ConsistentHashingRoutingLogic(system, VirtualNodesFactor,
+                    _hashMapping ?? ConsistentHashingRouter.EmptyConsistentHashMapping));
         }
 
         public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
         {
-            return new ConsistentHashingPool(NrOfInstances, Resizer, strategy, RouterDispatcher, UsePoolDispatcher, VirtualNodesFactor, HashMapping);
+            return new ConsistentHashingPool(NrOfInstances, Resizer, strategy, RouterDispatcher, UsePoolDispatcher,
+                VirtualNodesFactor, _hashMapping);
         }
 
         public override Pool WithResizer(Resizer resizer)
         {
-            return new ConsistentHashingPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher, VirtualNodesFactor, HashMapping);
+            return new ConsistentHashingPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher,
+                UsePoolDispatcher, VirtualNodesFactor, _hashMapping);
         }
 
         public override RouterConfig WithFallback(RouterConfig routerConfig)
@@ -413,12 +445,39 @@ namespace Akka.Routing
             else if (routerConfig is ConsistentHashingPool)
             {
                 var other = routerConfig as ConsistentHashingPool;
-                return WithHashMapping(other.HashMapping).OverrideUnsetConfig(other);
+                return WithHashMapping(other._hashMapping).OverrideUnsetConfig(other);
             }
             else
             {
-                throw new ArgumentException(string.Format("Expected ConsistentHashingPool, got {0}", routerConfig), "routerConfig");
+                throw new ArgumentException(string.Format("Expected ConsistentHashingPool, got {0}", routerConfig),
+                    "routerConfig");
             }
+        }
+
+        public class ConsistentHashingPoolSurrogate : ISurrogate
+        {
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+            }
+
+            public int NrOfInstances { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Resizer Resizer { get; set; }
+            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public string RouterDispatcher { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new ConsistentHashingPoolSurrogate
+            {
+                NrOfInstances = NrOfInstances,
+                UsePoolDispatcher = UsePoolDispatcher,
+                Resizer = Resizer,
+                SupervisorStrategy = SupervisorStrategy,
+                RouterDispatcher = RouterDispatcher,
+            };
         }
     }
 }

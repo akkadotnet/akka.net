@@ -135,7 +135,7 @@ namespace Akka.Actor
 
             public string Path { get; private set; }
 
-            public object FromSurrogate(ActorSystem system)
+            public ISurrogated FromSurrogate(ActorSystem system)
             {
                 return ((ActorSystemImpl)system).Provider.ResolveActorRef(Path);
             }

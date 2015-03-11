@@ -110,82 +110,127 @@ namespace Akka.Tests.Serialization
         }
 
         [Fact]
+        public void CanSerializeAddress()
+        {
+            var message = new Address("abc", "def", "ghi", 123);
+            AssertEqual(message);
+        }
+
+        [Fact]
         public void CanSerializeImmutableMessages()
         {
             var message = new ImmutableMessage(Tuple.Create("aaa", "bbb"));
-
-            var serializer = Sys.Serialization.FindSerializerFor(message);
-            var serialized = serializer.ToBinary(message);
-            var deserialized = (ImmutableMessage)serializer.FromBinary(serialized, typeof(ImmutableMessage));
-
-            Assert.Equal(message,deserialized);            
+            AssertEqual(message);        
         }
 
         [Fact]
         public void CanSerializeImmutableMessagesWithPrivateCtor()
         {
             var message = new ImmutableMessageWithPrivateCtor(Tuple.Create("aaa", "bbb"));
-
-            var serializer = Sys.Serialization.FindSerializerFor(message);
-            var serialized = serializer.ToBinary(message);
-            var deserialized = (ImmutableMessageWithPrivateCtor)serializer.FromBinary(serialized, typeof(ImmutableMessageWithPrivateCtor));
-
-            Assert.Equal(message, deserialized);
+            AssertEqual(message);
         }
 
         [Fact]
         public void CanSerializeProps()
         {           
             var message = Props.Create<BlackHoleActor>().WithMailbox("abc").WithDispatcher("def");
-            var serializer = Sys.Serialization.FindSerializerFor(message);
-            var serialized = serializer.ToBinary(message);
-            var deserialized = (Props)serializer.FromBinary(serialized, typeof(Props));
-
-            Assert.Equal(message, deserialized);
+            AssertEqual(message);
         }
 
         [Fact]
         public void CanSerializeDeploy()
         {
             var message = new Deploy(RouterConfig.NoRouter).WithMailbox("abc");
-            var serializer = Sys.Serialization.FindSerializerFor(message);
-            var serialized = serializer.ToBinary(message);
-            var deserialized = (Deploy)serializer.FromBinary(serialized, typeof(Deploy));
-
-            Assert.Equal(message, deserialized);
+            AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializeScope()
+        public void CanSerializeRemoteScope()
         {
             var message = new RemoteScope(new Address("akka.tcp", "foo", "localhost", 8080));
-            var serializer = Sys.Serialization.FindSerializerFor(message);
-            var serialized = serializer.ToBinary(message);
-            var deserialized = (RemoteScope)serializer.FromBinary(serialized, typeof(RemoteScope));
-
-            Assert.Equal(message, deserialized);
+            AssertEqual(message);
         }
 
         [Fact]
-        public void CanSerializePool()
+        public void CanSerializeLocalScope()
+        {
+            var message = LocalScope.Instance;
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void CanSerializeRoundRobinPool()
         {
             var message = new RoundRobinPool(10, new DefaultResizer(0,1));
-            var serializer = Sys.Serialization.FindSerializerFor(message);
-            var serialized = serializer.ToBinary(message);
-            var deserialized = (RoundRobinPool)serializer.FromBinary(serialized, typeof(RoundRobinPool));
-            Assert.Equal(message, deserialized);
+            AssertEqual(message);
+        }
+
+        [Fact(Skip = "What am I doing wrong??")]
+        public void CanSerializeRoundRobinGroup()
+        {
+            var message = new RoundRobinGroup("abc");
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void CanSerializeRandomPool()
+        {
+            var message = new RandomPool(10, new DefaultResizer(0, 1));
+            AssertEqual(message);
+        }
+
+        [Fact(Skip = "What am I doing wrong??")]
+        public void CanSerializeRandomGroup()
+        {
+            var message = new RandomGroup("abc");
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void CanSerializeConsistentHashPool()
+        {
+            var message = new ConsistentHashingPool(10);
+            AssertEqual(message);
+        }
+
+
+        [Fact]
+        public void CanSerializeTailChoppingPool()
+        {            
+            var message = new TailChoppingPool(10,TimeSpan.FromSeconds(10),TimeSpan.FromSeconds(2));
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void CanSerializeScatterGatherFirstCompletedPool()
+        {
+            var message = new ScatterGatherFirstCompletedPool(10);
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void CanSerializeSmallestMailboxPool()
+        {
+            var message = new SmallestMailboxPool(10);
+            AssertEqual(message);
         }
 
         [Fact]
         public void CanSerializeResizer()
         {
             var message = new DefaultResizer(1, 20);
+            AssertEqual(message);
+        }
+
+        private void AssertEqual<T>(T message)
+        {
             var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
-            var deserialized = (DefaultResizer)serializer.FromBinary(serialized, typeof(DefaultResizer));
+            var deserialized = (T)serializer.FromBinary(serialized, typeof(T));
 
             Assert.Equal(message, deserialized);
         }
+
 
         [Fact]
         public void CanSerializeConfig()
@@ -223,11 +268,7 @@ namespace Akka.Tests.Serialization
             var uri = "akka.tcp://sys@localhost:9000/user/actor";
             var actorPath = ActorPath.Parse(uri);
 
-            var serializer = Sys.Serialization.FindSerializerFor(actorPath);
-            var serialized = serializer.ToBinary(actorPath);
-            var deserialized = (ActorPath) serializer.FromBinary(serialized, typeof (object));
-
-            Assert.Equal(actorPath, deserialized);
+            AssertEqual(actorPath);
         }
 
         [Fact]
@@ -259,10 +300,7 @@ namespace Akka.Tests.Serialization
         public void CanTranslateActorRefFromSurrogateType()
         {
             var aref = ActorOf<BlackHoleActor>();
-            var serializer = Sys.Serialization.FindSerializerFor(aref);
-            var bytes = serializer.ToBinary(aref);
-            var sref = (ActorRef)serializer.FromBinary(bytes, typeof(ActorRef));
-            Assert.NotNull(sref);
+            AssertEqual(aref);
         }
 
         [Fact]

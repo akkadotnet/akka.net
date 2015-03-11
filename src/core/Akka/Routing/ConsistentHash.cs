@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Akka.Actor;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -126,6 +127,18 @@ namespace Akka.Routing
         {
             get { return !_nodes.Any(); }
         }
+        
+        public class ConsistentHashingGroupSurrogate : ISurrogate
+        {
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new ConsistentHashingGroup(Paths);
+            }
+
+            public string[] Paths { get; set; }
+        }
+
+
 
         #region Operator overloads
 
@@ -191,6 +204,20 @@ namespace Akka.Routing
                 h = MurmurHash.ExtendHash(h, (uint)vnode, MurmurHash.StartMagicA, MurmurHash.StartMagicB);
                 return (int)MurmurHash.FinalizeHash(h);
             }
+        }
+        
+        public class ConsistentHashingPoolSurrogate : ISurrogate
+        {
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+            }
+
+            public int NrOfInstances { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Resizer Resizer { get; set; }
+            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public string RouterDispatcher { get; set; }
         }
 
         /// <summary>

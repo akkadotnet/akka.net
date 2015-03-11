@@ -98,16 +98,25 @@ namespace Akka.Cluster.Routing
     /// </summary>
     public sealed class ClusterRouterGroup : Group, IClusterRouterConfigBase<Group, ClusterRouterGroupSettings>
     {
+        private readonly Group _local;
+        private readonly ClusterRouterGroupSettings _settings;
+
         public ClusterRouterGroup(Group local, ClusterRouterGroupSettings settings)
+            : base(settings.AllowLocalRoutees ? settings.RouteesPaths.ToArray() : Enumerable.Empty<string>(),local.RouterDispatcher)
         {
-            Settings = settings;
-            Local = local;
-            Paths = settings.AllowLocalRoutees ? settings.RouteesPaths.ToArray() : null;
-            RouterDispatcher = local.RouterDispatcher;
+            _settings = settings;
+            _local = local;
         }
 
-        public Group Local { get; private set; }
-        public ClusterRouterGroupSettings Settings { get; private set; }
+        public Group Local
+        {
+            get { return _local; }
+        }
+
+        public ClusterRouterGroupSettings Settings
+        {
+            get { return _settings; }
+        }
 
         public override Router CreateRouter(ActorSystem system)
         {
@@ -116,12 +125,17 @@ namespace Akka.Cluster.Routing
 
         internal override RouterActor CreateRouterActor()
         {
-            return new ClusterRouterGroupActor((ClusterRouterGroupSettings) Settings);
+            return new ClusterRouterGroupActor(Settings);
         }
 
         public override bool IsManagementMessage(object message)
         {
             return message is ClusterEvent.IClusterDomainEvent || message is ClusterEvent.CurrentClusterState || base.IsManagementMessage(message);
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            throw new NotImplementedException();
         }
 
         public override RouterConfig WithFallback(RouterConfig routerConfig)
@@ -134,7 +148,7 @@ namespace Akka.Cluster.Routing
 
         public RouterConfig Copy(Group local = null, ClusterRouterGroupSettings settings = null)
         {
-            return new ClusterRouterGroup(local ?? (Group)Local, settings ?? (ClusterRouterGroupSettings)Settings);
+            return new ClusterRouterGroup(local ?? Local, settings ?? Settings);
         }
     }
 
@@ -147,25 +161,36 @@ namespace Akka.Cluster.Routing
     public sealed class ClusterRouterPool : Pool, IClusterRouterConfigBase<Pool, ClusterRouterPoolSettings>
     {
         public ClusterRouterPool(Pool local, ClusterRouterPoolSettings settings)
+            : base(settings.AllowLocalRoutees ? settings.MaxInstancesPerNode : 0,
+            local.Resizer,
+            local.SupervisorStrategy,
+             local.RouterDispatcher,false
+            )
         {
-            Settings = settings;
-            Local = local;
+            if (local.Resizer != null) 
+                throw new ConfigurationException("Resizer can't be used together with cluster router.");
+            _settings = settings;
+            _local = local;
             Guard.Assert(local.Resizer == null, "Resizer can't be used together with cluster router.");
         }
 
         private readonly AtomicCounter _childNameCounter = new AtomicCounter(0);
+        private readonly Pool _local;
+        private readonly ClusterRouterPoolSettings _settings;
 
-        public Pool Local { get; private set; }
+        public Pool Local
+        {
+            get { return _local; }
+        }
 
-        public ClusterRouterPoolSettings Settings { get; private set; }
+        public ClusterRouterPoolSettings Settings
+        {
+            get { return _settings; }
+        }
 
         public override SupervisorStrategy SupervisorStrategy
         {
-            get { return Local.SupervisorStrategy; }
-            set
-            {
-                Local.SupervisorStrategy = value;
-            }
+            get { return _local.SupervisorStrategy; }
         }
 
         public override Resizer Resizer { get { return Local.Resizer; } }
@@ -193,10 +218,6 @@ namespace Akka.Cluster.Routing
             {
                 return Local.NrOfInstances;
             }
-            set
-            {
-                Local.NrOfInstances = value;
-            }
         }
 
         public override string RouterDispatcher
@@ -211,7 +232,7 @@ namespace Akka.Cluster.Routing
 
         internal override RouterActor CreateRouterActor()
         {
-            return new ClusterRouterPoolActor(((Pool) Local).SupervisorStrategy, (ClusterRouterPoolSettings) Settings);
+            return new ClusterRouterPoolActor(Local.SupervisorStrategy, Settings);
         }
 
         
@@ -232,6 +253,11 @@ namespace Akka.Cluster.Routing
             return message is ClusterEvent.IClusterDomainEvent || message is ClusterEvent.CurrentClusterState || base.IsManagementMessage(message);
         }
 
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            throw new NotImplementedException();
+        }
+
         public override Routee NewRoutee(Props routeeProps, IActorContext context)
         {
             var name = "c" + _childNameCounter.GetAndIncrement();
@@ -250,7 +276,7 @@ namespace Akka.Cluster.Routing
 
         public RouterConfig Copy(Pool local = null, ClusterRouterPoolSettings settings = null)
         {
-            return new ClusterRouterPool(local ?? (Pool)Local, settings ?? (ClusterRouterPoolSettings)Settings);
+            return new ClusterRouterPool(local ?? Local, settings ?? Settings);
         }
        
     }
