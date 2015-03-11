@@ -8,7 +8,7 @@ namespace Akka.TestKit
 {
     /// <summary>
     /// TestKit-based probe which allows sending, reception and reply.
-    /// User <see cref="TestKitBase.CreateTestProbe">CreateTestProbe()</see> inside your test 
+    /// Use <see cref="TestKitBase.CreateTestProbe(string)" /> inside your test 
     /// to create new instances.
     /// </summary>
     public class TestProbe : TestKitBase, NoImplicitSender
