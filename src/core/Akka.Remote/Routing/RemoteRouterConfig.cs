@@ -13,11 +13,26 @@ namespace Akka.Remote.Routing
     /// routees on defined target nodes. Delegates other duties to the local <see cref="Pool"/>,
     /// which makes it possible to mix this with built-in routers such as <see cref="RoundRobinGroup"/> or custom routers.
     /// </summary>
-    public sealed class RemoteRouterConfig : Pool
+    public sealed class RemoteRouterConfig : Pool 
     {
+        public class RemoteRouterConfigSurrogate : ISurrogate
+        {
+            public Pool Local { get; set; }
+            public Address[] Nodes { get; set; }
+
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new RemoteRouterConfig(Local,Nodes);
+            }
+        }
+
         public override ISurrogate ToSurrogate(ActorSystem system)
         {
-           throw  new NotImplementedException();
+            return new RemoteRouterConfigSurrogate
+            {
+                Local = Local,
+                Nodes = Nodes.ToArray(),
+            };
         }
 
         internal readonly Pool Local;
