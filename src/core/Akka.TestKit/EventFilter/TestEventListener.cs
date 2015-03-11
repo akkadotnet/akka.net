@@ -7,7 +7,7 @@ using Akka.TestKit.TestEvent;
 namespace Akka.TestKit
 {
 
-/// <summary>
+    /// <summary>
     /// EventListener for running tests, which allows selectively filtering out
     /// expected messages. To use it, include something like this in
     /// the configuration:
