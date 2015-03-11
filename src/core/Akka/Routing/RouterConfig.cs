@@ -111,8 +111,28 @@ namespace Akka.Routing
     /// <summary>
     /// Base class for defining Group routers.
     /// </summary>
-    public abstract class Group : RouterConfig
+    public abstract class Group : RouterConfig, IEquatable<Group>
     {
+        public bool Equals(Group other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(_paths, other._paths);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((Group) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (_paths != null ? _paths.GetHashCode() : 0);
+        }
+
         private readonly string[] _paths;
 
         public string[] Paths

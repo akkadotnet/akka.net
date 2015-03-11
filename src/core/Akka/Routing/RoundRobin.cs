@@ -46,7 +46,7 @@ namespace Akka.Routing
         {
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                return new RandomGroup(Paths);
+                return new RoundRobinGroup(Paths);
             }
 
             public string[] Paths { get; set; }

@@ -356,7 +356,7 @@ namespace Akka.Routing
         /// </summary>
         public int VirtualNodesFactor { get; private set; }
 
-        private ConsistentHashMapping HashMapping;
+        private readonly ConsistentHashMapping _hashMapping;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHashingPool"/> class.
@@ -384,7 +384,7 @@ namespace Akka.Routing
             : base(nrOfInstances, resizer, supervisorStrategy, routerDispatcher, usePoolDispatcher)
         {
             VirtualNodesFactor = virtualNodesFactor;
-            HashMapping = hashMapping;
+            _hashMapping = hashMapping;
         }
 
         /// <summary>
@@ -395,7 +395,7 @@ namespace Akka.Routing
         public ConsistentHashingPool WithVirtualNodesFactor(int vnodes)
         {
             return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher,
-                UsePoolDispatcher, vnodes, HashMapping);
+                UsePoolDispatcher, vnodes, _hashMapping);
         }
 
         /// <summary>
@@ -421,19 +421,19 @@ namespace Akka.Routing
         {
             return
                 new Router(new ConsistentHashingRoutingLogic(system, VirtualNodesFactor,
-                    HashMapping ?? ConsistentHashingRouter.EmptyConsistentHashMapping));
+                    _hashMapping ?? ConsistentHashingRouter.EmptyConsistentHashMapping));
         }
 
         public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
         {
             return new ConsistentHashingPool(NrOfInstances, Resizer, strategy, RouterDispatcher, UsePoolDispatcher,
-                VirtualNodesFactor, HashMapping);
+                VirtualNodesFactor, _hashMapping);
         }
 
         public override Pool WithResizer(Resizer resizer)
         {
             return new ConsistentHashingPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher,
-                UsePoolDispatcher, VirtualNodesFactor, HashMapping);
+                UsePoolDispatcher, VirtualNodesFactor, _hashMapping);
         }
 
         public override RouterConfig WithFallback(RouterConfig routerConfig)
@@ -445,7 +445,7 @@ namespace Akka.Routing
             else if (routerConfig is ConsistentHashingPool)
             {
                 var other = routerConfig as ConsistentHashingPool;
-                return WithHashMapping(other.HashMapping).OverrideUnsetConfig(other);
+                return WithHashMapping(other._hashMapping).OverrideUnsetConfig(other);
             }
             else
             {
@@ -458,7 +458,7 @@ namespace Akka.Routing
         {
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+                return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
             }
 
             public int NrOfInstances { get; set; }

@@ -141,6 +141,7 @@ namespace Akka.Actor
             return new Address(Protocol, System, Host, Port);
         }
 
+        //TODO: conform to WithXYZ convention for each value?
         public Address Copy(string protocol = null, string system = null, string host = null, int? port = null)
         {
             return new Address(protocol ?? Protocol, system ?? System, host ?? Host, port ?? Port);

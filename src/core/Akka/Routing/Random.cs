@@ -29,7 +29,7 @@ namespace Akka.Routing
     /// <summary>
     ///     Class RandomGroup.
     /// </summary>
-    public class RandomGroup : Group
+    public class RandomGroup : Group 
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="RandomGroup" /> class.
