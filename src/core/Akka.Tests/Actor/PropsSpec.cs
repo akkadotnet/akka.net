@@ -70,6 +70,12 @@ namespace Akka.Tests.Actor
             {
                 get { return typeof(PropsTestActor); }
             }
+
+
+            public void Release(ActorBase actor)
+            {
+                actor = null;
+            }
         }
 
         private class PropsTestActor : ActorBase

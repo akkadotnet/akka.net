@@ -31,7 +31,8 @@ namespace Akka.Actor
             _props = props;
             _systemImpl = system;
             Parent = parent;
-            Dispatcher = dispatcher;            
+            Dispatcher = dispatcher;
+            
         }
 
         public object CurrentMessage { get; private set; }
