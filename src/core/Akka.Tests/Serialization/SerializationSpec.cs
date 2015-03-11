@@ -208,6 +208,13 @@ namespace Akka.Tests.Serialization
             AssertEqual(message);
         }
 
+        [Fact]
+        public void CanSerializeSmallestMailboxPool()
+        {
+            var message = new SmallestMailboxPool(10);
+            AssertEqual(message);
+        }
+
 
 
         [Fact]
