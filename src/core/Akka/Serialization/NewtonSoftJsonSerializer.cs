@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design.Serialization;
 using System.Reflection;
 using System.Text;
 using Akka.Actor;
+using Akka.Dispatch.SysMsg;
 using Akka.Util;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace Akka.Serialization
@@ -26,7 +29,7 @@ namespace Akka.Serialization
             _settings = new JsonSerializerSettings
             {
                 PreserveReferencesHandling = PreserveReferencesHandling.Objects,
-                Converters = new List<JsonConverter> {new PrimitiveTypeConverter(),new SurrogateConverter(system)},
+                Converters = new List<JsonConverter> {new SurrogateConverter(system)},
                 NullValueHandling = NullValueHandling.Ignore,
                 DefaultValueHandling = DefaultValueHandling.Ignore,
                 MissingMemberHandling = MissingMemberHandling.Ignore,
@@ -123,36 +126,6 @@ namespace Akka.Serialization
             return deserializedValue;
         }
 
-        public class PrimitiveTypeConverter : JsonConverter
-        {
-
-            public override bool CanConvert(Type objectType)
-            {
-                return objectType == typeof (int) || objectType == typeof (float) || objectType == typeof (decimal);
-            }
-
-            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-            {
-                var surrogate = serializer.Deserialize<PrimitiveSurrogate>(reader);
-                return surrogate.GetValue();
-            }
-
-            public override bool CanRead
-            {
-                get { return true; }
-            }
-
-            public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-            {
-                if (value is int)
-                    serializer.Serialize(writer, new PrimitiveSurrogate((int)value));
-                if (value is float)
-                    serializer.Serialize(writer, new PrimitiveSurrogate((float)value));
-                if (value is decimal)
-                    serializer.Serialize(writer, new PrimitiveSurrogate((decimal)value));
-            }
-        }
-
         public class SurrogateConverter : JsonConverter
         {
             private readonly ActorSystem _system;
@@ -167,7 +140,16 @@ namespace Akka.Serialization
             /// <returns><c>true</c> if this instance can convert the specified object type; otherwise, <c>false</c>.</returns>
             public override bool CanConvert(Type objectType)
             {
-                return (typeof(ISurrogated).IsAssignableFrom(objectType));
+                if (objectType == typeof (int) || objectType == typeof (float) || objectType == typeof (decimal))
+                    return true;
+
+                if (typeof (ISurrogated).IsAssignableFrom(objectType))
+                    return true;
+
+                if (objectType == typeof (object))
+                    return true;
+
+                return false;
             }
 
             /// <summary>
@@ -181,7 +163,7 @@ namespace Akka.Serialization
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue,
                 JsonSerializer serializer)
             {
-                var surrogate = serializer.Deserialize<ISurrogate>(reader);
+                var surrogate = serializer.Deserialize(reader);
                 return TranslateSurrogate(surrogate, _system);
             }
 
@@ -193,9 +175,22 @@ namespace Akka.Serialization
             /// <param name="serializer">The calling serializer.</param>
             public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
             {
-                var surrogated = (ISurrogated)value;
-                var surrogate = surrogated.ToSurrogate(_system);
-                serializer.Serialize(writer, surrogate);
+                if (value is int)
+                    serializer.Serialize(writer, new PrimitiveSurrogate((int)value));
+                else if (value is float)
+                    serializer.Serialize(writer, new PrimitiveSurrogate((float)value));
+                else if (value is decimal)
+                    serializer.Serialize(writer, new PrimitiveSurrogate((decimal)value));
+                else if (value is ISurrogated)
+                {
+                    var surrogated = (ISurrogated) value;
+                    var surrogate = surrogated.ToSurrogate(_system);
+                    serializer.Serialize(writer, surrogate);
+                }
+                else
+                {
+                    serializer.Serialize(writer, value);
+                }
             }
         }
     }

@@ -149,6 +149,13 @@ namespace Akka.Tests.Serialization
         }
 
         [Fact]
+        public void CanSerializeAddressMessage()
+        {
+            var message = new UntypedContainerMessage { Contents = new Address("abc","def") };
+            AssertEqual(message);
+        }
+
+        [Fact]
         public void CanSerializeDecimal()
         {
             var message = 123.456m;
