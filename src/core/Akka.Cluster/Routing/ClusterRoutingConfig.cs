@@ -125,7 +125,7 @@ namespace Akka.Cluster.Routing
 
         internal override RouterActor CreateRouterActor()
         {
-            return new ClusterRouterGroupActor((ClusterRouterGroupSettings) Settings);
+            return new ClusterRouterGroupActor(Settings);
         }
 
         public override bool IsManagementMessage(object message)
@@ -148,7 +148,7 @@ namespace Akka.Cluster.Routing
 
         public RouterConfig Copy(Group local = null, ClusterRouterGroupSettings settings = null)
         {
-            return new ClusterRouterGroup(local ?? (Group)Local, settings ?? (ClusterRouterGroupSettings)Settings);
+            return new ClusterRouterGroup(local ?? Local, settings ?? Settings);
         }
     }
 
@@ -232,7 +232,7 @@ namespace Akka.Cluster.Routing
 
         internal override RouterActor CreateRouterActor()
         {
-            return new ClusterRouterPoolActor(((Pool) Local).SupervisorStrategy, (ClusterRouterPoolSettings) Settings);
+            return new ClusterRouterPoolActor(Local.SupervisorStrategy, Settings);
         }
 
         
@@ -276,7 +276,7 @@ namespace Akka.Cluster.Routing
 
         public RouterConfig Copy(Pool local = null, ClusterRouterPoolSettings settings = null)
         {
-            return new ClusterRouterPool(local ?? (Pool)Local, settings ?? (ClusterRouterPoolSettings)Settings);
+            return new ClusterRouterPool(local ?? Local, settings ?? Settings);
         }
        
     }
