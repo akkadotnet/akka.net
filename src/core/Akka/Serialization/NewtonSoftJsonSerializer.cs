@@ -26,7 +26,7 @@ namespace Akka.Serialization
             _settings = new JsonSerializerSettings
             {
                 PreserveReferencesHandling = PreserveReferencesHandling.Objects,
-                Converters = new List<JsonConverter> {new SurrogateConverter(system)},
+                Converters = new List<JsonConverter> {new SurrogateConverter(system), new PrimitiveTypeConverter()},
                 NullValueHandling = NullValueHandling.Ignore,
                 DefaultValueHandling = DefaultValueHandling.Ignore,
                 MissingMemberHandling = MissingMemberHandling.Ignore,
@@ -115,7 +115,37 @@ namespace Akka.Serialization
             {
                 return surrogate.FromSurrogate(system);
             }
+            var primitive = deserializedValue as PrimitiveSurrogate;
+            if (primitive != null)
+            {
+                return primitive.GetValue();
+            }
             return deserializedValue;
+        }
+
+        public class PrimitiveTypeConverter : JsonConverter
+        {
+
+            public override bool CanConvert(Type objectType)
+            {
+                return objectType == typeof (int) || objectType == typeof (float) || objectType == typeof (decimal);
+            }
+
+            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+            {
+                var surrogate = serializer.Deserialize<PrimitiveSurrogate>(reader);
+                return surrogate.GetValue();
+            }
+
+            public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+            {
+                if (value is int)
+                    serializer.Serialize(writer, new PrimitiveSurrogate((int)value));
+                if (value is float)
+                    serializer.Serialize(writer, new PrimitiveSurrogate((float)value));
+                if (value is decimal)
+                    serializer.Serialize(writer, new PrimitiveSurrogate((decimal)value));
+            }
         }
 
         public class SurrogateConverter : JsonConverter

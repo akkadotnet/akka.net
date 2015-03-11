@@ -14,6 +14,10 @@ namespace Akka.Tests.Serialization
     
     public class SerializationSpec : AkkaSpec
     {
+        public class UntypedContainerMessage
+        {
+            public object Contents { get; set; }
+        }
         public class ContainerMessage<T>
         {
             public ContainerMessage(T contents)
@@ -107,6 +111,41 @@ namespace Akka.Tests.Serialization
         public class SomeMessage
         {
             public ActorRef ActorRef { get; set; }
+        }
+
+        [Fact]
+        public void CanSerializeDecimal()
+        {
+            var message = 123.456m;
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void CanSerializeLong()
+        {
+            var message = 123l;
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void CanSerializeDouble()
+        {
+            var message = 123.456d;
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void CanSerializeInt()
+        {
+            var message = 123;
+            AssertEqual(message);
+        }
+
+        [Fact]
+        public void CanSerializeFloat()
+        {
+            var message = 123.456f;
+            AssertEqual(message);
         }
 
         [Fact]
