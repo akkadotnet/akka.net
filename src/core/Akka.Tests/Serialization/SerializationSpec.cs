@@ -215,8 +215,6 @@ namespace Akka.Tests.Serialization
             AssertEqual(message);
         }
 
-
-
         [Fact]
         public void CanSerializeResizer()
         {
@@ -270,11 +268,7 @@ namespace Akka.Tests.Serialization
             var uri = "akka.tcp://sys@localhost:9000/user/actor";
             var actorPath = ActorPath.Parse(uri);
 
-            var serializer = Sys.Serialization.FindSerializerFor(actorPath);
-            var serialized = serializer.ToBinary(actorPath);
-            var deserialized = (ActorPath) serializer.FromBinary(serialized, typeof (object));
-
-            Assert.Equal(actorPath, deserialized);
+            AssertEqual(actorPath);
         }
 
         [Fact]
