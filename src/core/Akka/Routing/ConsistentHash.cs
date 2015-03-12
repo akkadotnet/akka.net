@@ -80,7 +80,7 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Converts the result of <see cref="Array.BinarySearch(T[], T)"/> into an index in the 
+        /// Converts the result of <see cref="Array.BinarySearch{T}(T[], T)"/> into an index in the 
         /// <see cref="RingTuple"/> array.
         /// </summary>
         /// <param name="i"></param>

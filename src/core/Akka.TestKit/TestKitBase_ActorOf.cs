@@ -79,12 +79,12 @@ namespace Akka.TestKit
         /// <summary>
         /// Creates a new actor by defining the behavior inside the <paramref name="configure"/> action.
         /// <example>
-        /// <pre><code>
+        /// <code>
         /// ActorOf(c =>
         /// {
         ///     c.Receive&lt;string&gt;((msg, ctx) => ctx.Sender.Tell("Hello " + msg));
         /// });
-        /// </code></pre>
+        /// </code>
         /// </example>
         /// </summary>
         /// <param name="configure">An action that configures the actor's behavior.</param>
@@ -97,12 +97,12 @@ namespace Akka.TestKit
         /// <summary>
         /// Creates a new actor by defining the behavior inside the <paramref name="configure"/> action.
         /// <example>
-        /// <pre><code>
+        /// <code>
         /// ActorOf(c =>
         /// {
         ///     c.Receive&lt;string&gt;((msg, ctx) => ctx.Sender.Tell("Hello " + msg));
         /// });
-        /// </code></pre>
+        /// </code>
         /// </example>
         /// </summary>
         /// <param name="configure">An action that configures the actor's behavior.</param>

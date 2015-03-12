@@ -9,7 +9,7 @@ namespace Akka.TestKit
     /// When a a test class implements <see cref="NoImplicitSender"/> this behavior is removed and the normal
     /// behavior is restored, i.e. <see cref="NoSender"/> is used as sender when no sender has been specified.
     /// <example>
-    /// <code><pre>
+    /// <code>
     /// public class WithImplicitSender : TestKit
     /// {
     ///    public void TheTestMethod()
@@ -28,7 +28,7 @@ namespace Akka.TestKit
     ///       someActor.Tell("message");    //NoSender is used as Sender
     ///    }
     /// }
-    /// </pre></code>
+    /// </code>
     /// </example>
     /// </summary>
     // ReSharper disable once InconsistentNaming

@@ -260,7 +260,7 @@ namespace Akka.Actor
         public ActorRef Receiver { get; private set; }
         
         /// <summary>
-        /// Make the inbox’s actor watch the <paramref name="target"/> actor such that 
+        /// Make the inbox’s actor watch the <paramref name="subject"/> actor such that 
         /// reception of the <see cref="Terminated"/> message can then be awaited.
         /// </summary>
         public ActorRef Watch(ActorRef subject)

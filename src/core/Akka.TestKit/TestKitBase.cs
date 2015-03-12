@@ -129,7 +129,7 @@ namespace Akka.TestKit
         /// Filter <see cref="LogEvent"/> sent to the system's <see cref="EventStream"/>.
         /// In order to be able to filter the log the special logger
         /// <see cref="TestEventListener"/> must be installed using the config
-        /// <pre><code>akka.loggers = ["Akka.TestKit.TestEventListener, Akka.TestKit"]</code></pre>
+        /// <code>akka.loggers = ["Akka.TestKit.TestEventListener, Akka.TestKit"]</code>
         /// It is installed by default in testkit.
         /// </summary>
         public EventFilterFactory EventFilter { get { return _eventFilterFactory; } }
