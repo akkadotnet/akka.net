@@ -7,6 +7,8 @@ using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.DI.Core;
 using Autofac;
+using System.Text;
+using System.Runtime.CompilerServices;
 
 namespace Akka.DI.AutoFac
 {
@@ -95,7 +97,7 @@ namespace Akka.DI.AutoFac
         public void Release(ActorBase actor)
         {
             ILifetimeScope scope;
-         
+
             if (references.TryGetValue(actor, out scope))
             {
                 scope.Dispose();

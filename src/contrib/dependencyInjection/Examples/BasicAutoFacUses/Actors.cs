@@ -1,8 +1,6 @@
 ﻿﻿using Akka.Actor;
-using Akka.DI.Core;
 using Akka.Routing;
 using System;
-
 public class AnotherMessage
 {
     public string Name { get; set; }
@@ -15,7 +13,7 @@ public class AnotherMessage
 
 
 }
-public class TypedActorMessage : IConsistentHashable
+public class TypedActorMessage : ConsistentHashable
 {
     public string Name { get; set; }
     public int Id { get; set; }
@@ -40,12 +38,14 @@ public class TypedWorker : TypedActor, IHandle<TypedActorMessage>, IHandle<Anoth
 
     public void Handle(TypedActorMessage message)
     {
-        Console.WriteLine("TypedWorker - {0} received {1}", Self.Path.Name, message);
+        Console.WriteLine("{0} received {1}", Self.Path.Name, message);
     }
 
 
     public void Handle(AnotherMessage message)
     {
+
+        Console.WriteLine("{0} received other {1}", Self.Path.Name, message);
         Console.WriteLine("TypedWorker - {0} received other {1}", Self.Path.Name, message);
     }
 }
@@ -60,7 +60,8 @@ public class TypedParentWorker : TypedActor, IHandle<TypedActorMessage>, IHandle
     public void Handle(TypedActorMessage message)
     {
         Console.WriteLine("TypedParentWorker - {0} received {1}", Self.Path.Name, message);
-        Context.DI().ActorOf<TypedWorker>().Tell(message);
+        var producer = Context.System.GetExtension<DIExt>();
+        Context.ActorOf(producer.Props("TypedWorker")).Tell(message);
     }
 
 
