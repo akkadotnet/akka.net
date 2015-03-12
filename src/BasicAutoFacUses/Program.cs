@@ -17,6 +17,7 @@ namespace BasicAutoFacUses
         static void Main(string[] args)
         {
             WithHashPool();
+            //Parent Child
         }
 
         private static void WithHashPool()

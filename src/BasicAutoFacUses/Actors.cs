@@ -47,3 +47,24 @@ public class TypedWorker : TypedActor, IHandle<TypedActorMessage>, IHandle<Anoth
         Console.WriteLine("{0} received other {1}", Self.Path.Name, message);
     }
 }
+`public class TypedParentWorker : TypedActor, IHandle<TypedActorMessage>, IHandle<AnotherMessage>
+{
+    public TypedParentWorker()
+    {
+        //
+        Console.WriteLine("Created {0}", Guid.NewGuid().ToString());
+    }
+
+    public void Handle(TypedActorMessage message)
+    {
+        Console.WriteLine("{0} received {1}", Self.Path.Name, message);
+        Context.System.ActorOf<TypedWorker>().Tell(message);
+
+    }
+
+
+    public void Handle(AnotherMessage message)
+    {
+        Console.WriteLine("{0} received other {1}", Self.Path.Name, message);
+    }
+}
