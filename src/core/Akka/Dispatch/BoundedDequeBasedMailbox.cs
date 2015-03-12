@@ -5,7 +5,7 @@ namespace Akka.Dispatch
     /// <summary>
     /// Mailbox with support for EnqueueFirst
     /// </summary>
-    public class BoundedDequeBasedMailbox : Mailbox<BoundedMessageQueue, BoundedDequeMessageQueue>, DequeBasedMailbox
+    public class BoundedDequeBasedMailbox : Mailbox<BoundedMessageQueue, BoundedDequeMessageQueue>, IDequeBasedMailbox
     {
         protected override BoundedMessageQueue CreateSystemMessagesQueue()
         {
