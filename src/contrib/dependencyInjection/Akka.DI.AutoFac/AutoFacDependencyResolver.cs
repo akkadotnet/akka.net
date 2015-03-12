@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 namespace Akka.DI.AutoFac
 {
@@ -19,6 +20,7 @@ namespace Akka.DI.AutoFac
         private IContainer container;
         private ConcurrentDictionary<string, Type> typeCache;
         private ActorSystem system;
+        private ConditionalWeakTable<ActorBase, ILifetimeScope> references;
 
         /// <summary>
         /// AutoFacDependencyResolver Constructor
@@ -33,6 +35,7 @@ namespace Akka.DI.AutoFac
             typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
             this.system = system;
             this.system.AddDependencyResolver(this);
+            this.references = new ConditionalWeakTable<ActorBase, ILifetimeScope>();
         }
 
         /// <summary>
@@ -67,7 +70,10 @@ namespace Akka.DI.AutoFac
             return () =>
             {
                 Type actorType = this.GetType(actorName);
-                return (ActorBase)container.Resolve(actorType);
+                var scope = container.BeginLifetimeScope();
+                var actor = (ActorBase)scope.Resolve(actorType);
+                references.Add(actor, scope);
+                return actor;
             };
         }
         /// <summary>
@@ -88,7 +94,12 @@ namespace Akka.DI.AutoFac
 
         public void Release(ActorBase actor)
         {
-            throw new NotImplementedException();
+            ILifetimeScope scope;
+            if (references.TryGetValue(actor, out scope))
+            {
+                scope.Dispose();
+                references.Remove(actor);
+            }
         }
     }
     internal static class Extensions
