@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design.Serialization;
 using System.Reflection;
 using System.Text;
 using Akka.Actor;
+using Akka.Dispatch.SysMsg;
 using Akka.Util;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace Akka.Serialization
@@ -115,6 +118,11 @@ namespace Akka.Serialization
             {
                 return surrogate.FromSurrogate(system);
             }
+            var primitive = deserializedValue as PrimitiveSurrogate;
+            if (primitive != null)
+            {
+                return primitive.GetValue();
+            }
             return deserializedValue;
         }
 
@@ -132,7 +140,16 @@ namespace Akka.Serialization
             /// <returns><c>true</c> if this instance can convert the specified object type; otherwise, <c>false</c>.</returns>
             public override bool CanConvert(Type objectType)
             {
-                return (typeof(ISurrogated).IsAssignableFrom(objectType));
+                if (objectType == typeof (int) || objectType == typeof (float) || objectType == typeof (decimal))
+                    return true;
+
+                if (typeof (ISurrogated).IsAssignableFrom(objectType))
+                    return true;
+
+                if (objectType == typeof (object))
+                    return true;
+
+                return false;
             }
 
             /// <summary>
@@ -146,7 +163,7 @@ namespace Akka.Serialization
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue,
                 JsonSerializer serializer)
             {
-                var surrogate = serializer.Deserialize<ISurrogate>(reader);
+                var surrogate = serializer.Deserialize(reader);
                 return TranslateSurrogate(surrogate, _system);
             }
 
@@ -158,9 +175,22 @@ namespace Akka.Serialization
             /// <param name="serializer">The calling serializer.</param>
             public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
             {
-                var surrogated = (ISurrogated)value;
-                var surrogate = surrogated.ToSurrogate(_system);
-                serializer.Serialize(writer, surrogate);
+                if (value is int)
+                    serializer.Serialize(writer, new PrimitiveSurrogate((int)value));
+                else if (value is float)
+                    serializer.Serialize(writer, new PrimitiveSurrogate((float)value));
+                else if (value is decimal)
+                    serializer.Serialize(writer, new PrimitiveSurrogate((decimal)value));
+                else if (value is ISurrogated)
+                {
+                    var surrogated = (ISurrogated) value;
+                    var surrogate = surrogated.ToSurrogate(_system);
+                    serializer.Serialize(writer, surrogate);
+                }
+                else
+                {
+                    serializer.Serialize(writer, value);
+                }
             }
         }
     }
