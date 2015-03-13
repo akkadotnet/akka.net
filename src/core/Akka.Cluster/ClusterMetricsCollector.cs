@@ -47,12 +47,12 @@ namespace Akka.Cluster
         /// <summary>
         /// Start periodic gossip to random nodes in the cluster
         /// </summary>
-        private CancellationTokenSource _gossipTask;
+        private ICancelable _gossipCancelable;
 
         /// <summary>
         /// Start periodic metrics collection
         /// </summary>
-        private CancellationTokenSource _metricsTask;
+        private ICancelable _metricsCancelable;
 
         private Cluster _cluster;
 
@@ -66,13 +66,13 @@ namespace Akka.Cluster
             LatestGossip = MetricsGossip.Empty;
             Nodes = ImmutableHashSet.Create<Address>();
 
-            _metricsTask = new CancellationTokenSource();
-            Context.System.Scheduler.Schedule(_cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.MetricsInterval), 
-                _cluster.Settings.MetricsInterval, Self, InternalClusterAction.MetricsTick.Instance, _metricsTask.Token);
+            _metricsCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
+                _cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.MetricsInterval),
+                _cluster.Settings.MetricsInterval, Self, InternalClusterAction.MetricsTick.Instance, Self);
 
-            _gossipTask = new CancellationTokenSource();
-            Context.System.Scheduler.Schedule(_cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.GossipInterval),
-                _cluster.Settings.GossipInterval, Self, InternalClusterAction.GossipTick.Instance, _gossipTask.Token);
+            _gossipCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
+                _cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.GossipInterval), 
+                _cluster.Settings.GossipInterval, Self, InternalClusterAction.GossipTick.Instance, Self);
 
             Receive<InternalClusterAction.GossipTick>(tick => Gossip());
             Receive<InternalClusterAction.MetricsTick>(tick => Collect());
@@ -98,8 +98,8 @@ namespace Akka.Cluster
         protected override void PostStop()
         {
             _cluster.Unsubscribe(Self);
-            _gossipTask.Cancel();
-            _metricsTask.Cancel();
+            _gossipCancelable.Cancel();
+            _metricsCancelable.Cancel();
             Collector.Dispose();
         }
 

@@ -74,7 +74,7 @@ namespace Akka.Persistence
         private ActorRef _snapshotStore;
         private ActorRef _journal;
 
-        private CancellationTokenSource _scheduleCancellation;
+        private ICancelable _scheduleCancellation;
 
         private IStash _internalStash;
         private ViewState _currentState;

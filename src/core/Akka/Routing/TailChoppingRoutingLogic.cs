@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
+using System.Runtime.Remoting.Contexts;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -29,7 +30,7 @@ namespace Akka.Routing
         /// <summary>
         /// An instance of the actor system scheduler.
         /// </summary>
-        private readonly Scheduler _scheduler;
+        private readonly IScheduler _scheduler;
 
         /// <summary>
         /// Creates an instance of the TailChoppingRoutingLogic.
@@ -37,7 +38,7 @@ namespace Akka.Routing
         /// <param name="within">The time within which at least one response is expected.</param>
         /// <param name="interval">The duration after which the next routee will be picked.</param>
         /// <param name="scheduler">The scheduler to use</param>
-        public TailChoppingRoutingLogic(TimeSpan within, TimeSpan interval, Scheduler scheduler)
+        public TailChoppingRoutingLogic(TimeSpan within, TimeSpan interval, IScheduler scheduler)
         {
             _within = within;
             _interval = interval;
@@ -83,7 +84,7 @@ namespace Akka.Routing
         /// <summary>
         /// An instance of the actor system scheduler.
         /// </summary>
-        private readonly Scheduler _scheduler;
+        private readonly IScheduler _scheduler;
 
         /// <summary>
         /// Creates an instance of the TailChoppingRoutee.
@@ -92,7 +93,7 @@ namespace Akka.Routing
         /// <param name="within">The time within which at least one response is expected.</param>
         /// <param name="interval">The duration after which the next routee will be picked.</param>
         /// <param name="scheduler">Access to a <see cref="Scheduler"/> instance, used to force deadlines.</param>
-        public TailChoppingRoutee(Routee[] routees, TimeSpan within, TimeSpan interval, Scheduler scheduler)
+        public TailChoppingRoutee(Routee[] routees, TimeSpan within, TimeSpan interval, IScheduler scheduler)
         {
             _routees = routees;
             _within = within;
@@ -111,27 +112,26 @@ namespace Akka.Routing
             var routeeIndex = new AtomicCounter(0);
 
             var completion = new TaskCompletionSource<object>();
-            var tokenSource = new CancellationTokenSource();
-            var token = tokenSource.Token;
+            var cancelable = new Cancelable(_scheduler);
 
-            var scheduledSends = _scheduler.Schedule(TimeSpan.Zero, _interval, async () => 
+            _scheduler.Advanced.ScheduleRepeatedly(TimeSpan.Zero, _interval, async () => 
             {
                 var currentIndex = routeeIndex.GetAndIncrement();
                 if(currentIndex < _routees.Length)
                 {
                     completion.TrySetResult(await ((Task<object>)_routees[currentIndex].Ask(message, null)));
                 }
-            }, token);
+            }, cancelable);
 
-            var withinTimeout = _scheduler.ScheduleOnce(_within, () => 
+            _scheduler.Advanced.ScheduleOnce(_within, () => 
             {
                 completion.TrySetException(new TimeoutException(String.Format("Ask timed out on {0} after {1}", sender, _within)));
-            }, token);
+            }, cancelable);
 
             var request = completion.Task;
             completion.Task.ContinueWith(task => 
             {
-                tokenSource.Cancel(false);
+                cancelable.Cancel(false);
             });
 
             request.PipeTo(sender);

@@ -181,10 +181,11 @@ namespace Akka.Actor
             sender = sender ?? NoSender;
             var result = new TaskCompletionSource<object>();
             var a = new PromiseActorRef(provider, result, messageClassName);
-            var c = new CancellationTokenSource(timeout);
-            var f = provider.Guardian.Underlying.System.Scheduler.ScheduleOnce(timeout, () => result.TrySetResult(new Status.Failure(new AskTimeoutException(
+            var scheduler = provider.Guardian.Underlying.System.Scheduler.Advanced;
+            var c = new Cancelable(scheduler, timeout);
+            scheduler.ScheduleOnce(timeout, () => result.TrySetResult(new Status.Failure(new AskTimeoutException(
                 string.Format("Ask timed out on [{0}] after [{1} ms]. Sender[{2}] sent message of type {3}.", targetName, timeout.TotalMilliseconds, sender, messageClassName)))),
-                c.Token);
+                c);
 
             result.Task.ContinueWith(r =>
             {

@@ -663,43 +663,39 @@ namespace Akka.Cluster
                             && settings.PublishStatsInterval >= TimeSpan.Zero
                             && settings.PublishStatsInterval != TimeSpan.MaxValue;
 
-            _gossipTaskCancellable = new CancellationTokenSource();
-            _gossipTask =
-                scheduler.Schedule(
-                    settings.PeriodicTasksInitialDelay.Max(settings.GossipInterval),
-                    settings.GossipInterval,
-                    Self,
-                    InternalClusterAction.GossipTick.Instance,
-                    _gossipTaskCancellable.Token);
+            _gossipTaskCancellable =
+                scheduler.ScheduleTellRepeatedlyCancelable(
+                    settings.PeriodicTasksInitialDelay.Max(settings.GossipInterval), 
+                    settings.GossipInterval, 
+                    Self, 
+                    InternalClusterAction.GossipTick.Instance, 
+                    Self);
 
-            _failureDetectorReaperTaskCancellable = new CancellationTokenSource();
-            _failureDetectorReaperTask =
-                scheduler.Schedule(
-                    settings.PeriodicTasksInitialDelay.Max(settings.UnreachableNodesReaperInterval),
-                    settings.UnreachableNodesReaperInterval,
-                    Self,
-                    InternalClusterAction.ReapUnreachableTick.Instance,
-                    _failureDetectorReaperTaskCancellable.Token);
+            _failureDetectorReaperTaskCancellable =
+                scheduler.ScheduleTellRepeatedlyCancelable(
+                    settings.PeriodicTasksInitialDelay.Max(settings.UnreachableNodesReaperInterval), 
+                    settings.UnreachableNodesReaperInterval, 
+                    Self, 
+                    InternalClusterAction.ReapUnreachableTick.Instance, 
+                    Self);
 
-            _leaderActionsTaskCancellable = new CancellationTokenSource();
-            _leaderActionsTask =
-                scheduler.Schedule(
-                    settings.PeriodicTasksInitialDelay.Max(settings.LeaderActionsInterval),
-                    settings.LeaderActionsInterval,
-                    Self,
-                    InternalClusterAction.LeaderActionsTick.Instance,
-                    _leaderActionsTaskCancellable.Token);
+            _leaderActionsTaskCancellable =
+                scheduler.ScheduleTellRepeatedlyCancelable(
+                    settings.PeriodicTasksInitialDelay.Max(settings.LeaderActionsInterval), 
+                    settings.LeaderActionsInterval, 
+                    Self, 
+                    InternalClusterAction.LeaderActionsTick.Instance, 
+                    Self);
 
             if (settings.PublishStatsInterval != null && settings.PublishStatsInterval > TimeSpan.Zero && settings.PublishStatsInterval != TimeSpan.MaxValue)
             {
-                _publishStatsTaskTaskCancellable = new CancellationTokenSource();
-                _publishStatsTask =
-                            scheduler.Schedule(
-                                settings.PeriodicTasksInitialDelay.Max(settings.PublishStatsInterval.Value),
-                                settings.PublishStatsInterval.Value,
-                                Self,
-                                InternalClusterAction.PublishStatsTick.Instance,
-                                _publishStatsTaskTaskCancellable.Token);
+                _publishStatsTaskTaskCancellable =
+                    scheduler.ScheduleTellRepeatedlyCancelable(
+                        settings.PeriodicTasksInitialDelay.Max(settings.PublishStatsInterval.Value), 
+                        settings.PublishStatsInterval.Value, 
+                        Self, 
+                        InternalClusterAction.PublishStatsTick.Instance, 
+                        Self);
             }
 
             _logInfo = settings.LogInfo;
@@ -710,14 +706,10 @@ namespace Akka.Cluster
             return Context.ActorSelection(new RootActorPath(address) / "system" / "cluster" / "core" / "daemon");
         }
 
-        readonly Task _gossipTask;
-        readonly CancellationTokenSource _gossipTaskCancellable;
-        readonly Task _failureDetectorReaperTask;
-        readonly CancellationTokenSource _failureDetectorReaperTaskCancellable;
-        readonly Task _leaderActionsTask;
-        readonly CancellationTokenSource _leaderActionsTaskCancellable;
-        readonly Task _publishStatsTask;
-        readonly CancellationTokenSource _publishStatsTaskTaskCancellable;
+        readonly ICancelable _gossipTaskCancellable;
+        readonly ICancelable _failureDetectorReaperTaskCancellable;
+        readonly ICancelable _leaderActionsTaskCancellable;
+        readonly ICancelable _publishStatsTaskTaskCancellable;
 
         protected override void PreStart()
         {
@@ -1828,7 +1820,7 @@ namespace Akka.Cluster
         readonly Cluster _cluster;
         readonly Deadline _timeout;
         private Task _retryTask;
-        readonly CancellationTokenSource _retryTaskToken;
+        readonly ICancelable _retryTaskToken;
 
         public FirstSeedNodeProcess(ImmutableList<Address> seeds)
         {
@@ -1840,9 +1832,7 @@ namespace Akka.Cluster
 
             _remainingSeeds = seeds.Remove(_selfAddress);
             _timeout = Deadline.Now + _cluster.Settings.SeedNodeTimeout;
-            _retryTaskToken = new CancellationTokenSource();
-            _retryTask = _cluster.Scheduler.Schedule(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), Self,
-                new InternalClusterAction.JoinSeenNode(), _retryTaskToken.Token);
+            _retryTaskToken = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), Self, new InternalClusterAction.JoinSeenNode(), Self);
             Self.Tell(new InternalClusterAction.JoinSeenNode());
         }
 

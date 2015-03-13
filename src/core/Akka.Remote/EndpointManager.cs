@@ -292,21 +292,18 @@ namespace Akka.Remote
             }
         }
 
-        private CancellationTokenSource _pruneCancellationTokenSource;
-        private Task _pruneTimeCancellableImpl;
+        private ICancelable _pruneTimeCancelable;
 
         /// <summary>
-        /// Cancellable task for terminating <see cref="Prune"/> operations.
+        /// Cancelable for terminating <see cref="Prune"/> operations.
         /// </summary>
-        private Task PruneTimerCancelleable
+        private ICancelable PruneTimerCancelleable
         {
             get
             {
-                if (RetryGateEnabled && _pruneTimeCancellableImpl == null)
+                if (RetryGateEnabled && _pruneTimeCancelable == null)
                 {
-                    _pruneCancellationTokenSource = new CancellationTokenSource();
-                    return (_pruneTimeCancellableImpl = Context.System.Scheduler.Schedule(PruneInterval, PruneInterval, Self, new Prune(),
-                        _pruneCancellationTokenSource.Token));
+                    return _pruneTimeCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(PruneInterval, PruneInterval, Self, new Prune(), Self);
                 }
                 return null;
             }
@@ -381,7 +378,7 @@ namespace Akka.Remote
         protected override void PostStop()
         {
             if(PruneTimerCancelleable != null)
-                _pruneCancellationTokenSource.Cancel();
+                _pruneTimeCancelable.Cancel();
         }
 
         protected override void OnReceive(object message)
@@ -426,7 +423,7 @@ namespace Akka.Remote
                     listens.AddressesPromise.SetResult(transportsAndAddresses);
                 })
                 .With<ListensFailure>(failure => failure.AddressesPromise.SetException(failure.Cause))
-                .With<InboundAssociation>(ia => Context.System.Scheduler.ScheduleOnce(TimeSpan.FromMilliseconds(10), Self, ia))
+                .With<InboundAssociation>(ia => Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(10), Self, ia, Self))
                 .With<ManagementCommand>(mc => Sender.Tell(new ManagementCommandAck(status:false)))
                 .With<StartupFinished>(sf => Context.Become(Accepting))
                 .With<ShutdownAndFlush>(sf =>

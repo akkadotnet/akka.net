@@ -257,10 +257,10 @@ namespace Akka.Cluster
         // ===================== WORK DAEMONS =====================
         // ========================================================
 
-        readonly Scheduler _scheduler;
-        internal Scheduler Scheduler { get { return _scheduler; }}
+        readonly IScheduler _scheduler;
+        internal IScheduler Scheduler { get { return _scheduler; } }
 
-        private static Scheduler CreateScheduler(ActorSystem system)
+        private static IScheduler CreateScheduler(ActorSystem system)
         {
             //TODO: Whole load of stuff missing here!
             return system.Scheduler;
