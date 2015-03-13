@@ -9,6 +9,7 @@ using Akka.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using System.Globalization;
 
 namespace Akka.Serialization
 {
@@ -113,17 +114,35 @@ namespace Akka.Serialization
 
         private static object TranslateSurrogate(object deserializedValue,ActorSystem system)
         {
+            var j = deserializedValue as JObject;
+            if (j != null)
+            {
+                if (j["$"] != null)
+                {
+                    var value = j["$"].Value<string>();
+                    return GetValue(value);
+                }
+            }
             var surrogate = deserializedValue as ISurrogate;
             if (surrogate != null)
             {
                 return surrogate.FromSurrogate(system);
             }
-            var primitive = deserializedValue as PrimitiveSurrogate;
-            if (primitive != null)
-            {
-                return primitive.GetValue();
-            }
             return deserializedValue;
+        }
+
+        private static object GetValue(string V)
+        {
+            var t = V.Substring(0, 1);
+            var v = V.Substring(1);
+            if (t == "I")
+                return int.Parse(v, NumberFormatInfo.InvariantInfo);
+            if (t == "F")
+                return float.Parse(v, NumberFormatInfo.InvariantInfo);
+            if (t == "M")
+                return decimal.Parse(v, NumberFormatInfo.InvariantInfo);
+
+            throw new NotSupportedException();
         }
 
         public class SurrogateConverter : JsonConverter
@@ -163,6 +182,13 @@ namespace Akka.Serialization
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue,
                 JsonSerializer serializer)
             {
+                return DeserializeFromReader(reader, serializer);
+            }
+
+
+
+            private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer)
+            {
                 var surrogate = serializer.Deserialize(reader);
                 return TranslateSurrogate(surrogate, _system);
             }
@@ -175,22 +201,38 @@ namespace Akka.Serialization
             /// <param name="serializer">The calling serializer.</param>
             public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
             {
-                if (value is int)
-                    serializer.Serialize(writer, new PrimitiveSurrogate((int)value));
-                else if (value is float)
-                    serializer.Serialize(writer, new PrimitiveSurrogate((float)value));
-                else if (value is decimal)
-                    serializer.Serialize(writer, new PrimitiveSurrogate((decimal)value));
-                else if (value is ISurrogated)
+                if (value is int || value is decimal || value is float)
                 {
-                    var surrogated = (ISurrogated) value;
-                    var surrogate = surrogated.ToSurrogate(_system);
-                    serializer.Serialize(writer, surrogate);
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("$");
+                    writer.WriteValue(GetString(value));
+                    writer.WriteEndObject();
                 }
                 else
                 {
-                    serializer.Serialize(writer, value);
+                    var value1 = value as ISurrogated;
+                    if (value1 != null)
+                    {
+                        var surrogated = value1;
+                        var surrogate = surrogated.ToSurrogate(_system);
+                        serializer.Serialize(writer, surrogate);
+                    }
+                    else
+                    {
+                        serializer.Serialize(writer, value);
+                    }
                 }
+            }
+
+            private object GetString(object value)
+            {
+                if (value is int)
+                    return "I" + ((int) value).ToString(NumberFormatInfo.InvariantInfo);
+                if (value is float)
+                    return "F" + ((float)value).ToString(NumberFormatInfo.InvariantInfo);
+                if (value is decimal)
+                    return "M" + ((decimal)value).ToString(NumberFormatInfo.InvariantInfo);
+                throw new NotSupportedException();
             }
         }
     }
