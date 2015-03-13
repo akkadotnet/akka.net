@@ -7,7 +7,7 @@ namespace Akka.Routing
     /// <summary>
     /// IListeners is a generic interface to implement listening capabilities on an Actor.
     /// 
-    /// <remarks>Use the <see cref="ListenerSupport.Gossip"/> method to send a message to the listeners</remarks>.
+    /// <remarks>Use the <see cref="ListenerSupport.Gossip(object)"/> method to send a message to the listeners</remarks>.
     /// <remarks>Send <code>Listen(Self)</code> to another Actor to start listening.</remarks>
     /// <remarks>Send <code>Deafen(Self)</code> to another Actor to stop listening.</remarks>
     /// <remarks>Send <code>WithListeners(delegate)</code> to traverse the current listeners.</remarks>

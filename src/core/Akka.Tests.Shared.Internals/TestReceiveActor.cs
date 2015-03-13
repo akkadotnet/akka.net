@@ -6,8 +6,8 @@ using Akka.Actor;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// Just like <see cref="ReceiveActor"/>. Adds a Receive-overload that allows yout write code like:
-    /// <pre><code>Receive("the message", m => ... );</code></pre>
+    /// Just like <see cref="ReceiveActor"/>. Adds a Receive-overload that allows you to write code like:
+    /// <code>Receive("the message", m => ... );</code>
     /// </summary>
     public class TestReceiveActor : ReceiveActor
     {

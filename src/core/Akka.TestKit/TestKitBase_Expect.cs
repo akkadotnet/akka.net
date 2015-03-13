@@ -254,11 +254,11 @@ namespace Akka.TestKit
         /// which the objects are received is not fixed. Wait time is bounded by 
         /// <see cref="RemainingOrDefault"/> as duration, with an assertion exception being thrown in case of timeout.
         /// 
-        /// <pre>
+        /// <code>
         ///   dispatcher.Tell(SomeWork1())
         ///   dispatcher.Tell(SomeWork2())
         ///   ExpectMsgAllOf(TimeSpan.FromSeconds(1), Result1(), Result2())
-        /// </pre>
+        /// </code>
         /// </summary>
         /// <typeparam name="T">The type of the messages</typeparam>
         /// <param name="messages">The messages.</param>
@@ -276,11 +276,11 @@ namespace Akka.TestKit
         /// which the objects are received is not fixed. Wait time is bounded by the
         /// given duration, with an assertion exception being thrown in case of timeout.
         /// 
-        /// <pre>
+        /// <code>
         ///   dispatcher.Tell(SomeWork1())
         ///   dispatcher.Tell(SomeWork2())
         ///   ExpectMsgAllOf(TimeSpan.FromSeconds(1), Result1(), Result2())
-        /// </pre>
+        /// </code>
         /// The deadline is scaled by "akka.test.timefactor" using <see cref="Dilated"/>.
         /// </summary>
         /// <typeparam name="T">The type of the messages</typeparam>

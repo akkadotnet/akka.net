@@ -512,7 +512,7 @@ module Inbox =
     /// Receives a next message sent to the inbox, which satisfies provided predicate. 
     /// This is a blocking operation. Returns None if timeout occurred or message 
     /// is incompatible with expected response type.
-    /// <summary>
+    /// </summary>
     let filterReceive (timeout : TimeSpan) (predicate : 'Message -> bool) (i : Inbox) : 'Message option = 
         try 
             let r = 
