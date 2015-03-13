@@ -323,21 +323,30 @@ module Linq =
 module Serialization = 
     open Nessos.FsPickler
     open Akka.Serialization
+
+    let internal serializeToBinary (fsp:BinarySerializer) o = 
+            use stream = new System.IO.MemoryStream()
+            fsp.Serialize(o.GetType(), stream, o)
+            stream.ToArray()
+
+    let internal deserializeFromBinary (fsp:BinarySerializer) (bytes: byte array) (t: Type) =
+            use stream = new System.IO.MemoryStream(bytes)
+            fsp.Deserialize(t, stream)
     
+    // used for top level serialization
     type ExprSerializer(system) = 
         inherit Serializer(system)
         let fsp = FsPickler.CreateBinary()
         override __.Identifier = 9
-        override __.IncludeManifest = true
+        override __.IncludeManifest = true        
+        override __.ToBinary(o) = serializeToBinary fsp o        
+        override __.FromBinary(bytes, t) = deserializeFromBinary fsp bytes t
         
-        override __.ToBinary(o) = 
-            use stream = new System.IO.MemoryStream()
-            fsp.Serialize(o.GetType(), stream, o)
-            stream.ToArray()
-        
-        override __.FromBinary(bytes, t) = 
-            use stream = new System.IO.MemoryStream(bytes)
-            fsp.Deserialize(t, stream)
+                        
+    let internal exprSerializationSupport (system: ActorSystem) =
+        let serializer = ExprSerializer(system :?> ExtendedActorSystem)
+        system.Serialization.AddSerializer(serializer)
+        system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
 
 [<RequireQualifiedAccess>]
 module Configuration = 
@@ -356,7 +365,26 @@ module internal OptionHelper =
     let optToNullable = function
         | Some x -> Nullable x
         | None -> Nullable()
+        
+open Akka.Util
+type ExprDeciderSurrogate(serializedExpr: byte array) =
+    member __.SerializedExpr = serializedExpr
+    interface ISurrogate with
+        member this.FromSurrogate _ = 
+            let fsp = Nessos.FsPickler.FsPickler.CreateBinary()
+            let expr = (Serialization.deserializeFromBinary fsp (this.SerializedExpr) typeof<Expr<(exn->Directive)>>) :?> Expr<(exn->Directive)>
+            ExprDecider(expr) :> ISurrogated
 
+and ExprDecider (expr: Expr<(exn->Directive)>) =
+    member __.Expr = expr
+    member private this.Compiled = lazy this.Expr.Compile()()
+    interface IDecider with
+        member this.Decide (e: exn): Directive = this.Compiled.Value (e)
+    interface ISurrogated with
+        member this.ToSurrogate _ = 
+            let fsp = Nessos.FsPickler.FsPickler.CreateBinary()        
+            ExprDeciderSurrogate(Serialization.serializeToBinary fsp this.Expr) :> ISurrogate
+        
 type Strategy = 
 
     /// <summary>
@@ -374,6 +402,15 @@ type Strategy =
     /// <param name="decider">Used to determine a actor behavior response depending on exception occurred.</param>
     static member OneForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan)  : SupervisorStrategy = 
         upcast OneForOneStrategy(OptionHelper.optToNullable retries, OptionHelper.optToNullable timeout, System.Func<_, _>(decider))
+        
+    /// <summary>
+    /// Returns a supervisor strategy appliable only to child actor which faulted during execution.
+    /// </summary>
+    /// <param name="retries">Defines a number of times, an actor could be restarted. If it's a negative value, there is not limit.</param>
+    /// <param name="timeout">Defines time window for number of retries to occur.</param>
+    /// <param name="decider">Used to determine a actor behavior response depending on exception occurred.</param>
+    static member OneForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan)  : SupervisorStrategy = 
+        upcast OneForOneStrategy(OptionHelper.optToNullable retries, OptionHelper.optToNullable timeout, ExprDecider decider)
     
     /// <summary>
     /// Returns a supervisor strategy appliable to each supervised actor when any of them had faulted during execution.
@@ -391,13 +428,20 @@ type Strategy =
     static member AllForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy = 
         upcast AllForOneStrategy(OptionHelper.optToNullable retries, OptionHelper.optToNullable timeout, System.Func<_, _>(decider))
         
+    /// <summary>
+    /// Returns a supervisor strategy appliable to each supervised actor when any of them had faulted during execution.
+    /// </summary>
+    /// <param name="retries">Defines a number of times, an actor could be restarted. If it's a negative value, there is not limit.</param>
+    /// <param name="timeout">Defines time window for number of retries to occur.</param>
+    /// <param name="decider">Used to determine a actor behavior response depending on exception occurred.</param>
+    static member AllForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy = 
+        upcast AllForOneStrategy(OptionHelper.optToNullable retries, OptionHelper.optToNullable timeout, ExprDecider decider)
+        
 module System = 
     /// Creates an actor system with remote deployment serialization enabled.
     let create (name : string) (config : Akka.Configuration.Config) : ActorSystem = 
         let system = ActorSystem.Create(name, config)
-        let serializer = Serialization.ExprSerializer(system :?> ExtendedActorSystem)
-        system.Serialization.AddSerializer(serializer)
-        system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
+        Serialization.exprSerializationSupport system
         system
         
 [<AutoOpen>]

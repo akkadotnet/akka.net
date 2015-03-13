@@ -10,10 +10,8 @@ Unlike default (C#) actor system, F#-aware systems should be created using `Akka
 
 Example:
 
-```fsharp
-open Akka.FSharp
-use system = System.create "my-system" (Configuration.load())
-```
+    open Akka.FSharp
+    use system = System.create "my-system" (Configuration.load())
 
 F# also gives you it's own actor system Configuration module with support of following functions:
 
@@ -29,17 +27,15 @@ It's important to remember, that each actor returning point should point to the 
 
 Example:
 
-```fsharp
-let aref = 
-    spawn system "my-actor" 
-        (fun mailbox -> 
-            let rec loop() = actor {
-                let! message = mailbox.Receive()
-                // handle an incoming message
-                return! loop()
-            }
-            loop())
-```
+    let aref = 
+        spawn system "my-actor" 
+            (fun mailbox -> 
+                let rec loop() = actor {
+                    let! message = mailbox.Receive()
+                    // handle an incoming message
+                    return! loop()
+                }
+                loop())
 
 Since construct used in an example above is quite popular, you may also use following shorthand functions to define message handler's behavior:
 
@@ -48,15 +44,13 @@ Since construct used in an example above is quite popular, you may also use foll
 
 Example:
 
-```fsharp
-let handleMessage (mailbox: Actor<'a>) msg =
-    match msg with
-    | Some x -> printf "%A" x
-    | None -> ()
+    let handleMessage (mailbox: Actor<'a>) msg =
+        match msg with
+        | Some x -> printf "%A" x
+        | None -> ()
 
-let aref = spawn system "my-actor" (actorOf2 handleMessage)
-let blackHole = spawn system "black-hole" (actorOf (fun msg -> ()))
-```
+    let aref = spawn system "my-actor" (actorOf2 handleMessage)
+    let blackHole = spawn system "black-hole" (actorOf (fun msg -> ()))
 
 #### Spawning actors
 
@@ -70,9 +64,27 @@ Paragraph above already has shown, how actors may be created with help of the sp
 
 All of these functions may be used with either actor system or actor itself. In the first case spawned actor will be placed under */user* root guardian of the current actor system hierarchy. In second option spawned actor will become child of the actor used as [actorFactory] parameter of the spawning function.
 
+#### Dealing with disposable resources
+
+When executing application logic inside receive function, be aware of a constant threat of stopping a current actor at any time for various reasons. This is an especially problematic situation when you're using a resource allocation - when actor will be stopped suddenly, you may be left with potentially heavy resources still waiting for being released.
+
+Use `mailbox.Defer (deferredFunc)` in situations when you must ensure operation to be executed at the end of the actor lifecycle.
+
+Example:
+
+    let disposableActor (mailbox:Actor<_>) =
+        let resource = new DisposableResource()
+        mailbox.Defer ((resource :> IDisposable).Dispose)
+        let rec loop () = 
+            actor {
+                let! msg = mailbox.Receive()
+                return! loop ()   
+            }
+        loop()
+
 ### Actor spawning options
 
-To be able to specify more precise actor creation behavior, you may use `spawnOpt` and `spawne` methods, both taking a list of `SpawnOption` values. Each specific option should be present only once in the collection. When a conflict occurs (more than one option of specified type has been found), the latest value found inside the list will be chosen.
+To be able to specifiy more precise actor creation behavior, you may use `spawnOpt` and `spawne` methods, both taking a list of `SpawnOption` values. Each specific option should be present only once in the collection. When a conflict occurs (more than one option of specified type has been found), the latest value found inside the list will be chosen.
 
 -   `SpawnOption.Deploy(Akka.Actor.Deploy)` - defines deployment strategy for created actors (see: Deploy). This option may be used along with `spawne` function to enable remote actors deployment.
 -   `SpawnOption.Router(Akka.Routing.RouterConfig)` - defines an actor to be a router as well as it's routing specifics (see: [Routing](http://akkadotnet.github.io/wiki/Routing)).
@@ -82,12 +94,10 @@ To be able to specify more precise actor creation behavior, you may use `spawnOp
 
 Example (deploy actor remotely):
 
-```fsharp
-open Akka.Actor
-let remoteRef = 
-    spawne system "my-actor" <@ actorOf myFunc @> 
-        [SpawnOption.Deploy (Deploy(RemoteScope(Address.Parse "akka.tcp://remote-system@127.0.0.1:9000/")))]
-```
+    open Akka.Actor
+    let remoteRef = 
+        spawne system "my-actor" <@ actorOf myFunc @> 
+            [SpawnOption.Deploy (Deploy(RemoteScope(Address.Parse "akka.tcp://remote-system@127.0.0.1:9000/")))]
 
 ### Ask and tell operators
 
@@ -95,10 +105,8 @@ While you may use traditional `ActorRef.Tell` and `ActorRef.Ask` methods, it's m
 
 Example:
 
-```fsharp
-aref <! message
-async { let! response = aref <? request }
-```
+    aref <! message
+    async { let! response = aref <? request }
 
 ### Actor selection
 
@@ -108,12 +116,10 @@ Actors may be referenced not only by `ActorRef`s, but also through actor path se
 
 Example:
 
-```fsharp
-let aref = spawn system "my-actor" (actorOf2 (fun mailbox m -> printfn "%A said %s" (mailbox.Self.Path) m))
-aref <! "one"
-let aref2 = select "akka://my-system/user/my-actor" system
-aref2 <! "two"
-```
+    let aref = spawn system "my-actor" (actorOf2 (fun mailbox m -> printfn "%A said %s" (mailbox.Self.Path) m))
+    aref <! "one"
+    let aref2 = select "akka://my-system/user/my-actor" system
+    aref2 <! "two"
 
 ### Inboxes
 
@@ -126,15 +132,13 @@ Inboxes are actor-like objects used to be listened by other actors. They are a g
 
 Inboxes may be configured to accept a limited number of incoming messages (default is 1000):
 
-```hocon
-akka {
-    actor {
-        inbox {
-            inbox-size = 30
+    akka {
+        actor {
+            inbox {
+                inbox-size = 30
+            }
         }
     }
-}
-```
 
 ### Monitoring
 
@@ -151,19 +155,27 @@ Actors have a place in their system's hierarchy trees. To manage failures done b
 
 -   `Strategy.OneForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution.
 -   `Strategy.OneForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
+-   `OneForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan)  : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur. **Strategies created this way may be serialized and deserialized on remote nodes** .
 -   `Strategy.AllForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution.
 -   `Strategy.AllForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` -  returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
+-   `AllForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur. **Strategies created this way may be serialized and deserialized on remote nodes** .
 
 Example:
 
-```fsharp
-let aref = 
-    spawnOpt system "my-actor" (actorOf myFunc) 
-        [ SpawnOption.SupervisorStrategy (Strategy.OneForOne (fun error -> 
-            match error with
-            | :? ArithmeticException -> Directive.Escalate
-            | _ -> SupervisorStrategy.DefaultDecider error )) ]
-```
+    let aref = 
+        spawnOpt system "my-actor" (actorOf myFunc) 
+            [ SpawnOption.SupervisorStrategy (Strategy.OneForOne (fun error -> 
+                match error with
+                | :? ArithmeticException -> Directive.Escalate
+                | _ -> SupervisorStrategy.DefaultDecider error )) ]
+    
+    let remoteRef = 
+        spawne system "remote-actor" <@ actorOf myFunc @>
+            [ SpawnOption.SupervisorStrategy (Strategy.OneForOne <@ fun error -> 
+                match error with
+                | :? ArithmeticException -> Directive.Escalate
+                | _ -> SupervisorStrategy.DefaultDecider error ) @>
+              SpawnOption.Deploy (Deploy (RemoteScope remoteNodeAddr)) ]
 
 ### Publish/Subscribe support
 
@@ -175,31 +187,29 @@ While you may use built-in set of the event stream methods (see: Event Streams),
 
 Example: 
 
-```fsharp
-type Message = 
-    | Subscribe 
-    | Unsubscribe
-    | Msg of ActorRef * string
+    type Message = 
+        | Subscribe 
+        | Unsubscribe
+        | Msg of ActorRef * string
 
-let subscriber = 
-    spawn system "subscriber" 
-        (actorOf2 (fun mailbox msg -> 
-            let eventStream = mailbox.Context.System.EventStream
-            match msg with
-            | Msg (sender, content) -> printfn "%A says %s" (sender.Path) content
-            | Subscribe -> subscribe typeof<Message> mailbox.Self eventStream |> ignore
-            | Unsubscribe -> unsubscribe typeof<Message> mailbox.Self eventStream |> ignore ))
-        
-let publisher = 
-    spawn system "publisher" 
-        (actorOf2 (fun mailbox msg -> 
-            publish msg mailbox.Context.System.EventStream))
+    let subscriber = 
+        spawn system "subscriber" 
+            (actorOf2 (fun mailbox msg -> 
+                let eventStream = mailbox.Context.System.EventStream
+                match msg with
+                | Msg (sender, content) -> printfn "%A says %s" (sender.Path) content
+                | Subscribe -> subscribe typeof<Message> mailbox.Self eventStream |> ignore
+                | Unsubscribe -> unsubscribe typeof<Message> mailbox.Self eventStream |> ignore ))
+            
+    let publisher = 
+        spawn system "publisher" 
+            (actorOf2 (fun mailbox msg -> 
+                publish msg mailbox.Context.System.EventStream))
 
-subscriber <! Subscribe
-publisher  <! Msg (publisher, "hello")
-subscriber <! Unsubscribe
-publisher  <! Msg (publisher, "hello again")
-```
+    subscriber <! Subscribe
+    publisher  <! Msg (publisher, "hello")
+    subscriber <! Unsubscribe
+    publisher  <! Msg (publisher, "hello again")
 
 ### Scheduling
 
@@ -217,21 +227,19 @@ F# API provides following scheduling functions:
 
 ### Logging
 
-F# API supports two groups of logging functions - one that operates directly on strings and second (which may be recognized by *f* suffix in function names) which operates using F# string formatting features. Major difference is performance - first one is less powerful, but it's also faster than the second one.
+F# API supports two groups of logging functions - one that operates directly on strings and second (which may be recognized by *f* suffix in function names) which operates using F# string formating features. Major difference is performance - first one is less powerful, but it's also faster than the second one.
 
 Both groups support logging on various levels (DEBUG, &lt;default&gt; INFO, WARNING and ERROR). Actor system's logging level may be managed through configuration, i.e.:
 
-```hocon
-akka {
-    actor {
-        # collection of loggers used inside actor system, specified by fully-qualified type name
-        loggers = [ "Akka.Event.DefaultLogger, Akka" ]
+    akka {
+        actor {
+            # collection of loggers used inside actor system, specified by fully-qualified type name
+            loggers = [ "Akka.Event.DefaultLogger, Akka" ]
 
-        # Options: OFF, ERROR, WARNING, INFO, DEBUG
-        logLevel = "DEBUG"
+            # Options: OFF, ERROR, WARNING, INFO, DEBUG
+            logLevel = "DEBUG"
+        }
     }
-}
-```
 
 F# API provides following logging methods:
 
@@ -250,17 +258,15 @@ To operate directly between `Async` results and actors, use `pipeTo` function (a
 
 Example:
 
-```fsharp
-open System.IO
-let handler (mailbox: Actor<obj>) msg = 
-    match box msg with
-    | :? FileInfo as fi -> 
-        let reader = new StreamReader(fi.OpenRead())
-        reader.AsyncReadToEnd() |!> mailbox.Self 
-    | :? string as content ->
-        printfn "File content: %s" content
-    | _ -> mailbox.Unhandled()
+    open System.IO
+    let handler (mailbox: Actor<obj>) msg = 
+        match box msg with
+        | :? FileInfo as fi -> 
+            let reader = new StreamReader(fi.OpenRead())
+            reader.AsyncReadToEnd() |!> mailbox.Self 
+        | :? string as content ->
+            printfn "File content: %s" content
+        | _ -> mailbox.Unhandled()
 
-let aref = spawn system "my-actor" (actorOf2 handler)
-aref <! new FileInfo "Akka.xml"
-```
+    let aref = spawn system "my-actor" (actorOf2 handler)
+    aref <! new FileInfo "Akka.xml"

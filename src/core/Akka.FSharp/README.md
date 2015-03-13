@@ -151,8 +151,10 @@ Actors have a place in their system's hierarchy trees. To manage failures done b
 
 -   `Strategy.OneForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution.
 -   `Strategy.OneForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
+-   `OneForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan)  : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur. **Strategies created this way may be serialized and deserialized on remote nodes** .
 -   `Strategy.AllForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution.
 -   `Strategy.AllForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` -  returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
+-   `AllForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur. **Strategies created this way may be serialized and deserialized on remote nodes** .
 
 Example:
 
@@ -162,6 +164,14 @@ Example:
                 match error with
                 | :? ArithmeticException -> Directive.Escalate
                 | _ -> SupervisorStrategy.DefaultDecider error )) ]
+    
+    let remoteRef = 
+        spawne system "remote-actor" <@ actorOf myFunc @>
+            [ SpawnOption.SupervisorStrategy (Strategy.OneForOne <@ fun error -> 
+                match error with
+                | :? ArithmeticException -> Directive.Escalate
+                | _ -> SupervisorStrategy.DefaultDecider error ) @>
+              SpawnOption.Deploy (Deploy (RemoteScope remoteNodeAddr)) ]
 
 ### Publish/Subscribe support
 
