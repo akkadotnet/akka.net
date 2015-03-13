@@ -211,20 +211,6 @@ Example:
     subscriber <! Unsubscribe
     publisher  <! Msg (publisher, "hello again")
 
-### Scheduling
-
-Akka gives you an offhand support for scheduling (see: [Scheduler](http://akkadotnet.github.io/wiki/Scheduler)). Scheduling function can be grouped by two dimensions: 
-
-1. Cyclic (interval) vs single time scheduling - you may decide if scheduled job should be performed repeatedly or only once.
-2. Function vs message->actor scheduling - you may decide to schedule job in form of a function or a message automatically sent to target actor reference.
-
-F# API provides following scheduling functions:
-
--   `schedule (after: TimeSpan) (every: TimeSpan) (fn: unit -> unit) (scheduler: Scheduler): Async<unit>` - [cyclic, function] schedules a function to be called by the scheduler repeatedly.
--   `scheduleOnce (after: TimeSpan) (fn: unit -> unit) (scheduler: Scheduler): Async<unit>` - [single, function] schedules a function to be called only once by the scheduler.
--   `scheduleTell (after: TimeSpan) (every: TimeSpan) (message: 'Message) (receiver: ActorRef) (scheduler: Scheduler): Async<unit>` - [cyclic, message] schedules a message to be sent to the target actor reference by the scheduler repeatedly.
--   `scheduleTellOnce (after: TimeSpan) (message: 'Message) (receiver: ActorRef) (scheduler: Scheduler): Async<unit>` - [single, message] schedules a message to be sent only once to the target actor reference, by the scheduler.
-
 ### Logging
 
 F# API supports two groups of logging functions - one that operates directly on strings and second (which may be recognized by *f* suffix in function names) which operates using F# string formating features. Major difference is performance - first one is less powerful, but it's also faster than the second one.
