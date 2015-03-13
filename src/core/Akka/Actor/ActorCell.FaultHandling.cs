@@ -315,9 +315,11 @@ namespace Akka.Actor
                                     Publish(new Debug(_self.Path.ToString(), ActorType, "Stopped"));
 
                                 ClearActor(a);
+                                ReleaseActor(a);
                                 ClearActorCell();
-                                ReleaseAcotr(a);
+                                
                                 _actor = null;
+                                
                             }
                         }
                     }
@@ -325,7 +327,7 @@ namespace Akka.Actor
             }
         }
 
-        private void ReleaseAcotr(ActorBase a)
+        private void ReleaseActor(ActorBase a)
         {
             _props.Release(a);
         }
