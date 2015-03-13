@@ -17,7 +17,7 @@ namespace Akka.DI.AutoFac
     /// </summary>
     public class AutoFacDependencyResolver : IDependencyResolver
     {
-        private IContainer container;
+        private ILifetimeScope container;
         private ConcurrentDictionary<string, Type> typeCache;
         private ActorSystem system;
         private ConditionalWeakTable<ActorBase, ILifetimeScope> references;
@@ -25,13 +25,13 @@ namespace Akka.DI.AutoFac
         /// <summary>
         /// AutoFacDependencyResolver Constructor
         /// </summary>
-        /// <param name="container">Instance to the AutoFac IContainer</param>
+        /// <param name="rootScope">Instance to the AutoFac IContainer</param>
         /// <param name="system">Instance of the ActorSystem</param>
-        public AutoFacDependencyResolver(IContainer container, ActorSystem system)
+        public AutoFacDependencyResolver(ILifetimeScope rootScope, ActorSystem system)
         {
             if (system == null) throw new ArgumentNullException("system");
-            if (container == null) throw new ArgumentNullException("container");
-            this.container = container;
+            if (rootScope == null) throw new ArgumentNullException("container");
+            this.container = rootScope;
             typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
             this.system = system;
             this.system.AddDependencyResolver(this);
@@ -95,6 +95,7 @@ namespace Akka.DI.AutoFac
         public void Release(ActorBase actor)
         {
             ILifetimeScope scope;
+         
             if (references.TryGetValue(actor, out scope))
             {
                 scope.Dispose();
