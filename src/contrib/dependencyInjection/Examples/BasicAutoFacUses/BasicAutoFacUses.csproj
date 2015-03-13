@@ -59,15 +59,15 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\contrib\dependencyInjection\Akka.DI.AutoFac\Akka.DI.AutoFac.csproj">
+    <ProjectReference Include="..\..\Akka.DI.AutoFac\Akka.DI.AutoFac.csproj">
       <Project>{88854526-09d3-4f15-98f8-060838d958d1}</Project>
       <Name>Akka.DI.AutoFac</Name>
     </ProjectReference>
-    <ProjectReference Include="..\contrib\dependencyInjection\Akka.DI.Core\Akka.DI.Core.csproj">
+    <ProjectReference Include="..\..\Akka.DI.Core\Akka.DI.Core.csproj">
       <Project>{FDF09D18-B68E-4B95-B1F6-B89D9C6C3AE9}</Project>
       <Name>Akka.DI.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\core\Akka\Akka.csproj">
+    <ProjectReference Include="..\..\..\..\core\Akka\Akka.csproj">
       <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
