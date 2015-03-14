@@ -13,9 +13,4 @@ namespace Akka.Dispatch
             Task.Run(run);
         }
     }    
-
-        public override string ToString()
-        {
-            return string.Format("(Sender: {0}, Self: {1}, Message: {2})", Sender, Self, Message);
-        }
 }
