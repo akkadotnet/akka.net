@@ -19,7 +19,7 @@ module Actors =
     /// Bidirectional send operator. Sends a message object directly to actor 
     /// tracked by actorRef and awaits for response send back from corresponding actor. 
     /// </summary>
-    let inline (<?) (tell : #ICanTell) (msg : obj) = tell.Ask msg |> Async.AwaitTask
+    let inline (<?) (tell : #ICanTell) (msg : obj) : Async<'Message> = tell.Ask<'Message> msg |> Async.AwaitTask
 
     /// Pipes an output of asynchronous expression directly to the recipients mailbox.
     let pipeTo (computation : Async<'T>) (recipient : ICanTell) (sender : ActorRef) : unit = 
