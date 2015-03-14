@@ -18,10 +18,56 @@ namespace BasicCastleWindsorUse
         static void Main(string[] args)
         {
             WithHashPool();
+            WithHashPoolAndChildActors();
+        }
+
+        private static void WithHashPoolAndChildActors()
+        {
+            Console.WriteLine("Running With Hash Pool And Child Actors");
+            var config = ConfigurationFactory.ParseString(My.HashPoolWOResizer);
+
+            using (var system = ActorSystem.Create("MySystem", config))
+            {
+                IWindsorContainer container = new WindsorContainer();
+                container.Register(Component.For<TypedWorker>().Named("TypedWorker").LifestyleTransient());
+                container.Register(Component.For<TypedParentWorker>().Named("TypedParentWorker").LifestyleTransient());
+
+                var pool = new ConsistentHashingPool(config);
+                pool.NrOfInstances = 10;
+
+
+                WindsorDependencyResolver propsResolver =
+                    new WindsorDependencyResolver(container, system);
+
+                var router = system.ActorOf(propsResolver.Create<TypedParentWorker>().WithRouter(pool));
+
+                Task.Delay(500).Wait();
+                Console.WriteLine("Sending Messages");
+                for (var i = 0; i < 5; i++)
+                {
+                    for (var j = 0; j < 7; j++)
+                    {
+
+                        TypedActorMessage msg = new TypedActorMessage { Id = j, Name = Guid.NewGuid().ToString() };
+                        AnotherMessage ms = new AnotherMessage { Id = j, Name = msg.Name };
+
+                        var envelope = new ConsistentHashableEnvelope(ms, msg.Id);
+
+                        router.Tell(msg);
+                        router.Tell(envelope);
+
+                    }
+                }
+                Console.WriteLine("Hit Enter to Continue");
+                Console.ReadLine();
+            }
+
+            
         }
 
         private static void WithHashPool()
         {
+            Console.WriteLine("Running With Hash Pool");
             var config = ConfigurationFactory.ParseString(My.HashPoolWOResizer);
 
             using (var system = ActorSystem.Create("MySystem", config))
@@ -56,9 +102,10 @@ namespace BasicCastleWindsorUse
 
                     }
                 }
+                Console.WriteLine("Hit Enter to Continue");
+                Console.ReadLine();
             }
 
-            Console.ReadLine();
         }
     }
 }

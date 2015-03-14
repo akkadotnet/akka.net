@@ -36,7 +36,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Ninject">
-      <HintPath>..\contrib\dependencyInjection\Akka.DI.Ninject\bin\Debug\Ninject.dll</HintPath>
+      <HintPath>..\..\Akka.DI.Ninject\bin\Debug\Ninject.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

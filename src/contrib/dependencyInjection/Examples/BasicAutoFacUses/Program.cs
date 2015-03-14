@@ -16,7 +16,7 @@ namespace BasicAutoFacUses
     {
         static void Main(string[] args)
         {
-            //WithHashPool();
+            WithHashPool();
             WithHashPoolAndChildActors();
         }
 
@@ -59,9 +59,10 @@ namespace BasicAutoFacUses
 
                     }
                 }
+                Console.WriteLine("Hit Enter to continue");
+                Console.ReadLine();
             }
-            Console.WriteLine("Hit Enter to continue");
-            Console.ReadLine();
+           
         }
         private static void WithHashPoolAndChildActors()
         {
@@ -102,10 +103,11 @@ namespace BasicAutoFacUses
 
                     }
                 }
+                Console.WriteLine("Hit Enter to continue");
+                Console.ReadLine();
             }
 
-            Console.WriteLine("Hit Enter to continue");
-            Console.ReadLine();
+            
         }
     }
 }
