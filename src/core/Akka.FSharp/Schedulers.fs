@@ -4,7 +4,7 @@ module Schedulers
 open Akka.Actor
 open System
 
-type Akka.Actor.IScheduler with
+type Akka.Actor.IAdvancedScheduler with
 
     /// <summary>
     /// Schedules a function to be invoked repeatedly in the provided time intervals. 
@@ -16,8 +16,8 @@ type Akka.Actor.IScheduler with
     member this.ScheduleRepeatedly(after: TimeSpan, every: TimeSpan, fn: unit->unit, ?cancelable: ICancelable) : unit =
         let action = Action fn
         match cancelable with
-        | Some c -> this.Advanced.ScheduleRepeatedly(after, every, action, c)
-        | None -> this.Advanced.ScheduleRepeatedly(after, every, action)
+        | Some c -> this.ScheduleRepeatedly(after, every, action, c)
+        | None -> this.ScheduleRepeatedly(after, every, action)
         
     /// <summary>
     /// Schedules a single function call using specified sheduler.
@@ -28,9 +28,11 @@ type Akka.Actor.IScheduler with
     member this.ScheduleOnce(after: TimeSpan, fn: unit->unit, ?cancelable: ICancelable) : unit =
         let action = Action fn
         match cancelable with
-        | Some c -> this.Advanced.ScheduleOnce(after, action, c)
-        | None -> this.Advanced.ScheduleOnce(after, action)
+        | Some c -> this.ScheduleOnce(after, action, c)
+        | None -> this.ScheduleOnce(after, action)
         
+type Akka.Actor.IScheduler with
+
     /// <summary>
     /// Schedules a <paramref name="message"/> to be sent to the provided <paramref name="receiver"/> in specified time intervals.
     /// </summary>
