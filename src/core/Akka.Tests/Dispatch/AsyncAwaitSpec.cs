@@ -20,7 +20,7 @@ namespace Akka.Tests.Dispatch
             {
                 Self.Tell("change");
                 await Task.Delay(TimeSpan.FromSeconds(1));
-                //we expect that state should have changed due to an incoming message
+                //we expect that state should not have changed due to an incoming message
                 Sender.Tell(state);
             });
         }
