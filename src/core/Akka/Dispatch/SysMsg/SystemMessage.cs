@@ -354,6 +354,38 @@ namespace Akka.Dispatch.SysMsg
     }
 
     /// <summary>
+    ///     Class SuspendReentrancy.
+    /// </summary>
+    public sealed class SuspendReentrancy : SystemMessage
+    {
+        private SuspendReentrancy() { }
+        private static readonly SuspendReentrancy _instance = new SuspendReentrancy();
+        public static SuspendReentrancy Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Class ResumeReentrancy.
+    /// </summary>
+    public sealed class ResumeReentrancy : SystemMessage
+    {
+        private ResumeReentrancy() { }
+        private static readonly ResumeReentrancy _instance = new ResumeReentrancy();
+        public static ResumeReentrancy Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
+    }
+
+    /// <summary>
     ///     Class Stop.
     /// </summary>
     public sealed class Stop : SystemMessage

@@ -80,7 +80,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// and report their results
         /// </summary>
         /// <returns>An awaitable task, since this operation uses the <see cref="Futures.Ask"/> pattern</returns>
-        private Task HandleEndSpec(EndSpec endSpec)
+        private void HandleEndSpec(EndSpec endSpec)
         {
             var futures = new Task<NodeData>[Nodes.Count];
 
@@ -94,7 +94,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             var sender = Context.Sender;
 
             //wait for all Ask operations to complete and pipe the result back to ourselves, including the ref for the original sender
-            return Task.WhenAll(futures)
+            Task.WhenAll(futures)
                 .PipeTo(Self, sender);
         }
 

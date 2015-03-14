@@ -168,6 +168,7 @@
     <Compile Include="Configuration\Hocon\HoconTokenizer.cs" />
     <Compile Include="Configuration\Hocon\HoconValue.cs" />
     <Compile Include="Configuration\Hocon\IHoconElement.cs" />
+    <Compile Include="Dispatch\ActorTaskScheduler.cs" />
     <Compile Include="Dispatch\BoundedDequeBasedMailbox.cs" />
     <Compile Include="Dispatch\ConcurrentQueueMailbox.cs" />
     <Compile Include="Dispatch\DequeBasedMailbox.cs" />

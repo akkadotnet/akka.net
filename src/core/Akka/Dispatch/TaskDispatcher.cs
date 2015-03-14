@@ -1,97 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Runtime.ExceptionServices;
-using System.Runtime.Remoting.Messaging;
-using System.Threading;
 using System.Threading.Tasks;
-using Akka.Actor;
-using Akka.Dispatch.SysMsg;
 
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// Task based dispatcher with async await support
+    /// Task based dispatcher
     /// </summary>
     public class TaskDispatcher : MessageDispatcher
     {
-        public override void Dispatch(ActorCell cell, Envelope envelope)
-        {
-            ActorTaskScheduler.SetCurrentState(cell.Self, envelope.Sender, envelope.Message);
-            base.Dispatch(cell, envelope);
-        }
-
         public override void Schedule(Action run)
         {
-            
-            ActorTaskScheduler.Schedule(run);        
+            Task.Run(run);
         }
-    }
-
-
-
-    public class AmbientState
-    {
-        public ActorRef Self { get; set; }
-        public ActorRef Sender { get; set; }
-        public object Message { get; set; }
-
-        public override string ToString()
-        {
-            return string.Format("(Sender: {0}, Self: {1}, Message: {2})", Sender, Self, Message);
-        }
-    }
-
-    public class ActorTaskScheduler : TaskScheduler
-    {
-        public static readonly TaskScheduler Instance = new ActorTaskScheduler();
-        public static readonly TaskFactory TaskFactory = new TaskFactory(Instance);
-        public static readonly object ScheduleMailboxRun = new object();
-        public static readonly string StateKey = "akka.state";
-
-        public static void SetCurrentState(ActorRef self,ActorRef sender,object message)
-        {
-            CallContext.LogicalSetData(StateKey, new AmbientState
-            {
-                Sender = sender,
-                Self = self,
-                Message = message
-            });
-        }
-
-        public static void Schedule(Action run)
-        {
-            TaskFactory.StartNew(_ => run(), ScheduleMailboxRun);
-        }
-
-        protected override IEnumerable<Task> GetScheduledTasks()
-        {
-            return null;
-        }
-
-        protected override void QueueTask(Task task)
-        {
-
-            if (task.AsyncState == ScheduleMailboxRun)
-            {
-                ThreadPool.UnsafeQueueUserWorkItem(_ => { TryExecuteTask(task); }, null);
-            }
-            else
-            {
-                var s = CallContext.LogicalGetData(StateKey) as AmbientState;
-
-                s.Self.Tell(new CompleteTask(s, () => 
-                { 
-                    TryExecuteTask(task);
-                    if (task.IsFaulted)
-                        ExceptionDispatchInfo.Capture(task.Exception.InnerException).Throw();
-
-                }), ActorRef.NoSender);
-            }
-        }
-
-        protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
-        {
-            return false;
-        }
-    }
+    }    
 }

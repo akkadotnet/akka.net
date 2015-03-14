@@ -6,6 +6,7 @@ using System.Threading;
 using Akka.Actor.Internals;
 using Akka.Tools.MatchHandler;
 using System.Threading.Tasks;
+using Akka.Dispatch;
 
 namespace Akka.Actor
 {
@@ -73,23 +74,23 @@ namespace Akka.Actor
             base.Become(m => ExecutePartialMessageHandler(m, newHandler), discardOld);
         }
 
-
         protected void Receive<T>(Func<T,Task> handler)
         {
             EnsureMayConfigureMessageHandlers();
             _matchHandlerBuilders.Peek().Match<T>( m =>
             {
-                var task = handler(m);
+                Func<Task> wrap = () => handler(m);
+                ActorTaskScheduler.RunTask(AsyncBehavior.Suspend, wrap);
+            });
+        }
 
-                    task.ContinueWith(x =>
-                    {
-                        if (x.IsFaulted)
-                        {
-                            ExceptionDispatchInfo.Capture(task.Exception.InnerException).Throw();
-                        }
-
-                    }, TaskContinuationOptions.None);
-
+        protected void Receive<T>(AsyncBehavior behavior, Func<T, Task> handler)
+        {
+            EnsureMayConfigureMessageHandlers();
+            _matchHandlerBuilders.Peek().Match<T>(m =>
+            {
+                Func<Task> wrap = () => handler(m);
+                ActorTaskScheduler.RunTask(behavior, wrap);
             });
         }
 

@@ -1,4 +1,9 @@
 ﻿using System;
+using System.Runtime.ExceptionServices;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading;
+using System.Threading.Tasks;
+using Akka.Dispatch;
 
 namespace Akka.Actor
 {
@@ -11,6 +16,16 @@ namespace Akka.Actor
         {
             OnReceive(message);
             return true;
+        }
+
+        protected void RunTask(AsyncBehavior behavior, Action action)
+        {
+            ActorTaskScheduler.RunTask(behavior,action);
+        }
+
+        protected void RunTask(AsyncBehavior behavior, Func<Task> action)
+        {
+            ActorTaskScheduler.RunTask(behavior,action);
         }
 
         /// <summary>
