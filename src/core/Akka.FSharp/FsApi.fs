@@ -79,10 +79,29 @@ module Actors =
         /// </summary>
         abstract Defer : (unit -> unit) -> unit
 
+        /// <summary>
+        /// Stashes the current message (the message that the actor received last)
+        /// </summary>
+        abstract Stash : unit -> unit
+
+        /// <summary>
+        /// Unstash the oldest message in the stash and prepends it to the actor's mailbox.
+        /// The message is removed from the stash.
+        /// </summary>
+        abstract Unstash : unit -> unit
+
+        /// <summary>
+        /// Unstashes all messages by prepending them to the actor's mailbox.
+        /// The stash is guaranteed to be empty afterwards.
+        /// </summary>
+        abstract UnstashAll : unit -> unit
+
     [<AbstractClass>]
     type Actor() = 
         inherit UntypedActor()
- 
+        interface WithUnboundedStash with
+            member val Stash = null with get, set
+
     /// <summary>
     /// Returns an instance of <see cref="ActorSelection" /> for specified path. 
     /// If no matching receiver will be found, a <see cref="ActorRef.NoSender" /> instance will be returned. 
@@ -201,7 +220,10 @@ module Actors =
                         member __.Watch(aref:ActorRef) = context.Watch aref
                         member __.Unwatch(aref:ActorRef) = context.Unwatch aref
                         member __.Log = lazy (Akka.Event.Logging.GetLogger(context))
-                        member __.Defer fn = deferables <- fn::deferables }
+                        member __.Defer fn = deferables <- fn::deferables 
+                        member __.Stash() = (this :> WithUnboundedStash).Stash.Stash()
+                        member __.Unstash() = (this :> WithUnboundedStash).Stash.Unstash()
+                        member __.UnstashAll() = (this :> WithUnboundedStash).Stash.UnstashAll() }
     
         new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile () ())
         member __.Sender() : ActorRef = base.Sender
