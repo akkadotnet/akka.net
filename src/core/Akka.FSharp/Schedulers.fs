@@ -4,7 +4,7 @@ module Schedulers
 open Akka.Actor
 open System
 
-type Akka.Actor.IAdvancedScheduler with
+type Akka.Actor.IActionScheduler with
 
     /// <summary>
     /// Schedules a function to be invoked repeatedly in the provided time intervals. 
@@ -31,7 +31,7 @@ type Akka.Actor.IAdvancedScheduler with
         | Some c -> this.ScheduleOnce(after, action, c)
         | None -> this.ScheduleOnce(after, action)
         
-type Akka.Actor.IScheduler with
+type Akka.Actor.ITellScheduler with
 
     /// <summary>
     /// Schedules a <paramref name="message"/> to be sent to the provided <paramref name="receiver"/> in specified time intervals.
