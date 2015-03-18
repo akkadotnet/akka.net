@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 
 namespace Akka.MultiNodeTestRunner.Shared.Reporting

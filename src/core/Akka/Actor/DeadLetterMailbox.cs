@@ -1,5 +1,4 @@
 ﻿using Akka.Dispatch;
-using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 

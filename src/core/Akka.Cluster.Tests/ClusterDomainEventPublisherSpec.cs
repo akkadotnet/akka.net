@@ -2,9 +2,7 @@
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.TestKit;
-using Akka.TestKit.Xunit;
 using Xunit;
-using Assert = Xunit.Assert;
 
 namespace Akka.Cluster.Tests
 {

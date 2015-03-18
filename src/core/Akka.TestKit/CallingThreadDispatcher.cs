@@ -1,5 +1,4 @@
 ﻿using System;
-using Akka.Actor;
 using Akka.Dispatch;
 
 namespace Akka.TestKit

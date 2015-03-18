@@ -1,11 +1,9 @@
-﻿using Akka.Actor;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Linq;
+using Akka.Actor;
 using Akka.DI.Core;
 using Autofac;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Akka.DI.AutoFac
 {

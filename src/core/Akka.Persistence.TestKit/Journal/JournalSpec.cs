@@ -1,8 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Persistence.Journal;
 using Akka.TestKit;
 using Xunit;
 

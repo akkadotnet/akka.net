@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Event;
 using Akka.TestKit;
-using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
 

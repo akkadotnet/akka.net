@@ -1,5 +1,4 @@
-﻿using System;
-using Akka.Event;
+﻿using Akka.Event;
 
 namespace Akka.Actor
 {

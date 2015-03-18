@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
-using Akka.TestKit;
-using Akka.Tests.TestUtils;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.Util;
+using Akka.TestKit;
+using Akka.Tests.TestUtils;
 using Xunit;
 
 namespace Akka.Tests.Actor

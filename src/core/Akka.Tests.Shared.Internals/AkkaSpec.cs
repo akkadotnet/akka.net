@@ -3,10 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Akka.Actor;
 using Akka.Configuration;
-using Akka.Event;
-using Akka.Util;
 using Xunit;
 using Xunit.Sdk;
 

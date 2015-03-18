@@ -1,15 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
-using System.Runtime.Remoting.Contexts;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Xunit;
 using Akka.TestKit;
-using Akka.Tests;
+using Xunit;
 
 
 namespace Akka.Tests.Actor

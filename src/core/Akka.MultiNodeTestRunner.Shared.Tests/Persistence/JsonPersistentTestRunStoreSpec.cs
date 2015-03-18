@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using System.Linq;
-using System.Reflection;
 using Akka.Actor;
 using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Reporting;

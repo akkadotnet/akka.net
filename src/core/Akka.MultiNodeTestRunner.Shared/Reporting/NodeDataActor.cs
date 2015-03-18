@@ -1,6 +1,5 @@
 using System;
 using Akka.Actor;
-using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 
 namespace Akka.MultiNodeTestRunner.Shared.Reporting

@@ -1,11 +1,10 @@
-﻿using System.Threading;
-using Akka.Actor;
-using Akka.Actor.Internals;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Threading;
+using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Configuration;
 
 namespace Akka.Event

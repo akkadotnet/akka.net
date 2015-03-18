@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Threading;
 using Akka.Actor;
-using Akka.Configuration;
 using Helios.Concurrency;
 
 namespace TimeClient

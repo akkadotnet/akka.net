@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Runtime.InteropServices;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Dispatch;

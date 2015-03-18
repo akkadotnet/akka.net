@@ -1,15 +1,11 @@
 ﻿using System;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Event;
 using Akka.Remote;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
-using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Cluster.Tests.MultiNode

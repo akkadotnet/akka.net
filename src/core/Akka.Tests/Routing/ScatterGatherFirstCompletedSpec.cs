@@ -1,16 +1,10 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Threading.Tasks;
+using System.Threading;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
-using Akka.Tests;
-using Akka.Util;
-using Xunit;
-using System.Threading;
 using Akka.Util.Internal;
+using Xunit;
 
 namespace Akka.Tests.Routing
 {

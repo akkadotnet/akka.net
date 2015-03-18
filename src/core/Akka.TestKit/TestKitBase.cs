@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit.Internal;
-using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.TestKit

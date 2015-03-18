@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Akka.Actor;
 using Akka.Util.Internal;
 

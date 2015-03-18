@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 

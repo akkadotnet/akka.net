@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Runtime.Remoting.Contexts;
-using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Tests.TestUtils;

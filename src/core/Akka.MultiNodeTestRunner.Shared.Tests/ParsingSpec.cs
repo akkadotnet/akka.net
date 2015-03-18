@@ -1,7 +1,6 @@
 ﻿using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.MultiNodeTestRunner.Shared.Reporting;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.NodeTestRunner;
 using Akka.TestKit;

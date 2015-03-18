@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reflection;
 using System.Threading;
 using Akka.Event;
 using Akka.TestKit.Internal;

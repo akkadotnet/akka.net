@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 using Akka.Actor;
 using Akka.Util.Internal;
 

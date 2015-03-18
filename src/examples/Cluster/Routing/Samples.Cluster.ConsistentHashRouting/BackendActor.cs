@@ -1,6 +1,5 @@
 ﻿using System;
 using Akka.Actor;
-using Akka.Event;
 
 namespace Samples.Cluster.ConsistentHashRouting
 {

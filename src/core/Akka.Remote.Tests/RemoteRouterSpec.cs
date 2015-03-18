@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Routing;
 using Akka.Routing;
 using Akka.TestKit;
-using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
 using Xunit;
 

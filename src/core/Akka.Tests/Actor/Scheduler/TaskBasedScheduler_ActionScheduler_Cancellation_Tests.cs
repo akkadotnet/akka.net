@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;

@@ -1,13 +1,9 @@
-﻿using Akka.TestKit;
-using Akka.TestKit.TestActors;
-using Akka.Util;
-using Xunit;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.TestKit;
+using Akka.TestKit.TestActors;
+using Xunit;
 
 namespace Akka.Tests.Actor
 {

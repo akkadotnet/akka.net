@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;

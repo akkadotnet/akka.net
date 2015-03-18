@@ -6,7 +6,6 @@ using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
-using Akka.TestKit.TestActors;
 using Akka.TestKit.TestEvent;
 using Akka.Util.Internal;
 using Xunit;
