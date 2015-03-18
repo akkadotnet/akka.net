@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Routing;
 
 namespace Akka.Actor
@@ -20,7 +21,11 @@ namespace Akka.Actor
         /// </summary>
         private void RebuildConfig()
         {
-            this.Config = _userConfig.SafeWithFallback(_fallbackConfig);
+            Config = _userConfig.SafeWithFallback(_fallbackConfig);
+
+            //if we get a new config definition loaded after all ActorRefProviders have been started, such as Akka.Persistence...
+            if(System != null && System.Dispatchers != null)
+                System.Dispatchers.ReloadPrerequisites(new DefaultDispatcherPrerequisites(System.EventStream, System.Scheduler, this, System.Mailboxes));
         }
 
         /// <summary>

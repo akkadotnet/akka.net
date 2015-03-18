@@ -315,6 +315,11 @@ namespace Akka.Routing
                     HashMapping ?? ConsistentHashingRouter.EmptyConsistentHashMapping));
         }
 
+        public override Group WithDispatcher(string dispatcher)
+        {
+            return new ConsistentHashingGroup(Paths, VirtualNodesFactor, HashMapping){ RouterDispatcher = dispatcher};
+        }
+
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
             if (routerConfig is FromConfig || routerConfig is NoRouter)
@@ -434,6 +439,12 @@ namespace Akka.Routing
         {
             return new ConsistentHashingPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher,
                 UsePoolDispatcher, VirtualNodesFactor, _hashMapping);
+        }
+
+        public override Pool WithDispatcher(string dispatcher)
+        {
+            return new ConsistentHashingPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher,
+               UsePoolDispatcher, VirtualNodesFactor, _hashMapping);
         }
 
         public override RouterConfig WithFallback(RouterConfig routerConfig)

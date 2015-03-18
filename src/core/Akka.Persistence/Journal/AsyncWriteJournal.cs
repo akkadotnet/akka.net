@@ -113,16 +113,22 @@ namespace Akka.Persistence.Journal
                 }
             };
 
+            /*
+             * Self MUST BE CLOSED OVER here, or the code below will be subject to race conditions which may result
+             * in failure, as the `IActorContext` needed for resolving Context.Self will be done outside the current
+             * execution context.
+             */
+            var self = Self;
             WriteMessagesAsync(CreatePersistentBatch(message.Messages)).ContinueWith(t =>
             {
                 if (!t.IsFaulted)
                 {
-                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, Self));
+                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self));
                     resequence(x => new WriteMessageSuccess(x, message.ActorInstanceId));
                 }
                 else
                 {
-                    _resequencer.Tell(new Desequenced(new WriteMessagesFailed(t.Exception), counter, message.PersistentActor, Self));
+                    _resequencer.Tell(new Desequenced(new WriteMessagesFailed(t.Exception), counter, message.PersistentActor, self));
                     resequence(x => new WriteMessageFailure(x, t.Exception, message.ActorInstanceId));
                 }
             }, _continuationOptions);

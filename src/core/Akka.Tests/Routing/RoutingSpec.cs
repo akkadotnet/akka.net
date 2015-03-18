@@ -105,7 +105,7 @@ namespace Akka.Tests.Routing
             var latch = new TestLatch(Sys,1);
             var resizer = new TestResizer(latch);
             var router =
-                Sys.ActorOf(new RoundRobinPool( 0, resizer,SupervisorStrategy.DefaultStrategy,"").Props(Props.Create<BlackHoleActor>()));
+                Sys.ActorOf(new RoundRobinPool( 0, resizer,SupervisorStrategy.DefaultStrategy,null).Props(Props.Create<BlackHoleActor>()));
 
             Watch(router);
 
@@ -238,7 +238,7 @@ namespace Akka.Tests.Routing
             var router =
                 Sys.ActorOf(
                     Props.Create<BlackHoleActor>()
-                        .WithRouter(new RoundRobinPool(0, resizer, SupervisorStrategy.DefaultStrategy, "")));
+                        .WithRouter(new RoundRobinPool(0, resizer, SupervisorStrategy.DefaultStrategy, null)));
             latch.Open();
             router.Tell(new GetRoutees(),TestActor);
             ExpectMsg<Routees>().Members.Count().ShouldBe(2);
