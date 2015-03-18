@@ -24,5 +24,11 @@ namespace Akka.DI.Core
             DIExtension.DIExtensionProvider.Get(system).Initialize(dependencyResolver);
         }
         
+
+        public static DIActorAdapter DI(this IActorContext context)
+        {
+            return new DIActorAdapter(context);
+        }
+
     }
 }
