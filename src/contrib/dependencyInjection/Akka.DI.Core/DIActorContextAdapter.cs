@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace Akka.DI.Core
 {
-    public class DIActorAdapter
+    public class DIActorContextAdapter
     {
         readonly DIExt producer;
         readonly IActorContext context;
-        public DIActorAdapter(IActorContext context)
+        public DIActorContextAdapter(IActorContext context)
         {
             if (context == null) throw new ArgumentNullException("context");
             this.context = context;

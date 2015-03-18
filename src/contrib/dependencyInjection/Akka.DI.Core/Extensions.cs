@@ -25,9 +25,9 @@ namespace Akka.DI.Core
         }
         
 
-        public static DIActorAdapter DI(this IActorContext context)
+        public static DIActorContextAdapter DI(this IActorContext context)
         {
-            return new DIActorAdapter(context);
+            return new DIActorContextAdapter(context);
         }
 
     }

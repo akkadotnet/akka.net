@@ -45,7 +45,7 @@
     <Compile Include="..\..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="DIActorAdapter.cs" />
+    <Compile Include="DIActorContextAdapter.cs" />
     <Compile Include="DIActorProducer.cs" />
     <Compile Include="DIExt.cs" />
     <Compile Include="DIExtension.cs" />
