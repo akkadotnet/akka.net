@@ -18,7 +18,9 @@ namespace Akka.Serialization
     /// </summary>
     public class NewtonSoftJsonSerializer : Serializer
     {
-        private readonly JsonSerializerSettings _settings;     
+        private readonly JsonSerializerSettings _settings;
+
+        public JsonSerializerSettings Settings { get { return _settings; } }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="NewtonSoftJsonSerializer" /> class.

@@ -151,8 +151,10 @@ Actors have a place in their system's hierarchy trees. To manage failures done b
 
 -   `Strategy.OneForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution.
 -   `Strategy.OneForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
+-   `OneForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan)  : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur. **Strategies created this way may be serialized and deserialized on remote nodes** .
 -   `Strategy.AllForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution.
 -   `Strategy.AllForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` -  returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
+-   `AllForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur. **Strategies created this way may be serialized and deserialized on remote nodes** .
 
 Example:
 
@@ -162,6 +164,14 @@ Example:
                 match error with
                 | :? ArithmeticException -> Directive.Escalate
                 | _ -> SupervisorStrategy.DefaultDecider error )) ]
+    
+    let remoteRef = 
+        spawne system "remote-actor" <@ actorOf myFunc @>
+            [ SpawnOption.SupervisorStrategy (Strategy.OneForOne <@ fun error -> 
+                match error with
+                | :? ArithmeticException -> Directive.Escalate
+                | _ -> SupervisorStrategy.DefaultDecider error ) @>
+              SpawnOption.Deploy (Deploy (RemoteScope remoteNodeAddr)) ]
 
 ### Publish/Subscribe support
 
@@ -196,20 +206,6 @@ Example:
     publisher  <! Msg (publisher, "hello")
     subscriber <! Unsubscribe
     publisher  <! Msg (publisher, "hello again")
-
-### Scheduling
-
-Akka gives you an offhand support for scheduling (see: [Scheduler](http://akkadotnet.github.io/wiki/Scheduler)). Scheduling function can be grouped by two dimensions: 
-
-1. Cyclic (interval) vs single time scheduling - you may decide if scheduled job should be performed repeatedly or only once.
-2. Function vs message->actor scheduling - you may decide to schedule job in form of a function or a message automatically sent to target actor reference.
-
-F# API provides following scheduling functions:
-
--   `schedule (after: TimeSpan) (every: TimeSpan) (fn: unit -> unit) (scheduler: Scheduler): Async<unit>` - [cyclic, function] schedules a function to be called by the scheduler repeatedly.
--   `scheduleOnce (after: TimeSpan) (fn: unit -> unit) (scheduler: Scheduler): Async<unit>` - [single, function] schedules a function to be called only once by the scheduler.
--   `scheduleTell (after: TimeSpan) (every: TimeSpan) (message: 'Message) (receiver: ActorRef) (scheduler: Scheduler): Async<unit>` - [cyclic, message] schedules a message to be sent to the target actor reference by the scheduler repeatedly.
--   `scheduleTellOnce (after: TimeSpan) (message: 'Message) (receiver: ActorRef) (scheduler: Scheduler): Async<unit>` - [single, message] schedules a message to be sent only once to the target actor reference, by the scheduler.
 
 ### Logging
 

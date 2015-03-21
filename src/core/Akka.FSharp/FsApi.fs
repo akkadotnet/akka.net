@@ -19,7 +19,7 @@ module Actors =
     /// Bidirectional send operator. Sends a message object directly to actor 
     /// tracked by actorRef and awaits for response send back from corresponding actor. 
     /// </summary>
-    let inline (<?) (tell : #ICanTell) (msg : obj) = tell.Ask msg |> Async.AwaitTask
+    let inline (<?) (tell : #ICanTell) (msg : obj) : Async<'Message> = tell.Ask<'Message> msg |> Async.AwaitTask
 
     /// Pipes an output of asynchronous expression directly to the recipients mailbox.
     let pipeTo (computation : Async<'T>) (recipient : ICanTell) (sender : ActorRef) : unit = 
@@ -323,21 +323,30 @@ module Linq =
 module Serialization = 
     open Nessos.FsPickler
     open Akka.Serialization
+
+    let internal serializeToBinary (fsp:BinarySerializer) o = 
+            use stream = new System.IO.MemoryStream()
+            fsp.Serialize(o.GetType(), stream, o)
+            stream.ToArray()
+
+    let internal deserializeFromBinary (fsp:BinarySerializer) (bytes: byte array) (t: Type) =
+            use stream = new System.IO.MemoryStream(bytes)
+            fsp.Deserialize(t, stream)
     
+    // used for top level serialization
     type ExprSerializer(system) = 
         inherit Serializer(system)
         let fsp = FsPickler.CreateBinary()
         override __.Identifier = 9
-        override __.IncludeManifest = true
+        override __.IncludeManifest = true        
+        override __.ToBinary(o) = serializeToBinary fsp o        
+        override __.FromBinary(bytes, t) = deserializeFromBinary fsp bytes t
         
-        override __.ToBinary(o) = 
-            use stream = new System.IO.MemoryStream()
-            fsp.Serialize(o.GetType(), stream, o)
-            stream.ToArray()
-        
-        override __.FromBinary(bytes, t) = 
-            use stream = new System.IO.MemoryStream(bytes)
-            fsp.Deserialize(t, stream)
+                        
+    let internal exprSerializationSupport (system: ActorSystem) =
+        let serializer = ExprSerializer(system :?> ExtendedActorSystem)
+        system.Serialization.AddSerializer(serializer)
+        system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
 
 [<RequireQualifiedAccess>]
 module Configuration = 
@@ -356,7 +365,26 @@ module internal OptionHelper =
     let optToNullable = function
         | Some x -> Nullable x
         | None -> Nullable()
+        
+open Akka.Util
+type ExprDeciderSurrogate(serializedExpr: byte array) =
+    member __.SerializedExpr = serializedExpr
+    interface ISurrogate with
+        member this.FromSurrogate _ = 
+            let fsp = Nessos.FsPickler.FsPickler.CreateBinary()
+            let expr = (Serialization.deserializeFromBinary fsp (this.SerializedExpr) typeof<Expr<(exn->Directive)>>) :?> Expr<(exn->Directive)>
+            ExprDecider(expr) :> ISurrogated
 
+and ExprDecider (expr: Expr<(exn->Directive)>) =
+    member __.Expr = expr
+    member private this.Compiled = lazy this.Expr.Compile()()
+    interface IDecider with
+        member this.Decide (e: exn): Directive = this.Compiled.Value (e)
+    interface ISurrogated with
+        member this.ToSurrogate _ = 
+            let fsp = Nessos.FsPickler.FsPickler.CreateBinary()        
+            ExprDeciderSurrogate(Serialization.serializeToBinary fsp this.Expr) :> ISurrogate
+        
 type Strategy = 
 
     /// <summary>
@@ -374,6 +402,15 @@ type Strategy =
     /// <param name="decider">Used to determine a actor behavior response depending on exception occurred.</param>
     static member OneForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan)  : SupervisorStrategy = 
         upcast OneForOneStrategy(OptionHelper.optToNullable retries, OptionHelper.optToNullable timeout, System.Func<_, _>(decider))
+        
+    /// <summary>
+    /// Returns a supervisor strategy appliable only to child actor which faulted during execution.
+    /// </summary>
+    /// <param name="retries">Defines a number of times, an actor could be restarted. If it's a negative value, there is not limit.</param>
+    /// <param name="timeout">Defines time window for number of retries to occur.</param>
+    /// <param name="decider">Used to determine a actor behavior response depending on exception occurred.</param>
+    static member OneForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan)  : SupervisorStrategy = 
+        upcast OneForOneStrategy(OptionHelper.optToNullable retries, OptionHelper.optToNullable timeout, ExprDecider decider)
     
     /// <summary>
     /// Returns a supervisor strategy appliable to each supervised actor when any of them had faulted during execution.
@@ -391,13 +428,20 @@ type Strategy =
     static member AllForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy = 
         upcast AllForOneStrategy(OptionHelper.optToNullable retries, OptionHelper.optToNullable timeout, System.Func<_, _>(decider))
         
+    /// <summary>
+    /// Returns a supervisor strategy appliable to each supervised actor when any of them had faulted during execution.
+    /// </summary>
+    /// <param name="retries">Defines a number of times, an actor could be restarted. If it's a negative value, there is not limit.</param>
+    /// <param name="timeout">Defines time window for number of retries to occur.</param>
+    /// <param name="decider">Used to determine a actor behavior response depending on exception occurred.</param>
+    static member AllForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy = 
+        upcast AllForOneStrategy(OptionHelper.optToNullable retries, OptionHelper.optToNullable timeout, ExprDecider decider)
+        
 module System = 
     /// Creates an actor system with remote deployment serialization enabled.
     let create (name : string) (config : Akka.Configuration.Config) : ActorSystem = 
         let system = ActorSystem.Create(name, config)
-        let serializer = Serialization.ExprSerializer(system :?> ExtendedActorSystem)
-        system.Serialization.AddSerializer(serializer)
-        system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
+        Serialization.exprSerializationSupport system
         system
         
 [<AutoOpen>]
@@ -588,71 +632,3 @@ module EventStreaming =
     /// Publishes an event on the provided event stream. Event channel is resolved from event's type.
     /// </summary>
     let publish (event: 'Event) (eventStream: Akka.Event.EventStream) : unit = eventStream.Publish event
-
-[<AutoOpen>]
-module Scheduler = //TODO: Mimic the c# api for scheduler?
-
-    /// <summary>
-    /// Schedules a function to be invoked repeatedly in the provided time intervals. 
-    /// </summary>
-    /// <param name="after">Initial delay to first function call.</param>
-    /// <param name="every">Interval.</param>
-    /// <param name="fn">Function called by the scheduler.</param>
-    /// <param name="scheduler"></param>
-    let schedule (after: TimeSpan) (every: TimeSpan) (fn: unit -> unit) (scheduler: IScheduler): unit =
-        let action = Action fn
-        scheduler.Advanced.ScheduleRepeatedly(after, every, action)
-    
-    /// <summary>
-    /// Schedules a function to be invoked repeatedly in the provided time intervals. 
-    /// </summary>
-    /// <param name="after">Initial delay to first function call.</param>
-    /// <param name="every">Interval.</param>
-    /// <param name="fn">Function called by the scheduler.</param>
-    /// <param name="scheduler"></param>
-    let scheduleRepeatedly (after: TimeSpan) (every: TimeSpan) (fn: unit -> unit) (scheduler: IScheduler): unit =
-        let action = Action fn
-        scheduler.Advanced.ScheduleRepeatedly(after, every, action)
-    
-    /// <summary>
-    /// Schedules a single function call using specified sheduler.
-    /// </summary>
-    /// <param name="after">Delay before calling the function.</param>
-    /// <param name="fn">Function called by the scheduler.</param>
-    /// <param name="scheduler"></param>
-    let scheduleOnce (after: TimeSpan) (fn: unit -> unit) (scheduler: IScheduler): unit =
-        let action = Action fn
-        scheduler.Advanced.ScheduleOnce(after, action)
-
-    /// <summary>
-    /// Schedules a <paramref name="message"/> to be sent to the provided <paramref name="receiver"/> in specified time intervals.
-    /// </summary>
-    /// <param name="after">Initial delay to first function call.</param>
-    /// <param name="every">Interval.</param>
-    /// <param name="message">Message to be sent to the receiver by the scheduler.</param>
-    /// <param name="receiver">Message receiver.</param>
-    /// <param name="scheduler"></param>
-    let scheduleTell (after: TimeSpan) (every: TimeSpan) (message: 'Message) (receiver: ActorRef) (scheduler: IScheduler): unit =
-         DeprecatedSchedulerExtensions.Schedule(scheduler, after, every, receiver, message)
-    
-    
-    /// <summary>
-    /// Schedules a <paramref name="message"/> to be sent to the provided <paramref name="receiver"/> in specified time intervals.
-    /// </summary>
-    /// <param name="after">Initial delay to first function call.</param>
-    /// <param name="every">Interval.</param>
-    /// <param name="message">Message to be sent to the receiver by the scheduler.</param>
-    /// <param name="receiver">Message receiver.</param>
-    /// <param name="scheduler"></param>
-    let scheduleTellRepeatedly (after: TimeSpan) (every: TimeSpan) (message: 'Message) (receiver: ActorRef) (scheduler: IScheduler): unit =
-        scheduler.ScheduleTellRepeatedly(after, every, receiver, message, ActorCell.GetCurrentSelfOrNoSender())
-    
-    /// <summary>
-    /// Schedules a single <paramref name="message"/> send to the provided <paramref name="receiver"/>.
-    /// </summary>
-    /// <param name="after">Delay before sending a message.</param>
-    /// <param name="message">Message to be sent to the receiver by the scheduler.</param>
-    /// <param name="receiver">Message receiver.</param>
-    /// <param name="scheduler"></param>
-    let scheduleTellOnce (after: TimeSpan) (message: 'Message) (receiver: ActorRef) (scheduler: IScheduler): unit =
-        scheduler.ScheduleTellOnce(after, receiver, message, ActorCell.GetCurrentSelfOrNoSender())
