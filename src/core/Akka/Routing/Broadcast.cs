@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util;
 
 namespace Akka.Routing
 {
@@ -23,8 +21,30 @@ namespace Akka.Routing
     /// </summary>
     public class BroadcastPool : Pool
     {
-        protected BroadcastPool()
-        {           
+        public class BroadcastPoolSurrogate : ISurrogate
+        {
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new BroadcastPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+            }
+
+            public int NrOfInstances { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Resizer Resizer { get; set; }
+            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public string RouterDispatcher { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new BroadcastPoolSurrogate
+            {
+                NrOfInstances = NrOfInstances,
+                UsePoolDispatcher = UsePoolDispatcher,
+                Resizer = Resizer,
+                SupervisorStrategy = SupervisorStrategy,
+                RouterDispatcher = RouterDispatcher,
+            };
         }
 
         /// <summary>
@@ -53,7 +73,7 @@ namespace Akka.Routing
         /// Simple form of BroadcastPool constructor
         /// </summary>
         /// <param name="nrOfInstances">The nr of instances.</param>
-        public BroadcastPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null) { }
+        public BroadcastPool(int nrOfInstances) : base(nrOfInstances, null, DefaultStrategy, null) { }
 
         /// <summary>
         /// Creates the router.
@@ -64,14 +84,42 @@ namespace Akka.Routing
         {
             return new Router(new BroadcastRoutingLogic());
         }
+
+        public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
+        {
+            return new BroadcastPool(NrOfInstances, Resizer, strategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        public override Pool WithResizer(Resizer resizer)
+        {
+            return new BroadcastPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+        }
+        public override RouterConfig WithFallback(RouterConfig routerConfig)
+        {
+            return OverrideUnsetConfig(routerConfig);
+        }
     }
 
     public class BroadcastGroup : Group
-    {        
-        protected BroadcastGroup()
+    {
+        public class BroadcastGroupSurrogate : ISurrogate
         {
-            
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new BroadcastGroup(Paths);
+            }
+
+            public string[] Paths { get; set; }
         }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new BroadcastGroupSurrogate
+            {
+                Paths = Paths,
+            };
+        }
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="BroadcastGroup" /> class.
         /// </summary>

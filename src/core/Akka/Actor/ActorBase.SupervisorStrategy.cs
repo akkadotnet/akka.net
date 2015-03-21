@@ -2,7 +2,7 @@
 {
     public abstract partial class ActorBase
     {
-        private SupervisorStrategy _supervisorStrategy = null;
+        private SupervisorStrategy _supervisorStrategy;
 
         /// <summary>
         /// Gets or sets a <see cref="SupervisorStrategy"/>.

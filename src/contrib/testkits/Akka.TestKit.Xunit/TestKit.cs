@@ -61,7 +61,7 @@ namespace Akka.TestKit.Xunit
         /// the system. Otherwise you'll leak memory.
         /// </remarks>
         /// </summary>
-        protected virtual void AfterTest()
+        protected virtual void AfterAll()
         {
             Shutdown();
         }
@@ -104,7 +104,7 @@ namespace Akka.TestKit.Xunit
                 {
                     if(disposing)
                     {
-                        AfterTest();                        
+                        AfterAll();                        
                     }
                 }
                 _isDisposed = true;

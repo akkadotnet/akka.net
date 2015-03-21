@@ -3,17 +3,27 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internals;
+using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
-    public abstract class RouterConfig : IEquatable<RouterConfig>
+    /// <summary>
+    /// Configuration for router actors
+    /// </summary>
+    public abstract class RouterConfig : IEquatable<RouterConfig> , ISurrogated
     {
         //  public abstract RoutingLogic GetLogic();
 
         public static readonly RouterConfig NoRouter = new NoRouter();
-        public virtual string RouterDispatcher { get; protected set; }
+        private readonly string _routerDispatcher;
+
+        public virtual string RouterDispatcher
+        {
+            get { return _routerDispatcher; }
+        }
 
         public virtual RouterConfig WithFallback(RouterConfig routerConfig)
         {
@@ -21,7 +31,7 @@ namespace Akka.Routing
         }
 
         public abstract Router CreateRouter(ActorSystem system);
-        public abstract RouterActor CreateRouterActor();
+        internal abstract RouterActor CreateRouterActor();
 
         public abstract IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell);
 
@@ -38,6 +48,16 @@ namespace Akka.Routing
             if (other == null) return false;
             return GetType() == other.GetType() && String.Equals(RouterDispatcher, other.RouterDispatcher);
         }
+
+        public abstract ISurrogate ToSurrogate(ActorSystem system);
+
+        protected RouterConfig()
+        {            
+        }
+        protected RouterConfig(string routerDispatcher)
+        {
+            _routerDispatcher = routerDispatcher;
+        }
     }
 
     public static class RouterConfigExtensions
@@ -48,9 +68,12 @@ namespace Akka.Routing
         }
     }
 
+    /// <summary>
+    /// Signals that no Router is to be used with a given <see cref="Props"/>
+    /// </summary>
     public class NoRouter : RouterConfig
     {
-        public override RouterActor CreateRouterActor()
+        internal override RouterActor CreateRouterActor()
         {
             throw new NotImplementedException();
         }
@@ -64,30 +87,72 @@ namespace Akka.Routing
         {
             throw new NotImplementedException();
         }
+
+        public class NoRouterSurrogate : ISurrogate
+        {
+
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new NoRouter();
+            }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new NoRouterSurrogate();
+        }
+        
+	public override RouterConfig WithFallback(RouterConfig routerConfig)
+        {
+            return routerConfig;
+        }
     }
 
-    public abstract class Group : RouterConfig
+    /// <summary>
+    /// Base class for defining Group routers.
+    /// </summary>
+    public abstract class Group : RouterConfig, IEquatable<Group>
     {
-        private string[] paths;
+        public bool Equals(Group other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(_paths, other._paths);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((Group) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (_paths != null ? _paths.GetHashCode() : 0);
+        }
+
+        private readonly string[] _paths;
 
         public string[] Paths
         {
-            get { return paths; }
-            set { paths = value; } //should be private, fails for serialization atm, JSON.NET should be able to set private setters, right?
-        }
-
-        protected Group()
-        {
+            get { return _paths; }            
         }
 
         protected Group(IEnumerable<string> paths)
         {
-            this.paths = paths.ToArray();
+            _paths = paths.ToArray();
+        }
+
+        protected Group(IEnumerable<string> paths,string routerDispatcher) : base(routerDispatcher)
+        {
+            _paths = paths.ToArray();
         }
 
         protected Group(IEnumerable<ActorRef> routees)
         {
-            paths = routees.Select(x => x.Path.ToStringWithAddress()).ToArray();
+            _paths = routees.Select(x => x.Path.ToStringWithAddress()).ToArray();
         }
 
         /// <summary>
@@ -100,10 +165,10 @@ namespace Akka.Routing
 
         public Props Props()
         {
-            return Akka.Actor.Props.Empty.WithRouter(this);
+            return Actor.Props.Empty.WithRouter(this);
         }
 
-        public override RouterActor CreateRouterActor()
+        internal override RouterActor CreateRouterActor()
         {
             return new RouterActor();
         }
@@ -115,8 +180,8 @@ namespace Akka.Routing
 
         public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
         {
-            if (paths == null) return new Routee[0];
-            return paths.Select(((ActorSystemImpl)routedActorCell.System).ActorSelection).Select(actor => new ActorSelectionRoutee(actor));
+            if (_paths == null) return new Routee[0];
+            return _paths.Select(((ActorSystemImpl)routedActorCell.System).ActorSelection).Select(actor => new ActorSelectionRoutee(actor));
         }
 
         public override bool Equals(RouterConfig other)
@@ -129,9 +194,15 @@ namespace Akka.Routing
     }
 
 
-    //TODO: ensure this can be serialized/deserialized fully    
+    /// <summary>
+    /// Base class for defining Pool routers
+    /// </summary>
     public abstract class Pool : RouterConfig, IEquatable<Pool>
     {
+        private readonly int _nrOfInstances;
+        private readonly bool _usePoolDispatcher;
+        private readonly Resizer _resizer;
+        private readonly SupervisorStrategy _supervisorStrategy;
         //TODO: add supervisor strategy to the equality compare
         public bool Equals(Pool other)
         {
@@ -144,7 +215,7 @@ namespace Akka.Routing
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (obj.GetType() != GetType()) return false;
             return Equals((Pool) obj);
         }
 
@@ -159,54 +230,68 @@ namespace Akka.Routing
             }
         }
 
-
-        protected Pool() //for serialization
-        {
-        }
-
         protected Pool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher,
-            bool usePoolDispatcher = false)
+            bool usePoolDispatcher = false) :base(routerDispatcher)
         {
             // OMG, if every member in Java is virtual - you must never call any members in a constructor!!1!
             // In all seriousness, without making these members virtual RemoteRouterConfig won't work
             // ReSharper disable DoNotCallOverridableMethodsInConstructor
-            NrOfInstances = nrOfInstances;
+            _nrOfInstances = nrOfInstances;
 
-            Resizer = resizer;
-            SupervisorStrategy = supervisorStrategy ?? Pool.DefaultStrategy;
-            UsePoolDispatcher = usePoolDispatcher;
-            RouterDispatcher = routerDispatcher;
+            _resizer = resizer;
+            _supervisorStrategy = supervisorStrategy ?? DefaultStrategy;
+            _usePoolDispatcher = usePoolDispatcher;
         }
 
-        protected Pool(Configuration.Config config)
+        protected Pool(Config config)
         {
-            NrOfInstances = config.GetInt("nr-of-instances");
-            Resizer = DefaultResizer.FromConfig(config);
-            UsePoolDispatcher = config.HasPath("pool-dispatcher");
+            _nrOfInstances = config.GetInt("nr-of-instances");
+            _resizer = DefaultResizer.FromConfig(config);
+            _usePoolDispatcher = config.HasPath("pool-dispatcher");
             // ReSharper restore DoNotCallOverridableMethodsInConstructor
         }
-
-        //TODO: do we want mutable props here ???
 
         /// <summary>
         /// The number of instances in the pool.
         /// </summary>
-        public virtual int NrOfInstances { get; set; }
+        public virtual int NrOfInstances
+        {
+            get { return _nrOfInstances; }
+        }
+
+        /// <summary>
+        /// Used by the <see cref="RoutedActorCell"/> to determine the initial number of routees.
+        /// 
+        /// Needs to be connected to an <see cref="ActorSystem"/> for clustered deployment scenarios.
+        /// </summary>
+        public virtual int GetNrOfInstances(ActorSystem system)
+        {
+            return NrOfInstances;
+        }
 
         /// <summary>
         /// Whether or not to use the pool dispatcher.
         /// </summary>
-        public virtual bool UsePoolDispatcher { get; set; }
+        public virtual bool UsePoolDispatcher
+        {
+            get { return _usePoolDispatcher; }
+        }
 
         /// <summary>
         /// An instance of the resizer for this pool.
         /// </summary>
-        public virtual Resizer Resizer { get; set; }
+        public virtual Resizer Resizer
+        {
+            get { return _resizer; }
+        }
 
         /// <summary>
         /// An instance of the supervisor strategy for this pool.
         /// </summary>
-        public virtual SupervisorStrategy SupervisorStrategy { get; set; }
+        public virtual SupervisorStrategy SupervisorStrategy
+        {
+            get { return _supervisorStrategy; }
+        }
 
         public virtual Routee NewRoutee(Props routeeProps, IActorContext context)
         {
@@ -235,7 +320,7 @@ namespace Akka.Routing
             return routeeProps.WithRouter(this);
         }
 
-        public override RouterActor CreateRouterActor()
+        internal override RouterActor CreateRouterActor()
         {
             if (Resizer == null)
                 return new RouterPoolActor(SupervisorStrategy);
@@ -244,12 +329,46 @@ namespace Akka.Routing
 
         public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
         {
-            for (int i = 0; i < NrOfInstances; i++)
+            for (var i = 0; i < NrOfInstances; i++)
             {
                 //TODO: where do we get props?
-                yield return NewRoutee(Akka.Actor.Props.Empty, routedActorCell);
+                yield return NewRoutee(Actor.Props.Empty, routedActorCell);
             }
         }
+
+        protected RouterConfig OverrideUnsetConfig(RouterConfig other)
+        {
+            if (other is NoRouter) return this; // NoRouter is thedefault, hence "neutral"
+            if (other is Pool)
+            {
+                Pool wssConf;
+                var p = other as Pool;
+                if (SupervisorStrategy == null || (SupervisorStrategy.Equals(Pool.DefaultStrategy) &&
+                    !p.SupervisorStrategy.Equals(Pool.DefaultStrategy)))
+                    wssConf = this.WithSupervisorStrategy(p.SupervisorStrategy);
+                else
+                    wssConf = this;
+
+                if (wssConf.Resizer == null && p.Resizer != null)
+                    return wssConf.WithResizer(p.Resizer);
+                return wssConf;
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Returns a new instance of the <see cref="Pool"/> router with a new <see cref="SupervisorStrategy"/>.
+        /// 
+        /// NOTE: this method is immutable and returns a new instance of the <see cref="Pool"/>.
+        /// </summary>
+        public abstract Pool WithSupervisorStrategy(SupervisorStrategy strategy);
+
+        /// <summary>
+        /// Returns a new instance of the <see cref="Pool"/> router with a new <see cref="Resizer"/>.
+        /// 
+        /// NOTE: this method is immutable and returns a new instance of the <see cref="Pool"/>.
+        /// </summary>
+        public abstract Pool WithResizer(Resizer resizer);
 
         #region Static methods
 
@@ -259,7 +378,7 @@ namespace Akka.Routing
         /// </summary>
         public static SupervisorStrategy DefaultStrategy
         {
-            get { return new OneForOneStrategy(10, TimeSpan.FromSeconds(10), (ex) => Directive.Escalate); }
+            get { return new OneForOneStrategy(10, TimeSpan.FromSeconds(10), ex => Directive.Escalate); }
         }
 
         #endregion
@@ -280,6 +399,14 @@ namespace Akka.Routing
         #endregion
     }
 
+    /// <summary>
+    /// Used to tell <see cref="ActorRefProvider"/> to create router based on what's stored in configuration.
+    /// 
+    /// For example:
+    /// <code>
+    ///      ActorRef router1 = Sys.ActorOf(Props.Create{Echo}().WithRouter(FromConfig.Instance), "router1");
+    /// </code>
+    /// </summary>
     public class FromConfig : RouterConfig
     {
         private static readonly FromConfig _instance = new FromConfig();
@@ -289,18 +416,12 @@ namespace Akka.Routing
             get { return _instance; }
         }
 
-        public FromConfig()
-            : base()
-        {
-
-        }
-
         public override Router CreateRouter(ActorSystem system)
         {
             throw new NotSupportedException();
         }
 
-        public override RouterActor CreateRouterActor()
+        internal override RouterActor CreateRouterActor()
         {
             throw new NotSupportedException();
         }
@@ -308,6 +429,20 @@ namespace Akka.Routing
         public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
         {
             throw new NotSupportedException();
+        }
+
+        public class FromConfigSurrogate : ISurrogate
+        {
+
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return Instance;
+            }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new FromConfigSurrogate();
         }
     }
 }

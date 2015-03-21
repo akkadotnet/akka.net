@@ -6,6 +6,7 @@ using Akka.Cluster.Routing;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
+using Akka.Remote.Routing;
 using Akka.Routing;
 
 namespace Akka.Cluster
@@ -60,6 +61,15 @@ namespace Akka.Cluster
         private ClusterScope() { }
 
         public static readonly ClusterScope Instance = new ClusterScope();
+        public override Scope WithFallback(Scope other)
+        {
+            return Instance;
+        }
+
+        public override Scope Copy()
+        {
+            return Instance;
+        }
     }
 
     /// <summary>
@@ -83,19 +93,20 @@ namespace Akka.Cluster
             {
                 if(deploy.Scope != Deploy.NoScopeGiven)
                     throw new ConfigurationException(string.Format("Cluster deployment can't be combined with scope [{0}]", deploy.Scope));
-                //TODO: add handling for RemoteRouterConfig
+                if(deploy.RouterConfig is RemoteRouterConfig)
+                    throw new ConfigurationException(string.Format("Cluster deployment can't be combined with [{0}]", deploy.Config));
 
                 if (deploy.RouterConfig is Pool)
                 {
                     return
-                        deploy.Copy(scope: ClusterScope.Instance)
+                        deploy.WithScope(scope: ClusterScope.Instance)
                             .WithRouterConfig(new ClusterRouterPool(deploy.RouterConfig as Pool,
                                 ClusterRouterPoolSettings.FromConfig(deploy.Config)));
                 }
                 else if (deploy.RouterConfig is Group)
                 {
                     return
-                        deploy.Copy(scope: ClusterScope.Instance)
+                        deploy.WithScope(scope: ClusterScope.Instance)
                             .WithRouterConfig(new ClusterRouterGroup(deploy.RouterConfig as Group,
                                 ClusterRouterGroupSettings.FromConfig(deploy.Config)));
                 }

@@ -10,6 +10,7 @@ namespace Akka.Actor
     public partial class ActorCell
     {
         private ChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
+        private long _nextRandomNameDoNotCallMeDirectly;
 
         [Obsolete("Use ChildrenContainer instead", true)]
         private ChildrenContainer ChildrenRefs
@@ -47,7 +48,7 @@ namespace Akka.Actor
         {
             return ActorOf(props, name, true, isSystemService);
         }
-
+        
         public virtual ActorRef ActorOf(Props props, string name = null)
         {
             return ActorOf(props, name, false, false);
@@ -58,16 +59,11 @@ namespace Akka.Actor
             if (name == null)
                 name = GetRandomActorName();
             else
-            {
                 CheckName(name);
-            }
 
             return MakeChild(props, name, isAsync, isSystemService);
         }
-
-
-        private long _nextRandomNameDoNotCallMeDirectly;
-
+        
         private string GetRandomActorName()
         {
             var id = Interlocked.Increment(ref _nextRandomNameDoNotCallMeDirectly);
@@ -110,7 +106,7 @@ namespace Akka.Actor
         /// <returns>The third value of the tuple that <paramref name="updater"/> returned.</returns>
         private TReturn UpdateChildrenRefs<TReturn>(Func<ChildrenContainer, Tuple<bool, ChildrenContainer, TReturn>> updater)
         {
-            return InterlockedSpin.ConditionallySwap<ChildrenContainer, TReturn>(ref _childrenContainerDoNotCallMeDirectly, updater);
+            return InterlockedSpin.ConditionallySwap(ref _childrenContainerDoNotCallMeDirectly, updater);
         }
 
         /// <summary>
@@ -140,7 +136,7 @@ namespace Akka.Actor
         /// <summary>This should only be used privately or when creating the root actor. </summary>
         public ChildRestartStats InitChild(InternalActorRef actor)
         {
-            return UpdateChildrenRefs<ChildRestartStats>(cc =>
+            return UpdateChildrenRefs(cc =>
             {
                 ChildStats stats;
                 var name = actor.Path.Name;
@@ -167,14 +163,13 @@ namespace Akka.Actor
 
         protected bool SetChildrenTerminationReason(SuspendReason reason)
         {
-            return UpdateChildrenRefs<bool>(cc =>
+            return UpdateChildrenRefs(cc =>
             {
                 var c = cc as TerminatingChildrenContainer;
                 if (c != null)
-                {
                     //The arguments says: Update; with a new reason; and return true
                     return new Tuple<bool, ChildrenContainer, bool>(true, c.CreateCopyWithReason(reason), true);
-                }
+                
                 //The arguments says:Do NOT update; any container will do since it wont be updated; return false 
                 return new Tuple<bool, ChildrenContainer, bool>(false, cc, false);
             });
@@ -207,7 +202,7 @@ namespace Akka.Actor
                 foreach (var stats in ChildrenContainer.Stats)
                 {
                     var child = stats.Child;
-                    ((InternalActorRef)child).Suspend();
+                    child.Suspend();
                 }
             }
             else
@@ -216,7 +211,7 @@ namespace Akka.Actor
                 {
                     var child = stats.Child;
                     if (!exceptFor.Contains(child))
-                        ((InternalActorRef)stats.Child).Suspend();
+                        child.Suspend();
                 }
             }
         }
@@ -230,7 +225,7 @@ namespace Akka.Actor
             {
                 var child = stats.Child;
                 var cause = child.Equals(perpetrator) ? causedByFailure : null;
-                ((InternalActorRef)child).Resume(cause);
+                child.Resume(cause);
             }
         }
 
@@ -254,9 +249,7 @@ namespace Akka.Actor
             {
                 child = stats as ChildRestartStats;
                 if (child != null)
-                {
                     return true;
-                }
             }
             child = null;
             return false;
@@ -288,7 +281,7 @@ namespace Akka.Actor
                 ChildRestartStats stats;
                 if (TryGetChildRestartStatsByName(name, out stats))
                 {
-                    child = (InternalActorRef)stats.Child;
+                    child = stats.Child;
                     return true;
                 }
             }
@@ -301,7 +294,7 @@ namespace Akka.Actor
                     var uid = nameAndUid.Uid;
                     if (uid == ActorCell.UndefinedUid || uid == stats.Uid)
                     {
-                        child = (InternalActorRef)stats.Child;
+                        child = stats.Child;
                         return true;
                     }
                 }
@@ -327,9 +320,9 @@ namespace Akka.Actor
         {
             if (name == null) throw new InvalidActorNameException("Actor name must not be null.");
             if (name.Length == 0) throw new InvalidActorNameException("Actor name must not be empty.");
-            if (!ActorPath.ElementRegex.IsMatch(name))
+            if (!ActorPath.IsValidPathElement(name))
             {
-                throw new InvalidActorNameException(string.Format("Illegal actor name \"{0}\", must conform to {1}", name, ActorPath.ElementRegex));
+                throw new InvalidActorNameException(string.Format("Illegal actor name [{0}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${1}.", name, new String(ActorPath.ValidSymbols)));
             }
         }
 

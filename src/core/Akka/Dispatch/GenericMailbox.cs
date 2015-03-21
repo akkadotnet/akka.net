@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+﻿﻿using System.Diagnostics;
 using System.Threading;
 using Akka.Actor;
 using Akka.Dispatch.MessageQueues;
@@ -9,9 +9,9 @@ namespace Akka.Dispatch
     /// <summary>
     /// Class Mailbox of TSys,TUser.
     /// </summary>
-    public abstract class Mailbox<TSys,TUser> : MessageQueueMailbox 
-        where TSys:MessageQueue
-        where TUser:MessageQueue
+    public abstract class Mailbox<TSys, TUser> : MessageQueueMailbox
+        where TSys : MessageQueue
+        where TUser : MessageQueue
     {
         private Stopwatch _deadLineTimer;
         private volatile bool _isClosed;
@@ -76,19 +76,19 @@ namespace Akka.Dispatch
                 {
                     Mailbox.DebugPrint(ActorCell.Self + " processing system message " + envelope);
                     // TODO: Add + " with " + ActorCell.GetChildren());
-                    ActorCell.SystemInvoke(envelope);
+                    dispatcher.SystemDispatch(ActorCell, envelope);
                 }
 
                 //we should process x messages in this run
                 var left = dispatcher.Throughput;
 
                 //try dequeue a user message
-                while (!_isSuspended && !_isClosed && _userMessages.TryDequeue(out envelope))
+                while (!IsSuspended && !_isClosed && _userMessages.TryDequeue(out envelope))
                 {
                     Mailbox.DebugPrint(ActorCell.Self + " processing message " + envelope);
 
                     //run the receive handler
-                    ActorCell.Invoke(envelope);
+                    dispatcher.Dispatch(ActorCell, envelope);
 
                     //check if any system message have arrived while processing user messages
                     if (_systemMessages.TryDequeue(out envelope))
@@ -96,7 +96,7 @@ namespace Akka.Dispatch
                         //handle system message
                         Mailbox.DebugPrint(ActorCell.Self + " processing system message " + envelope);
                         // TODO: Add + " with " + ActorCell.GetChildren());
-                        ActorCell.SystemInvoke(envelope);
+                        dispatcher.SystemDispatch(ActorCell, envelope);
                         break;
                     }
                     left--;
@@ -121,7 +121,7 @@ namespace Akka.Dispatch
                 Interlocked.Exchange(ref status, MailboxStatus.Idle);
 
                 //there are still messages that needs to be processed
-                if (_systemMessages.Count > 0 || (!_isSuspended && _userMessages.Count > 0))
+                if (_systemMessages.Count > 0 || (!IsSuspended && _userMessages.Count > 0))
                 {
                     //we still need has unscheduled messages for external info.
                     //e.g. repointable actor ref uses it
@@ -135,7 +135,7 @@ namespace Akka.Dispatch
                     //that wasn't scheduled due to dispatcher throughput beeing reached
                     //or system messages arriving during user message processing
                     Schedule();
-                }             
+                }
             });
         }
 
@@ -190,9 +190,10 @@ namespace Akka.Dispatch
         /// <summary>
         /// Disposes this instance.
         /// </summary>
-        public override void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            _isClosed = true;
+            if(disposing)
+                _isClosed = true;
         }
 
         //TODO: should we only check userMessages? not system messages?

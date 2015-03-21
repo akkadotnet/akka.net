@@ -6,7 +6,7 @@ using Akka.Actor.Internal;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// This is a specialized form of the <see cref="TestActorRef"/> with support for querying and
+    /// This is a specialized form of the <see cref="TestActorRef{TActor}"/> with support for querying and
     /// setting the state of a <see cref="FSM{TState,TData}"/>. 
     /// </summary>
     /// <typeparam name="TActor">The type of the actor.</typeparam>

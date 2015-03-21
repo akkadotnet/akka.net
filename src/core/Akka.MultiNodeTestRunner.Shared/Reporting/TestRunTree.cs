@@ -73,12 +73,12 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// <summary>
         /// Returns a deep copy of the current tree.
         /// </summary>
-        public TestRunTree Copy()
+        public TestRunTree Copy(bool? passed = null)
         {
             var specs = new FactData[_specs.Count];
             _specs.CopyTo(specs);
 
-            return new TestRunTree(StartTime, specs.ToList(), EndTime, Passed);
+            return new TestRunTree(StartTime, specs.ToList(), EndTime, passed ?? Passed);
         }
 
         #region Equality

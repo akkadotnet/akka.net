@@ -6,6 +6,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Persistence.Serialization;
+using System.Runtime.Serialization;
 
 namespace Akka.Persistence
 {
@@ -107,6 +108,11 @@ namespace Akka.Persistence
             : base(message, cause)
         {
         }
+
+        protected MaxUnconfirmedMessagesExceededException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /// <summary>
@@ -131,7 +137,7 @@ namespace Akka.Persistence
     /// </summary>
     public abstract class GuaranteedDeliveryActor : PersistentActor, InitializableActor
     {
-        private CancellationTokenSource _redeliverScheduleCancellation;
+        private ICancelable _redeliverScheduleCancelable;
         private long _deliverySequenceNr = 0L;
         private ConcurrentDictionary<long, Delivery> _unconfirmed = new ConcurrentDictionary<long, Delivery>();
         
@@ -140,7 +146,7 @@ namespace Akka.Persistence
         /// </summary>
         public void Init()
         {
-            _redeliverScheduleCancellation = ScheduleRedelivery();
+            _redeliverScheduleCancelable = ScheduleRedelivery();
         }
 
 
@@ -251,13 +257,13 @@ namespace Akka.Persistence
 
         protected override void PreRestart(Exception reason, object message)
         {
-            _redeliverScheduleCancellation.Cancel();
+            _redeliverScheduleCancelable.Cancel();
             base.PreRestart(reason, message);
         }
 
         protected override void PostStop()
         {
-            _redeliverScheduleCancellation.Cancel();
+            _redeliverScheduleCancelable.Cancel();
             base.PostStop();
         }
 
@@ -317,14 +323,10 @@ namespace Akka.Persistence
             return (++_deliverySequenceNr);
         }
 
-        private CancellationTokenSource ScheduleRedelivery()
+        private ICancelable ScheduleRedelivery()
         {
             var interval = new TimeSpan(RedeliverInterval.Ticks / 2);
-            var cancellation = new CancellationTokenSource();
-
-            Context.System.Scheduler.Schedule(interval, interval, Self, RedeliveryTick.Instance, cancellation.Token);
-
-            return cancellation;
+            return Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(interval, interval, Self, RedeliveryTick.Instance, Self);
         }
     }
 }

@@ -55,8 +55,28 @@ Paragraph above already has shown, how actors may be created with help of the sp
 -   `spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : ActorRef` - spawns an actor using specified actor computation expression. The actor can only be used locally. 
 -   `spawnOpt (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, with custom spawn option settings. The actor can only be used locally. 
 -   `spawne (actorFactory : ActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, using an Expression AST. The actor code can be deployed remotely.
+-   `spawnObj (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : ActorRef` - spawns an actor using specified actor quotation. The actor can only be used locally.
+-   `spawnObjOpt (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor quotation, with custom spawn option settings. The actor can only be used locally.
 
 All of these functions may be used with either actor system or actor itself. In the first case spawned actor will be placed under */user* root guardian of the current actor system hierarchy. In second option spawned actor will become child of the actor used as [actorFactory] parameter of the spawning function.
+
+#### Dealing with disposable resources
+
+When executing application logic inside receive function, be aware of a constant threat of stopping a current actor at any time for various reasons. This is an especially problematic situation when you're using a resource allocation - when actor will be stopped suddenly, you may be left with potentially heavy resources still waiting for being released.
+
+Use `mailbox.Defer (deferredFunc)` in situations when you must ensure operation to be executed at the end of the actor lifecycle.
+
+Example:
+
+    let disposableActor (mailbox:Actor<_>) =
+        let resource = new DisposableResource()
+        mailbox.Defer ((resource :> IDisposable).Dispose)
+        let rec loop () = 
+            actor {
+                let! msg = mailbox.Receive()
+                return! loop ()   
+            }
+        loop()
 
 ### Actor spawning options
 

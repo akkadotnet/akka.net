@@ -16,7 +16,7 @@ namespace Akka.TestKit.Xunit.Internals
         readonly IEqualityComparer<T> innerComparer;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AssertEqualityComparerAdapter{T}"/> class.
+        /// Initializes a new instance of the <see cref="AkkaAssertEqualityComparerAdapter{T}"/> class.
         /// </summary>
         /// <param name="innerComparer">The comparer that is being adapted.</param>
         public AkkaAssertEqualityComparerAdapter(IEqualityComparer<T> innerComparer)

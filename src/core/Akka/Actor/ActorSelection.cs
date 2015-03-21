@@ -72,6 +72,11 @@ namespace Akka.Actor
         public SelectionPathElement[] Elements { get; set; }
 
         /// <summary>
+        /// <see cref="string"/> representation of all of the elements in the <see cref="ActorSelection"/> path.
+        /// </summary>
+        public string PathString { get { return string.Join("/", Elements.Select(x => x.ToString())); } }
+
+        /// <summary>
         ///     Posts a message to this ActorSelection.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -219,6 +224,12 @@ namespace Akka.Actor
         public SelectionPathElement[] Elements { get; private set; }
 
         public bool WildCardFanOut { get; private set; }
+
+        public override string ToString()
+        {
+            return string.Format("ActorSelectionMessage - Message: {0} - WildCartFanOut: {1} - Elements: {2}",
+                Message, WildCardFanOut, string.Join<SelectionPathElement>("/", Elements));
+        }
     }
 
     /// <summary>

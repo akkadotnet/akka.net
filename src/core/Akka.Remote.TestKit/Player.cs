@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -514,13 +515,13 @@ namespace Akka.Remote.TestKit
         readonly int _poolSize;
         readonly ActorRef _fsm;
         readonly LoggingAdapter _log;
-        readonly Scheduler _scheduler;
+        readonly IScheduler _scheduler;
         private bool _loggedDisconnect = false;
         
         Deadline _nextAttempt;
         
         public PlayerHandler(INode server, int reconnects, TimeSpan backoff, int poolSize, ActorRef fsm,
-            LoggingAdapter log, Scheduler scheduler)
+            LoggingAdapter log, IScheduler scheduler)
         {
             _server = server;
             _reconnects = reconnects;
@@ -539,7 +540,7 @@ namespace Akka.Remote.TestKit
             if (ex is HeliosConnectionException && _reconnects > 0)
             {
                 _reconnects -= 1;
-                _scheduler.ScheduleOnce(_nextAttempt.TimeLeft, Reconnect);
+                _scheduler.Advanced.ScheduleOnce(_nextAttempt.TimeLeft, Reconnect);
                 return;
             }
             _fsm.Tell(new ClientFSM.ConnectionFailure(ex.ToString()));

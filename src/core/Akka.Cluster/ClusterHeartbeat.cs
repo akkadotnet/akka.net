@@ -32,7 +32,7 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class ClusterHeartbeatSender : ReceiveActor
     {
-        private readonly CancellationTokenSource _heartbeatTask;
+        private readonly ICancelable _heartbeatTask;
 
         public IFailureDetectorRegistry<Address> FailureDetector
         {
@@ -58,10 +58,10 @@ namespace Akka.Cluster
                 FailureDetector);
 
             //stat perioidic heartbeat to other nodes in cluster
-            _heartbeatTask = new CancellationTokenSource();
-            Context.System.Scheduler.Schedule(
-                _cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.HeartbeatInterval),
-                _cluster.Settings.HeartbeatInterval, Self, new HeartbeatTick());
+            _heartbeatTask =
+            Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
+                _cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.HeartbeatInterval), 
+                _cluster.Settings.HeartbeatInterval, Self, new HeartbeatTick(), Self);
             Initializing();
         }
 
@@ -145,8 +145,8 @@ namespace Akka.Cluster
                     _log.Debug("Cluster Node [{0}] - First Heartbeat to [{1}]", _cluster.SelfAddress, to.Address);
                     // schedule the expected first heartbeat for later, which will give the
                     // other side a chance to reply, and also trigger some resends if needed
-                    Context.System.Scheduler.ScheduleOnce(_cluster.Settings.HeartbeatExpectedResponseAfter, Self,
-                        new ExpectedFirstHeartbeat(to));
+                    Context.System.Scheduler.ScheduleTellOnce(_cluster.Settings.HeartbeatExpectedResponseAfter, Self, 
+                        new ExpectedFirstHeartbeat(to), Self);
                 }
                 HeartbeatReceiver(to.Address).Tell(_selfHeartbeat);
             }
@@ -172,7 +172,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Sent at regular intervals for failure detection
         /// </summary>
-        internal sealed class Heartbeat : IClusterMessage
+        internal sealed class Heartbeat : IClusterMessage, IPriorityMessage
         {
             public Heartbeat(Address @from)
             {
@@ -199,7 +199,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Sends replies to <see cref="Heartbeat"/> messages
         /// </summary>
-        internal sealed class HeartbeatRsp : IClusterMessage
+        internal sealed class HeartbeatRsp : IClusterMessage, IPriorityMessage
         {
             public HeartbeatRsp(UniqueAddress @from)
             {

@@ -24,7 +24,7 @@ namespace Akka.Configuration.Hocon
                     HoconObject obj = v.Value.GetObject();
                     if (obj != null)
                         return (object) obj.Unwrapped;
-                    return null;
+                    return v.Value;
                 });
             }
         }

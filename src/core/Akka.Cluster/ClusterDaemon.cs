@@ -25,7 +25,7 @@ namespace Akka.Cluster
     {
         internal abstract class BaseClusterUserAction
         {
-           readonly Address _address;
+            readonly Address _address;
 
             public Address Address { get { return _address; } }
 
@@ -36,7 +36,7 @@ namespace Akka.Cluster
 
             public override bool Equals(object obj)
             {
-                var baseUserAction = (BaseClusterUserAction) obj;
+                var baseUserAction = (BaseClusterUserAction)obj;
                 return baseUserAction != null && Equals(baseUserAction);
             }
 
@@ -57,7 +57,8 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class JoinTo : BaseClusterUserAction
         {
-            public JoinTo(Address address) : base(address)
+            public JoinTo(Address address)
+                : base(address)
             {
             }
         }
@@ -67,8 +68,9 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class Leave : BaseClusterUserAction, IClusterMessage
         {
-            public Leave(Address address) : base(address)
-            {}
+            public Leave(Address address)
+                : base(address)
+            { }
         }
 
         /// <summary>
@@ -76,8 +78,9 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class Down : BaseClusterUserAction, IClusterMessage
         {
-            public Down(Address address) : base(address)
-            {   
+            public Down(Address address)
+                : base(address)
+            {
             }
         }
     }
@@ -107,7 +110,7 @@ namespace Akka.Cluster
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is Join && Equals((Join) obj);
+                return obj is Join && Equals((Join)obj);
             }
 
             private bool Equals(Join other)
@@ -121,6 +124,12 @@ namespace Akka.Cluster
                 {
                     return (_node.GetHashCode() * 397) ^ _roles.GetHashCode();
                 }
+            }
+
+            public override string ToString()
+            {
+                return string.Format("{0}: {1} wants to join on Roles [{2}]", GetType(), Node,
+                    string.Join(",", Roles ?? ImmutableHashSet<string>.Empty));
             }
         }
 
@@ -148,7 +157,7 @@ namespace Akka.Cluster
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
-                return obj is Welcome && Equals((Welcome) obj);
+                return obj is Welcome && Equals((Welcome)obj);
             }
 
             private bool Equals(Welcome other)
@@ -281,11 +290,11 @@ namespace Akka.Cluster
         /// <summary>
         /// Marker interface for periodic tick messages
         /// </summary>
-        internal interface ITick {}
+        internal interface ITick { }
 
         internal class GossipTick : ITick
         {
-            private GossipTick(){}
+            private GossipTick() { }
             private static readonly GossipTick _instance = new GossipTick();
             public static GossipTick Instance
             {
@@ -293,12 +302,12 @@ namespace Akka.Cluster
                 {
                     return _instance;
                 }
-            }            
+            }
         }
 
         internal class GossipSpeedupTick : ITick
         {
-            private GossipSpeedupTick(){}
+            private GossipSpeedupTick() { }
             private static readonly GossipSpeedupTick _instance = new GossipSpeedupTick();
             public static GossipSpeedupTick Instance
             {
@@ -306,12 +315,12 @@ namespace Akka.Cluster
                 {
                     return _instance;
                 }
-            }             
+            }
         }
 
         internal class ReapUnreachableTick : ITick
         {
-            private ReapUnreachableTick(){}
+            private ReapUnreachableTick() { }
             private static readonly ReapUnreachableTick _instance = new ReapUnreachableTick();
             public static ReapUnreachableTick Instance
             {
@@ -319,12 +328,12 @@ namespace Akka.Cluster
                 {
                     return _instance;
                 }
-            }             
+            }
         }
 
         internal class MetricsTick : ITick
         {
-            private MetricsTick(){}
+            private MetricsTick() { }
             private static readonly MetricsTick _instance = new MetricsTick();
             public static MetricsTick Instance
             {
@@ -332,12 +341,12 @@ namespace Akka.Cluster
                 {
                     return _instance;
                 }
-            }              
+            }
         }
 
         internal class LeaderActionsTick : ITick
         {
-            private LeaderActionsTick(){}
+            private LeaderActionsTick() { }
             private static readonly LeaderActionsTick _instance = new LeaderActionsTick();
             public static LeaderActionsTick Instance
             {
@@ -345,12 +354,12 @@ namespace Akka.Cluster
                 {
                     return _instance;
                 }
-            }             
+            }
         }
 
         internal class PublishStatsTick : ITick
         {
-            private PublishStatsTick(){}
+            private PublishStatsTick() { }
             private static readonly PublishStatsTick _instance = new PublishStatsTick();
             public static PublishStatsTick Instance
             {
@@ -358,7 +367,7 @@ namespace Akka.Cluster
                 {
                     return _instance;
                 }
-            }            
+            }
         }
 
         internal sealed class SendGossipTo
@@ -370,7 +379,7 @@ namespace Akka.Cluster
                 _address = address;
             }
 
-            public Address Address {get { return _address; }}
+            public Address Address { get { return _address; } }
 
             public override bool Equals(object obj)
             {
@@ -387,7 +396,7 @@ namespace Akka.Cluster
 
         internal class GetClusterCoreRef
         {
-            private GetClusterCoreRef(){}
+            private GetClusterCoreRef() { }
             private static readonly GetClusterCoreRef _instance = new GetClusterCoreRef();
             public static GetClusterCoreRef Instance
             {
@@ -395,7 +404,7 @@ namespace Akka.Cluster
                 {
                     return _instance;
                 }
-            } 
+            }
         }
 
         internal sealed class PublisherCreated
@@ -616,7 +625,7 @@ namespace Akka.Cluster
         {
             Cluster.Get(Context.System).Shutdown();
         }
-        
+
     }
 
     class ClusterCoreDaemon : UntypedActor
@@ -637,6 +646,7 @@ namespace Akka.Cluster
         GossipStats _gossipStats = new GossipStats();
         ActorRef _seedNodeProcess;
         int _seedNodeProcessCounter = 0; //for unique names
+        private bool _logInfo;
 
         readonly ActorRef _publisher;
 
@@ -644,68 +654,66 @@ namespace Akka.Cluster
         {
             _publisher = publisher;
             SelfUniqueAddress = _cluster.SelfUniqueAddress;
-            _vclockNode  = new VectorClock.Node(VclockName(SelfUniqueAddress));
-            //TODO: _statsEnabled = PublishStatsInternal.IsFinite;
+            _vclockNode = new VectorClock.Node(VclockName(SelfUniqueAddress));
+            
             var settings = _cluster.Settings;
             var scheduler = _cluster.Scheduler;
 
-            _gossipTaskCancellable = new CancellationTokenSource();
-            _gossipTask =
-                scheduler.Schedule(
-                    settings.PeriodicTasksInitialDelay.Max(settings.GossipInterval), 
-                    settings.GossipInterval,
-                    Self, 
-                    InternalClusterAction.GossipTick.Instance,
-                    _gossipTaskCancellable.Token);
+            _statsEnabled = settings.PublishStatsInterval.HasValue
+                            && settings.PublishStatsInterval >= TimeSpan.Zero
+                            && settings.PublishStatsInterval != TimeSpan.MaxValue;
 
-            _failureDetectorReaperTaskCancellable = new CancellationTokenSource();
-            _failureDetectorReaperTask =
-                scheduler.Schedule(
-                    settings.PeriodicTasksInitialDelay.Max(settings.UnreachableNodesReaperInterval),
+            _gossipTaskCancellable =
+                scheduler.ScheduleTellRepeatedlyCancelable(
+                    settings.PeriodicTasksInitialDelay.Max(settings.GossipInterval), 
+                    settings.GossipInterval, 
+                    Self, 
+                    InternalClusterAction.GossipTick.Instance, 
+                    Self);
+
+            _failureDetectorReaperTaskCancellable =
+                scheduler.ScheduleTellRepeatedlyCancelable(
+                    settings.PeriodicTasksInitialDelay.Max(settings.UnreachableNodesReaperInterval), 
                     settings.UnreachableNodesReaperInterval, 
                     Self, 
-                    InternalClusterAction.ReapUnreachableTick.Instance,
-                    _failureDetectorReaperTaskCancellable.Token);
+                    InternalClusterAction.ReapUnreachableTick.Instance, 
+                    Self);
 
-            _leaderActionsTaskCancellable = new CancellationTokenSource();
-            _leaderActionsTask =
-                scheduler.Schedule(
-                    settings.PeriodicTasksInitialDelay.Max(settings.LeaderActionsInterval),
-                    settings.LeaderActionsInterval,
-                    Self,
-                    InternalClusterAction.LeaderActionsTick.Instance,
-                    _leaderActionsTaskCancellable.Token);
+            _leaderActionsTaskCancellable =
+                scheduler.ScheduleTellRepeatedlyCancelable(
+                    settings.PeriodicTasksInitialDelay.Max(settings.LeaderActionsInterval), 
+                    settings.LeaderActionsInterval, 
+                    Self, 
+                    InternalClusterAction.LeaderActionsTick.Instance, 
+                    Self);
 
-            if (settings.PublishStatsInterval != null)
+            if (settings.PublishStatsInterval != null && settings.PublishStatsInterval > TimeSpan.Zero && settings.PublishStatsInterval != TimeSpan.MaxValue)
             {
-                _publishStatsTaskTaskCancellable = new CancellationTokenSource();
-                _publishStatsTask =
-                            scheduler.Schedule(
-                                settings.PeriodicTasksInitialDelay.Max(settings.PublishStatsInterval.Value),
-                                settings.PublishStatsInterval.Value,
-                                Self,
-                                InternalClusterAction.PublishStatsTick.Instance,
-                                _publishStatsTaskTaskCancellable.Token);                
+                _publishStatsTaskTaskCancellable =
+                    scheduler.ScheduleTellRepeatedlyCancelable(
+                        settings.PeriodicTasksInitialDelay.Max(settings.PublishStatsInterval.Value), 
+                        settings.PublishStatsInterval.Value, 
+                        Self, 
+                        InternalClusterAction.PublishStatsTick.Instance, 
+                        Self);
             }
+
+            _logInfo = settings.LogInfo;
         }
 
         ActorSelection ClusterCore(Address address)
         {
-            return Context.ActorSelection(new RootActorPath(address)/"system"/"cluster"/"core"/"daemon");
+            return Context.ActorSelection(new RootActorPath(address) / "system" / "cluster" / "core" / "daemon");
         }
 
-        readonly Task _gossipTask;
-        readonly CancellationTokenSource _gossipTaskCancellable;
-        readonly Task _failureDetectorReaperTask;
-        readonly CancellationTokenSource _failureDetectorReaperTaskCancellable;
-        readonly Task _leaderActionsTask;
-        readonly CancellationTokenSource _leaderActionsTaskCancellable;
-        readonly Task _publishStatsTask;
-        readonly CancellationTokenSource _publishStatsTaskTaskCancellable;
+        readonly ICancelable _gossipTaskCancellable;
+        readonly ICancelable _failureDetectorReaperTaskCancellable;
+        readonly ICancelable _leaderActionsTaskCancellable;
+        readonly ICancelable _publishStatsTaskTaskCancellable;
 
         protected override void PreStart()
         {
-            Context.System.EventStream.Subscribe(Self, typeof (QuarantinedEvent));
+            Context.System.EventStream.Subscribe(Self, typeof(QuarantinedEvent));
 
             if (_cluster.Settings.AutoDownUnreachableAfter != null)
                 Context.ActorOf(
@@ -728,48 +736,84 @@ namespace Akka.Cluster
             _gossipTaskCancellable.Cancel();
             _failureDetectorReaperTaskCancellable.Cancel();
             _leaderActionsTaskCancellable.Cancel();
-            if(_publishStatsTaskTaskCancellable != null) _publishStatsTaskTaskCancellable.Cancel();
+            if (_publishStatsTaskTaskCancellable != null) _publishStatsTaskTaskCancellable.Cancel();
         }
 
         private void Uninitialized(object message)
         {
-            message.Match()
-                .With<InternalClusterAction.InitJoin>(m =>
-                    Sender.Tell(new InternalClusterAction.InitJoinAck(_cluster.SelfAddress)))
-                .With<ClusterUserAction.JoinTo>(m => Join(m.Address))
-                .With<InternalClusterAction.JoinSeedNodes>(m => JoinSeedNodes(m.SeedNodes))
-                .With<InternalClusterAction.ISubscriptionMessage>(msg => _publisher.Forward(msg));
+            if (_logInfo && !(message is InternalClusterAction.ITick))
+            {
+                _log.Debug("[Uninitialized] Received {0}", message);
+            }
+
+            if (message is InternalClusterAction.InitJoin)
+            {
+                Sender.Tell(new InternalClusterAction.InitJoinNack(_cluster.SelfAddress));
+            }
+            else if (message is ClusterUserAction.JoinTo)
+            {
+                var jt = message as ClusterUserAction.JoinTo;
+                Join(jt.Address);
+            }
+            else if (message is InternalClusterAction.JoinSeedNodes)
+            {
+                var js = message as InternalClusterAction.JoinSeedNodes;
+                JoinSeedNodes(js.SeedNodes);
+            }
+            else if (message is InternalClusterAction.ISubscriptionMessage)
+            {
+                var isub = message as InternalClusterAction.ISubscriptionMessage;
+                _publisher.Forward(isub);
+            }
+            else
+            {
+                Unhandled(message);
+            }
         }
 
         private void TryingToJoin(object message, Address joinWith, Deadline deadline)
         {
-            message.Match()
-                .With<InternalClusterAction.Welcome>(m => Welcome(joinWith, m.From, m.Gossip))
-                .With<InternalClusterAction.InitJoin>(
-                    m => Sender.Tell(new InternalClusterAction.InitJoinAck(_cluster.SelfAddress)))
-                .With<ClusterUserAction.JoinTo>(m =>
+            if (_logInfo && !(message is InternalClusterAction.ITick))
+            {
+                _log.Debug("[TryingToJoin] Received {0}", message);
+            }
+
+            if (message is InternalClusterAction.Welcome)
+            {
+                var w = message as InternalClusterAction.Welcome;
+                Welcome(joinWith, w.From, w.Gossip);
+            }
+            else if (message is InternalClusterAction.InitJoin)
+            {
+                Sender.Tell(new InternalClusterAction.InitJoinNack(_cluster.SelfAddress));
+            }
+            else if (message is ClusterUserAction.JoinTo)
+            {
+                var jt = message as ClusterUserAction.JoinTo;
+                BecomeUninitialized();
+                Join(jt.Address);
+            }
+            else if (message is InternalClusterAction.ISubscriptionMessage)
+            {
+                var isub = message as InternalClusterAction.ISubscriptionMessage;
+                _publisher.Forward(isub);
+            }
+            else if (message is InternalClusterAction.ITick)
+            {
+                if (deadline != null && deadline.IsOverdue)
                 {
-                    BecomeUnitialized();
-                    Join(m.Address);
-                })
-                .With<InternalClusterAction.JoinSeedNodes>(m =>
-                {
-                    BecomeUnitialized();
-                    JoinSeedNodes(m.SeedNodes);
-                })
-                .With<InternalClusterAction.ISubscriptionMessage>(msg => _publisher.Forward(msg))
-                .Default(m =>
-                {
-                    if (deadline != null && deadline.IsOverdue)
-                    {
-                        BecomeUnitialized();
-                        if (_cluster.Settings.SeedNodes.Any()) JoinSeedNodes(_cluster.Settings.SeedNodes);
-                        else Join(joinWith);
-                    }
-                });
+                    BecomeUninitialized();
+                    if (_cluster.Settings.SeedNodes.Any()) JoinSeedNodes(_cluster.Settings.SeedNodes);
+                    else Join(joinWith);
+                }
+            }
+            else
+            {
+                Unhandled(message);
+            }
         }
 
-        private void BecomeUnitialized()
+        private void BecomeUninitialized()
         {
             // make sure that join process is stopped
             StopSeedNodeProcess();
@@ -789,27 +833,84 @@ namespace Akka.Cluster
 
         private void Initialized(object message)
         {
-            message.Match()
-                .With<GossipEnvelope>(m => ReceiveGossip(m))
-                .With<GossipStatus>(ReceiveGossipStatus)
-                .With<InternalClusterAction.GossipTick>(m => GossipTick())
-                .With<InternalClusterAction.GossipSpeedupTick>(m => GossipSpeedupTick())
-                .With<InternalClusterAction.ReapUnreachableTick>(m => ReapUnreachableMembers())
-                .With<InternalClusterAction.LeaderActionsTick>(m => LeaderActions())
-                .With<InternalClusterAction.PublishStatsTick>(m => PublishInternalStats())
-                .With<InternalClusterAction.InitJoin>(m => InitJoin())
-                .With<InternalClusterAction.Join>(m => Joining(m.Node, m.Roles))
-                .With<ClusterUserAction.Down>(m => Downing(m.Address))
-                .With<ClusterUserAction.Leave>(m => Leaving(m.Address))
-                .With<InternalClusterAction.SendGossipTo>(m => SendGossipTo(m.Address))
-                .With<InternalClusterAction.ISubscriptionMessage>(m => _publisher.Forward(m))
-                .With<QuarantinedEvent>(m => Quarantined(new UniqueAddress(m.Address, m.Uid)))
-                .With<ClusterUserAction.JoinTo>(
-                    m => _log.Info("Trying to join [{0}] when already part of a cluster, ignoring", m.Address))
-                .With<InternalClusterAction.JoinSeedNodes>(
-                    m =>
-                        _log.Info("Trying to join seed nodes [{0}] when already part of a cluster, ignoring",
-                            m.SeedNodes.Select(a => a.ToString()).Aggregate((a, b) => a + ", " + b)));
+            if (_logInfo && !(message is InternalClusterAction.ITick))
+            {
+                _log.Debug("[Initialized] Received {0}", message);
+            }
+
+            if (message is GossipEnvelope)
+            {
+                var ge = message as GossipEnvelope;
+                ReceiveGossip(ge);
+            }
+            else if (message is GossipStatus)
+            {
+                var gs = message as GossipStatus;
+                ReceiveGossipStatus(gs);
+            }
+            else if (message is InternalClusterAction.GossipTick)
+            {
+                GossipTick();
+            }
+            else if (message is InternalClusterAction.GossipSpeedupTick)
+            {
+                GossipSpeedupTick();
+            }
+            else if (message is InternalClusterAction.ReapUnreachableTick)
+            {
+                ReapUnreachableMembers();
+            }
+            else if (message is InternalClusterAction.LeaderActionsTick)
+            {
+                LeaderActions();
+            }
+            else if (message is InternalClusterAction.PublishStatsTick)
+            {
+                PublishInternalStats();
+            }
+            else if (message is InternalClusterAction.InitJoin)
+            {
+                InitJoin();
+            }
+            else if (message is InternalClusterAction.Join)
+            {
+                var join = message as InternalClusterAction.Join;
+                Joining(join.Node, join.Roles);
+            }
+            else if (message is ClusterUserAction.Down)
+            {
+                var down = message as ClusterUserAction.Down;
+                Downing(down.Address);
+            }
+            else if (message is ClusterUserAction.Leave)
+            {
+                var leave = message as ClusterUserAction.Leave;
+                Leaving(leave.Address);
+            }
+            else if (message is InternalClusterAction.ISubscriptionMessage)
+            {
+                _publisher.Forward(message);
+            }
+            else if (message is QuarantinedEvent)
+            {
+                var q = message as QuarantinedEvent;
+                Quarantined(new UniqueAddress(q.Address, q.Uid));
+            }
+            else if (message is ClusterUserAction.JoinTo)
+            {
+                var jt = message as ClusterUserAction.JoinTo;
+                _log.Info("Trying to join [{0}] when already part of a cluster, ignoring", jt.Address);
+            }
+            else if (message is InternalClusterAction.JoinSeedNodes)
+            {
+                var joinSeedNodes = message as InternalClusterAction.JoinSeedNodes;
+                _log.Info("Trying to join seed nodes [{0}] when already part of a cluster, ignoring",
+                    joinSeedNodes.SeedNodes.Select(a => a.ToString()).Aggregate((a, b) => a + ", " + b));
+            }
+            else
+            {
+                Unhandled(message);
+            }
         }
 
         protected override void OnReceive(object message)
@@ -819,11 +920,18 @@ namespace Akka.Cluster
 
         protected override void Unhandled(object message)
         {
-            message.Match()
-                .With<InternalClusterAction.ITick>(m => { })
-                .With<GossipEnvelope>(m => { })
-                .With<GossipStatus>(m => { })
-                .Default(m => base.Unhandled(m));
+            if (message is InternalClusterAction.ITick || message is GossipEnvelope || message is GossipStatus)
+            {
+                //do nothing
+            }
+            else
+            {
+                if (_logInfo)
+                {
+                    _log.Debug("[Unhandled] Received {0}", message);
+                }
+                base.Unhandled(message);
+            }
         }
 
         public void InitJoin()
@@ -836,7 +944,7 @@ namespace Akka.Cluster
             if (seedNodes.Any())
             {
                 StopSeedNodeProcess();
-                if(seedNodes.SequenceEqual(ImmutableList.Create(_cluster.SelfAddress)))
+                if (seedNodes.SequenceEqual(ImmutableList.Create(_cluster.SelfAddress)))
                 {
                     Self.Tell(new ClusterUserAction.JoinTo(_cluster.SelfAddress));
                     _seedNodeProcess = null;
@@ -847,7 +955,7 @@ namespace Akka.Cluster
                     _seedNodeProcessCounter += 1;
                     if (seedNodes.Head().Equals(_cluster.SelfAddress))
                     {
-                        _seedNodeProcess = Context.ActorOf(Props.Create(() => new FirstSeedNodeProcess(seedNodes)),"firstSeedNodeProcess-" + _seedNodeProcessCounter);
+                        _seedNodeProcess = Context.ActorOf(Props.Create(() => new FirstSeedNodeProcess(seedNodes)), "firstSeedNodeProcess-" + _seedNodeProcessCounter);
                     }
                     else
                     {
@@ -856,11 +964,11 @@ namespace Akka.Cluster
                 }
             }
         }
-        
-       // Try to join this cluster node with the node specified by `address`.
-       // It's only allowed to join from an empty state, i.e. when not already a member.
-       // A `Join(selfUniqueAddress)` command is sent to the node to join,
-       // which will reply with a `Welcome` message.
+
+        // Try to join this cluster node with the node specified by `address`.
+        // It's only allowed to join from an empty state, i.e. when not already a member.
+        // A `Join(selfUniqueAddress)` command is sent to the node to join,
+        // which will reply with a `Welcome` message.
         public void Join(Address address)
         {
             if (address.Protocol != _cluster.SelfAddress.Protocol)
@@ -877,7 +985,7 @@ namespace Akka.Cluster
             else
             {
                 //TODO: Akka exception?
-                if(!_latestGossip.Members.IsEmpty) throw new InvalidOperationException("Join can only be done from an empty state");
+                if (!_latestGossip.Members.IsEmpty) throw new InvalidOperationException("Join can only be done from an empty state");
 
                 // to support manual join when joining to seed nodes is stuck (no seed nodes available)
                 StopSeedNodeProcess();
@@ -914,7 +1022,7 @@ namespace Akka.Cluster
         // current gossip state, including the new joining member.
         public void Joining(UniqueAddress node, ImmutableHashSet<string> roles)
         {
-            if(node.Address.Protocol != _cluster.SelfAddress.Protocol)
+            if (node.Address.Protocol != _cluster.SelfAddress.Protocol)
             {
                 _log.Warning("Member with wrong protocol tried to join, but was ignored, expected [{0}] but was [{1}]",
                     _cluster.SelfAddress.Protocol, node.Address.Protocol);
@@ -967,7 +1075,7 @@ namespace Akka.Cluster
         //Reply from Join request
         public void Welcome(Address joinWith, UniqueAddress from, Gossip gossip)
         {
-            if(!_latestGossip.Members.IsEmpty) throw new InvalidOperationException("Welcome can only be done from an empty state");
+            if (!_latestGossip.Members.IsEmpty) throw new InvalidOperationException("Welcome can only be done from an empty state");
             if (!joinWith.Equals(from.Address))
             {
                 _log.Info("Ignoring welcome from [{0}] when trying to join with [{1}]", from.Address, joinWith);
@@ -977,7 +1085,7 @@ namespace Akka.Cluster
                 _log.Info("Welcome from [{0}]", from.Address);
                 _latestGossip = gossip.Seen(SelfUniqueAddress);
                 Publish(_latestGossip);
-                if(!from.Equals(SelfUniqueAddress))
+                if (!from.Equals(SelfUniqueAddress))
                     GossipTo(from, Sender);
                 BecomeInitialized();
             }
@@ -989,7 +1097,7 @@ namespace Akka.Cluster
         public void Leaving(Address address)
         {
             // only try to update if the node is available (in the member ring)
-            if(_latestGossip.Members.Any(m=> m.Address.Equals(address) && m.Status == MemberStatus.Up))
+            if (_latestGossip.Members.Any(m => m.Address.Equals(address) && m.Status == MemberStatus.Up))
             {
                 var newMembers = _latestGossip.Members.Select(m =>
                 {
@@ -1030,7 +1138,7 @@ namespace Akka.Cluster
             var member = localMembers.FirstOrDefault(m => m.Address == address);
             if (member == null)
             {
-                _log.Info("Ignoring down of unknown node [{0}]", address); 
+                _log.Info("Ignoring down of unknown node [{0}]", address);
             }
             else
             {
@@ -1063,7 +1171,7 @@ namespace Akka.Cluster
                 var newOverview = localGossip.Overview.Copy(reachability: newReachability);
                 var newGossip = localGossip.Copy(overview: newOverview);
                 UpdateLatestGossip(newGossip);
-                _log.Warn("Cluster Node [{0}] - Marking node as TERMINATED [{1}], due to quarantine",
+                _log.Warning("Cluster Node [{0}] - Marking node as TERMINATED [{1}], due to quarantine",
                     Self, node.Address);
                 Publish(_latestGossip);
                 Downing(node.Address);
@@ -1073,7 +1181,7 @@ namespace Akka.Cluster
         public void ReceiveGossipStatus(GossipStatus status)
         {
             var from = status.From;
-            if(!_latestGossip.Overview.Reachability.IsReachable(SelfUniqueAddress, from))
+            if (!_latestGossip.Overview.Reachability.IsReachable(SelfUniqueAddress, from))
                 _log.Info("Ignoring received gossip status from unreachable [{0}]", from);
             else if (_latestGossip.Members.All(m => !m.UniqueAddress.Equals(from)))
                 _log.Debug("Cluster Node [{0}] - Ignoring received gossip status from unknown [{1}]",
@@ -1122,11 +1230,11 @@ namespace Akka.Cluster
             {
                 _log.Debug("Cluster Node [{0}] - Ignoring received gossip from [{1}] to protect against overload",
                     _cluster.SelfAddress, from);
-                 return ReceiveGossipType.Ignored;
-            }          
+                return ReceiveGossipType.Ignored;
+            }
             if (!envelope.To.Equals(SelfUniqueAddress))
             {
-                _log.Info("Ignoring received gossip intended for someone else, from [{0}] to [{1}]", 
+                _log.Info("Ignoring received gossip intended for someone else, from [{0}] to [{1}]",
                     from.Address, envelope.To);
                 return ReceiveGossipType.Ignored;
             }
@@ -1140,12 +1248,12 @@ namespace Akka.Cluster
                 _log.Info("Ignoring received gossip from unreachable [{0}]", from);
                 return ReceiveGossipType.Ignored;
             }
-            if(localGossip.Members.All(m => !m.UniqueAddress.Equals(from)))
+            if (localGossip.Members.All(m => !m.UniqueAddress.Equals(from)))
             {
                 _log.Debug("Cluster Node [{0}] - Ignoring received gossip from unknown [{1}]", _cluster.SelfAddress, from);
                 return ReceiveGossipType.Ignored;
             }
-            if(remoteGossip.Members.All(m => !m.UniqueAddress.Equals(SelfUniqueAddress)))
+            if (remoteGossip.Members.All(m => !m.UniqueAddress.Equals(SelfUniqueAddress)))
             {
                 _log.Debug("Ignoring received gossip that does not contain myself, from [{0}]", from);
                 return ReceiveGossipType.Ignored;
@@ -1176,7 +1284,7 @@ namespace Akka.Cluster
                     winningGossip = remoteGossip;
                     talkback = !remoteGossip.SeenByNode(SelfUniqueAddress);
                     gossipType = ReceiveGossipType.Newer;
-                    break;                
+                    break;
                 default:
                     //conflicting versions, merge
                     winningGossip = remoteGossip.Merge(localGossip);
@@ -1224,7 +1332,7 @@ namespace Akka.Cluster
             Publish(_latestGossip);
 
             var selfStatus = _latestGossip.GetMember(SelfUniqueAddress).Status;
-            if(selfStatus == MemberStatus.Exiting || selfStatus == MemberStatus.Down)
+            if (selfStatus == MemberStatus.Exiting || selfStatus == MemberStatus.Down)
                 Shutdown();
             else if (talkback)
             {
@@ -1240,9 +1348,9 @@ namespace Akka.Cluster
             SendGossip();
             if (IsGossipSpeedupNeeded())
             {
-                _cluster.Scheduler.ScheduleOnce(new TimeSpan(_cluster.Settings.GossipInterval.Ticks/3), Self,
+                _cluster.Scheduler.ScheduleOnce(new TimeSpan(_cluster.Settings.GossipInterval.Ticks / 3), Self,
                     InternalClusterAction.GossipSpeedupTick.Instance);
-                _cluster.Scheduler.ScheduleOnce(new TimeSpan(_cluster.Settings.GossipInterval.Ticks * 2/3), Self,
+                _cluster.Scheduler.ScheduleOnce(new TimeSpan(_cluster.Settings.GossipInterval.Ticks * 2 / 3), Self,
                     InternalClusterAction.GossipSpeedupTick.Instance);
             }
         }
@@ -1254,7 +1362,7 @@ namespace Akka.Cluster
 
         public bool IsGossipSpeedupNeeded()
         {
-            return _latestGossip.Overview.Seen.Count < _latestGossip.Members.Count/2;
+            return _latestGossip.Overview.Seen.Count < _latestGossip.Members.Count / 2;
         }
 
         //Initiates a new round of gossip.
@@ -1295,7 +1403,7 @@ namespace Akka.Cluster
 
                     if (peer != null)
                     {
-                        if(localGossip.SeenByNode(peer)) GossipStatusTo(peer);   
+                        if (localGossip.SeenByNode(peer)) GossipStatusTo(peer);
                         else GossipTo(peer);
                     }
                 }
@@ -1327,7 +1435,7 @@ namespace Akka.Cluster
                     // i.e. default from 0.8 at 400 nodes, to 0.08 at 1600 nodes     
                     var k = (minP - _cluster.Settings.ReduceGossipDifferentViewProbability) / (high - low);
                     return _cluster.Settings.ReduceGossipDifferentViewProbability + (size - low) * k;
-                }                
+                }
             }
         }
 
@@ -1398,7 +1506,7 @@ namespace Akka.Cluster
                     return m.CopyUp(upNumber);
                 }
 
-                if (m.Status == MemberStatus.Leaving && hasPartionHandoffCompletedSuccessfully)
+                if (m.Status == MemberStatus.Leaving)
                 {
                     // Move LEAVING => EXITING (once we have a convergence on LEAVING
                     // *and* if we have a successful partition handoff)
@@ -1430,6 +1538,13 @@ namespace Akka.Cluster
                 // log status changes
                 foreach (var m in changedMembers)
                     _log.Info("Leader is moving node [{0}] to [{1}]", m.Address, m.Status);
+
+                //log the removal of unreachable nodes
+                foreach (var m in removedUnreachable)
+                {
+                    var status = m.Status == MemberStatus.Exiting ? "exiting" : "unreachable";
+                    _log.Info("Leader is removing {0} node [{1}]", status, m.Address);
+                }
 
                 Publish(_latestGossip);
 
@@ -1538,11 +1653,11 @@ namespace Akka.Cluster
                     GossipTo(m.UniqueAddress);
             }
         }
-        
+
         //Gossips latest gossip to a node.
         public void GossipTo(UniqueAddress node)
         {
-            if(ValidNodeForGossip(node))
+            if (ValidNodeForGossip(node))
                 ClusterCore(node.Address).Tell(new GossipEnvelope(SelfUniqueAddress, node, _latestGossip));
         }
 
@@ -1560,7 +1675,7 @@ namespace Akka.Cluster
 
         public void GossipStatusTo(UniqueAddress node, ActorRef destination)
         {
-            if(ValidNodeForGossip(node))
+            if (ValidNodeForGossip(node))
                 destination.Tell(new GossipStatus(SelfUniqueAddress, _latestGossip.Version));
         }
 
@@ -1630,11 +1745,11 @@ namespace Akka.Cluster
 
         public JoinSeedNodeProcess(ImmutableList<Address> seeds)
         {
-             _selfAddress = Cluster.Get(Context.System).SelfAddress;
+            _selfAddress = Cluster.Get(Context.System).SelfAddress;
             _seeds = seeds;
-            if(!seeds.Any() || seeds.Head() == _selfAddress)
+            if (!seeds.Any() || seeds.Head() == _selfAddress)
                 throw new ArgumentException("Join seed node should not be done");
-           Context.SetReceiveTimeout(Cluster.Get(Context.System).Settings.SeedNodeTimeout);
+            Context.SetReceiveTimeout(Cluster.Get(Context.System).Settings.SeedNodeTimeout);
         }
 
         protected override void PreStart()
@@ -1652,13 +1767,13 @@ namespace Akka.Cluster
                         _seeds.Where(x => x != _selfAddress)
                             .Select(y => Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(y))))
                 {
-                   path.Tell(new InternalClusterAction.InitJoin()); 
+                    path.Tell(new InternalClusterAction.InitJoin());
                 }
             }
             else if (message is InternalClusterAction.InitJoinAck)
             {
                 //first InitJoinAck reply
-                var initJoinAck = (InternalClusterAction.InitJoinAck) message;
+                var initJoinAck = (InternalClusterAction.InitJoinAck)message;
                 Context.Parent.Tell(new ClusterUserAction.JoinTo(initJoinAck.Address));
                 Context.Become(Done);
             }
@@ -1679,7 +1794,8 @@ namespace Akka.Cluster
             if (message is InternalClusterAction.InitJoinAck)
             {
                 //already received one, skip the rest
-            } else if(message is ReceiveTimeout) Context.Stop(Self);
+            }
+            else if (message is ReceiveTimeout) Context.Stop(Self);
         }
     }
 
@@ -1704,7 +1820,7 @@ namespace Akka.Cluster
         readonly Cluster _cluster;
         readonly Deadline _timeout;
         private Task _retryTask;
-        readonly CancellationTokenSource _retryTaskToken;
+        readonly ICancelable _retryTaskToken;
 
         public FirstSeedNodeProcess(ImmutableList<Address> seeds)
         {
@@ -1716,9 +1832,7 @@ namespace Akka.Cluster
 
             _remainingSeeds = seeds.Remove(_selfAddress);
             _timeout = Deadline.Now + _cluster.Settings.SeedNodeTimeout;
-            _retryTaskToken = new CancellationTokenSource();
-            _retryTask = _cluster.Scheduler.Schedule(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), Self,
-                new InternalClusterAction.JoinSeenNode(), _retryTaskToken.Token);
+            _retryTaskToken = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), Self, new InternalClusterAction.JoinSeenNode(), Self);
             Self.Tell(new InternalClusterAction.JoinSeenNode());
         }
 
@@ -1750,13 +1864,13 @@ namespace Akka.Cluster
             else if (message is InternalClusterAction.InitJoinAck)
             {
                 // first InitJoinAck reply, join existing cluster
-                var initJoinAck = (InternalClusterAction.InitJoinAck) message;
+                var initJoinAck = (InternalClusterAction.InitJoinAck)message;
                 Context.Parent.Tell(new ClusterUserAction.JoinTo(initJoinAck.Address));
                 Context.Stop(Self);
             }
             else if (message is InternalClusterAction.InitJoinNack)
             {
-                var initJoinNack = (InternalClusterAction.InitJoinNack) message;
+                var initJoinNack = (InternalClusterAction.InitJoinNack)message;
                 _remainingSeeds = _remainingSeeds.Remove(initJoinNack.Address);
                 if (!_remainingSeeds.Any())
                 {
@@ -1783,8 +1897,8 @@ namespace Akka.Cluster
         public readonly long NewerCount;
         public readonly long OlderCount;
 
-        public GossipStats(long receivedGossipCount = 0L, 
-            long mergeCount = 0L, 
+        public GossipStats(long receivedGossipCount = 0L,
+            long mergeCount = 0L,
             long sameCount = 0L,
             long newerCount = 0L, long olderCount = 0L)
         {
@@ -1820,9 +1934,9 @@ namespace Akka.Cluster
             long? sameCount = null,
             long? newerCount = null, long? olderCount = null)
         {
-            return new GossipStats(receivedGossipCount ?? ReceivedGossipCount, 
-                mergeCount ?? MergeCount, 
-                newerCount ?? NewerCount, 
+            return new GossipStats(receivedGossipCount ?? ReceivedGossipCount,
+                mergeCount ?? MergeCount,
+                newerCount ?? NewerCount,
                 olderCount ?? OlderCount);
         }
 
@@ -1830,10 +1944,10 @@ namespace Akka.Cluster
 
         public static GossipStats operator +(GossipStats a, GossipStats b)
         {
-            return new GossipStats(a.ReceivedGossipCount + b.ReceivedGossipCount, 
-                a.MergeCount + b.MergeCount, 
-                a.SameCount + b.SameCount, 
-                a.NewerCount + b.NewerCount, 
+            return new GossipStats(a.ReceivedGossipCount + b.ReceivedGossipCount,
+                a.MergeCount + b.MergeCount,
+                a.SameCount + b.SameCount,
+                a.NewerCount + b.NewerCount,
                 a.OlderCount + b.OlderCount);
         }
 
@@ -1866,7 +1980,7 @@ namespace Akka.Cluster
             _cluster = Cluster.Get(Context.System);
             Receive<ClusterEvent.CurrentClusterState>(state =>
             {
-                if(state.Members.Any(IsSelfUp))
+                if (state.Members.Any(IsSelfUp))
                     Done();
             });
 
@@ -1879,7 +1993,7 @@ namespace Akka.Cluster
 
         protected override void PreStart()
         {
-            _cluster.Subscribe(Self, new []{ typeof(ClusterEvent.MemberUp) });
+            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.MemberUp) });
         }
 
         protected override void PostStop()
@@ -1893,7 +2007,7 @@ namespace Akka.Cluster
             {
                 _callback.Invoke();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _log.Error(ex, "OnMemberUp callback failed with [{0}]", ex.Message);
             }
@@ -1920,8 +2034,8 @@ namespace Akka.Cluster
             _seenLatest = seenLatest;
         }
 
-        public int VersionSize {get { return _versionSize;}}
-        public int SeenLatest {get { return _seenLatest;}}
+        public int VersionSize { get { return _versionSize; } }
+        public int SeenLatest { get { return _seenLatest; } }
 
         public override bool Equals(object obj)
         {
@@ -1935,7 +2049,7 @@ namespace Akka.Cluster
         {
             unchecked
             {
-                return (_versionSize*397) ^ _seenLatest;
+                return (_versionSize * 397) ^ _seenLatest;
             }
         }
     }

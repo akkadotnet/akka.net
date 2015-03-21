@@ -31,6 +31,7 @@ namespace Akka.Remote
             RemoteLifecycleEventsLogLevel = config.GetString("akka.remote.log-remote-lifecycle-events") ?? "DEBUG";
             Dispatcher = config.GetString("akka.remote.use-dispatcher");
             if (RemoteLifecycleEventsLogLevel.Equals("on")) RemoteLifecycleEventsLogLevel = "DEBUG";
+            if (RemoteLifecycleEventsLogLevel.Equals("off")) RemoteLifecycleEventsLogLevel = "WARNING";
             FlushWait = config.GetTimeSpan("akka.remote.flush-wait-on-shutdown");
             ShutdownTimeout = config.GetTimeSpan("akka.remote.shutdown-timeout");
             TransportNames = config.GetStringList("akka.remote.enabled-transports");
@@ -132,7 +133,8 @@ namespace Akka.Remote
         private static IDictionary<string, string> ConfigToMap(Config cfg)
         {
             if(cfg.IsEmpty) return new Dictionary<string, string>();
-            return cfg.Root.GetObject().Unwrapped.ToDictionary(k => k.Key, v => v.Value != null? v.Value.ToString():null);
+            var unwrapped = cfg.Root.GetObject().Unwrapped;
+            return unwrapped.ToDictionary(k => k.Key, v => v.Value != null? v.Value.ToString():null);
         }
     }
 }

@@ -8,6 +8,6 @@ namespace Akka.Actor
 {
     public interface ICanTell
     {
-        void Tell(object mssage, ActorRef sender);
+        void Tell(object message, ActorRef sender);
     }
 }

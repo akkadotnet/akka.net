@@ -292,21 +292,18 @@ namespace Akka.Remote
             }
         }
 
-        private CancellationTokenSource _pruneCancellationTokenSource;
-        private Task _pruneTimeCancellableImpl;
+        private ICancelable _pruneTimeCancelable;
 
         /// <summary>
-        /// Cancellable task for terminating <see cref="Prune"/> operations.
+        /// Cancelable for terminating <see cref="Prune"/> operations.
         /// </summary>
-        private Task PruneTimerCancelleable
+        private ICancelable PruneTimerCancelleable
         {
             get
             {
-                if (RetryGateEnabled && _pruneTimeCancellableImpl == null)
+                if (RetryGateEnabled && _pruneTimeCancelable == null)
                 {
-                    _pruneCancellationTokenSource = new CancellationTokenSource();
-                    return (_pruneTimeCancellableImpl = Context.System.Scheduler.Schedule(PruneInterval, PruneInterval, Self, new Prune(),
-                        _pruneCancellationTokenSource.Token));
+                    return _pruneTimeCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(PruneInterval, PruneInterval, Self, new Prune(), Self);
                 }
                 return null;
             }
@@ -381,7 +378,7 @@ namespace Akka.Remote
         protected override void PostStop()
         {
             if(PruneTimerCancelleable != null)
-                _pruneCancellationTokenSource.Cancel();
+                _pruneTimeCancelable.Cancel();
         }
 
         protected override void OnReceive(object message)
@@ -397,7 +394,7 @@ namespace Akka.Remote
                     {
                         return new ListensResult(listen.AddressesPromise, listens.Result);
                     }
-                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent)
+                }, TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
                     .PipeTo(Self))
                 .With<ListensResult>(listens =>
                 {
@@ -426,7 +423,7 @@ namespace Akka.Remote
                     listens.AddressesPromise.SetResult(transportsAndAddresses);
                 })
                 .With<ListensFailure>(failure => failure.AddressesPromise.SetException(failure.Cause))
-                .With<InboundAssociation>(ia => Context.System.Scheduler.ScheduleOnce(TimeSpan.FromMilliseconds(10), Self, ia))
+                .With<InboundAssociation>(ia => Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(10), Self, ia, Self))
                 .With<ManagementCommand>(mc => Sender.Tell(new ManagementCommandAck(status:false)))
                 .With<StartupFinished>(sf => Context.Become(Accepting))
                 .With<ShutdownAndFlush>(sf =>
@@ -441,11 +438,15 @@ namespace Akka.Remote
             message.Match()
                 .With<ManagementCommand>(mc =>
                 {
-                    var allStatuses = _transportMapping.Values.Select(x => x.ManagementCommand(mc));
+                    var sender = Sender;
+                    var allStatuses = _transportMapping.Values.Select(x => x.ManagementCommand(mc.Cmd));
                     Task.WhenAll(allStatuses)
-                        .ContinueWith(x => new ManagementCommandAck(x.Result.All(y => y)),
-                            TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent)
-                        .PipeTo(Self);
+                        .ContinueWith(x =>
+                        {
+                            return new ManagementCommandAck(x.Result.All(y => y));
+                        },
+                            TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
+                        .PipeTo(sender);
                 })
                 .With<Quarantine>(quarantine =>
                 {
@@ -525,7 +526,7 @@ namespace Akka.Remote
                     // The construction of the Task for shutdownStatus has to happen after the flushStatus future has been finished
                     // so that endpoints are shut down before transports.
                     var shutdownStatus = Task.WhenAll(endpoints.AllEndpoints.Select(
-                            x => x.GracefulStop(settings.FlushWait, new EndpointWriter.FlushAndStop()))).ContinueWith(
+                            x => x.GracefulStop(settings.FlushWait, EndpointWriter.FlushAndStop.Instance))).ContinueWith(
                                 result =>
                                 {
                                     if (result.IsFaulted)
@@ -696,7 +697,7 @@ namespace Akka.Remote
                         //The chain at this point:
                         //  Adapter <-- .. <-- Adapter <-- Driver
                         var wrappedTransport = transportSettings.Adapters.Select(x => TransportAdaptersExtension.For(Context.System).GetAdapterProvider(x)).Aggregate(driver,
-                            (transport, provider) => provider.Create(transport, Context.System));
+                            (transport, provider) => provider.Create(transport, (ExtendedActorSystem)Context.System));
 
                         //Apply AkkaProtocolTransport wrapper to the end of the chain
                         //The chain at this point:

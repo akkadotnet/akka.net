@@ -65,12 +65,14 @@ Paragraph above already has shown, how actors may be created with help of the sp
 -   `spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : ActorRef` - spawns an actor using specified actor computation expression. The actor can only be used locally. 
 -   `spawnOpt (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, with custom spawn option settings. The actor can only be used locally. 
 -   `spawne (actorFactory : ActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, using an Expression AST. The actor code can be deployed remotely.
+-   `spawnObj (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : ActorRef` - spawns an actor using specified actor quotation. The actor can only be used locally.
+-   `spawnObjOpt (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor quotation, with custom spawn option settings. The actor can only be used locally.
 
 All of these functions may be used with either actor system or actor itself. In the first case spawned actor will be placed under */user* root guardian of the current actor system hierarchy. In second option spawned actor will become child of the actor used as [actorFactory] parameter of the spawning function.
 
 ### Actor spawning options
 
-To be able to specifiy more precise actor creation behavior, you may use `spawnOpt` and `spawne` methods, both taking a list of `SpawnOption` values. Each specific option should be present only once in the collection. When a conflict occurs (more than one option of specified type has been found), the latest value found inside the list will be chosen.
+To be able to specify more precise actor creation behavior, you may use `spawnOpt` and `spawne` methods, both taking a list of `SpawnOption` values. Each specific option should be present only once in the collection. When a conflict occurs (more than one option of specified type has been found), the latest value found inside the list will be chosen.
 
 -   `SpawnOption.Deploy(Akka.Actor.Deploy)` - defines deployment strategy for created actors (see: Deploy). This option may be used along with `spawne` function to enable remote actors deployment.
 -   `SpawnOption.Router(Akka.Routing.RouterConfig)` - defines an actor to be a router as well as it's routing specifics (see: [Routing](http://akkadotnet.github.io/wiki/Routing)).
@@ -215,7 +217,7 @@ F# API provides following scheduling functions:
 
 ### Logging
 
-F# API supports two groups of logging functions - one that operates directly on strings and second (which may be recognized by *f* suffix in function names) which operates using F# string formating features. Major difference is performance - first one is less powerful, but it's also faster than the second one.
+F# API supports two groups of logging functions - one that operates directly on strings and second (which may be recognized by *f* suffix in function names) which operates using F# string formatting features. Major difference is performance - first one is less powerful, but it's also faster than the second one.
 
 Both groups support logging on various levels (DEBUG, &lt;default&gt; INFO, WARNING and ERROR). Actor system's logging level may be managed through configuration, i.e.:
 

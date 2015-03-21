@@ -260,7 +260,7 @@ namespace Akka.Actor
         public ActorRef Receiver { get; private set; }
         
         /// <summary>
-        /// Make the inbox’s actor watch the <paramref name="target"/> actor such that 
+        /// Make the inbox’s actor watch the <paramref name="subject"/> actor such that 
         /// reception of the <see cref="Terminated"/> message can then be awaited.
         /// </summary>
         public ActorRef Watch(ActorRef subject)
@@ -329,7 +329,14 @@ namespace Akka.Actor
 
         public void Dispose()
         {
-            _system.Stop(Receiver);
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+                _system.Stop(Receiver);
         }
 
         private object AwaitResult(Task<object> task, TimeSpan timeout)

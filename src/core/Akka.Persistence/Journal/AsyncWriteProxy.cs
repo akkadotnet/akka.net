@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using System.Runtime.Serialization;
 
 namespace Akka.Persistence.Journal
 {
@@ -15,6 +16,11 @@ namespace Akka.Persistence.Journal
 
         public AsyncReplayTimeoutException(string msg)
             : base(msg)
+        {
+        }
+
+        protected AsyncReplayTimeoutException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
         {
         }
     }

@@ -1,20 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Akka.Actor;
+﻿using Akka.Actor;
 
 namespace Akka.Util
 {
     public interface ISurrogate
     {
-        object FromSurrogate(ActorSystem system);
+        ISurrogated FromSurrogate(ActorSystem system);
     }
 
     public interface ISurrogated
     {
-
         ISurrogate ToSurrogate(ActorSystem system);
     }
 }

@@ -37,7 +37,19 @@ namespace Akka.Dispatch
         /// <summary>
         ///     Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
-        public abstract void Dispose();
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Releases unmanaged and - optionally - managed resources.
+        /// </summary>
+        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+        }
 
         /// <summary>
         ///     Posts the specified envelope to the mailbox.
@@ -129,16 +141,28 @@ namespace Akka.Dispatch
             }
         }
 
-        protected volatile bool _isSuspended;
-        public bool IsSuspended { get { return _isSuspended; } }
+        private volatile MailboxSuspendStatus _suspendStatus;
+        public bool IsSuspended { get { return _suspendStatus != MailboxSuspendStatus.NotSuspended; } }
+
         public void Suspend()
         {
-            _isSuspended = true;
+            Suspend(MailboxSuspendStatus.Supervision);
         }
 
         public void Resume()
         {
-            _isSuspended = false;
+            _suspendStatus = MailboxSuspendStatus.NotSuspended;
+            Schedule();
+        }
+
+        public void Suspend(MailboxSuspendStatus reason)
+        {
+            _suspendStatus |= reason;
+        }
+
+        public void Resume(MailboxSuspendStatus reason)
+        {
+            _suspendStatus &= ~reason;
             Schedule();
         }
 
@@ -148,5 +172,13 @@ namespace Akka.Dispatch
         public abstract void CleanUp();
 
         //TODO: When Mailbox gets SuspendCount, update ActorCell.MakeChild
-    }   
+    }
+
+    [Flags]
+    public enum MailboxSuspendStatus
+    {
+        NotSuspended = 0,
+        Supervision = 1,
+        AwaitingTask = 2,
+    }
 }

@@ -54,7 +54,7 @@ namespace Akka.MultiNodeTestRunner
         static void Main(string[] args)
         {
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
-            SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>());
+            SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>(), "sinkCoordinator");
 
             var assemblyName = args[0];
 
@@ -67,7 +67,7 @@ namespace Akka.MultiNodeTestRunner
                     controller.Find(false, discovery, new TestFrameworkOptions());
                     discovery.Finished.WaitOne();
 
-                    foreach (var test in discovery.Tests)
+                    foreach (var test in discovery.Tests.Reverse())
                     {
                         PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
 
@@ -172,7 +172,7 @@ namespace Akka.MultiNodeTestRunner
 
         static void PublishToAllSinks(string message)
         {
-            SinkCoordinator.Tell(message);
+            SinkCoordinator.Tell(message, ActorRef.NoSender);
         }
     }
 }

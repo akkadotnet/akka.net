@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.Serialization;
 
 namespace Akka.Actor
 {
@@ -8,5 +9,10 @@ namespace Akka.Actor
     public class StashOverflowException : AkkaException
     {
         public StashOverflowException(string message, Exception cause = null) : base(message, cause) { }
+
+        protected StashOverflowException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 }

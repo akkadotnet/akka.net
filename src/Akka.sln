@@ -173,6 +173,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BasicCastleWindsorUses", "contrib\dependencyInjection\Examples\BasicCastleWindsorUse\BasicCastleWindsorUses.csproj", "{6CF8FB6A-EA0C-4D8C-BD38-57C41F0619E6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BasicNinjectUses", "contrib\dependencyInjection\Examples\BasicNinjectUses\BasicNinjectUses.csproj", "{4B693CFF-F14F-4924-95A1-5FA896D749D9}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FaultToletance", "FaultToletance", "{85D1D513-2F94-404A-A99C-37F2BAD0D7BE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FaultTolerance", "examples\FaultTolerance\FaultTolerance.csproj", "{FBEBD803-AEFC-44B1-A429-6143C3288CA4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -627,6 +630,14 @@ Global
 		{4B693CFF-F14F-4924-95A1-5FA896D749D9}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{4B693CFF-F14F-4924-95A1-5FA896D749D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4B693CFF-F14F-4924-95A1-5FA896D749D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FBEBD803-AEFC-44B1-A429-6143C3288CA4}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{FBEBD803-AEFC-44B1-A429-6143C3288CA4}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{FBEBD803-AEFC-44B1-A429-6143C3288CA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FBEBD803-AEFC-44B1-A429-6143C3288CA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FBEBD803-AEFC-44B1-A429-6143C3288CA4}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{FBEBD803-AEFC-44B1-A429-6143C3288CA4}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{FBEBD803-AEFC-44B1-A429-6143C3288CA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FBEBD803-AEFC-44B1-A429-6143C3288CA4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -704,5 +715,7 @@ Global
 		{61862D3B-A8A7-491B-AC38-0F4E31E4576A} = {36873A12-7430-4237-9E7D-8F8FA8C32EC0}
 		{6CF8FB6A-EA0C-4D8C-BD38-57C41F0619E6} = {36873A12-7430-4237-9E7D-8F8FA8C32EC0}
 		{4B693CFF-F14F-4924-95A1-5FA896D749D9} = {36873A12-7430-4237-9E7D-8F8FA8C32EC0}
+		{85D1D513-2F94-404A-A99C-37F2BAD0D7BE} = {69279534-1DBA-4115-BF8B-03F77FC8125E}
+		{FBEBD803-AEFC-44B1-A429-6143C3288CA4} = {85D1D513-2F94-404A-A99C-37F2BAD0D7BE}
 	EndGlobalSection
 EndGlobal

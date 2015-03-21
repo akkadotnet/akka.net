@@ -68,7 +68,7 @@ namespace Akka.Actor
         /// </summary>
         public static T WithExtension<T>(this ActorSystem system) where T : class, IExtension
         {
-            return (T)system.GetExtension<T>();
+            return system.GetExtension<T>();
         }
 
         /// <summary>
@@ -77,7 +77,7 @@ namespace Akka.Actor
         public static T WithExtension<T>(this ActorSystem system, Type extensionId) where T : class, IExtension
         {
             if (system.HasExtension<T>())
-                return (T)system.GetExtension<T>();
+                return system.GetExtension<T>();
             else
             {
                 return (T) system.RegisterExtension((IExtensionId)Activator.CreateInstance(extensionId));
@@ -91,7 +91,7 @@ namespace Akka.Actor
                                                                      where TI: IExtensionId
         {
             if (system.HasExtension<T>())
-                return (T)system.GetExtension<T>();
+                return system.GetExtension<T>();
             else
             {
                 return (T)system.RegisterExtension((IExtensionId)Activator.CreateInstance(typeof(TI)));

@@ -6,7 +6,7 @@ using Akka.Routing;
 
 namespace Routing
 {
-    public class HashableMessage : ConsistentHashable
+    public class HashableMessage : IConsistentHashable
     {
         public string Name { get; set; }
         public int Id { get; set; }

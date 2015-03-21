@@ -69,7 +69,7 @@ namespace Akka.Actor
 
         /// <summary>Gets the scheduler.</summary>
         /// <value>The scheduler.</value>
-        public abstract Scheduler Scheduler { get; }
+        public abstract IScheduler Scheduler { get; }
 
         /// <summary>Gets the log</summary>
         public abstract LoggingAdapter Log { get; }
@@ -77,7 +77,9 @@ namespace Akka.Actor
         /// <summary>
         ///     Creates a new ActorSystem with the specified name, and the specified Config
         /// </summary>
-        /// <param name="name">Name of the ActorSystem</param>
+        /// <param name="name">Name of the ActorSystem
+        /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
+        /// </param>
         /// <param name="config">Configuration of the ActorSystem</param>
         /// <returns>ActorSystem.</returns>
         public static ActorSystem Create(string name, Config config)
@@ -89,7 +91,9 @@ namespace Akka.Actor
         /// <summary>
         ///     Creates the specified name.
         /// </summary>
-        /// <param name="name">The name.</param>
+        /// <param name="name">The name. The name must be uri friendly.
+        /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
+        /// </param>
         /// <returns>ActorSystem.</returns>
         public static ActorSystem Create(string name)
         {
@@ -190,7 +194,7 @@ namespace Akka.Actor
         //}
 
         /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
-        void IDisposable.Dispose()
+        public void Dispose()
         {
             Dispose(true);
             //Take this object off the finalization queue and prevent finalization code for this object

@@ -20,7 +20,7 @@ namespace Akka.DI.Core
         {
             if (system == null) throw new ArgumentNullException("system");
             if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
-            system.RegisterExtension((IExtensionId)DIExtension.DIExtensionProvider);
+            system.RegisterExtension(DIExtension.DIExtensionProvider);
             DIExtension.DIExtensionProvider.Get(system).Initialize(dependencyResolver);
         }
         

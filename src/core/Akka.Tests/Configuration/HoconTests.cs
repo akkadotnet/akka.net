@@ -76,7 +76,7 @@ namespace Akka.Tests.Configuration
 
 
         [Fact]
-        public void CanConcatinateSubstitutedUnquotedString()
+        public void CanConcatenateSubstitutedUnquotedString()
         {
             var hocon = @"a {
   name = Roger
@@ -86,7 +86,7 @@ namespace Akka.Tests.Configuration
         }
 
         [Fact]
-        public void CanConcatinateSubstitutedArray()
+        public void CanConcatenateSubstitutedArray()
         {
             var hocon = @"a {
   b = [1,2,3]
@@ -372,7 +372,7 @@ a.b.e.f=3
         }
 
         [Fact]
-        public void CanAssignTrippleQuotedStringToField()
+        public void CanAssignTripleQuotedStringToField()
         {
             var hocon = @"a=""""""hello""""""";
             Assert.Equal("hello", ConfigurationFactory.ParseString(hocon).GetString("a"));

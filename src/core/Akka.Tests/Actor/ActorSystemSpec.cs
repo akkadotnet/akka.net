@@ -74,7 +74,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void AnActorSystem_Must_Support_Dynamically_Regsitered_Extensions()
+        public void AnActorSystem_Must_Support_Dynamically_Registered_Extensions()
         {
             Assert.False(Sys.HasExtension<OtherTestExtensionImpl>());
             var otherTestExtension = Sys.WithExtension<OtherTestExtensionImpl>(typeof(OtherTestExtension));

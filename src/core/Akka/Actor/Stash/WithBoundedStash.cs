@@ -7,7 +7,7 @@ namespace Akka.Actor
     /// Lets the <see cref="StashFactory"/> know that this Actor needs stash support
     /// with restricted storage capacity
     /// You need to add the property:
-    /// <pre><code>public IStash Stash { get; set; }</code></pre>
+    /// <code>public IStash Stash { get; set; }</code>
     /// </summary>
     // ReSharper disable once InconsistentNaming
     [Obsolete("Bounded stashing is not yet implemented. Unbounded stashing will be used instead")]

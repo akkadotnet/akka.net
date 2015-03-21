@@ -17,7 +17,7 @@ namespace Akka.TestKit
         /// <summary>
         /// <para>This function will be called for each received message and can be 
         /// used to send or forward messages, etc. </para>
-        /// <para>Each invocation must return the <see cref="AutoPilot"/> for the next round.</para>
+        /// <para>Each invocation must return the <see cref="AutoPilot"/> for the next round.</para> 
         /// </summary>
         /// <param name="sender">The sender.</param>
         /// <param name="message">The message.</param>

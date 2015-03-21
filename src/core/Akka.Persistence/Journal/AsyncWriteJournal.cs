@@ -76,6 +76,7 @@ namespace Akka.Persistence.Journal
 
         private void HandleReplayMessages(ReplayMessages message)
         {
+            var context = Context;
             // Send replayed messages and replay result to persistentActor directly. No need
             // to resequence replayed messages relative to written and looped messages.
             ReplayMessagesAsync(message.PersistenceId, message.FromSequenceNr, message.ToSequenceNr, message.Max, p =>
@@ -85,7 +86,7 @@ namespace Akka.Persistence.Journal
             .NotifyAboutReplayCompletion(message.PersistentActor)
             .ContinueWith(t =>
             {
-                if(!t.IsFaulted && CanPublish) Context.System.EventStream.Publish(message);
+                if (!t.IsFaulted && CanPublish) context.System.EventStream.Publish(message);
             }, _continuationOptions);
         }
 
@@ -116,7 +117,7 @@ namespace Akka.Persistence.Journal
             {
                 if (!t.IsFaulted)
                 {
-                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessull.Instance, counter, message.PersistentActor, Self));
+                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, Self));
                     resequence(x => new WriteMessageSuccess(x, message.ActorInstanceId));
                 }
                 else

@@ -14,7 +14,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
         protected override SupervisorStrategy SupervisorStrategy()
         {
-            return new OneForOneStrategy(maxNrOfRetries: 5, withinTimeRange: TimeSpan.FromSeconds(1), decider: ex => ex is ActorKilledException ? Directive.Restart : Directive.Escalate);
+            return new OneForOneStrategy(maxNrOfRetries: 5, withinTimeRange: TimeSpan.FromSeconds(1), localOnlyDecider: ex => ex is ActorKilledException ? Directive.Restart : Directive.Escalate);
         }
 
         protected override bool ReceiveMessage(object message)

@@ -47,7 +47,7 @@ namespace Akka.Cluster.Tests
                 get { return MemberA.Address; }
             }
 
-            public override Scheduler Scheduler
+            public override IScheduler Scheduler
             {
                 get { return Context.System.Scheduler; }
             }
@@ -122,7 +122,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDownMustNotDownUnreachableWhenLoosingLeadershipInbetweenDetectionAndSpecfiedDuration()
+        public void AutoDownMustNotDownUnreachableWhenLoosingLeadershipInbetweenDetectionAndSpecifiedDuration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));

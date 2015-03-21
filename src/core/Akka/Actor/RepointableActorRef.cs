@@ -65,7 +65,7 @@ namespace Akka.Actor
         ///Call twice on your own peril!
         ///This is protected so that others can have different initialization.
         /// </summary>
-        public void Initialize(bool async)
+        public RepointableActorRef Initialize(bool async)
         {
             var underlying = Underlying;
             if(underlying == null)
@@ -76,6 +76,8 @@ namespace Akka.Actor
                 _supervisor.Tell(new Supervise(this, async));
                 if(!async)
                     Point();
+
+                return this;
             }
             else
             {

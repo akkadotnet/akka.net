@@ -72,10 +72,14 @@ namespace Akka.Tests.Routing
             ExpectTerminated(c2).ExistenceConfirmed.ShouldBe(true);
             // it might take a while until the Router has actually processed the Terminated message
             Task.Delay(100).Wait();
-            router.Tell("", TestActor);
-            router.Tell("", TestActor);
-            ExpectMsg<ActorRef>().ShouldBe(c1);           
-            ExpectMsg<ActorRef>().ShouldBe(c1);
+            AwaitCondition(() =>
+            {
+                router.Tell("", TestActor);
+                router.Tell("", TestActor);
+                var res = ReceiveWhile(TimeSpan.FromMilliseconds(100), o => o is ActorRef ? (ActorRef) o : ActorRef.NoSender, 2);
+                return res.SequenceEqual(new[] {c1, c1});
+            });
+            
             Sys.Stop(c1);
             ExpectTerminated(router).ExistenceConfirmed.ShouldBe(true);
         }

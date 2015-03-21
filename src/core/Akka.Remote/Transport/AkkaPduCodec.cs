@@ -2,6 +2,7 @@
 using System.Linq;
 using Akka.Actor;
 using Google.ProtocolBuffers;
+using System.Runtime.Serialization;
 
 namespace Akka.Remote.Transport
 {
@@ -11,6 +12,11 @@ namespace Akka.Remote.Transport
     internal class PduCodecException : AkkaException
     {
         public PduCodecException(string msg, Exception cause = null) : base(msg, cause) { }
+
+        protected PduCodecException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /*

@@ -164,10 +164,10 @@ namespace Akka.Remote.Tests
             _heartbeatRspB = new RemoteWatcher.HeartbeatRsp(remoteAddressUid);
         }
 
-        protected override void AfterTest()
+        protected override void AfterAll()
         {
             Shutdown(_remoteSystem);
-            base.AfterTest();
+            base.AfterAll();
         }
         readonly ActorSystem _remoteSystem;
         readonly Address _remoteAddress;
@@ -332,7 +332,7 @@ namespace Akka.Remote.Tests
 
         [Fact]
         public void
-            ARemoteWatcherMustGenerateAddressTerminatedForNewWatchAfterBrokenConnectionWasRestablishedAndBrokenAgain()
+            ARemoteWatcherMustGenerateAddressTerminatedForNewWatchAfterBrokenConnectionWasReestablishedAndBrokenAgain()
         {
             var p = CreateTestProbe();
             var q = CreateTestProbe();

@@ -53,7 +53,7 @@
   <ItemGroup>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Newtonsoft.Json.6.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
@@ -79,11 +79,22 @@
     <Compile Include="Actor\ChildrenContainer\Internal\TerminatedChildrenContainer.cs" />
     <Compile Include="Actor\ChildrenContainer\Internal\TerminatingChildrenContainer.cs" />
     <Compile Include="Actor\ActorCell.FaultHandling.cs" />
+    <Compile Include="Actor\Cancellation\AlreadyCanceledCancelable.cs" />
+    <Compile Include="Actor\Cancellation\CancelableExtensions.cs" />
+    <Compile Include="Actor\Cancellation\Cancelable.cs" />
     <Compile Include="Actor\Dsl\Act.cs" />
+    <Compile Include="Actor\Cancellation\ICancellable.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
     <Compile Include="Actor\Internals\InternalCurrentActorCellKeeper.cs" />
     <Compile Include="Actor\Internals\InternalSupportsTestFSMRef.cs" />
     <Compile Include="Actor\Internals\InitializableActor.cs" />
+    <Compile Include="Actor\Scheduler\DateTimeNowTimeProvider.cs" />
+    <Compile Include="Actor\Scheduler\IDateTimeNowTimeProvider.cs" />
+    <Compile Include="Actor\Scheduler\ITimeProvider.cs" />
+    <Compile Include="Actor\Scheduler\DeprecatedSchedulerExtensions.cs" />
+    <Compile Include="Actor\Scheduler\IActionScheduler.cs" />
+    <Compile Include="Actor\Scheduler\IAdvancedScheduler.cs" />
+    <Compile Include="Actor\Scheduler\IScheduler.cs" />
     <Compile Include="Actor\ReceiveActor.cs" />
     <Compile Include="Actor\ActorBase.cs" />
     <Compile Include="Actor\ActorCell.cs" />
@@ -123,7 +134,9 @@
     <Compile Include="Actor\NoSerializationVerificationNeeded.cs" />
     <Compile Include="Actor\PipeToSupport.cs" />
     <Compile Include="Actor\Receive.cs" />
-    <Compile Include="Actor\Scheduler.cs" />
+    <Compile Include="Actor\Scheduler\ITellScheduler.cs" />
+    <Compile Include="Actor\Scheduler\SchedulerBase.cs" />
+    <Compile Include="Actor\Scheduler\SchedulerExtensions.cs" />
     <Compile Include="Actor\Scope.cs" />
     <Compile Include="Actor\Settings.cs" />
     <Compile Include="Actor\Stash\Internal\AbstractStash.cs" />
@@ -137,6 +150,7 @@
     <Compile Include="Actor\Stash\UntypedActorWithUnboundedStash.cs" />
     <Compile Include="Actor\Stash\WithBoundedStash.cs" />
     <Compile Include="Actor\Stash\WithUnboundedStash.cs" />
+    <Compile Include="Actor\Scheduler\TaskBasedScheduler.cs" />
     <Compile Include="Configuration\ConfigurationException.cs" />
     <Compile Include="Configuration\ConfigurationFactory.cs" />
     <Compile Include="Configuration\Config.cs" />
@@ -154,6 +168,7 @@
     <Compile Include="Configuration\Hocon\HoconTokenizer.cs" />
     <Compile Include="Configuration\Hocon\HoconValue.cs" />
     <Compile Include="Configuration\Hocon\IHoconElement.cs" />
+    <Compile Include="Dispatch\ActorTaskScheduler.cs" />
     <Compile Include="Dispatch\BoundedDequeBasedMailbox.cs" />
     <Compile Include="Dispatch\ConcurrentQueueMailbox.cs" />
     <Compile Include="Dispatch\DequeBasedMailbox.cs" />
@@ -181,6 +196,7 @@
     <Compile Include="Dispatch\Mailboxes.cs" />
     <Compile Include="Dispatch\MessageQueues\MessageQueue.cs" />
     <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
+    <Compile Include="Dispatch\TaskDispatcher.cs" />
     <Compile Include="Dispatch\ThreadPoolBuilder.cs" />
     <Compile Include="Dispatch\UnboundedDequeBasedMailbox.cs" />
     <Compile Include="Dispatch\UnboundedMailbox.cs" />
@@ -208,8 +224,10 @@
     <Compile Include="Event\LogLevel.cs" />
     <Compile Include="Event\LogMessage.cs" />
     <Compile Include="Event\StandardOutLogger.cs" />
+    <Compile Include="Routing\ConsistentHashRouter.cs" />
     <Compile Include="Util\Guard.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
+    <Compile Include="Util\Internal\ImmutabilityUtils.cs" />
     <Compile Include="Util\Internal\InterlockedSpin.cs" />
     <Compile Include="Util\Internal\Collections\EmptyReadOnlyCollections.cs" />
     <Compile Include="Util\Internal\Collections\IBinaryTreeNode.cs" />

@@ -150,12 +150,13 @@ namespace Akka.Actor
                 Repeat = repeat;
                 Message = message;
                 Name = name;
-                _scheduler = context.System.Scheduler;
-                _ref = new CancellationTokenSource();
+                var scheduler = context.System.Scheduler;
+                _scheduler = scheduler;
+                _ref = new Cancelable(scheduler);
             }
 
-            private readonly Scheduler _scheduler;
-            private readonly CancellationTokenSource _ref;
+            private readonly IScheduler _scheduler;
+            private readonly ICancelable _ref;
 
             public string Name { get; private set; }
 
@@ -183,8 +184,8 @@ namespace Akka.Actor
                 else
                     send = () => actor.Tell(this, Context.Self);
 
-                if(Repeat) _scheduler.Schedule(timeout, timeout, send, _ref.Token);
-                else _scheduler.ScheduleOnce(timeout, send, _ref.Token);
+                if(Repeat) _scheduler.Advanced.ScheduleRepeatedly(timeout, timeout, send, _ref);
+                else _scheduler.Advanced.ScheduleOnce(timeout, send, _ref);
             }
 
             public void Cancel()
@@ -644,7 +645,7 @@ namespace Akka.Actor
         /// </summary>
         private State<TState, TData> _currentState;
 
-        private CancellationTokenSource _timeoutFuture;
+        private ICancelable _timeoutFuture;
         private State<TState, TData> _nextState;
         private long _generation = 0L;
 
@@ -902,9 +903,7 @@ namespace Akka.Actor
                     var t = timeout.Value;
                     if (t < TimeSpan.MaxValue)
                     {
-                        _timeoutFuture = new CancellationTokenSource();
-                        Context.System.Scheduler.ScheduleOnce(t, Self,
-                            new TimeoutMarker(_generation), _timeoutFuture.Token);
+                        _timeoutFuture = Context.System.Scheduler.ScheduleTellOnceCancelable(t, Context.Self, new TimeoutMarker(_generation), Context.Self);
                     }
                 }
             }

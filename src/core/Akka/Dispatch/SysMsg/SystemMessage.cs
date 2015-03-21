@@ -7,8 +7,8 @@ namespace Akka.Dispatch.SysMsg
     /**
  * public API
  */
-//@SerialVersionUID(1L)
-//private[akka] case class Create(failure: Option[ActorInitializationException]) extends SystemMessage // sent to self from Dispatcher.register
+    //@SerialVersionUID(1L)
+    //private[akka] case class Create(failure: Option[ActorInitializationException]) extends SystemMessage // sent to self from Dispatcher.register
     /// <summary>
     ///     Class SystemMessage.
     /// </summary>
@@ -22,6 +22,10 @@ namespace Akka.Dispatch.SysMsg
     /// </summary>
     public sealed class NoMessage : SystemMessage
     {
+        public override string ToString()
+        {
+            return "NoMessage";
+        }
     }
 
     /// <summary>
@@ -104,7 +108,7 @@ namespace Akka.Dispatch.SysMsg
 
         public override string ToString()
         {
-            return "<Failed>: " + _child + " (" + _uid + ") " + (_cause!=null ? ", Cause=" + _cause : "");
+            return "<Failed>: " + _child + " (" + _uid + ") " + (_cause != null ? ", Cause=" + _cause : "");
         }
     }
 
@@ -233,25 +237,31 @@ namespace Akka.Dispatch.SysMsg
         public Task Task { get; private set; }
     }
 
-    /// <summary>
-    ///     Class CompleteFuture.
-    /// </summary>
-    public sealed class CompleteFuture : SystemMessage
+    public sealed class CompleteTask : SystemMessage
     {
         /// <summary>
-        ///     Initializes a new instance of the <see cref="CompleteFuture" /> class.
+        ///     Initializes a new instance of the <see cref="CompleteTask" /> class.
         /// </summary>
+        /// <param name="state"></param>
         /// <param name="action">The action.</param>
-        public CompleteFuture(Action action)
+        public CompleteTask(AmbientState state, Action action)
         {
+            State = state;
             SetResult = action;
         }
+
+        public AmbientState State { get; private set; }
 
         /// <summary>
         ///     Gets the set result.
         /// </summary>
         /// <value>The set result.</value>
         public Action SetResult { get; private set; }
+
+        public override string ToString()
+        {
+            return "CompleteTask - AmbientState: " + State;
+        }
     }
 
     /// <summary>
@@ -292,7 +302,7 @@ namespace Akka.Dispatch.SysMsg
 
         public override string ToString()
         {
-            return "<Recreate>" + (Cause==null? "":" Cause: " + Cause);
+            return "<Recreate>" + (Cause == null ? "" : " Cause: " + Cause);
         }
     }
 
@@ -336,6 +346,43 @@ namespace Akka.Dispatch.SysMsg
                 return _instance;
             }
         }
+
+        public override string ToString()
+        {
+            return "<Suspend>";
+        }
+    }
+
+    /// <summary>
+    ///     Class SuspendReentrancy.
+    /// </summary>
+    public sealed class SuspendReentrancy : SystemMessage
+    {
+        private SuspendReentrancy() { }
+        private static readonly SuspendReentrancy _instance = new SuspendReentrancy();
+        public static SuspendReentrancy Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Class ResumeReentrancy.
+    /// </summary>
+    public sealed class ResumeReentrancy : SystemMessage
+    {
+        private ResumeReentrancy() { }
+        private static readonly ResumeReentrancy _instance = new ResumeReentrancy();
+        public static ResumeReentrancy Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
     }
 
     /// <summary>
@@ -351,6 +398,11 @@ namespace Akka.Dispatch.SysMsg
             {
                 return _instance;
             }
+        }
+
+        public override string ToString()
+        {
+            return "<Stop>";
         }
     }
 
@@ -423,13 +475,18 @@ namespace Akka.Dispatch.SysMsg
                 return _instance;
             }
         }
+
+        public override string ToString()
+        {
+            return "<Terminate>";
+        }
     }
 
     public sealed class Create : SystemMessage
     {
         private readonly ActorInitializationException _failure;
 
-        public Create(ActorInitializationException failure=null)
+        public Create(ActorInitializationException failure = null)
         {
             _failure = failure;
         }

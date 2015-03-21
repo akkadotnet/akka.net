@@ -27,7 +27,7 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class InternalActivateFsmLogging
     {
-        private static readonly InternalActivateFsmLogging _instance=new InternalActivateFsmLogging();
+        private static readonly InternalActivateFsmLogging _instance = new InternalActivateFsmLogging();
 
         private InternalActivateFsmLogging(){}
         /// <summary>

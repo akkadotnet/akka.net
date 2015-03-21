@@ -7,11 +7,11 @@ using Akka.TestKit.TestEvent;
 namespace Akka.TestKit
 {
 
-/// <summary>
+    /// <summary>
     /// EventListener for running tests, which allows selectively filtering out
     /// expected messages. To use it, include something like this in
     /// the configuration:
-    /// <pre><code>akka.loggers = ["Akka.TestKit.TestEventListener, Akka.TestKit"]</code></pre>
+    /// <code>akka.loggers = ["Akka.TestKit.TestEventListener, Akka.TestKit"]</code>
     /// </summary>
     public class TestEventListener : DefaultLogger
     {

@@ -32,6 +32,7 @@ title: index
 - [ReceiveActors](ReceiveActor)
 - [Typed Actors](TypedActor)
 - [Finite State Machines](FSM)
+- [Persistence](Persistence)
 - [Fault Tolerance](Fault tolerance)
 - [Dispatchers](Dispatchers)
 - [Mailboxes](Mailbox)

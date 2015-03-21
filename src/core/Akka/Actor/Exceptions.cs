@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.Serialization;
 
 namespace Akka.Actor
 {
@@ -23,6 +24,12 @@ namespace Akka.Actor
             : base(message, cause)
         {
         }
+
+        protected AkkaException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+
         protected Exception Cause { get { return InnerException; } }
     }
 
@@ -42,6 +49,28 @@ namespace Akka.Actor
         {
             //Intentionally left blank
         }
+
+        protected InvalidActorNameException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+    }
+
+    /// <summary>
+    /// Thrown when an Ask operation times out
+    /// </summary>
+    public class AskTimeoutException : AkkaException
+    {
+        public AskTimeoutException(string message)
+            : base(message)
+        {
+            //Intentionally left blank
+        }
+
+        protected AskTimeoutException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /// <summary>
@@ -57,6 +86,11 @@ namespace Akka.Actor
         public ActorInitializationException(ActorRef actor, string message, Exception cause = null) : base(message, cause)
         {
             _actor = actor;
+        }
+
+        protected ActorInitializationException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
         }
 
         public ActorRef Actor { get { return _actor; } }
@@ -78,6 +112,11 @@ namespace Akka.Actor
         public LoggerInitializationException(string message) : base(message) { }
 
         public LoggerInitializationException(string message, Exception cause = null) : base(message, cause) { }
+
+        protected LoggerInitializationException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
 
@@ -94,6 +133,11 @@ namespace Akka.Actor
         public ActorKilledException(string message) : base(message)
         {
         }
+
+        protected ActorKilledException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /// <summary>
@@ -103,6 +147,11 @@ namespace Akka.Actor
     public class IllegalActorStateException : AkkaException
     {
         public IllegalActorStateException(string msg) : base(msg) { }
+
+        protected IllegalActorStateException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /// <summary>
@@ -111,6 +160,11 @@ namespace Akka.Actor
     public class IllegalActorNameException : AkkaException
     {
         public IllegalActorNameException(string msg) : base(msg) { }
+
+        protected IllegalActorNameException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /// <summary>
@@ -125,6 +179,11 @@ namespace Akka.Actor
             : base("Monitored actor [" + deadActor + "] terminated")
         {
             _deadActor = deadActor;
+        }
+
+        protected DeathPactException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
         }
 
         public ActorRef DeadActor
@@ -151,6 +210,11 @@ namespace Akka.Actor
             exception = cause;
             this.optionalMessage = optionalMessage;
         }
+
+        protected PreRestartException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /// <summary>
@@ -176,6 +240,11 @@ namespace Akka.Actor
             _originalCause = originalCause;
         }
 
+        protected PostRestartException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+
         public Exception OriginalCause { get { return _originalCause; } }
     }
 
@@ -185,20 +254,31 @@ namespace Akka.Actor
     /// </summary>
     public class ActorNotFoundException : AkkaException
     {
+        public ActorNotFoundException() : base() { }
+        
+        protected ActorNotFoundException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /// <summary>
     /// InvalidMessageException is thrown when an invalid message is sent to an Actor.
     /// Currently only <c>null</c> is an invalid message.
     /// </summary>
-    public class InvalidMessageException:AkkaException
+    public class InvalidMessageException : AkkaException
     {
         public InvalidMessageException() : this("Message is null")
         {
         }
 
         public InvalidMessageException(string message):base(message)
-        {            
+        {
+        }
+
+        protected InvalidMessageException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
         }
     }
 }

@@ -108,6 +108,13 @@ Target "BuildMono" <| fun _ ->
     |> ignore
 
 //--------------------------------------------------------------------------------
+// Build the docs
+Target "Docs" <| fun _ ->
+    !! "documentation/akkadoc.shfbproj"
+    |> MSBuildRelease "" "Rebuild"
+    |> ignore
+
+//--------------------------------------------------------------------------------
 // Copy the build output to bin directory
 //--------------------------------------------------------------------------------
 
@@ -300,16 +307,19 @@ let publishNugetPackages _ =
     let rec publishPackage url accessKey trialsLeft packageFile =
         let tracing = enableProcessTracing
         enableProcessTracing <- false
-        let args = sprintf "push -source %s \"%s\" %s" url packageFile accessKey
+        let args p =
+            match p with
+            | (pack, key, "") -> sprintf "push \"%s\" %s" pack key
+            | (pack, key, url) -> sprintf "push \"%s\" %s -source %s" pack key url
 
         tracefn "Pushing %s Attempts left: %d" (FullName packageFile) trialsLeft
         try 
             let result = ExecProcess (fun info -> 
                     info.FileName <- nugetExe
                     info.WorkingDirectory <- (Path.GetDirectoryName (FullName packageFile))
-                    info.Arguments <- args) (System.TimeSpan.FromMinutes 1.0)
+                    info.Arguments <- args (packageFile, accessKey,url)) (System.TimeSpan.FromMinutes 1.0)
             enableProcessTracing <- tracing
-            if result <> 0 then failwithf "Error during NuGet symbol push. %s %s" nugetExe args
+            if result <> 0 then failwithf "Error during NuGet symbol push. %s %s" nugetExe (args (packageFile, accessKey,url))
         with exn -> 
             if (trialsLeft > 0) then (publishPackage url accessKey (trialsLeft-1) packageFile)
             else raise exn
@@ -416,6 +426,9 @@ Target "HelpNuget" <| fun _ ->
 // nuget dependencies
 "CleanNuget" ==> "CreateNuget"
 "CleanNuget" ==> "BuildRelease" ==> "Nuget"
+
+//docs dependencies
+"BuildRelease" ==> "Docs"
 
 Target "All" DoNothing
 "BuildRelease" ==> "All"

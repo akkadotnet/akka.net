@@ -35,6 +35,20 @@ namespace Akka.Actor
         public static ActorSelection ActorSelection(string path, ActorSystem system, ActorRef lookupRoot)
         {
             var provider = ((ActorSystemImpl)system).Provider;
+
+            //no path given
+            if (string.IsNullOrEmpty(path))
+            {
+                return new ActorSelection(system.DeadLetters, "");
+            }
+
+            //absolute path
+            var elements = path.Split('/');
+            if (elements[0] == "")
+            {
+                return new ActorSelection(provider.RootGuardian, elements.Skip(1));
+            }
+
             if(Uri.IsWellFormedUriString(path, UriKind.Absolute))
             {
                 ActorPath actorPath;
@@ -44,19 +58,7 @@ namespace Akka.Actor
                 var actorRef = provider.RootGuardianAt(actorPath.Address);
                 return new ActorSelection(actorRef, actorPath.Elements);
             }
-            //no path given
-            if(string.IsNullOrEmpty(path))
-            {
-                return new ActorSelection(system.DeadLetters, "");
-            }
-
-            //absolute path
-            var elements = path.Split('/');
-            if(elements[0] == "")
-            {
-                return new ActorSelection(provider.RootGuardian, elements.Skip(1));
-            }
-
+            
             return new ActorSelection(lookupRoot, path);
         }
     }

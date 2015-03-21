@@ -59,7 +59,7 @@ namespace Akka.Routing
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((DefaultResizer) obj);
+            return Equals((DefaultResizer)obj);
         }
 
         public override int GetHashCode()
@@ -67,12 +67,12 @@ namespace Akka.Routing
             unchecked
             {
                 int hashCode = MessagesPerResize;
-                hashCode = (hashCode*397) ^ BackoffRate.GetHashCode();
-                hashCode = (hashCode*397) ^ RampupRate.GetHashCode();
-                hashCode = (hashCode*397) ^ BackoffThreshold.GetHashCode();
-                hashCode = (hashCode*397) ^ UpperBound;
-                hashCode = (hashCode*397) ^ PressureThreshold;
-                hashCode = (hashCode*397) ^ LowerBound;
+                hashCode = (hashCode * 397) ^ BackoffRate.GetHashCode();
+                hashCode = (hashCode * 397) ^ RampupRate.GetHashCode();
+                hashCode = (hashCode * 397) ^ BackoffThreshold.GetHashCode();
+                hashCode = (hashCode * 397) ^ UpperBound;
+                hashCode = (hashCode * 397) ^ PressureThreshold;
+                hashCode = (hashCode * 397) ^ LowerBound;
                 return hashCode;
             }
         }
@@ -132,7 +132,7 @@ namespace Akka.Routing
 
         public override bool IsTimeForResize(long messageCounter)
         {
-            return messageCounter%MessagesPerResize == 0;
+            return messageCounter % MessagesPerResize == 0;
         }
 
         public override int Resize(IEnumerable<Routee> currentRoutees)
@@ -183,9 +183,9 @@ namespace Akka.Routing
         /// <returns>proposed decrease in capacity (as a negative number)</returns>
         public int Backoff(int pressure, int capacity)
         {
-            if (BackoffThreshold > 0.0 && BackoffRate > 0.0 && capacity > 0 && (Convert.ToDouble(pressure)/Convert.ToDouble(capacity)) < BackoffThreshold)
+            if (BackoffThreshold > 0.0 && BackoffRate > 0.0 && capacity > 0 && (Convert.ToDouble(pressure) / Convert.ToDouble(capacity)) < BackoffThreshold)
             {
-                return Convert.ToInt32(Math.Floor(-1.0*BackoffRate*capacity));
+                return Convert.ToInt32(Math.Floor(-1.0 * BackoffRate * capacity));
             }
             return 0;
         }
@@ -199,7 +199,7 @@ namespace Akka.Routing
         /// <returns>proposed increase in capacity</returns>
         public int Rampup(int pressure, int capacity)
         {
-            return (pressure < capacity) ? 0 : Convert.ToInt32(Math.Ceiling(RampupRate*capacity));
+            return (pressure < capacity) ? 0 : Convert.ToInt32(Math.Ceiling(RampupRate * capacity));
         }
 
         /// <summary>
@@ -231,25 +231,21 @@ namespace Akka.Routing
                         {
                             var underlying = actorRef.Underlying;
                             var cell = underlying as ActorCell;
-                            if(cell != null)
+                            if (cell != null)
                             {
-                                return
-                                    PressureThreshold == 1
-                                        ? cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
-                                          cell.Mailbox.HasUnscheduledMessages
-                                        : (PressureThreshold < 1
-                                            ? cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
-                                              cell.CurrentMessage != null
-                                            : cell.Mailbox.NumberOfMessages >= PressureThreshold);
+                                if (PressureThreshold == 1)
+                                    return cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
+                                    cell.Mailbox.HasMessages;
+                                if (PressureThreshold < 1)
+                                    return cell.Mailbox.Status == Mailbox.MailboxStatus.Busy &&
+                                           cell.CurrentMessage != null;
+                                return cell.Mailbox.NumberOfMessages >= PressureThreshold;
                             }
                             else
                             {
-                                return
-                                    PressureThreshold == 1
-                                        ? underlying.HasMessages
-                                        : (PressureThreshold < 1
-                                            ? true // unstarted cells are always busy, for example
-                                            : underlying.NumberOfMessages >= PressureThreshold);
+                                if (PressureThreshold == 1) return underlying.HasMessages;
+                                if (PressureThreshold < 1) return true; //unstarted cells are always busy, for instance
+                                return underlying.NumberOfMessages >= PressureThreshold;
                             }
                         }
                     }
@@ -280,7 +276,7 @@ namespace Akka.Routing
         ///           default UnboundedMailbox is O(N) operation.</li>
         /// </ul>
         /// </summary>
-        public int PressureThreshold { get;private set; }
+        public int PressureThreshold { get; private set; }
 
         /// <summary>
         /// Percentage to increase capacity whenever all routees are busy.

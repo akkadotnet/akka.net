@@ -4,6 +4,7 @@ using Akka.Actor;
 using Akka.Event;
 using Helios.Net;
 using Helios.Topology;
+using System.Runtime.Serialization;
 
 namespace Akka.Remote.TestKit
 {
@@ -56,11 +57,20 @@ namespace Akka.Remote.TestKit
             {
                 return !Equals(left, right);
             }
+
+            public override string ToString()
+            {
+                return string.Format("{0}: {1}", GetType(), Name);
+            }
         }
 
         public class ClientDisconnectedException : AkkaException
         {
             public ClientDisconnectedException(string msg) : base(msg){}
+
+            protected ClientDisconnectedException(SerializationInfo info, StreamingContext context) : base(info, context)
+            {
+            }
         }
 
         public class GetNodes
@@ -239,7 +249,7 @@ namespace Akka.Remote.TestKit
                 var name = host.ToEndPoint() + ":" + host.Port + "-server" + _generation++;
                 Sender.Tell(
                     Context.ActorOf(
-                        new Props(typeof (ServerFSM), new object[] {Self, (RemoteConnection)channel}).WithDeploy(Deploy.Local), name));
+                        new Props(typeof (ServerFSM), new object[] {Self, channel}).WithDeploy(Deploy.Local), name));
                 return;
             }
             var nodeInfo = message as NodeInfo;

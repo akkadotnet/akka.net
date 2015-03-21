@@ -20,7 +20,7 @@ var logger = new LoggerConfiguration()
 	.MinimumLevel.Information()
 	.CreateLogger();
 Serilog.Log.Logger = logger;
-var system = ActorSystem.Create("my-test-system", "akka { logLevel=INFO,  loggers=[\"Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog\"]}");
+var system = ActorSystem.Create("my-test-system", "akka { logLevel=INFO,  loggers=['Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog']}");
 ```
 
 ## Logging
