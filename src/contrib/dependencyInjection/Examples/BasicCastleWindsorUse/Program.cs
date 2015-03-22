@@ -26,13 +26,24 @@ namespace BasicCastleWindsorUse
             Console.WriteLine("Running With Hash Pool And Child Actors");
             var config = ConfigurationFactory.ParseString(My.HashPoolWOResizer);
 
+            ConsistentHashMapping hashMapping = msg =>
+            {
+                if (msg is TypedActorMessage)
+                {
+                    var m2 = msg as TypedActorMessage;
+                    return m2.ConsistentHashKey;
+                }
+
+                return null;
+            };
+
             using (var system = ActorSystem.Create("MySystem", config))
             {
                 IWindsorContainer container = new WindsorContainer();
                 container.Register(Component.For<TypedWorker>().Named("TypedWorker").LifestyleTransient());
                 container.Register(Component.For<TypedParentWorker>().Named("TypedParentWorker").LifestyleTransient());
 
-                var pool = new ConsistentHashingPool(config);
+                var pool = new ConsistentHashingPool(10, null, null, null, hashMapping: hashMapping);
 
                 WindsorDependencyResolver propsResolver =
                     new WindsorDependencyResolver(container, system);
@@ -68,13 +79,24 @@ namespace BasicCastleWindsorUse
             Console.WriteLine("Running With Hash Pool");
             var config = ConfigurationFactory.ParseString(My.HashPoolWOResizer);
 
+            ConsistentHashMapping hashMapping = msg =>
+            {
+                if (msg is TypedActorMessage)
+                {
+                    var m2 = msg as TypedActorMessage;
+                    return m2.ConsistentHashKey;
+                }
+
+                return null;
+            };
+
             using (var system = ActorSystem.Create("MySystem", config))
             {
                 IWindsorContainer container = new WindsorContainer();
                 container.Register(Component.For<TypedWorker>().Named("TypedWorker").LifestyleTransient());
 
 
-                var pool = new ConsistentHashingPool(config);
+                var pool = new ConsistentHashingPool(10, null, null, null, hashMapping: hashMapping);
 
                 WindsorDependencyResolver propsResolver =
                     new WindsorDependencyResolver(container, system);

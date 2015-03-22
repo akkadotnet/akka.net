@@ -1,5 +1,5 @@
 akka.actor.deployment {
             /router1 {
                 router = consistent-hashing-pool
-				
+				nr-of-instances = 10
                 }

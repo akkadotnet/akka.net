@@ -29,14 +29,23 @@ namespace BasicAutoFacUses
             builder.RegisterType<TypedWorker>();
             
             Autofac.IContainer container = builder.Build();
+            ConsistentHashMapping hashMapping = msg =>
+            {
+                if (msg is TypedActorMessage)
+                {
+                    var m2 = msg as TypedActorMessage;
+                    return m2.ConsistentHashKey;
+                }
 
+                return null;
+            };
 
             using (var system = ActorSystem.Create("MySystem"))
             {
                 AutoFacDependencyResolver propsResolver =
                     new AutoFacDependencyResolver(container, system);
                 
-                var pool = new ConsistentHashingPool(config);
+                var pool = new ConsistentHashingPool(10,null,null,null,hashMapping: hashMapping);
 
                 var router = system.ActorOf(propsResolver.Create<TypedWorker>().WithRouter(pool));
 
@@ -72,14 +81,23 @@ namespace BasicAutoFacUses
             builder.RegisterType<TypedParentWorker>();
 
             Autofac.IContainer container = builder.Build();
+            ConsistentHashMapping hashMapping = msg =>
+            {
+                if (msg is TypedActorMessage)
+                {
+                    var m2 = msg as TypedActorMessage;
+                    return m2.ConsistentHashKey;
+                }
 
+                return null;
+            };
 
             using (var system = ActorSystem.Create("MySystem"))
             {
                 AutoFacDependencyResolver propsResolver =
                     new AutoFacDependencyResolver(container, system);
 
-                var pool = new ConsistentHashingPool(config);
+                var pool = new ConsistentHashingPool(10,null,null,null,hashMapping:hashMapping);
 
                 var router = system.ActorOf(propsResolver.Create<TypedParentWorker>().WithRouter(pool));
 
