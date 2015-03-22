@@ -2,6 +2,8 @@
 using Akka.DI.Core;
 using Akka.Routing;
 using System;
+
+
 public class AnotherMessage
 {
     public string Name { get; set; }
@@ -14,7 +16,7 @@ public class AnotherMessage
 
 
 }
-public class TypedActorMessage : ConsistentHashable
+public class TypedActorMessage : IConsistentHashable
 {
     public string Name { get; set; }
     public int Id { get; set; }

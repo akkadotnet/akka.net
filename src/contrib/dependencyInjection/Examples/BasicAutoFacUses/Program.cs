@@ -38,7 +38,6 @@ namespace BasicAutoFacUses
                 
                 var pool = new ConsistentHashingPool(config);
 
-                pool.NrOfInstances = 10;
                 var router = system.ActorOf(propsResolver.Create<TypedWorker>().WithRouter(pool));
 
                 Task.Delay(500).Wait();
@@ -82,7 +81,6 @@ namespace BasicAutoFacUses
 
                 var pool = new ConsistentHashingPool(config);
 
-                pool.NrOfInstances = 10;
                 var router = system.ActorOf(propsResolver.Create<TypedParentWorker>().WithRouter(pool));
 
                 Task.Delay(500).Wait();

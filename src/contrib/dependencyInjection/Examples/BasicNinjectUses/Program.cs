@@ -35,8 +35,6 @@ namespace BasicNinjectUses
 
 
                 var pool = new ConsistentHashingPool(config);
-                pool.NrOfInstances = 10;
-
 
                 var router = system.ActorOf(propsResolver.Create<TypedWorker>().WithRouter(pool));
 
@@ -81,9 +79,7 @@ namespace BasicNinjectUses
 
 
                 var pool = new ConsistentHashingPool(config);
-                pool.NrOfInstances = 10;
-
-
+    
                 var router = system.ActorOf(propsResolver.Create<TypedWorker>().WithRouter(pool));
 
                 Task.Delay(500).Wait();

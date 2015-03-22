@@ -60,6 +60,14 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\core\Akka.Cluster\Akka.Cluster.csproj">
+      <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
+      <Name>Akka.Cluster</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\core\Akka\Akka.csproj">
+      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Name>Akka</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Akka.DI.AutoFac\Akka.DI.AutoFac.csproj">
       <Project>{88854526-09d3-4f15-98f8-060838d958d1}</Project>
       <Name>Akka.DI.AutoFac</Name>
@@ -67,10 +75,6 @@
     <ProjectReference Include="..\..\Akka.DI.Core\Akka.DI.Core.csproj">
       <Project>{FDF09D18-B68E-4B95-B1F6-B89D9C6C3AE9}</Project>
       <Name>Akka.DI.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\core\Akka\Akka.csproj">
-      <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
-      <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

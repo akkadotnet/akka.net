@@ -33,8 +33,6 @@ namespace BasicCastleWindsorUse
                 container.Register(Component.For<TypedParentWorker>().Named("TypedParentWorker").LifestyleTransient());
 
                 var pool = new ConsistentHashingPool(config);
-                pool.NrOfInstances = 10;
-
 
                 WindsorDependencyResolver propsResolver =
                     new WindsorDependencyResolver(container, system);
@@ -77,8 +75,6 @@ namespace BasicCastleWindsorUse
 
 
                 var pool = new ConsistentHashingPool(config);
-                pool.NrOfInstances = 10;
-
 
                 WindsorDependencyResolver propsResolver =
                     new WindsorDependencyResolver(container, system);

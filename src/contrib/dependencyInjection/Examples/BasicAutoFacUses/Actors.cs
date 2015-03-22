@@ -15,7 +15,7 @@ public class AnotherMessage
 
 
 }
-public class TypedActorMessage : ConsistentHashable
+public class TypedActorMessage : IConsistentHashable
 {
     public string Name { get; set; }
     public int Id { get; set; }

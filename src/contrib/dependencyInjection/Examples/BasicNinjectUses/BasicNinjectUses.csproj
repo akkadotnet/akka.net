@@ -60,6 +60,14 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\core\Akka.Cluster\Akka.Cluster.csproj">
+      <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
+      <Name>Akka.Cluster</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\core\Akka\Akka.csproj">
+      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Name>Akka</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Akka.DI.Core\Akka.DI.Core.csproj">
       <Project>{fdf09d18-b68e-4b95-b1f6-b89d9c6c3ae9}</Project>
       <Name>Akka.DI.Core</Name>
@@ -67,10 +75,6 @@
     <ProjectReference Include="..\..\Akka.DI.Ninject\Akka.DI.Ninject.csproj">
       <Project>{c22a9758-ad7d-4078-bd67-4829bacdfeb6}</Project>
       <Name>Akka.DI.Ninject</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\core\Akka\Akka.csproj">
-      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
-      <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
