@@ -6,7 +6,6 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
-using Helios.Buffers;
 using Helios.Exceptions;
 using Helios.Net;
 using Helios.Net.Bootstrap;

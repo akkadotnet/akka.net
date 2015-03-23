@@ -1,11 +1,8 @@
-﻿using System;
+﻿using System.Threading;
+using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.TestKit;
 using Xunit;
-using Akka.Actor;
-using Akka.Configuration;
-using System.Collections.Concurrent;
-using System.Threading;
 
 namespace Akka.Remote.Tests
 {

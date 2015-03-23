@@ -2,11 +2,10 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Persistence.Serialization;
-using System.Runtime.Serialization;
 
 namespace Akka.Persistence
 {

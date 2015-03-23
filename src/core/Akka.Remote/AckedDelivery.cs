@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Security.Policy;
-using Akka.Actor;
 using System.Runtime.Serialization;
+using Akka.Actor;
 
 namespace Akka.Remote
 {

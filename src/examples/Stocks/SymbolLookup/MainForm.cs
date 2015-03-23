@@ -7,7 +7,6 @@ using QDFeedParser;
 using SymbolLookup.Actors;
 using SymbolLookup.Actors.Messages;
 using SymbolLookup.YahooFinance;
-using Akka.Dispatch;
 
 namespace SymbolLookup
 {

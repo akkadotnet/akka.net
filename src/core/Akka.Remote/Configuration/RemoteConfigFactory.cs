@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using Akka.Configuration;
 
 namespace Akka.Remote.Configuration

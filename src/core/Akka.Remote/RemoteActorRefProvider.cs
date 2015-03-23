@@ -7,10 +7,7 @@ using Akka.Actor.Internals;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.Pattern;
 using Akka.Remote.Configuration;
-using Akka.Remote.Serialization;
-using Akka.Routing;
 using Akka.Serialization;
 using Akka.Util.Internal;
 

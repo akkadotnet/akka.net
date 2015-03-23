@@ -1,9 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.Remoting;
 using Akka.Actor;
 using Akka.TestKit;
-using Akka.TestKit.Xunit;
 using Xunit;
 
 namespace Akka.Cluster.Tests

@@ -2,7 +2,6 @@
 using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Dsl;
-using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Tests.TestUtils;

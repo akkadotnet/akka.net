@@ -1,5 +1,3 @@
-using System;
-
 namespace Akka.Actor
 {
     public static class CancelableExtensions

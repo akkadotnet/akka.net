@@ -1,10 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Runtime.Remoting.Contexts;
-using System.Threading;
-using Akka.Actor;
+﻿using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
-using Akka.TestKit.Internal;
 
 namespace Akka.Testkit.Tests.TestEventListenerTests
 {

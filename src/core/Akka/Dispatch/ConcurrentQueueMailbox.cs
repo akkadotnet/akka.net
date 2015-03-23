@@ -1,8 +1,6 @@
-﻿﻿using System.Collections.Concurrent;
-using System.Diagnostics;
+﻿﻿using System.Diagnostics;
 using System.Threading;
 using Akka.Actor;
-using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
 
 #if MONO

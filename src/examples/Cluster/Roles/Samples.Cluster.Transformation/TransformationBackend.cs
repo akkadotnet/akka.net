@@ -1,5 +1,4 @@
-﻿using System;
-using Akka.Actor;
+﻿using Akka.Actor;
 using Akka.Cluster;
 
 namespace Samples.Cluster.Transformation

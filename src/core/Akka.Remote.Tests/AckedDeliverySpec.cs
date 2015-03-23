@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
-using Akka.Event;
 using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;

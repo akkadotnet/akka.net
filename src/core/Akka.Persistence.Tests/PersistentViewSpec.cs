@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;

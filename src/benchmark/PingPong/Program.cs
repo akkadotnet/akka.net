@@ -2,16 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Management;
-using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Dispatch.SysMsg;
-using Akka.Event;
 
 namespace PingPong
 {
@@ -27,7 +21,7 @@ namespace PingPong
         public static uint CpuSpeed()
         {
 #if !mono
-            var mo = new ManagementObject("Win32_Processor.DeviceID='CPU0'");
+            var mo = new System.Management.ManagementObject("Win32_Processor.DeviceID='CPU0'");
             var sp = (uint)(mo["CurrentClockSpeed"]);
             mo.Dispose();
             return sp;

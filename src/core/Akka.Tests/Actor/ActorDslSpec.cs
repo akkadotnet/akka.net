@@ -1,7 +1,6 @@
 ﻿using System;
 using Akka.Actor;
 using Akka.Actor.Dsl;
-using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
 using Xunit;
 

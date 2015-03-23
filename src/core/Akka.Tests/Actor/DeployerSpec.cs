@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Akka.Actor;
+﻿using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Routing;
 using Akka.TestKit;

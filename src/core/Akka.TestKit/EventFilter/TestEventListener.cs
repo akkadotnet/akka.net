@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.TestKit.Internal;
 using Akka.TestKit.TestEvent;
 
 namespace Akka.TestKit

@@ -1,8 +1,4 @@
-using System;
-using Akka.Actor;
 using Akka.Event;
-using Akka.TestKit;
-using Akka.TestKit.TestActors;
 
 namespace Akka.Testkit.Tests.TestEventListenerTests
 {

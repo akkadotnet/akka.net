@@ -3,7 +3,6 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Persistence.Journal;
 using Akka.TestKit;
-using Akka.TestKit.TestActors;
 using Xunit;
 
 namespace Akka.Persistence.Tests

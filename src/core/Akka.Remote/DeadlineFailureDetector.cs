@@ -1,10 +1,8 @@
-﻿using Akka.Configuration;
+﻿using System;
+using System.Threading;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
-using Akka.Util.Internal;
-
-using System;
-using System.Threading;
 
 namespace Akka.Remote
 {

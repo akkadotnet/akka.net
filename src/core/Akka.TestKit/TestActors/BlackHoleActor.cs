@@ -1,5 +1,4 @@
-﻿using System.Dynamic;
-using Akka.Actor;
+﻿using Akka.Actor;
 
 namespace Akka.TestKit.TestActors
 {

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Configuration;
-using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;

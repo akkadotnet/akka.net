@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading;
-using Akka.Actor;
+﻿using System.Threading;
 
 namespace Akka.Util
 {

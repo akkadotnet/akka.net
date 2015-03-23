@@ -1,15 +1,8 @@
-﻿using ChatMessages;
+﻿using System;
+using System.Linq;
 using Akka;
 using Akka.Actor;
-using Akka.Configuration;
-using Akka.Remote;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using ChatMessages;
 
 namespace ChatClient
 {

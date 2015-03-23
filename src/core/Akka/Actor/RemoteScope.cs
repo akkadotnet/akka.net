@@ -1,5 +1,4 @@
 ﻿using System;
-using Akka.Util.Internal;
 
 namespace Akka.Actor
 {

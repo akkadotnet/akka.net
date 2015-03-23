@@ -2,14 +2,11 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.Transport;
-using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Remote

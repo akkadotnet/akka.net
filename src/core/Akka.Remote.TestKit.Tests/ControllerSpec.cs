@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Akka.Actor;
 using Akka.TestKit;
-using Akka.TestKit.Xunit;
 using Helios.Topology;
 using Xunit;
 
