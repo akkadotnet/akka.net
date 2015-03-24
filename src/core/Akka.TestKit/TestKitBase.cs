@@ -257,7 +257,7 @@ namespace Akka.TestKit
 
         /// <summary>
         /// Multiplies the duration with the <see cref="Akka.TestKit.TestKitSettings.TestTimeFactor"/>,
-        /// e.g. the config value "akka.test.timefactor"
+        /// i.e. the config value "akka.test.timefactor"
         /// </summary>
         public TimeSpan Dilated(TimeSpan duration)
         {
@@ -370,7 +370,7 @@ namespace Akka.TestKit
         /// <returns>A new <see cref="TestLatch"/></returns>
         public virtual TestLatch CreateTestLatch(int count=1)
         {
-            return new TestLatch(Sys, count);
+            return new TestLatch(Dilated,count,_testKitSettings.DefaultTimeout);
         }
 
         /// <summary>
