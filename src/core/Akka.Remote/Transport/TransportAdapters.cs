@@ -100,7 +100,8 @@ namespace Akka.Remote.Transport
 
         public Address AugmentScheme(Address address)
         {
-            return address.Copy(protocol: AugmentScheme(address.Protocol));
+            var protocol = AugmentScheme(address.Protocol);
+            return address.WithProtocol(protocol);
         }
 
         public string RemoveScheme(string scheme)
@@ -112,7 +113,8 @@ namespace Akka.Remote.Transport
 
         public Address RemoveScheme(Address address)
         {
-            return address.Copy(protocol: RemoveScheme(address.Protocol));
+            var protocol = RemoveScheme(address.Protocol);
+            return address.WithProtocol(protocol);
         }
     }
 

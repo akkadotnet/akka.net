@@ -45,7 +45,7 @@ namespace Akka.Actor
 
         public override Scope Copy()
         {
-            return new RemoteScope(Address.Copy());
+            return new RemoteScope(Address);
         }
     }
 }

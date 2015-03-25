@@ -189,7 +189,7 @@ namespace Akka.Remote.Tests
             var probe = CreateTestProbe(masterActorSystem);
             var router = masterActorSystem.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>())
                 .WithDeploy(
-                new Deploy(new RemoteScope(intendedRemoteAddress.Copy()))), "remote-blub2");
+                new Deploy(new RemoteScope(intendedRemoteAddress))), "remote-blub2");
 
             router.Path.Address.ShouldBe(intendedRemoteAddress);
 
@@ -215,7 +215,7 @@ namespace Akka.Remote.Tests
             var probe = CreateTestProbe(masterActorSystem);
             var router = masterActorSystem.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>())
                 .WithDeploy(
-                new Deploy(new RemoteScope(intendedRemoteAddress.Copy()))), "local-blub");
+                new Deploy(new RemoteScope(intendedRemoteAddress))), "local-blub");
             router.Path.Address.ToString().ShouldBe(string.Format("akka://{0}", masterActorSystem.Name));
 
             var replies = new HashSet<ActorPath>();
@@ -266,7 +266,7 @@ namespace Akka.Remote.Tests
             var probe = CreateTestProbe(masterActorSystem);
             var router = masterActorSystem.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>())
                 .WithDeploy(
-                new Deploy(new RemoteScope(intendedRemoteAddress.Copy()))), "remote-override");
+                new Deploy(new RemoteScope(intendedRemoteAddress))), "remote-override");
 
             router.Path.Address.ShouldBe(intendedRemoteAddress);
 

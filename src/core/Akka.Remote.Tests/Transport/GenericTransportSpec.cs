@@ -24,8 +24,8 @@ namespace Akka.Remote.Tests.Transport
         {
             this.withAkkaProtocol = withAkkaProtocol;
 
-            addressA = addressATest.Copy(protocol: string.Format("{0}.{1}", SchemeIdentifier, addressATest.Protocol));
-            addressB = addressBTest.Copy(protocol: string.Format("{0}.{1}", SchemeIdentifier, addressBTest.Protocol));
+            addressA = addressATest.WithProtocol(string.Format("{0}.{1}", SchemeIdentifier, addressATest.Protocol));
+            addressB = addressBTest.WithProtocol(string.Format("{0}.{1}", SchemeIdentifier, addressBTest.Protocol));
             nonExistingAddress = new Address(SchemeIdentifier + ".test", "nosystem", "nohost", 0);
         }
 

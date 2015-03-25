@@ -109,12 +109,26 @@ namespace Akka.Actor
             return new Address(Protocol, System, Host, Port);
         }
 
-        //TODO: conform to WithXYZ convention for each value?
-        public Address Copy(string protocol = null, string system = null, string host = null, int? port = null)
+        public Address WithProtocol(string protocol)
         {
-            return new Address(protocol ?? Protocol, system ?? System, host ?? Host, port ?? Port);
+            return new Address(protocol, System, Host, Port);
         }
-        
+
+        public Address WithSystem(string system)
+        {
+            return new Address(Protocol, system, Host, Port);
+        }
+
+        public Address WithHost(string host = null)
+        {
+            return new Address(Protocol, System, host, Port);
+        }
+
+        public Address WithPort(int? port = null)
+        {
+            return new Address(Protocol, System, Host, Port);
+        }
+
         public static bool operator ==(Address left, Address right)
         {
             return Equals(left, right);
