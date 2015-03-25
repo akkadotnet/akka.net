@@ -126,7 +126,7 @@ namespace Akka.Actor
 
         public Address WithPort(int? port = null)
         {
-            return new Address(Protocol, System, Host, Port);
+            return new Address(Protocol, System, Host, port);
         }
 
         public static bool operator ==(Address left, Address right)
