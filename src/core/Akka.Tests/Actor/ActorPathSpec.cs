@@ -8,7 +8,6 @@ using Xunit.Extensions;
 
 namespace Akka.Tests.Actor
 {
-    
     public class ActorPathSpec
     {
         [Fact]

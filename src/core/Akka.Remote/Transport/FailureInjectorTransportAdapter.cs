@@ -257,7 +257,8 @@ namespace Akka.Remote.Transport
 
         private static Address NakedAddress(Address address)
         {
-            return address.Copy(protocol: string.Empty, system: string.Empty);
+            return address.WithProtocol(string.Empty)
+                .WithSystem(string.Empty);
         }
 
         private IGremlinMode ChaosMode(Address remoteAddress)

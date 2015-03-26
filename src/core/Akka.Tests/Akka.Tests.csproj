@@ -90,6 +90,7 @@
     <Compile Include="Actor\ActorPathSpec.cs" />
     <Compile Include="Actor\ActorProducerPipelineTests.cs" />
     <Compile Include="Actor\ActorRefSpec.cs" />
+    <Compile Include="Actor\AddressSpec.cs" />
     <Compile Include="Actor\Cancellation\AlreadyCancelledCancelableTests.cs" />
     <Compile Include="Actor\Cancellation\CancelableTests.cs" />
     <Compile Include="Actor\InboxSpec.cs" />
