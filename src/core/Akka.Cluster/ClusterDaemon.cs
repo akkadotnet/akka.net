@@ -1145,7 +1145,7 @@ namespace Akka.Cluster
                 if (localReachability.IsReachable(m.UniqueAddress))
                     _log.Info("Marking node [{0}] as Down", m.Address);
                 else
-                    _log.Info("Marking unreachable node [{0}] as Down", MemberStatus.Down);
+                    _log.Info("Marking unreachable node [{0}] as Down", m.Address);
 
                 // replace member (changed status)
                 var newMembers = localMembers.Remove(m).Add(m);
