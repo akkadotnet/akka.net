@@ -154,7 +154,6 @@
     <Compile Include="Configuration\ConfigurationException.cs" />
     <Compile Include="Configuration\ConfigurationFactory.cs" />
     <Compile Include="Configuration\Config.cs" />
-    <Compile Include="Configuration\FluentConfig.cs" />
     <Compile Include="Configuration\Hocon\AkkaConfigurationSection.cs" />
     <Compile Include="Configuration\Hocon\CDataConfigurationElement.cs" />
     <Compile Include="Configuration\Hocon\HoconArray.cs" />
