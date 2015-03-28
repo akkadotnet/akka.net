@@ -163,7 +163,7 @@ namespace Akka.TestKit
         [Obsolete("Use the constructor instead. This method will be removed in future versions")]
         public static TestLatch Apply(ActorSystem system, int count = 1)
         {
-            return new TestLatch(system, count);
+            return new TestLatch(count);
         }
 
         #endregion

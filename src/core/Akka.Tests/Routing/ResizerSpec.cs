@@ -90,7 +90,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void DefaultResizer_must_be_possible_to_define_programmatically()
         {
-            var latch = new TestLatch(Sys, 3);
+            var latch = new TestLatch(3);
             var resizer = new DefaultResizer(2, 3);
             var router = Sys.ActorOf(Props.Create<ResizerTestActor>().WithRouter(new RoundRobinPool(0, resizer)));
 
@@ -107,7 +107,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void DefaultResizer_must_be_possible_to_define_in_configuration()
         {
-            var latch = new TestLatch(Sys, 3);
+            var latch = new TestLatch(3);
             var router = Sys.ActorOf(Props.Create<ResizerTestActor>().WithRouter(FromConfig.Instance), "router1");
 
             router.Tell(latch);

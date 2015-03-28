@@ -103,7 +103,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Tail_chopping_router_must_deliver_a_broadcast_message_using_tell()
         {
-            var doneLatch = new TestLatch(Sys, 2);
+            var doneLatch = new TestLatch(2);
             var counter1 = new AtomicCounter(0);
             var counter2 = new AtomicCounter(0);
 

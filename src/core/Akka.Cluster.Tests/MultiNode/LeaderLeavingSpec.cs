@@ -92,7 +92,7 @@ akka.cluster.publish-stats-interval = 25 s")
                     }
                     else
                     {
-                        var exitingLatch = new TestLatch(Sys);
+                        var exitingLatch = new TestLatch();
 
                         var listener = Sys.ActorOf(Props.Create(() => new Listener(oldLeaderAddress, exitingLatch)).WithDeploy(Deploy.Local));
 

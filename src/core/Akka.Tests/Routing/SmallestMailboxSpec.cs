@@ -45,20 +45,20 @@ namespace Akka.Tests.Routing
             var usedActors = new ConcurrentDictionary<int, string>();
             var router = Sys.ActorOf(new SmallestMailboxPool(3).Props(Props.Create(() => new SmallestMailboxActor(usedActors))));
 
-            var busy = new TestLatch(Sys, 1);
-            var received0 = new TestLatch(Sys, 1);
+            var busy = new TestLatch(1);
+            var received0 = new TestLatch(1);
             router.Tell(Tuple.Create(busy, received0));
             received0.Ready(TestLatch.DefaultTimeout);
 
-            var received1 = new TestLatch(Sys, 1);
+            var received1 = new TestLatch(1);
             router.Tell(Tuple.Create(1, received1));
             received1.Ready(TestLatch.DefaultTimeout);
 
-            var received2 = new TestLatch(Sys, 1);
+            var received2 = new TestLatch(1);
             router.Tell(Tuple.Create(2, received2));
             received2.Ready(TestLatch.DefaultTimeout);
 
-            var received3 = new TestLatch(Sys, 1);
+            var received3 = new TestLatch(1);
             router.Tell(Tuple.Create(3, received3));
             received3.Ready(TestLatch.DefaultTimeout);
 

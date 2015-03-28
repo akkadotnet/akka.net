@@ -102,7 +102,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Router_in_general_must_not_terminate_when_resizer_is_used()
         {
-            var latch = new TestLatch(Sys,1);
+            var latch = new TestLatch(1);
             var resizer = new TestResizer(latch);
             var router =
                 Sys.ActorOf(new RoundRobinPool( 0, resizer,SupervisorStrategy.DefaultStrategy,"").Props(Props.Create<BlackHoleActor>()));
@@ -233,7 +233,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Router_in_general_must_use_specified_resizer_when_resizer_not_configured()
         {
-            var latch = new TestLatch(Sys,1);
+            var latch = new TestLatch(1);
             var resizer = new TestResizer(latch);
             var router =
                 Sys.ActorOf(

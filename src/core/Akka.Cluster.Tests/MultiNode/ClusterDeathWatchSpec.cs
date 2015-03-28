@@ -121,7 +121,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
                     var path2 = new RootActorPath(GetAddress(_config.Second)) / "user" / "subject";
                     var path3 = new RootActorPath(GetAddress(_config.Third)) / "user" / "subject";
-                    var watchEstablished = new TestLatch(Sys, 2);
+                    var watchEstablished = new TestLatch(2);
                     Sys.ActorOf(Props.Create(() => new Observer(path2, path3, watchEstablished, TestActor))
                         .WithDeploy(Deploy.Local), "observer1");
 

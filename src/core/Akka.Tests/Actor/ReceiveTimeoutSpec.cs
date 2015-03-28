@@ -66,7 +66,7 @@ namespace Akka.Tests.Actor
         [Fact(DisplayName="An actor with receive timeout must get timeout")]
         public void GetTimeout()
         {
-            var timeoutLatch = new TestLatch(Sys);
+            var timeoutLatch = new TestLatch();
             var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch)));
 
             timeoutLatch.Ready(TestLatch.DefaultTimeout);
@@ -77,7 +77,7 @@ namespace Akka.Tests.Actor
         [Fact(DisplayName = "An actor with receive timeout must reschedule timeout after regular receive")]
         public void RescheduleTimeout()
         {
-            var timeoutLatch = new TestLatch(Sys);
+            var timeoutLatch = new TestLatch();
             var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch)));
             timeoutActor.Tell(Tick);
             timeoutLatch.Ready(TestLatch.DefaultTimeout);
@@ -87,7 +87,7 @@ namespace Akka.Tests.Actor
         [Fact(DisplayName = "An actor with receive timeout must not receive timeout message when not specified")]
         public void NotGetTimeout()
         {
-            var timeoutLatch = new TestLatch(Sys);
+            var timeoutLatch = new TestLatch();
             var timeoutActor = Sys.ActorOf(Props.Create(() => new NoTimeoutActor(timeoutLatch)));
             Assert.Throws<TimeoutException>(() => timeoutLatch.Ready(TestLatch.DefaultTimeout));
             Sys.Stop(timeoutActor);
