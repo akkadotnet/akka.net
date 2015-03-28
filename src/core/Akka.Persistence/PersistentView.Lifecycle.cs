@@ -9,6 +9,12 @@ namespace Akka.Persistence
         {
             base.PreStart();
             Self.Tell(new Recover(SnapshotSelectionCriteria.Latest, replayMax: AutoUpdateReplayMax));
+
+            if (IsAutoUpdate)
+            {
+                _scheduleCancellation = Context.System.Scheduler
+                    .ScheduleTellRepeatedlyCancelable(AutoUpdateInterval, AutoUpdateInterval, Self, new ScheduledUpdate(AutoUpdateReplayMax), Self);
+            }
         }
 
         protected override void PreRestart(Exception reason, object message)
@@ -25,7 +31,11 @@ namespace Akka.Persistence
 
         protected override void PostStop()
         {
-            if (_scheduleCancellation != null) _scheduleCancellation.Cancel();
+            if (_scheduleCancellation != null)
+            {
+                _scheduleCancellation.Cancel();
+                _scheduleCancellation = null;
+            }
             base.PostStop();
         }
 

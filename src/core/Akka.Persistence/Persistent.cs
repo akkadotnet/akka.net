@@ -7,7 +7,27 @@ namespace Akka.Persistence
 {
     public interface IWithPersistenceId
     {
+        /// <summary>
+        /// Identifier of the persistent identity for which messages should be replayed.
+        /// </summary>
         string PersistenceId { get; }
+    }
+
+    public interface IPersistentIdentity : IWithPersistenceId
+    {
+        /// <summary>
+        /// Configuration identifier of the journal plugin servicing current persistent actor or view.
+        /// When empty, looks in [akka.persistence.journal.plugin] to find configuration entry path.
+        /// Otherwise uses string value as an absolute path to the journal configuration entry.
+        /// </summary>
+        string JournalPluginId { get; }
+
+        /// <summary>
+        /// Configuration identifier of the snapshot store plugin servicing current persistent actor or view.
+        /// When empty, looks in [akka.persistence.snapshot-store.plugin] to find configuration entry path.
+        /// Otherwise uses string value as an absolute path to the snapshot store configuration entry.
+        /// </summary>
+        string SnapshotPluginId { get; }
     }
 
     /// <summary>

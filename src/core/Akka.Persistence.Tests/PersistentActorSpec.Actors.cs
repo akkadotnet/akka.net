@@ -60,9 +60,9 @@ namespace Akka.Persistence.Tests
 
     public partial class PersistentActorSpec
     {
-        
 
-        internal class LatchCmd
+
+        internal class LatchCmd : NoSerializationVerificationNeeded
         {
             public LatchCmd(TestLatch latch, object data)
             {
@@ -427,7 +427,8 @@ namespace Akka.Persistence.Tests
                     var cmd = message as Cmd;
                     if (cmd != null)
                     {
-                        if (cmd.Data == "a")
+                        var data = cmd.Data.ToString();
+                        if (data == "a")
                         {
                             Persist(new Evt("a"), evt =>
                             {
@@ -435,7 +436,7 @@ namespace Akka.Persistence.Tests
                                 Context.Become(ProcessC);
                             });
                         }
-                        else if (cmd.Data == "b-1" || cmd.Data == "b-2")
+                        else if (data == "b-1" || data == "b-2")
                         {
                             Persist(new Evt(cmd.Data.ToString()), UpdateStateHandler);
                         }
@@ -450,14 +451,14 @@ namespace Akka.Persistence.Tests
             protected bool ProcessC(object message)
             {
                 var cmd = message as Cmd;
-                if (cmd != null && cmd.Data == "c")
+                if (cmd != null && cmd.Data.ToString() == "c")
                 {
                     Persist(new Evt("c"), evt =>
                     {
                         UpdateState(evt);
                         Context.Unbecome();
                     });
-                    Stash.UnstashAll();
+                    UnstashAll();
                 }
                 else Stash.Stash();
                 return true;
@@ -509,7 +510,7 @@ namespace Akka.Persistence.Tests
                     if (cmd != null)
                     {
                         Sender.Tell(cmd.Data);
-                        for (int i = 0; i < 3; i++)
+                        for (int i = 1; i <= 3; i++)
                         {
                             PersistAsync(new Evt(cmd.Data.ToString() + "-" + (++_counter)), evt =>
                             {
@@ -591,6 +592,7 @@ namespace Akka.Persistence.Tests
         internal class AsyncPersistAndPersistMixedSyncAsyncActor : ExamplePersistentActor
         {
             private int _counter = 0;
+            
             public AsyncPersistAndPersistMixedSyncAsyncActor(string name)
                 : base(name)
             {
@@ -686,7 +688,7 @@ namespace Akka.Persistence.Tests
                         UpdateState(evt);
                         Context.Unbecome();
                     });
-                    Stash.UnstashAll();
+                    UnstashAll();
                 }
                 else Stash.Stash();
                 return true;
