@@ -24,7 +24,7 @@ namespace Akka.Actor.Internal
             return NormalChildrenContainer.Create(newMap);
         }
 
-        public ChildrenContainer Remove(ActorRef child)
+        public ChildrenContainer Remove(IActorRef child)
         {
             return this;
         }
@@ -35,22 +35,22 @@ namespace Akka.Actor.Internal
             return false;
         }
 
-        public bool TryGetByRef(ActorRef actor, out ChildRestartStats childRestartStats)
+        public bool TryGetByRef(IActorRef actor, out ChildRestartStats childRestartStats)
         {
             childRestartStats = null;
             return false;
         }
 
-        public bool Contains(ActorRef actor)
+        public bool Contains(IActorRef actor)
         {
             return false;
         }
 
-        public IReadOnlyList<InternalActorRef> Children { get { return EmptyReadOnlyCollections<InternalActorRef>.List; } }
+        public IReadOnlyList<IInternalActorRef> Children { get { return EmptyReadOnlyCollections<IInternalActorRef>.List; } }
 
         public IReadOnlyList<ChildRestartStats> Stats { get { return EmptyReadOnlyCollections<ChildRestartStats>.List; } }
 
-        public ChildrenContainer ShallDie(ActorRef actor)
+        public ChildrenContainer ShallDie(IActorRef actor)
         {
             return this;
         }

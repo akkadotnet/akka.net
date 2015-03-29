@@ -12,13 +12,13 @@ namespace Akka.Actor
 
         protected override DateTimeOffset TimeNow { get { return DateTimeOffset.Now; } }
 
-        protected override void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, ActorRef sender, ICancelable cancelable)
+        protected override void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
         {
             var cancellationToken = cancelable == null ? CancellationToken.None : cancelable.Token;
             InternalScheduleOnce(delay, () => receiver.Tell(message, sender), cancellationToken);
         }
 
-        protected override void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, ActorRef sender, ICancelable cancelable)
+        protected override void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
         {
             var cancellationToken = cancelable == null ? CancellationToken.None : cancelable.Token;
             InternalScheduleRepeatedly(initialDelay, interval, () => receiver.Tell(message, sender), cancellationToken);

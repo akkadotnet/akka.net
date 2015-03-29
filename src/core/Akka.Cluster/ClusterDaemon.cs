@@ -408,14 +408,14 @@ namespace Akka.Cluster
 
         internal sealed class PublisherCreated
         {
-            readonly ActorRef _publisher;
+            readonly IActorRef _publisher;
 
-            public PublisherCreated(ActorRef publisher)
+            public PublisherCreated(IActorRef publisher)
             {
                 _publisher = publisher;
             }
 
-            public ActorRef Publisher
+            public IActorRef Publisher
             {
                 get { return _publisher; }
             }
@@ -444,11 +444,11 @@ namespace Akka.Cluster
 
         public sealed class Subscribe : ISubscriptionMessage
         {
-            readonly ActorRef _subscriber;
+            readonly IActorRef _subscriber;
             readonly ClusterEvent.SubscriptionInitialStateMode _initialStateMode;
             readonly ImmutableHashSet<Type> _to;
 
-            public Subscribe(ActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initialStateMode,
+            public Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initialStateMode,
                 ImmutableHashSet<Type> to)
             {
                 _subscriber = subscriber;
@@ -456,7 +456,7 @@ namespace Akka.Cluster
                 _to = to;
             }
 
-            public ActorRef Subscriber
+            public IActorRef Subscriber
             {
                 get { return _subscriber; }
             }
@@ -474,16 +474,16 @@ namespace Akka.Cluster
 
         public sealed class Unsubscribe : ISubscriptionMessage
         {
-            readonly ActorRef _subscriber;
+            readonly IActorRef _subscriber;
             readonly Type _to;
 
-            public Unsubscribe(ActorRef subscriber, Type to)
+            public Unsubscribe(IActorRef subscriber, Type to)
             {
                 _to = to;
                 _subscriber = subscriber;
             }
 
-            public ActorRef Subscriber
+            public IActorRef Subscriber
             {
                 get { return _subscriber; }
             }
@@ -496,15 +496,15 @@ namespace Akka.Cluster
 
         public sealed class SendCurrentClusterState : ISubscriptionMessage
         {
-            readonly ActorRef _receiver;
+            readonly IActorRef _receiver;
 
-            public ActorRef Receiver
+            public IActorRef Receiver
             {
                 get { return _receiver; }
             }
 
             /// <param name="receiver"><see cref="Akka.Cluster.ClusterEvent.CurrentClusterState"/> will be sent to the `receiver`</param>
-            public SendCurrentClusterState(ActorRef receiver)
+            public SendCurrentClusterState(IActorRef receiver)
             {
                 _receiver = receiver;
             }
@@ -549,7 +549,7 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class ClusterDaemon : UntypedActor
     {
-        readonly ActorRef _coreSupervisor;
+        readonly IActorRef _coreSupervisor;
         readonly ClusterSettings _settings;
 
         public ClusterDaemon(ClusterSettings settings)
@@ -591,8 +591,8 @@ namespace Akka.Cluster
     /// </summary>
     class ClusterCoreSupervisor : ReceiveActor
     {
-        readonly ActorRef _publisher;
-        readonly ActorRef _coreDaemon;
+        readonly IActorRef _publisher;
+        readonly IActorRef _coreDaemon;
 
         private readonly LoggingAdapter _log = Context.GetLogger();
 
@@ -643,13 +643,13 @@ namespace Akka.Cluster
 
         readonly bool _statsEnabled;
         GossipStats _gossipStats = new GossipStats();
-        ActorRef _seedNodeProcess;
+        IActorRef _seedNodeProcess;
         int _seedNodeProcessCounter = 0; //for unique names
         private bool _logInfo;
 
-        readonly ActorRef _publisher;
+        readonly IActorRef _publisher;
 
-        public ClusterCoreDaemon(ActorRef publisher)
+        public ClusterCoreDaemon(IActorRef publisher)
         {
             _publisher = publisher;
             SelfUniqueAddress = _cluster.SelfUniqueAddress;
@@ -1660,7 +1660,7 @@ namespace Akka.Cluster
                 ClusterCore(node.Address).Tell(new GossipEnvelope(SelfUniqueAddress, node, _latestGossip));
         }
 
-        public void GossipTo(UniqueAddress node, ActorRef destination)
+        public void GossipTo(UniqueAddress node, IActorRef destination)
         {
             if (ValidNodeForGossip(node))
                 destination.Tell(new GossipEnvelope(SelfUniqueAddress, node, _latestGossip));
@@ -1672,7 +1672,7 @@ namespace Akka.Cluster
                 ClusterCore(node.Address).Tell(new GossipStatus(SelfUniqueAddress, _latestGossip.Version));
         }
 
-        public void GossipStatusTo(UniqueAddress node, ActorRef destination)
+        public void GossipStatusTo(UniqueAddress node, IActorRef destination)
         {
             if (ValidNodeForGossip(node))
                 destination.Tell(new GossipStatus(SelfUniqueAddress, _latestGossip.Version));

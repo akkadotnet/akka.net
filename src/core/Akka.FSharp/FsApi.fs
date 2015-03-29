@@ -22,7 +22,7 @@ module Actors =
     let inline (<?) (tell : #ICanTell) (msg : obj) : Async<'Message> = tell.Ask<'Message> msg |> Async.AwaitTask
 
     /// Pipes an output of asynchronous expression directly to the recipients mailbox.
-    let pipeTo (computation : Async<'T>) (recipient : ICanTell) (sender : ActorRef) : unit = 
+    let pipeTo (computation : Async<'T>) (recipient : ICanTell) (sender : IActorRef) : unit = 
         let success (result : 'T) : unit = recipient.Tell(result, sender)
         let failure (err : exn) : unit = recipient.Tell(Status.Failure(err), sender)
         Async.StartWithContinuations(computation, success, failure, failure)
@@ -50,9 +50,9 @@ module Actors =
         abstract Receive : unit -> IO<'Message>
     
         /// <summary>
-        /// Gets <see cref="ActorRef" /> for the current actor.
+        /// Gets <see cref="IActorRef" /> for the current actor.
         /// </summary>
-        abstract Self : ActorRef
+        abstract Self : IActorRef
     
         /// <summary>
         /// Gets the current actor context.
@@ -62,7 +62,7 @@ module Actors =
         /// <summary>
         /// Returns a sender of current message or <see cref="ActorRefs.NoSender" />, if none could be determined.
         /// </summary>
-        abstract Sender : unit -> ActorRef
+        abstract Sender : unit -> IActorRef
     
         /// <summary>
         /// Explicit signalization of unhandled message.
@@ -217,8 +217,8 @@ module Actors =
                         member __.ActorOf(props, name) = context.ActorOf(props, name)
                         member __.ActorSelection(path : string) = context.ActorSelection(path)
                         member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
-                        member __.Watch(aref:ActorRef) = context.Watch aref
-                        member __.Unwatch(aref:ActorRef) = context.Unwatch aref
+                        member __.Watch(aref:IActorRef) = context.Watch aref
+                        member __.Unwatch(aref:IActorRef) = context.Unwatch aref
                         member __.Log = lazy (Akka.Event.Logging.GetLogger(context))
                         member __.Defer fn = deferables <- fn::deferables 
                         member __.Stash() = (this :> WithUnboundedStash).Stash.Stash()
@@ -226,7 +226,7 @@ module Actors =
                         member __.UnstashAll() = (this :> WithUnboundedStash).Stash.UnstashAll() }
     
         new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile () ())
-        member __.Sender() : ActorRef = base.Sender
+        member __.Sender() : IActorRef = base.Sender
         member __.Unhandled msg = base.Unhandled msg
         override x.OnReceive msg = 
             match state with
@@ -476,7 +476,7 @@ module Spawn =
     /// <param name="expr">F# expression compiled down to receive function used by actor for response for incoming request</param>
     /// <param name="options">List of options used to configure actor creation</param>
     let spawne (actorFactory : ActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) 
-        (options : SpawnOption list) : ActorRef = 
+        (options : SpawnOption list) : IActorRef = 
         let e = Linq.Expression.ToExpression(fun () -> new FunActor<'Message, 'Returned>(expr))
         let props = applySpawnOptions (Props.Create e) options
         actorFactory.ActorOf(props, name)
@@ -490,7 +490,7 @@ module Spawn =
     /// <param name="f">Used by actor for handling response for incoming request</param>
     /// <param name="options">List of options used to configure actor creation</param>
     let spawnOpt (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) 
-        (options : SpawnOption list) : ActorRef = 
+        (options : SpawnOption list) : IActorRef = 
         let e = Linq.Expression.ToExpression(fun () -> new FunActor<'Message, 'Returned>(f))
         let props = applySpawnOptions (Props.Create e) options
         actorFactory.ActorOf(props, name)
@@ -502,7 +502,7 @@ module Spawn =
     /// <param name="actorFactory">Either actor system or parent actor</param>
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used by actor for handling response for incoming request</param>
-    let spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : ActorRef = 
+    let spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : IActorRef = 
         spawnOpt actorFactory name f []
 
     /// <summary>
@@ -514,7 +514,7 @@ module Spawn =
     /// <param name="f">Used to create a new instance of the actor</param>
     /// <param name="options">List of options used to configure actor creation</param>
     let spawnObjOpt (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) 
-        (options : SpawnOption list) : ActorRef = 
+        (options : SpawnOption list) : IActorRef = 
         let e = Linq.Expression.ToExpression<'Actor> f
         let props = applySpawnOptions (Props.Create e) options
         actorFactory.ActorOf(props, name)
@@ -526,7 +526,7 @@ module Spawn =
     /// <param name="actorFactory">Either actor system or parent actor</param>
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used to create a new instance of the actor</param>
-    let spawnObj (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : ActorRef = 
+    let spawnObj (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : IActorRef = 
         spawnObjOpt actorFactory name f []
 
     /// <summary>
@@ -608,12 +608,12 @@ module Watchers =
     /// Orders a <paramref name="watcher"/> to monitor an actor targeted by provided <paramref name="subject"/>.
     /// When an actor refered by subject dies, a watcher should receive a <see cref="Terminated"/> message.
     /// </summary>
-    let monitor (subject: ActorRef) (watcher: ICanWatch) : ActorRef = watcher.Watch subject
+    let monitor (subject: IActorRef) (watcher: ICanWatch) : IActorRef = watcher.Watch subject
 
     /// <summary>
     /// Orders a <paramref name="watcher"/> to stop monitoring an actor refered by provided <paramref name="subject"/>.
     /// </summary>
-    let demonitor (subject: ActorRef) (watcher: ICanWatch) : ActorRef = watcher.Unwatch subject
+    let demonitor (subject: IActorRef) (watcher: ICanWatch) : IActorRef = watcher.Unwatch subject
 
 [<AutoOpen>]
 module EventStreaming =
@@ -621,12 +621,12 @@ module EventStreaming =
     /// <summary>
     /// Subscribes an actor reference to target channel of the provided event stream.
     /// </summary>
-    let subscribe (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool = eventStream.Subscribe(ref, channel)
+    let subscribe (channel: System.Type) (ref: IActorRef) (eventStream: Akka.Event.EventStream) : bool = eventStream.Subscribe(ref, channel)
 
     /// <summary>
     /// Unubscribes an actor reference from target channel of the provided event stream.
     /// </summary>
-    let unsubscribe (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool = eventStream.Unsubscribe(ref, channel)
+    let unsubscribe (channel: System.Type) (ref: IActorRef) (eventStream: Akka.Event.EventStream) : bool = eventStream.Unsubscribe(ref, channel)
 
     /// <summary>
     /// Publishes an event on the provided event stream. Event channel is resolved from event's type.

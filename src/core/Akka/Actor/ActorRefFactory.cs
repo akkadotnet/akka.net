@@ -20,7 +20,7 @@
         /// <param name="props">The props.</param>
         /// <param name="name">The name.</param>
         /// <returns>InternalActorRef.</returns>
-        ActorRef ActorOf(Props props, string name = null);
+        IActorRef ActorOf(Props props, string name = null);
 
        
         /// <summary>

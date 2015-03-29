@@ -224,12 +224,12 @@ namespace Akka.Actor
             }
         }
 
-        private void Supervise(ActorRef child, bool async)
+        private void Supervise(IActorRef child, bool async)
         {
             //TODO: complete this
             if (!IsTerminating)
             {
-                var childRestartStats = InitChild((InternalActorRef)child);
+                var childRestartStats = InitChild((IInternalActorRef)child);
                 if (childRestartStats != null)
                 {
                     HandleSupervise(child, async);
@@ -245,7 +245,7 @@ namespace Akka.Actor
             }
         }
 
-        private void HandleSupervise(ActorRef child, bool async)
+        private void HandleSupervise(IActorRef child, bool async)
         {
             if (async && child is RepointableActorRef)
             {

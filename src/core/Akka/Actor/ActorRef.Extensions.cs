@@ -10,7 +10,7 @@
         ///     and don't receive a valid result in return, this method will indicate
         ///     whether or not the actor we received is valid.
         /// </summary>
-        public static bool IsNobody(this ActorRef actorRef)
+        public static bool IsNobody(this IActorRef actorRef)
         {
             return actorRef == null || actorRef is Nobody || actorRef is NoSender || actorRef is DeadLetterActorRef;
         }

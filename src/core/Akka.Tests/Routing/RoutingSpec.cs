@@ -60,8 +60,8 @@ namespace Akka.Tests.Routing
             var router = Sys.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>()), "router");
             router.Tell("",TestActor);
             router.Tell("",TestActor);
-            var c1 = ExpectMsg<ActorRef>();
-            var c2 = ExpectMsg<ActorRef>();
+            var c1 = ExpectMsg<IActorRef>();
+            var c2 = ExpectMsg<IActorRef>();
             Watch(router);
             Watch(c2);
             Sys.Stop(c2);
@@ -72,7 +72,7 @@ namespace Akka.Tests.Routing
             {
                 router.Tell("", TestActor);
                 router.Tell("", TestActor);
-                var res = ReceiveWhile(TimeSpan.FromMilliseconds(100), o => o is ActorRef ? (ActorRef) o : ActorRefs.NoSender, 2);
+                var res = ReceiveWhile(TimeSpan.FromMilliseconds(100), o => o is IActorRef ? (IActorRef) o : ActorRefs.NoSender, 2);
                 return res.SequenceEqual(new[] {c1, c1});
             });
             
@@ -162,11 +162,11 @@ namespace Akka.Tests.Routing
         {
             var router = Sys.ActorOf(new BroadcastPool(5).Props(Props.Create<Echo>()));
             router.Tell("hello",TestActor);
-            ExpectMsg<ActorRef>();
-            ExpectMsg<ActorRef>();
-            ExpectMsg<ActorRef>();
-            ExpectMsg<ActorRef>();
-            ExpectMsg<ActorRef>();
+            ExpectMsg<IActorRef>();
+            ExpectMsg<IActorRef>();
+            ExpectMsg<IActorRef>();
+            ExpectMsg<IActorRef>();
+            ExpectMsg<IActorRef>();
             ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 

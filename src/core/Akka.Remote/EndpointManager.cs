@@ -34,14 +34,14 @@ namespace Akka.Remote
 
         public class Pass : EndpointPolicy
         {
-            public Pass(ActorRef endpoint, int? uid)
+            public Pass(IActorRef endpoint, int? uid)
                 : base(false)
             {
                 Uid = uid;
                 Endpoint = endpoint;
             }
 
-            public ActorRef Endpoint { get; private set; }
+            public IActorRef Endpoint { get; private set; }
 
             public int? Uid { get; private set; }
         }
@@ -96,7 +96,7 @@ namespace Akka.Remote
 
         public sealed class Send : RemotingCommand, IHasSequenceNumber
         {
-            public Send(object message, RemoteActorRef recipient, ActorRef senderOption = null, SeqNo seqOpt = null)
+            public Send(object message, RemoteActorRef recipient, IActorRef senderOption = null, SeqNo seqOpt = null)
             {
                 Recipient = recipient;
                 SenderOption = senderOption;
@@ -109,7 +109,7 @@ namespace Akka.Remote
             /// <summary>
             /// Can be null!
             /// </summary>
-            public ActorRef SenderOption { get; private set; }
+            public IActorRef SenderOption { get; private set; }
 
             public RemoteActorRef Recipient { get; private set; }
 
@@ -306,8 +306,8 @@ namespace Akka.Remote
             }
         }
 
-        private Dictionary<ActorRef, AkkaProtocolHandle> pendingReadHandoffs = new Dictionary<ActorRef, AkkaProtocolHandle>();
-        private Dictionary<ActorRef, List<InboundAssociation>> stashedInbound = new Dictionary<ActorRef, List<InboundAssociation>>();
+        private Dictionary<IActorRef, AkkaProtocolHandle> pendingReadHandoffs = new Dictionary<IActorRef, AkkaProtocolHandle>();
+        private Dictionary<IActorRef, List<InboundAssociation>> stashedInbound = new Dictionary<IActorRef, List<InboundAssociation>>();
 
         #region ActorBase overrides
 
@@ -465,7 +465,7 @@ namespace Akka.Remote
                     var read = endpoints.ReadOnlyEndpointFor(quarantine.RemoteAddress);
                     if (read != null)
                     {
-                        Context.Stop((InternalActorRef)read);
+                        Context.Stop((IInternalActorRef)read);
                     }
 
                     if (quarantine.Uid.HasValue)
@@ -477,7 +477,7 @@ namespace Akka.Remote
                 .With<Send>(send =>
                 {
                     var recipientAddress = send.Recipient.Path.Address;
-                    Func<int?, ActorRef> createAndRegisterWritingEndpoint = refuseUid => endpoints.RegisterWritableEndpoint(recipientAddress,
+                    Func<int?, IActorRef> createAndRegisterWritingEndpoint = refuseUid => endpoints.RegisterWritableEndpoint(recipientAddress,
                         CreateEndpoint(recipientAddress, send.Recipient.LocalAddressToUse,
                             _transportMapping[send.Recipient.LocalAddressToUse], settings, writing: true,
                             handleOption: null, refuseUid: refuseUid), refuseUid);
@@ -626,7 +626,7 @@ namespace Akka.Remote
             }
         }
 
-        private void HandleStashedInbound(ActorRef endpoint)
+        private void HandleStashedInbound(IActorRef endpoint)
         {
             var stashed = stashedInbound.GetOrElse(endpoint, new List<InboundAssociation>());
             stashedInbound.Remove(endpoint);
@@ -711,7 +711,7 @@ namespace Akka.Remote
             }
         }
 
-        private void AcceptPendingReader(ActorRef takingOverFrom)
+        private void AcceptPendingReader(IActorRef takingOverFrom)
         {
             if (pendingReadHandoffs.ContainsKey(takingOverFrom))
             {
@@ -724,7 +724,7 @@ namespace Akka.Remote
             }
         }
 
-        private void RemovePendingReader(ActorRef takingOverFrom, AkkaProtocolHandle withHandle)
+        private void RemovePendingReader(IActorRef takingOverFrom, AkkaProtocolHandle withHandle)
         {
             if (pendingReadHandoffs.ContainsKey(takingOverFrom) &&
                 pendingReadHandoffs[takingOverFrom].Equals(withHandle))
@@ -757,13 +757,13 @@ namespace Akka.Remote
             }
         }
 
-        private ActorRef CreateEndpoint(Address remoteAddress, Address localAddress, AkkaProtocolTransport transport,
+        private IActorRef CreateEndpoint(Address remoteAddress, Address localAddress, AkkaProtocolTransport transport,
             RemoteSettings endpointSettings, bool writing, AkkaProtocolHandle handleOption = null, int? refuseUid = null)
         {
             System.Diagnostics.Debug.Assert(_transportMapping.ContainsKey(localAddress));
             System.Diagnostics.Debug.Assert(writing || refuseUid == null);
 
-            ActorRef endpointActor;
+            IActorRef endpointActor;
 
             if (writing)
             {

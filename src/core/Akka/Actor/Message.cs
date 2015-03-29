@@ -11,7 +11,7 @@
         ///     Gets or sets the sender.
         /// </summary>
         /// <value>The sender.</value>
-        public ActorRef Sender { get; set; }
+        public IActorRef Sender { get; set; }
 
         /// <summary>
         ///     Gets or sets the message.

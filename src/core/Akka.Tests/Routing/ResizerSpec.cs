@@ -228,7 +228,7 @@ namespace Akka.Tests.Routing
 
         #region Internal methods
 
-        private int RouteeSize(ActorRef router)
+        private int RouteeSize(IActorRef router)
         {
             var routeesTask = router.Ask<Routees>(new GetRoutees(), TestKitSettings.DefaultTimeout);
             routeesTask.Wait(TestKitSettings.DefaultTimeout);

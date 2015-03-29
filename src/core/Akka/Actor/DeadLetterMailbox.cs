@@ -6,14 +6,14 @@ namespace Akka.Actor
 {
     public class DeadLetterMailbox : Mailbox
     {
-        private readonly ActorRef _deadLetters;
+        private readonly IActorRef _deadLetters;
 
-        public DeadLetterMailbox(ActorRef deadLetters)
+        public DeadLetterMailbox(IActorRef deadLetters)
         {
             _deadLetters = deadLetters;
         }
 
-        public override void Post(ActorRef receiver, Envelope envelope)
+        public override void Post(IActorRef receiver, Envelope envelope)
         {
             var message = envelope.Message;
             if(message is SystemMessage)

@@ -13,7 +13,7 @@ namespace Akka.TestKit
     /// <typeparam name="TData">The type of the data.</typeparam>
     public class TestFSMRef<TActor, TState, TData> : TestActorRefBase<TActor> where TActor : FSM<TState, TData>
     {
-        public TestFSMRef(ActorSystem system, Props props, ActorRef supervisor = null, string name = null, bool activateLogging = false)
+        public TestFSMRef(ActorSystem system, Props props, IActorRef supervisor = null, string name = null, bool activateLogging = false)
             : base(system, props, supervisor, name)
         {
             if(activateLogging)

@@ -78,7 +78,7 @@ namespace Akka.Actor
     /// </summary>
     public abstract partial class ActorBase : IInternalActor
     {
-        private ActorRef _clearedSelf;
+        private IActorRef _clearedSelf;
         private bool HasBeenCleared { get { return _clearedSelf != null; } }
 
         /// <summary>
@@ -96,7 +96,7 @@ namespace Akka.Actor
         ///     Gets the sending ActorRef of the current message
         /// </summary>
         /// <value>The sender ActorRef</value>
-        protected ActorRef Sender
+        protected IActorRef Sender
         {
             get { return Context.Sender; }
         }
@@ -105,7 +105,7 @@ namespace Akka.Actor
         ///     Gets the self ActorRef
         /// </summary>
         /// <value>Self ActorRef</value>
-        protected ActorRef Self { get { return HasBeenCleared ? _clearedSelf : Context.Self; } }
+        protected IActorRef Self { get { return HasBeenCleared ? _clearedSelf : Context.Self; } }
 
         /// <summary>
         ///     Gets the context.
@@ -206,7 +206,7 @@ namespace Akka.Actor
             Context.Unbecome();
         }
 
-        internal void Clear(ActorRef self)
+        internal void Clear(IActorRef self)
         {
             _clearedSelf = self;
         }

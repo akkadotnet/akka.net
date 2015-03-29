@@ -39,7 +39,7 @@ namespace Akka.Dispatch.SysMsg
         /// <param name="actor">The actor.</param>
         /// <param name="existenceConfirmed">if set to <c>true</c> [existence confirmed].</param>
         /// <param name="addressTerminated">if set to <c>true</c> [address terminated].</param>
-        public DeathWatchNotification(ActorRef actor, bool existenceConfirmed, bool addressTerminated)
+        public DeathWatchNotification(IActorRef actor, bool existenceConfirmed, bool addressTerminated)
         {
             Actor = actor;
             ExistenceConfirmed = existenceConfirmed;
@@ -50,7 +50,7 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the actor.
         /// </summary>
         /// <value>The actor.</value>
-        public ActorRef Actor { get; private set; }
+        public IActorRef Actor { get; private set; }
 
         /// <summary>
         ///     Gets a value indicating whether [existence confirmed].
@@ -77,7 +77,7 @@ namespace Akka.Dispatch.SysMsg
     {
         private readonly long _uid;
         private readonly Exception _cause;
-        private readonly ActorRef _child;
+        private readonly IActorRef _child;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Failed" /> class.
@@ -85,7 +85,7 @@ namespace Akka.Dispatch.SysMsg
         /// <param name="child">The child.</param>
         /// <param name="cause">The cause.</param>
         /// <param name="uid">The uid</param>
-        public Failed(ActorRef child, Exception cause, long uid)
+        public Failed(IActorRef child, Exception cause, long uid)
         {
             _uid = uid;
             _child = child;
@@ -96,7 +96,7 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the child.
         /// </summary>
         /// <value>The child.</value>
-        public ActorRef Child { get { return _child; } }
+        public IActorRef Child { get { return _child; } }
 
         /// <summary>
         ///     Gets the cause.
@@ -122,7 +122,7 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <param name="child">The child.</param>
         /// <param name="async">if set to <c>true</c> [asynchronous].</param>
-        public Supervise(ActorRef child, bool async)
+        public Supervise(IActorRef child, bool async)
         {
             Child = child;
             Async = async;
@@ -138,7 +138,7 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the child.
         /// </summary>
         /// <value>The child.</value>
-        public ActorRef Child { get; private set; }
+        public IActorRef Child { get; private set; }
 
         public override string ToString()
         {
@@ -157,7 +157,7 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <param name="watchee">The watchee.</param>
         /// <param name="watcher">The watcher.</param>
-        public Watch(ActorRef watchee, ActorRef watcher)
+        public Watch(IActorRef watchee, IActorRef watcher)
         {
             Watchee = watchee;
             Watcher = watcher;
@@ -167,13 +167,13 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the watchee.
         /// </summary>
         /// <value>The watchee.</value>
-        public ActorRef Watchee { get; private set; }
+        public IActorRef Watchee { get; private set; }
 
         /// <summary>
         ///     Gets the watcher.
         /// </summary>
         /// <value>The watcher.</value>
-        public ActorRef Watcher { get; private set; }
+        public IActorRef Watcher { get; private set; }
 
         public override string ToString()
         {
@@ -192,7 +192,7 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <param name="watchee">The watchee.</param>
         /// <param name="watcher">The watcher.</param>
-        public Unwatch(ActorRef watchee, ActorRef watcher)
+        public Unwatch(IActorRef watchee, IActorRef watcher)
         {
             Watchee = watchee;
             Watcher = watcher;
@@ -202,13 +202,13 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the watchee.
         /// </summary>
         /// <value>The watchee.</value>
-        public ActorRef Watchee { get; private set; }
+        public IActorRef Watchee { get; private set; }
 
         /// <summary>
         ///     Gets the watcher.
         /// </summary>
         /// <value>The watcher.</value>
-        public ActorRef Watcher { get; private set; }
+        public IActorRef Watcher { get; private set; }
 
         public override string ToString()
         {
@@ -415,7 +415,7 @@ namespace Akka.Dispatch.SysMsg
         ///     Initializes a new instance of the <see cref="StopChild" /> class.
         /// </summary>
         /// <param name="child">The child.</param>
-        public StopChild(ActorRef child)
+        public StopChild(IActorRef child)
         {
             Child = child;
         }
@@ -424,7 +424,7 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the child.
         /// </summary>
         /// <value>The child.</value>
-        public ActorRef Child { get; private set; }
+        public IActorRef Child { get; private set; }
 
 
         public override string ToString()

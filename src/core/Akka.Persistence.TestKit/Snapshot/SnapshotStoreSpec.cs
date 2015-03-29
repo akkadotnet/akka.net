@@ -39,7 +39,7 @@ namespace Akka.Persistence.TestKit.Snapshot
         {
         }
 
-        protected ActorRef SnapshotStore { get { return Extension.SnapshotStoreFor(null); } }
+        protected IActorRef SnapshotStore { get { return Extension.SnapshotStoreFor(null); } }
 
         private static Config ConfigFromTemplate(Type snapshotStoreType)
         {

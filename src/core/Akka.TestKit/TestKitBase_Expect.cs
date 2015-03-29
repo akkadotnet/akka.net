@@ -80,7 +80,7 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        public T ExpectMsg<T>(Func<T, ActorRef, bool> isMessageAndSender, TimeSpan? timeout = null, string hint = null)
+        public T ExpectMsg<T>(Func<T, IActorRef, bool> isMessageAndSender, TimeSpan? timeout = null, string hint = null)
         {
             return InternalExpectMsg<T>(RemainingOrDilated(RemainingOrDilated(timeout)), (m, sender) =>
             {
@@ -98,7 +98,7 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        public T ExpectMsg<T>(Action<T, ActorRef> assertMessageAndSender, TimeSpan? timeout = null, string hint = null)
+        public T ExpectMsg<T>(Action<T, IActorRef> assertMessageAndSender, TimeSpan? timeout = null, string hint = null)
         {
             return InternalExpectMsg<T>(RemainingOrDilated(RemainingOrDilated(timeout)), assertMessageAndSender, hint);
         }
@@ -133,7 +133,7 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>       
-        public Terminated ExpectTerminated(ActorRef target, TimeSpan? timeout = null, string hint = null)
+        public Terminated ExpectTerminated(IActorRef target, TimeSpan? timeout = null, string hint = null)
         {
             var msg = string.Format("Terminated {0}. {1}", target.Path, hint ?? "");
             return InternalExpectMsg<Terminated>(RemainingOrDilated(timeout), terminated => _assertions.AssertEqual(target, terminated.ActorRef, msg), msg);
@@ -156,23 +156,23 @@ namespace Akka.TestKit
             return (T)envelope.Message;
         }
 
-        private T InternalExpectMsg<T>(TimeSpan? timeout, Action<T> msgAssert, Action<ActorRef> senderAssert, string hint)
+        private T InternalExpectMsg<T>(TimeSpan? timeout, Action<T> msgAssert, Action<IActorRef> senderAssert, string hint)
         {
             var envelope = InternalExpectMsgEnvelope<T>(timeout, msgAssert, senderAssert, hint);
             return (T)envelope.Message;
         }
 
-        private T InternalExpectMsg<T>(TimeSpan? timeout, Action<T, ActorRef> assert, string hint)
+        private T InternalExpectMsg<T>(TimeSpan? timeout, Action<T, IActorRef> assert, string hint)
         {
             var envelope = InternalExpectMsgEnvelope<T>(timeout, assert, hint);
             return (T)envelope.Message;
         }
 
-        private MessageEnvelope InternalExpectMsgEnvelope<T>(TimeSpan? timeout, Action<T> msgAssert, Action<ActorRef> senderAssert, string hint)
+        private MessageEnvelope InternalExpectMsgEnvelope<T>(TimeSpan? timeout, Action<T> msgAssert, Action<IActorRef> senderAssert, string hint)
         {
             msgAssert = msgAssert ?? (m => { });
             senderAssert = senderAssert ?? (sender => { });
-            Action<T, ActorRef> combinedAssert = (m, sender) =>
+            Action<T, IActorRef> combinedAssert = (m, sender) =>
             {
                 senderAssert(sender);
                 msgAssert(m);
@@ -181,7 +181,7 @@ namespace Akka.TestKit
             return envelope;
         }
 
-        private MessageEnvelope InternalExpectMsgEnvelope<T>(TimeSpan? timeout, Action<T, ActorRef> assert, string hint, bool shouldLog=false)
+        private MessageEnvelope InternalExpectMsgEnvelope<T>(TimeSpan? timeout, Action<T, IActorRef> assert, string hint, bool shouldLog=false)
         {
             MessageEnvelope envelope;
             ConditionalLog(shouldLog, "Expecting message of type {0}. {1}", typeof(T), hint);

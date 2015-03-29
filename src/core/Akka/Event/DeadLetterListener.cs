@@ -44,8 +44,8 @@ namespace Akka.Event
         protected override bool Receive(object message)
         {
             var deadLetter = (DeadLetter)message;
-            ActorRef snd = deadLetter.Sender;
-            ActorRef rcp = deadLetter.Recipient;
+            IActorRef snd = deadLetter.Sender;
+            IActorRef rcp = deadLetter.Recipient;
             _count++;
             bool done = _maxCount != int.MaxValue && _count >= _maxCount;
             string doneMsg = done ? ", no more dead letters will be logged" : "";
@@ -60,7 +60,7 @@ namespace Akka.Event
             }
             if (done)
             {
-                ((InternalActorRef)Self).Stop();
+                ((IInternalActorRef)Self).Stop();
             }
             return true;
         }

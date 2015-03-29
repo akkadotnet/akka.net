@@ -298,8 +298,8 @@ namespace Akka.Persistence.Tests
 
         internal class SnapshottingPersistentActor : ExamplePersistentActor
         {
-            protected readonly ActorRef Probe;
-            public SnapshottingPersistentActor(string name, ActorRef probe)
+            protected readonly IActorRef Probe;
+            public SnapshottingPersistentActor(string name, IActorRef probe)
                 : base(name)
             {
                 Probe = probe;
@@ -339,7 +339,7 @@ namespace Akka.Persistence.Tests
         {
             public const string Message = "It's changing me";
             public const string Response = "I'm becoming";
-            public SnapshottingBecomingPersistentActor(string name, ActorRef probe) : base(name, probe) { }
+            public SnapshottingBecomingPersistentActor(string name, IActorRef probe) : base(name, probe) { }
 
             private bool BecomingRecover(object message)
             {
@@ -719,7 +719,7 @@ namespace Akka.Persistence.Tests
 
         internal class HandleRecoveryFinishedEventPersistentActor : SnapshottingPersistentActor
         {
-            public HandleRecoveryFinishedEventPersistentActor(string name, ActorRef probe)
+            public HandleRecoveryFinishedEventPersistentActor(string name, IActorRef probe)
                 : base(name, probe)
             {
             }

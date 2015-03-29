@@ -104,7 +104,7 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="message">The message to send.</param>
         /// <param name="sender">The sender of the message.</param>
-        public override void Send(object message, ActorRef sender)
+        public override void Send(object message, IActorRef sender)
         {
             _routees.Shuffle();
             var routeeIndex = new AtomicCounter(0);

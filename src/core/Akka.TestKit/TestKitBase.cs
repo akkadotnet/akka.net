@@ -34,7 +34,7 @@ namespace Akka.TestKit
         private readonly BlockingQueue<MessageEnvelope> _queue;
         private MessageEnvelope _lastMessage = NullMessageEnvelope.Instance;
         private static readonly AtomicCounter _testActorId = new AtomicCounter(0);
-        private readonly ActorRef _testActor;
+        private readonly IActorRef _testActor;
         private TimeSpan? _end;
         private bool _lastWasNoMsg; //if last assertion was expectNoMsg, disable timing failure upon within() block end.
         private readonly LoggingAdapter _log;
@@ -106,7 +106,7 @@ namespace Akka.TestKit
 
         public ActorSystem Sys { get { return _system; } }
         public TestKitSettings TestKitSettings { get { return _testKitSettings; } }
-        public ActorRef LastSender { get { return _lastMessage.Sender; } }
+        public IActorRef LastSender { get { return _lastMessage.Sender; } }
         public static Config DefaultConfig { get { return _defaultConfig; } }
         public static Config FullDebugConfig { get { return _fullDebugConfig; } }
         public static TimeSpan Now { get { return TimeSpan.FromTicks(DateTime.UtcNow.Ticks); } }
@@ -121,7 +121,7 @@ namespace Akka.TestKit
         /// <see cref="SetAutoPilot"/>. All other messages are forwarded to the queue
         /// and can be retrieved with Receive and the ExpectMsg overloads.
         /// </summary>
-        public ActorRef TestActor { get { return _testActor; } }
+        public IActorRef TestActor { get { return _testActor; } }
 
         /// <summary>
         /// Filter <see cref="LogEvent"/> sent to the system's <see cref="EventStream"/>.
@@ -167,7 +167,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="actorToWatch">The actor to watch.</param>
         /// <returns>The actor to watch, i.e. the parameter <paramref name="actorToWatch"/></returns>
-        public ActorRef Watch(ActorRef actorToWatch)
+        public IActorRef Watch(IActorRef actorToWatch)
         {
             _testActor.Tell(new TestActor.Watch(actorToWatch));
             return actorToWatch;
@@ -178,7 +178,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="actorToUnwatch">The actor to unwatch.</param>
         /// <returns>The actor to unwatch, i.e. the parameter <paramref name="actorToUnwatch"/></returns>
-        public ActorRef Unwatch(ActorRef actorToUnwatch)
+        public IActorRef Unwatch(IActorRef actorToUnwatch)
         {
             _testActor.Tell(new TestActor.Unwatch(actorToUnwatch));
             return actorToUnwatch;
@@ -324,12 +324,12 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="name">The name of the new actor.</param>
         /// <returns></returns>
-        public ActorRef CreateTestActor(string name)
+        public IActorRef CreateTestActor(string name)
         {
             return CreateTestActor(_system, name);
         }
 
-        private ActorRef CreateTestActor(ActorSystem system, string name)
+        private IActorRef CreateTestActor(ActorSystem system, string name)
         {
             var testActorProps = Props.Create(() => new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_queue)))
                 .WithDispatcher("akka.test.test-actor.dispatcher");

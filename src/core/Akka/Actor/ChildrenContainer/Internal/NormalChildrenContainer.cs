@@ -27,12 +27,12 @@ namespace Akka.Actor.Internal
             return Create(InternalChildren.AddOrUpdate(name, stats));
         }
 
-        public override ChildrenContainer Remove(ActorRef child)
+        public override ChildrenContainer Remove(IActorRef child)
         {
             return Create(InternalChildren.Remove(child.Path.Name));
         }
 
-        public override ChildrenContainer ShallDie(ActorRef actor)
+        public override ChildrenContainer ShallDie(IActorRef actor)
         {
             return new TerminatingChildrenContainer(InternalChildren, actor, SuspendReason.UserRequest.Instance);
         }

@@ -22,7 +22,7 @@ namespace Akka.Actor
         public override ActorRefProvider Provider { get { return _provider; } }
         public override bool IsTerminated { get { return true; } }
 
-        protected override void TellInternal(object message, ActorRef sender)
+        protected override void TellInternal(object message, IActorRef sender)
         {
             var systemMessage = message as SystemMessage;
             if(systemMessage != null)
@@ -33,7 +33,7 @@ namespace Akka.Actor
             SendUserMessage(message, sender);
         }
 
-        protected virtual void SendUserMessage(object message, ActorRef sender)
+        protected virtual void SendUserMessage(object message, IActorRef sender)
         {
             if(message == null) throw new InvalidMessageException();
             var deadLetter = message as DeadLetter;
@@ -60,7 +60,7 @@ namespace Akka.Actor
             SpecialHandle(message, _provider.DeadLetters);
         }
 
-        protected virtual bool SpecialHandle(object message, ActorRef sender)
+        protected virtual bool SpecialHandle(object message, IActorRef sender)
         {
             var w = message as Watch;
             if(w != null)

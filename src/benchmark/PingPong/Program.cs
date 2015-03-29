@@ -124,7 +124,7 @@ namespace PingPong
 
             var countdown = new CountdownEvent(numberOfClients * 2);
             var waitForStartsActor = system.ActorOf(Props.Create(() => new WaitForStarts(countdown)), "wait-for-starts");
-            var clients = new List<ActorRef>();
+            var clients = new List<IActorRef>();
             var tasks = new List<Task>();
             var started = new Messages.Started();
             for(int i = 0; i < numberOfClients; i++)

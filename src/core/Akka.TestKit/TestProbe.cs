@@ -10,7 +10,7 @@ namespace Akka.TestKit
     /// Use <see cref="TestKitBase.CreateTestProbe(string)" /> inside your test 
     /// to create new instances.
     /// </summary>
-    public class TestProbe : TestKitBase, NoImplicitSender, InternalActorRef
+    public class TestProbe : TestKitBase, NoImplicitSender, IInternalActorRef
     {      
         public TestProbe(ActorSystem system, TestKitAssertions assertions, string testProbeName=null)
             : base(assertions, system, testProbeName)
@@ -18,10 +18,10 @@ namespace Akka.TestKit
         }
 
         /// <summary>Gets the reference of this probe.</summary>
-        public ActorRef Ref { get { return TestActor; } }
+        public IActorRef Ref { get { return TestActor; } }
 
         /// <summary>Gets the sender of the last message</summary>
-        public ActorRef Sender { get { return LastSender; } }
+        public IActorRef Sender { get { return LastSender; } }
 
         /// <summary>
         /// Send message to an actor while using the probe as the sender.
@@ -30,7 +30,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="actor">The actor.</param>
         /// <param name="message">The message.</param>
-        public void Send(ActorRef actor, object message)
+        public void Send(IActorRef actor, object message)
         {
             actor.Tell(message, TestActor);
         }
@@ -41,7 +41,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="actor">The actor to forward to.</param>
         /// <param name="message">The message.</param>
-        public void Forward(ActorRef actor, object message)
+        public void Forward(IActorRef actor, object message)
         {
             actor.Tell(message, Sender);
         }
@@ -51,7 +51,7 @@ namespace Akka.TestKit
         /// <see cref="TestKitBase.LastMessage"/> was sent directly to the actor in the first place.
         /// </summary>
         /// <param name="actor">The actor to forward to.</param>
-        public void Forward(ActorRef actor)
+        public void Forward(IActorRef actor)
         {
             actor.Tell(LastMessage, Sender);
         }
@@ -72,19 +72,19 @@ namespace Akka.TestKit
             throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
         }
 
-        int IComparable<ActorRef>.CompareTo(ActorRef other)
+        int IComparable<IActorRef>.CompareTo(IActorRef other)
         {
             return TestActor.CompareTo(other);
         }
 
-        bool IEquatable<ActorRef>.Equals(ActorRef other)
+        bool IEquatable<IActorRef>.Equals(IActorRef other)
         {
             return TestActor.Equals(other);
         }
 
-        ActorPath ActorRef.Path { get { return TestActor.Path; } }
+        ActorPath IActorRef.Path { get { return TestActor.Path; } }
 
-        void ICanTell.Tell(object message, ActorRef sender)
+        void ICanTell.Tell(object message, IActorRef sender)
         {
             TestActor.Tell(message, sender);
         }
@@ -94,42 +94,42 @@ namespace Akka.TestKit
             return TestActor.ToSurrogate(system);
         }
 
-        bool ActorRefScope.IsLocal { get { return ((InternalActorRef) TestActor).IsLocal; } }
+        bool ActorRefScope.IsLocal { get { return ((IInternalActorRef) TestActor).IsLocal; } }
 
-        InternalActorRef InternalActorRef.Parent { get { return ((InternalActorRef)TestActor).Parent; } }
+        IInternalActorRef IInternalActorRef.Parent { get { return ((IInternalActorRef)TestActor).Parent; } }
 
-        ActorRefProvider InternalActorRef.Provider { get { return ((InternalActorRef)TestActor).Provider; } }
+        ActorRefProvider IInternalActorRef.Provider { get { return ((IInternalActorRef)TestActor).Provider; } }
 
-        bool InternalActorRef.IsTerminated { get { return ((InternalActorRef)TestActor).IsTerminated; } }
+        bool IInternalActorRef.IsTerminated { get { return ((IInternalActorRef)TestActor).IsTerminated; } }
 
-        ActorRef InternalActorRef.GetChild(IEnumerable<string> name)
+        IActorRef IInternalActorRef.GetChild(IEnumerable<string> name)
         {
-            return ((InternalActorRef)TestActor).GetChild(name);
+            return ((IInternalActorRef)TestActor).GetChild(name);
         }
 
-        void InternalActorRef.Resume(Exception causedByFailure)
+        void IInternalActorRef.Resume(Exception causedByFailure)
         {
-            ((InternalActorRef)TestActor).Resume(causedByFailure);
+            ((IInternalActorRef)TestActor).Resume(causedByFailure);
         }
 
-        void InternalActorRef.Start()
+        void IInternalActorRef.Start()
         {
-            ((InternalActorRef)TestActor).Start();
+            ((IInternalActorRef)TestActor).Start();
         }
 
-        void InternalActorRef.Stop()
+        void IInternalActorRef.Stop()
         {
-            ((InternalActorRef)TestActor).Stop();
+            ((IInternalActorRef)TestActor).Stop();
         }
 
-        void InternalActorRef.Restart(Exception cause)
+        void IInternalActorRef.Restart(Exception cause)
         {
-            ((InternalActorRef)TestActor).Restart(cause);
+            ((IInternalActorRef)TestActor).Restart(cause);
         }
 
-        void InternalActorRef.Suspend()
+        void IInternalActorRef.Suspend()
         {
-            ((InternalActorRef)TestActor).Suspend();
+            ((IInternalActorRef)TestActor).Suspend();
         }
     }
 }

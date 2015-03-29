@@ -17,7 +17,7 @@ namespace Akka.Actor.Internals
     /// </summary>
     public class ActorSystemImpl : ExtendedActorSystem
     {
-        private ActorRef _logDeadLetterListener;
+        private IActorRef _logDeadLetterListener;
         private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
 
         private LoggingAdapter _log;
@@ -60,7 +60,7 @@ namespace Akka.Actor.Internals
         public override string Name { get { return _name; } }
         public override Serialization.Serialization Serialization { get { return _serialization; } }
         public override EventStream EventStream { get { return _eventStream; } }
-        public override ActorRef DeadLetters { get { return Provider.DeadLetters; } }
+        public override IActorRef DeadLetters { get { return Provider.DeadLetters; } }
         public override Dispatchers Dispatchers { get { return _dispatchers; } }
         public override Mailboxes Mailboxes { get { return _mailboxes; } }
         public override IScheduler Scheduler { get { return _scheduler; } }
@@ -69,18 +69,18 @@ namespace Akka.Actor.Internals
         public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
 
 
-        public override InternalActorRef Guardian { get { return _provider.Guardian; } }
-        public override InternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
+        public override IInternalActorRef Guardian { get { return _provider.Guardian; } }
+        public override IInternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
 
 
         /// <summary>Creates a new system actor.</summary>
-        public override ActorRef SystemActorOf(Props props, string name = null)
+        public override IActorRef SystemActorOf(Props props, string name = null)
         {
             return _provider.SystemGuardian.Cell.ActorOf(props, name: name);
         }
 
         /// <summary>Creates a new system actor.</summary>
-        public override ActorRef SystemActorOf<TActor>(string name = null)
+        public override IActorRef SystemActorOf<TActor>(string name = null)
         {
             return _provider.SystemGuardian.Cell.ActorOf<TActor>(name);
         }
@@ -102,7 +102,7 @@ namespace Akka.Actor.Internals
             }
         }
 
-        public override ActorRef ActorOf(Props props, string name = null)
+        public override IActorRef ActorOf(Props props, string name = null)
         {
             return _provider.Guardian.Cell.ActorOf(props, name: name);
         }
@@ -323,7 +323,7 @@ namespace Akka.Actor.Internals
             }
         }
 
-        public override void Stop(ActorRef actor)
+        public override void Stop(IActorRef actor)
         {
             var path = actor.Path;
             var parentPath = path.Parent;
@@ -332,7 +332,7 @@ namespace Akka.Actor.Internals
             else if(parentPath == _provider.SystemGuardian.Path)
                 _provider.SystemGuardian.Tell(new StopChild(actor));
             else
-                ((InternalActorRef)actor).Stop();
+                ((IInternalActorRef)actor).Stop();
         }
 
 

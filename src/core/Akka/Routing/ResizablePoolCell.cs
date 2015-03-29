@@ -22,7 +22,7 @@ namespace Akka.Routing
         private readonly Props _routerProps;
         private Pool _pool;
 
-        public ResizablePoolCell(ActorSystemImpl system, InternalActorRef self, Props routerProps, MessageDispatcher dispatcher, Props routeeProps, InternalActorRef supervisor, Pool pool)
+        public ResizablePoolCell(ActorSystemImpl system, IInternalActorRef self, Props routerProps, MessageDispatcher dispatcher, Props routeeProps, IInternalActorRef supervisor, Pool pool)
             : base(system,self, routerProps,dispatcher, routeeProps, supervisor)
         {
 
@@ -45,7 +45,7 @@ namespace Akka.Routing
 
         }
 
-        public override void Post(ActorRef sender, object message)
+        public override void Post(IActorRef sender, object message)
         {
             if(!(_routerProps.RouterConfig.IsManagementMessage(message)) &&
                 resizer.IsTimeForResize(_resizeCounter.GetAndIncrement()) &&

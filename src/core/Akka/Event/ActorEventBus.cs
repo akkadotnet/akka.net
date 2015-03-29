@@ -7,7 +7,7 @@ namespace Akka.Event
     /// </summary>
     /// <typeparam name="TEvent">The type of the t event.</typeparam>
     /// <typeparam name="TClassifier">The type of the t classifier.</typeparam>
-    public abstract class ActorEventBus<TEvent, TClassifier> : EventBus<TEvent, TClassifier, ActorRef>
+    public abstract class ActorEventBus<TEvent, TClassifier> : EventBus<TEvent, TClassifier, IActorRef>
     {
     }
 }

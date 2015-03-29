@@ -32,7 +32,7 @@ namespace Akka.Persistence.TestKit
         public string Pid { get { return _pid; } }
         public PersistenceExtension Extension { get { return _extension; } }
 
-        public void Subscribe<T>(ActorRef subscriber)
+        public void Subscribe<T>(IActorRef subscriber)
         {
             Sys.EventStream.Subscribe(subscriber, typeof (T));
         }

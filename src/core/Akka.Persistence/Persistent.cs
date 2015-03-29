@@ -36,7 +36,7 @@ namespace Akka.Persistence
     public interface IPersistentEnvelope
     {
         object Payload { get; }
-        ActorRef Sender { get; }
+        IActorRef Sender { get; }
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ namespace Akka.Persistence
     /// </summary>
     internal sealed class NonPersistentMessage : IPersistentEnvelope
     {
-        public NonPersistentMessage(object payload, ActorRef sender)
+        public NonPersistentMessage(object payload, IActorRef sender)
         {
             Payload = payload;
             Sender = sender;
@@ -58,7 +58,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Sender of this message.
         /// </summary>
-        public ActorRef Sender { get; private set; }
+        public IActorRef Sender { get; private set; }
     }
 
     /// <summary>
@@ -84,11 +84,11 @@ namespace Akka.Persistence
         /// <summary>
         /// Creates a new deep copy of this message.
         /// </summary>
-        IPersistentRepresentation Update(long sequenceNr, string persistenceId, bool isDeleted, ActorRef sender);
+        IPersistentRepresentation Update(long sequenceNr, string persistenceId, bool isDeleted, IActorRef sender);
 
         #region Internal API
 
-        IPersistentRepresentation PrepareWrite(ActorRef sender);
+        IPersistentRepresentation PrepareWrite(IActorRef sender);
 
         IPersistentRepresentation PrepareWrite(IActorContext context);
 
@@ -98,7 +98,7 @@ namespace Akka.Persistence
     [Serializable]
     public class Persistent : IPersistentRepresentation
     {
-        public Persistent(object payload, long sequenceNr = 0L, string persistenceId = null, bool isDeleted = false, ActorRef sender = null)
+        public Persistent(object payload, long sequenceNr = 0L, string persistenceId = null, bool isDeleted = false, IActorRef sender = null)
         {
             Payload = payload;
             SequenceNr = sequenceNr;
@@ -108,7 +108,7 @@ namespace Akka.Persistence
         }
 
         public object Payload { get; private set; }
-        public ActorRef Sender { get; private set; }
+        public IActorRef Sender { get; private set; }
         public string PersistenceId { get; private set; }
         public bool IsDeleted { get; private set; }
         public long SequenceNr { get; private set; }
@@ -118,12 +118,12 @@ namespace Akka.Persistence
             return new Persistent(payload, SequenceNr, PersistenceId, IsDeleted, Sender);
         }
 
-        public IPersistentRepresentation Update(long sequenceNr, string persistenceId, bool isDeleted, ActorRef sender)
+        public IPersistentRepresentation Update(long sequenceNr, string persistenceId, bool isDeleted, IActorRef sender)
         {
             return new Persistent(Payload, sequenceNr, persistenceId, isDeleted, sender);
         }
 
-        public IPersistentRepresentation PrepareWrite(ActorRef sender)
+        public IPersistentRepresentation PrepareWrite(IActorRef sender)
         {
             return new Persistent(Payload, SequenceNr, PersistenceId, IsDeleted, sender);
         }

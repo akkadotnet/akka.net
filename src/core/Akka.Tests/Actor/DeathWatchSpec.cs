@@ -13,8 +13,8 @@ namespace Akka.Tests.Actor
 {
     public class DeathWatchSpec : AkkaSpec
     {
-        private ActorRef _supervisor;
-        private ActorRef _terminal;
+        private IActorRef _supervisor;
+        private IActorRef _terminal;
 
         public DeathWatchSpec()
         {
@@ -131,7 +131,7 @@ namespace Akka.Tests.Actor
                 var terminal = t1.Result as LocalActorRef;
                 var t2 = supervisor.Ask(CreateWatchAndForwarderProps(terminal, TestActor), timeout);
                 t2.Wait(timeout);
-                var monitor = t2.Result as ActorRef;
+                var monitor = t2.Result as IActorRef;
 
                 terminal.Tell(Kill.Instance);
                 terminal.Tell(Kill.Instance);
@@ -157,8 +157,8 @@ namespace Akka.Tests.Actor
                 var strategy = new FailedSupervisorStrategy(TestActor);
                 _supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(strategy)).WithDeploy(Deploy.Local));
 
-                var failed = _supervisor.Ask(Props.Empty).Result as ActorRef;
-                var brother = _supervisor.Ask(Props.Create(() => new BrotherActor(failed))).Result as ActorRef;
+                var failed = _supervisor.Ask(Props.Empty).Result as IActorRef;
+                var brother = _supervisor.Ask(Props.Create(() => new BrotherActor(failed))).Result as IActorRef;
 
                 StartWatching(brother);
 
@@ -176,7 +176,7 @@ namespace Akka.Tests.Actor
                     return res.ToString();
                 }, 3);
 
-                ((InternalActorRef)TestActor).IsTerminated.ShouldBe(false);
+                ((IInternalActorRef)TestActor).IsTerminated.ShouldBe(false);
                 result.ShouldOnlyContainInOrder("1", "2", "3");
             });
         }
@@ -229,26 +229,26 @@ namespace Akka.Tests.Actor
             ExpectMsg<ActorIdentity>(ai => ai.Subject == w);
         }
 
-        private void ExpectTerminationOf(ActorRef actorRef)
+        private void ExpectTerminationOf(IActorRef actorRef)
         {
             ExpectMsg<WrappedTerminated>(w => ReferenceEquals(w.Terminated.ActorRef, actorRef));
         }
 
-        private ActorRef StartWatching(ActorRef target)
+        private IActorRef StartWatching(IActorRef target)
         {
             var task = _supervisor.Ask(CreateWatchAndForwarderProps(target, TestActor), TimeSpan.FromSeconds(3));
             task.Wait(TimeSpan.FromSeconds(3));
-            return (ActorRef)task.Result;
+            return (IActorRef)task.Result;
         }
 
-        private Props CreateWatchAndForwarderProps(ActorRef target, ActorRef forwardToActor)
+        private Props CreateWatchAndForwarderProps(IActorRef target, IActorRef forwardToActor)
         {
             return Props.Create(() => new WatchAndForwardActor(target, forwardToActor));
         }
 
         internal class BrotherActor : ReceiveActor
         {
-            public BrotherActor(ActorRef failed)
+            public BrotherActor(IActorRef failed)
             {
                 Context.Watch(failed);
             }
@@ -256,9 +256,9 @@ namespace Akka.Tests.Actor
 
         internal class FailedSupervisorStrategy : OneForOneStrategy
         {
-            public ActorRef TestActor { get; private set; }
+            public IActorRef TestActor { get; private set; }
 
-            public FailedSupervisorStrategy(ActorRef testActor) : base(DefaultDecider)
+            public FailedSupervisorStrategy(IActorRef testActor) : base(DefaultDecider)
             {
                 TestActor = testActor;
             }
@@ -289,9 +289,9 @@ namespace Akka.Tests.Actor
         }
         internal class KnobActor : ActorBase
         {
-            private readonly ActorRef _testActor;
+            private readonly IActorRef _testActor;
 
-            public KnobActor(ActorRef testActor)
+            public KnobActor(IActorRef testActor)
             {
                 _testActor = testActor;
             }
@@ -325,9 +325,9 @@ namespace Akka.Tests.Actor
 
         internal class WatchAndUnwatchMonitor : ActorBase
         {
-            private readonly ActorRef _testActor;
+            private readonly IActorRef _testActor;
 
-            public WatchAndUnwatchMonitor(ActorRef terminal, ActorRef testActor)
+            public WatchAndUnwatchMonitor(IActorRef terminal, IActorRef testActor)
             {
                 _testActor = testActor;
                 Context.Watch(terminal);
@@ -365,9 +365,9 @@ namespace Akka.Tests.Actor
 
         internal class WatchAndForwardActor : ActorBase
         {
-            private readonly ActorRef _forwardToActor;
+            private readonly IActorRef _forwardToActor;
 
-            public WatchAndForwardActor(ActorRef watchedActor, ActorRef forwardToActor)
+            public WatchAndForwardActor(IActorRef watchedActor, IActorRef forwardToActor)
             {
                 _forwardToActor = forwardToActor;
                 Context.Watch(watchedActor);
@@ -407,24 +407,24 @@ namespace Akka.Tests.Actor
 
         internal struct W
         {
-            public W(ActorRef @ref)
+            public W(IActorRef @ref)
                 : this()
             {
                 Ref = @ref;
             }
 
-            public ActorRef Ref { get; private set; }
+            public IActorRef Ref { get; private set; }
         }
 
         internal struct U
         {
-            public U(ActorRef @ref)
+            public U(IActorRef @ref)
                 : this()
             {
                 Ref = @ref;
             }
 
-            public ActorRef Ref { get; private set; }
+            public IActorRef Ref { get; private set; }
         }
         internal struct FF
         {
@@ -455,9 +455,9 @@ namespace Akka.Tests.Actor
         /// </summary>
         public class EchoActor : UntypedActor
         {
-            private ActorRef _testActor;
+            private IActorRef _testActor;
 
-            public EchoActor(ActorRef testActorRef)
+            public EchoActor(IActorRef testActorRef)
             {
                 _testActor = testActorRef;
             }

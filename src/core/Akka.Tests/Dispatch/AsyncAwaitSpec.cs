@@ -79,7 +79,7 @@ namespace Akka.Tests.Dispatch
 
     public class Asker : ReceiveActor
     {
-        public Asker(ActorRef other)
+        public Asker(IActorRef other)
         {
             Receive<string>(async _ =>
             {
@@ -95,9 +95,9 @@ namespace Akka.Tests.Dispatch
 
     public class UntypedAsker : UntypedActor
     {
-        private readonly ActorRef _other;
+        private readonly IActorRef _other;
 
-        public UntypedAsker(ActorRef other)
+        public UntypedAsker(IActorRef other)
         {
             _other = other;
         }
@@ -121,7 +121,7 @@ namespace Akka.Tests.Dispatch
 
     public class BlockingAsker : ReceiveActor
     {
-        public BlockingAsker(ActorRef other)
+        public BlockingAsker(IActorRef other)
         {
             Receive<string>(_ =>
             {
@@ -153,9 +153,9 @@ namespace Akka.Tests.Dispatch
 
     public class AsyncExceptionActor : ReceiveActor
     {
-        private readonly ActorRef _callback;
+        private readonly IActorRef _callback;
 
-        public AsyncExceptionActor(ActorRef callback)
+        public AsyncExceptionActor(IActorRef callback)
         {
             _callback = callback;
             Receive<string>(async _ =>
@@ -195,9 +195,9 @@ namespace Akka.Tests.Dispatch
 
     public class AsyncTplExceptionActor : ReceiveActor
     {
-        private readonly ActorRef _callback;
+        private readonly IActorRef _callback;
 
-        public AsyncTplExceptionActor(ActorRef callback)
+        public AsyncTplExceptionActor(IActorRef callback)
         {
             _callback = callback;
             Receive<string>(m =>

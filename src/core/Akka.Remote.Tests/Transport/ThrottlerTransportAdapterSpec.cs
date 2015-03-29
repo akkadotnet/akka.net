@@ -42,14 +42,14 @@ namespace Akka.Remote.Tests.Transport
 
         public class ThrottlingTester : ReceiveActor
         {
-            private ActorRef _remoteRef;
-            private ActorRef _controller;
+            private IActorRef _remoteRef;
+            private IActorRef _controller;
 
             private int _received = 0;
             private int _messageCount = MessageCount;
             private long _startTime = 0L;
 
-            public ThrottlingTester(ActorRef remoteRef, ActorRef controller)
+            public ThrottlingTester(IActorRef remoteRef, IActorRef controller)
             {
                 _remoteRef = remoteRef;
                 _controller = controller;
@@ -118,14 +118,14 @@ namespace Akka.Remote.Tests.Transport
         }
 
         private ActorSystem systemB;
-        private ActorRef remote;
+        private IActorRef remote;
 
         private RootActorPath RootB
         {
             get { return new RootActorPath(systemB.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress); }
         }
 
-        private ActorRef Here
+        private IActorRef Here
         {
             get
             {

@@ -11,11 +11,11 @@ namespace Akka.TestKit
     /// This is the base class for TestActorRefs
     /// </summary>
     /// <typeparam name="TActor">The type of actor</typeparam>
-    public abstract class TestActorRefBase<TActor> : ICanTell, IEquatable<ActorRef>, InternalActorRef where TActor : ActorBase
+    public abstract class TestActorRefBase<TActor> : ICanTell, IEquatable<IActorRef>, IInternalActorRef where TActor : ActorBase
     {
         private readonly InternalTestActorRef _internalRef;
 
-        protected TestActorRefBase(ActorSystem system, Props actorProps, ActorRef supervisor=null, string name=null)
+        protected TestActorRefBase(ActorSystem system, Props actorProps, IActorRef supervisor=null, string name=null)
         {
             _internalRef = InternalTestActorRef.Create(system, actorProps, supervisor, name);
         }
@@ -27,12 +27,12 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
-        public void Receive(object message, ActorRef sender = null)
+        public void Receive(object message, IActorRef sender = null)
         {
             _internalRef.Receive(message, sender);
         }
 
-        public ActorRef Ref
+        public IActorRef Ref
         {
             get { return _internalRef; }
         }
@@ -83,7 +83,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender</param>
-        public void Tell(object message, ActorRef sender)
+        public void Tell(object message, IActorRef sender)
         {
             _internalRef.Tell(message, sender);
 
@@ -97,7 +97,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="subject">The subject to watch.</param>
         /// <returns>Returns the same ActorRef that is provided to it, to allow for cleaner invocations.</returns>
-        public void Watch(ActorRef subject)
+        public void Watch(IActorRef subject)
         {
             _internalRef.Watch(subject);
         }
@@ -110,7 +110,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <returns>Returns the same ActorRef that is provided to it, to allow for cleaner invocations.</returns>
         /// <param name="subject">The subject to unwatch.</param>
-        public void Unwatch(ActorRef subject)
+        public void Unwatch(IActorRef subject)
         {
             _internalRef.Unwatch(subject);
         }
@@ -120,7 +120,7 @@ namespace Akka.TestKit
             return _internalRef.ToString();
         }
 
-        protected delegate TActorRef CreateTestActorRef<out TActorRef>(ActorSystem system, Props props, MessageDispatcher dispatcher, Func<Mailbox> mailbox, InternalActorRef supervisor, ActorPath path) where TActorRef : TestActorRefBase<TActor>;
+        protected delegate TActorRef CreateTestActorRef<out TActorRef>(ActorSystem system, Props props, MessageDispatcher dispatcher, Func<Mailbox> mailbox, IInternalActorRef supervisor, ActorPath path) where TActorRef : TestActorRefBase<TActor>;
 
         public override bool Equals(object obj)
         {
@@ -132,54 +132,54 @@ namespace Akka.TestKit
             return _internalRef.GetHashCode();
         }
 
-        public bool Equals(ActorRef other)
+        public bool Equals(IActorRef other)
         {
             return _internalRef.Equals(other);
         }
 
-        public static bool operator ==(TestActorRefBase<TActor> testActorRef, ActorRef actorRef)
+        public static bool operator ==(TestActorRefBase<TActor> testActorRef, IActorRef actorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
             return testActorRef.Equals(actorRef);
         }
 
-        public static bool operator !=(TestActorRefBase<TActor> testActorRef, ActorRef actorRef)
+        public static bool operator !=(TestActorRefBase<TActor> testActorRef, IActorRef actorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
             return !testActorRef.Equals(actorRef);
         }
 
-        public static bool operator ==(ActorRef actorRef, TestActorRefBase<TActor> testActorRef)
+        public static bool operator ==(IActorRef actorRef, TestActorRefBase<TActor> testActorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
             return testActorRef.Equals(actorRef);
         }
 
-        public static bool operator !=(ActorRef actorRef, TestActorRefBase<TActor> testActorRef)
+        public static bool operator !=(IActorRef actorRef, TestActorRefBase<TActor> testActorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
             return !testActorRef.Equals(actorRef);
         }
 
-        public static ActorRef ToActorRef(TestActorRefBase<TActor> actorRef)
+        public static IActorRef ToActorRef(TestActorRefBase<TActor> actorRef)
         {
             return actorRef._internalRef;
         }
 
         //ActorRef implementations
-        int IComparable<ActorRef>.CompareTo(ActorRef other)
+        int IComparable<IActorRef>.CompareTo(IActorRef other)
         {
             return _internalRef.CompareTo(other);
         }
 
-        bool IEquatable<ActorRef>.Equals(ActorRef other)
+        bool IEquatable<IActorRef>.Equals(IActorRef other)
         {
             return _internalRef.Equals(other);
         }
 
-        ActorPath ActorRef.Path { get { return _internalRef.Path; } }
+        ActorPath IActorRef.Path { get { return _internalRef.Path; } }
 
-        void ICanTell.Tell(object message, ActorRef sender)
+        void ICanTell.Tell(object message, IActorRef sender)
         {
             _internalRef.Tell(message, sender);
         }
@@ -191,38 +191,38 @@ namespace Akka.TestKit
 
         bool ActorRefScope.IsLocal { get { return _internalRef.IsLocal; } }
 
-        InternalActorRef InternalActorRef.Parent { get { return _internalRef.Parent; } }
+        IInternalActorRef IInternalActorRef.Parent { get { return _internalRef.Parent; } }
 
-        ActorRefProvider InternalActorRef.Provider { get { return _internalRef.Provider; } }
+        ActorRefProvider IInternalActorRef.Provider { get { return _internalRef.Provider; } }
 
-        bool InternalActorRef.IsTerminated { get { return _internalRef.IsTerminated; } }
+        bool IInternalActorRef.IsTerminated { get { return _internalRef.IsTerminated; } }
 
-        ActorRef InternalActorRef.GetChild(IEnumerable<string> name)
+        IActorRef IInternalActorRef.GetChild(IEnumerable<string> name)
         {
             return _internalRef.GetChild(name);
         }
 
-        void InternalActorRef.Resume(Exception causedByFailure)
+        void IInternalActorRef.Resume(Exception causedByFailure)
         {
             _internalRef.Resume(causedByFailure);
         }
 
-        void InternalActorRef.Start()
+        void IInternalActorRef.Start()
         {
             _internalRef.Start();
         }
 
-        void InternalActorRef.Stop()
+        void IInternalActorRef.Stop()
         {
             _internalRef.Stop();
         }
 
-        void InternalActorRef.Restart(Exception cause)
+        void IInternalActorRef.Restart(Exception cause)
         {
             _internalRef.Restart(cause);
         }
 
-        void InternalActorRef.Suspend()
+        void IInternalActorRef.Suspend()
         {
             _internalRef.Suspend();
         }

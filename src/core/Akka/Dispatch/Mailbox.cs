@@ -56,7 +56,7 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="receiver"></param>
         /// <param name="envelope">The envelope.</param>
-        public abstract void Post(ActorRef receiver, Envelope envelope);
+        public abstract void Post(IActorRef receiver, Envelope envelope);
 
         /// <summary>
         ///     Stops this instance.

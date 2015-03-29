@@ -150,7 +150,7 @@ namespace Akka.Routing
             _paths = paths.ToArray();
         }
 
-        protected Group(IEnumerable<ActorRef> routees)
+        protected Group(IEnumerable<IActorRef> routees)
         {
             _paths = routees.Select(x => x.Path.ToStringWithAddress()).ToArray();
         }

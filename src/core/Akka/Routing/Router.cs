@@ -9,7 +9,7 @@ namespace Akka.Routing
 {
     internal class NoRoutee : Routee
     {
-        public override void Send(object message, ActorRef sender)
+        public override void Send(object message, IActorRef sender)
         {
             if (sender is LocalActorRef)
             {
@@ -22,7 +22,7 @@ namespace Akka.Routing
     {
         public static readonly Routee NoRoutee = new NoRoutee();
 
-        public virtual void Send(object message, ActorRef sender)
+        public virtual void Send(object message, IActorRef sender)
         {
         }
 
@@ -32,7 +32,7 @@ namespace Akka.Routing
         }
 
 
-        public static Routee FromActorRef(ActorRef actorRef)
+        public static Routee FromActorRef(IActorRef actorRef)
         {
             return new ActorRefRoutee(actorRef);
         }
@@ -40,14 +40,14 @@ namespace Akka.Routing
 
     public class ActorRefRoutee : Routee
     {
-        public ActorRef Actor { get; private set; }
+        public IActorRef Actor { get; private set; }
 
-        public ActorRefRoutee(ActorRef actor)
+        public ActorRefRoutee(IActorRef actor)
         {
             this.Actor = actor;
         }
 
-        public override void Send(object message, ActorRef sender)
+        public override void Send(object message, IActorRef sender)
         {
             Actor.Tell(message, sender);
         }
@@ -87,7 +87,7 @@ namespace Akka.Routing
             _actor = actor;
         }
 
-        public override void Send(object message, ActorRef sender)
+        public override void Send(object message, IActorRef sender)
         {
             _actor.Tell(message, sender);
         }
@@ -143,7 +143,7 @@ namespace Akka.Routing
             this.routees = routees;
         }
 
-        public override void Send(object message, ActorRef sender)
+        public override void Send(object message, IActorRef sender)
         {
             foreach (Routee routee in  routees)
             {
@@ -165,7 +165,7 @@ namespace Akka.Routing
         //The signature might look funky. Why not just Router(RoutingLogic logic, params ActorRef[] routees) ? 
         //We need one unique constructor to handle this call: new Router(logic). The other constructor will handle that.
         //So in order to not confuse the compiler we demand at least one ActorRef. /@hcanber
-        public Router(RoutingLogic logic, ActorRef routee, params ActorRef[] routees)
+        public Router(RoutingLogic logic, IActorRef routee, params IActorRef[] routees)
         {
             var routeesLength = routees.Length;
             if (routees == null || routeesLength == 0)
@@ -221,7 +221,7 @@ namespace Akka.Routing
             return message;
         }
 
-        public void Route(object message, ActorRef sender)
+        public void Route(object message, IActorRef sender)
         {
             if (message is Broadcast)
             {
@@ -233,7 +233,7 @@ namespace Akka.Routing
             }
         }
 
-        protected virtual void Send(Routee routee, object message, ActorRef sender)
+        protected virtual void Send(Routee routee, object message, IActorRef sender)
         {
             routee.Send(UnWrap(message), sender);
         }
@@ -257,7 +257,7 @@ namespace Akka.Routing
         /// <summary>
         /// Create a new instance with one more routee and the same <see cref="RoutingLogic"/>.
         /// </summary>
-        public Router AddRoutee(ActorRef routee)
+        public Router AddRoutee(IActorRef routee)
         {
             return AddRoutee(new ActorRefRoutee(routee));
         }
@@ -282,7 +282,7 @@ namespace Akka.Routing
         /// <summary>
         /// Create a new instance without the specified routee.
         /// </summary>
-        public Router RemoveRoutee(ActorRef routee)
+        public Router RemoveRoutee(IActorRef routee)
         {
             return RemoveRoutee(new ActorRefRoutee(routee));
         }

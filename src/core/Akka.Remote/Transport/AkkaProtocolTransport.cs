@@ -245,7 +245,7 @@ namespace Akka.Remote.Transport
     {
         public AkkaProtocolHandle(Address originalLocalAddress, Address originalRemoteAddress,
             TaskCompletionSource<IHandleEventListener> readHandlerCompletionSource, AssociationHandle wrappedHandle,
-            HandshakeInfo handshakeInfo, ActorRef stateActor, AkkaPduCodec codec)
+            HandshakeInfo handshakeInfo, IActorRef stateActor, AkkaPduCodec codec)
             : base(originalLocalAddress, originalRemoteAddress, wrappedHandle, RemoteSettings.AkkaScheme)
         {
             HandshakeInfo = handshakeInfo;
@@ -256,7 +256,7 @@ namespace Akka.Remote.Transport
 
         public readonly HandshakeInfo HandshakeInfo;
 
-        public readonly ActorRef StateActor;
+        public readonly IActorRef StateActor;
 
         public readonly AkkaPduCodec Codec;
 

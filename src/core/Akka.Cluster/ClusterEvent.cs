@@ -703,7 +703,7 @@ namespace Akka.Cluster
         /// The current snapshot state corresponding to latest gossip 
         /// to mimic what you would have seen if you were listening to the events.
         /// </summary>
-        private void SendCurrentClusterState(ActorRef receiver)
+        private void SendCurrentClusterState(IActorRef receiver)
         {
             var state = new ClusterEvent.CurrentClusterState(
                 _latestGossip.Members,
@@ -716,7 +716,7 @@ namespace Akka.Cluster
             receiver.Tell(state);
         }
 
-        private void Subscribe(ActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initMode,
+        private void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initMode,
             IEnumerable<Type> to)
         {
             if (initMode == ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents)
@@ -738,7 +738,7 @@ namespace Akka.Cluster
             foreach (var t in to) _eventStream.Subscribe(subscriber, t);
         }
 
-        private void Unsubscribe(ActorRef subscriber, Type to)
+        private void Unsubscribe(IActorRef subscriber, Type to)
         {
             if (to == null) _eventStream.Unsubscribe(subscriber);
             else _eventStream.Unsubscribe(subscriber, to);

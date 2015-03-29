@@ -7,8 +7,8 @@ namespace Akka.Persistence.Tests
 {
     public partial class PersistentViewSpec : PersistenceSpec
     {
-        protected ActorRef _pref;
-        protected ActorRef _view;
+        protected IActorRef _pref;
+        protected IActorRef _view;
         protected TestProbe _prefProbe;
         protected TestProbe _viewProbe;
 

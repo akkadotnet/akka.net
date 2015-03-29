@@ -78,7 +78,7 @@ namespace Akka.Tests.Actor.Stash
             var slaveProps = Props.Create(() => new SlaveActor(restartLatch, hasMsgLatch, "stashme"));
 
             //Send the props to supervisor, which will create an actor and return the ActorRef
-            var slave = boss.AskAndWait<ActorRef>(slaveProps, TestKitSettings.DefaultTimeout);
+            var slave = boss.AskAndWait<IActorRef>(slaveProps, TestKitSettings.DefaultTimeout);
 
             //send a message that will be stashed
             slave.Tell("stashme");
@@ -101,7 +101,7 @@ namespace Akka.Tests.Actor.Stash
             var slaveProps = Props.Create(() => new ActorsThatClearsStashOnPreRestart(restartLatch));
 
             //Send the props to supervisor, which will create an actor and return the ActorRef
-            var slave = boss.AskAndWait<ActorRef>(slaveProps, TestKitSettings.DefaultTimeout);
+            var slave = boss.AskAndWait<IActorRef>(slaveProps, TestKitSettings.DefaultTimeout);
 
             //send messages that will be stashed
             slave.Tell("stashme 1");
@@ -259,7 +259,7 @@ namespace Akka.Tests.Actor.Stash
 
         private class TerminatedMessageStashingActor : TestReceiveActor, WithUnboundedStash
         {
-            public TerminatedMessageStashingActor(ActorRef probe)
+            public TerminatedMessageStashingActor(IActorRef probe)
             {
                 var watchedActor=Context.Watch(Context.ActorOf<BlackHoleActor>("watched-actor"));
                 var stashed = false;

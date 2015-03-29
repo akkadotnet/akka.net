@@ -8,7 +8,7 @@ namespace Akka.Cluster.Tests
 {
     public class MetricsGossipSpec : MetricsCollectorFactory
     {
-        public ActorRef Self { get { return TestActor; } }
+        public IActorRef Self { get { return TestActor; } }
 
         private IMetricsCollector _collector;
 

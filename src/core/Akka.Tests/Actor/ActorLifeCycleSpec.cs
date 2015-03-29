@@ -17,9 +17,9 @@ namespace Akka.Tests
         {
             private AtomicCounter generationProvider;
             private string id;
-            private ActorRef testActor;
+            private IActorRef testActor;
             private int CurrentGeneration;
-            public LifeCycleTestActor(ActorRef testActor,string id,AtomicCounter generationProvider)
+            public LifeCycleTestActor(IActorRef testActor,string id,AtomicCounter generationProvider)
             {
                 this.testActor = testActor;
                 this.id = id;
@@ -65,9 +65,9 @@ namespace Akka.Tests
         {
             private AtomicCounter generationProvider;
             private string id;
-            private ActorRef testActor;
+            private IActorRef testActor;
             private int CurrentGeneration;
-            public LifeCycleTest2Actor(ActorRef testActor, string id, AtomicCounter generationProvider)
+            public LifeCycleTest2Actor(IActorRef testActor, string id, AtomicCounter generationProvider)
             {
                 this.testActor = testActor;
                 this.id = id;
@@ -106,7 +106,7 @@ namespace Akka.Tests
             string id = Guid.NewGuid().ToString();
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTestActor(TestActor, id, generationProvider));
-            var restarter = supervisor.Ask<ActorRef>(restarterProps).Result;
+            var restarter = supervisor.Ask<IActorRef>(restarterProps).Result;
 
             ExpectMsg(Tuple.Create( "preStart", id, 0));
             restarter.Tell(Kill.Instance);
@@ -137,7 +137,7 @@ namespace Akka.Tests
             string id = Guid.NewGuid().ToString();            
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(TestActor, id, generationProvider));
-            var restarter = supervisor.Ask<ActorRef>(restarterProps).Result;
+            var restarter = supervisor.Ask<IActorRef>(restarterProps).Result;
 
             ExpectMsg(Tuple.Create("preStart", id, 0));
             restarter.Tell(Kill.Instance);
@@ -168,7 +168,7 @@ namespace Akka.Tests
             string id = Guid.NewGuid().ToString();            
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(TestActor, id, generationProvider));
-            var restarter = supervisor.Ask<InternalActorRef>(restarterProps).Result;
+            var restarter = supervisor.Ask<IInternalActorRef>(restarterProps).Result;
 
             ExpectMsg(Tuple.Create("preStart", id, 0));
             restarter.Tell("status");
@@ -206,8 +206,8 @@ namespace Akka.Tests
         }
         public class BecomeActor : UntypedActor
         {
-            private ActorRef testActor;
-            public BecomeActor(ActorRef testActor)
+            private IActorRef testActor;
+            public BecomeActor(IActorRef testActor)
             {
                 this.testActor = testActor;
             }
@@ -266,8 +266,8 @@ namespace Akka.Tests
 
         public class SupervisorTestActor : UntypedActor
         {
-            private ActorRef testActor;
-            public SupervisorTestActor(ActorRef testActor)
+            private IActorRef testActor;
+            public SupervisorTestActor(IActorRef testActor)
             {
                 this.testActor = testActor;
             }
@@ -288,7 +288,7 @@ namespace Akka.Tests
                     .With<Stop>(m =>
                     {
                         var child = Context.Child(m.Name);
-                        ((InternalActorRef)child).Stop();
+                        ((IInternalActorRef)child).Stop();
                     })
                     .With<Count>(m => 
                         testActor.Tell(Context.GetChildren().Count()));
@@ -314,8 +314,8 @@ namespace Akka.Tests
 
         public class KillableActor : UntypedActor
         {
-            private ActorRef testActor;
-            public KillableActor(ActorRef testActor)
+            private IActorRef testActor;
+            public KillableActor(IActorRef testActor)
             {
                 this.testActor = testActor;
             }

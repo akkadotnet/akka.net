@@ -24,12 +24,12 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// </summary>
         public class SubscribeFactCompletionMessages
         {
-            public SubscribeFactCompletionMessages(ActorRef subscriber)
+            public SubscribeFactCompletionMessages(IActorRef subscriber)
             {
                 Subscriber = subscriber;
             }
 
-            public ActorRef Subscriber { get; private set; }
+            public IActorRef Subscriber { get; private set; }
         }
 
         /// <summary>
@@ -37,13 +37,13 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// </summary>
         public class UnsubscribeFactCompletionMessages
         {
-            public UnsubscribeFactCompletionMessages(ActorRef subscriber)
+            public UnsubscribeFactCompletionMessages(IActorRef subscriber)
             {
                 Subscriber = subscriber;
             }
 
 
-            public ActorRef Subscriber { get; private set; }
+            public IActorRef Subscriber { get; private set; }
         }
 
         #endregion
@@ -57,7 +57,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         {
             TestRunStarted = testRunStarted;
             TestRunData = new TestRunTree(testRunStarted.Ticks);
-            Subscribers = new List<ActorRef>();
+            Subscribers = new List<IActorRef>();
             SetReceive();
         }
 
@@ -65,7 +65,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         protected readonly DateTime TestRunStarted;
 
-        protected ActorRef _currentSpecRunActor;
+        protected IActorRef _currentSpecRunActor;
 
         /// <summary>
         /// Automatically set when <see cref="EndTestRun"/> is sent to this actor.
@@ -91,7 +91,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// <summary>
         /// All of the subscribers who wish to receive <see cref="FactData"/> notifications
         /// </summary>
-        protected List<ActorRef> Subscribers;
+        protected List<IActorRef> Subscribers;
 
         #endregion
 

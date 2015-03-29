@@ -97,12 +97,12 @@ namespace Akka.Tests.Actor
 
             Func<Exception, Directive> decider = _ => { return Directive.Escalate; };
             var managerProps = new PropsWithName(Props.Create(() => new CountDownActor(countDown, new AllForOneStrategy(decider))), "manager");
-            var manager = boss.Ask<ActorRef>(managerProps, TestKitSettings.DefaultTimeout).Result;
+            var manager = boss.Ask<IActorRef>(managerProps, TestKitSettings.DefaultTimeout).Result;
 
             var workerProps = Props.Create(() => new CountDownActor(countDown, SupervisorStrategy.DefaultStrategy));
-            var worker1 = manager.Ask<ActorRef>(new PropsWithName(workerProps, "worker1"), TestKitSettings.DefaultTimeout).Result;
-            var worker2 = manager.Ask<ActorRef>(new PropsWithName(workerProps, "worker2"), TestKitSettings.DefaultTimeout).Result;
-            var worker3 = manager.Ask<ActorRef>(new PropsWithName(workerProps, "worker3"), TestKitSettings.DefaultTimeout).Result;
+            var worker1 = manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker1"), TestKitSettings.DefaultTimeout).Result;
+            var worker2 = manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker2"), TestKitSettings.DefaultTimeout).Result;
+            var worker3 = manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker3"), TestKitSettings.DefaultTimeout).Result;
 
             EventFilter.Exception<ActorKilledException>().ExpectOne(() =>
             {
@@ -160,9 +160,9 @@ namespace Akka.Tests.Actor
             //    worker
             var boss = ActorOf<Resumer>("resumer");
             boss.Tell("spawn:middle");
-            var middle = ExpectMsg<ActorRef>();
+            var middle = ExpectMsg<IActorRef>();
             middle.Tell("spawn:worker");
-            var worker = ExpectMsg<ActorRef>();
+            var worker = ExpectMsg<IActorRef>();
 
             //Check everything is in place by sending ping to worker and expect it to respond with pong
             worker.Tell("ping");
@@ -201,11 +201,11 @@ namespace Akka.Tests.Actor
             //      |
             //    worker
             slowResumer.Tell("spawn:boss");
-            var boss = ExpectMsg<ActorRef>();
+            var boss = ExpectMsg<IActorRef>();
             boss.Tell("spawn:middle");
-            var middle = ExpectMsg<ActorRef>();
+            var middle = ExpectMsg<IActorRef>();
             middle.Tell("spawn:worker");
-            var worker = ExpectMsg<ActorRef>();
+            var worker = ExpectMsg<IActorRef>();
 
             //Check everything is in place by sending ping to worker and expect it to respond with pong
             worker.Tell("ping");

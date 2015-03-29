@@ -54,7 +54,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         {
             var a = new TestActorRef<NestingActor>(Sys, Props.Create(() => new NestingActor(true)));
             Assert.NotNull(a);
-            var nested = a.Ask<ActorRef>("any", DefaultTimeout).Result;
+            var nested = a.Ask<IActorRef>("any", DefaultTimeout).Result;
             Assert.NotNull(nested);
             Assert.NotSame(a, nested);
         }
@@ -64,7 +64,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         {
             var a = new TestActorRef<NestingActor>(Sys, Props.Create(() => new NestingActor(false)));
             Assert.NotNull(a);
-            var nested = a.Ask<ActorRef>("any", DefaultTimeout).Result;
+            var nested = a.Ask<IActorRef>("any", DefaultTimeout).Result;
             Assert.NotNull(nested);
             Assert.NotSame(a, nested);
         }

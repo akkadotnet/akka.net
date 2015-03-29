@@ -11,8 +11,8 @@ namespace Akka.Tests.Actor
     public class ActorSelectionSpec : AkkaSpec
     {
         // ReSharper disable NotAccessedField.Local
-        private ActorRef _echoActor;
-        private ActorRef _selectionTestActor;
+        private IActorRef _echoActor;
+        private IActorRef _selectionTestActor;
         // ReSharper restore NotAccessedField.Local
 
         public ActorSelectionSpec()

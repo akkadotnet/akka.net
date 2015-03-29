@@ -12,7 +12,7 @@ namespace Akka.Actor
         /// Pipes the output of a Task directly to the <see cref="recipient"/>'s mailbox once
         /// the task completes
         /// </summary>
-        public static Task PipeTo<T>(this Task<T> taskToPipe, ICanTell recipient, ActorRef sender = null)
+        public static Task PipeTo<T>(this Task<T> taskToPipe, ICanTell recipient, IActorRef sender = null)
         {
             sender = sender ?? ActorRefs.NoSender;
             return taskToPipe.ContinueWith(tresult =>

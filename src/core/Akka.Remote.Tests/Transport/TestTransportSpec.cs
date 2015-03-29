@@ -18,7 +18,7 @@ namespace Akka.Remote.Tests.Transport{
         protected Address addressB = new Address("test", "testsystemB", "testhostB", 5432);
         protected Address nonExistantAddress = new Address("test", "nosystem", "nohost", 0);
 
-        public ActorRef Self { get { return TestActor; } }
+        public IActorRef Self { get { return TestActor; } }
         private TimeSpan DefaultTimeout { get { return Dilated(TestKitSettings.DefaultTimeout); } }
         #endregion
 

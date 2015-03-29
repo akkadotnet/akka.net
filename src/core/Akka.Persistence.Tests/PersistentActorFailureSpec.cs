@@ -48,9 +48,9 @@ namespace Akka.Persistence.Tests
 
         internal class Supervisor : ActorBase
         {
-            private readonly ActorRef _testActor;
+            private readonly IActorRef _testActor;
 
-            public Supervisor(ActorRef testActor)
+            public Supervisor(IActorRef testActor)
             {
                 _testActor = testActor;
             }
@@ -93,7 +93,7 @@ namespace Akka.Persistence.Tests
             var supervisor = ActorOf(() => new Supervisor(TestActor));
             supervisor.Tell(Props.Create(() => new BehaviorOneActor(Name)));
 
-            ExpectMsg<ActorRef>();
+            ExpectMsg<IActorRef>();
             ExpectMsg<ActorKilledException>();
         }
     }

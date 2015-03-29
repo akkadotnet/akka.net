@@ -21,10 +21,10 @@ namespace Akka.Persistence.Tests
 
         internal class SaveSnapshotTestActor : NamedPersistentActor
         {
-            private readonly ActorRef _probe;
+            private readonly IActorRef _probe;
             protected LinkedList<string> _state = new LinkedList<string>();
 
-            public SaveSnapshotTestActor(string name, ActorRef probe)
+            public SaveSnapshotTestActor(string name, IActorRef probe)
                 : base(name)
             {
                 _probe = probe;
@@ -51,9 +51,9 @@ namespace Akka.Persistence.Tests
 
         internal class LoadSnapshotTestActor : NamedPersistentActor
         {
-            private readonly ActorRef _probe;
+            private readonly IActorRef _probe;
 
-            public LoadSnapshotTestActor(string name, ActorRef probe)
+            public LoadSnapshotTestActor(string name, IActorRef probe)
                 : base(name)
             {
                 _probe = probe;
@@ -108,7 +108,7 @@ namespace Akka.Persistence.Tests
 
         internal class DeleteSnapshotTestActor : LoadSnapshotTestActor
         {
-            public DeleteSnapshotTestActor(string name, ActorRef probe)
+            public DeleteSnapshotTestActor(string name, IActorRef probe)
                 : base(name, probe)
             {
             }

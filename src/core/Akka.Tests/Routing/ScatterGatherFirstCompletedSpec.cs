@@ -53,7 +53,7 @@ namespace Akka.Tests.Routing
      routedActor.isTerminated should be(false)*/
 
             var routedActor = Sys.ActorOf(Props.Create<TestActor>().WithRouter(new ScatterGatherFirstCompletedPool(1)));
-            ((InternalActorRef)routedActor).IsTerminated.ShouldBe(false);
+            ((IInternalActorRef)routedActor).IsTerminated.ShouldBe(false);
         }
 
         [Fact]

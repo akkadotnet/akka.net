@@ -21,8 +21,8 @@ namespace Akka.Remote
     // ReSharper disable once InconsistentNaming
     internal interface InboundMessageDispatcher
     {
-        void Dispatch(InternalActorRef recipient, Address recipientAddress, SerializedMessage message,
-            ActorRef senderOption = null);
+        void Dispatch(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
+            IActorRef senderOption = null);
     }
 
     /// <summary>
@@ -33,7 +33,7 @@ namespace Akka.Remote
         private ActorSystem system;
         private RemoteActorRefProvider provider;
         private LoggingAdapter log;
-        private InternalActorRef remoteDaemon;
+        private IInternalActorRef remoteDaemon;
         private RemoteSettings settings;
 
         public DefaultMessageDispatcher(ActorSystem system, RemoteActorRefProvider provider, LoggingAdapter log)
@@ -45,8 +45,8 @@ namespace Akka.Remote
             settings = provider.RemoteSettings;
         }
 
-        public void Dispatch(InternalActorRef recipient, Address recipientAddress, SerializedMessage message,
-            ActorRef senderOption = null)
+        public void Dispatch(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
+            IActorRef senderOption = null)
         {
             var payload = MessageSerializer.Deserialize(system, message);
             Type payloadClass = payload == null ? null : payload.GetType();
@@ -307,7 +307,7 @@ namespace Akka.Remote
         private long _seqCounter;
         private List<Ack> _pendingAcks = null;
 
-        private ActorRef _writer;
+        private IActorRef _writer;
 
         private void Reset()
         {
@@ -610,7 +610,7 @@ namespace Akka.Remote
 
         #region Writer create
 
-        private ActorRef CreateWriter()
+        private IActorRef CreateWriter()
         {
             var writer =
                 Context.ActorOf(
@@ -742,7 +742,7 @@ namespace Akka.Remote
         public EndpointWriter(AkkaProtocolHandle handleOrActive, Address localAddress, Address remoteAddress,
             int? refuseUid, AkkaProtocolTransport transport, RemoteSettings settings,
             AkkaPduCodec codec, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
-            ActorRef reliableDeliverySupervisor = null) :
+            IActorRef reliableDeliverySupervisor = null) :
             base(localAddress, remoteAddress, transport, settings)
         {
             _handleOrActive = handleOrActive;
@@ -771,13 +771,13 @@ namespace Akka.Remote
         private AkkaProtocolHandle _handleOrActive;
         private readonly int? _refuseUid;
         private readonly AkkaPduCodec _codec;
-        private readonly ActorRef _reliableDeliverySupervisor;
+        private readonly IActorRef _reliableDeliverySupervisor;
         private readonly ActorSystem _system;
         private readonly RemoteActorRefProvider _provider;
         private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
         private DisassociateInfo _stopReason = DisassociateInfo.Unknown;
 
-        private ActorRef _reader;
+        private IActorRef _reader;
         private readonly AtomicCounter _readerId = new AtomicCounter(0);
         private readonly InboundMessageDispatcher _msgDispatcher;
 
@@ -1037,7 +1037,7 @@ namespace Akka.Remote
             throw reason;
         }
 
-        private ActorRef StartReadEndpoint(AkkaProtocolHandle handle)
+        private IActorRef StartReadEndpoint(AkkaProtocolHandle handle)
         {
             var newReader =
                 Context.ActorOf(
@@ -1326,7 +1326,7 @@ namespace Akka.Remote
 
         public static Props EndpointWriterProps(AkkaProtocolHandle handleOrActive, Address localAddress,
             Address remoteAddress, int? refuseUid, AkkaProtocolTransport transport, RemoteSettings settings,
-            AkkaPduCodec codec, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers, ActorRef reliableDeliverySupervisor = null)
+            AkkaPduCodec codec, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers, IActorRef reliableDeliverySupervisor = null)
         {
             return Props.Create(
                 () =>
@@ -1346,7 +1346,7 @@ namespace Akka.Remote
             /// Create a new TakeOver command
             /// </summary>
             /// <param name="protocolHandle">The handle of the new association</param>
-            public TakeOver(AkkaProtocolHandle protocolHandle, ActorRef replyTo)
+            public TakeOver(AkkaProtocolHandle protocolHandle, IActorRef replyTo)
             {
                 ProtocolHandle = protocolHandle;
                 ReplyTo = replyTo;
@@ -1354,18 +1354,18 @@ namespace Akka.Remote
 
             public AkkaProtocolHandle ProtocolHandle { get; private set; }
 
-            public ActorRef ReplyTo { get; private set; }
+            public IActorRef ReplyTo { get; private set; }
         }
 
         public sealed class TookOver : NoSerializationVerificationNeeded
         {
-            public TookOver(ActorRef writer, AkkaProtocolHandle protocolHandle)
+            public TookOver(IActorRef writer, AkkaProtocolHandle protocolHandle)
             {
                 ProtocolHandle = protocolHandle;
                 Writer = writer;
             }
 
-            public ActorRef Writer { get; private set; }
+            public IActorRef Writer { get; private set; }
 
             public AkkaProtocolHandle ProtocolHandle { get; private set; }
         }
@@ -1410,25 +1410,25 @@ namespace Akka.Remote
 
         public sealed class StopReading
         {
-            public StopReading(ActorRef writer, ActorRef replyTo)
+            public StopReading(IActorRef writer, IActorRef replyTo)
             {
                 Writer = writer;
                 ReplyTo = replyTo;
             }
 
-            public ActorRef Writer { get; private set; }
+            public IActorRef Writer { get; private set; }
 
-            public ActorRef ReplyTo { get; private set; }
+            public IActorRef ReplyTo { get; private set; }
         }
 
         public sealed class StoppedReading
         {
-            public StoppedReading(ActorRef writer)
+            public StoppedReading(IActorRef writer)
             {
                 Writer = writer;
             }
 
-            public ActorRef Writer { get; private set; }
+            public IActorRef Writer { get; private set; }
         }
 
         public sealed class OutboundAck
@@ -1455,7 +1455,7 @@ namespace Akka.Remote
         public EndpointReader(Address localAddress, Address remoteAddress, AkkaProtocolTransport transport,
             RemoteSettings settings, AkkaPduCodec codec, InboundMessageDispatcher msgDispatch, bool inbound,
             int uid, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
-            ActorRef reliableDelvierySupervisor = null) :
+            IActorRef reliableDelvierySupervisor = null) :
             base(localAddress, remoteAddress, transport, settings)
         {
             _receiveBuffers = receiveBuffers;
@@ -1468,7 +1468,7 @@ namespace Akka.Remote
         }
 
         private AkkaPduCodec _codec;
-        private ActorRef _reliableDeliverySupervisor;
+        private IActorRef _reliableDeliverySupervisor;
         private ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
         private int _uid;
         private InboundMessageDispatcher _msgDispatch;
@@ -1651,7 +1651,7 @@ namespace Akka.Remote
         public static Props ReaderProps(Address localAddress, Address remoteAddress, AkkaProtocolTransport transport,
             RemoteSettings settings, AkkaPduCodec codec, InboundMessageDispatcher dispatcher, bool inbound, int uid,
             ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
-            ActorRef reliableDeliverySupervisor = null)
+            IActorRef reliableDeliverySupervisor = null)
         {
             return
                 Props.Create(

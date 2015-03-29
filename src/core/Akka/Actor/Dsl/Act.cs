@@ -35,7 +35,7 @@ namespace Akka.Actor.Dsl
         /// </summary>
         void UnbecomeStacked();
 
-        ActorRef ActorOf(Action<IActorDsl> config, string name = null);
+        IActorRef ActorOf(Action<IActorDsl> config, string name = null);
     }
 
     public sealed class Act : ReceiveActor, IActorDsl
@@ -109,7 +109,7 @@ namespace Akka.Actor.Dsl
             base.Unbecome();
         }
 
-        public ActorRef ActorOf(Action<IActorDsl> config, string name = null)
+        public IActorRef ActorOf(Action<IActorDsl> config, string name = null)
         {
             var props = Props.Create(() => new Act(config));
             return Context.ActorOf(props, name);
@@ -171,12 +171,12 @@ namespace Akka.Actor.Dsl
 
     public static class ActExtensions
     {
-        public static ActorRef ActorOf(this ActorRefFactory factory, Action<IActorDsl> config, string name = null)
+        public static IActorRef ActorOf(this ActorRefFactory factory, Action<IActorDsl> config, string name = null)
         {
             return factory.ActorOf(Props.Create(() => new Act(config)), name);
         }
 
-        public static ActorRef ActorOf(this ActorRefFactory factory, Action<IActorDsl, IActorContext> config, string name = null)
+        public static IActorRef ActorOf(this ActorRefFactory factory, Action<IActorDsl, IActorContext> config, string name = null)
         {
             return factory.ActorOf(Props.Create(() => new Act(config)), name);
         }

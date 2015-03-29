@@ -19,7 +19,7 @@ namespace Akka.MultiNodeTestRunner
     {
         protected static ActorSystem TestRunSystem;
 
-        protected static ActorRef SinkCoordinator;
+        protected static IActorRef SinkCoordinator;
 
         
 

@@ -7,7 +7,7 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
 {
     public class DeadLettersEventFilterTests : EventFilterTestBase
     {
-        private readonly ActorRef _deadActor;
+        private readonly IActorRef _deadActor;
         // ReSharper disable ConvertToLambdaExpression
         public DeadLettersEventFilterTests() : base("akka.loglevel=ERROR")
         {

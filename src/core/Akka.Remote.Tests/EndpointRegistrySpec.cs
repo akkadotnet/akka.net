@@ -9,8 +9,8 @@ namespace Akka.Remote.Tests
     
     public class EndpointRegistrySpec : AkkaSpec
     {
-        private ActorRef actorA;
-        private ActorRef actorB;
+        private IActorRef actorA;
+        private IActorRef actorB;
         
         Address address1 = new Address("test", "testsys1", "testhost1", 1234);
         Address address2 = new Address("test", "testsy2", "testhost2", 1234);

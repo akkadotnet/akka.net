@@ -100,8 +100,8 @@ namespace FaultTolerance
         LoggingAdapter log = Logging.GetLogger(Context);
 
         // The sender of the initial Start message will continuously be notified about progress
-        ActorRef progressListener;
-        ActorRef counterService = Context.ActorOf<CounterService>("counter");
+        IActorRef progressListener;
+        IActorRef counterService = Context.ActorOf<CounterService>("counter");
         int totalCount = 51;
 
         // Stop the CounterService child if it throws ServiceUnavailable
@@ -198,8 +198,8 @@ namespace FaultTolerance
         LoggingAdapter log = Logging.GetLogger(Context);
 
         string key = Context.Self.Path.Name;
-        ActorRef storage;
-        ActorRef counter;
+        IActorRef storage;
+        IActorRef counter;
         List<SenderMessagePair> backlog = new List<SenderMessagePair>();
         int MAX_BACKLOG = 10000;
 
@@ -309,13 +309,13 @@ namespace FaultTolerance
 
         private class SenderMessagePair
         {
-            public SenderMessagePair(ActorRef sender, object message)
+            public SenderMessagePair(IActorRef sender, object message)
             {
                 this.Sender = sender;
                 this.Message = message;
             }
 
-            public ActorRef Sender { get; private set; }
+            public IActorRef Sender { get; private set; }
             public object Message { get; private set; }
         }
     }
@@ -326,12 +326,12 @@ namespace FaultTolerance
 
     public class UseStorage
     {
-        public UseStorage(ActorRef storage)
+        public UseStorage(IActorRef storage)
         {
             this.Storage = storage;
         }
 
-        public ActorRef Storage { get; private set; }
+        public IActorRef Storage { get; private set; }
 
         public override string ToString()
         {
@@ -350,7 +350,7 @@ namespace FaultTolerance
         LoggingAdapter log = Logging.GetLogger(Context);
         string key;
         long count;
-        ActorRef storage;
+        IActorRef storage;
 
         public Counter(string key, long initialValue)
         {

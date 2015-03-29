@@ -6,7 +6,7 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
 {
     public class ForwardAllEventsTestEventListener : TestEventListener
     {
-        private ActorRef _forwarder;
+        private IActorRef _forwarder;
 
         protected override void Print(LogEvent m)
         {           
@@ -27,14 +27,14 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
 
         public class ForwardAllEventsTo
         {
-            private readonly ActorRef _forwarder;
+            private readonly IActorRef _forwarder;
 
-            public ForwardAllEventsTo(ActorRef forwarder)
+            public ForwardAllEventsTo(IActorRef forwarder)
             {
                 _forwarder = forwarder;
             }
 
-            public ActorRef Forwarder { get { return _forwarder; } }
+            public IActorRef Forwarder { get { return _forwarder; } }
         }
     }
 

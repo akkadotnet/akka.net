@@ -20,13 +20,13 @@ namespace Akka.Actor
         /// exposed so that the ActorSystemImpl can use it as lookupRoot, i.e.
         /// for anchoring absolute actor look-ups.
         /// </summary>
-        InternalActorRef RootGuardian { get; }
+        IInternalActorRef RootGuardian { get; }
 
         /// <summary>Reference to the supervisor of guardian and systemGuardian at the specified address;
         /// this is exposed so that the ActorRefFactory can use it as lookupRoot, i.e.
         /// for anchoring absolute actor selections.
         /// </summary>
-        ActorRef RootGuardianAt(Address address);
+        IActorRef RootGuardianAt(Address address);
 
         /// <summary> Gets the supervisor used for all top-level user actors.</summary>
         LocalActorRef Guardian { get; }
@@ -35,7 +35,7 @@ namespace Akka.Actor
         LocalActorRef SystemGuardian { get; }
 
         /// <summary>Gets the dead letters.</summary>
-        ActorRef DeadLetters { get; }
+        IActorRef DeadLetters { get; }
 
         /// <summary>
         /// Gets the root path for all actors within this actor system, not including any remote address information.
@@ -60,12 +60,12 @@ namespace Akka.Actor
         ActorPath TempPath();
 
         /// <summary>Returns the actor reference representing the "/temp" path.</summary>
-        InternalActorRef TempContainer { get; }
+        IInternalActorRef TempContainer { get; }
 
         /// <summary>Registers an actorRef at a path returned by <see cref="TempPath"/>; do NOT pass in any other path.</summary>
         /// <param name="actorRef">The actor reference.</param>
         /// <param name="path">A path returned by <see cref="TempPath"/>. Do NOT pass in any other path!</param>
-        void RegisterTempActor(InternalActorRef actorRef, ActorPath path);
+        void RegisterTempActor(IInternalActorRef actorRef, ActorPath path);
 
         /// <summary>Unregister a temporary actor (i.e. obtained from <see cref="TempPath"/>); do NOT pass in any other path.</summary>
         /// <param name="path">A path returned by <see cref="TempPath"/>. Do NOT pass in any other path!</param>
@@ -80,13 +80,13 @@ namespace Akka.Actor
         /// but it should be overridable from external configuration; the lookup of
         /// the latter can be suppressed by setting "lookupDeploy" to "false".
         /// </summary>
-        InternalActorRef ActorOf(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async);
+        IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async);
 
         /// <summary>Get the actor reference for a specified path. If no such actor exists, it will be (equivalent to) a dead letter reference.</summary>
-        ActorRef ResolveActorRef(string path);
+        IActorRef ResolveActorRef(string path);
 
         /// <summary>Get the actor reference for a specified path. If no such actor exists, it will be (equivalent to) a dead letter reference.</summary>
-        ActorRef ResolveActorRef(ActorPath actorPath);
+        IActorRef ResolveActorRef(ActorPath actorPath);
 
         /// <summary>
         /// This Future is completed upon termination of this <see cref="ActorRefProvider"/>, which
@@ -114,13 +114,13 @@ namespace Akka.Actor
         private readonly Settings _settings;
         private readonly EventStream _eventStream;
         private readonly Deployer _deployer;
-        private readonly InternalActorRef _deadLetters;
+        private readonly IInternalActorRef _deadLetters;
         private readonly RootActorPath _rootPath;
         private readonly LoggingAdapter _log;
         private readonly AtomicCounterLong _tempNumber;
         private readonly ActorPath _tempNode;
         private ActorSystemImpl _system;
-        private readonly Dictionary<string, InternalActorRef> _extraNames = new Dictionary<string, InternalActorRef>();
+        private readonly Dictionary<string, IInternalActorRef> _extraNames = new Dictionary<string, IInternalActorRef>();
         private readonly TaskCompletionSource<Status> _terminationPromise = new TaskCompletionSource<Status>();
         private readonly SupervisorStrategy _systemGuardianStrategy;
         private VirtualPathContainer _tempContainer;
@@ -135,7 +135,7 @@ namespace Akka.Actor
             //Intentionally left blank
         }
 
-        public LocalActorRefProvider(string systemName, Settings settings, EventStream eventStream, Deployer deployer, Func<ActorPath, InternalActorRef> deadLettersFactory)
+        public LocalActorRefProvider(string systemName, Settings settings, EventStream eventStream, Deployer deployer, Func<ActorPath, IInternalActorRef> deadLettersFactory)
         {
             _settings = settings;
             _eventStream = eventStream;
@@ -153,11 +153,11 @@ namespace Akka.Actor
 
         }
 
-        public ActorRef DeadLetters { get { return _deadLetters; } }
+        public IActorRef DeadLetters { get { return _deadLetters; } }
 
         public Deployer Deployer { get { return _deployer; } }
 
-        public InternalActorRef RootGuardian { get { return _rootGuardian; } }
+        public IInternalActorRef RootGuardian { get { return _rootGuardian; } }
 
         public ActorPath RootPath { get { return _rootPath; } }
 
@@ -165,7 +165,7 @@ namespace Akka.Actor
 
         public LocalActorRef SystemGuardian { get { return _systemGuardian; } }
 
-        public InternalActorRef TempContainer { get { return _tempContainer; } }
+        public IInternalActorRef TempContainer { get { return _tempContainer; } }
 
         public Task TerminationTask { get { return _terminationPromise.Task; } }
 
@@ -191,7 +191,7 @@ namespace Akka.Actor
         /// Just be careful to complete all this before <see cref="ActorSystem.Start"/> finishes,
         /// or before you start your own auto-spawned actors.
         /// </summary>
-        public void RegisterExtraName(string name, InternalActorRef actor)
+        public void RegisterExtraName(string name, IInternalActorRef actor)
         {
             _extraNames.Add(name, actor);
         }
@@ -211,7 +211,7 @@ namespace Akka.Actor
             return rootGuardian;
         }
 
-        public ActorRef RootGuardianAt(Address address)
+        public IActorRef RootGuardianAt(Address address)
         {
             return address == _rootPath.Address ? _rootGuardian : _deadLetters;
         }
@@ -248,7 +248,7 @@ namespace Akka.Actor
             return child;
         }
 
-        public void RegisterTempActor(InternalActorRef actorRef, ActorPath path)
+        public void RegisterTempActor(IInternalActorRef actorRef, ActorPath path)
         {
             if(path.Parent != _tempNode)
                 throw new Exception("Cannot RegisterTempActor() with anything not obtained from tempPath()");
@@ -282,7 +282,7 @@ namespace Akka.Actor
             _eventStream.StartDefaultLoggers(_system);
         }
 
-        public ActorRef ResolveActorRef(string path)
+        public IActorRef ResolveActorRef(string path)
         {
             ActorPath actorPath;
             if(ActorPath.TryParse(path, out actorPath) && actorPath.Address == _rootPath.Address)
@@ -297,7 +297,7 @@ namespace Akka.Actor
         /// <param name="path">The actor path.</param>
         /// <returns>ActorRef.</returns>
         /// <exception cref="System.NotSupportedException">The provided actor path is not valid in the LocalActorRefProvider</exception>
-        public ActorRef ResolveActorRef(ActorPath path)
+        public IActorRef ResolveActorRef(ActorPath path)
         {
             if(path.Root == _rootPath)
                 return ResolveActorRef(_rootGuardian, path.Elements);
@@ -324,7 +324,7 @@ namespace Akka.Actor
             //throw new NotSupportedException("The provided actor path is not valid in the LocalActorRefProvider");
         }
 
-        private ActorRef ResolveActorRef(InternalActorRef actorRef, IReadOnlyCollection<string> pathElements)
+        private IActorRef ResolveActorRef(IInternalActorRef actorRef, IReadOnlyCollection<string> pathElements)
         {
             if(pathElements.Count == 0)
             {
@@ -341,7 +341,7 @@ namespace Akka.Actor
         }
 
 
-        public InternalActorRef ActorOf(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
+        public IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
             if (props.Deploy.RouterConfig.NoRouter())
             {

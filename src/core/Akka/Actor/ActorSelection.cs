@@ -25,7 +25,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="anchor">The anchor.</param>
         /// <param name="path">The path.</param>
-        public ActorSelection(ActorRef anchor, SelectionPathElement[] path)
+        public ActorSelection(IActorRef anchor, SelectionPathElement[] path)
         {
             Anchor = anchor;
             Elements = path;
@@ -36,7 +36,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="anchor">The anchor.</param>
         /// <param name="path">The path.</param>
-        public ActorSelection(ActorRef anchor, string path)
+        public ActorSelection(IActorRef anchor, string path)
             : this(anchor, path == "" ? new string[] {} : path.Split('/'))
         {
         }
@@ -46,7 +46,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="anchor">The anchor.</param>
         /// <param name="elements">The elements.</param>
-        public ActorSelection(ActorRef anchor, IEnumerable<string> elements)
+        public ActorSelection(IActorRef anchor, IEnumerable<string> elements)
         {
             Anchor = anchor;
             Elements = elements.Select<string, SelectionPathElement>(e =>
@@ -63,7 +63,7 @@ namespace Akka.Actor
         ///     Gets the anchor.
         /// </summary>
         /// <value>The anchor.</value>
-        public ActorRef Anchor { get; private set; }
+        public IActorRef Anchor { get; private set; }
 
         /// <summary>
         ///     Gets or sets the elements.
@@ -81,7 +81,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
-        public void Tell(object message, ActorRef sender)
+        public void Tell(object message, IActorRef sender)
         {
             Deliver(message, sender, 0, Anchor);
         }
@@ -99,12 +99,12 @@ namespace Akka.Actor
             Deliver(message, sender, 0, Anchor);
         }
 
-        public Task<ActorRef> ResolveOne(TimeSpan timeout)
+        public Task<IActorRef> ResolveOne(TimeSpan timeout)
         {
             return InnerResolveOne(timeout);
         }
 
-        private async Task<ActorRef> InnerResolveOne(TimeSpan timeout)
+        private async Task<IActorRef> InnerResolveOne(TimeSpan timeout)
         {
             try
             {
@@ -124,7 +124,7 @@ namespace Akka.Actor
         /// <param name="sender">The sender.</param>
         /// <param name="pathIndex">Index of the path.</param>
         /// <param name="current">The current.</param>
-        private void Deliver(object message, ActorRef sender, int pathIndex, ActorRef current)
+        private void Deliver(object message, IActorRef sender, int pathIndex, IActorRef current)
         {
             if (pathIndex == Elements.Length)
             {
@@ -146,7 +146,7 @@ namespace Akka.Actor
                         var pattern = element as SelectChildPattern;
                         var children =
                             withCell.Children.Where(c => c.Path.Name.Like(pattern.PatternStr));
-                        foreach (ActorRef matchingChild in children)
+                        foreach (IActorRef matchingChild in children)
                         {
                             Deliver(message, sender, pathIndex + 1, matchingChild);
                         }
@@ -165,7 +165,7 @@ namespace Akka.Actor
         ///     Convenience method used by remoting when receiving <see cref="ActorSelectionMessage" /> from a remote
         ///     actor.
         /// </summary>
-        internal static void DeliverSelection(InternalActorRef anchor, ActorRef sender, ActorSelectionMessage sel)
+        internal static void DeliverSelection(IInternalActorRef anchor, IActorRef sender, ActorSelectionMessage sel)
         {
             var actorSelection = new ActorSelection(anchor, sel.Elements);
             actorSelection.Tell(sel.Message, sender);

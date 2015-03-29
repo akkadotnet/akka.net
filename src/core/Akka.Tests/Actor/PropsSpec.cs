@@ -19,7 +19,7 @@ namespace Akka.Tests.Actor
         public void Props_must_create_actor_by_expression()
         {
             var props = Props.Create(() => new PropsTestActor());
-            ActorRef actor = Sys.ActorOf(props);
+            IActorRef actor = Sys.ActorOf(props);
             Assert.NotNull(actor);
         }
 
@@ -29,7 +29,7 @@ namespace Akka.Tests.Actor
             TestLatch latchProducer = new TestLatch(Sys);
             TestLatch latchActor = new TestLatch(Sys);
             var props = Props.CreateBy<TestProducer>(latchProducer, latchActor);
-            ActorRef actor = Sys.ActorOf(props);
+            IActorRef actor = Sys.ActorOf(props);
             latchActor.Ready(TimeSpan.FromSeconds(1));
         }
 

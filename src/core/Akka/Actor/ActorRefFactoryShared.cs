@@ -31,7 +31,7 @@ namespace Akka.Actor
         ///     the supplied path, it is recommended to send a message and gather the
         ///     replies in order to resolve the matching set of actors.
         /// </summary>
-        public static ActorSelection ActorSelection(string path, ActorSystem system, ActorRef lookupRoot)
+        public static ActorSelection ActorSelection(string path, ActorSystem system, IActorRef lookupRoot)
         {
             var provider = ((ActorSystemImpl)system).Provider;
 
