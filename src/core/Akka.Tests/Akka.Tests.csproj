@@ -124,6 +124,7 @@
     <Compile Include="Actor\ReceiveActorTests_LifeCycle.cs" />
     <Compile Include="Configuration\HoconTests.cs" />
     <Compile Include="Dispatch\AsyncAwaitSpec.cs" />
+    <Compile Include="Dispatch\DispatchersSpec.cs" />
     <Compile Include="Dispatch\MailboxesSpec.cs" />
     <Compile Include="Event\EventBusSpec.cs" />
     <Compile Include="Event\EventStreamSpec.cs" />

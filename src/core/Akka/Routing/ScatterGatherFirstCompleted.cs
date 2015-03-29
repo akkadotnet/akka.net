@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Util;
 
 namespace Akka.Routing
@@ -120,6 +121,11 @@ namespace Akka.Routing
         {
             return new Router(new ScatterGatherFirstCompletedRoutingLogic(Within));
         }
+
+        public override Group WithDispatcher(string dispatcher)
+        {
+            return new ScatterGatherFirstCompletedGroup(Within, Paths){ RouterDispatcher = dispatcher};
+        }
     }
 
     /// <summary>
@@ -199,6 +205,11 @@ namespace Akka.Routing
         public override Pool WithResizer(Resizer resizer)
         {
             return new ScatterGatherFirstCompletedPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, _within, UsePoolDispatcher);
+        }
+
+        public override Pool WithDispatcher(string dispatcher)
+        {
+            return new ScatterGatherFirstCompletedPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher, _within, UsePoolDispatcher);
         }
 
         public override RouterConfig WithFallback(RouterConfig routerConfig)

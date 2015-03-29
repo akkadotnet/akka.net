@@ -94,6 +94,12 @@ namespace Akka.Routing
         {
             return new BroadcastPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
         }
+
+        public override Pool WithDispatcher(string dispatcher)
+        {
+            return new BroadcastPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher, UsePoolDispatcher);
+        }
+
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
             return OverrideUnsetConfig(routerConfig);
@@ -162,6 +168,11 @@ namespace Akka.Routing
         public override Router CreateRouter(ActorSystem system)
         {
             return new Router(new BroadcastRoutingLogic());
+        }
+
+        public override Group WithDispatcher(string dispatcher)
+        {
+            return new BroadcastGroup(Paths){ RouterDispatcher = dispatcher };
         }
     }
 }
