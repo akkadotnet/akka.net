@@ -1,10 +1,8 @@
-﻿using System;
-using Akka.Actor;
+﻿using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
-using Xunit;
-using Akka.Util;
 using Akka.Util.Internal;
+using Xunit;
 
 namespace Akka.Tests.Routing
 {

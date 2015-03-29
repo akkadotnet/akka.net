@@ -1,15 +1,9 @@
-﻿using ChatMessages;
+﻿using System;
+using System.Linq;
 using Akka;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Remote;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using ChatMessages;
 
 namespace ChatClient
 {
@@ -17,11 +11,24 @@ namespace ChatClient
     {
         static void Main(string[] args)
         {
-            var fluentConfig = FluentConfig.Begin()
-                                .StartRemotingOn("localhost") //no port given = use any free port
-                                .Build();
+            var config = ConfigurationFactory.ParseString(@"
+akka {  
+    actor {
+        provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
+    }
+    remote {
+        helios.tcp {
+            transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
+		    applied-adapters = []
+		    transport-protocol = tcp
+		    port = 0
+		    hostname = localhost
+        }
+    }
+}
+");
 
-            using (var system = ActorSystem.Create("MyClient", fluentConfig)) 
+            using (var system = ActorSystem.Create("MyClient", config)) 
             {
                 var chatClient = system.ActorOf(Props.Create<ChatClientActor>());
                 system.ActorSelection("akka.tcp://MyServer@localhost:8081/user/ChatServer");

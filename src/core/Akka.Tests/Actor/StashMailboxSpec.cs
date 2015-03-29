@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.TestKit;

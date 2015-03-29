@@ -2,11 +2,10 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Persistence.Serialization;
-using System.Runtime.Serialization;
 
 namespace Akka.Persistence
 {
@@ -255,17 +254,18 @@ namespace Akka.Persistence
             _unconfirmed = new ConcurrentDictionary<long, Delivery>(unconfirmedDeliveries);
         }
 
-        protected override void PreRestart(Exception reason, object message)
+        public override void AroundPostRestart(Exception cause, object message)
         {
             _redeliverScheduleCancelable.Cancel();
-            base.PreRestart(reason, message);
+            base.AroundPostRestart(cause, message);
         }
 
-        protected override void PostStop()
+        public override void AroundPostStop()
         {
             _redeliverScheduleCancelable.Cancel();
-            base.PostStop();
+            base.AroundPostStop();
         }
+
 
         protected override void OnReplaySuccess()
         {

@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Akka.MultiNodeTestRunner.Shared.Reporting;
+﻿using Akka.MultiNodeTestRunner.Shared.Reporting;
 
 namespace Akka.MultiNodeTestRunner.Shared.Persistence
 {

@@ -56,7 +56,7 @@ let main() =
     // return processed data and display it
     async {
         let! res = master <? Collect
-        for (k, v) in res :?> (string*int) seq do
+        for (k, v) in res do
             printfn "%s\t%d" k v
         system.Shutdown()
     } |> Async.RunSynchronously

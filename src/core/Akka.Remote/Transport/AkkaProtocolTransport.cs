@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internals;
-using Akka.Util;
-using Google.ProtocolBuffers;
-using Akka.Util.Internal;
 using Akka.Event;
-using System.Runtime.Serialization;
+using Akka.Util.Internal;
+using Google.ProtocolBuffers;
 
 namespace Akka.Remote.Transport
 {

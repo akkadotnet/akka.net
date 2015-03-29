@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 using Akka.Actor;
 using Akka.Util.Internal;
 
@@ -141,10 +140,7 @@ namespace Akka.Persistence
         private void OnReplayComplete(bool shouldAwait)
         {
             ChangeState(Idle());
-            if (IsAutoUpdate)
-            {
-                _scheduleCancellation = Context.System.Scheduler.ScheduleTellOnceCancelable(AutoUpdateInterval, Self, new Update(false, AutoUpdateReplayMax), Self);
-            }
+
             if (shouldAwait)
             {
                 _internalStash.UnstashAll();
@@ -161,35 +157,26 @@ namespace Akka.Persistence
             {
                 if (message is ReplayMessagesFailure)
                 {
-                    ReplayFailureCompleted(cause);
+                    OnReplayFailureCompleted(receive, cause, failedMessage as IPersistentRepresentation);
                     // journal couldn't tell the maximum stored sequence number, hence the next
                     // replay must be a full replay (up to the highest stored sequence number)
                     // Recover(lastSequenceNr) is sent by preRestart
                     LastSequenceNr = long.MaxValue;
                 }
-                else if (message is ReplayMessagesSuccess) ReplayFailureCompleted(cause);
+                else if (message is ReplayMessagesSuccess) OnReplayFailureCompleted(receive, cause, failedMessage as IPersistentRepresentation);
                 else if (message is ReplayedMessage) UpdateLastSequenceNr(((ReplayedMessage)message).Persistent);
                 else if (message is Recover) ; // ignore
                 else _internalStash.Stash();
             });
         }
 
-        private void ReplayFailureCompleted(Exception cause)
+        private void OnReplayFailureCompleted(Receive receive, Exception cause, IPersistentRepresentation failed)
         {
-            ChangeState(PrepareRestart(cause));
-            Context.EnqueueMessageFirst(cause);
+            ChangeState(Idle());
+            var recoveryFailure = failed != null ? new RecoveryFailure(cause, failed.SequenceNr, failed.Payload) : new RecoveryFailure(cause);
+            base.AroundReceive(receive, recoveryFailure);
         }
 
-        /// <summary>
-        /// Re-receives the replayed message that caused an exception and re-throws that exception.
-        /// </summary>
-        private ViewState PrepareRestart(Exception cause)
-        {
-            return new ViewState("prepare restart", true, (receive, message) =>
-            {
-                if (message is ReplayedMessage) throw cause;
-            });
-        }
 
         /// <summary>
         /// When receiving an <see cref="Update"/> event, switches to <see cref="ReplayStarted"/> state
@@ -203,12 +190,22 @@ namespace Akka.Persistence
                 if (message is Update)
                 {
                     var update = (Update)message;
-                    ChangeState(ReplayStarted(update.IsAwait));
-                    Journal.Tell(new ReplayMessages(LastSequenceNr + 1, long.MaxValue, update.ReplayMax, PersistenceId, Self));
+                    ChangeStateToReplayStarted(update.IsAwait, update.ReplayMax);
+                }
+                else if (message is ScheduledUpdate)
+                {
+                    var scheduled = (ScheduledUpdate) message;
+                    ChangeStateToReplayStarted(false, scheduled.ReplayMax);
                 }
                 else if (message is Recover) ; // ignore
                 else base.AroundReceive(receive, message);
             });
+        }
+
+        private void ChangeStateToReplayStarted(bool isAwait, long replayMax)
+        {
+            ChangeState(ReplayStarted(isAwait));
+            Journal.Tell(new ReplayMessages(LastSequenceNr + 1, long.MaxValue, replayMax, PersistenceId, Self));
         }
     }
 }

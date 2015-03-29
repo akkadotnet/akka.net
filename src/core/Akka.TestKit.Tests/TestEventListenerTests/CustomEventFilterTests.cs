@@ -1,7 +1,4 @@
-﻿using System;
-using System.Threading;
-using Akka.Event;
-using Akka.TestKit;
+﻿using Akka.Event;
 using Xunit;
 
 namespace Akka.Testkit.Tests.TestEventListenerTests

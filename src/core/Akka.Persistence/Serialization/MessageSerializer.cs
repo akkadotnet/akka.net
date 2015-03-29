@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Serialization;
 using Google.ProtocolBuffers;

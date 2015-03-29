@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
 using System.Linq;
 using Akka.Actor;
 using Akka.Util.Internal;
@@ -45,7 +44,7 @@ namespace Akka.Persistence
         public Action<object> Handler { get; private set; }
     }
 
-    public abstract partial class Eventsourced : ActorBase, IWithPersistenceId, WithUnboundedStash
+    public abstract partial class Eventsourced : ActorBase, IPersistentIdentity, WithUnboundedStash
     {
         private static readonly AtomicCounter InstanceCounter = new AtomicCounter(1);
 
@@ -86,14 +85,18 @@ namespace Akka.Persistence
 
         public IStash Stash { get; set; }
 
+        public string JournalPluginId { get; protected set; }
+
+        public string SnapshotPluginId { get; protected set; }
+
         public ActorRef Journal
         {
-            get { return _journal ?? (_journal = Extension.JournalFor(SnapshotterId)); }
+            get { return _journal ?? (_journal = Extension.JournalFor(JournalPluginId)); }
         }
 
         public ActorRef SnapshotStore
         {
-            get { return _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotterId)); }
+            get { return _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotPluginId)); }
         }
 
         /// <summary>

@@ -1,5 +1,4 @@
-﻿using System;
-using Akka.Routing;
+﻿using Akka.Routing;
 
 namespace Samples.Cluster.ConsistentHashRouting
 {

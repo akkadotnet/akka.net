@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+﻿﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Persistence.Journal;
 using Akka.TestKit;
 using Xunit;
 
@@ -13,18 +13,42 @@ namespace Akka.Persistence.TestKit.Journal
         protected static readonly Config Config =
             ConfigurationFactory.ParseString("akka.persistence.publish-plugin-commands = on");
 
+        private static readonly string _specConfigTemplate = @"
+            akka.persistence {{
+                publish-plugin-commands = on
+                journal {{
+                    plugin = ""akka.persistence.journal.testspec""
+                    testspec {{
+                        class = ""{0}""
+                        plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    }}
+                }}
+            }}
+        ";
+
         private readonly TestProbe _senderProbe;
         private readonly TestProbe _receiverProbe;
 
         protected JournalSpec(Config config = null, string actorSystemName = null, string testActorName = null)
-            : base(config ?? Config, actorSystemName ?? "JournalSpec", testActorName)
+            : base(FromConfig(config).WithFallback(Config), actorSystemName ?? "JournalSpec", testActorName)
         {
             _senderProbe = CreateTestProbe();
             _receiverProbe = CreateTestProbe();
             WriteMessages(1, 5, Pid, _senderProbe.Ref);
         }
 
+        protected JournalSpec(Type journalType, string actorSystemName = null)
+            : base(ConfigFromTemplate(journalType), actorSystemName)
+        {
+        }
+
         protected ActorRef Journal { get { return Extension.JournalFor(null); } }
+
+        private static Config ConfigFromTemplate(Type journalType)
+        {
+            var config = string.Format(_specConfigTemplate, journalType.AssemblyQualifiedName);
+            return ConfigurationFactory.ParseString(config);
+        }
 
         protected bool IsReplayedMessage(ReplayedMessage message, long seqNr, bool isDeleted = false)
         {

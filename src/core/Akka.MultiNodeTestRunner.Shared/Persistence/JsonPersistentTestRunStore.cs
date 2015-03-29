@@ -1,10 +1,7 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Reflection;
 using System.Text;
-using System.Xml.Serialization;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
-using Akka.Serialization;
 using Akka.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;

@@ -10,9 +10,6 @@ using Akka.Dispatch.SysMsg;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
-using Akka.TestKit.Internal;
-using Akka.TestKit.Internal.StringMatcher;
-using Akka.TestKit.TestEvent;
 using Akka.TestKit.Xunit;
 using Xunit;
 

@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
-using Akka.Tests.Event;
 using Xunit;
 
 namespace Akka.Tests.Actor

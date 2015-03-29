@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -114,7 +113,7 @@ namespace Akka.Persistence.Tests
             _viewProbe.ExpectMsg("replicated-c-3");
         }
 
-        [Fact(Skip = "FIXME")]
+        [Fact(Skip = "FIXME: working, but random timeouts can occur when running all tests at once")]
         public void PersistentView_should_run_size_limited_updates_on_user_request()
         {
             _pref.Tell("c");
@@ -126,6 +125,7 @@ namespace Akka.Persistence.Tests
             _prefProbe.ExpectMsg("e-5");
             _prefProbe.ExpectMsg("f-6");
 
+            //TODO: performance optimization 
             _view = ActorOf(() => new PassiveTestPersistentView(Name, _viewProbe.Ref, null));
             _view.Tell(new Update(isAwait: true, replayMax: 2));
             _view.Tell("get");
@@ -157,7 +157,7 @@ namespace Akka.Persistence.Tests
             _viewProbe.ExpectMsg("replicated-b-2");
             _viewProbe.ExpectMsg("replicated-c-3");
             _viewProbe.ExpectMsg("replicated-d-4");
-            
+
             replayProbe.ExpectMsg<ReplayMessages>(m => m.FromSequenceNr == 1L && m.Max == 2L);
             replayProbe.ExpectMsg<ReplayMessages>(m => m.FromSequenceNr == 3L && m.Max == 2L);
             replayProbe.ExpectMsg<ReplayMessages>(m => m.FromSequenceNr == 5L && m.Max == 2L);

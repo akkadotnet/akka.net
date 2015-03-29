@@ -1,8 +1,7 @@
-﻿using System;
+﻿using System.Linq;
+using Akka.Actor;
 using Akka.Actor.Internals;
 using Xunit;
-using Akka.Actor;
-using System.Linq;
 
 namespace Akka.Tests
 {

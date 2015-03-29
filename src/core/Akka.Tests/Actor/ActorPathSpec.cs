@@ -1,18 +1,13 @@
-﻿using System.Web;
-using Akka.Event;
+﻿using System;
+using System.Linq;
+using System.Web;
+using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Akka.Actor;
 using Xunit.Extensions;
 
 namespace Akka.Tests.Actor
 {
-    
     public class ActorPathSpec
     {
         [Fact]

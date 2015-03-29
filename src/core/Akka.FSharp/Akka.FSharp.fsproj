@@ -79,6 +79,7 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.fs" />
     <Compile Include="FsApi.fs" />
+    <Compile Include="Schedulers.fs" />
     <None Include="packages.config" />
     <None Include="Akka.FSharp.nuspec" />
     <None Include="README.md" />

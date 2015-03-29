@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq.Expressions;
-using Akka.Actor;
+﻿using Akka.Actor;
 
 namespace Akka.TestKit
 {

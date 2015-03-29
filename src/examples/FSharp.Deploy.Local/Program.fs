@@ -58,7 +58,7 @@ let main _ =
              @> [ SpawnOption.Deploy(remoteDeploy remoteSystemAddress) ]
     async { 
         let! msg = remoter <? (REQ, "hello")
-        match msg :?> int * string with
+        match msg with
         | (RES, m) -> printfn "Remote actor responded: %s" m
         | _ -> printfn "Unexpected response from remote actor"
     }

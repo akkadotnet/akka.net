@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -25,7 +24,7 @@ namespace Akka.Persistence.Tests
                 akka.persistence.snapshot-store.local.dir = ""target/snapshots-{2}/""
                 akka.test.single-expect-default = 10s", serialization ?? "on", plugin, test);
 
-            return c.WithFallback(ConfigurationFactory.ParseString(configString)).WithFallback(Persistence.DefaultConfig());
+            return c.WithFallback(ConfigurationFactory.ParseString(configString));
         }
 
         internal readonly Cleanup Clean;
@@ -60,11 +59,20 @@ namespace Akka.Persistence.Tests
             base.AfterAll();
             Clean.Dispose();
         }
+
+        protected void ExpectMsgInOrder(params object[] ordered)
+        {
+            var msg = ExpectMsg<object[]>();
+            msg
+                //.Select(x => x.ToString())
+                .ShouldOnlyContainInOrder(ordered);
+        }
     }
 
     internal class Cleanup : IDisposable
     {
         internal List<DirectoryInfo> StorageLocations;
+        private static readonly object _syncRoot = new object();
 
         public Cleanup(AkkaSpec spec)
         {
@@ -76,15 +84,27 @@ namespace Akka.Persistence.Tests
 
         public void Initialize()
         {
+            DeleteStorageLocations();
+        }
+
+        private void DeleteStorageLocations()
+        {
             StorageLocations.ForEach(fi =>
             {
-                if (fi.Exists) fi.Delete(true);
+                lock (_syncRoot)
+                {
+                    try
+                    {
+                        if (fi.Exists) fi.Delete(true);    
+                    }
+                    catch (IOException) { }
+                }
             });
         }
 
         public void Dispose()
         {
-            StorageLocations.ForEach(fi => fi.Delete(true));
+            DeleteStorageLocations();
         }
     }
 

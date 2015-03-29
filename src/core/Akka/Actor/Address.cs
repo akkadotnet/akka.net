@@ -18,72 +18,44 @@ namespace Akka.Actor
     public sealed class Address : ICloneable, IEquatable<Address>, ISurrogated
     {
         /// <summary>
-        ///     Pseudo address for all systems
+        /// Pseudo address for all systems
         /// </summary>
         public static readonly Address AllSystems = new Address("akka", "all-systems");
 
-        /// <summary>
-        ///     To string
-        /// </summary>
         private readonly Lazy<string> _toString;
-
         private readonly string _host;
         private readonly int? _port;
         private readonly string _system;
         private readonly string _protocol;
 
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="Address" /> class.
-        /// </summary>
-        /// <param name="protocol">The protocol.</param>
-        /// <param name="system">The system.</param>
-        /// <param name="host">The host.</param>
-        /// <param name="port">The port.</param>
         public Address(string protocol, string system, string host = null, int? port = null)
         {
             _protocol = protocol;
             _system = system;
-            _host = host;
+            _host = host != null ? host.ToLowerInvariant() : null;
             _port = port;
             _toString = CreateLazyToString();
         }
 
-        /// <summary>
-        ///     Gets the host.
-        /// </summary>
-        /// <value>The host.</value>
         public string Host
         {
             get { return _host; }
         }
 
-        /// <summary>
-        ///     Gets the port.
-        /// </summary>
-        /// <value>The port.</value>
         public int? Port
         {
             get { return _port; }
         }
 
-        /// <summary>
-        ///     Gets the system.
-        /// </summary>
-        /// <value>The system.</value>
         public string System
         {
             get { return _system; }
         }
 
-        /// <summary>
-        ///     Gets the protocol.
-        /// </summary>
-        /// <value>The protocol.</value>
         public string Protocol
         {
             get { return _protocol; }
         }
-
 
         private Lazy<string> CreateLazyToString()
         {
@@ -100,10 +72,6 @@ namespace Akka.Actor
             }, true);
         }
 
-        /// <summary>
-        ///     Returns a <see cref="string" /> that represents this instance.
-        /// </summary>
-        /// <returns>A <see cref="string" /> that represents this instance.</returns>
         public override string ToString()
         {
             return _toString.Value;
@@ -141,12 +109,25 @@ namespace Akka.Actor
             return new Address(Protocol, System, Host, Port);
         }
 
-        //TODO: conform to WithXYZ convention for each value?
-        public Address Copy(string protocol = null, string system = null, string host = null, int? port = null)
+        public Address WithProtocol(string protocol)
         {
-            return new Address(protocol ?? Protocol, system ?? System, host ?? Host, port ?? Port);
+            return new Address(protocol, System, Host, Port);
         }
 
+        public Address WithSystem(string system)
+        {
+            return new Address(Protocol, system, Host, Port);
+        }
+
+        public Address WithHost(string host = null)
+        {
+            return new Address(Protocol, System, host, Port);
+        }
+
+        public Address WithPort(int? port = null)
+        {
+            return new Address(Protocol, System, Host, port);
+        }
 
         public static bool operator ==(Address left, Address right)
         {
@@ -158,16 +139,10 @@ namespace Akka.Actor
             return !Equals(left, right);
         }
 
-        /// <summary>
-        ///     Hosts the port.
-        /// </summary>
-        /// <returns>System.String.</returns>
         public string HostPort()
         {
             return ToString().Substring(Protocol.Length + 3);
         }
-
-        #region Static Methods
 
         /// <summary>
         /// Parses a new <see cref="Address"/> from a given string
@@ -178,26 +153,23 @@ namespace Akka.Actor
         public static Address Parse(string address)
         {
             var uri = new Uri(address);
-
             var protocol = uri.Scheme;
-            //if (!protocol.ToLowerInvariant().StartsWith("akka"))
-            //    protocol = string.Format("akka.{0}", protocol);
 
             if (string.IsNullOrEmpty(uri.UserInfo))
             {
-                string systemName = uri.Host;
-                return new Address(protocol, systemName, null, null);
+                var systemName = uri.Host;
+                
+                return new Address(protocol, systemName);
             }
             else
             {
-                string systemName = uri.UserInfo;
-                string host = uri.Host;
-                int port = uri.Port;
+                var systemName = uri.UserInfo;
+                var host = uri.Host;
+                var port = uri.Port;
+
                 return new Address(protocol, systemName, host, port);
             }
         }
-
-        #endregion
 
         public class AddressSurrogate : ISurrogate
         {
@@ -222,7 +194,6 @@ namespace Akka.Actor
             };
         }
     }
-
 
     /// <summary>
     /// Extractor class for so-called "relative actor paths" - as in "relative URI", not

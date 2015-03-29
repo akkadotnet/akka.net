@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.MultiNodeTestRunner.Shared;
-using Akka.MultiNodeTestRunner.Shared.Reporting;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.Remote.TestKit;
 using Xunit;

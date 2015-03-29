@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 

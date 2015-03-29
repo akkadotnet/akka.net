@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 using Akka.Actor;
 using Newtonsoft.Json;
 
@@ -46,6 +45,17 @@ namespace Akka.Persistence
         public long ReplayMax { get; private set; }
     }
 
+    [Serializable]
+    public sealed class ScheduledUpdate
+    {
+        public ScheduledUpdate(long replayMax)
+        {
+            ReplayMax = replayMax;
+        }
+
+        public long ReplayMax { get; private set; }
+    }
+
     /// <summary>
     /// A view replicates the persistent message stream of a <see cref="PersistentActor"/>. Implementation classes receive
     /// the message stream directly from the Journal. These messages can be processed to update internal state
@@ -66,7 +76,7 @@ namespace Akka.Persistence
     /// `akka.persistence.view.auto-update-interval` configuration key. Applications may trigger additional
     /// view updates by sending the view <see cref="Update"/> requests. See also methods
     /// </summary>
-    public abstract partial class PersistentView : ActorBase, ISnapshotter, IWithPersistenceId, WithUnboundedStash
+    public abstract partial class PersistentView : ActorBase, ISnapshotter, IPersistentIdentity, WithUnboundedStash
     {
         protected readonly PersistenceExtension Extension;
 
@@ -88,9 +98,18 @@ namespace Akka.Persistence
             _currentState = RecoveryPending();
         }
 
+        public string JournalPluginId { get; protected set; }
+
+        public string SnapshotPluginId { get; protected set; }
+
+        public ActorRef Journal
+        {
+            get { return _journal ?? (_journal = Extension.JournalFor(JournalPluginId)); }
+        }
+
         public ActorRef SnapshotStore
         {
-            get { return _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotterId)); }
+            get { return _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotPluginId)); }
         }
 
         /// <summary>
@@ -144,11 +163,6 @@ namespace Akka.Persistence
         /// Gets last sequence number.
         /// </summary>
         public long SnapshotSequenceNr { get { return LastSequenceNr; } }
-
-        public ActorRef Journal
-        {
-            get { return _journal ?? (_journal = Extension.JournalFor(PersistenceId)); }
-        }
 
         private void ChangeState(ViewState state)
         {

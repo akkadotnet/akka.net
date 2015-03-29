@@ -1,13 +1,12 @@
-﻿using Akka.Configuration;
+﻿using System;
+using Akka.Actor;
+using Akka.Configuration;
+using Akka.Dispatch.SysMsg;
 using Akka.Routing;
 using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Xunit;
-using System;
-using System.Collections.Generic;
-using Akka.Actor;
-using Akka.Dispatch.SysMsg;
 
 namespace Akka.Tests.Serialization
 {

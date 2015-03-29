@@ -2,7 +2,6 @@
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Dispatch;
-using Akka.Dispatch.SysMsg;
 
 namespace Akka.Routing
 {

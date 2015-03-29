@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
-using System.Runtime.Remoting;
-using Akka.Util;
-using Akka.Util.Internal;
-using Google.ProtocolBuffers;
 using Akka.Actor;
 using Akka.Serialization;
-using System.IO.Compression;
+using Akka.Util.Internal;
+using Google.ProtocolBuffers;
 
 namespace Akka.Cluster.Proto
 {

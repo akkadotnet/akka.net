@@ -5,72 +5,63 @@ open Akka.Actor
 open Akka.Configuration
 open Akka.FSharp
 
-type Msg =
-    | Value of int
-    | Respond
+type CustomException() =
+    inherit Exception()
 
-/// worker function
-let workerFun (mailbox : Actor<_>) = 
-    let state = ref 0 // we store value in a reference cell
-    
-    let rec loop() = 
-        actor { 
-            let! msg = mailbox.Receive()
-            // worker should save state only for positive integers, and respond on demand, all other options causes exceptions
-            match msg with
-            | Value num when num > 0 -> 
-                state := num
-            | Value num ->
-                logErrorf mailbox "Received an error-prone value %d" num
-                raise (ArithmeticException "values equal or less than 0")
-            | Respond -> mailbox.Sender() <! !state
-            return! loop()
-        }
-    loop()
+type Message =
+    | Echo of string
+    | Crash
 
-let main() = 
-    let system = System.create "SypervisorSystem" <| ConfigurationFactory.Default()
-    
-    // below we define OneForOneStrategy to handle specific exceptions incoming from child actors
-    let strategy = 
-        Strategy.OneForOne (fun e -> 
-            match e with
-            | :? ArithmeticException -> Directive.Resume
-            | :? ArgumentException -> Directive.Stop
-            | _ -> Directive.Escalate)
-    
-    // create a supervisor actor
-    let supervisor = 
-        spawnOpt system "master" (fun mailbox -> 
-            // by using spawn we may create a child actors without exiting a F# functional API
-            let worker = spawn mailbox "worker" workerFun
-            
-            let rec loop() = 
-                actor { 
-                    let! msg = mailbox.Receive()
-                    match msg with
-                    | Respond -> worker.Tell(msg, mailbox.Sender())
-                    | _ -> worker <! msg
-                    return! loop()
-                }
-            loop()) [ SupervisorStrategy(strategy) ]
-    
-    async { 
-        // this one should be handled gently
-        supervisor <! Value 5
-        do! Async.Sleep 500
-        let! r = supervisor <? Respond
-        printfn "value received %d" (r :?> int)
-    }
-    |> Async.RunSynchronously
+let main() =
+    use system = System.create "system" (Configuration.defaultConfig())
+    // create parent actor to watch over jobs delegated to it's child
+    let parent = 
+        spawnOpt system "parent" 
+            <| fun parentMailbox ->
+                // define child actor
+                let child = 
+                    spawn parentMailbox "child" <| fun childMailbox ->
+                        childMailbox.Defer (fun () -> printfn "Child stopping")
+                        printfn "Child started"
+                        let rec childLoop() = 
+                            actor {
+                                let! msg = childMailbox.Receive()
+                                match msg with
+                                | Echo info -> 
+                                    // respond to original sender
+                                    let response = "Child " + (childMailbox.Self.Path.ToStringWithAddress()) + " received: "  + info
+                                    childMailbox.Sender() <! response
+                                | Crash -> 
+                                    // log crash request and crash
+                                    printfn "Child %A received crash order" (childMailbox.Self.Path)
+                                    raise (CustomException())
+                                return! childLoop()
+                            }
+                        childLoop()
+                // define parent behavior
+                let rec parentLoop() =
+                    actor {
+                        let! (msg: Message) = parentMailbox.Receive()
+                        child.Forward(msg)  // forward all messages through
+                        return! parentLoop()
+                    }
+                parentLoop()
+            // define supervision strategy
+            <| [ SpawnOption.SupervisorStrategy (
+                    // restart on Custom Exception, default behavior on all other exception types
+                    Strategy.OneForOne(fun e ->
+                    match e with
+                    | :? CustomException -> Directive.Restart 
+                    | _ -> SupervisorStrategy.DefaultDecider(e)))  ]
 
-    async { 
-        // this one should cause ArithmeticException in worker actor, handled by it's parent (supervisor)
-        // according to SupervisorStrategy, it should resume system work
-        supervisor <! Value -11
-        do! Async.Sleep 500
-        // since -11 thrown an exception and didn't saved a state, a previous value (5) should be returned
-        let! r = supervisor <? Respond
-        printfn "value received %d" (r :?> int)
-    }
-    |> Async.RunSynchronously
+    async {
+        let! response = parent <? Echo "hello world"
+        printfn "%s" response
+        // after this one child should crash
+        parent <! Crash
+        System.Threading.Thread.Sleep 200
+        
+        // actor should be restarted
+        let! response = parent <? Echo "hello world2"
+        printfn "%s" response
+    } |> Async.RunSynchronously

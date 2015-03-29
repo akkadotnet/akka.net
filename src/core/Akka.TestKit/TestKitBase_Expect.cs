@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit.Internal;
+using Akka.Util;
 
 namespace Akka.TestKit
 {
@@ -253,6 +252,28 @@ namespace Akka.TestKit
                 ConditionalLog(failMessage, duration,t, elapsed);
                 _assertions.Fail(failMessage,duration, t, elapsed);
             }
+        }
+
+        /// <summary>
+        /// Receive a message from the test actor and assert that it equals 
+        /// one of the given <paramref name="messages"/>. Wait time is bounded by 
+        /// <see cref="RemainingOrDefault"/> as duration, with an assertion exception being thrown in case of timeout.
+        /// </summary>
+        /// <typeparam name="T">The type of the messages</typeparam>
+        /// <param name="messages">The messages.</param>
+        /// <returns>The received messages in received order</returns>
+        public T ExpectMsgAnyOf<T>(params T[] messages)
+        {
+            return InternalExpectMsgAnyOf<T>(RemainingOrDefault, messages);
+        }
+
+        private T InternalExpectMsgAnyOf<T>(TimeSpan max, T[] messages)
+        {
+            var o = ReceiveOne(max);
+            _assertions.AssertTrue(o != null, string.Format("Timeout {0} during waiting for ExpectMsgAnyOf waiting for ({1})", max, StringFormat.SafeJoin(",", messages)));
+            _assertions.AssertTrue(messages.Contains((T)o), "ExpectMsgAnyOf found unexpected {0}", o);
+
+            return (T)o;
         }
 
         /// <summary>

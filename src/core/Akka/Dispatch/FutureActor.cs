@@ -1,6 +1,5 @@
 ﻿using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Dispatch.SysMsg;
 
 namespace Akka.Dispatch
 {

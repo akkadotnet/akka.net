@@ -1,5 +1,4 @@
 ﻿using System;
-using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
@@ -46,7 +45,7 @@ namespace Akka.Actor
 
         public override Scope Copy()
         {
-            return new RemoteScope(Address.Copy());
+            return new RemoteScope(Address);
         }
     }
 }

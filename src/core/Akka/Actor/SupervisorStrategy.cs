@@ -220,6 +220,23 @@ namespace Akka.Actor
         ///     the number of times a child actor is allowed to be restarted, negative value means no limit,
         ///     if the limit is exceeded the child actor is stopped.
         /// </param>
+        /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, Duration.Inf means no window.</param>
+        /// <param name="decider">mapping from Exception to <see cref="Directive" /></param>
+        public OneForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, IDecider decider)
+            : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, decider)
+        {
+            //Intentionally left blank
+        }
+
+        /// <summary>
+        ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
+        ///     to all children when one fails, as opposed to <see cref="OneForOneStrategy" /> that applies
+        ///     it only to the child actor that failed.
+        /// </summary>
+        /// <param name="maxNrOfRetries">
+        ///     the number of times a child actor is allowed to be restarted, negative value means no limit,
+        ///     if the limit is exceeded the child actor is stopped.
+        /// </param>
         /// <param name="withinTimeMilliseconds">duration in milliseconds of the time window for <paramref name="maxNrOfRetries"/>, negative values means no window.</param>
         /// <param name="localOnlyDecider">Mapping from an <see cref="Exception"/> to <see cref="Directive"/></param>
         /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>

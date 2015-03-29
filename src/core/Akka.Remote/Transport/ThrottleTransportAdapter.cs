@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Dispatch.SysMsg;
 using Akka.Util;
 using Akka.Util.Internal;
 using Google.ProtocolBuffers;
@@ -350,7 +349,8 @@ namespace Akka.Remote.Transport
 
         private static Address NakedAddress(Address address)
         {
-            return address.Copy(protocol: string.Empty, system: string.Empty);
+            return address.WithProtocol(string.Empty)
+                .WithSystem(string.Empty);
         }
 
         private ThrottleMode GetInboundMode(Address nakedAddress)

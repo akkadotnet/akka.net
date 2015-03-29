@@ -13,12 +13,10 @@ namespace Akka.Persistence.Tests
 
         internal class StoppingStrategySupervisor : ActorBase
         {
-            private readonly ActorRef _testProbe;
             private readonly ActorRef _crashingActor;
 
             public StoppingStrategySupervisor(ActorRef testProbe)
             {
-                _testProbe = testProbe;
                 _crashingActor = Context.ActorOf(Props.Create(() => new CrashingActor(testProbe)), "CrashingActor");
             }
 
@@ -116,7 +114,7 @@ namespace Akka.Persistence.Tests
         {
         }
 
-        [Fact]
+        [Fact(Skip = "FIXME")]
         public void GuaranteedDelivery_should_not_send_when_actor_crashes()
         {
             var testProbe = CreateTestProbe();
