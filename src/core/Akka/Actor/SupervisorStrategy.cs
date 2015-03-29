@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Event;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Actor
@@ -11,7 +13,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Base class for supervision strategies
     /// </summary>
-    public abstract class SupervisorStrategy
+    public abstract class SupervisorStrategy : ISurrogated
     {
         /// <summary>
         ///     Handles the specified child.
@@ -183,6 +185,8 @@ namespace Akka.Actor
         /// </summary>
         public abstract void HandleChildTerminated(IActorContext actorContext, ActorRef child, IEnumerable<InternalActorRef> children);
 
+
+        public abstract ISurrogate ToSurrogate(ActorSystem system);
     }
 
     /// <summary>
@@ -190,9 +194,24 @@ namespace Akka.Actor
     /// </summary>
     public class OneForOneStrategy : SupervisorStrategy
     {
-        public int MaxNumberOfRetries { get; private set; }
-        public int WithinTimeRangeMilliseconds { get; private set; }
-        public IDecider Decider { get; private set; }
+        private readonly int _maxNumberOfRetries;
+        private readonly int _withinTimeRangeMilliseconds;
+        private readonly IDecider _decider;
+
+        public int MaxNumberOfRetries
+        {
+            get { return _maxNumberOfRetries; }
+        }
+
+        public int WithinTimeRangeMilliseconds
+        {
+            get { return _withinTimeRangeMilliseconds; }
+        }
+
+        public IDecider Decider
+        {
+            get { return _decider; }
+        }
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
@@ -259,9 +278,9 @@ namespace Akka.Actor
         /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
         public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, IDecider decider, bool loggingEnabled = true)
         {
-            MaxNumberOfRetries = maxNrOfRetries;
-            WithinTimeRangeMilliseconds = withinTimeMilliseconds;
-            Decider = decider;
+            _maxNumberOfRetries = maxNrOfRetries;
+            _withinTimeRangeMilliseconds = withinTimeMilliseconds;
+            _decider = decider;
             LoggingEnabled = loggingEnabled;
         }
 
@@ -316,6 +335,30 @@ namespace Akka.Actor
         {
             //Intentionally left blank
         }
+
+        public class OneForOneStrategySurrogate : ISurrogate
+        {
+            public int MaxNumberOfRetries { get; set; }
+            public int WithinTimeRangeMilliseconds { get; set; }
+            public IDecider Decider { get; set; }
+            public bool LoggingEnabled { get; set; }
+
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new OneForOneStrategy(MaxNumberOfRetries,WithinTimeRangeMilliseconds,Decider,LoggingEnabled);
+            }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new OneForOneStrategySurrogate
+            {
+                Decider = Decider,
+                LoggingEnabled = LoggingEnabled,
+                MaxNumberOfRetries = MaxNumberOfRetries,
+                WithinTimeRangeMilliseconds = WithinTimeRangeMilliseconds
+            };
+        }
     }
 
     /// <summary>
@@ -323,9 +366,24 @@ namespace Akka.Actor
     /// </summary>
     public class AllForOneStrategy : SupervisorStrategy
     {
-        public int MaxNumberOfRetries { get; private set; }
-        public int WithinTimeRangeMilliseconds { get; private set; }
-        public IDecider Decider { get; private set; }
+        private readonly IDecider _decider;
+        private readonly int _withinTimeRangeMilliseconds;
+        private readonly int _maxNumberOfRetries;
+
+        public int MaxNumberOfRetries
+        {
+            get { return _maxNumberOfRetries; }
+        }
+
+        public int WithinTimeRangeMilliseconds
+        {
+            get { return _withinTimeRangeMilliseconds; }
+        }
+
+        public IDecider Decider
+        {
+            get { return _decider; }
+        }
 
         /// <summary>
         ///     Applies the fault handling `Directive` (Resume, Restart, Stop) specified in the `Decider`
@@ -392,9 +450,9 @@ namespace Akka.Actor
         /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
         public AllForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, IDecider decider, bool loggingEnabled = true)
         {
-            MaxNumberOfRetries = maxNrOfRetries;
-            WithinTimeRangeMilliseconds = withinTimeMilliseconds;
-            Decider = decider;
+            _maxNumberOfRetries = maxNrOfRetries;
+            _withinTimeRangeMilliseconds = withinTimeMilliseconds;
+            _decider = decider;
             LoggingEnabled = loggingEnabled;
         }
 
@@ -462,6 +520,30 @@ namespace Akka.Actor
         public override void HandleChildTerminated(IActorContext actorContext, ActorRef child, IEnumerable<InternalActorRef> children)
         {
             //Intentionally left blank
+        }
+
+        public class AllForOneStrategySurrogate : ISurrogate
+        {
+            public int MaxNumberOfRetries { get; set; }
+            public int WithinTimeRangeMilliseconds { get; set; }
+            public IDecider Decider { get; set; }
+            public bool LoggingEnabled { get; set; }
+
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new AllForOneStrategy(MaxNumberOfRetries, WithinTimeRangeMilliseconds, Decider, LoggingEnabled);
+            }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new AllForOneStrategySurrogate
+            {
+                Decider = Decider,
+                LoggingEnabled = LoggingEnabled,
+                MaxNumberOfRetries = MaxNumberOfRetries,
+                WithinTimeRangeMilliseconds = WithinTimeRangeMilliseconds
+            };
         }
     }
 
