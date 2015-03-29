@@ -72,7 +72,7 @@ namespace Akka.Tests.Routing
             {
                 router.Tell("", TestActor);
                 router.Tell("", TestActor);
-                var res = ReceiveWhile(TimeSpan.FromMilliseconds(100), o => o is ActorRef ? (ActorRef) o : ActorRef.NoSender, 2);
+                var res = ReceiveWhile(TimeSpan.FromMilliseconds(100), o => o is ActorRef ? (ActorRef) o : ActorRefs.NoSender, 2);
                 return res.SequenceEqual(new[] {c1, c1});
             });
             

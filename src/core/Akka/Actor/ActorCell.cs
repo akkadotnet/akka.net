@@ -105,13 +105,13 @@ namespace Akka.Actor
         public InternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
         {
             InternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRef.Nobody;
+            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
         }
 
         ActorRef IActorContext.Child(string name)
         {
             InternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRef.Nobody;
+            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
         }
 
         public ActorSelection ActorSelection(string path)

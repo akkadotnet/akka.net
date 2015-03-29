@@ -228,7 +228,7 @@ namespace Akka.Remote
                 throw new RemoteTransportException("Attempted to send remote message but Remoting is not running.", null);
             }
             if (sender == null)
-                sender = ActorRef.NoSender;
+                sender = ActorRefs.NoSender;
 
             _endpointManager.Tell(new EndpointManager.Send(message, recipient, sender), sender);
         }

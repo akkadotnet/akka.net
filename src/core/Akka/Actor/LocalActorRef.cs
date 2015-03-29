@@ -143,7 +143,7 @@ namespace Akka.Actor
         public override InternalActorRef GetSingleChild(string name)
         {
             InternalActorRef child;
-            return _cell.TryGetSingleChild(name, out child) ? child : Nobody;
+            return _cell.TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
         }
 
         public override ActorRef GetChild(IEnumerable<string> name)

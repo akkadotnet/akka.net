@@ -12,7 +12,7 @@ namespace Akka.Testkit.Tests
         {
             var echoActor = Sys.ActorOf(c => c.ReceiveAny((m, ctx) => TestActor.Tell(ctx.Sender)));
             echoActor.Tell("message");
-            ExpectMsg<ActorRef>(actorRef => actorRef == DeadLetterActorRef.NoSender);
+            ExpectMsg<ActorRef>(actorRef => actorRef == ActorRefs.NoSender);
         }
 
     }

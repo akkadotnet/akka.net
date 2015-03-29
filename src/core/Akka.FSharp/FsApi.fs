@@ -28,10 +28,10 @@ module Actors =
         Async.StartWithContinuations(computation, success, failure, failure)
 
     /// Pipe operator which sends an output of asynchronous expression directly to the recipients mailbox.
-    let inline (|!>) (computation : Async<'T>) (recipient : ICanTell) = pipeTo computation recipient ActorRef.NoSender
+    let inline (|!>) (computation : Async<'T>) (recipient : ICanTell) = pipeTo computation recipient ActorRefs.NoSender
 
     /// Pipe operator which sends an output of asynchronous expression directly to the recipients mailbox
-    let inline (<!|) (recipient : ICanTell) (computation : Async<'T>) = pipeTo computation recipient ActorRef.NoSender
+    let inline (<!|) (recipient : ICanTell) (computation : Async<'T>) = pipeTo computation recipient ActorRefs.NoSender
 
     type IO<'T> =
         | Input
@@ -60,7 +60,7 @@ module Actors =
         abstract Context : IActorContext
     
         /// <summary>
-        /// Returns a sender of current message or <see cref="ActorRef.NoSender" />, if none could be determined.
+        /// Returns a sender of current message or <see cref="ActorRefs.NoSender" />, if none could be determined.
         /// </summary>
         abstract Sender : unit -> ActorRef
     
@@ -104,7 +104,7 @@ module Actors =
 
     /// <summary>
     /// Returns an instance of <see cref="ActorSelection" /> for specified path. 
-    /// If no matching receiver will be found, a <see cref="ActorRef.NoSender" /> instance will be returned. 
+    /// If no matching receiver will be found, a <see cref="ActorRefs.NoSender" /> instance will be returned. 
     /// </summary>
     let inline select (path : string) (selector : ActorRefFactory) : ActorSelection = selector.ActorSelection path
         

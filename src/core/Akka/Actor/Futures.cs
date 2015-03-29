@@ -178,7 +178,7 @@ namespace Akka.Actor
         public static PromiseActorRef Apply(ActorRefProvider provider, TimeSpan timeout, object targetName,
             string messageClassName, ActorRef sender = null)
         {
-            sender = sender ?? NoSender;
+            sender = sender ?? ActorRefs.NoSender;
             var result = new TaskCompletionSource<object>();
             var a = new PromiseActorRef(provider, result, messageClassName);
             var scheduler = provider.Guardian.Underlying.System.Scheduler.Advanced;
@@ -345,7 +345,7 @@ namespace Akka.Actor
             else if (message is DeathWatchNotification)
             {
                 var dw = message as DeathWatchNotification;
-                Tell(new Terminated(dw.Actor, dw.ExistenceConfirmed, dw.AddressTerminated));
+                Tell(new Terminated(dw.Actor, dw.ExistenceConfirmed, dw.AddressTerminated), this);
             }
             else if (message is Watch)
             {

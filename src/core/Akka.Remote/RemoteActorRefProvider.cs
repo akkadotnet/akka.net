@@ -244,7 +244,7 @@ namespace Akka.Remote
                 Transport,
                 Transport.LocalAddressForRemote(address),
                 new RootActorPath(address),
-                ActorRef.Nobody,
+                ActorRefs.Nobody,
                 Props.None,
                 Deploy.None);
         }
@@ -286,7 +286,7 @@ namespace Akka.Remote
                 //the actor's local address was already included in the ActorPath
                 if (HasAddress(actorPath.Address))
                     return (InternalActorRef)ResolveActorRef(actorPath);
-                return new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address) / actorPath.Elements, ActorRef.Nobody, Props.None, Deploy.None);
+                return new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address) / actorPath.Elements, ActorRefs.Nobody, Props.None, Deploy.None);
             }
             _log.Debug("resolve of unknown path [{0}] failed", path);
             return InternalDeadLetters;
@@ -295,7 +295,7 @@ namespace Akka.Remote
         public ActorRef ResolveActorRef(string path)
         {
             if (path == "")
-                return ActorRef.NoSender;
+                return ActorRefs.NoSender;
 
             ActorPath actorPath;
             if (ActorPath.TryParse(path, out actorPath))
@@ -338,7 +338,7 @@ namespace Akka.Remote
             return new RemoteActorRef(Transport,
                 Transport.LocalAddressForRemote(actorPath.Address),
                 actorPath,
-                ActorRef.Nobody,
+                ActorRefs.Nobody,
                 Props.None,
                 Deploy.None);
         }

@@ -31,7 +31,7 @@ type Eventsourced<'Command, 'Event, 'State> =
     abstract Context : IActorContext
     
     /// <summary>
-    /// Returns a sender of current message or <see cref="ActorRef.NoSender" />, if none could be determined.
+    /// Returns a sender of current message or <see cref="ActorRefs.NoSender" />, if none could be determined.
     /// </summary>
     abstract Sender : unit -> ActorRef
     
@@ -169,7 +169,7 @@ type View<'Event, 'State> =
     abstract Context : IActorContext
     
     /// <summary>
-    /// Returns a sender of current message or <see cref="ActorRef.NoSender" />, if none could be determined.
+    /// Returns a sender of current message or <see cref="ActorRefs.NoSender" />, if none could be determined.
     /// </summary>
     abstract Sender : unit -> ActorRef
     

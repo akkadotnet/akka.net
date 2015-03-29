@@ -51,8 +51,8 @@ namespace Akka.Event
             string doneMsg = done ? ", no more dead letters will be logged" : "";
             if (!done)
             {
-                var rcpPath = rcp == ActorRef.NoSender ? "NoSender" : rcp.Path.ToString();
-                var sndPath = snd == ActorRef.NoSender ? "NoSender" : snd.Path.ToString();
+                var rcpPath = rcp == ActorRefs.NoSender ? "NoSender" : rcp.Path.ToString();
+                var sndPath = snd == ActorRefs.NoSender ? "NoSender" : snd.Path.ToString();
 
                 _eventStream.Publish(new Info(rcpPath, rcp.GetType(),
                     string.Format("Message {0} from {1} to {2} was not delivered. {3} dead letters encountered.{4}",

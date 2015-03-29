@@ -26,7 +26,7 @@ namespace Akka.Dispatch
         public FutureActor(TaskCompletionSource<object> completionSource, ActorRef respondTo)
         {
             result = completionSource;
-            this.respondTo = respondTo ?? ActorRef.NoSender;
+            this.respondTo = respondTo ?? ActorRefs.NoSender;
         }
 
         /// <summary>

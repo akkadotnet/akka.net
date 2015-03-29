@@ -95,7 +95,7 @@ namespace Akka.Routing
         /// </summary>
         public void Gossip(object msg)
         {
-            Gossip(msg, ActorRef.NoSender);
+            Gossip(msg, ActorRefs.NoSender);
         }
 
         /// <summary>

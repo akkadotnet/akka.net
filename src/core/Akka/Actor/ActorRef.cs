@@ -105,7 +105,7 @@ namespace Akka.Actor
             }
             else if (d != null)
             {
-                Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated));
+                this.Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated));
             }
         }
     }
@@ -117,11 +117,41 @@ namespace Akka.Actor
         public static ActorRef GetSelfOrNoSender()
         {
             var actorCell = ActorCell.Current;
-            return actorCell != null ? actorCell.Self : ActorRef.NoSender;
+            return actorCell != null ? actorCell.Self : ActorRefs.NoSender;
         }
     }
+    public interface ActorRef : ICanTell, IEquatable<ActorRef>, IComparable<ActorRef>, ISurrogated
+    {
+        ActorPath Path { get; }
+    }
 
-    public abstract class ActorRef : ICanTell, IEquatable<ActorRef>, IComparable<ActorRef>, ISurrogated
+    public static class ActorRefImplicitSenderExtensions
+    {
+        public static void Tell(this ActorRef receiver, object message)
+        {
+            var sender = ActorCell.GetCurrentSelfOrNoSender();
+            receiver.Tell(message, sender);
+        }
+
+
+        /// <summary>
+        /// Forwards the message using the current Sender
+        /// </summary>
+        /// <param name="message"></param>
+        public static void Forward(this ActorRef receiver, object message)
+        {
+            var sender = ActorCell.GetCurrentSenderOrNoSender();
+            receiver.Tell(message, sender);
+        }
+
+    }
+    public static class ActorRefs
+    {
+        public static readonly Nobody Nobody = Nobody.Instance;
+        public static readonly ActorRef NoSender = Actor.NoSender.Instance; //In Akka this is just null
+    }
+
+    public abstract class ActorRefBase : ActorRef
     {
         public class Surrogate : ISurrogate
         {
@@ -138,31 +168,12 @@ namespace Akka.Actor
             }
         }
 
-        public static readonly Nobody Nobody = Nobody.Instance;
-        public static readonly ActorRef NoSender = Actor.NoSender.Instance; //In Akka this is just null
-
         public abstract ActorPath Path { get; }
 
         public void Tell(object message, ActorRef sender)
         {
             if (sender == null) throw new ArgumentNullException("sender", "A sender must be specified");
 
-            TellInternal(message, sender);
-        }
-
-        public void Tell(object message)
-        {
-            var sender = ActorCell.GetCurrentSelfOrNoSender();
-            TellInternal(message, sender);
-        }
-
-        /// <summary>
-        /// Forwards the message using the current Sender
-        /// </summary>
-        /// <param name="message"></param>
-        public void Forward(object message)
-        {
-            var sender = ActorCell.GetCurrentSenderOrNoSender();
             TellInternal(message, sender);
         }
 
@@ -196,16 +207,6 @@ namespace Akka.Actor
             return Path.Uid == other.Path.Uid && Path.Equals(other.Path);
         }
 
-        public static bool operator ==(ActorRef left, ActorRef right)
-        {
-            return Equals(left, right);
-        }
-
-        public static bool operator !=(ActorRef left, ActorRef right)
-        {
-            return !Equals(left, right);
-        }
-
         public int CompareTo(ActorRef other)
         {
             var pathComparisonResult = Path.CompareTo(other.Path);
@@ -221,7 +222,7 @@ namespace Akka.Actor
     }
 
 
-    public abstract class InternalActorRef : ActorRef, ActorRefScope
+    public abstract class InternalActorRef : ActorRefBase, ActorRefScope
     {
         public abstract InternalActorRef Parent { get; }
         public abstract ActorRefProvider Provider { get; }
@@ -249,14 +250,14 @@ namespace Akka.Actor
     {
         public override InternalActorRef Parent
         {
-            get { return Nobody; }
+            get { return ActorRefs.Nobody; }
         }
 
         public override ActorRef GetChild(IEnumerable<string> name)
         {
             if (name.All(string.IsNullOrEmpty))
                 return this;
-            return Nobody;
+            return ActorRefs.Nobody;
         }
 
         public override void Resume(Exception causedByFailure = null)
@@ -318,7 +319,7 @@ namespace Akka.Actor
 
     }
 
-    public sealed class NoSender : ActorRef
+    public sealed class NoSender : ActorRefBase
     {
         public static readonly NoSender Instance = new NoSender();
         private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/NoSender");
@@ -424,7 +425,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             InternalActorRef child;
             if (_children.TryGetValue(firstName, out child))
                 return child.GetChild(new Enumerable<string>(enumerator));
-            return Nobody;
+            return ActorRefs.Nobody;
         }
 
         public void ForeachActorRef(Action<InternalActorRef> action)

@@ -56,7 +56,7 @@ namespace Akka.Event
         {
             foreach (var subscriber in _subscribers.Value)
             {
-                subscriber.Tell(msg, ActorRef.NoSender);
+                subscriber.Tell(msg, ActorRefs.NoSender);
             }
         }
     }

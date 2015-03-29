@@ -34,7 +34,7 @@ namespace Akka.Tests.Actor.Scheduler
                     }
                 });
             });
-            scheduler.ScheduleTellRepeatedly(initialDelay, interval, receiver, "Test", ActorRef.NoSender, cancelable);
+            scheduler.ScheduleTellRepeatedly(initialDelay, interval, receiver, "Test", ActorRefs.NoSender, cancelable);
 
             //Expect to get a list from receiver after it has received three messages
             var dateTimeOffsets = ExpectMsg<List<DateTimeOffset>>();
@@ -62,7 +62,7 @@ namespace Akka.Tests.Actor.Scheduler
             //Prepare, set up actions to be fired
             IScheduler scheduler = new TaskBasedScheduler();
 
-            scheduler.ScheduleTellRepeatedly(TimeSpan.FromMilliseconds(initialDelay), TimeSpan.FromMilliseconds(interval), TestActor, "Test", ActorRef.NoSender);
+            scheduler.ScheduleTellRepeatedly(TimeSpan.FromMilliseconds(initialDelay), TimeSpan.FromMilliseconds(interval), TestActor, "Test", ActorRefs.NoSender);
 
             //Just check that we receives more than one message
             ExpectMsg("Test");
@@ -80,7 +80,7 @@ namespace Akka.Tests.Actor.Scheduler
 
             foreach(var time in times)
             {
-                scheduler.ScheduleTellOnce(time, TestActor, "Test" + time, ActorRef.NoSender);
+                scheduler.ScheduleTellOnce(time, TestActor, "Test" + time, ActorRefs.NoSender);
             }
 
             ExpectMsg("Test1");
@@ -100,7 +100,7 @@ namespace Akka.Tests.Actor.Scheduler
 
             foreach(var time in times)
             {
-                scheduler.ScheduleTellOnce(time, TestActor, "Test" + time, ActorRef.NoSender);
+                scheduler.ScheduleTellOnce(time, TestActor, "Test" + time, ActorRefs.NoSender);
             }
 
             //Perform the test
@@ -122,7 +122,7 @@ namespace Akka.Tests.Actor.Scheduler
             IScheduler scheduler = new TaskBasedScheduler();
 
             XAssert.Throws<ArgumentOutOfRangeException>(() =>
-                scheduler.ScheduleTellOnce(invalidTime, TestActor, "Test", ActorRef.NoSender)
+                scheduler.ScheduleTellOnce(invalidTime, TestActor, "Test", ActorRefs.NoSender)
                 );
             ExpectNoMsg(50);
         }
@@ -135,7 +135,7 @@ namespace Akka.Tests.Actor.Scheduler
             IScheduler scheduler = new TaskBasedScheduler();
 
             XAssert.Throws<ArgumentOutOfRangeException>(() =>
-                scheduler.ScheduleTellRepeatedly(invalidTime, 100, TestActor, "Test", ActorRef.NoSender)
+                scheduler.ScheduleTellRepeatedly(invalidTime, 100, TestActor, "Test", ActorRefs.NoSender)
                 );
             ExpectNoMsg(50);
         }
@@ -149,7 +149,7 @@ namespace Akka.Tests.Actor.Scheduler
             IScheduler scheduler = new TaskBasedScheduler();
 
             XAssert.Throws<ArgumentOutOfRangeException>(() =>
-                scheduler.ScheduleTellRepeatedly(42, invalidInterval, TestActor, "Test", ActorRef.NoSender)
+                scheduler.ScheduleTellRepeatedly(42, invalidInterval, TestActor, "Test", ActorRefs.NoSender)
                 );
             ExpectNoMsg(50);
         }
@@ -158,7 +158,7 @@ namespace Akka.Tests.Actor.Scheduler
         public void When_ScheduleTellOnce_with_0_delay_Then_action_is_executed_immediately()
         {
             IScheduler scheduler = new TaskBasedScheduler();
-            scheduler.ScheduleTellOnce(0, TestActor, "Test", ActorRef.NoSender);
+            scheduler.ScheduleTellOnce(0, TestActor, "Test", ActorRefs.NoSender);
             ExpectMsg("Test");
         }
 
@@ -166,7 +166,7 @@ namespace Akka.Tests.Actor.Scheduler
         public void When_ScheduleTellRepeatedly_with_0_delay_Then_action_is_executed_immediately()
         {
             IScheduler scheduler = new TaskBasedScheduler();
-            scheduler.ScheduleTellRepeatedly(0, 60 * 1000, TestActor, "Test", ActorRef.NoSender);
+            scheduler.ScheduleTellRepeatedly(0, 60 * 1000, TestActor, "Test", ActorRefs.NoSender);
             ExpectMsg("Test");
         }
     }

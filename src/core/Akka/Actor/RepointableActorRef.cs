@@ -195,7 +195,7 @@ namespace Akka.Actor
                                 crs.Child.GetChild(name.Skip(index));
                             }
                         }
-                        return Nobody;
+                        return ActorRefs.Nobody;
                 }
                 index++;
             }

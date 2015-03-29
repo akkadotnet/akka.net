@@ -62,7 +62,7 @@ namespace Akka.Dispatch
                 if (task.IsFaulted)
                     Rethrow(task, null);
 
-            }), ActorRef.NoSender);
+            }), ActorRefs.NoSender);
         }
 
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)

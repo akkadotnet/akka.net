@@ -37,7 +37,7 @@ namespace Akka.Actor
         /// Gets the <see cref="ActorRef"/> of the actor who sent the current message.
         /// 
         /// If the message was not sent by an actor (i.e. some external non-actor code
-        /// sent this actor a message) then this value will default to <see cref="ActorRef.NoSender"/>.
+        /// sent this actor a message) then this value will default to <see cref="ActorRefs.NoSender"/>.
         /// </summary>
         ActorRef Sender { get; }
 
@@ -62,7 +62,7 @@ namespace Akka.Actor
         /// Retrieves a child actor with the specified name, if it exists.
         /// 
         /// If the child with the given name cannot be found, 
-        /// then <see cref="ActorRef.Nobody"/> will be returned instead.
+        /// then <see cref="ActorRefs.Nobody"/> will be returned instead.
         /// </summary>
         /// <param name="name">
         /// The name of the child actor.
@@ -71,7 +71,7 @@ namespace Akka.Actor
         /// 
         /// Not the path, just the name of the child at the time it was created by this parent.
         /// </param>
-        /// <returns>The <see cref="ActorRef"/> belonging to the child if found, <see cref="ActorRef.Nobody"/> otherwise.</returns>
+        /// <returns>The <see cref="ActorRef"/> belonging to the child if found, <see cref="ActorRefs.Nobody"/> otherwise.</returns>
         ActorRef Child(string name);
 
         /// <summary>

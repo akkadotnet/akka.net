@@ -174,7 +174,7 @@ namespace Akka.Remote
                     return child.GetChild(rest);
                 }
             }
-            return Nobody;
+            return ActorRefs.Nobody;
         }
     }
 }

@@ -225,7 +225,7 @@ namespace Akka.Tests.Dispatch
             var actor = Sys.ActorOf(Props.Create<UntypedAsyncAwaitActor>(), "Worker");
             var asker = Sys.ActorOf(Props.Create(() => new UntypedAsker(actor)), "Asker");
             var task = asker.Ask("start", TimeSpan.FromSeconds(5));
-            actor.Tell(123, ActorRef.NoSender);
+            actor.Tell(123, ActorRefs.NoSender);
             var res = await task;
             Assert.Equal("done", res);
         }
@@ -235,7 +235,7 @@ namespace Akka.Tests.Dispatch
         {
             var actor = Sys.ActorOf(Props.Create<AsyncAwaitActor>());
             var task = actor.Ask<string>("start", TimeSpan.FromSeconds(5));
-            actor.Tell(123, ActorRef.NoSender);
+            actor.Tell(123, ActorRefs.NoSender);
             var res = await task;
             Assert.Equal("done", res);
         }
@@ -246,7 +246,7 @@ namespace Akka.Tests.Dispatch
             var actor = Sys.ActorOf(Props.Create<AsyncAwaitActor>(), "Worker");
             var asker = Sys.ActorOf(Props.Create(() => new Asker(actor)), "Asker");
             var task = asker.Ask("start", TimeSpan.FromSeconds(5));
-            actor.Tell(123, ActorRef.NoSender);
+            actor.Tell(123, ActorRefs.NoSender);
             var res = await task;
             Assert.Equal("done", res);
         }
@@ -257,7 +257,7 @@ namespace Akka.Tests.Dispatch
             var actor = Sys.ActorOf(Props.Create<AsyncAwaitActor>().WithDispatcher("akka.actor.task-dispatcher"),"Worker");
             var asker =Sys.ActorOf(Props.Create(() => new BlockingAsker(actor)).WithDispatcher("akka.actor.task-dispatcher"),"Asker");
             var task = asker.Ask("start", TimeSpan.FromSeconds(5));
-            actor.Tell(123, ActorRef.NoSender);
+            actor.Tell(123, ActorRefs.NoSender);
             var res = await task;
             Assert.Equal("done", res);
         }

@@ -2,6 +2,7 @@
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.TestKit.Internal;
+using Akka.Util;
 
 namespace Akka.TestKit
 {
@@ -9,7 +10,7 @@ namespace Akka.TestKit
     /// This is the base class for TestActorRefs
     /// </summary>
     /// <typeparam name="TActor">The type of actor</typeparam>
-    public abstract class TestActorRefBase<TActor> : ICanTell, IEquatable<ActorRef> where TActor : ActorBase
+    public abstract class TestActorRefBase<TActor> : ICanTell, IEquatable<ActorRef>, ActorRef where TActor : ActorBase
     {
         private readonly InternalTestActorRef _internalRef;
 
@@ -159,9 +160,32 @@ namespace Akka.TestKit
             return !testActorRef.Equals(actorRef);
         }
 
-        public static implicit operator ActorRef(TestActorRefBase<TActor> actorRef)
+        public static ActorRef ToActorRef(TestActorRefBase<TActor> actorRef)
         {
             return actorRef._internalRef;
+        }
+
+        //ActorRef implementations
+        int IComparable<ActorRef>.CompareTo(ActorRef other)
+        {
+            return Ref.CompareTo(other);
+        }
+
+        bool IEquatable<ActorRef>.Equals(ActorRef other)
+        {
+            return Ref.Equals(other);
+        }
+
+        ActorPath ActorRef.Path { get { return Ref.Path; } }
+
+        void ICanTell.Tell(object message, ActorRef sender)
+        {
+            Ref.Tell(message, sender);
+        }
+
+        ISurrogate ISurrogated.ToSurrogate(ActorSystem system)
+        {
+            return Ref.ToSurrogate(system);
         }
     }
 }

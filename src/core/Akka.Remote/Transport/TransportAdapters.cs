@@ -355,7 +355,7 @@ namespace Akka.Remote.Transport
                     associationListener = listener.Listener;
                     foreach (var dEvent in DelayedEvents)
                     {
-                        Self.Tell(dEvent, ActorRef.NoSender);
+                        Self.Tell(dEvent, ActorRefs.NoSender);
                     }
                     DelayedEvents = new Queue<object>();
                     Context.Become(Ready);

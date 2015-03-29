@@ -52,7 +52,7 @@ namespace Akka.Actor
 
             var fref = new FutureActorRef(promise, unregister, path);
             internalTarget.Tell(new Watch(internalTarget, fref));
-            target.Tell(stopMessage, ActorRef.NoSender);
+            target.Tell(stopMessage, ActorRefs.NoSender);
             return promise.Task.ContinueWith(t =>
             {
                 var returnResult = false;

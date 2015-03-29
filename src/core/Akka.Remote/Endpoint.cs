@@ -1117,7 +1117,7 @@ namespace Akka.Remote
                         }
                     };
                     backoff();
-                    s.Tell(BackoffTimer.Instance, ActorRef.NoSender);
+                    s.Tell(BackoffTimer.Instance, ActorRefs.NoSender);
                 });
             }
         }

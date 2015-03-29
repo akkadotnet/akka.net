@@ -270,7 +270,7 @@ namespace Akka.Actor
         public InternalActorRef GetSingleChild(string name)
         {
             InternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRef.Nobody;
+            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
         }
 
         public bool TryGetSingleChild(string name, out InternalActorRef child)
@@ -299,7 +299,7 @@ namespace Akka.Actor
                     }
                 }
             }
-            child = ActorRef.Nobody;
+            child = ActorRefs.Nobody;
             return false;
         }
 

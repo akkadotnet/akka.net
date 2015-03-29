@@ -92,7 +92,7 @@ namespace Akka.Actor
         /// <param name="message">The message.</param>
         public void Tell(object message)
         {
-            var sender = ActorRef.NoSender;
+            var sender = ActorRefs.NoSender;
             if (ActorCell.Current != null && ActorCell.Current.Self != null)
                 sender = ActorCell.Current.Self;
 

@@ -21,7 +21,7 @@ namespace Akka.Tests.Actor
         public void Path_Should_be_the_same_path_as_specified()
         {
             var props = Props.Create<GuardianActor>(new OneForOneStrategy(e => Directive.Stop));
-            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl) Sys, props, _dispatcher, () => Sys.Mailboxes.CreateMailbox(props,null), ActorRef.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
+            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl) Sys, props, _dispatcher, () => Sys.Mailboxes.CreateMailbox(props,null), ActorRefs.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
             Assert.Equal(_rootActorPath, rootGuardianActorRef.Path);
         }
 
@@ -29,7 +29,7 @@ namespace Akka.Tests.Actor
         public void Parent_Should_be_itself()
         {
             var props = Props.Create<GuardianActor>(new OneForOneStrategy(e => Directive.Stop));
-            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl) Sys, props, _dispatcher, () => Sys.Mailboxes.CreateMailbox(props,null), ActorRef.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
+            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl) Sys, props, _dispatcher, () => Sys.Mailboxes.CreateMailbox(props,null), ActorRefs.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
             var parent = rootGuardianActorRef.Parent;
             Assert.Same(rootGuardianActorRef, parent);
         }
@@ -39,7 +39,7 @@ namespace Akka.Tests.Actor
         public void Getting_temp_child_Should_return_tempContainer()
         {
             var props = Props.Create<GuardianActor>(new OneForOneStrategy(e => Directive.Stop));
-            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher, () => Sys.Mailboxes.CreateMailbox(props, null), ActorRef.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
+            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher, () => Sys.Mailboxes.CreateMailbox(props, null), ActorRefs.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
             var tempContainer = new DummyActorRef(_rootActorPath / "temp");
             rootGuardianActorRef.SetTempContainer(tempContainer);
             var actorRef = rootGuardianActorRef.GetSingleChild("temp");
@@ -50,7 +50,7 @@ namespace Akka.Tests.Actor
         public void Getting_deadLetters_child_Should_return_tempContainer()
         {
             var props = Props.Create<GuardianActor>(new OneForOneStrategy(e => Directive.Stop));
-            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher, () => Sys.Mailboxes.CreateMailbox(props, null), ActorRef.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
+            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher, () => Sys.Mailboxes.CreateMailbox(props, null), ActorRefs.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
             var actorRef = rootGuardianActorRef.GetSingleChild("deadLetters");
             Assert.Same(_deadLetters, actorRef);
         }
@@ -62,7 +62,7 @@ namespace Akka.Tests.Actor
             var extraNameChild = new DummyActorRef(_rootActorPath / "extra");
             var extraNames = new Dictionary<string, InternalActorRef> { { "extra", extraNameChild } };
             var props = Props.Create<GuardianActor>(new OneForOneStrategy(e => Directive.Stop));
-            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher, () => Sys.Mailboxes.CreateMailbox(props, null), ActorRef.Nobody, _rootActorPath, _deadLetters, extraNames);
+            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher, () => Sys.Mailboxes.CreateMailbox(props, null), ActorRefs.Nobody, _rootActorPath, _deadLetters, extraNames);
             var actorRef = rootGuardianActorRef.GetSingleChild("extra");
             Assert.Same(extraNameChild, actorRef);
         }
@@ -71,9 +71,9 @@ namespace Akka.Tests.Actor
         public void Getting_an_unknown_child_that_exists_in_extraNames_Should_return_nobody()
         {
             var props = Props.Create<GuardianActor>(new OneForOneStrategy(e => Directive.Stop));
-            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher, () => Sys.Mailboxes.CreateMailbox(props, null), ActorRef.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
+            var rootGuardianActorRef = new RootGuardianActorRef((ActorSystemImpl)Sys, props, _dispatcher, () => Sys.Mailboxes.CreateMailbox(props, null), ActorRefs.Nobody, _rootActorPath, _deadLetters, _emptyExtraNames);
             var actorRef = rootGuardianActorRef.GetSingleChild("unknown-child");
-            Assert.Same(ActorRef.Nobody, actorRef);
+            Assert.Same(ActorRefs.Nobody, actorRef);
         }
 
 

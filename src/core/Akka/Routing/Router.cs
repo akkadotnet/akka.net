@@ -32,7 +32,7 @@ namespace Akka.Routing
         }
 
 
-        public static implicit operator Routee(ActorRef actorRef)
+        public static Routee FromActorRef(ActorRef actorRef)
         {
             return new ActorRefRoutee(actorRef);
         }
@@ -161,7 +161,36 @@ namespace Akka.Routing
     {
         private readonly RoutingLogic _logic;
         private readonly Routee[] _routees;
-       
+
+        //The signature might look funky. Why not just Router(RoutingLogic logic, params ActorRef[] routees) ? 
+        //We need one unique constructor to handle this call: new Router(logic). The other constructor will handle that.
+        //So in order to not confuse the compiler we demand at least one ActorRef. /@hcanber
+        public Router(RoutingLogic logic, ActorRef routee, params ActorRef[] routees)
+        {
+            var routeesLength = routees.Length;
+            if (routees == null || routeesLength == 0)
+            {
+                _routees = new[] { Routee.FromActorRef(routee) };
+            }
+            else
+            {
+                //Convert and put routee first in a new array
+                var rts = new Routee[routeesLength + 1];
+                rts[0] = Routee.FromActorRef(routee);
+
+                //Convert all routees and put them into the new array
+                for (var i = 0; i < routeesLength; i++)
+                {
+                    var actorRef = routees[i];
+                    var r = Routee.FromActorRef(actorRef);
+                    rts[i + 1] = r;
+                }
+                _routees = rts;
+            }
+            _logic = logic;
+        }
+
+
         public Router(RoutingLogic logic, params Routee[] routees)
         {
             if(routees == null)

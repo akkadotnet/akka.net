@@ -80,7 +80,7 @@ namespace SymbolLookup
             //Do nothing
             if (string.IsNullOrEmpty(txtSymbols.Text))
                 return;
-            StockActor.Tell(txtSymbols.Text, ActorRef.NoSender);
+            StockActor.Tell(txtSymbols.Text, ActorRefs.NoSender);
         }
     }
 }

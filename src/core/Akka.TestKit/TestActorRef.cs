@@ -47,11 +47,6 @@ namespace Akka.TestKit
             return !testActorRef.Equals(actorRef);
         }
 
-        public static implicit operator ActorRef(TestActorRef<TActor> actorRef)
-        {
-            return actorRef.Ref;
-        }
-
         //Here to suppress CS0660, 'class' defines operator == or operator != but does not override Object.Equals(object o)
         public override bool Equals(object obj)
         {

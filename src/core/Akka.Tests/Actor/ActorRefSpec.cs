@@ -32,8 +32,8 @@ namespace Akka.Tests.Actor
 
             equalTestActorRef1.Equals(equalTestActorRef2).ShouldBeTrue();
             // ReSharper disable EqualExpressionComparison
-            (equalTestActorRef1 == equalTestActorRef2).ShouldBeTrue();
-            (equalTestActorRef1 != equalTestActorRef2).ShouldBeFalse();
+            (Equals(equalTestActorRef1, equalTestActorRef2)).ShouldBeTrue();
+            (!Equals(equalTestActorRef1, equalTestActorRef2)).ShouldBeFalse();
             // ReSharper restore EqualExpressionComparison
         }
 
@@ -532,7 +532,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        private class EqualTestActorRef : ActorRef
+        private class EqualTestActorRef : ActorRefBase
         {
             private ActorPath _path;
 

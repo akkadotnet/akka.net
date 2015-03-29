@@ -14,7 +14,7 @@ namespace Akka.Actor
         /// </summary>
         public static Task PipeTo<T>(this Task<T> taskToPipe, ICanTell recipient, ActorRef sender = null)
         {
-            sender = sender ?? ActorRef.NoSender;
+            sender = sender ?? ActorRefs.NoSender;
             return taskToPipe.ContinueWith(tresult =>
             {
                 if(tresult.IsCanceled  || tresult.IsFaulted)

@@ -171,7 +171,7 @@ namespace Akka.MultiNodeTestRunner
 
         static void PublishToAllSinks(string message)
         {
-            SinkCoordinator.Tell(message, ActorRef.NoSender);
+            SinkCoordinator.Tell(message, ActorRefs.NoSender);
         }
     }
 }

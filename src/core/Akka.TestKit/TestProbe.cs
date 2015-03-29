@@ -1,5 +1,6 @@
 ﻿using System;
 using Akka.Actor;
+using Akka.Util;
 
 namespace Akka.TestKit
 {
@@ -8,7 +9,7 @@ namespace Akka.TestKit
     /// Use <see cref="TestKitBase.CreateTestProbe(string)" /> inside your test 
     /// to create new instances.
     /// </summary>
-    public class TestProbe : TestKitBase, NoImplicitSender
+    public class TestProbe : TestKitBase, NoImplicitSender, ActorRef
     {      
         public TestProbe(ActorSystem system, TestKitAssertions assertions, string testProbeName=null)
             : base(assertions, system, testProbeName)
@@ -70,9 +71,26 @@ namespace Akka.TestKit
             throw new NotSupportedException("Cannot create a TestProbe from a TestProbe");
         }
 
-        public static implicit operator ActorRef(TestProbe probe)
+        int IComparable<ActorRef>.CompareTo(ActorRef other)
         {
-            return probe.Ref;
+            return Ref.CompareTo(other);
+        }
+
+        bool IEquatable<ActorRef>.Equals(ActorRef other)
+        {
+            return Ref.Equals(other);
+        }
+
+        ActorPath ActorRef.Path { get { return Ref.Path; } }
+
+        void ICanTell.Tell(object message, ActorRef sender)
+        {
+            Ref.Tell(message,sender);
+        }
+
+        ISurrogate ISurrogated.ToSurrogate(ActorSystem system)
+        {
+            return Ref.ToSurrogate(system);
         }
     }
 }
