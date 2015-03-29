@@ -380,7 +380,7 @@ namespace Akka.TestKit
         /// </summary>
         public TestBarrier CreateTestBarrier(int count)
         {
-            return new TestBarrier(this, count);
+            return new TestBarrier(this, count, _testKitSettings.DefaultTimeout);
         }
 
     }
