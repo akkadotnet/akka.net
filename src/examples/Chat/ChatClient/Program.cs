@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Akka;
+using Akka.Configuration;
 using Akka.Actor;
 using ChatMessages;
 
