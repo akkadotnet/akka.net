@@ -55,7 +55,33 @@ namespace Akka.Actor
         /// Gets the <see cref="ActorRef"/> of the parent of the current actor.
         /// </summary>
         ActorRef Parent { get; }
+
+        /// <summary>
+        /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
+        /// </summary>
+        /// <param name="receive">The new message handler.</param>
+        void Become(Receive receive);
+
+        /// <summary>
+        /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
+        /// The current handler is stored on a stack, and you can revert to it by calling <see cref="UnbecomeStacked"/>
+        /// <remarks>Please note, that in order to not leak memory, make sure every call to <see cref="BecomeStacked"/>
+        /// is matched with a call to <see cref="UnbecomeStacked"/>.</remarks>
+        /// </summary>
+        /// <param name="receive">The new message handler.</param>
+        void BecomeStacked(Receive receive);
+
+        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
         void Become(Receive receive, bool discardOld = true);
+
+        /// <summary>
+        /// Changes the actor's behavior and replaces the current receive handler with the previous one on the behavior stack.
+        /// <remarks>In order to store an actor on the behavior stack, a call to <see cref="BecomeStacked"/> must have been made
+        /// prior to this call</remarks>
+        /// </summary>
+        void UnbecomeStacked();
+
+        [Obsolete("Use UnbecomeStacked instead. This method will be removed in future versions")]
         void Unbecome();
 
         /// <summary>

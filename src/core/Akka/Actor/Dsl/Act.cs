@@ -21,17 +21,22 @@ namespace Akka.Actor.Dsl
         void DefaultPostStop();
 
         /// <summary>
-        /// Become new behavior with discard of the old one. Equivalent of: Context.Become(_, discardOld: true).
+        /// Changes the actor's behavior and replaces the current handler with the specified handler.
         /// </summary>
         void Become(Action<object, IActorContext> handler);
 
         /// <summary>
-        /// Become new behavior without discarding the old one. Equivalent of: Context.Become(_, discardOld: false).
+        /// Changes the actor's behavior and replaces the current handler with the specified handler without discarding the current.
+        /// The current handler is stored on a stack, and you can revert to it by calling <see cref="UnbecomeStacked"/>
+        /// <remarks>Please note, that in order to not leak memory, make sure every call to <see cref="BecomeStacked"/>
+        /// is matched with a call to <see cref="UnbecomeStacked"/>.</remarks>
         /// </summary>
         void BecomeStacked(Action<object, IActorContext> handler);
 
         /// <summary>
-        /// Reverts <see cref="BecomeStacked"/> behavior.
+        /// Changes the actor's behavior and replaces the current handler with the previous one on the behavior stack.
+        /// <remarks>In order to store an actor on the behavior stack, a call to <see cref="BecomeStacked"/> must have been made
+        /// prior to this call</remarks>
         /// </summary>
         void UnbecomeStacked();
 
@@ -104,9 +109,10 @@ namespace Akka.Actor.Dsl
         {
             Become(msg => handler(msg, Context), false);
         }
+
         public void UnbecomeStacked()
         {
-            base.Unbecome();
+            Unbecome();
         }
 
         public ActorRef ActorOf(Action<IActorDsl> config, string name = null)
