@@ -17,7 +17,7 @@ namespace Akka.Actor
         private Props _props;
         private static readonly Props terminatedProps=new TerminatedProps();
 
-        protected Stack<Receive> behaviorStack = new Stack<Receive>();
+        private Stack<Receive> _behaviorStack = new Stack<Receive>(1);
         private long _uid;
         private ActorBase _actor;
         private bool _actorHasBeenCleared;
@@ -138,15 +138,15 @@ namespace Akka.Actor
 
         public void Become(Receive receive, bool discardOld = true)
         {
-            if(discardOld && behaviorStack.Count > 1) //We should never pop off the initial receiver
-                behaviorStack.Pop();
-            behaviorStack.Push(receive);
+            if(discardOld && _behaviorStack.Count > 1) //We should never pop off the initial receiver
+                _behaviorStack.Pop();
+            _behaviorStack.Push(receive);
         }
 
         public void Unbecome()
         {
-            if (behaviorStack.Count > 1) //We should never pop off the initial receiver
-                behaviorStack.Pop();                
+            if (_behaviorStack.Count > 1) //We should never pop off the initial receiver
+                _behaviorStack.Pop();                
         }
   
         void IUntypedActorContext.Become(UntypedReceive receive, bool discardOld)
@@ -167,7 +167,7 @@ namespace Akka.Actor
             //set the thread static context or things will break
             UseThreadContext(() =>
             {
-                behaviorStack = new Stack<Receive>();
+                _behaviorStack = new Stack<Receive>(1);
                 instance = CreateNewActorInstance();
                 instance.SupervisorStrategyInternal = _props.SupervisorStrategy;
                 //defaults to null - won't affect lazy instantiation unless explicitly set in props
@@ -265,12 +265,12 @@ namespace Akka.Actor
             }
             _actorHasBeenCleared = true;
             CurrentMessage = null;
-            behaviorStack = null;
+            _behaviorStack = null;
         }
 
         protected void PrepareForNewActor()
         {
-            behaviorStack = new Stack<Receive>();
+            _behaviorStack = new Stack<Receive>(1);
             _actorHasBeenCleared = false;
         }
         protected void SetActorFields(ActorBase actor)
