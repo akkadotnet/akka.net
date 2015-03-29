@@ -222,7 +222,30 @@ namespace Akka.Actor
     }
 
 
-    public abstract class InternalActorRef : ActorRefBase, ActorRefScope
+    public interface InternalActorRef : ActorRef, ActorRefScope
+    {
+        InternalActorRef Parent { get; }
+        ActorRefProvider Provider { get; }
+        bool IsTerminated { get; }
+
+        /// <summary>
+        /// Obtain a child given the paths element to that actor, by possibly traversing the actor tree or 
+        /// looking it up at some provider-specific location. 
+        /// A path element of ".." signifies the parent, a trailing "" element must be disregarded. 
+        /// If the requested path does not exist, returns <see cref="Nobody"/>.
+        /// </summary>
+        /// <param name="name">The path elements.</param>
+        /// <returns>The <see cref="ActorRef"/>, or if the requested path does not exist, returns <see cref="Nobody"/>.</returns>
+        ActorRef GetChild(IEnumerable<string> name);
+
+        void Resume(Exception causedByFailure = null);
+        void Start();
+        void Stop();
+        void Restart(Exception cause);
+        void Suspend();
+    }
+
+    public abstract class InternalActorRefBase : ActorRefBase, InternalActorRef
     {
         public abstract InternalActorRef Parent { get; }
         public abstract ActorRefProvider Provider { get; }
@@ -246,7 +269,7 @@ namespace Akka.Actor
         public abstract bool IsLocal { get; }
     }
 
-    public abstract class MinimalActorRef : InternalActorRef, LocalRef
+    public abstract class MinimalActorRef : InternalActorRefBase, LocalRef
     {
         public override InternalActorRef Parent
         {
@@ -309,7 +332,7 @@ namespace Akka.Actor
 
     }
 
-    public abstract class ActorRefWithCell : InternalActorRef
+    public abstract class ActorRefWithCell : InternalActorRefBase
     {
         public abstract Cell Underlying { get; }
 

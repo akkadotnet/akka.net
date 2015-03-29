@@ -14,7 +14,7 @@ namespace Akka.Remote
     /// <summary>
     /// Class RemoteActorRef.
     /// </summary>
-    public class RemoteActorRef : InternalActorRef, RemoteRef
+    public class RemoteActorRef : InternalActorRefBase, RemoteRef
     {
         /// <summary>
         /// The deploy

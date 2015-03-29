@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Util;
 
@@ -9,7 +10,7 @@ namespace Akka.TestKit
     /// Use <see cref="TestKitBase.CreateTestProbe(string)" /> inside your test 
     /// to create new instances.
     /// </summary>
-    public class TestProbe : TestKitBase, NoImplicitSender, ActorRef
+    public class TestProbe : TestKitBase, NoImplicitSender, InternalActorRef
     {      
         public TestProbe(ActorSystem system, TestKitAssertions assertions, string testProbeName=null)
             : base(assertions, system, testProbeName)
@@ -73,24 +74,62 @@ namespace Akka.TestKit
 
         int IComparable<ActorRef>.CompareTo(ActorRef other)
         {
-            return Ref.CompareTo(other);
+            return TestActor.CompareTo(other);
         }
 
         bool IEquatable<ActorRef>.Equals(ActorRef other)
         {
-            return Ref.Equals(other);
+            return TestActor.Equals(other);
         }
 
-        ActorPath ActorRef.Path { get { return Ref.Path; } }
+        ActorPath ActorRef.Path { get { return TestActor.Path; } }
 
         void ICanTell.Tell(object message, ActorRef sender)
         {
-            Ref.Tell(message,sender);
+            TestActor.Tell(message, sender);
         }
 
         ISurrogate ISurrogated.ToSurrogate(ActorSystem system)
         {
-            return Ref.ToSurrogate(system);
+            return TestActor.ToSurrogate(system);
+        }
+
+        bool ActorRefScope.IsLocal { get { return ((InternalActorRef) TestActor).IsLocal; } }
+
+        InternalActorRef InternalActorRef.Parent { get { return ((InternalActorRef)TestActor).Parent; } }
+
+        ActorRefProvider InternalActorRef.Provider { get { return ((InternalActorRef)TestActor).Provider; } }
+
+        bool InternalActorRef.IsTerminated { get { return ((InternalActorRef)TestActor).IsTerminated; } }
+
+        ActorRef InternalActorRef.GetChild(IEnumerable<string> name)
+        {
+            return ((InternalActorRef)TestActor).GetChild(name);
+        }
+
+        void InternalActorRef.Resume(Exception causedByFailure)
+        {
+            ((InternalActorRef)TestActor).Resume(causedByFailure);
+        }
+
+        void InternalActorRef.Start()
+        {
+            ((InternalActorRef)TestActor).Start();
+        }
+
+        void InternalActorRef.Stop()
+        {
+            ((InternalActorRef)TestActor).Stop();
+        }
+
+        void InternalActorRef.Restart(Exception cause)
+        {
+            ((InternalActorRef)TestActor).Restart(cause);
+        }
+
+        void InternalActorRef.Suspend()
+        {
+            ((InternalActorRef)TestActor).Suspend();
         }
     }
 }
