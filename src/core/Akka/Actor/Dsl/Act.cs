@@ -102,17 +102,17 @@ namespace Akka.Actor.Dsl
 
         public void Become(Action<object, IActorContext> handler)
         {
-            Become(msg => handler(msg, Context), true);
+            Become(msg => handler(msg, Context));
         }
 
         public void BecomeStacked(Action<object, IActorContext> handler)
         {
-            Become(msg => handler(msg, Context), false);
+            BecomeStacked(msg => handler(msg, Context));
         }
 
-        public void UnbecomeStacked()
+        void IActorDsl.UnbecomeStacked()
         {
-            Unbecome();
+            base.UnbecomeStacked();
         }
 
         public ActorRef ActorOf(Action<IActorDsl> config, string name = null)
