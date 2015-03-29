@@ -106,7 +106,7 @@ namespace Akka.Persistence
             public ViewSettings(Config config)
             {
                 AutoUpdate = config.GetBoolean("view.auto-update");
-                AutoUpdateInterval = config.GetMillisDuration("view.auto-update-interval");
+                AutoUpdateInterval = config.GetTimeSpan("view.auto-update-interval");
                 var repMax = config.GetLong("view.auto-update-replay-max");
                 AutoUpdateReplayMax = repMax < 0 ? long.MaxValue : repMax;
             }

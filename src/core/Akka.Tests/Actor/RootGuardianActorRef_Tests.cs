@@ -15,7 +15,12 @@ namespace Akka.Tests.Actor
         static RootActorPath _rootActorPath = new RootActorPath(new Address("akka", "test"));
         DummyActorRef _deadLetters = new DummyActorRef(_rootActorPath / "deadLetters");
         ReadOnlyDictionary<string, InternalActorRef> _emptyExtraNames = new ReadOnlyDictionary<string, InternalActorRef>(new Dictionary<string, InternalActorRef>());
-        SameThreadMessageDispatcher _dispatcher = new SameThreadMessageDispatcher();
+        MessageDispatcher _dispatcher;
+
+        public RootGuardianActorRef_Tests()
+        {
+            _dispatcher = Sys.Dispatchers.Lookup(CallingThreadDispatcher.Id);
+        }
 
         [Fact]
         public void Path_Should_be_the_same_path_as_specified()
@@ -94,14 +99,6 @@ namespace Akka.Tests.Actor
             public override ActorRefProvider Provider
             {
                 get { throw new System.NotImplementedException(); }
-            }
-        }
-
-        private class SameThreadMessageDispatcher : MessageDispatcher
-        {
-            public override void Schedule(Action run)
-            {
-                run();
             }
         }
     }

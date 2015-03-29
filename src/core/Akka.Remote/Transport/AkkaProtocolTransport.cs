@@ -142,14 +142,13 @@ namespace Akka.Remote.Transport
                     var stateActorAssociationListener = associationListener;
                     var stateActorSettings = _settings;
                     var failureDetector = CreateTransportFailureDetector();
-                    //TODO: eventually this needs to be configured with the RemoteDispatcher via https://github.com/akka/akka/blob/f1edf789798dc02dfa37d3301d7712736c964ab1/akka-remote/src/main/scala/akka/remote/transport/AkkaProtocolTransport.scala#L156
-                    Context.ActorOf(ProtocolStateActor.InboundProps(
+                    Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(ProtocolStateActor.InboundProps(
                         new HandshakeInfo(stateActorLocalAddress, AddressUidExtension.Uid(Context.System)), 
                         handle,
                         stateActorAssociationListener,
                         stateActorSettings,
                         new AkkaPduProtobuffCodec(),
-                        failureDetector), ActorNameFor(handle.RemoteAddress));
+                        failureDetector)), ActorNameFor(handle.RemoteAddress));
                 })
                 .With<AssociateUnderlying>(au => CreateOutboundStateActor(au.RemoteAddress, au.StatusPromise, null)) //need to create an Outbond ProtocolStateActor
                 .With<AssociateUnderlyingRefuseUid>(au => CreateOutboundStateActor(au.RemoteAddress, au.StatusCompletionSource, au.RefuseUid));
@@ -172,14 +171,13 @@ namespace Akka.Remote.Transport
             var stateActorWrappedTransport = _wrappedTransport;
             var failureDetector = CreateTransportFailureDetector();
 
-            //TODO: eventually this needs to be configured with the RemoteDispatcher via https://github.com/akka/akka/blob/f1edf789798dc02dfa37d3301d7712736c964ab1/akka-remote/src/main/scala/akka/remote/transport/AkkaProtocolTransport.scala#L156
-            Context.ActorOf(ProtocolStateActor.OutboundProps(
+            Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(ProtocolStateActor.OutboundProps(
                 new HandshakeInfo(stateActorLocalAddress, AddressUidExtension.Uid(Context.System)),
                 remoteAddress,
                 statusPromise,
                 stateActorWrappedTransport,
                 stateActorSettings,
-                new AkkaPduProtobuffCodec(), failureDetector, refuseUid),
+                new AkkaPduProtobuffCodec(), failureDetector, refuseUid)),
                 ActorNameFor(remoteAddress));
         }
 

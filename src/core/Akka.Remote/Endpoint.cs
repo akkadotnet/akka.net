@@ -613,9 +613,9 @@ namespace Akka.Remote
         private ActorRef CreateWriter()
         {
             var writer =
-                Context.ActorOf(
+                Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(
                     EndpointWriter.EndpointWriterProps(currentHandle, localAddress, remoteAddress, refuseUid, transport,
-                        settings, new AkkaPduProtobuffCodec(), receiveBuffers, Self).WithDeploy(Deploy.Local),
+                        settings, new AkkaPduProtobuffCodec(), receiveBuffers, Self)).WithDeploy(Deploy.Local),
                     "endpointWriter");
             Context.Watch(writer);
             return writer;
@@ -1040,9 +1040,9 @@ namespace Akka.Remote
         private ActorRef StartReadEndpoint(AkkaProtocolHandle handle)
         {
             var newReader =
-                Context.ActorOf(
+                Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(
                     EndpointReader.ReaderProps(LocalAddress, RemoteAddress, Transport, Settings, _codec, _msgDispatcher,
-                        Inbound, (int)handle.HandshakeInfo.Uid, _receiveBuffers, _reliableDeliverySupervisor)
+                        Inbound, (int)handle.HandshakeInfo.Uid, _receiveBuffers, _reliableDeliverySupervisor))
                         .WithDeploy(Deploy.Local),
                     string.Format("endpointReader-{0}-{1}", AddressUrlEncoder.Encode(RemoteAddress), _readerId.Next()));
             Context.Watch(newReader);

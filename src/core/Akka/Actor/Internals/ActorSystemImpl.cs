@@ -274,7 +274,7 @@ namespace Akka.Actor.Internals
         /// </summary>
         private void ConfigureDispatchers()
         {
-            _dispatchers = new Dispatchers(this);
+            _dispatchers = new Dispatchers(this, new DefaultDispatcherPrerequisites(EventStream, Scheduler, Settings, Mailboxes));
         }
 
         /// <summary>

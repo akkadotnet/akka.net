@@ -133,6 +133,11 @@ namespace Akka.Routing
             return new SmallestMailboxPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
         }
 
+        public override Pool WithDispatcher(string dispatcher)
+        {
+            return new SmallestMailboxPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher, UsePoolDispatcher);
+        }
+
         public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
             return OverrideUnsetConfig(routerConfig);

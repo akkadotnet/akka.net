@@ -2,6 +2,7 @@
 using System.Linq;
 using Akka;
 using Akka.Actor;
+using Akka.Configuration;
 using ChatMessages;
 
 namespace ChatClient

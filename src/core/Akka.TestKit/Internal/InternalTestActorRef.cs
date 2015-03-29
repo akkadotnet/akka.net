@@ -136,9 +136,7 @@ namespace Akka.TestKit.Internal
                 props = props.WithDispatcher(CallingThreadDispatcher.Id);
             }
 
-            //TODO: Should be val dispatcher = _system.dispatchers.lookup(props.dispatcher) 
-            //      but since we don't have the CallingThreadDispatcherConfigurator yet, we'll just create the dispatcher manually
-            var dispatcher = props.Deploy.Dispatcher == CallingThreadDispatcher.Id ? new CallingThreadDispatcher() : system.Dispatchers.FromConfig(props.Dispatcher);
+            var dispatcher = system.Dispatchers.Lookup(props.Deploy.Dispatcher);
 
             var supervisorLocal = supervisor as LocalActorRef;
             if(supervisorLocal != null)

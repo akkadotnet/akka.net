@@ -185,8 +185,7 @@ namespace Akka.Remote
                     {
                         // for consistency we check configuration of dispatcher and mailbox locally
                         var dispatcher = _system.Dispatchers.Lookup(props.Dispatcher);
-                        var mailboxType = _system.Mailboxes.GetMailboxType(props, ConfigurationFactory.Empty);
-                        //TODO: dispatcher need configurators
+                        var mailboxType = _system.Mailboxes.GetMailboxType(props, dispatcher.Configurator.Config);
                     }
                     catch (Exception ex)
                     {

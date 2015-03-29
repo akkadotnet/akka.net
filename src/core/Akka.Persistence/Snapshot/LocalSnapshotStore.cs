@@ -180,7 +180,7 @@ namespace Akka.Persistence.Snapshot
             var snapshots = _snapshotDirectory
                 .EnumerateFiles("snapshot-" + persistenceId + "-*", SearchOption.TopDirectoryOnly)
                 .Select(ExtractSnapshotMetadata)
-                .Where(metadata => metadata != null && criteria.IsMatch(metadata) && !_saving.Contains(metadata));
+                .Where(metadata => metadata != null && criteria.IsMatch(metadata) && !_saving.Contains(metadata)).ToList();
 
             return snapshots;    // guaranteed to be not null in previous constraint
         }
