@@ -14,7 +14,7 @@ namespace Akka.Testkit.Tests
             TestKitSettings.SingleExpectDefault.ShouldBe(TimeSpan.FromSeconds(3));
             TestKitSettings.TestEventFilterLeeway.ShouldBe(TimeSpan.FromSeconds(3));
             TestKitSettings.TestTimeFactor.ShouldBe(1);
-            var callingThreadDispatcherTypeName = typeof(CallingThreadDispatcher).FullName + ", " + typeof(CallingThreadDispatcher).Assembly.GetName().Name;
+            var callingThreadDispatcherTypeName = typeof(CallingThreadDispatcherConfigurator).FullName + ", " + typeof(CallingThreadDispatcher).Assembly.GetName().Name;
             Sys.Settings.Config.GetString("akka.test.calling-thread-dispatcher.type").ShouldBe(callingThreadDispatcherTypeName);
             Sys.Settings.Config.GetString("akka.test.test-actor.dispatcher.type").ShouldBe(callingThreadDispatcherTypeName);
             CallingThreadDispatcher.Id.ShouldBe("akka.test.calling-thread-dispatcher");

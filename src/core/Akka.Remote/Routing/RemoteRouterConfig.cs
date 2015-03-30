@@ -106,6 +106,11 @@ namespace Akka.Remote.Routing
             return new RemoteRouterConfig(Local.WithResizer(resizer), Nodes);
         }
 
+        public override Pool WithDispatcher(string dispatcher)
+        {
+            return new RemoteRouterConfig(Local.WithDispatcher(dispatcher), Nodes);
+        }
+
         public override Router CreateRouter(ActorSystem system)
         {
             return Local.CreateRouter(system);

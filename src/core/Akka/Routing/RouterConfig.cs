@@ -18,12 +18,8 @@ namespace Akka.Routing
         //  public abstract RoutingLogic GetLogic();
 
         public static readonly RouterConfig NoRouter = new NoRouter();
-        private readonly string _routerDispatcher;
 
-        public virtual string RouterDispatcher
-        {
-            get { return _routerDispatcher; }
-        }
+        public virtual string RouterDispatcher { get; protected set; }
 
         public virtual RouterConfig WithFallback(RouterConfig routerConfig)
         {
@@ -46,7 +42,9 @@ namespace Akka.Routing
         public virtual bool Equals(RouterConfig other)
         {
             if (other == null) return false;
-            return GetType() == other.GetType() && String.Equals(RouterDispatcher, other.RouterDispatcher);
+            return GetType() == other.GetType() 
+                && (GetType() == typeof(NoRouter) 
+                || String.Equals(RouterDispatcher, other.RouterDispatcher));
         }
 
         public abstract ISurrogate ToSurrogate(ActorSystem system);
@@ -56,7 +54,8 @@ namespace Akka.Routing
         }
         protected RouterConfig(string routerDispatcher)
         {
-            _routerDispatcher = routerDispatcher;
+// ReSharper disable once DoNotCallOverridableMethodsInConstructor
+            RouterDispatcher = routerDispatcher ?? Dispatchers.DefaultDispatcherId;
         }
     }
 
@@ -73,6 +72,11 @@ namespace Akka.Routing
     /// </summary>
     public class NoRouter : RouterConfig
     {
+        public override string RouterDispatcher
+        {
+            get { throw new NotSupportedException("NoRouter has no router"); }
+        }
+
         internal override RouterActor CreateRouterActor()
         {
             throw new NotImplementedException();
@@ -140,17 +144,18 @@ namespace Akka.Routing
             get { return _paths; }            
         }
 
-        protected Group(IEnumerable<string> paths)
+        protected Group(IEnumerable<string> paths) : base(Dispatchers.DefaultDispatcherId)
         {
             _paths = paths.ToArray();
         }
 
-        protected Group(IEnumerable<string> paths,string routerDispatcher) : base(routerDispatcher)
+        protected Group(IEnumerable<string> paths, string routerDispatcher) : base(routerDispatcher ?? Dispatchers.DefaultDispatcherId)
         {
             _paths = paths.ToArray();
         }
 
         protected Group(IEnumerable<ActorRef> routees)
+            : base(Dispatchers.DefaultDispatcherId)
         {
             _paths = routees.Select(x => x.Path.ToStringWithAddress()).ToArray();
         }
@@ -177,6 +182,13 @@ namespace Akka.Routing
         {
             throw new NotImplementedException();
         }
+
+        /// <summary>
+        /// Returns a new instance of the <see cref="Group"/> router with a new dispatcher id.
+        /// 
+        /// NOTE: this method is immutable and returns a new instance of the <see cref="Group"/>.
+        /// </summary>
+        public abstract Group WithDispatcher(string dispatcher);
 
         public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
         {
@@ -231,7 +243,7 @@ namespace Akka.Routing
         }
 
         protected Pool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher,
-            bool usePoolDispatcher = false) :base(routerDispatcher)
+            bool usePoolDispatcher = false) : base(routerDispatcher ?? Dispatchers.DefaultDispatcherId)
         {
             // OMG, if every member in Java is virtual - you must never call any members in a constructor!!1!
             // In all seriousness, without making these members virtual RemoteRouterConfig won't work
@@ -243,7 +255,7 @@ namespace Akka.Routing
             _usePoolDispatcher = usePoolDispatcher;
         }
 
-        protected Pool(Config config)
+        protected Pool(Config config) : base(Dispatchers.DefaultDispatcherId)
         {
             _nrOfInstances = config.GetInt("nr-of-instances");
             _resizer = DefaultResizer.FromConfig(config);
@@ -309,7 +321,7 @@ namespace Akka.Routing
             if (UsePoolDispatcher && routeeProps.Dispatcher == Dispatchers.DefaultDispatcherId)
             {
                 return
-                    routeeProps.WithDispatcher("akka.actor.deployment." + context.Self.Path.Elements.Drop(1).Join("/") +
+                    routeeProps.WithDispatcher("akka.actor.deployment." + "/" + context.Self.Path.Elements.Drop(1).Join("/") +
                                                ".pool-dispatcher");
             }
             return routeeProps;
@@ -370,6 +382,13 @@ namespace Akka.Routing
         /// </summary>
         public abstract Pool WithResizer(Resizer resizer);
 
+        /// <summary>
+        /// Returns a new instance of the <see cref="Pool"/> router with a new dispatcher id.
+        /// 
+        /// NOTE: this method is immutable and returns a new instance of the <see cref="Pool"/>.
+        /// </summary>
+        public abstract Pool WithDispatcher(string dispatcher);
+
         #region Static methods
 
         /// <summary>
@@ -409,7 +428,11 @@ namespace Akka.Routing
     /// </summary>
     public class FromConfig : RouterConfig
     {
-        private static readonly FromConfig _instance = new FromConfig();
+        private static readonly FromConfig _instance = new FromConfig(Dispatchers.DefaultDispatcherId);
+
+        private FromConfig(string routerDispatcher) : base(routerDispatcher)
+        {
+        }
 
         public static FromConfig Instance
         {

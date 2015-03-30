@@ -6,19 +6,44 @@ using System.Threading;
 
 namespace Akka.Configuration.Hocon
 {
+    /// <summary>
+    /// Root type of HOCON configuration object
+    /// </summary>
     public class HoconValue : IMightBeAHoconObject
     {
+        /// <summary>
+        /// Default constructor
+        /// </summary>
         public HoconValue()
         {
             Values = new List<IHoconElement>();
         }
 
+        /// <summary>
+        /// Returns true if this HOCON value doesn't contain any elements
+        /// </summary>
         public bool IsEmpty
         {
             get { return Values.Count == 0; }
         }
 
+        /// <summary>
+        /// The list of elements inside this HOCON value
+        /// </summary>
         public List<IHoconElement> Values { get; private set; }
+
+        /// <summary>
+        /// Wraps this <see cref="HoconValue"/> into a new <see cref="Config"/> object at the specified key.
+        /// </summary>
+        public Config AtKey(string key)
+        {
+            var o = new HoconObject();
+            o.GetOrCreateKey(key);
+            o.Items[key] = this;
+            var r = new HoconValue();
+            r.Values.Add(o);
+            return new Config(new HoconRoot(r));
+        }
 
         public HoconObject GetObject()
         {
@@ -31,6 +56,10 @@ namespace Akka.Configuration.Hocon
             return null;
         }
 
+        /// <summary>
+        /// Determines if this <see cref="HoconValue"/> is a <see cref="HoconObject"/>
+        /// </summary>
+        /// <returns><c>true</c> if this value is a HOCON object, <c>false</c> otherwise.</returns>
         public bool IsObject()
         {
             return GetObject() != null;

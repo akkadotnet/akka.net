@@ -83,6 +83,11 @@ namespace Akka.TestKit
             _queue = new BlockingQueue<MessageEnvelope>();
             _log = Logging.GetLogger(system, GetType());
             _eventFilterFactory = new EventFilterFactory(this);
+            
+            //register the CallingThreadDispatcherConfigurator
+            _system.Dispatchers.RegisterConfigurator(CallingThreadDispatcher.Id,
+                new CallingThreadDispatcherConfigurator(_system.Settings.Config, _system.Dispatchers.Prerequisites));
+
             if (string.IsNullOrEmpty(testActorName))
                 testActorName = "testActor" + _testActorId.IncrementAndGet();
 

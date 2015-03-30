@@ -2,6 +2,7 @@
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Util;
 
 namespace Akka.Routing
@@ -102,6 +103,11 @@ namespace Akka.Routing
         {
             return new Router(new RoundRobinRoutingLogic());
         }
+
+        public override Group WithDispatcher(string dispatcher)
+        {
+            return new RoundRobinGroup(Paths){ RouterDispatcher = dispatcher};
+        }
     }
 
     /// <summary>
@@ -184,6 +190,11 @@ namespace Akka.Routing
         public override Pool WithResizer(Resizer resizer)
         {
             return new RoundRobinPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        public override Pool WithDispatcher(string dispatcher)
+        {
+            return new RoundRobinPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher, UsePoolDispatcher);
         }
 
         public override RouterConfig WithFallback(RouterConfig routerConfig)

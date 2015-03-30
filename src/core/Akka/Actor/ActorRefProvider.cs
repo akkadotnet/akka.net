@@ -367,18 +367,16 @@ namespace Akka.Actor
                         props2 = props2.WithDispatcher(propsDeploy.Dispatcher);
                 }
 
-                //TODO: implement Dispatchers and uncomment
-                //if (!system.Dispatchers.HasDispatcher(props2.Dispatcher))
-                //{
-                //    throw new ConfigurationException(string.Format("Dispatcher [{0}] not configured for path {1}", props2.Dispatcher, path));
-                //}
+                if (!system.Dispatchers.HasDispatcher(props2.Dispatcher))
+                {
+                    throw new ConfigurationException(string.Format("Dispatcher [{0}] not configured for path {1}", props2.Dispatcher, path));
+                }
 
                 try
                 {
                     // for consistency we check configuration of dispatcher and mailbox locally
                     var dispatcher = _system.Dispatchers.Lookup(props2.Dispatcher);
                     var mailboxType = _system.Mailboxes.GetMailboxType(props2, ConfigurationFactory.Empty);
-                    //TODO: dispatcher need configurators
 
                     if (async)
                         return
@@ -403,11 +401,11 @@ namespace Akka.Actor
                 var d = fromProps.Where(x => x != null).Aggregate((deploy1, deploy2) => deploy2.WithFallback(deploy1));
                 var p = props.WithRouter(d.RouterConfig);
 
-                //TODO: implement Dispatchers and uncomment
-                //if (!system.Dispatchers.HasDispatcher(p.Dispatcher))
-                //    throw new ConfigurationException(string.Format("Dispatcher [{0}] not configured for routees of path {1}", p.Dispatcher, path));
-                //if (!system.Dispatchers.HasDispatcher(d.RouterConfig.d))
-                //    throw new ConfigurationException(string.Format("Dispatcher [{0}] not configured for router of path {1}", p.RouterConfig.RouterDispatcher, path));
+      
+                if (!system.Dispatchers.HasDispatcher(p.Dispatcher))
+                    throw new ConfigurationException(string.Format("Dispatcher [{0}] not configured for routees of path {1}", p.Dispatcher, path));
+                if (!system.Dispatchers.HasDispatcher(d.RouterConfig.RouterDispatcher))
+                    throw new ConfigurationException(string.Format("Dispatcher [{0}] not configured for router of path {1}", p.RouterConfig.RouterDispatcher, path));
 
                 var routerProps = Props.Empty.WithRouter(p.Deploy.RouterConfig).WithDispatcher(p.RouterConfig.RouterDispatcher);
                 var routeeProps = props.WithRouter(RouterConfig.NoRouter);
@@ -416,7 +414,7 @@ namespace Akka.Actor
                 {
                     // routers use context.actorOf() to create the routees, which does not allow us to pass
                     // these through, but obtain them here for early verification
-                    var routerDispatcher = system.Dispatchers.FromConfig(props.RouterConfig.RouterDispatcher);
+                    var routerDispatcher = system.Dispatchers.Lookup(props.RouterConfig.RouterDispatcher);
                     var routerMailbox = _system.Mailboxes.CreateMailbox(props, null);
 
                     var routedActorRef = new RoutedActorRef(system, routerProps, routerDispatcher, () => routerMailbox, routeeProps,

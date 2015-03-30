@@ -75,6 +75,11 @@ namespace Akka.Routing
             return new Router(new RandomLogic());
         }
 
+        public override Group WithDispatcher(string dispatcher)
+        {
+            return new RandomGroup(Paths){ RouterDispatcher = dispatcher};
+        }
+
         public class RandomGroupSurrogate : ISurrogate
         {
             public string[] Paths { get; set; }
@@ -169,6 +174,11 @@ namespace Akka.Routing
         public override Pool WithResizer(Resizer resizer)
         {
             return new RandomPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        public override Pool WithDispatcher(string dispatcher)
+        {
+            return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher, UsePoolDispatcher);
         }
 
         public override RouterConfig WithFallback(RouterConfig routerConfig)

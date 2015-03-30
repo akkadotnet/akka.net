@@ -33,7 +33,7 @@ namespace Akka.Configuration
         /// <summary>
         ///     Lets the caller know if this root node contains any values
         /// </summary>
-        public bool IsEmpty
+        public virtual bool IsEmpty
         {
             get { return Root == null || Root.IsEmpty; }
         }
@@ -41,7 +41,7 @@ namespace Akka.Configuration
         /// <summary>
         ///     Returns the root node of this configuration section
         /// </summary>
-        public HoconValue Root { get; private set; }
+        public virtual HoconValue Root { get; private set; }
 
         public IEnumerable<HoconSubstitution> Substitutions { get; set; }
 
@@ -78,7 +78,7 @@ namespace Akka.Configuration
             return currentNode;
         }
 
-        public bool GetBoolean(string path, bool @default = false)
+        public virtual bool GetBoolean(string path, bool @default = false)
         {
             HoconValue value = GetNode(path);
             if (value == null)
@@ -87,14 +87,14 @@ namespace Akka.Configuration
             return value.GetBoolean();
         }
 
-        public long? GetByteSize(string path)
+        public virtual long? GetByteSize(string path)
         {
             HoconValue value = GetNode(path);
             if (value == null) return null;
             return value.GetByteSize();
         }
 
-        public int GetInt(string path, int @default = 0)
+        public virtual int GetInt(string path, int @default = 0)
         {
             HoconValue value = GetNode(path);
             if (value == null)
@@ -103,7 +103,7 @@ namespace Akka.Configuration
             return value.GetInt();
         }
 
-        public long GetLong(string path, long @default = 0)
+        public virtual long GetLong(string path, long @default = 0)
         {
             HoconValue value = GetNode(path);
             if (value == null)
@@ -112,7 +112,7 @@ namespace Akka.Configuration
             return value.GetLong();
         }
 
-        public string GetString(string path, string @default = null)
+        public virtual string GetString(string path, string @default = null)
         {
             HoconValue value = GetNode(path);
             if (value == null)
@@ -121,7 +121,7 @@ namespace Akka.Configuration
             return value.GetString();
         }
 
-        public float GetFloat(string path, float @default = 0)
+        public virtual float GetFloat(string path, float @default = 0)
         {
             HoconValue value = GetNode(path);
             if (value == null)
@@ -130,7 +130,7 @@ namespace Akka.Configuration
             return value.GetFloat();
         }
 
-        public decimal GetDecimal(string path, decimal @default = 0)
+        public virtual decimal GetDecimal(string path, decimal @default = 0)
         {
             HoconValue value = GetNode(path);
             if (value == null)
@@ -139,7 +139,7 @@ namespace Akka.Configuration
             return value.GetDecimal();
         }
 
-        public double GetDouble(string path, double @default = 0)
+        public virtual double GetDouble(string path, double @default = 0)
         {
             HoconValue value = GetNode(path);
             if (value == null)
@@ -148,56 +148,56 @@ namespace Akka.Configuration
             return value.GetDouble();
         }
 
-        public IList<Boolean> GetBooleanList(string path)
+        public virtual IList<Boolean> GetBooleanList(string path)
         {
             HoconValue value = GetNode(path);
             return value.GetBooleanList();
         }
 
-        public IList<decimal> GetDecimalList(string path)
+        public virtual IList<decimal> GetDecimalList(string path)
         {
             HoconValue value = GetNode(path);
             return value.GetDecimalList();
         }
 
-        public IList<float> GetFloatList(string path)
+        public virtual IList<float> GetFloatList(string path)
         {
             HoconValue value = GetNode(path);
             return value.GetFloatList();
         }
 
-        public IList<double> GetDoubleList(string path)
+        public virtual IList<double> GetDoubleList(string path)
         {
             HoconValue value = GetNode(path);
             return value.GetDoubleList();
         }
 
-        public IList<int> GetIntList(string path)
+        public virtual IList<int> GetIntList(string path)
         {
             HoconValue value = GetNode(path);
             return value.GetIntList();
         }
 
-        public IList<long> GetLongList(string path)
+        public virtual IList<long> GetLongList(string path)
         {
             HoconValue value = GetNode(path);
             return value.GetLongList();
         }
 
-        public IList<byte> GetByteList(string path)
+        public virtual IList<byte> GetByteList(string path)
         {
             HoconValue value = GetNode(path);
             return value.GetByteList();
         }
 
-        public IList<string> GetStringList(string path)
+        public virtual IList<string> GetStringList(string path)
         {
             HoconValue value = GetNode(path);
             if (value == null) return new string[0];
             return value.GetStringList();
         }
 
-        public Config GetConfig(string path)
+        public virtual Config GetConfig(string path)
         {
             HoconValue value = GetNode(path);
             if (Fallback != null)
@@ -217,6 +217,11 @@ namespace Akka.Configuration
             return new Config(new HoconRoot(value));
         }
 
+        /// <summary>
+        /// Return a <see cref="HoconValue"/> from a specific path.
+        /// </summary>
+        /// <param name="path">The path for which we're loading a value.</param>
+        /// <returns>The <see cref="HoconValue"/> found at the location if one exists, otherwise <c>null</c>.</returns>
         public HoconValue GetValue(string path)
         {
             HoconValue value = GetNode(path);
@@ -229,7 +234,7 @@ namespace Akka.Configuration
             return GetTimeSpan(path, @default, allowInfinite);
         }
 
-        public TimeSpan GetTimeSpan(string path, TimeSpan? @default = null, bool allowInfinite = true)
+        public virtual TimeSpan GetTimeSpan(string path, TimeSpan? @default = null, bool allowInfinite = true)
         {
             HoconValue value = GetNode(path);
             if (value == null)
@@ -246,7 +251,7 @@ namespace Akka.Configuration
             return Root.ToString();
         }
 
-        public Config WithFallback(Config fallback)
+        public virtual Config WithFallback(Config fallback)
         {
             if (fallback == this)
                 throw new ArgumentException("Config can not have itself as fallback", "fallback");
@@ -264,7 +269,12 @@ namespace Akka.Configuration
         }
 
 
-        public bool HasPath(string path)
+        /// <summary>
+        /// Determine if a HOCON configuration element exists at the specified location
+        /// </summary>
+        /// <param name="path">The location to check for a configuration value.</param>
+        /// <returns><c>true</c> if a value was found, <c>false</c> otherwise.</returns>
+        public virtual bool HasPath(string path)
         {
             HoconValue value = GetNode(path);
             return value != null;
@@ -288,7 +298,7 @@ namespace Akka.Configuration
             return config;
         }
 
-        public IEnumerable<KeyValuePair<string, HoconValue>> AsEnumerable()
+        public virtual IEnumerable<KeyValuePair<string, HoconValue>> AsEnumerable()
         {
             var used = new HashSet<string>();
             Config current = this;
