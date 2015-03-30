@@ -14,6 +14,7 @@ namespace Akka.Dispatch
         PinnedDispatcher,
         SynchronizedDispatcher,
     }
+
     public static class DispatcherTypeMembers
     {
         public static string GetName(this DispatcherType self)
@@ -22,6 +23,32 @@ namespace Akka.Dispatch
             return self.ToString();
         }
     }
+
+    public static class DispatcherExtensions
+    {
+        /// <summary>
+        /// Schedules the specified run and returns a continuation task.
+        /// </summary>
+        public static Task<T> ScheduleAsync<T>(this MessageDispatcher dispatcher, Func<T> fn)
+        {
+            var promise = new TaskCompletionSource<T>();
+            dispatcher.Schedule(() =>
+            {
+                try
+                {
+                    var result = fn();
+                    promise.SetResult(result);
+                }
+                catch (Exception e)
+                {
+                    promise.SetException(e);
+                }
+            });
+
+            return promise.Task;
+        }
+    }
+
     /// <summary>
     ///     Class MessageDispatcher.
     /// </summary>
