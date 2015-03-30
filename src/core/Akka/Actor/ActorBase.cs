@@ -181,29 +181,49 @@ namespace Akka.Actor
             Context.System.EventStream.Publish(new UnhandledMessage(message, Sender, Self));
         }
 
-        /// <summary>
-        /// Changes the Actor's behavior to become the new <see cref="Actor.Receive"/> handler.
-        /// This method acts upon the behavior stack as follows:
-        /// <para>if <paramref name="discardOld"/>==<c>true</c> it will replace the current behavior (i.e. the top element)</para>
-        /// <para>if <paramref name="discardOld"/>==<c>false</c> it will keep the current behavior and push the given one atop</para>
-        /// The default of replacing the current behavior on the stack has been chosen to avoid memory
-        /// leaks in case client code is written without consulting this documentation first (i.e.
-        /// always pushing new behaviors and never issuing an <see cref="Unbecome"/>)
-        /// </summary>
-        /// <param name="receive">The receive delegate.</param>
-        /// <param name="discardOld">If <c>true</c> it will replace the current behavior; 
-        /// otherwise it will keep the current behavior and it can be reverted using <see cref="Unbecome"/></param>
+
+        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
         protected void Become(Receive receive, bool discardOld = true)
         {
-            Context.Become(receive, discardOld);
+            if(discardOld)
+                Context.Become(receive);
+            else
+                Context.BecomeStacked(receive);
+        }
+
+        /// <summary>
+        /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
+        /// </summary>
+        /// <param name="receive">The new message handler.</param>
+        protected void Become(Receive receive)
+        {
+            Context.Become(receive);
+        }
+
+        /// <summary>
+        /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
+        /// The current handler is stored on a stack, and you can revert to it by calling <see cref="IActorContext.UnbecomeStacked"/>
+        /// <remarks>Please note, that in order to not leak memory, make sure every call to <see cref="BecomeStacked"/>
+        /// is matched with a call to <see cref="IActorContext.UnbecomeStacked"/>.</remarks>
+        /// </summary>
+        /// <param name="receive">The new message handler.</param>
+        protected void BecomeStacked(Receive receive)
+        {
+            Context.BecomeStacked(receive);
         }
 
         /// <summary>
         /// Reverts the Actor behavior to the previous one on the behavior stack.
         /// </summary>
+        protected void UnbecomeStacked()
+        {
+            Context.UnbecomeStacked();
+        }
+
+        [Obsolete("Use UnbecomeStacked instead. This method will be removed in future versions")]
         protected void Unbecome()
         {
-            Context.Unbecome();
+            UnbecomeStacked();
         }
 
         internal void Clear(ActorRef self)

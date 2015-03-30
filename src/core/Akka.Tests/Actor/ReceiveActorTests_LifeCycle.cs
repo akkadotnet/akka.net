@@ -59,8 +59,8 @@ namespace Akka.Tests.Actor
             public CrashActor()
             {
                 Receive<string>(s => s == "CRASH", s => { throw new Exception("Crash!"); });
-                Receive<string>(s => s == "BECOME", _ => Become(State2, discardOld: false));
-                Receive<string>(s => s == "BECOME-DISCARD", _ => Become(State2, discardOld: true));
+                Receive<string>(s => s == "BECOME", _ => BecomeStacked(State2));
+                Receive<string>(s => s == "BECOME-DISCARD", _ => BecomeStacked(State2));
                 Receive<string>(s => Sender.Tell("1:"+s));
             }
 

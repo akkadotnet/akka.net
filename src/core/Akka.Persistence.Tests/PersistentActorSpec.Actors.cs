@@ -186,7 +186,7 @@ namespace Akka.Persistence.Tests
                     Persist(new Evt(cmd.Data + "-22"), evt =>
                     {
                         UpdateState(evt);
-                        Context.Unbecome();
+                        Context.UnbecomeStacked();
                     });
                     return true;
                 }
@@ -224,7 +224,7 @@ namespace Akka.Persistence.Tests
                     Persist(new Evt(cmd.Data + "-21"), evt =>
                     {
                         UpdateState(evt);
-                        Context.Unbecome();
+                        Context.UnbecomeStacked();
                     });
                     Persist(new Evt(cmd.Data + "-22"), UpdateStateHandler);
                     return true;
@@ -255,7 +255,7 @@ namespace Akka.Persistence.Tests
                 if (message is Cmd)
                 {
                     var cmd = message as Cmd;
-                    Context.Unbecome();
+                    Context.UnbecomeStacked();
                     Persist(new[] { new Evt(cmd.Data + "-31"), new Evt(cmd.Data + "-32") }, UpdateStateHandler);
                     UpdateState(new Evt(cmd.Data + "-30"));
                     return true;
@@ -289,7 +289,7 @@ namespace Akka.Persistence.Tests
                     var cmd = message as Cmd;
                     Persist(new[] { new Evt(cmd.Data + "-31"), new Evt(cmd.Data + "-32") }, UpdateStateHandler);
                     UpdateState(new Evt(cmd.Data + "-30"));
-                    Context.Unbecome();
+                    Context.UnbecomeStacked();
                     return true;
                 }
                 return false;
@@ -456,7 +456,7 @@ namespace Akka.Persistence.Tests
                     Persist(new Evt("c"), evt =>
                     {
                         UpdateState(evt);
-                        Context.Unbecome();
+                        Context.UnbecomeStacked();
                     });
                     UnstashAll();
                 }
@@ -686,7 +686,7 @@ namespace Akka.Persistence.Tests
                     Persist(new Evt("c"), evt =>
                     {
                         UpdateState(evt);
-                        Context.Unbecome();
+                        Context.UnbecomeStacked();
                     });
                     UnstashAll();
                 }

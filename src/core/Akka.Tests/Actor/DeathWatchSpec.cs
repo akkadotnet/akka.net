@@ -312,7 +312,7 @@ namespace Akka.Tests.Actor
                                 if (y.ActorRef == kid)
                                 {
                                     _testActor.Tell(Bonk);
-                                    Context.Unbecome();
+                                    Context.UnbecomeStacked();
                                 }
                             });
                             return true;
