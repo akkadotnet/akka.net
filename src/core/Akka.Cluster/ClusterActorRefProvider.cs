@@ -37,7 +37,7 @@ namespace Akka.Cluster
             Cluster.Get(system);
         }
 
-        protected override ActorRef CreateRemoteWatcher(ActorSystemImpl system)
+        protected override IActorRef CreateRemoteWatcher(ActorSystemImpl system)
         {
             // make sure Cluster extension is initialized/loaded from init thread
             Cluster.Get(system);

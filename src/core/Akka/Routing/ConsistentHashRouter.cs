@@ -280,7 +280,7 @@ namespace Akka.Routing
             HashMapping = hashMapping;
         }
 
-        public ConsistentHashingGroup(IEnumerable<ActorRef> routees, int virtualNodesFactor = 0,
+        public ConsistentHashingGroup(IEnumerable<IActorRef> routees, int virtualNodesFactor = 0,
             ConsistentHashMapping hashMapping = null)
             : base(routees)
         {

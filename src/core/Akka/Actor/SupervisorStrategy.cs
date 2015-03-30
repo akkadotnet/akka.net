@@ -21,7 +21,7 @@ namespace Akka.Actor
         /// <param name="child">The actor that caused the evaluation to occur</param>
         /// <param name="x">The exception that caused the evaluation to occur.</param>
         /// <returns>Directive.</returns>
-        protected abstract Directive Handle(ActorRef child, Exception x);
+        protected abstract Directive Handle(IActorRef child, Exception x);
 
         /// <summary>
         ///     This is the main entry point: in case of a child’s failure, this method
@@ -92,12 +92,12 @@ namespace Akka.Actor
         /// <param name="child">The child.</param>
         /// <param name="cause">The cause.</param>
         /// <param name="suspendFirst">if set to <c>true</c> [suspend first].</param>
-        protected void RestartChild(ActorRef child, Exception cause, bool suspendFirst)
+        protected void RestartChild(IActorRef child, Exception cause, bool suspendFirst)
         {
-            var c = child.AsInstanceOf<InternalActorRef>();
+            var c = child.AsInstanceOf<IInternalActorRef>();
             if (suspendFirst)
                 c.Suspend();
-            c.AsInstanceOf<InternalActorRef>().Restart(cause);
+            c.AsInstanceOf<IInternalActorRef>().Restart(cause);
         }
 
         /// <summary>
@@ -117,9 +117,9 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="child">The child.</param>
         /// <param name="exception">The exception.</param>
-        protected void ResumeChild(ActorRef child, Exception exception)
+        protected void ResumeChild(IActorRef child, Exception exception)
         {
-            child.AsInstanceOf<InternalActorRef>().Resume(exception);
+            child.AsInstanceOf<IInternalActorRef>().Resume(exception);
         }
 
         /// <summary>
@@ -129,7 +129,7 @@ namespace Akka.Actor
         /// <param name="child">The child.</param>
         /// <param name="cause">The cause.</param>
         /// <param name="directive">The directive.</param>
-        protected virtual void LogFailure(IActorContext context, ActorRef child, Exception cause, Directive directive)
+        protected virtual void LogFailure(IActorContext context, IActorRef child, Exception cause, Directive directive)
         {
             if(LoggingEnabled)
             {
@@ -183,7 +183,7 @@ namespace Akka.Actor
         /// It does not need to do anything special. Exceptions thrown from this method
         /// do NOT make the actor fail if this happens during termination.
         /// </summary>
-        public abstract void HandleChildTerminated(IActorContext actorContext, ActorRef child, IEnumerable<InternalActorRef> children);
+        public abstract void HandleChildTerminated(IActorContext actorContext, IActorRef child, IEnumerable<IInternalActorRef> children);
 
 
         public abstract ISurrogate ToSurrogate(ActorSystem system);
@@ -315,7 +315,7 @@ namespace Akka.Actor
         /// <param name="child">The child.</param>
         /// <param name="x">The x.</param>
         /// <returns>Directive.</returns>
-        protected override Directive Handle(ActorRef child, Exception x)
+        protected override Directive Handle(IActorRef child, Exception x)
         {
             return Decider.Decide(x);
         }
@@ -331,7 +331,7 @@ namespace Akka.Actor
         }
 
 
-        public override void HandleChildTerminated(IActorContext actorContext, ActorRef child, IEnumerable<InternalActorRef> children)
+        public override void HandleChildTerminated(IActorContext actorContext, IActorRef child, IEnumerable<IInternalActorRef> children)
         {
             //Intentionally left blank
         }
@@ -489,7 +489,7 @@ namespace Akka.Actor
         /// <param name="child">The child.</param>
         /// <param name="x">The x.</param>
         /// <returns>Directive.</returns>
-        protected override Directive Handle(ActorRef child, Exception x)
+        protected override Directive Handle(IActorRef child, Exception x)
         {
             return Decider.Decide(x);
         }
@@ -517,7 +517,7 @@ namespace Akka.Actor
             }
         }
 
-        public override void HandleChildTerminated(IActorContext actorContext, ActorRef child, IEnumerable<InternalActorRef> children)
+        public override void HandleChildTerminated(IActorContext actorContext, IActorRef child, IEnumerable<IInternalActorRef> children)
         {
             //Intentionally left blank
         }

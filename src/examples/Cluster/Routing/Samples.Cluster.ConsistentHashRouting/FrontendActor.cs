@@ -6,10 +6,10 @@ namespace Samples.Cluster.ConsistentHashRouting
 {
     public class FrontendActor : UntypedActor, WithUnboundedStash
     {
-        protected readonly ActorRef BackendRouter;
+        protected readonly IActorRef BackendRouter;
         protected int jobCount = 0;
 
-        public FrontendActor(ActorRef backendRouter)
+        public FrontendActor(IActorRef backendRouter)
         {
             BackendRouter = backendRouter;
         }

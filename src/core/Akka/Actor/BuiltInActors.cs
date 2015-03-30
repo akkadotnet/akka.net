@@ -38,9 +38,9 @@ namespace Akka.Actor
 
     public class SystemGuardianActor : ActorBase
     {
-        private readonly ActorRef _userGuardian;
+        private readonly IActorRef _userGuardian;
 
-        public SystemGuardianActor(ActorRef userGuardian)
+        public SystemGuardianActor(IActorRef userGuardian)
         {
             _userGuardian = userGuardian;
         }
@@ -119,7 +119,7 @@ namespace Akka.Actor
             return true;
         }
 
-        private void StopWhenAllTerminationHooksDone(ActorRef remove)
+        private void StopWhenAllTerminationHooksDone(IActorRef remove)
         {
             //TODO: Implement termination hook support
             //_terminationHooks.Remove(terminatedActor)
@@ -165,7 +165,7 @@ namespace Akka.Actor
                 _eventStream.Publish(deadLetter);
         }
 
-        protected override bool SpecialHandle(object message, ActorRef sender)
+        protected override bool SpecialHandle(object message, IActorRef sender)
         {
             var w = message as Watch;
             if(w != null)

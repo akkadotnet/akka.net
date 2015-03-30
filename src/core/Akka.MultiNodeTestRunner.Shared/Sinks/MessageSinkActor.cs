@@ -18,14 +18,14 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /// </summary>
         public class BeginSinkTerminate
         {
-            public BeginSinkTerminate(TestRunTree testRun, ActorRef subscriber)
+            public BeginSinkTerminate(TestRunTree testRun, IActorRef subscriber)
             {
                 Subscriber = subscriber;
                 TestRun = testRun;
             }
 
             public TestRunTree TestRun { get; private set; }
-            public ActorRef Subscriber { get; private set; }
+            public IActorRef Subscriber { get; private set; }
         }
 
         /// <summary>

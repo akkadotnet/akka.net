@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Akka.Actor;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Akka.TestKit.VsTest.Tests
 {

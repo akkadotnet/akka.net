@@ -14,9 +14,9 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
             }
             //TODO: case replyTo: Promise[_] ⇒ replyTo.asInstanceOf[Promise[Any]].success("complexReply")
-            if(message is ActorRef)
+            if(message is IActorRef)
             {
-                ((ActorRef)message).Tell("complexReply", Self);
+                ((IActorRef)message).Tell("complexReply", Self);
                 return true;
             }
             return false;

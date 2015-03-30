@@ -2,6 +2,6 @@
 {
     public interface ICanTell
     {
-        void Tell(object message, ActorRef sender);
+        void Tell(object message, IActorRef sender);
     }
 }

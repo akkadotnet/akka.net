@@ -37,11 +37,11 @@ namespace Akka.TestKit
         /// </summary>
         public class Watch : NoSerializationVerificationNeeded
         {
-            private readonly ActorRef _actorToWatch;
+            private readonly IActorRef _actorToWatch;
 
-            public Watch(ActorRef actorToWatch) { _actorToWatch = actorToWatch; }
+            public Watch(IActorRef actorToWatch) { _actorToWatch = actorToWatch; }
 
-            public ActorRef Actor { get { return _actorToWatch; } }
+            public IActorRef Actor { get { return _actorToWatch; } }
         }
 
         /// <summary>
@@ -50,11 +50,11 @@ namespace Akka.TestKit
         /// </summary>
         public class Unwatch : NoSerializationVerificationNeeded
         {
-            private readonly ActorRef _actorToUnwatch;
+            private readonly IActorRef _actorToUnwatch;
 
-            public Unwatch(ActorRef actorToUnwatch) { _actorToUnwatch = actorToUnwatch; }
+            public Unwatch(IActorRef actorToUnwatch) { _actorToUnwatch = actorToUnwatch; }
 
-            public ActorRef Actor { get { return _actorToUnwatch; } }
+            public IActorRef Actor { get { return _actorToUnwatch; } }
         }
 
         /// <summary>

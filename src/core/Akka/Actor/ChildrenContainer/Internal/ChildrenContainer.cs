@@ -6,16 +6,16 @@ namespace Akka.Actor.Internal
     public interface ChildrenContainer
     {
         ChildrenContainer Add(string name, ChildRestartStats stats);
-        ChildrenContainer Remove(ActorRef child);
+        ChildrenContainer Remove(IActorRef child);
         bool TryGetByName(string name, out ChildStats stats);
-        bool TryGetByRef(ActorRef actor, out ChildRestartStats stats);
-        IReadOnlyList<InternalActorRef> Children { get; }
+        bool TryGetByRef(IActorRef actor, out ChildRestartStats stats);
+        IReadOnlyList<IInternalActorRef> Children { get; }
         IReadOnlyList<ChildRestartStats> Stats { get; }
-        ChildrenContainer ShallDie(ActorRef actor);
+        ChildrenContainer ShallDie(IActorRef actor);
         ChildrenContainer Reserve(string name);
         ChildrenContainer Unreserve(string name);
         bool IsTerminating { get; }
         bool IsNormal { get; }
-        bool Contains(ActorRef actor);
+        bool Contains(IActorRef actor);
     }
 }

@@ -4,9 +4,9 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 {
     public class WatchAndForwardActor : ActorBase
     {
-        private readonly ActorRef _forwardToActor;
+        private readonly IActorRef _forwardToActor;
 
-        public WatchAndForwardActor(ActorRef watchedActor, ActorRef forwardToActor)
+        public WatchAndForwardActor(IActorRef watchedActor, IActorRef forwardToActor)
         {
             _forwardToActor = forwardToActor;
             Context.Watch(watchedActor);

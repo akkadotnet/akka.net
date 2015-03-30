@@ -10,13 +10,13 @@ namespace Akka.Actor
     internal interface IQuery
     {
         DateTime Deadline { get; }
-        ActorRef Client { get; }
-        IQuery WithClient(ActorRef client);
+        IActorRef Client { get; }
+        IQuery WithClient(IActorRef client);
     }
 
     internal struct Get : IQuery
     {
-        public Get(DateTime deadline, ActorRef client = null)
+        public Get(DateTime deadline, IActorRef client = null)
             : this()
         {
             Deadline = deadline;
@@ -24,8 +24,8 @@ namespace Akka.Actor
         }
 
         public DateTime Deadline { get; private set; }
-        public ActorRef Client { get; private set; }
-        public IQuery WithClient(ActorRef client)
+        public IActorRef Client { get; private set; }
+        public IQuery WithClient(IActorRef client)
         {
             return new Get(Deadline, client);
         }
@@ -33,7 +33,7 @@ namespace Akka.Actor
 
     internal struct Select : IQuery
     {
-        public Select(DateTime deadline, Predicate<object> predicate, ActorRef client = null)
+        public Select(DateTime deadline, Predicate<object> predicate, IActorRef client = null)
             : this()
         {
             Deadline = deadline;
@@ -43,8 +43,8 @@ namespace Akka.Actor
 
         public DateTime Deadline { get; private set; }
         public Predicate<object> Predicate { get; set; }
-        public ActorRef Client { get; private set; }
-        public IQuery WithClient(ActorRef client)
+        public IActorRef Client { get; private set; }
+        public IQuery WithClient(IActorRef client)
         {
             return new Select(Deadline, Predicate, client);
         }
@@ -52,24 +52,24 @@ namespace Akka.Actor
 
     internal struct StartWatch
     {
-        public StartWatch(ActorRef target)
+        public StartWatch(IActorRef target)
             : this()
         {
             Target = target;
         }
 
-        public ActorRef Target { get; private set; }
+        public IActorRef Target { get; private set; }
     }
 
     internal struct StopWatch
     {
-        public StopWatch(ActorRef target) 
+        public StopWatch(IActorRef target) 
             : this()
         {
             Target = target;
         }
 
-        public ActorRef Target { get; private set; }
+        public IActorRef Target { get; private set; }
     }
 
     internal struct Kick { }
@@ -192,7 +192,7 @@ namespace Akka.Actor
         /// <summary>
         /// Get a reference to internal actor. It may be for example registered in event stream.
         /// </summary>
-        ActorRef Receiver { get; }
+        IActorRef Receiver { get; }
 
         /// <summary>
         /// Receive a next message from current <see cref="Inboxable"/> with default timeout. This call will return immediately,
@@ -226,7 +226,7 @@ namespace Akka.Actor
         /// which will be send to given <paramref cref="target"/> actor. It means, 
         /// that all <paramref name="target"/>'s replies will be sent to current inbox instead.
         /// </summary>
-        void Send(ActorRef target, object message);
+        void Send(IActorRef target, object message);
     }
 
     public class Inbox : Inboxable, IDisposable
@@ -248,7 +248,7 @@ namespace Akka.Actor
             return inbox;
         }
 
-        private Inbox(TimeSpan defaultTimeout, ActorRef receiver, ActorSystem system)
+        private Inbox(TimeSpan defaultTimeout, IActorRef receiver, ActorSystem system)
         {
             _subscribers = new HashSet<IObserver<object>>();
             _defaultTimeout = defaultTimeout;
@@ -256,25 +256,25 @@ namespace Akka.Actor
             Receiver = receiver;
         }
 
-        public ActorRef Receiver { get; private set; }
+        public IActorRef Receiver { get; private set; }
         
         /// <summary>
         /// Make the inbox’s actor watch the <paramref name="subject"/> actor such that 
         /// reception of the <see cref="Terminated"/> message can then be awaited.
         /// </summary>
-        public ActorRef Watch(ActorRef subject)
+        public IActorRef Watch(IActorRef subject)
         {
             Receiver.Tell(new StartWatch(subject));
             return subject;
         }
 
-        public ActorRef Unwatch(ActorRef subject)
+        public IActorRef Unwatch(IActorRef subject)
         {
             Receiver.Tell(new StopWatch(subject));
             return subject;
         }
 
-        public void Send(ActorRef actorRef, object msg)
+        public void Send(IActorRef actorRef, object msg)
         {
             actorRef.Tell(msg, Receiver);
         }

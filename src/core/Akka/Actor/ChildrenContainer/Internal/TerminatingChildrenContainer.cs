@@ -16,15 +16,15 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class TerminatingChildrenContainer : ChildrenContainerBase
     {
-        private readonly IImmutableSet<ActorRef> _toDie;
+        private readonly IImmutableSet<IActorRef> _toDie;
         private readonly SuspendReason _reason;
 
-        public TerminatingChildrenContainer(IImmutableMap<string, ChildStats> children, ActorRef toDie, SuspendReason reason)
-            : this(children, ImmutableTreeSet<ActorRef>.Create(toDie), reason)
+        public TerminatingChildrenContainer(IImmutableMap<string, ChildStats> children, IActorRef toDie, SuspendReason reason)
+            : this(children, ImmutableTreeSet<IActorRef>.Create(toDie), reason)
         {
             //Intentionally left blank
         }
-        public TerminatingChildrenContainer(IImmutableMap<string, ChildStats> children, IImmutableSet<ActorRef> toDie, SuspendReason reason)
+        public TerminatingChildrenContainer(IImmutableMap<string, ChildStats> children, IImmutableSet<IActorRef> toDie, SuspendReason reason)
             : base(children)
         {
             _toDie = toDie;
@@ -39,7 +39,7 @@ namespace Akka.Actor.Internal
             return new TerminatingChildrenContainer(newMap, _toDie, _reason);
         }
 
-        public override ChildrenContainer Remove(ActorRef child)
+        public override ChildrenContainer Remove(IActorRef child)
         {
             var set = _toDie.Remove(child);
             if (set.IsEmpty)
@@ -50,7 +50,7 @@ namespace Akka.Actor.Internal
             return new TerminatingChildrenContainer(InternalChildren.Remove(child.Path.Name), set, _reason);
         }
 
-        public override ChildrenContainer ShallDie(ActorRef actor)
+        public override ChildrenContainer ShallDie(IActorRef actor)
         {
             return new TerminatingChildrenContainer(InternalChildren, _toDie.Add(actor), _reason);
         }

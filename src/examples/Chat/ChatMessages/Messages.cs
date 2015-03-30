@@ -42,7 +42,7 @@ namespace ChatMessages
 
     public class ChannelsResponse 
     {
-        public ActorRef[] channels { get; set; }
+        public IActorRef[] channels { get; set; }
     }
 
     public class Disconnect 

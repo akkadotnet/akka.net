@@ -22,7 +22,7 @@ namespace Akka.Remote.Tests.Serialization
         }
 
         private Akka.Serialization.Serialization ser;
-        private ActorRef supervisor;
+        private IActorRef supervisor;
 
         public DaemonMsgCreateSerializerSpec()
             : base(@"akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""")

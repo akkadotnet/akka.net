@@ -44,15 +44,15 @@ namespace Akka.Event
         protected override bool Receive(object message)
         {
             var deadLetter = (DeadLetter)message;
-            ActorRef snd = deadLetter.Sender;
-            ActorRef rcp = deadLetter.Recipient;
+            IActorRef snd = deadLetter.Sender;
+            IActorRef rcp = deadLetter.Recipient;
             _count++;
             bool done = _maxCount != int.MaxValue && _count >= _maxCount;
             string doneMsg = done ? ", no more dead letters will be logged" : "";
             if (!done)
             {
-                var rcpPath = rcp == ActorRef.NoSender ? "NoSender" : rcp.Path.ToString();
-                var sndPath = snd == ActorRef.NoSender ? "NoSender" : snd.Path.ToString();
+                var rcpPath = rcp == ActorRefs.NoSender ? "NoSender" : rcp.Path.ToString();
+                var sndPath = snd == ActorRefs.NoSender ? "NoSender" : snd.Path.ToString();
 
                 _eventStream.Publish(new Info(rcpPath, rcp.GetType(),
                     string.Format("Message {0} from {1} to {2} was not delivered. {3} dead letters encountered.{4}",
@@ -60,7 +60,7 @@ namespace Akka.Event
             }
             if (done)
             {
-                ((InternalActorRef)Self).Stop();
+                ((IInternalActorRef)Self).Stop();
             }
             return true;
         }

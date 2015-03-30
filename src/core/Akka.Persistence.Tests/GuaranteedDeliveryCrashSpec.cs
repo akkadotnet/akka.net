@@ -13,9 +13,9 @@ namespace Akka.Persistence.Tests
 
         internal class StoppingStrategySupervisor : ActorBase
         {
-            private readonly ActorRef _crashingActor;
+            private readonly IActorRef _crashingActor;
 
-            public StoppingStrategySupervisor(ActorRef testProbe)
+            public StoppingStrategySupervisor(IActorRef testProbe)
             {
                 _crashingActor = Context.ActorOf(Props.Create(() => new CrashingActor(testProbe)), "CrashingActor");
             }
@@ -62,12 +62,12 @@ namespace Akka.Persistence.Tests
 
         internal class CrashingActor : GuaranteedDeliveryActor
         {
-            private readonly ActorRef _testProbe;
+            private readonly IActorRef _testProbe;
             private LoggingAdapter _adapter;
 
             LoggingAdapter Log { get { return _adapter ?? (_adapter = Context.GetLogger()); } }
 
-            public CrashingActor(ActorRef testProbe)
+            public CrashingActor(IActorRef testProbe)
             {
                 _testProbe = testProbe;
             }

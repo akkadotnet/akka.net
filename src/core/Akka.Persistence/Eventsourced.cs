@@ -50,8 +50,8 @@ namespace Akka.Persistence
 
         private readonly int _instanceId;
         private readonly IStash _internalStash;
-        private ActorRef _snapshotStore;
-        private ActorRef _journal;
+        private IActorRef _snapshotStore;
+        private IActorRef _journal;
         private ICollection<IPersistentEnvelope> _journalBatch = new List<IPersistentEnvelope>();
         private readonly int _maxMessageBatchSize;
         private bool _isWriteInProgress = false;
@@ -89,12 +89,12 @@ namespace Akka.Persistence
 
         public string SnapshotPluginId { get; protected set; }
 
-        public ActorRef Journal
+        public IActorRef Journal
         {
             get { return _journal ?? (_journal = Extension.JournalFor(JournalPluginId)); }
         }
 
-        public ActorRef SnapshotStore
+        public IActorRef SnapshotStore
         {
             get { return _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotPluginId)); }
         }

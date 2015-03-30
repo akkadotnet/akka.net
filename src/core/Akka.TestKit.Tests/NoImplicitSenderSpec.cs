@@ -12,7 +12,7 @@ namespace Akka.Testkit.Tests
         {
             var echoActor = Sys.ActorOf(c => c.ReceiveAny((m, ctx) => TestActor.Tell(ctx.Sender)));
             echoActor.Tell("message");
-            ExpectMsg<ActorRef>(actorRef => actorRef == DeadLetterActorRef.NoSender);
+            ExpectMsg<IActorRef>(actorRef => actorRef == ActorRefs.NoSender);
         }
 
     }
@@ -24,11 +24,11 @@ namespace Akka.Testkit.Tests
         {
             var echoActor = Sys.ActorOf(c => c.ReceiveAny((m, ctx) => TestActor.Tell(ctx.Sender)));
             echoActor.Tell("message");
-            ExpectMsg<ActorRef>(actorRef => actorRef == TestActor);
+            ExpectMsg<IActorRef>(actorRef => actorRef == TestActor);
 
             //Test that it works after we know that context has been changed
             echoActor.Tell("message");
-            ExpectMsg<ActorRef>(actorRef => actorRef == TestActor);
+            ExpectMsg<IActorRef>(actorRef => actorRef == TestActor);
 
         }
 

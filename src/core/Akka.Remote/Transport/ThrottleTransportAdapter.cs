@@ -401,7 +401,7 @@ namespace Akka.Remote.Transport
                 return Task.FromResult(SetThrottleAck.Instance);
         }
 
-        private Task<SetThrottleAck> AskModeWithDeathCompletion(ActorRef target, ThrottleMode mode, TimeSpan timeout)
+        private Task<SetThrottleAck> AskModeWithDeathCompletion(IActorRef target, ThrottleMode mode, TimeSpan timeout)
         {
             if (target.IsNobody()) return Task.FromResult(SetThrottleAck.Instance);
             else
@@ -663,12 +663,12 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal sealed class ThrottlerHandle : AbstractTransportAdapterHandle
     {
-        internal readonly ActorRef ThrottlerActor;
+        internal readonly IActorRef ThrottlerActor;
         internal AtomicReference<ThrottleMode> OutboundThrottleMode = new AtomicReference<ThrottleMode>(Unthrottled.Instance);
 
         
 
-        public ThrottlerHandle(AssociationHandle wrappedHandle, ActorRef throttlerActor) : base(wrappedHandle, ThrottleTransportAdapter.Scheme)
+        public ThrottlerHandle(AssociationHandle wrappedHandle, IActorRef throttlerActor) : base(wrappedHandle, ThrottleTransportAdapter.Scheme)
         {
             ThrottlerActor = throttlerActor;
         }
@@ -790,7 +790,7 @@ namespace Akka.Remote.Transport
 
         #endregion
 
-        protected ActorRef Manager;
+        protected IActorRef Manager;
         protected IAssociationEventListener AssociationHandler;
         protected AssociationHandle OriginalHandle;
         protected bool Inbound;
@@ -804,7 +804,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         private static readonly AkkaPduProtobuffCodec Codec = new AkkaPduProtobuffCodec();
 
-        public ThrottledAssociation(ActorRef manager, IAssociationEventListener associationHandler, AssociationHandle originalHandle, bool inbound)
+        public ThrottledAssociation(IActorRef manager, IAssociationEventListener associationHandler, AssociationHandle originalHandle, bool inbound)
         {
             Manager = manager;
             AssociationHandler = associationHandler;

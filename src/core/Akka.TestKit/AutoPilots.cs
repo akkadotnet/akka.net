@@ -22,7 +22,7 @@ namespace Akka.TestKit
         /// <param name="sender">The sender.</param>
         /// <param name="message">The message.</param>
         /// <returns>The <see cref="AutoPilot"/> to be used for the next round</returns>
-        abstract public AutoPilot Run(ActorRef sender, object message);
+        abstract public AutoPilot Run(IActorRef sender, object message);
 
         /// <summary>
         /// When returned by another <see cref="AutoPilot"/> then no
@@ -50,7 +50,7 @@ namespace Akka.TestKit
         public static NoAutoPilot Instance = new NoAutoPilot();
 
         private NoAutoPilot() { }
-        public override AutoPilot Run(ActorRef sender, object message)
+        public override AutoPilot Run(IActorRef sender, object message)
         {
             return this;
         }
@@ -66,13 +66,13 @@ namespace Akka.TestKit
 
         private KeepRunning(){}
 
-        public override AutoPilot Run(ActorRef sender, object message)
+        public override AutoPilot Run(IActorRef sender, object message)
         {
             throw new Exception("Must not call");
         }
     }
 
-    public delegate AutoPilot AutoPilotDelegate(ActorRef sender, object message);
+    public delegate AutoPilot AutoPilotDelegate(IActorRef sender, object message);
 
     /// <summary>
     /// Creates an <see cref="AutoPilot"/>.
@@ -93,7 +93,7 @@ namespace Akka.TestKit
             _autoPilotDelegate = autoPilotDelegate;
         }
 
-        public override AutoPilot Run(ActorRef sender, object message)
+        public override AutoPilot Run(IActorRef sender, object message)
         {
             return _autoPilotDelegate(sender,message);
         }

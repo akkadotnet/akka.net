@@ -4,27 +4,27 @@ namespace Akka.Actor
 {
     public abstract class SchedulerBase : IScheduler, IAdvancedScheduler
     {
-        void ITellScheduler.ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, ActorRef sender)
+        void ITellScheduler.ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender)
         {
             ValidateDelay(delay, "delay");
             InternalScheduleTellOnce(delay, receiver, message, sender, null);
         }
 
-        void ITellScheduler.ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, ActorRef sender, ICancelable cancelable)
+        void ITellScheduler.ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
         {
             ValidateDelay(delay, "delay");
             InternalScheduleTellOnce(delay, receiver, message, sender, cancelable);
 
         }
 
-        void ITellScheduler.ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, ActorRef sender)
+        void ITellScheduler.ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, IActorRef sender)
         {
             ValidateDelay(initialDelay, "initialDelay");
             ValidateInterval(interval, "interval");
             InternalScheduleTellRepeatedly(initialDelay, interval, receiver, message, sender, null);
         }
 
-        void ITellScheduler.ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, ActorRef sender, ICancelable cancelable)
+        void ITellScheduler.ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
         {
             ValidateDelay(initialDelay, "initialDelay");
             ValidateInterval(interval, "interval");
@@ -64,9 +64,9 @@ namespace Akka.Actor
 
         protected abstract DateTimeOffset TimeNow { get; }
 
-        protected abstract void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, ActorRef sender, ICancelable cancelable);
+        protected abstract void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable);
 
-        protected abstract void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, ActorRef sender, ICancelable cancelable);
+        protected abstract void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable);
 
         protected abstract void InternalScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable);
         protected abstract void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable);

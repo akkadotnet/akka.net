@@ -13,7 +13,7 @@ namespace Akka.Event
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
         /// <param name="recipient">The recipient.</param>
-        internal UnhandledMessage(object message, ActorRef sender, ActorRef recipient)
+        internal UnhandledMessage(object message, IActorRef sender, IActorRef recipient)
         {
             Message = message;
             Sender = sender;
@@ -30,12 +30,12 @@ namespace Akka.Event
         ///     Gets the sender.
         /// </summary>
         /// <value>The sender.</value>
-        public ActorRef Sender { get; private set; }
+        public IActorRef Sender { get; private set; }
 
         /// <summary>
         ///     Gets the recipient.
         /// </summary>
         /// <value>The recipient.</value>
-        public ActorRef Recipient { get; private set; }
+        public IActorRef Recipient { get; private set; }
     }
 }

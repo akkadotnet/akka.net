@@ -19,7 +19,7 @@ namespace Akka.MultiNodeTestRunner
     {
         protected static ActorSystem TestRunSystem;
 
-        protected static ActorRef SinkCoordinator;
+        protected static IActorRef SinkCoordinator;
 
         
 
@@ -171,7 +171,7 @@ namespace Akka.MultiNodeTestRunner
 
         static void PublishToAllSinks(string message)
         {
-            SinkCoordinator.Tell(message, ActorRef.NoSender);
+            SinkCoordinator.Tell(message, ActorRefs.NoSender);
         }
     }
 }

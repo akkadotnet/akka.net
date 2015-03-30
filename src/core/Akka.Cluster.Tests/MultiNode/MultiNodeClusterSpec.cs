@@ -99,10 +99,10 @@ namespace Akka.Cluster.Tests.MultiNode
                 }
             }
 
-            readonly ActorRef _testActor;
+            readonly IActorRef _testActor;
             readonly Address _target;
 
-            public EndActor(ActorRef testActor, Address target)
+            public EndActor(IActorRef testActor, Address target)
             {
                 _testActor = testActor;
                 _target = target;

@@ -25,11 +25,11 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class ChildRestartStats : ChildStats
     {
-        private readonly InternalActorRef _child;
+        private readonly IInternalActorRef _child;
         private uint _maxNrOfRetriesCount;
         private long _restartTimeWindowStartTicks;
 
-        public ChildRestartStats(InternalActorRef child, uint maxNrOfRetriesCount = 0, long restartTimeWindowStartTicks = 0)
+        public ChildRestartStats(IInternalActorRef child, uint maxNrOfRetriesCount = 0, long restartTimeWindowStartTicks = 0)
         {
             _child = child;
             _maxNrOfRetriesCount = maxNrOfRetriesCount;
@@ -38,7 +38,7 @@ namespace Akka.Actor.Internal
 
         public long Uid { get { return Child.Path.Uid; } }
 
-        public InternalActorRef Child { get { return _child; } }
+        public IInternalActorRef Child { get { return _child; } }
 
         public uint MaxNrOfRetriesCount { get { return _maxNrOfRetriesCount; } }
 

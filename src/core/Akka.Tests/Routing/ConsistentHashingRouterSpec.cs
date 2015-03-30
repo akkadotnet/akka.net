@@ -67,9 +67,9 @@ namespace Akka.Tests.Routing
 
         #endregion
 
-        private ActorRef router1;
-        private ActorRef router3;
-        private ActorRef a, b, c;
+        private IActorRef router1;
+        private IActorRef router3;
+        private IActorRef a, b, c;
 
         public ConsistentHashingRouterSpec()
             : base(@"
@@ -112,17 +112,17 @@ namespace Akka.Tests.Routing
         public void ConsistentHashingRouterMustSelectDestinationBasedOnConsistentHashKeyOfMessage()
         {
             router1.Tell(new Msg("a", "A"));
-            var destinationA = ExpectMsg<ActorRef>();
+            var destinationA = ExpectMsg<IActorRef>();
             router1.Tell(new ConsistentHashableEnvelope("AA", "a"));
             ExpectMsg(destinationA);
 
             router1.Tell(new Msg(17, "A"));
-            var destinationB = ExpectMsg<ActorRef>();
+            var destinationB = ExpectMsg<IActorRef>();
             router1.Tell(new ConsistentHashableEnvelope("BB", 17));
             ExpectMsg(destinationB);
 
             router1.Tell(new Msg(new MsgKey("c"), "C"));
-            var destinationC = ExpectMsg<ActorRef>();
+            var destinationC = ExpectMsg<IActorRef>();
             router1.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
             ExpectMsg(destinationC);
         }
@@ -144,17 +144,17 @@ namespace Akka.Tests.Routing
                 Sys.ActorOf(new ConsistentHashingPool(1, null, null, null, hashMapping: hashMapping).Props(Props.Create<Echo>()), "router2");
 
             router2.Tell(new Msg2("a", "A"));
-            var destinationA = ExpectMsg<ActorRef>();
+            var destinationA = ExpectMsg<IActorRef>();
             router2.Tell(new ConsistentHashableEnvelope("AA", "a"));
             ExpectMsg(destinationA);
 
             router2.Tell(new Msg2(17, "A"));
-            var destinationB = ExpectMsg<ActorRef>();
+            var destinationB = ExpectMsg<IActorRef>();
             router2.Tell(new ConsistentHashableEnvelope("BB", 17));
             ExpectMsg(destinationB);
 
             router2.Tell(new Msg2(new MsgKey("c"), "C"));
-            var destinationC = ExpectMsg<ActorRef>();
+            var destinationC = ExpectMsg<IActorRef>();
             router2.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
             ExpectMsg(destinationC);
         }
@@ -170,17 +170,17 @@ namespace Akka.Tests.Routing
         public void ConsistentHashingGroupRouterMustSelectDestinationBasedOnConsistentHashKeyOfMessage()
         {
             router3.Tell(new Msg("a", "A"));
-            var destinationA = ExpectMsg<ActorRef>();
+            var destinationA = ExpectMsg<IActorRef>();
             router3.Tell(new ConsistentHashableEnvelope("AA", "a"));
             ExpectMsg(destinationA);
 
             router3.Tell(new Msg(17, "A"));
-            var destinationB = ExpectMsg<ActorRef>();
+            var destinationB = ExpectMsg<IActorRef>();
             router3.Tell(new ConsistentHashableEnvelope("BB", 17));
             ExpectMsg(destinationB);
 
             router3.Tell(new Msg(new MsgKey("c"), "C"));
-            var destinationC = ExpectMsg<ActorRef>();
+            var destinationC = ExpectMsg<IActorRef>();
             router3.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
             ExpectMsg(destinationC);
         }
@@ -202,17 +202,17 @@ namespace Akka.Tests.Routing
                 Sys.ActorOf(Props.Empty.WithRouter(new ConsistentHashingGroup(new[]{c},hashMapping: hashMapping)), "router4");
 
             router4.Tell(new Msg2("a", "A"));
-            var destinationA = ExpectMsg<ActorRef>();
+            var destinationA = ExpectMsg<IActorRef>();
             router4.Tell(new ConsistentHashableEnvelope("AA", "a"));
             ExpectMsg(destinationA);
 
             router4.Tell(new Msg2(17, "A"));
-            var destinationB = ExpectMsg<ActorRef>();
+            var destinationB = ExpectMsg<IActorRef>();
             router4.Tell(new ConsistentHashableEnvelope("BB", 17));
             ExpectMsg(destinationB);
 
             router4.Tell(new Msg2(new MsgKey("c"), "C"));
-            var destinationC = ExpectMsg<ActorRef>();
+            var destinationC = ExpectMsg<IActorRef>();
             router4.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
             ExpectMsg(destinationC);
         }
@@ -229,7 +229,7 @@ namespace Akka.Tests.Routing
             currentRoutees.Members.Count().ShouldBe(2);
 
             router5.Tell(new Msg("a", "A"), TestActor);
-            var actorWhoDies = ExpectMsg<ActorRef>();
+            var actorWhoDies = ExpectMsg<IActorRef>();
 
             //kill off the actor
             actorWhoDies.Tell(PoisonPill.Instance);
@@ -239,7 +239,7 @@ namespace Akka.Tests.Routing
             {
                 router5.Tell(new Msg("a", "A"), TestActor);
                 //verify that a different actor now owns this hash range
-                var actorWhoDidntDie = ExpectMsg<ActorRef>(TimeSpan.FromMilliseconds(50));
+                var actorWhoDidntDie = ExpectMsg<IActorRef>(TimeSpan.FromMilliseconds(50));
                 actorWhoDidntDie.ShouldNotBe(actorWhoDies);
             }, TimeSpan.FromSeconds(5));
 

@@ -113,9 +113,9 @@ namespace Akka.Remote.TestKit
         {
             readonly RoleName _name;
             readonly Address _addr;
-            readonly ActorRef _fsm;
+            readonly IActorRef _fsm;
 
-            public NodeInfo(RoleName name, Address addr, ActorRef fsm)
+            public NodeInfo(RoleName name, Address addr, IActorRef fsm)
             {
                 _name = name;
                 _addr = addr;
@@ -132,7 +132,7 @@ namespace Akka.Remote.TestKit
                 get { return _addr; }
             }
 
-            public ActorRef FSM
+            public IActorRef FSM
             {
                 get { return _fsm; }
             }
@@ -184,12 +184,12 @@ namespace Akka.Remote.TestKit
         int _initialParticipants;
         readonly TestConductorSettings _settings = TestConductor.Get(Context.System).Settings;
         readonly IConnection _connection;
-        readonly ActorRef _barrier;
+        readonly IActorRef _barrier;
         ImmutableDictionary<RoleName, NodeInfo> _nodes =
             ImmutableDictionary.Create<RoleName, NodeInfo>();
         // map keeping unanswered queries for node addresses (enqueued upon GetAddress, serviced upon NodeInfo)
-        ImmutableDictionary<RoleName, ImmutableHashSet<ActorRef>> _addrInterest =
-            ImmutableDictionary.Create<RoleName, ImmutableHashSet<ActorRef>>();
+        ImmutableDictionary<RoleName, ImmutableHashSet<IActorRef>> _addrInterest =
+            ImmutableDictionary.Create<RoleName, ImmutableHashSet<IActorRef>>();
         int _generation = 1;
 
         public Controller(int initialParticipants, INode controllerPort)
@@ -309,11 +309,11 @@ namespace Akka.Remote.TestKit
                         Sender.Tell(new ToClient<AddressReply>(new AddressReply(node, _nodes[node].Addr)));
                     else
                     {
-                        ImmutableHashSet<ActorRef> existing;
+                        ImmutableHashSet<IActorRef> existing;
                         _addrInterest = _addrInterest.SetItem(node,
                             (_addrInterest.TryGetValue(node, out existing)
                                 ? existing
-                                : ImmutableHashSet.Create<ActorRef>()
+                                : ImmutableHashSet.Create<IActorRef>()
                                 ).Add(Sender));
                     }
                     return;

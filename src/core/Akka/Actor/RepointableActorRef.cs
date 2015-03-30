@@ -19,10 +19,10 @@ namespace Akka.Actor
         private readonly Props _props;
         private readonly MessageDispatcher _dispatcher;
         private readonly Func<Mailbox> _createMailbox;
-        private readonly InternalActorRef _supervisor;
+        private readonly IInternalActorRef _supervisor;
         private readonly ActorPath _path;
 
-        public RepointableActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, InternalActorRef supervisor, ActorPath path)
+        public RepointableActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, IInternalActorRef supervisor, ActorPath path)
         {
             _system = system;
             _props = props;
@@ -122,7 +122,7 @@ namespace Akka.Actor
 
         public override ActorPath Path { get { return _path; } }
 
-        public override InternalActorRef Parent { get { return Underlying.Parent; } }
+        public override IInternalActorRef Parent { get { return Underlying.Parent; } }
 
         public override ActorRefProvider Provider { get { return _system.Provider; } }
 
@@ -166,14 +166,14 @@ namespace Akka.Actor
             }
         }
 
-        protected override void TellInternal(object message, ActorRef sender)
+        protected override void TellInternal(object message, IActorRef sender)
         {
             Underlying.Post(sender, message);
         }
 
-        public override ActorRef GetChild(IEnumerable<string> name)
+        public override IActorRef GetChild(IEnumerable<string> name)
         {
-            var current = (ActorRef)this;
+            var current = (IActorRef)this;
             var index = 0;
             foreach(var element in name)
             {
@@ -195,19 +195,19 @@ namespace Akka.Actor
                                 crs.Child.GetChild(name.Skip(index));
                             }
                         }
-                        return Nobody;
+                        return ActorRefs.Nobody;
                 }
                 index++;
             }
             return current;
         }
 
-        public override InternalActorRef GetSingleChild(string name)
+        public override IInternalActorRef GetSingleChild(string name)
         {
             return Lookup.GetSingleChild(name);
         }
 
-        public override IEnumerable<ActorRef> Children
+        public override IEnumerable<IActorRef> Children
         {
             get { return Lookup.GetChildren(); }
         }
@@ -219,12 +219,12 @@ namespace Akka.Actor
         private readonly ActorSystemImpl _system;
         private readonly RepointableActorRef _self;
         private readonly Props _props;
-        private readonly InternalActorRef _supervisor;
+        private readonly IInternalActorRef _supervisor;
         private readonly object _lock = new object();
         private readonly List<Envelope> _messageQueue = new List<Envelope>();
         private readonly TimeSpan _timeout;
 
-        public UnstartedCell(ActorSystemImpl system, RepointableActorRef self, Props props, InternalActorRef supervisor)
+        public UnstartedCell(ActorSystemImpl system, RepointableActorRef self, Props props, IInternalActorRef supervisor)
         {
             _system = system;
             _self = self;
@@ -279,19 +279,19 @@ namespace Akka.Actor
             SendSystemMessage(Terminate.Instance, ActorCell.GetCurrentSelfOrNoSender());
         }
 
-        public InternalActorRef Parent { get { return _supervisor; } }
+        public IInternalActorRef Parent { get { return _supervisor; } }
 
-        public IEnumerable<InternalActorRef> GetChildren()
+        public IEnumerable<IInternalActorRef> GetChildren()
         {
-            return Enumerable.Empty<InternalActorRef>();
+            return Enumerable.Empty<IInternalActorRef>();
         }
 
-        public InternalActorRef GetSingleChild(string name)
+        public IInternalActorRef GetSingleChild(string name)
         {
             return Nobody.Instance;
         }
 
-        public InternalActorRef GetChildByName(string name)
+        public IInternalActorRef GetChildByName(string name)
         {
             return Nobody.Instance;
         }
@@ -302,7 +302,7 @@ namespace Akka.Actor
             return false;
         }
 
-        public void Post(ActorRef sender, object message)
+        public void Post(IActorRef sender, object message)
         {
             if(message is SystemMessage)
                 SendSystemMessage(message, sender);
@@ -310,7 +310,7 @@ namespace Akka.Actor
                 SendMessage(message, sender);
         }
 
-        private void SendMessage(object message, ActorRef sender)
+        private void SendMessage(object message, IActorRef sender)
         {
             if(Monitor.TryEnter(_lock, _timeout))
             {
@@ -339,7 +339,7 @@ namespace Akka.Actor
             }
         }
 
-        private void SendSystemMessage(object message, ActorRef sender)
+        private void SendSystemMessage(object message, IActorRef sender)
         {
             lock(_lock)
             {
@@ -442,7 +442,7 @@ namespace Akka.Actor
             }
         }
 
-        public ActorRef Self { get { return _self; } }
+        public IActorRef Self { get { return _self; } }
         public Props Props { get { return _props; } }
     }
 }

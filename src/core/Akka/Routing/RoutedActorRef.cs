@@ -12,10 +12,10 @@ namespace Akka.Routing
         private readonly MessageDispatcher _routerDispatcher;
         private readonly Func<Mailbox> _createMailbox;
         private readonly Props _routeeProps;
-        private readonly InternalActorRef _supervisor;
+        private readonly IInternalActorRef _supervisor;
 
         public RoutedActorRef(ActorSystemImpl system, Props routerProps, MessageDispatcher routerDispatcher,
-            Func<Mailbox> createMailbox, Props routeeProps, InternalActorRef supervisor, ActorPath path)
+            Func<Mailbox> createMailbox, Props routeeProps, IInternalActorRef supervisor, ActorPath path)
             : base(system, routerProps, routerDispatcher, createMailbox, supervisor, path)
         {
             _system = system;

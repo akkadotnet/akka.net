@@ -15,31 +15,31 @@ namespace Akka.Actor
 		/// </summary>
 		/// <param name="subject">The actor to monitor for termination.</param>
 		/// <returns>Returns the provided subject</returns>
-        ActorRef Watch(ActorRef subject);
+        IActorRef Watch(IActorRef subject);
 
 		/// <summary>
 		/// Stops monitoring the <paramref name="subject"/> for termination.
 		/// </summary>
 		/// <param name="subject">The actor to stop monitor for termination.</param>
 		/// <returns>Returns the provided subject</returns>
-        ActorRef Unwatch(ActorRef subject);
+        IActorRef Unwatch(IActorRef subject);
     }
 
     public interface IActorContext : ActorRefFactory, ICanWatch
     {
         /// <summary>
-        /// Gets the <see cref="ActorRef"/> belonging to the current actor.
+        /// Gets the <see cref="IActorRef"/> belonging to the current actor.
         /// </summary>
-        ActorRef Self { get; }
+        IActorRef Self { get; }
         Props Props { get; }
 
         /// <summary>
-        /// Gets the <see cref="ActorRef"/> of the actor who sent the current message.
+        /// Gets the <see cref="IActorRef"/> of the actor who sent the current message.
         /// 
         /// If the message was not sent by an actor (i.e. some external non-actor code
-        /// sent this actor a message) then this value will default to <see cref="ActorRef.NoSender"/>.
+        /// sent this actor a message) then this value will default to <see cref="ActorRefs.NoSender"/>.
         /// </summary>
-        ActorRef Sender { get; }
+        IActorRef Sender { get; }
 
         /// <summary>
         /// Gets a reference to the <see cref="ActorSystem"/> to which this actor belongs.
@@ -52,9 +52,9 @@ namespace Akka.Actor
         ActorSystem System { get; }
 
         /// <summary>
-        /// Gets the <see cref="ActorRef"/> of the parent of the current actor.
+        /// Gets the <see cref="IActorRef"/> of the parent of the current actor.
         /// </summary>
-        ActorRef Parent { get; }
+        IActorRef Parent { get; }
 
         /// <summary>
         /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
@@ -88,7 +88,7 @@ namespace Akka.Actor
         /// Retrieves a child actor with the specified name, if it exists.
         /// 
         /// If the child with the given name cannot be found, 
-        /// then <see cref="ActorRef.Nobody"/> will be returned instead.
+        /// then <see cref="ActorRefs.Nobody"/> will be returned instead.
         /// </summary>
         /// <param name="name">
         /// The name of the child actor.
@@ -97,16 +97,16 @@ namespace Akka.Actor
         /// 
         /// Not the path, just the name of the child at the time it was created by this parent.
         /// </param>
-        /// <returns>The <see cref="ActorRef"/> belonging to the child if found, <see cref="ActorRef.Nobody"/> otherwise.</returns>
-        ActorRef Child(string name);
+        /// <returns>The <see cref="IActorRef"/> belonging to the child if found, <see cref="ActorRefs.Nobody"/> otherwise.</returns>
+        IActorRef Child(string name);
 
         /// <summary>
         /// Gets all of the children that belong to this actor.
         /// 
         /// If this actor has no children, 
-        /// an empty collection of <see cref="ActorRef"/> is returned instead.
+        /// an empty collection of <see cref="IActorRef"/> is returned instead.
         /// </summary>
-        IEnumerable<ActorRef> GetChildren();
+        IEnumerable<IActorRef> GetChildren();
 
         /// <summary>
         /// <para>
@@ -145,9 +145,9 @@ namespace Akka.Actor
          */
 
         /// <summary>
-        /// Issues a stop command to the provided <see cref="ActorRef"/>, which will cause that actor
+        /// Issues a stop command to the provided <see cref="IActorRef"/>, which will cause that actor
         /// to terminate.
         /// </summary>
-        void Stop(ActorRef child);
+        void Stop(IActorRef child);
     }
 }

@@ -8,7 +8,7 @@ namespace Akka.Dispatch
     /// </summary>
     public class FutureActor : ActorBase
     {
-        private ActorRef respondTo;
+        private IActorRef respondTo;
         private TaskCompletionSource<object> result;
 
         /// <summary>
@@ -23,10 +23,10 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="completionSource">The completion source.</param>
         /// <param name="respondTo">The respond to.</param>
-        public FutureActor(TaskCompletionSource<object> completionSource, ActorRef respondTo)
+        public FutureActor(TaskCompletionSource<object> completionSource, IActorRef respondTo)
         {
             result = completionSource;
-            this.respondTo = respondTo ?? ActorRef.NoSender;
+            this.respondTo = respondTo ?? ActorRefs.NoSender;
         }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace Akka.Dispatch
         {
             //if there is no listening actor asking,
             //just eval the result directly
-            ((InternalActorRef)Self).Stop();
+            ((IInternalActorRef)Self).Stop();
             Become(EmptyReceive);
 
             result.SetResult(message);

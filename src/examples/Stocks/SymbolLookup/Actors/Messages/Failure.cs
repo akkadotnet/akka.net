@@ -5,7 +5,7 @@ namespace SymbolLookup.Actors.Messages
 {
     public class Failure
     {
-        public Failure(Exception ex, ActorRef actor)
+        public Failure(Exception ex, IActorRef actor)
         {
             Cause = ex;
             Child = actor;
@@ -13,6 +13,6 @@ namespace SymbolLookup.Actors.Messages
 
         public Exception Cause { get; private set; }
 
-        public ActorRef Child { get; private set; }
+        public IActorRef Child { get; private set; }
     }
 }

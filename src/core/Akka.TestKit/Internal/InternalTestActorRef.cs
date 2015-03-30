@@ -34,12 +34,12 @@ namespace Akka.TestKit.Internal
             //So it adds one $. The second is added by akka.util.Helpers.base64(l) which by default 
             //creates a StringBuilder and adds adds $. Hence, 2 $$
         }
-        private InternalTestActorRef(ActorSystem system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, InternalActorRef supervisor, ActorPath path) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType      
+        private InternalTestActorRef(ActorSystem system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, IInternalActorRef supervisor, ActorPath path) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType      
             : base(system, props, dispatcher, createMailbox, supervisor, path, actorRef => NewActorCell(system, actorRef, props, dispatcher, supervisor, createMailbox))
         {
         }
 
-        protected static ActorCell NewActorCell(ActorSystem system, LocalActorRef actorRef, Props props, MessageDispatcher dispatcher, InternalActorRef supervisor, Func<Mailbox> createMailbox)
+        protected static ActorCell NewActorCell(ActorSystem system, LocalActorRef actorRef, Props props, MessageDispatcher dispatcher, IInternalActorRef supervisor, Func<Mailbox> createMailbox)
         {
             var cell = new TestActorCell((ActorSystemImpl)system, actorRef, props, dispatcher, supervisor);
             cell.Init(sendSupervise: true, createMailbox: createMailbox);
@@ -61,7 +61,7 @@ namespace Akka.TestKit.Internal
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
-        public void Receive(object message, ActorRef sender = null)
+        public void Receive(object message, IActorRef sender = null)
         {
             var cell = Cell;
             sender = sender.IsNobody() ? cell.System.DeadLetters : sender;
@@ -93,7 +93,7 @@ namespace Akka.TestKit.Internal
         /// </summary>
         /// <param name="subject">The subject to watch.</param>
         /// <returns>Returns the same ActorRef that is provided to it, to allow for cleaner invocations.</returns>
-        public void Watch(ActorRef subject)
+        public void Watch(IActorRef subject)
         {
             Cell.Watch(subject);
         }
@@ -106,7 +106,7 @@ namespace Akka.TestKit.Internal
         /// </summary>
         /// <returns>Returns the same ActorRef that is provided to it, to allow for cleaner invocations.</returns>
         /// <param name="subject">The subject to unwatch.</param>
-        public void Unwatch(ActorRef subject)
+        public void Unwatch(IActorRef subject)
         {
             Cell.Unwatch(subject);
         }
@@ -119,7 +119,7 @@ namespace Akka.TestKit.Internal
         /// INTERNAL
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
-        public static InternalTestActorRef Create(ActorSystem system, Props props, ActorRef supervisor = null, string name = null)
+        public static InternalTestActorRef Create(ActorSystem system, Props props, IActorRef supervisor = null, string name = null)
         {
             if(name == null)
                 name = CreateUniqueName();
@@ -164,7 +164,7 @@ namespace Akka.TestKit.Internal
             }
             //TODO: Should be: Func<Mailbox> mailbox = () => system.Mailboxes.FromConfig(dispatcher.Configurator.Config);
             Func<Mailbox> mailbox = () => system.Mailboxes.CreateMailbox(props, null);
-            var testActorRef = new InternalTestActorRef(system, props, dispatcher, mailbox, (InternalActorRef)supervisor, supervisor.Path / name);
+            var testActorRef = new InternalTestActorRef(system, props, dispatcher, mailbox, (IInternalActorRef)supervisor, supervisor.Path / name);
 
             // we need to start ourselves since the creation of an actor has been split into initialization and starting
             testActorRef.Underlying.Start();
@@ -174,7 +174,7 @@ namespace Akka.TestKit.Internal
 
         protected class TestActorCell : ActorCell
         {
-            public TestActorCell(ActorSystemImpl system, InternalActorRef self, Props props, MessageDispatcher dispatcher, InternalActorRef parent)
+            public TestActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher, IInternalActorRef parent)
                 : base(system, self, props, dispatcher, parent)
             {
             }

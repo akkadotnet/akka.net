@@ -12,7 +12,7 @@ namespace Akka.Actor
     public interface Cell
     {
         /// <summary>Gets the “self” reference which this Cell is attached to.</summary>
-        ActorRef Self { get; }
+        IActorRef Self { get; }
 
         /// <summary>The system within which this Cell lives.</summary>
         ActorSystem System { get; }        
@@ -41,7 +41,7 @@ namespace Akka.Actor
 
 
         /// <summary>The supervisor of this actor.</summary>
-        InternalActorRef Parent { get; }
+        IInternalActorRef Parent { get; }
 
         /// <summary>Returns true if the actor is local.</summary>
         bool IsLocal { get; }
@@ -64,18 +64,18 @@ namespace Akka.Actor
 
         bool IsTerminated { get; }
 
-        void Post(ActorRef sender, object message);
+        void Post(IActorRef sender, object message);
 
 
 
-        IEnumerable<InternalActorRef> GetChildren();    //TODO: Should be replaced by childrenRefs: ChildrenContainer
+        IEnumerable<IInternalActorRef> GetChildren();    //TODO: Should be replaced by childrenRefs: ChildrenContainer
 
         /// <summary>
         /// Method for looking up a single child beneath this actor.
         /// It is racy if called from the outside.</summary>
-        InternalActorRef GetSingleChild(string name);
+        IInternalActorRef GetSingleChild(string name);
 
-        InternalActorRef GetChildByName(string name);
+        IInternalActorRef GetChildByName(string name);
 
         /// <summary>
         /// Tries to get the stats for the child with the specified name. The stats can be either <see cref="ChildNameReserved"/> 

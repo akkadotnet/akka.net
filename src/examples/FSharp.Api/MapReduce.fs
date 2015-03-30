@@ -33,7 +33,7 @@ let reduce (dict:ConcurrentDictionary<string, int>) (mailbox: Actor<MRMsg>) = fu
 
 /// Master actor function, used as proxy between system user and internal Map/Reduce implementation
 /// Can either forward data chunk to mappers or forward a request of returning all reduced data
-let master mapper (reducer:ActorRef) (mailbox: Actor<MRMsg>) = function
+let master mapper (reducer:IActorRef) (mailbox: Actor<MRMsg>) = function
     | Map line  -> mapper <! Map line
     | Collect   -> reducer.Forward Collect
     | m         -> mailbox.Unhandled m

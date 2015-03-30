@@ -8,7 +8,7 @@ namespace Akka.Cluster.Tests
 {
     public class ClusterDomainEventPublisherSpec : AkkaSpec
     {
-        ActorRef _publisher;
+        IActorRef _publisher;
         static readonly Member aUp = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552), MemberStatus.Up);
         static readonly Member aLeaving = aUp.Copy(status: MemberStatus.Leaving);
         static readonly Member aExiting = aLeaving.Copy(status: MemberStatus.Exiting);

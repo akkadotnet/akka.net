@@ -11,7 +11,7 @@ namespace Akka.Actor
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
         /// <param name="cancelable">OPTIONAL. An <see cref="ICancelable"/> that can be used to cancel sending of the message. Notye that once the message has been sent, it cannot be canceled.</param>
-        public static void ScheduleTellOnce(this ITellScheduler scheduler, int millisecondsDelay, ICanTell receiver, object message, ActorRef sender, ICancelable cancelable = null)
+        public static void ScheduleTellOnce(this ITellScheduler scheduler, int millisecondsDelay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable = null)
         {
             scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(millisecondsDelay), receiver, message, sender, cancelable);
         }
@@ -25,7 +25,7 @@ namespace Akka.Actor
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
         /// <param name="cancelable">OPTIONAL. An <see cref="ICancelable"/> that can be used to cancel sending of the message. Notye that once the message has been sent, it cannot be canceled.</param>
-        public static void ScheduleTellRepeatedly(this ITellScheduler scheduler, int initialMillisecondsDelay, int millisecondsInterval, ICanTell receiver, object message, ActorRef sender, ICancelable cancelable = null)
+        public static void ScheduleTellRepeatedly(this ITellScheduler scheduler, int initialMillisecondsDelay, int millisecondsInterval, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable = null)
         {
             scheduler.ScheduleTellRepeatedly(TimeSpan.FromMilliseconds(initialMillisecondsDelay), TimeSpan.FromMilliseconds(millisecondsInterval), receiver, message, sender, cancelable);
         }
@@ -68,7 +68,7 @@ namespace Akka.Actor
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
         /// <returns>An <see cref="ICancelable"/> that can be used to cancel sending of the message. Once the message already has been sent, it cannot be cancelled.</returns>
-        public static ICancelable ScheduleTellOnceCancelable(this IScheduler scheduler, TimeSpan delay, ICanTell receiver, object message, ActorRef sender)
+        public static ICancelable ScheduleTellOnceCancelable(this IScheduler scheduler, TimeSpan delay, ICanTell receiver, object message, IActorRef sender)
         {
             var cancelable = new Cancelable(scheduler);
             scheduler.ScheduleTellOnce(delay, receiver, message, sender, cancelable);
@@ -82,7 +82,7 @@ namespace Akka.Actor
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
         /// <returns>An <see cref="ICancelable"/> that can be used to cancel sending of the message. Once the message already has been sent, it cannot be cancelled.</returns>
-        public static ICancelable ScheduleTellOnceCancelable(this IScheduler scheduler, int millisecondsDelay, ICanTell receiver, object message, ActorRef sender)
+        public static ICancelable ScheduleTellOnceCancelable(this IScheduler scheduler, int millisecondsDelay, ICanTell receiver, object message, IActorRef sender)
         {
             var cancelable = new Cancelable(scheduler);
             scheduler.ScheduleTellOnce(millisecondsDelay, receiver, message, sender, cancelable);
@@ -97,7 +97,7 @@ namespace Akka.Actor
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
         /// <returns>An <see cref="ICancelable"/> that can be used to cancel sending of the message. Once the message already has been sent, it cannot be cancelled.</returns>
-        public static ICancelable ScheduleTellRepeatedlyCancelable(this IScheduler scheduler, TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, ActorRef sender)
+        public static ICancelable ScheduleTellRepeatedlyCancelable(this IScheduler scheduler, TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, IActorRef sender)
         {
             var cancelable = new Cancelable(scheduler);
             scheduler.ScheduleTellRepeatedly(initialDelay, interval, receiver, message, sender, cancelable);
@@ -112,7 +112,7 @@ namespace Akka.Actor
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
         /// <returns>An <see cref="ICancelable"/> that can be used to cancel sending of the message. Once the message already has been sent, it cannot be cancelled.</returns>
-        public static ICancelable ScheduleTellRepeatedlyCancelable(this IScheduler scheduler, int initialMillisecondsDelay, int millisecondsInterval, ICanTell receiver, object message, ActorRef sender)
+        public static ICancelable ScheduleTellRepeatedlyCancelable(this IScheduler scheduler, int initialMillisecondsDelay, int millisecondsInterval, ICanTell receiver, object message, IActorRef sender)
         {
             var cancelable = new Cancelable(scheduler);
             scheduler.ScheduleTellRepeatedly(initialMillisecondsDelay, millisecondsInterval, receiver, message, sender, cancelable);

@@ -84,7 +84,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             _config = config;
         }
 
-        protected Routees CurrentRoutees(ActorRef router)
+        protected Routees CurrentRoutees(IActorRef router)
         {
             var routerAsk = router.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
             return routerAsk.Result;
@@ -93,7 +93,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         /// <summary>
         /// Fills in the self address for local ActorRef
         /// </summary>
-        protected Address FullAddress(ActorRef actorRef)
+        protected Address FullAddress(IActorRef actorRef)
         {
             if (string.IsNullOrEmpty(actorRef.Path.Address.Host) || !actorRef.Path.Address.Port.HasValue)
                 return Cluster.SelfAddress;

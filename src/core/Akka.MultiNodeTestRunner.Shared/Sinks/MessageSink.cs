@@ -17,7 +17,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /// <summary>
         /// ActorRef for the actor who coordinates all of reporting for each test run
         /// </summary>
-        protected ActorRef MessageSinkActorRef;
+        protected IActorRef MessageSinkActorRef;
 
         protected readonly Props MessageSinkActorProps;
 
@@ -42,7 +42,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         public bool IsOpen { get; private set; }
         public bool IsClosed { get; private set; }
 
-        internal void RequestExitCode(ActorRef sender)
+        internal void RequestExitCode(IActorRef sender)
         {
             MessageSinkActorRef.Tell(new SinkCoordinator.RequestExitCode(), sender);
         }

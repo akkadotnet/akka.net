@@ -47,7 +47,7 @@ akka {
         ILogReceive
 
     {
-        private readonly HashSet<ActorRef> _clients = new HashSet<ActorRef>();
+        private readonly HashSet<IActorRef> _clients = new HashSet<IActorRef>();
 
         public void Handle(SayRequest message)
         {

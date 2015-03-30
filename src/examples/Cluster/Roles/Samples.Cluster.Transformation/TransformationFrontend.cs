@@ -5,7 +5,7 @@ namespace Samples.Cluster.Transformation
 {
     public class TransformationFrontend : UntypedActor
     {
-        protected List<ActorRef> Backends = new List<ActorRef>();
+        protected List<IActorRef> Backends = new List<IActorRef>();
         protected int Jobs = 0;
 
         protected override void OnReceive(object message)

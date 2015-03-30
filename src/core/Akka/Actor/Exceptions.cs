@@ -77,13 +77,13 @@ namespace Akka.Actor
     /// </summary>
     public class ActorInitializationException : AkkaException
     {
-        private readonly ActorRef _actor;
+        private readonly IActorRef _actor;
         protected ActorInitializationException() : base(){}
 
         public ActorInitializationException(string message) : base(message) { }
 
         public ActorInitializationException(string message, Exception cause) : base(message, cause) { }
-        public ActorInitializationException(ActorRef actor, string message, Exception cause = null) : base(message, cause)
+        public ActorInitializationException(IActorRef actor, string message, Exception cause = null) : base(message, cause)
         {
             _actor = actor;
         }
@@ -93,7 +93,7 @@ namespace Akka.Actor
         {
         }
 
-        public ActorRef Actor { get { return _actor; } }
+        public IActorRef Actor { get { return _actor; } }
 
         public override string ToString()
         {
@@ -173,9 +173,9 @@ namespace Akka.Actor
     /// </summary>
     public class DeathPactException : AkkaException
     {
-        private readonly ActorRef _deadActor;
+        private readonly IActorRef _deadActor;
 
-        public DeathPactException(ActorRef deadActor)
+        public DeathPactException(IActorRef deadActor)
             : base("Monitored actor [" + deadActor + "] terminated")
         {
             _deadActor = deadActor;
@@ -186,7 +186,7 @@ namespace Akka.Actor
         {
         }
 
-        public ActorRef DeadActor
+        public IActorRef DeadActor
         {
             get { return _deadActor; }
         }
@@ -197,12 +197,12 @@ namespace Akka.Actor
     /// </summary>
     public class PreRestartException : AkkaException
     {
-        private ActorRef Actor;
+        private IActorRef Actor;
         private Exception e; //TODO: what is this?
         private Exception exception;
         private object optionalMessage;
 
-        public PreRestartException(ActorRef actor, Exception restartException, Exception cause,
+        public PreRestartException(IActorRef actor, Exception restartException, Exception cause,
             object optionalMessage)
         {
             Actor = actor;
@@ -234,7 +234,7 @@ namespace Akka.Actor
         /// <param name="actor">The actor whose constructor or postRestart() hook failed.</param>
         /// <param name="cause">Cause is the exception thrown by that actor within preRestart().</param>
         /// <param name="originalCause">The original causeis the exception which caused the restart in the first place.</param>
-        public PostRestartException(ActorRef actor, Exception cause, Exception originalCause)
+        public PostRestartException(IActorRef actor, Exception cause, Exception originalCause)
             :base(actor,"Exception post restart (" + (originalCause == null ?"null" : originalCause.GetType().ToString()) + ")", cause)
         {
             _originalCause = originalCause;

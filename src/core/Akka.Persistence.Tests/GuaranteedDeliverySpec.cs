@@ -15,7 +15,7 @@ namespace Akka.Persistence.Tests
 
         class Sender : GuaranteedDeliveryActor
         {
-            private readonly ActorRef _testActor;
+            private readonly IActorRef _testActor;
             private readonly string _name;
             private readonly TimeSpan _redeliverInterval;
             private readonly int _warn;
@@ -23,9 +23,9 @@ namespace Akka.Persistence.Tests
             private readonly bool _isAsync;
             private readonly IDictionary<string, ActorPath> _destinations;
             private readonly LoggingAdapter _log;
-            private ActorRef _lastSnapshotAskedForBy;
+            private IActorRef _lastSnapshotAskedForBy;
 
-            public Sender(ActorRef testActor, string name, TimeSpan redeliverInterval, int warn, int redeliveryBurstLimit, bool isAsync, IDictionary<string, ActorPath> destinations)
+            public Sender(IActorRef testActor, string name, TimeSpan redeliverInterval, int warn, int redeliveryBurstLimit, bool isAsync, IDictionary<string, ActorPath> destinations)
                 : base()
             {
                 _testActor = testActor;
@@ -131,7 +131,7 @@ namespace Akka.Persistence.Tests
         {
             private readonly ISet<long> _allReceived;
 
-            public Destination(ActorRef testActor)
+            public Destination(IActorRef testActor)
             {
                 _allReceived = new HashSet<long>();
                 Receive<Action>(a =>
@@ -149,7 +149,7 @@ namespace Akka.Persistence.Tests
         class Unreliable : ReceiveActor
         {
             private int _count = 0;
-            public Unreliable(int dropMod, ActorRef target)
+            public Unreliable(int dropMod, IActorRef target)
             {
                 Receive<object>((message) =>
                 {

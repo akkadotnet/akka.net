@@ -21,9 +21,9 @@ namespace Akka.Actor
         }
 
         // ReSharper disable once InconsistentNaming
-        private ActorRef _failed_DoNotUseMeDirectly;
+        private IActorRef _failed_DoNotUseMeDirectly;
         private bool IsFailed { get { return _failed_DoNotUseMeDirectly != null; } }
-        private void SetFailed(ActorRef perpetrator)
+        private void SetFailed(IActorRef perpetrator)
         {
             _failed_DoNotUseMeDirectly = perpetrator;
         }
@@ -31,7 +31,7 @@ namespace Akka.Actor
         {
             _failed_DoNotUseMeDirectly = null;
         }
-        private ActorRef Perpetrator { get { return _failed_DoNotUseMeDirectly; } }
+        private IActorRef Perpetrator { get { return _failed_DoNotUseMeDirectly; } }
 
         /// <summary>Re-create the actor in response to a failure.</summary>
         private void FaultRecreate(Exception cause)
@@ -210,7 +210,7 @@ namespace Akka.Actor
             }
         }
 
-        private void HandleInvokeFailure(Exception cause, IEnumerable<ActorRef> childrenNotToSuspend = null)
+        private void HandleInvokeFailure(Exception cause, IEnumerable<IActorRef> childrenNotToSuspend = null)
         {
             // prevent any further messages to be processed until the actor has been restarted
             if (!IsFailed)
@@ -397,7 +397,7 @@ namespace Akka.Actor
             }
         }
 
-        private void HandleChildTerminated(ActorRef child)
+        private void HandleChildTerminated(IActorRef child)
         {
             var status = RemoveChildAndGetStateChange(child);
 

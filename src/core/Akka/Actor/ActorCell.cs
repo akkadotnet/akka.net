@@ -12,7 +12,7 @@ namespace Akka.Actor
     public partial class ActorCell : IUntypedActorContext, Cell 
     {
         /// <summary>NOTE! Only constructor and ClearActorFields is allowed to update this</summary>
-        private InternalActorRef _self;
+        private IInternalActorRef _self;
         public const int UndefinedUid = 0;
         private Props _props;
         private static readonly Props terminatedProps=new TerminatedProps();
@@ -25,7 +25,7 @@ namespace Akka.Actor
         private readonly ActorSystemImpl _systemImpl;
 
 
-        public ActorCell(ActorSystemImpl system, InternalActorRef self, Props props, MessageDispatcher dispatcher, InternalActorRef parent)
+        public ActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher, IInternalActorRef parent)
         {
             _self = self;
             _props = props;
@@ -49,10 +49,10 @@ namespace Akka.Actor
         public ActorSystem System { get { return _systemImpl; } }
         public ActorSystemImpl SystemImpl { get { return _systemImpl; } }
         public Props Props { get { return _props; } }
-        public ActorRef Self { get { return _self; } }
-        ActorRef IActorContext.Parent { get { return Parent; } }
-        public InternalActorRef Parent { get; private set; }
-        public ActorRef Sender { get; private set; }
+        public IActorRef Self { get { return _self; } }
+        IActorRef IActorContext.Parent { get { return Parent; } }
+        public IInternalActorRef Parent { get; private set; }
+        public IActorRef Sender { get; private set; }
         public bool HasMessages { get { return Mailbox.HasUnscheduledMessages; } }
         public int NumberOfMessages { get { return Mailbox.NumberOfMessages; } }
         internal bool ActorHasBeenCleared { get { return _actorHasBeenCleared; } }
@@ -102,16 +102,16 @@ namespace Akka.Actor
         }
 
         [Obsolete("Use TryGetChildStatsByName", true)]
-        public InternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
+        public IInternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
         {
-            InternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRef.Nobody;
+            IInternalActorRef child;
+            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
         }
 
-        ActorRef IActorContext.Child(string name)
+        IActorRef IActorContext.Child(string name)
         {
-            InternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRef.Nobody;
+            IInternalActorRef child;
+            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
         }
 
         public ActorSelection ActorSelection(string path)
@@ -125,12 +125,12 @@ namespace Akka.Actor
         }
 
 
-        IEnumerable<ActorRef> IActorContext.GetChildren()
+        IEnumerable<IActorRef> IActorContext.GetChildren()
         {
             return GetChildren();
         }
 
-        public IEnumerable<InternalActorRef> GetChildren()
+        public IEnumerable<IInternalActorRef> GetChildren()
         {
             return ChildrenContainer.Children;
         }
@@ -241,7 +241,7 @@ namespace Akka.Actor
         }
 
 
-        public virtual void Post(ActorRef sender, object message)
+        public virtual void Post(IActorRef sender, object message)
         {
             if (Mailbox == null)
             {
@@ -322,13 +322,13 @@ namespace Akka.Actor
                 : new NameAndUid(name.Substring(0, i), Int32.Parse(name.Substring(i + 1)));
         }
 
-        public static ActorRef GetCurrentSelfOrNoSender()
+        public static IActorRef GetCurrentSelfOrNoSender()
         {
             var current = Current;
             return current != null ? current.Self : NoSender.Instance;
         }
 
-        public static ActorRef GetCurrentSenderOrNoSender()
+        public static IActorRef GetCurrentSenderOrNoSender()
         {
             var current = Current;
             return current != null ? current.Sender : NoSender.Instance;

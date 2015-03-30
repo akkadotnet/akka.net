@@ -152,7 +152,7 @@ namespace Akka.Remote.Tests
             //TODO: using smaller numbers for the cancellation here causes a bug.
             //the remoting layer uses some "initialdelay task.delay" for 4 seconds.
             //so the token is cancelled before the delay completed.. 
-            var msg = await here.Ask<Tuple<string,ActorRef>>("ping", TimeSpan.FromSeconds(1.5));
+            var msg = await here.Ask<Tuple<string,IActorRef>>("ping", TimeSpan.FromSeconds(1.5));
             Assert.Equal("pong", msg.Item1);
             Assert.IsType<FutureActorRef>(msg.Item2);
         }
@@ -218,9 +218,9 @@ namespace Akka.Remote.Tests
 
         private class Forwarder : UntypedActor
         {
-            private readonly ActorRef _testActor;
+            private readonly IActorRef _testActor;
 
-            public Forwarder(ActorRef testActor)
+            public Forwarder(IActorRef testActor)
             {
                 _testActor = testActor;
             }
@@ -300,7 +300,7 @@ namespace Akka.Remote.Tests
 
         class Echo1 : UntypedActor
         {
-            private ActorRef target = Context.System.DeadLetters;
+            private IActorRef target = Context.System.DeadLetters;
             protected override void OnReceive(object message)
             {
                 message.Match()
@@ -337,7 +337,7 @@ namespace Akka.Remote.Tests
                     {
                         if (str.Equals("ping")) Sender.Tell(Tuple.Create("pong", Sender));
                     })
-                    .With<Tuple<string, ActorRef>>(actorTuple =>
+                    .With<Tuple<string, IActorRef>>(actorTuple =>
                     {
                         if (actorTuple.Item1.Equals("ping"))
                         {
@@ -353,10 +353,10 @@ namespace Akka.Remote.Tests
 
         class Proxy : UntypedActor
         {
-            private ActorRef _one;
-            private ActorRef _another;
+            private IActorRef _one;
+            private IActorRef _another;
 
-            public Proxy(ActorRef one, ActorRef another)
+            public Proxy(IActorRef one, IActorRef another)
             {
                 _one = one;
                 _another = another;

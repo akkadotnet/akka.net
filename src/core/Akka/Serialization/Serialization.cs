@@ -120,7 +120,7 @@ namespace Akka.Serialization
             throw new Exception("Serializer not found for type " + objectType.Name);
         }
 
-        public static string SerializedActorPath(ActorRef @ref)
+        public static string SerializedActorPath(IActorRef @ref)
         {
             /*
 val path = actorRef.path

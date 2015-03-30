@@ -6,7 +6,7 @@ namespace PingPong
 {
     public class ClientReceiveActor : ReceiveActor
     {
-        public ClientReceiveActor(ActorRef actor, long repeat, TaskCompletionSource<bool> latch)
+        public ClientReceiveActor(IActorRef actor, long repeat, TaskCompletionSource<bool> latch)
         {
             var received=0L;
             var sent=0L;

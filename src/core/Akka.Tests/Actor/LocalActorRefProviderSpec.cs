@@ -18,7 +18,7 @@ namespace Akka.Tests.Actor
         {
             var parent = Sys.ActorOf(Props.Create(() => new ParentActor()));
             parent.Tell("GetChild", TestActor);
-            var child = ExpectMsg<ActorRef>();
+            var child = ExpectMsg<IActorRef>();
             var childPropsBeforeTermination = ((LocalActorRef)child).Underlying.Props;
             Assert.Equal(Props.Empty, childPropsBeforeTermination);
             Watch(parent);
@@ -101,7 +101,7 @@ namespace Akka.Tests.Actor
 
         private class ParentActor : ActorBase
         {
-            private readonly ActorRef childActorRef;
+            private readonly IActorRef childActorRef;
 
             public ParentActor()
             {

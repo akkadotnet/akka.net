@@ -22,9 +22,9 @@ namespace Akka.Cluster.Tests.Routing
 
         class KillableActor : ReceiveActor
         {
-            private readonly ActorRef TestActor;
+            private readonly IActorRef TestActor;
 
-            public KillableActor(ActorRef testActor)
+            public KillableActor(IActorRef testActor)
             {
                 TestActor = testActor;
                 Receive<string>(s => s == "go away", s =>

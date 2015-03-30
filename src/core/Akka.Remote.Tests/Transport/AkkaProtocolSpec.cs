@@ -456,6 +456,6 @@ namespace Akka.Remote.Tests.Transport
 
         #endregion
 
-        public ActorRef Self { get { return TestActor; } }
+        public IActorRef Self { get { return TestActor; } }
     }
 }

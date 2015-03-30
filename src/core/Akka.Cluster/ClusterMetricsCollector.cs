@@ -54,9 +54,9 @@ namespace Akka.Cluster
 
         private Cluster _cluster;
 
-        private readonly ActorRef _publisher;
+        private readonly IActorRef _publisher;
 
-        public ClusterMetricsCollector(ActorRef publisher)
+        public ClusterMetricsCollector(IActorRef publisher)
         {
             _publisher = publisher;
             _cluster = Cluster.Get(Context.System);

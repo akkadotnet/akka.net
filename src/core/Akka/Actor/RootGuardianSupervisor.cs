@@ -26,7 +26,7 @@ namespace Akka.Actor
             _path = root / "_Root-guardian-supervisor";   //In akka this is root / "bubble-walker" 
         }
 
-        protected override void TellInternal(object message, ActorRef sender)
+        protected override void TellInternal(object message, IActorRef sender)
         {
             var systemMessage = message as SystemMessage;
             if(systemMessage!=null)
@@ -54,7 +54,7 @@ namespace Akka.Actor
                     var child = failed.Child;
                     _log.Error(cause, "guardian {0} failed, shutting down!", child);
                     CauseOfTermination = cause;
-                    ((InternalActorRef) child).Stop();
+                    ((IInternalActorRef) child).Stop();
                     return;
                 }
                 var supervise = systemMessage as Supervise;

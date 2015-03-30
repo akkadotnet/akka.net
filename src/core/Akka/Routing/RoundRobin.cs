@@ -91,7 +91,7 @@ namespace Akka.Routing
         ///     Initializes a new instance of the <see cref="RoundRobinGroup" /> class.
         /// </summary>
         /// <param name="routees">The routees.</param>
-        public RoundRobinGroup(IEnumerable<ActorRef> routees) : base(routees)
+        public RoundRobinGroup(IEnumerable<IActorRef> routees) : base(routees)
         {
         }
 

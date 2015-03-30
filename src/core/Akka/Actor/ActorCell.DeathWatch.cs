@@ -8,13 +8,13 @@ namespace Akka.Actor
 {
     partial class ActorCell
     {
-        HashSet<ActorRef> _watching = new HashSet<ActorRef>();
-        readonly HashSet<ActorRef> _watchedBy = new HashSet<ActorRef>();
-        HashSet<ActorRef> _terminatedQueue = new HashSet<ActorRef>();//terminatedqueue should never be used outside the message loop
+        HashSet<IActorRef> _watching = new HashSet<IActorRef>();
+        readonly HashSet<IActorRef> _watchedBy = new HashSet<IActorRef>();
+        HashSet<IActorRef> _terminatedQueue = new HashSet<IActorRef>();//terminatedqueue should never be used outside the message loop
 
-        public ActorRef Watch(ActorRef subject)
+        public IActorRef Watch(IActorRef subject)
         {
-            var a = (InternalActorRef)subject;
+            var a = (IInternalActorRef)subject;
 
             if (!a.Equals(Self) && !WatchingContains(a))
             {
@@ -27,9 +27,9 @@ namespace Akka.Actor
             return a;
         }
 
-        public ActorRef Unwatch(ActorRef subject)
+        public IActorRef Unwatch(IActorRef subject)
         {
-            var a = (InternalActorRef)subject;
+            var a = (IInternalActorRef)subject;
             if (! a.Equals(Self) && WatchingContains(a))
             {
                 a.Tell(new Unwatch(a, Self));
@@ -55,7 +55,7 @@ namespace Akka.Actor
         /// When this actor is watching the subject of <see cref="Terminated"/> message
         /// it will be propagated to user's receive.
         /// </summary>
-        protected void WatchedActorTerminated(ActorRef actor, bool existenceConfirmed, bool addressTerminated)
+        protected void WatchedActorTerminated(IActorRef actor, bool existenceConfirmed, bool addressTerminated)
         {
             if (WatchingContains(actor))
             {
@@ -75,18 +75,18 @@ namespace Akka.Actor
             }
         }
 
-        public void TerminatedQueuedFor(ActorRef subject)
+        public void TerminatedQueuedFor(IActorRef subject)
         {
             _terminatedQueue.Add(subject);
         }
 
-        private bool WatchingContains(ActorRef subject)
+        private bool WatchingContains(IActorRef subject)
         {
             return _watching.Contains(subject) ||
                    (subject.Path.Uid != ActorCell.UndefinedUid && _watching.Contains(new UndefinedUidActorRef(subject)));
         }
 
-        private HashSet<ActorRef> RemoveFromSet(ActorRef subject, HashSet<ActorRef> set)
+        private HashSet<IActorRef> RemoveFromSet(IActorRef subject, HashSet<IActorRef> set)
         {
             if (subject.Path.Uid != ActorCell.UndefinedUid)
             {
@@ -95,7 +95,7 @@ namespace Akka.Actor
                 return set;
             }
 
-            return new HashSet<ActorRef>(set.Where(a => !a.Path.Equals(subject.Path)));
+            return new HashSet<IActorRef>(set.Where(a => !a.Path.Equals(subject.Path)));
         }
 
         protected void TellWatchersWeDied()
@@ -123,15 +123,15 @@ namespace Akka.Actor
             }
             finally
             {
-                _watching = new HashSet<ActorRef>();
+                _watching = new HashSet<IActorRef>();
             }
         }
 
-        private void SendTerminated(bool ifLocal, ActorRef watcher)
+        private void SendTerminated(bool ifLocal, IActorRef watcher)
         {
             if (((ActorRefScope)watcher).IsLocal == ifLocal && !watcher.Equals(Parent))
             {
-                ((InternalActorRef)watcher).Tell(new DeathWatchNotification(Self, true, false));
+                ((IInternalActorRef)watcher).Tell(new DeathWatchNotification(Self, true, false));
             }
         }
 
@@ -143,18 +143,18 @@ namespace Akka.Actor
                 try
                 {
                     foreach ( // ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS
-                        var watchee in _watching.OfType<InternalActorRef>())
+                        var watchee in _watching.OfType<IInternalActorRef>())
                         watchee.Tell(new Unwatch(watchee, Self));
                 }
                 finally
                 {
-                    _watching = new HashSet<ActorRef>();
-                    _terminatedQueue = new HashSet<ActorRef>();
+                    _watching = new HashSet<IActorRef>();
+                    _terminatedQueue = new HashSet<IActorRef>();
                 }
             });
         }
 
-        protected void AddWatcher(ActorRef watchee, ActorRef watcher)
+        protected void AddWatcher(IActorRef watchee, IActorRef watcher)
         {
             var watcheeSelf = watchee.Equals(Self);
             var watcherSelf = watcher.Equals(Self);
@@ -177,7 +177,7 @@ namespace Akka.Actor
             }
         }
 
-        protected void RemWatcher(ActorRef watchee, ActorRef watcher)
+        protected void RemWatcher(IActorRef watchee, IActorRef watcher)
         {
             var watcheeSelf = watchee.Equals(Self);
             var watcherSelf = watcher.Equals(Self);
@@ -226,7 +226,7 @@ namespace Akka.Actor
         /// Ends subscription to AddressTerminated if subscribing and the
         /// block removes the last non-local ref from watching and watchedBy.
         /// </summary>
-        private void MaintainAddressTerminatedSubscription(Action block, ActorRef change= null)
+        private void MaintainAddressTerminatedSubscription(Action block, IActorRef change= null)
         {
             if (IsNonLocal(change))
             {
@@ -242,10 +242,10 @@ namespace Akka.Actor
             }
         }
 
-        private static bool IsNonLocal(ActorRef @ref)
+        private static bool IsNonLocal(IActorRef @ref)
         {
             if (@ref == null) return true;
-            var a = @ref as InternalActorRef;
+            var a = @ref as IInternalActorRef;
             if (a != null && !a.IsLocal) return true;
             return false;
         }
@@ -268,9 +268,9 @@ namespace Akka.Actor
 
     class UndefinedUidActorRef : MinimalActorRef
     {
-        readonly ActorRef _ref;
+        readonly IActorRef _ref;
 
-        public UndefinedUidActorRef(ActorRef @ref)
+        public UndefinedUidActorRef(IActorRef @ref)
         {
             _ref = @ref;
         }

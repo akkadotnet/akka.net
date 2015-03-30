@@ -19,7 +19,7 @@ namespace Akka.Cluster.Tests
 
     public class MetricsCollectorSpec : MetricsCollectorFactory, IDisposable
     {
-        public ActorRef Self { get { return TestActor; } }
+        public IActorRef Self { get { return TestActor; } }
 
         private readonly IMetricsCollector _collector;
 

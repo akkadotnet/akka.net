@@ -48,7 +48,7 @@ namespace Akka.Actor
         ///     Gets the dead letters.
         /// </summary>
         /// <value>The dead letters.</value>
-        public abstract ActorRef DeadLetters { get; }
+        public abstract IActorRef DeadLetters { get; }
 
         /// <summary>Gets the dispatchers.</summary>
         /// <value>The dispatchers.</value>
@@ -175,7 +175,7 @@ namespace Akka.Actor
         public abstract bool AwaitTermination(TimeSpan timeout, CancellationToken cancellationToken);
 
 
-        public abstract void Stop(ActorRef actor);
+        public abstract void Stop(IActorRef actor);
         private bool _isDisposed; //Automatically initialized to false;
 
         //Destructor:
@@ -229,7 +229,7 @@ namespace Akka.Actor
 
         public abstract object RegisterExtension(IExtensionId extension);
 
-        public abstract ActorRef ActorOf(Props props, string name = null);
+        public abstract IActorRef ActorOf(Props props, string name = null);
         
         public abstract ActorSelection ActorSelection(ActorPath actorPath);
         public abstract ActorSelection ActorSelection(string actorPath);

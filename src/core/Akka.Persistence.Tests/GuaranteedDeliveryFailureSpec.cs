@@ -124,14 +124,14 @@ namespace Akka.Persistence.Tests
 
         internal interface IChaosSupport
         {
-            ActorRef Probe { get; }
+            IActorRef Probe { get; }
             List<int> State { get; set; }
         }
 
         internal class ChaosSender : GuaranteedDeliveryActor
         {
             private readonly string _persistenceId;
-            private readonly ActorRef _destination;
+            private readonly IActorRef _destination;
             private readonly Config _config;
             private readonly double _liveProcessingFailureRate;
             private readonly double _replayProcessingFailureRate;
@@ -139,7 +139,7 @@ namespace Akka.Persistence.Tests
 
             public LoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); }}
 
-            public ChaosSender(ActorRef destination, ActorRef probe)
+            public ChaosSender(IActorRef destination, IActorRef probe)
             {
                 _destination = destination;
                 Probe = probe;
@@ -229,7 +229,7 @@ namespace Akka.Persistence.Tests
             }
 
 
-            public ActorRef Probe { get; private set; }
+            public IActorRef Probe { get; private set; }
             public List<int> State { get; set; }
         }
 
@@ -241,7 +241,7 @@ namespace Akka.Persistence.Tests
 
             public LoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
 
-            public ChaosDestination(ActorRef probe)
+            public ChaosDestination(IActorRef probe)
             {
                 Probe = probe;
                 State = new List<int>();
@@ -268,17 +268,17 @@ namespace Akka.Persistence.Tests
                 });
             }
 
-            public ActorRef Probe { get; private set; }
+            public IActorRef Probe { get; private set; }
             public List<int> State { get; set; }
         }
 
         internal class ChaosApp : ReceiveActor
         {
-            private readonly ActorRef _probe;
-            private readonly ActorRef _destination;
-            private readonly ActorRef _sender;
+            private readonly IActorRef _probe;
+            private readonly IActorRef _destination;
+            private readonly IActorRef _sender;
 
-            public ChaosApp(ActorRef probe)
+            public ChaosApp(IActorRef probe)
             {
                 _probe = probe;
                 _destination = Context.ActorOf(Props.Create(() => new ChaosDestination(_probe)), "destination");

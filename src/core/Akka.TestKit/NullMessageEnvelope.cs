@@ -13,7 +13,7 @@ namespace Akka.TestKit
             get { throw new IllegalActorStateException("last receive did not dequeue a message"); }
         }
 
-        public override ActorRef Sender
+        public override IActorRef Sender
         {
             get { throw new IllegalActorStateException("last receive did not dequeue a message"); }
         }

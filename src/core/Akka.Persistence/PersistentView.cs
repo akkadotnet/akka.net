@@ -81,8 +81,8 @@ namespace Akka.Persistence
         protected readonly PersistenceExtension Extension;
 
         private readonly PersistenceSettings.ViewSettings _viewSettings;
-        private ActorRef _snapshotStore;
-        private ActorRef _journal;
+        private IActorRef _snapshotStore;
+        private IActorRef _journal;
 
         private ICancelable _scheduleCancellation;
 
@@ -102,12 +102,12 @@ namespace Akka.Persistence
 
         public string SnapshotPluginId { get; protected set; }
 
-        public ActorRef Journal
+        public IActorRef Journal
         {
             get { return _journal ?? (_journal = Extension.JournalFor(JournalPluginId)); }
         }
 
-        public ActorRef SnapshotStore
+        public IActorRef SnapshotStore
         {
             get { return _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotPluginId)); }
         }

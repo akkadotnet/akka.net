@@ -21,6 +21,6 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="receiver">The intended recipient of the message.</param>
         /// <param name="envelope">The message that will be appended to the queue.</param>
-        void Post(ActorRef receiver, Envelope envelope);
+        void Post(IActorRef receiver, Envelope envelope);
     }
 }

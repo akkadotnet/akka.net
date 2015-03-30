@@ -23,9 +23,9 @@ namespace Akka.Remote.TestKit
     /// </summary>
     partial class TestConductor //Conductor trait in JVM version
     {
-        ActorRef _controller;
+        IActorRef _controller;
 
-        public ActorRef Controller
+        public IActorRef Controller
         {
             get
             {
@@ -243,10 +243,10 @@ namespace Akka.Remote.TestKit
     internal class ConductorHandler : IHeliosConnectionHandler
     {
         private readonly LoggingAdapter _log;
-        private readonly ActorRef _controller;
-        private readonly ConcurrentDictionary<IConnection, ActorRef> _clients = new ConcurrentDictionary<IConnection, ActorRef>();
+        private readonly IActorRef _controller;
+        private readonly ConcurrentDictionary<IConnection, IActorRef> _clients = new ConcurrentDictionary<IConnection, IActorRef>();
 
-        public ConductorHandler(ActorRef controller, LoggingAdapter log)
+        public ConductorHandler(IActorRef controller, LoggingAdapter log)
         {
             _controller = controller;
             _log = log;
@@ -256,18 +256,18 @@ namespace Akka.Remote.TestKit
         {
             _log.Debug("connection from {0}", responseChannel.RemoteHost);
             //TODO: Seems wrong to create new RemoteConnection here
-            var fsm = await _controller.Ask<ActorRef>(new Controller.CreateServerFSM(new RemoteConnection(responseChannel, this)), TimeSpan.FromMilliseconds(Int32.MaxValue));
+            var fsm = await _controller.Ask<IActorRef>(new Controller.CreateServerFSM(new RemoteConnection(responseChannel, this)), TimeSpan.FromMilliseconds(Int32.MaxValue));
             _clients.AddOrUpdate(responseChannel, fsm, (connection, @ref) => fsm);
         }
 
         public void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
         {
             _log.Debug("disconnect from {0}", closedChannel.RemoteHost);
-            ActorRef fsm;
+            IActorRef fsm;
             if (_clients.TryGetValue(closedChannel, out fsm))
             {
                 fsm.Tell(new Controller.ClientDisconnected(new RoleName(null)));
-                ActorRef removedActor;
+                IActorRef removedActor;
                 _clients.TryRemove(closedChannel, out removedActor);
             }
         }
@@ -307,11 +307,11 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
-    class ServerFSM : FSM<ServerFSM.State, ActorRef>, LoggingFSM
+    class ServerFSM : FSM<ServerFSM.State, IActorRef>, LoggingFSM
     {
         private readonly LoggingAdapter _log = Context.GetLogger();
         readonly RemoteConnection _channel;
-        readonly ActorRef _controller;        
+        readonly IActorRef _controller;        
         RoleName _roleName;
 
         public enum State
@@ -320,7 +320,7 @@ namespace Akka.Remote.TestKit
             Ready
         }
 
-        public ServerFSM(ActorRef controller, RemoteConnection channel)
+        public ServerFSM(IActorRef controller, RemoteConnection channel)
         {
             _controller = controller;
             _channel = channel;
