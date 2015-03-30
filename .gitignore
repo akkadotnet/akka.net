@@ -203,3 +203,5 @@ FakesAssemblies/
 /src/.Akka.boltdata/Settings.json
 /src/.Akka.boltdata/TestResults.json
 resetdev.bat
+
+*.userprefs
