@@ -25,13 +25,15 @@ namespace Akka.Actor
         private readonly ActorSystemImpl _systemImpl;
 
 
+
         public ActorCell(ActorSystemImpl system, InternalActorRef self, Props props, MessageDispatcher dispatcher, InternalActorRef parent)
         {
             _self = self;
             _props = props;
             _systemImpl = system;
             Parent = parent;
-            Dispatcher = dispatcher;            
+            Dispatcher = dispatcher;
+            
         }
 
         public object CurrentMessage { get; private set; }

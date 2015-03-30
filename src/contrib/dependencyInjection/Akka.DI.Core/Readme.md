@@ -30,6 +30,11 @@ Let's walk through the process of creating one for CastleWindsor container. You 
         {
             throw new NotImplementedException();
         }
+
+        public void Release(ActorBase actor)
+        {
+            throw new NotImplementedException();
+        }
 	}
 
 Add a constructor and private fields.
@@ -78,12 +83,20 @@ Secondly you need to implement the CreateActorFactory method which will be used 
             return () => (ActorBase)container.Resolve(GetType(actorName));
         }
 
-Lastly, you implement the Create<TActor> which is used register the Props configuration for the referenced Actor Type with the ActorSystem. This method will always be the same implementation. 
+Thirdly, you implement the Create<TActor> which is used register the Props configuration for the referenced Actor Type with the ActorSystem. This method will always be the same implementation. 
 
         public Props Create<TActor>() where TActor : ActorBase
         {
             return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
         }
+
+Lastly, you implement the Release method which in this instance is very simple.
+
+      public void Release(ActorBase actor)
+        {
+            this.container.Release(actor);
+        }
+**Note: For further details on the importance of the release method please read the following blog [post](http://blog.ploeh.dk/2014/05/19/di-friendly-framework/).**
 
 So with that you can do something like the following code example:
 

@@ -315,13 +315,21 @@ namespace Akka.Actor
                                     Publish(new Debug(_self.Path.ToString(), ActorType, "Stopped"));
 
                                 ClearActor(a);
+                                ReleaseActor(a);
                                 ClearActorCell();
+                                
                                 _actor = null;
+                                
                             }
                         }
                     }
                 }
             }
+        }
+
+        private void ReleaseActor(ActorBase a)
+        {
+            _props.Release(a);
         }
 
         private void FinishRecreate(Exception cause, ActorBase failedActor)

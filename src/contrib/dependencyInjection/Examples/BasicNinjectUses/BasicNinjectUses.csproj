@@ -4,16 +4,17 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{FDF09D18-B68E-4B95-B1F6-B89D9C6C3AE9}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{4B693CFF-F14F-4924-95A1-5FA896D749D9}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Akka.DI.Core</RootNamespace>
-    <AssemblyName>Akka.DI.Core</AssemblyName>
+    <RootNamespace>BasicNinjectUses</RootNamespace>
+    <AssemblyName>BasicNinjectUses</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -24,6 +25,7 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -31,9 +33,11 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
-    <DocumentationFile>bin\Release\Akka.DI.Core.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Ninject">
+      <HintPath>..\contrib\dependencyInjection\Akka.DI.Ninject\bin\Debug\Ninject.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -43,26 +47,40 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\SharedAssemblyInfo.cs">
-      <Link>Properties\SharedAssemblyInfo.cs</Link>
-    </Compile>
-    <Compile Include="DIActorContextAdapter.cs" />
-    <Compile Include="DIActorProducer.cs" />
-    <Compile Include="DIExt.cs" />
-    <Compile Include="DIExtension.cs" />
-    <Compile Include="Extensions.cs" />
-    <Compile Include="IDependencyResolver.cs" />
+    <Compile Include="Actors.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj">
+    <ProjectReference Include="..\..\Akka.DI.Core\Akka.DI.Core.csproj">
+      <Project>{fdf09d18-b68e-4b95-b1f6-b89d9c6c3ae9}</Project>
+      <Name>Akka.DI.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Akka.DI.Ninject\Akka.DI.Ninject.csproj">
+      <Project>{c22a9758-ad7d-4078-bd67-4829bacdfeb6}</Project>
+      <Name>Akka.DI.Ninject</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\core\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Akka.DI.Core.nuspec" />
-    <None Include="Readme.md" />
+    <None Include="app.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\HashPoolWOResizer.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

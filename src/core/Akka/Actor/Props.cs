@@ -523,6 +523,12 @@ namespace Akka.Actor
             {
                 get { return typeof(ActorBase); }
             }
+
+
+            public void Release(ActorBase actor)
+            {
+                actor = null;
+            }
         }
 
         private class ActivatorProducer : IndirectActorProducer
@@ -545,6 +551,12 @@ namespace Akka.Actor
             {
                 get { return _actorType; }
             }
+
+
+            public void Release(ActorBase actor)
+            {
+                actor = null;
+            }
         }
 
         private class FactoryConsumer<TActor> : IndirectActorProducer where TActor : ActorBase
@@ -565,6 +577,12 @@ namespace Akka.Actor
             {
                 get { return typeof(TActor); }
             }
+
+
+            public void Release(ActorBase actor)
+            {
+                actor = null;
+            }
         }
 
         #endregion
@@ -581,6 +599,19 @@ namespace Akka.Actor
                 return new ActivatorProducer(type, args);
             }
             throw new ArgumentException(string.Format("Unknown actor producer [{0}]", type.FullName));
+        }
+
+        internal void Release(ActorBase actor)
+        {
+            try
+            {
+                if (this.producer != null) this.producer.Release(actor);
+            }
+            finally
+            {
+                actor = null;	
+            }
+
         }
     }
 
@@ -672,5 +703,12 @@ namespace Akka.Actor
         ///     be created. The returned type is not used to produce the actor.
         /// </summary>
         Type ActorType { get; }
+
+        /// <summary>
+        /// This method is used by [[Props]] to signal the Producer that it can
+        /// release it's reference.  <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501/ref=sr_1_1?ie=UTF8&qid=1425861096&sr=8-1&keywords=mark+seemann">HERE</see> 
+        /// </summary>
+        /// <param name="actor"></param>
+        void Release(ActorBase actor);
     }
 }

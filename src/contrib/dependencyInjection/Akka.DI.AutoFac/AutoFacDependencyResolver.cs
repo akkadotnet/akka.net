@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.DI.Core;
 using Autofac;
+using System.Text;
+using System.Runtime.CompilerServices;
 
 namespace Akka.DI.AutoFac
 {
@@ -14,23 +19,25 @@ namespace Akka.DI.AutoFac
     /// </summary>
     public class AutoFacDependencyResolver : IDependencyResolver
     {
-        private IContainer container;
+        private ILifetimeScope container;
         private ConcurrentDictionary<string, Type> typeCache;
         private ActorSystem system;
+        private ConditionalWeakTable<ActorBase, ILifetimeScope> references;
 
         /// <summary>
         /// AutoFacDependencyResolver Constructor
         /// </summary>
-        /// <param name="container">Instance to the AutoFac IContainer</param>
+        /// <param name="rootScope">Instance to the AutoFac IContainer</param>
         /// <param name="system">Instance of the ActorSystem</param>
-        public AutoFacDependencyResolver(IContainer container, ActorSystem system)
+        public AutoFacDependencyResolver(ILifetimeScope rootScope, ActorSystem system)
         {
             if (system == null) throw new ArgumentNullException("system");
-            if (container == null) throw new ArgumentNullException("container");
-            this.container = container;
+            if (rootScope == null) throw new ArgumentNullException("container");
+            this.container = rootScope;
             typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
             this.system = system;
             this.system.AddDependencyResolver(this);
+            this.references = new ConditionalWeakTable<ActorBase, ILifetimeScope>();
         }
 
         /// <summary>
@@ -65,7 +72,10 @@ namespace Akka.DI.AutoFac
             return () =>
             {
                 Type actorType = this.GetType(actorName);
-                return (ActorBase)container.Resolve(actorType);
+                var scope = container.BeginLifetimeScope();
+                var actor = (ActorBase)scope.Resolve(actorType);
+                references.Add(actor, scope);
+                return actor;
             };
         }
         /// <summary>
@@ -78,6 +88,22 @@ namespace Akka.DI.AutoFac
             return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
         }
 
+        /// <summary>
+        /// This method is used to signal the DI Container that it can
+        /// release it's reference to the actor.  <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501/ref=sr_1_1?ie=UTF8&qid=1425861096&sr=8-1&keywords=mark+seemann">HERE</see> 
+        /// </summary>
+        /// <param name="actor"></param>
+
+        public void Release(ActorBase actor)
+        {
+            ILifetimeScope scope;
+
+            if (references.TryGetValue(actor, out scope))
+            {
+                scope.Dispose();
+                references.Remove(actor);
+            }
+        }
     }
     internal static class Extensions
     {

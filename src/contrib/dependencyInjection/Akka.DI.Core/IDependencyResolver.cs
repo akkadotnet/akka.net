@@ -27,5 +27,11 @@ namespace Akka.DI.Core
         /// <typeparam name="TActor"></typeparam>
         /// <returns>Props configuration instance</returns>
         Props Create<TActor>() where TActor : ActorBase;
+        /// <summary>
+        /// This method is used to signal the DI Container that it can
+        /// release it's reference to the actor.  <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501/ref=sr_1_1?ie=UTF8&qid=1425861096&sr=8-1&keywords=mark+seemann">HERE</see> 
+        /// </summary>
+        /// <param name="actor"></param>
+        void Release(ActorBase actor);
     }
 }
