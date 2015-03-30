@@ -59,7 +59,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Scatter_gather_router_must_deliver_a_broadcast_message_using_tell()
         {
-            var doneLatch = new TestLatch(Sys, 2);
+            var doneLatch = new TestLatch(2);
             var counter1 = new AtomicCounter(0);
             var counter2 = new AtomicCounter(0);
             var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
@@ -114,7 +114,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Scatter_gather_router_must_return_response_even_if_one_of_the_actors_has_stopped()
         {
-            var shutdownLatch = new TestLatch(Sys,1);
+            var shutdownLatch = new TestLatch(1);
             var actor1 = Sys.ActorOf(Props.Create(() => new StopActor(1)));
             var actor2 = Sys.ActorOf(Props.Create(() => new StopActor(14)));
             var paths = new []{actor1,actor2};

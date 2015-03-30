@@ -34,7 +34,7 @@ namespace Akka.Tests.Routing
         public void Random_must_be_able_to_shut_down_its_instance()
         {
             const int routeeCount = 7;
-            var testLatch = new TestLatch(Sys, routeeCount);
+            var testLatch = new TestLatch(routeeCount);
             var router = Sys.ActorOf(new RandomPool(routeeCount).Props(Props.Create(() => new HelloWorldActor(testLatch))));
             router.Tell("hello", TestActor);
             router.Tell("hello", TestActor);

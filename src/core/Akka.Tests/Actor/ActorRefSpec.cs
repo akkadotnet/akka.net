@@ -188,7 +188,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public void An_ActorRef_should_support_reply_via_Sender()
         {
-            var latch = new TestLatch(Sys, 4);
+            var latch = new TestLatch(4);
             var serverRef = Sys.ActorOf(Props.Create<ReplyActor>());
             var clientRef = Sys.ActorOf(Props.Create(() => new SenderActor(serverRef, latch)));
 

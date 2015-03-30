@@ -43,7 +43,7 @@ namespace Akka.Tests.Actor
         {
             //arrange
             var target = Sys.ActorOf<TargetActor>();
-            var latch = new TestLatch(Sys);
+            var latch = new TestLatch();
 
             //act
             target.Tell(Tuple.Create(latch, TimeSpan.FromSeconds(2)));

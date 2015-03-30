@@ -13,8 +13,8 @@ namespace Akka.Tests.Routing
         public void Listener_must_listen_in()
         {
             //arrange
-            var fooLatch = new TestLatch(Sys, 2);
-            var barLatch = new TestLatch(Sys, 2);
+            var fooLatch = new TestLatch(2);
+            var barLatch = new TestLatch(2);
             var barCount = new AtomicCounter(0);
 
             var broadcast = Sys.ActorOf<BroadcastActor>();
