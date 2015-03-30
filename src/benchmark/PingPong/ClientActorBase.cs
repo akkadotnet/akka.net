@@ -6,13 +6,13 @@ namespace PingPong
 {
     public class ClientActorBase : ActorBase
     {
-        private readonly ActorRef _actor;
+        private readonly IActorRef _actor;
         private readonly TaskCompletionSource<bool> _latch;
         private long _received;
         private readonly long _repeat;
         private long _sent;
 
-        public ClientActorBase(ActorRef actor, long repeat, TaskCompletionSource<bool> latch)
+        public ClientActorBase(IActorRef actor, long repeat, TaskCompletionSource<bool> latch)
         {
             _actor = actor;
             _repeat = repeat;

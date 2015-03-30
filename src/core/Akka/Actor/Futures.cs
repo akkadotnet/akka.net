@@ -33,7 +33,7 @@ namespace Akka.Actor
             return result;
         }
 
-        internal static ActorRef ResolveReplyTo()
+        internal static IActorRef ResolveReplyTo()
         {
             if (ActorCell.Current != null)
                 return ActorCell.Current.Self;
@@ -46,8 +46,8 @@ namespace Akka.Actor
             if (ActorCell.Current != null)
                 return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
 
-            if (self is InternalActorRef)
-                return self.AsInstanceOf<InternalActorRef>().Provider;
+            if (self is IInternalActorRef)
+                return self.AsInstanceOf<IInternalActorRef>().Provider;
 
             if (self is ActorSelection)
                 return ResolveProvider(self.AsInstanceOf<ActorSelection>().Anchor);
@@ -176,9 +176,9 @@ namespace Akka.Actor
         private static readonly Status.Failure ActorStopResult = new Status.Failure(new ActorKilledException("Stopped"));
 
         public static PromiseActorRef Apply(ActorRefProvider provider, TimeSpan timeout, object targetName,
-            string messageClassName, ActorRef sender = null)
+            string messageClassName, IActorRef sender = null)
         {
-            sender = sender ?? NoSender;
+            sender = sender ?? ActorRefs.NoSender;
             var result = new TaskCompletionSource<object>();
             var a = new PromiseActorRef(provider, result, messageClassName);
             var scheduler = provider.Guardian.Underlying.System.Scheduler.Advanced;
@@ -205,14 +205,14 @@ namespace Akka.Actor
         #endregion
 
         //TODO: ActorCell.emptyActorRefSet ?
-        private readonly AtomicReference<HashSet<ActorRef>> _watchedByDoNotCallMeDirectly = new AtomicReference<HashSet<ActorRef>>();
+        private readonly AtomicReference<HashSet<IActorRef>> _watchedByDoNotCallMeDirectly = new AtomicReference<HashSet<IActorRef>>();
 
-        private HashSet<ActorRef> WatchedBy
+        private HashSet<IActorRef> WatchedBy
         {
             get { return _watchedByDoNotCallMeDirectly; }
         }
 
-        private bool UpdateWatchedBy(HashSet<ActorRef> oldWatchedBy, HashSet<ActorRef> newWatchedBy)
+        private bool UpdateWatchedBy(HashSet<IActorRef> oldWatchedBy, HashSet<IActorRef> newWatchedBy)
         {
             return _watchedByDoNotCallMeDirectly.CompareAndSet(oldWatchedBy, newWatchedBy);
         }
@@ -225,7 +225,7 @@ namespace Akka.Actor
         /// <summary>
         /// Returns false if the <see cref="Result"/> is already completed.
         /// </summary>
-        private bool AddWatcher(ActorRef watcher)
+        private bool AddWatcher(IActorRef watcher)
         {
             if (WatchedBy.Contains(watcher))
             {
@@ -234,7 +234,7 @@ namespace Akka.Actor
             return UpdateWatchedBy(WatchedBy, WatchedBy.CopyAndAdd(watcher)) || AddWatcher(watcher);
         }
 
-        private void RemoveWatcher(ActorRef watcher)
+        private void RemoveWatcher(IActorRef watcher)
         {
             if (!WatchedBy.Contains(watcher))
             {
@@ -243,10 +243,10 @@ namespace Akka.Actor
             if (!UpdateWatchedBy(WatchedBy, WatchedBy.CopyAndRemove(watcher))) RemoveWatcher(watcher);
         }
 
-        private HashSet<ActorRef> ClearWatchers()
+        private HashSet<IActorRef> ClearWatchers()
         {
             //TODO: ActorCell.emptyActorRefSet ?
-            if (WatchedBy == null) return new HashSet<ActorRef>();
+            if (WatchedBy == null) return new HashSet<IActorRef>();
             if (!UpdateWatchedBy(WatchedBy, null)) return ClearWatchers();
             else return WatchedBy;
         }
@@ -262,7 +262,7 @@ namespace Akka.Actor
             return _stateDoNotCallMeDirectly.CompareAndSet(oldState, newState);
         }
 
-        public override InternalActorRef Parent
+        public override IInternalActorRef Parent
         {
             get { return Provider.TempContainer; }
         }
@@ -316,7 +316,7 @@ namespace Akka.Actor
             }
         }
 
-        protected override void TellInternal(object message, ActorRef sender)
+        protected override void TellInternal(object message, IActorRef sender)
         {
             if (message is SystemMessage)
             {
@@ -345,7 +345,7 @@ namespace Akka.Actor
             else if (message is DeathWatchNotification)
             {
                 var dw = message as DeathWatchNotification;
-                Tell(new Terminated(dw.Actor, dw.ExistenceConfirmed, dw.AddressTerminated));
+                Tell(new Terminated(dw.Actor, dw.ExistenceConfirmed, dw.AddressTerminated), this);
             }
             else if (message is Watch)
             {

@@ -4,7 +4,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 {
     public class NestingActor : ActorBase
     {
-        private readonly ActorRef _nested;
+        private readonly IActorRef _nested;
 
         public NestingActor(bool createTestActorRef)
         {

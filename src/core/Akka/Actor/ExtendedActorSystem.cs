@@ -18,13 +18,13 @@
         /// Gets the top-level supervisor of all user actors created using 
         /// <see cref="ActorSystem.ActorOf">system.ActorOf(...)</see>
         /// </summary>
-        public abstract InternalActorRef Guardian { get; }
+        public abstract IInternalActorRef Guardian { get; }
 
 
         /// <summary>
         /// Gets the top-level supervisor of all system-internal services like logging.
         /// </summary>
-        public abstract InternalActorRef SystemGuardian { get; }
+        public abstract IInternalActorRef SystemGuardian { get; }
 
         /// <summary>
         /// Gets the actor producer pipeline resolver for current actor system. It may be used by
@@ -35,12 +35,12 @@
         /// <summary>Creates a new system actor in the "/system" namespace. This actor 
         /// will be shut down during system shutdown only after all user actors have
         /// terminated.</summary>
-        public abstract ActorRef SystemActorOf(Props props, string name = null);
+        public abstract IActorRef SystemActorOf(Props props, string name = null);
 
         /// <summary>Creates a new system actor in the "/system" namespace. This actor 
         /// will be shut down during system shutdown only after all user actors have
         /// terminated.</summary>
-        public abstract ActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase, new();
+        public abstract IActorRef SystemActorOf<TActor>(string name = null) where TActor : ActorBase, new();
 
         //TODO: Missing threadFactory, dynamicAccess, printTree
         //  /**

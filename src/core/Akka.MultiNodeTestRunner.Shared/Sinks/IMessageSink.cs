@@ -38,7 +38,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /// 
         /// During instances of when a test run has been successfully started, this method
         /// will wait up to 10 seconds for any <see cref="Actor"/> instances included as part of this
-        /// <see cref="IMessageSink"/> to shutdown, via the <see cref="GracefulStopSupport.GracefulStop(ActorRef, TimeSpan)"/> method.
+        /// <see cref="IMessageSink"/> to shutdown, via the <see cref="GracefulStopSupport.GracefulStop(IActorRef, TimeSpan)"/> method.
         /// </summary>
         Task<bool> Close(ActorSystem context);
 

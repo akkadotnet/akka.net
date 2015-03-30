@@ -20,9 +20,9 @@ namespace Akka.Remote.TestKit
     /// </summary>
     partial class TestConductor //Player trait in JVM version
     {
-        ActorRef _client;
+        IActorRef _client;
 
-        public ActorRef Client
+        public IActorRef Client
         {
             get
             {
@@ -55,11 +55,11 @@ namespace Akka.Remote.TestKit
 
         private class WaitForClientFSMToConnect : UntypedActor
         {
-            ActorRef _waiting;
+            IActorRef _waiting;
 
             protected override void OnReceive(object message)
             {
-                var fsm = message as ActorRef;
+                var fsm = message as IActorRef;
                 if (fsm != null)
                 {
                     _waiting = Sender;
@@ -171,10 +171,10 @@ namespace Akka.Remote.TestKit
         {
             readonly RemoteConnection _channel;
             public RemoteConnection Channel { get { return _channel; } }
-            readonly Tuple<string, ActorRef> _runningOp;
-            public Tuple<string, ActorRef> RunningOp { get { return _runningOp; } }
+            readonly Tuple<string, IActorRef> _runningOp;
+            public Tuple<string, IActorRef> RunningOp { get { return _runningOp; } }
             
-            public Data(RemoteConnection channel, Tuple<string, ActorRef> runningOp)
+            public Data(RemoteConnection channel, Tuple<string, IActorRef> runningOp)
             {
                 _channel = channel;
                 _runningOp = runningOp;
@@ -212,7 +212,7 @@ namespace Akka.Remote.TestKit
                 return !Equals(left, right);
             }
 
-            public Data Copy(Tuple<string, ActorRef> runningOp)
+            public Data Copy(Tuple<string, IActorRef> runningOp)
             {
                 return new Data(Channel, runningOp);
             }
@@ -511,14 +511,14 @@ namespace Akka.Remote.TestKit
         int _reconnects;
         readonly TimeSpan _backoff;
         readonly int _poolSize;
-        readonly ActorRef _fsm;
+        readonly IActorRef _fsm;
         readonly LoggingAdapter _log;
         readonly IScheduler _scheduler;
         private bool _loggedDisconnect = false;
         
         Deadline _nextAttempt;
         
-        public PlayerHandler(INode server, int reconnects, TimeSpan backoff, int poolSize, ActorRef fsm,
+        public PlayerHandler(INode server, int reconnects, TimeSpan backoff, int poolSize, IActorRef fsm,
             LoggingAdapter log, IScheduler scheduler)
         {
             _server = server;

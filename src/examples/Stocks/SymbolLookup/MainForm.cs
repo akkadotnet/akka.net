@@ -15,7 +15,7 @@ namespace SymbolLookup
         private readonly object m_lock = new object();
         public ImmutableDictionary<string, Tuple<Quote, IFeed>> StockData { get; set; }
         public ActorSystem ActorSystem;
-        public ActorRef StockActor;
+        public IActorRef StockActor;
 
         public event EventHandler<FullStockData> DataAvailable;
         public event EventHandler<string> StatusChange;
@@ -80,7 +80,7 @@ namespace SymbolLookup
             //Do nothing
             if (string.IsNullOrEmpty(txtSymbols.Text))
                 return;
-            StockActor.Tell(txtSymbols.Text, ActorRef.NoSender);
+            StockActor.Tell(txtSymbols.Text, ActorRefs.NoSender);
         }
     }
 }

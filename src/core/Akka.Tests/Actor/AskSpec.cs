@@ -26,15 +26,15 @@ namespace Akka.Tests.Actor
 
         public class WaitActor : UntypedActor
         {
-            public WaitActor(ActorRef replyActor, ActorRef testActor)
+            public WaitActor(IActorRef replyActor, IActorRef testActor)
             {
                 _replyActor = replyActor;
                 _testActor = testActor;
             }
 
-            private ActorRef _replyActor;
+            private IActorRef _replyActor;
 
-            private ActorRef _testActor;
+            private IActorRef _testActor;
 
             protected override void OnReceive(object message)
             {

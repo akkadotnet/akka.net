@@ -19,7 +19,7 @@ namespace Akka.Cluster.Tests
         akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
         akka.remote.helios.tcp.port = 0";
 
-        public ActorRef Self { get { return TestActor; } }
+        public IActorRef Self { get { return TestActor; } }
 
         readonly Address _selfAddress;
         readonly Cluster _cluster;

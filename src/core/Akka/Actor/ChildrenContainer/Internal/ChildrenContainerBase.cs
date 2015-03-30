@@ -17,12 +17,12 @@ namespace Akka.Actor.Internal
         public virtual bool IsTerminating { get { return false; } }
         public virtual bool IsNormal { get { return true; } }
         public abstract ChildrenContainer Add(string name, ChildRestartStats stats);
-        public abstract ChildrenContainer Remove(ActorRef child);
+        public abstract ChildrenContainer Remove(IActorRef child);
         public abstract ChildrenContainer Reserve(string name);
-        public abstract ChildrenContainer ShallDie(ActorRef actor);
+        public abstract ChildrenContainer ShallDie(IActorRef actor);
         public abstract ChildrenContainer Unreserve(string name);
 
-        public IReadOnlyList<InternalActorRef> Children
+        public IReadOnlyList<IInternalActorRef> Children
         {
             get
             {
@@ -53,7 +53,7 @@ namespace Akka.Actor.Internal
             return false;
         }
 
-        public bool TryGetByRef(ActorRef actor, out ChildRestartStats childRestartStats)
+        public bool TryGetByRef(IActorRef actor, out ChildRestartStats childRestartStats)
         {
             ChildStats stats;
             if (InternalChildren.TryGet(actor.Path.Name, out stats))
@@ -70,7 +70,7 @@ namespace Akka.Actor.Internal
             return false;
         }
 
-        public bool Contains(ActorRef actor)
+        public bool Contains(IActorRef actor)
         {
             ChildRestartStats stats;
             return TryGetByRef(actor, out stats);

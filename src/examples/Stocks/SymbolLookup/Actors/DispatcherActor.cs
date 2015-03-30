@@ -14,8 +14,8 @@ namespace SymbolLookup.Actors
     {
         private readonly EventHandler<FullStockData> _dataHandler;
         private readonly EventHandler<string> _statusHandler;
-        private ActorRef rss = Context.ActorOf(Props.Create(() => new SymbolRssActor(new HttpFeedFactory())), "symbolrss");
-        private ActorRef stock = Context.ActorOf(Props.Create(() => new StockQuoteActor(new HttpClient())), "symbolquotes");
+        private IActorRef rss = Context.ActorOf(Props.Create(() => new SymbolRssActor(new HttpFeedFactory())), "symbolrss");
+        private IActorRef stock = Context.ActorOf(Props.Create(() => new StockQuoteActor(new HttpClient())), "symbolquotes");
         private int _stockActorNumber = 1;
         public DispatcherActor(EventHandler<FullStockData> dataHandler, EventHandler<string> statusHandler)
         {
@@ -39,7 +39,7 @@ namespace SymbolLookup.Actors
         {
             _statusHandler(this, string.Format("Received data for {0}", sd.Symbol));
             _dataHandler(this, sd);
-            ((InternalActorRef)Sender).Stop(); //tell the sender to shut down
+            ((IInternalActorRef)Sender).Stop(); //tell the sender to shut down
         }
 
         public void Handle(Failure fail)

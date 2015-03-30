@@ -42,7 +42,7 @@ namespace Akka.Persistence.TestKit.Journal
         {
         }
 
-        protected ActorRef Journal { get { return Extension.JournalFor(null); } }
+        protected IActorRef Journal { get { return Extension.JournalFor(null); } }
 
         private static Config ConfigFromTemplate(Type journalType)
         {
@@ -59,7 +59,7 @@ namespace Akka.Persistence.TestKit.Journal
                    && p.SequenceNr == seqNr;
         }
 
-        protected void WriteMessages(int from, int to, string pid, ActorRef sender)
+        protected void WriteMessages(int from, int to, string pid, IActorRef sender)
         {
             var messages = Enumerable.Range(from, to).Select(i => new Persistent("a-" + i, i, pid, false, sender)).ToArray();
             var probe = CreateTestProbe();

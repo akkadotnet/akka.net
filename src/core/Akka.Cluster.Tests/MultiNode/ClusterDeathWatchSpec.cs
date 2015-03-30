@@ -73,9 +73,9 @@ namespace Akka.Cluster.Tests.MultiNode
             _config = config;
         }
 
-        private ActorRef _remoteWatcher;
+        private IActorRef _remoteWatcher;
 
-        protected ActorRef RemoteWatcher
+        protected IActorRef RemoteWatcher
         {
             get
             {
@@ -207,7 +207,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         RemoteWatcher.Tell(Remote.RemoteWatcher.Stats.Empty);
-                        ExpectMsg<Remote.RemoteWatcher.Stats>().WatchingRefs.Contains(new Tuple<ActorRef, ActorRef>(subject5, TestActor)).ShouldBeTrue();
+                        ExpectMsg<Remote.RemoteWatcher.Stats>().WatchingRefs.Contains(new Tuple<IActorRef, IActorRef>(subject5, TestActor)).ShouldBeTrue();
                     });
                 }, _config.First);
                 EnterBarrier("remote-watch");
@@ -331,10 +331,10 @@ namespace Akka.Cluster.Tests.MultiNode
         /// </summary>
         class Observer : ReceiveActor
         {
-            private readonly ActorRef _testActorRef;
+            private readonly IActorRef _testActorRef;
             readonly TestLatch _watchEstablished;
 
-            public Observer(ActorPath path2, ActorPath path3, TestLatch watchEstablished, ActorRef testActorRef)
+            public Observer(ActorPath path2, ActorPath path3, TestLatch watchEstablished, IActorRef testActorRef)
             {
                 _watchEstablished = watchEstablished;
                 _testActorRef = testActorRef;
@@ -364,9 +364,9 @@ namespace Akka.Cluster.Tests.MultiNode
 
         class DumbObserver : ReceiveActor
         {
-            private readonly ActorRef _testActorRef;
+            private readonly IActorRef _testActorRef;
 
-            public DumbObserver(ActorPath path2, ActorRef testActorRef)
+            public DumbObserver(ActorPath path2, IActorRef testActorRef)
             {
                 _testActorRef = testActorRef;
 

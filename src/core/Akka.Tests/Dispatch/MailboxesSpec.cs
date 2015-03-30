@@ -1,4 +1,5 @@
 ﻿using System;
+using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.TestKit;

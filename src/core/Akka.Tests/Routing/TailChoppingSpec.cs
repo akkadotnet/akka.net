@@ -82,7 +82,7 @@ namespace Akka.Tests.Routing
             }
         }
 
-        public Func<Func<ActorRef, int>, bool> OneOfShouldEqual(int what, IEnumerable<ActorRef> actors)
+        public Func<Func<IActorRef, int>, bool> OneOfShouldEqual(int what, IEnumerable<IActorRef> actors)
         {
             return func =>
             {
@@ -91,7 +91,7 @@ namespace Akka.Tests.Routing
             };
         }
 
-        public Func<Func<ActorRef, int>, bool> AllShouldEqual(int what, IEnumerable<ActorRef> actors)
+        public Func<Func<IActorRef, int>, bool> AllShouldEqual(int what, IEnumerable<IActorRef> actors)
         {
             return func =>
             {
@@ -137,7 +137,7 @@ namespace Akka.Tests.Routing
             probe.Send(routedActor, "");
             probe.ExpectMsg("ack");
 
-            var actorList = new List<ActorRef> { actor1, actor2 };
+            var actorList = new List<IActorRef> { actor1, actor2 };
             Assert.True(OneOfShouldEqual(1, actorList)((x => (int)x.Ask("times").Result)));
 
             routedActor.Tell(new Broadcast("stop"));
@@ -157,7 +157,7 @@ namespace Akka.Tests.Routing
             probe.Send(routedActor, "");
             probe.ExpectMsg<Status.Failure>();
 
-            var actorList = new List<ActorRef> { actor1, actor2 };
+            var actorList = new List<IActorRef> { actor1, actor2 };
             Assert.True(AllShouldEqual(1, actorList)((x => (int)x.Ask("times").Result)));
 
             routedActor.Tell(new Broadcast("stop"));

@@ -42,7 +42,7 @@ type Akka.Actor.ITellScheduler with
     /// <param name="receiver">Message receiver.</param>
     /// <param name="sender">Optional actor reference set up as message sender</param>
     /// <param name="cancelable">Optional cancelation token</param>
-    member this.ScheduleTellRepeatedly(after: TimeSpan, every: TimeSpan, receiver: ActorRef, message: 'Message, ?sender: ActorRef, ?cancelable: ICancelable) : unit =
+    member this.ScheduleTellRepeatedly(after: TimeSpan, every: TimeSpan, receiver: IActorRef, message: 'Message, ?sender: IActorRef, ?cancelable: ICancelable) : unit =
         let s = match sender with
                 | Some aref -> aref
                 | None -> ActorCell.GetCurrentSelfOrNoSender()
@@ -58,7 +58,7 @@ type Akka.Actor.ITellScheduler with
     /// <param name="receiver">Message receiver.</param>
     /// <param name="sender">Optional actor reference set up as message sender</param>
     /// <param name="cancelable">Optional cancelation token</param>
-    member this.ScheduleTellOnce(after: TimeSpan, receiver: ActorRef, message: 'Message, ?sender: ActorRef, ?cancelable: ICancelable) : unit =
+    member this.ScheduleTellOnce(after: TimeSpan, receiver: IActorRef, message: 'Message, ?sender: IActorRef, ?cancelable: ICancelable) : unit =
         let s = match sender with
                 | Some aref -> aref
                 | None -> ActorCell.GetCurrentSelfOrNoSender()

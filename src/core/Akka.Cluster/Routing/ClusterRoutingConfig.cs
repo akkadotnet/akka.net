@@ -362,7 +362,7 @@ namespace Akka.Cluster.Routing
         }
 
         /// <summary>
-        /// Fills in self address for local <see cref="ActorRef"/>
+        /// Fills in self address for local <see cref="IActorRef"/>
         /// </summary>
         public Address FullAddress(Routee routee)
         {

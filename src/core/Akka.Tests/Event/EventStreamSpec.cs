@@ -221,9 +221,9 @@ namespace Akka.Tests.Event
 
         public class SetTarget
         {
-            public ActorRef Ref { get; private set; }
+            public IActorRef Ref { get; private set; }
 
-            public SetTarget(ActorRef @ref)
+            public SetTarget(IActorRef @ref)
             {
                 this.Ref = @ref;
             }
@@ -273,7 +273,7 @@ namespace Akka.Tests.Event
 
         public class MyLog : UntypedActor
         {
-            private ActorRef dst = Context.System.DeadLetters;
+            private IActorRef dst = Context.System.DeadLetters;
 
             protected override void OnReceive(object message)
             {

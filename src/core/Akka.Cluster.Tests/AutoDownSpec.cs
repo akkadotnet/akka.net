@@ -35,9 +35,9 @@ namespace Akka.Cluster.Tests
 
         class AutoDownTestActor : AutoDownBase
         {
-            readonly ActorRef _probe;
+            readonly IActorRef _probe;
 
-            public AutoDownTestActor(TimeSpan autoDownUnreachableAfter, ActorRef probe): base(autoDownUnreachableAfter)
+            public AutoDownTestActor(TimeSpan autoDownUnreachableAfter, IActorRef probe): base(autoDownUnreachableAfter)
             {
                 _probe = probe;
             }
@@ -65,7 +65,7 @@ namespace Akka.Cluster.Tests
             }
         }
 
-        private ActorRef AutoDownActor(TimeSpan autoDownUnreachableAfter)
+        private IActorRef AutoDownActor(TimeSpan autoDownUnreachableAfter)
         {
             return
                 Sys.ActorOf(new Props(typeof(AutoDownTestActor),

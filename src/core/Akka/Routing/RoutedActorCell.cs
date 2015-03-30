@@ -19,7 +19,7 @@ namespace Akka.Routing
         private readonly Props _routeeProps;
 
 
-        public RoutedActorCell(ActorSystemImpl system, InternalActorRef self, Props routerProps, MessageDispatcher dispatcher, Props routeeProps, InternalActorRef supervisor)
+        public RoutedActorCell(ActorSystemImpl system, IInternalActorRef self, Props routerProps, MessageDispatcher dispatcher, Props routeeProps, IInternalActorRef supervisor)
             : base(system, self, routerProps, dispatcher, supervisor)
         {
             _routeeProps = routeeProps;
@@ -149,13 +149,13 @@ namespace Akka.Routing
             RemoveRoutees(new List<Routee>() { routee }, stopChild);
         }
 
-        public override void Post(ActorRef sender, object message)
+        public override void Post(IActorRef sender, object message)
         {
             if (message is SystemMessage) base.Post(sender, message);
             else SendMessage(sender, message);
         }
 
-        private void SendMessage(ActorRef sender, object message)
+        private void SendMessage(IActorRef sender, object message)
         {
             //Route the message via the router to the selected destination.
             if (_routerConfig.IsManagementMessage(message))

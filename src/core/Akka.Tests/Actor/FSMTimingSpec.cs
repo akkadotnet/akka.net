@@ -10,11 +10,11 @@ namespace Akka.Tests.Actor
 
     public class FSMTimingSpec : AkkaSpec
     {
-        public ActorRef Self { get { return TestActor; } }
+        public IActorRef Self { get { return TestActor; } }
 
-        public ActorRef _fsm;
+        public IActorRef _fsm;
 
-        public ActorRef fsm
+        public IActorRef fsm
         {
             get { return _fsm ?? (_fsm = Sys.ActorOf(Props.Create(() => new StateMachine(Self)), "fsm")); }
         }
@@ -208,13 +208,13 @@ namespace Akka.Tests.Actor
 
         #region Actors
 
-        static void Suspend(ActorRef actorRef)
+        static void Suspend(IActorRef actorRef)
         {
             actorRef.Match()
                 .With<ActorRefWithCell>(l => l.Suspend());
         }
 
-        static void Resume(ActorRef actorRef)
+        static void Resume(IActorRef actorRef)
         {
             actorRef.Match()
                 .With<ActorRefWithCell>(l => l.Resume());
@@ -265,7 +265,7 @@ namespace Akka.Tests.Actor
 
         public class StateMachine : FSM<State, int>, LoggingFSM
         {
-            public StateMachine(ActorRef tester)
+            public StateMachine(IActorRef tester)
             {
                 Tester = tester;
                 StartWith(State.Initial, 0);
@@ -466,7 +466,7 @@ namespace Akka.Tests.Actor
 
 
 
-            public ActorRef Tester { get; private set; }
+            public IActorRef Tester { get; private set; }
         }
 
         #endregion

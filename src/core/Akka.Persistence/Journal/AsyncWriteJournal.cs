@@ -11,7 +11,7 @@ namespace Akka.Persistence.Journal
         private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent;
         protected readonly bool CanPublish;
         private readonly PersistenceExtension _extension;
-        private readonly ActorRef _resequencer;
+        private readonly IActorRef _resequencer;
 
         private long _resequencerCounter = 1L;
 
@@ -138,7 +138,7 @@ namespace Akka.Persistence.Journal
 
         internal sealed class Desequenced
         {
-            public Desequenced(object message, long sequenceNr, ActorRef target, ActorRef sender)
+            public Desequenced(object message, long sequenceNr, IActorRef target, IActorRef sender)
             {
                 Message = message;
                 SequenceNr = sequenceNr;
@@ -148,8 +148,8 @@ namespace Akka.Persistence.Journal
 
             public object Message { get; private set; }
             public long SequenceNr { get; private set; }
-            public ActorRef Target { get; private set; }
-            public ActorRef Sender { get; private set; }
+            public IActorRef Target { get; private set; }
+            public IActorRef Sender { get; private set; }
         }
 
         internal class Resequencer : ActorBase

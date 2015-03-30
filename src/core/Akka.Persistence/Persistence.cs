@@ -12,8 +12,8 @@ namespace Akka.Persistence
 
         private readonly Config _config;
         private readonly ExtendedActorSystem _system;
-        private readonly ActorRef _journal;
-        private readonly ActorRef _snapshotStore;
+        private readonly IActorRef _journal;
+        private readonly IActorRef _snapshotStore;
 
         public PersistenceSettings Settings { get; private set; }
 
@@ -30,24 +30,24 @@ namespace Akka.Persistence
             Settings = new PersistenceSettings(_system, _config);
         }
 
-        public string PersistenceId(ActorRef actor)
+        public string PersistenceId(IActorRef actor)
         {
             return actor.Path.ToStringWithoutAddress();
         }
 
-        public ActorRef SnapshotStoreFor(string persistenceId)
+        public IActorRef SnapshotStoreFor(string persistenceId)
         {
             // currently always returns _snapshotStore, but in future it may return dedicated actor for each persistence id
             return _snapshotStore;
         }
 
-        public ActorRef JournalFor(string persistenceId)
+        public IActorRef JournalFor(string persistenceId)
         {
             // currently always returns _journal, but in future it may return dedicated actor for each persistence id
             return _journal;
         }
 
-        private ActorRef CreatePlugin(string type, Func<Type, string> dispatcherSelector)
+        private IActorRef CreatePlugin(string type, Func<Type, string> dispatcherSelector)
         {
             var pluginConfigPath = _config.GetString(type + ".plugin");
             var pluginConfig = _system.Settings.Config.GetConfig(pluginConfigPath);

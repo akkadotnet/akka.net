@@ -4,7 +4,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 {
     public class ReplyActor : TActorBase
     {
-        private ActorRef _replyTo;
+        private IActorRef _replyTo;
 
         protected override bool ReceiveMessage(object message)
         {

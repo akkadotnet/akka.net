@@ -9,14 +9,14 @@ namespace Akka.Actor
     public sealed class
         Terminated : AutoReceivedMessage, PossiblyHarmful
     {
-        public Terminated(ActorRef actorRef, bool existenceConfirmed, bool addressTerminated)
+        public Terminated(IActorRef actorRef, bool existenceConfirmed, bool addressTerminated)
         {
             ActorRef = actorRef;
             ExistenceConfirmed = existenceConfirmed;
             AddressTerminated = addressTerminated;
         }
 
-        public ActorRef ActorRef { get; private set; }
+        public IActorRef ActorRef { get; private set; }
 
 
         public bool AddressTerminated { get; private set; }
@@ -48,14 +48,14 @@ namespace Akka.Actor
     //response to the Identity message, get identity by Sender
     public sealed class ActorIdentity
     {
-        public ActorIdentity(object messageId, ActorRef subject)
+        public ActorIdentity(object messageId, IActorRef subject)
         {
             MessageId = messageId;
             Subject = subject;
         }
 
         public object MessageId { get; private set; }
-        public ActorRef Subject { get; private set; }
+        public IActorRef Subject { get; private set; }
 
         public override string ToString()
         {

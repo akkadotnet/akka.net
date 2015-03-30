@@ -24,7 +24,7 @@ namespace Akka.Remote.Serialization
             get { return false; }
         }
 
-        private ActorRefData SerializeActorRef(ActorRef @ref)
+        private ActorRefData SerializeActorRef(IActorRef @ref)
         {
             return ActorRefData.CreateBuilder()
                 .SetPath(Akka.Serialization.Serialization.SerializedActorPath(@ref))
@@ -168,7 +168,7 @@ namespace Akka.Remote.Serialization
             return args;
         }
 
-        private ActorRef DeserializeActorRef(ActorRefData actorRefData)
+        private IActorRef DeserializeActorRef(ActorRefData actorRefData)
         {
             var path = actorRefData.Path;
             var @ref = system.Provider.ResolveActorRef(path);

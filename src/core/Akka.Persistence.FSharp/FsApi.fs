@@ -21,9 +21,9 @@ type Eventsourced<'Command, 'Event, 'State> =
     inherit Snapshotter<'State>
         
     /// <summary>
-    /// Gets <see cref="ActorRef" /> for the current actor.
+    /// Gets <see cref="IActorRef" /> for the current actor.
     /// </summary>
-    abstract Self : ActorRef
+    abstract Self : IActorRef
     
     /// <summary>
     /// Gets the current actor context.
@@ -31,9 +31,9 @@ type Eventsourced<'Command, 'Event, 'State> =
     abstract Context : IActorContext
     
     /// <summary>
-    /// Returns a sender of current message or <see cref="ActorRef.NoSender" />, if none could be determined.
+    /// Returns a sender of current message or <see cref="ActorRefs.NoSender" />, if none could be determined.
     /// </summary>
-    abstract Sender : unit -> ActorRef
+    abstract Sender : unit -> IActorRef
     
     /// <summary>
     /// Explicit signalization of unhandled message.
@@ -72,12 +72,12 @@ type Eventsourced<'Command, 'Event, 'State> =
     /// <summary>
     /// Returns currently attached journal actor reference.
     /// </summary>
-    abstract Journal: unit -> ActorRef
+    abstract Journal: unit -> IActorRef
     
     /// <summary>
     /// Returns currently attached snapshot store actor reference.
     /// </summary>
-    abstract SnapshotStore: unit -> ActorRef
+    abstract SnapshotStore: unit -> IActorRef
     
     /// <summary>
     /// Returns value determining if current persistent actor is actually recovering.
@@ -119,8 +119,8 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.ActorOf(props, name) = context.ActorOf(props, name)
             member __.ActorSelection(path : string) = context.ActorSelection(path)
             member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
-            member __.Watch(aref:ActorRef) = context.Watch aref
-            member __.Unwatch(aref:ActorRef) = context.Unwatch aref
+            member __.Watch(aref:IActorRef) = context.Watch aref
+            member __.Unwatch(aref:IActorRef) = context.Unwatch aref
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
             member __.DeferEvent callback events = this.Defer(events, Action<_>(updateState callback))
@@ -136,7 +136,7 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.DeleteSnapshot seqNr timestamp = this.DeleteSnapshot(seqNr, timestamp)
             member __.DeleteSnapshots criteria = this.DeleteSnapshots(criteria) }
       
-    member __.Sender() : ActorRef = base.Sender
+    member __.Sender() : IActorRef = base.Sender
     member __.Unhandled msg = base.Unhandled msg
     override x.OnCommand (msg: obj) = 
         match msg with
@@ -159,9 +159,9 @@ type View<'Event, 'State> =
     inherit Snapshotter<'State>
 
     /// <summary>
-    /// Gets <see cref="ActorRef" /> for the current actor.
+    /// Gets <see cref="IActorRef" /> for the current actor.
     /// </summary>
-    abstract Self : ActorRef
+    abstract Self : IActorRef
     
     /// <summary>
     /// Gets the current actor context.
@@ -169,9 +169,9 @@ type View<'Event, 'State> =
     abstract Context : IActorContext
     
     /// <summary>
-    /// Returns a sender of current message or <see cref="ActorRef.NoSender" />, if none could be determined.
+    /// Returns a sender of current message or <see cref="ActorRefs.NoSender" />, if none could be determined.
     /// </summary>
-    abstract Sender : unit -> ActorRef
+    abstract Sender : unit -> IActorRef
     
     /// <summary>
     /// Explicit signalization of unhandled message.
@@ -192,12 +192,12 @@ type View<'Event, 'State> =
     /// <summary>
     /// Returns currently attached journal actor reference.
     /// </summary>
-    abstract Journal: unit -> ActorRef
+    abstract Journal: unit -> IActorRef
     
     /// <summary>
     /// Returns currently attached snapshot store actor reference.
     /// </summary>
-    abstract SnapshotStore: unit -> ActorRef
+    abstract SnapshotStore: unit -> IActorRef
         
     /// <summary>
     /// Returns last sequence number attached to latest persisted event.
@@ -238,8 +238,8 @@ type FunPersistentView<'Event, 'State>(perspective: Perspective<'Event, 'State>,
             member __.ActorOf(props, name) = context.ActorOf(props, name)
             member __.ActorSelection(path : string) = context.ActorSelection(path)
             member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
-            member __.Watch(aref:ActorRef) = context.Watch aref
-            member __.Unwatch(aref:ActorRef) = context.Unwatch aref
+            member __.Watch(aref:IActorRef) = context.Watch aref
+            member __.Unwatch(aref:IActorRef) = context.Unwatch aref
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
             member __.Journal() = this.Journal
@@ -252,7 +252,7 @@ type FunPersistentView<'Event, 'State>(perspective: Perspective<'Event, 'State>,
             member __.DeleteSnapshot seqNr timestamp = this.DeleteSnapshot(seqNr, timestamp)
             member __.DeleteSnapshots criteria = this.DeleteSnapshots(criteria) }
       
-    member __.Sender() : ActorRef = base.Sender
+    member __.Sender() : IActorRef = base.Sender
     member __.Unhandled msg = base.Unhandled msg
     override x.Receive (msg: obj): bool = 
         match msg with
@@ -301,8 +301,8 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
             member __.ActorOf(props, name) = context.ActorOf(props, name)
             member __.ActorSelection(path : string) = context.ActorSelection(path)
             member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
-            member __.Watch(aref:ActorRef) = context.Watch aref
-            member __.Unwatch(aref:ActorRef) = context.Unwatch aref
+            member __.Watch(aref:IActorRef) = context.Watch aref
+            member __.Unwatch(aref:IActorRef) = context.Unwatch aref
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
             member __.DeferEvent callback events = this.Defer(events, Action<_>(updateState callback))
@@ -323,7 +323,7 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
             member __.SetDeliverySnapshot snap = this.SetDeliverySnapshot snap
             member __.UnconfirmedCount() = this.UnconfirmedCount }
       
-    member __.Sender() : ActorRef = base.Sender
+    member __.Sender() : IActorRef = base.Sender
     member __.Unhandled msg = base.Unhandled msg
     override x.ReceiveCommand (msg: obj) = 
         match msg with
@@ -372,7 +372,7 @@ module Linq =
 /// <param name="name">Identifies uniquely current actor across different incarnations. It's necessary to identify it's event source.</param>
 /// <param name="aggregate">Aggregate containing state of the actor, but also an event- and command-handling behavior.</param>
 /// <param name="options">Additional spawning options.</param>
-let spawnPersist (actorFactory : ActorRefFactory) (name : PersistenceId) (aggregate: Aggregate<'Command, 'Event, 'State>) (options : SpawnOption list) : ActorRef =
+let spawnPersist (actorFactory : ActorRefFactory) (name : PersistenceId) (aggregate: Aggregate<'Command, 'Event, 'State>) (options : SpawnOption list) : IActorRef =
     let e = Linq.PersistentExpression.ToExpression(fun () -> new FunPersistentActor<'Command, 'Event, 'State>(aggregate, name))
     let props = applySpawnOptions (Props.Create e) options
     actorFactory.ActorOf(props, name)
@@ -385,7 +385,7 @@ let spawnPersist (actorFactory : ActorRefFactory) (name : PersistenceId) (aggreg
 /// <param name="viewName">Identifies uniquely current view's state. It's different that event source, since many views with different internal states can relate to single event source.</param>
 /// <param name="aggregate">Aggregate containing state of the actor, but also an command-handling behavior.</param>
 /// <param name="options">Additional spawning options.</param>
-let spawnView (actorFactory : ActorRefFactory) (viewName: PersistenceId) (name : PersistenceId)  (perspective: Perspective<'Event, 'State>) (options : SpawnOption list) : ActorRef =
+let spawnView (actorFactory : ActorRefFactory) (viewName: PersistenceId) (name : PersistenceId)  (perspective: Perspective<'Event, 'State>) (options : SpawnOption list) : IActorRef =
     let e = Linq.PersistentExpression.ToExpression(fun () -> new FunPersistentView<'Event, 'State>(perspective, name, viewName))
     let props = applySpawnOptions (Props.Create e) options
     actorFactory.ActorOf(props, viewName)
@@ -397,7 +397,7 @@ let spawnView (actorFactory : ActorRefFactory) (viewName: PersistenceId) (name :
 /// <param name="name">Identifies uniquely current actor across different incarnations. It's necessary to identify it's event source.</param>
 /// <param name="aggregate">Aggregate containing state of the actor, but also an event- and command-handling behavior.</param>
 /// <param name="options">Additional spawning options.</param>
-let spawnDeliverer (actorFactory : ActorRefFactory) (name : PersistenceId) (aggregate: DeliveryAggregate<'Command, 'Event, 'State>) (options : SpawnOption list) : ActorRef =
+let spawnDeliverer (actorFactory : ActorRefFactory) (name : PersistenceId) (aggregate: DeliveryAggregate<'Command, 'Event, 'State>) (options : SpawnOption list) : IActorRef =
     let e = Linq.PersistentExpression.ToExpression(fun () -> new Deliverer<'Command, 'Event, 'State>(aggregate, name))
     let props = applySpawnOptions (Props.Create e) options
     actorFactory.ActorOf(props, name)

@@ -9,9 +9,9 @@ namespace Akka.Persistence.Tests
 
         internal class TestPersistentActor : NamedPersistentActor
         {
-            private readonly ActorRef _probe;
+            private readonly IActorRef _probe;
 
-            public TestPersistentActor(string name, ActorRef probe)
+            public TestPersistentActor(string name, IActorRef probe)
                 : base(name)
             {
                 _probe = probe;
@@ -33,13 +33,13 @@ namespace Akka.Persistence.Tests
         internal class TestPersistentView : PersistentView
         {
             private readonly string _name;
-            private readonly ActorRef _probe;
+            private readonly IActorRef _probe;
             private readonly TimeSpan _interval;
 
             private string _failAt;
             private string _last;
 
-            public TestPersistentView(string name, ActorRef probe, TimeSpan interval, string failAt = null)
+            public TestPersistentView(string name, IActorRef probe, TimeSpan interval, string failAt = null)
             {
                 _name = name;
                 _probe = probe;
@@ -47,7 +47,7 @@ namespace Akka.Persistence.Tests
                 _failAt = failAt;
             }
 
-            public TestPersistentView(string name, ActorRef probe)
+            public TestPersistentView(string name, IActorRef probe)
                 : this(name, probe, TimeSpan.FromMilliseconds(100))
             {
             }
@@ -85,12 +85,12 @@ namespace Akka.Persistence.Tests
         internal class PassiveTestPersistentView : PersistentView
         {
             private readonly string _name;
-            private readonly ActorRef _probe;
+            private readonly IActorRef _probe;
 
             private string _failAt;
             private string _last;
 
-            public PassiveTestPersistentView(string name, ActorRef probe, string failAt = null)
+            public PassiveTestPersistentView(string name, IActorRef probe, string failAt = null)
             {
                 _name = name;
                 _probe = probe;
@@ -137,9 +137,9 @@ namespace Akka.Persistence.Tests
         internal class ActiveTestPersistentView : PersistentView
         {
             private readonly string _name;
-            private readonly ActorRef _probe;
+            private readonly IActorRef _probe;
 
-            public ActiveTestPersistentView(string name, ActorRef probe)
+            public ActiveTestPersistentView(string name, IActorRef probe)
             {
                 _name = name;
                 _probe = probe;
@@ -161,9 +161,9 @@ namespace Akka.Persistence.Tests
         internal class BecomingPersistentView : PersistentView
         {
             private readonly string _name;
-            private readonly ActorRef _probe;
+            private readonly IActorRef _probe;
 
-            public BecomingPersistentView(string name, ActorRef probe)
+            public BecomingPersistentView(string name, IActorRef probe)
             {
                 _name = name;
                 _probe = probe;
@@ -186,12 +186,12 @@ namespace Akka.Persistence.Tests
         internal class PersistentOrNotTestPersistentView : PersistentView
         {
             private readonly string _name;
-            private readonly ActorRef _probe;
+            private readonly IActorRef _probe;
 
             public override string ViewId { get { return _name + "-view"; } }
             public override string PersistenceId { get { return _name; } }
 
-            public PersistentOrNotTestPersistentView(string name, ActorRef probe)
+            public PersistentOrNotTestPersistentView(string name, IActorRef probe)
             {
                 _name = name;
                 _probe = probe;
@@ -209,7 +209,7 @@ namespace Akka.Persistence.Tests
         internal class SnapshottingPersistentView : PersistentView
         {
             private readonly string _name;
-            private readonly ActorRef _probe;
+            private readonly IActorRef _probe;
 
             private string _last;
 
@@ -218,7 +218,7 @@ namespace Akka.Persistence.Tests
 
             public override TimeSpan AutoUpdateInterval { get { return TimeSpan.FromMilliseconds(100); } }
 
-            public SnapshottingPersistentView(string name, ActorRef probe)
+            public SnapshottingPersistentView(string name, IActorRef probe)
             {
                 _name = name;
                 _probe = probe;

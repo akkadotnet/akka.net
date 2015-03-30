@@ -43,7 +43,7 @@ namespace Akka.Event
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
         /// <exception cref="System.ArgumentNullException">message</exception>
-        protected override void TellInternal(object message, ActorRef sender)
+        protected override void TellInternal(object message, IActorRef sender)
         {
             if(message == null)
                 throw new ArgumentNullException("message");

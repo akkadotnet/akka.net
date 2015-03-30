@@ -16,8 +16,8 @@ namespace Akka.Dispatch
 
     public class AmbientState
     {
-        public ActorRef Self { get; set; }
-        public ActorRef Sender { get; set; }
+        public IActorRef Self { get; set; }
+        public IActorRef Sender { get; set; }
         public object Message { get; set; }
     }
 
@@ -29,7 +29,7 @@ namespace Akka.Dispatch
         private const string Faulted = "faulted";
         private static readonly object Outer = new object();
 
-        public static void SetCurrentState(ActorRef self, ActorRef sender, object message)
+        public static void SetCurrentState(IActorRef self, IActorRef sender, object message)
         {
             CallContext.LogicalSetData(StateKey, new AmbientState
             {
@@ -62,7 +62,7 @@ namespace Akka.Dispatch
                 if (task.IsFaulted)
                     Rethrow(task, null);
 
-            }), ActorRef.NoSender);
+            }), ActorRefs.NoSender);
         }
 
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)

@@ -11,14 +11,14 @@ namespace Akka.Remote
     /// </summary>
     internal class EndpointRegistry
     {
-        private readonly Dictionary<Address, ActorRef> addressToReadonly = new Dictionary<Address, ActorRef>();
+        private readonly Dictionary<Address, IActorRef> addressToReadonly = new Dictionary<Address, IActorRef>();
 
         private Dictionary<Address, EndpointManager.EndpointPolicy> addressToWritable =
             new Dictionary<Address, EndpointManager.EndpointPolicy>();
 
-        private readonly Dictionary<ActorRef, Address> readonlyToAddress = new Dictionary<ActorRef, Address>();
-        private readonly Dictionary<ActorRef, Address> writableToAddress = new Dictionary<ActorRef, Address>();
-        public ActorRef RegisterWritableEndpoint(Address address, ActorRef endpoint, int? uid = null)
+        private readonly Dictionary<IActorRef, Address> readonlyToAddress = new Dictionary<IActorRef, Address>();
+        private readonly Dictionary<IActorRef, Address> writableToAddress = new Dictionary<IActorRef, Address>();
+        public IActorRef RegisterWritableEndpoint(Address address, IActorRef endpoint, int? uid = null)
         {
             EndpointManager.EndpointPolicy existing;
             if (addressToWritable.TryGetValue(address, out existing))
@@ -32,7 +32,7 @@ namespace Akka.Remote
             return endpoint;
         }
 
-        public void RegisterWritableEndpointUid(ActorRef writer, int uid)
+        public void RegisterWritableEndpointUid(IActorRef writer, int uid)
         {
             var address = writableToAddress[writer];
             if (addressToWritable[address] is EndpointManager.Pass)
@@ -42,14 +42,14 @@ namespace Akka.Remote
             }
         }
 
-        public ActorRef RegisterReadOnlyEndpoint(Address address, ActorRef endpoint)
+        public IActorRef RegisterReadOnlyEndpoint(Address address, IActorRef endpoint)
         {
             addressToReadonly.Add(address, endpoint);
             readonlyToAddress.Add(endpoint, address);
             return endpoint;
         }
 
-        public void UnregisterEndpoint(ActorRef endpoint)
+        public void UnregisterEndpoint(IActorRef endpoint)
         {
             if (IsWritable(endpoint))
             {
@@ -73,9 +73,9 @@ namespace Akka.Remote
             }
         }
 
-        public ActorRef ReadOnlyEndpointFor(Address address)
+        public IActorRef ReadOnlyEndpointFor(Address address)
         {
-            ActorRef tmp;
+            IActorRef tmp;
             if (addressToReadonly.TryGetValue(address, out tmp))
             {
                 return tmp;
@@ -83,12 +83,12 @@ namespace Akka.Remote
             return null;
         }
 
-        public bool IsWritable(ActorRef endpoint)
+        public bool IsWritable(IActorRef endpoint)
         {
             return writableToAddress.ContainsKey(endpoint);
         }
 
-        public bool IsReadOnly(ActorRef endpoint)
+        public bool IsReadOnly(IActorRef endpoint)
         {
             return readonlyToAddress.ContainsKey(endpoint);
         }
@@ -126,7 +126,7 @@ namespace Akka.Remote
         /// Marking an endpoint as failed means that we will not try to connect to the remote system within
         /// the gated period but it is ok for the remote system to try to connect with us (inbound-only.)
         /// </summary>
-        public void MarkAsFailed(ActorRef endpoint, Deadline timeOfRelease)
+        public void MarkAsFailed(IActorRef endpoint, Deadline timeOfRelease)
         {
             if (IsWritable(endpoint))
             {
@@ -150,7 +150,7 @@ namespace Akka.Remote
             addressToWritable.Remove(address);
         }
 
-        public IList<ActorRef> AllEndpoints
+        public IList<IActorRef> AllEndpoints
         {
             get { return writableToAddress.Keys.Concat(readonlyToAddress.Keys).ToList(); }
         }

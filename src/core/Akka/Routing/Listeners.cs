@@ -21,32 +21,32 @@ namespace Akka.Routing
 
     public class Listen : ListenerMessage
     {
-        public Listen(ActorRef listener)
+        public Listen(IActorRef listener)
         {
             Listener = listener;
         }
 
-        public ActorRef Listener { get; private set; }
+        public IActorRef Listener { get; private set; }
     }
 
     public class Deafen : ListenerMessage
     {
-        public Deafen(ActorRef listener)
+        public Deafen(IActorRef listener)
         {
             Listener = listener;
         }
 
-        public ActorRef Listener { get; private set; }
+        public IActorRef Listener { get; private set; }
     }
 
     public class WithListeners : ListenerMessage
     {
-        public WithListeners(Action<ActorRef> listenerFunction)
+        public WithListeners(Action<IActorRef> listenerFunction)
         {
             ListenerFunction = listenerFunction;
         }
 
-        public Action<ActorRef> ListenerFunction { get; private set; }
+        public Action<IActorRef> ListenerFunction { get; private set; }
     }
 
     /// <summary>
@@ -55,7 +55,7 @@ namespace Akka.Routing
     /// </summary>
     public class ListenerSupport
     {
-        protected readonly HashSet<ActorRef> Listeners = new HashSet<ActorRef>();
+        protected readonly HashSet<IActorRef> Listeners = new HashSet<IActorRef>();
 
         /// <summary>
         /// Chain this into the <see cref="ActorBase.OnReceive"/> function.
@@ -78,13 +78,13 @@ namespace Akka.Routing
             };}
         }
 
-        public void Add(ActorRef actor)
+        public void Add(IActorRef actor)
         {
             if(!Listeners.Contains(actor))
                 Listeners.Add(actor);
         }
 
-        public void Remove(ActorRef actor)
+        public void Remove(IActorRef actor)
         {
             if(Listeners.Contains(actor))
                 Listeners.Remove(actor);
@@ -95,13 +95,13 @@ namespace Akka.Routing
         /// </summary>
         public void Gossip(object msg)
         {
-            Gossip(msg, ActorRef.NoSender);
+            Gossip(msg, ActorRefs.NoSender);
         }
 
         /// <summary>
         /// Send the supplied message to all listeners
         /// </summary>
-        public void Gossip(object msg, ActorRef sender)
+        public void Gossip(object msg, IActorRef sender)
         {
             foreach(var listener in Listeners)
                 listener.Tell(msg, sender);

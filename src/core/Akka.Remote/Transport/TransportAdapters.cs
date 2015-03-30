@@ -293,11 +293,11 @@ namespace Akka.Remote.Transport
 
         public static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(5);
 
-        protected volatile ActorRef manager;
+        protected volatile IActorRef manager;
 
-        private Task<ActorRef> RegisterManager()
+        private Task<IActorRef> RegisterManager()
         {
-            return System.ActorSelection("/system/transports").Ask<ActorRef>(new RegisterTransportActor(ManagerProps, ManagerName));
+            return System.ActorSelection("/system/transports").Ask<IActorRef>(new RegisterTransportActor(ManagerProps, ManagerName));
         }
 
         protected override Task<IAssociationEventListener> InterceptListen(Address listenAddress, Task<IAssociationEventListener> listenerTask)
@@ -355,7 +355,7 @@ namespace Akka.Remote.Transport
                     associationListener = listener.Listener;
                     foreach (var dEvent in DelayedEvents)
                     {
-                        Self.Tell(dEvent, ActorRef.NoSender);
+                        Self.Tell(dEvent, ActorRefs.NoSender);
                     }
                     DelayedEvents = new Queue<object>();
                     Context.Become(Ready);

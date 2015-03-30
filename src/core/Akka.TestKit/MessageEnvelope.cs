@@ -6,6 +6,6 @@ namespace Akka.TestKit
     {
         public abstract object Message { get; }
 
-        public abstract ActorRef Sender { get; }
+        public abstract IActorRef Sender { get; }
     }
 }

@@ -157,7 +157,7 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="receiver"></param>
         /// <param name="envelope"> The envelope. </param>
-        public override void Post(ActorRef receiver, Envelope envelope)
+        public override void Post(IActorRef receiver, Envelope envelope)
         {
             if (_isClosed)
                 return;

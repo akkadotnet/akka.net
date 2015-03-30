@@ -10,9 +10,9 @@ namespace Akka.Remote.Tests
     {
         class TestActorProxy : UntypedActor
         {
-            readonly ActorRef _testActor;
+            readonly IActorRef _testActor;
 
-            public TestActorProxy(ActorRef TestActor)
+            public TestActorProxy(IActorRef TestActor)
             {
                 _testActor = TestActor;
             }
@@ -178,7 +178,7 @@ namespace Akka.Remote.Tests
             get { return AddressUidExtension.Uid(_remoteSystem); }
         }
 
-        private ActorRef CreateRemoteActor(Props props, string name)
+        private IActorRef CreateRemoteActor(Props props, string name)
         {
             _remoteSystem.ActorOf(props, name);
             Sys.ActorSelection(new RootActorPath(_remoteAddress) / "user" / name).Tell(new Identify(name), TestActor);

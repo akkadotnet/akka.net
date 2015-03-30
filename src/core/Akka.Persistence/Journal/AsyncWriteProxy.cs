@@ -28,7 +28,7 @@ namespace Akka.Persistence.Journal
     [Serializable]
     public sealed class SetStore
     {
-        public SetStore(ActorRef store)
+        public SetStore(IActorRef store)
         {
             if (store == null)
                 throw new ArgumentNullException("store", "SetStore requires non-null reference to store actor");
@@ -36,7 +36,7 @@ namespace Akka.Persistence.Journal
             Store = store;
         }
 
-        public ActorRef Store { get; private set; }
+        public IActorRef Store { get; private set; }
     }
 
     public static class AsyncWriteTarget
@@ -154,7 +154,7 @@ namespace Akka.Persistence.Journal
     public abstract class AsyncWriteProxy : AsyncWriteJournal, WithUnboundedStash
     {
         private readonly Receive _initialized;
-        private ActorRef _store;
+        private IActorRef _store;
 
         public IStash Stash { get; set; }
         public TimeSpan Timeout { get; private set; }

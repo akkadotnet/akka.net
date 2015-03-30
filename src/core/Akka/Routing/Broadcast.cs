@@ -156,7 +156,7 @@ namespace Akka.Routing
         ///     Initializes a new instance of the <see cref="BroadcastGroup" /> class.
         /// </summary>
         /// <param name="routees">The routees.</param>
-        public BroadcastGroup(IEnumerable<ActorRef> routees)
+        public BroadcastGroup(IEnumerable<IActorRef> routees)
             : base(routees)
         {
         }

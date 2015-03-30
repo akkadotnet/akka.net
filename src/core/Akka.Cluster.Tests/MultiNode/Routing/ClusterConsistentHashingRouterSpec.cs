@@ -72,14 +72,14 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             _config = config;
         }
 
-        private ActorRef _router1 = null;
+        private IActorRef _router1 = null;
 
-        protected ActorRef Router1
+        protected IActorRef Router1
         {
             get { return _router1 ?? (_router1 = CreateRouter1()); }
         }
 
-        private ActorRef CreateRouter1()
+        private IActorRef CreateRouter1()
         {
             return
                 Sys.ActorOf(
@@ -87,7 +87,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                     "router1");
         }
 
-        protected Routees CurrentRoutees(ActorRef router)
+        protected Routees CurrentRoutees(IActorRef router)
         {
             var routerAsk = router.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
             return routerAsk.Result;
@@ -96,14 +96,14 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
         /// <summary>
         /// Fills in the self address for local ActorRef
         /// </summary>
-        protected Address FullAddress(ActorRef actorRef)
+        protected Address FullAddress(IActorRef actorRef)
         {
             if (string.IsNullOrEmpty(actorRef.Path.Address.Host) || !actorRef.Path.Address.Port.HasValue)
                 return Cluster.SelfAddress;
             return actorRef.Path.Address;
         }
 
-        protected void AssertHashMapping(ActorRef router)
+        protected void AssertHashMapping(IActorRef router)
         {
             // it may take some time until router receives cluster member events
             AwaitAssert(() =>
@@ -115,7 +115,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             routerMembers.ShouldBe(Roles.Select(GetAddress).ToList());
 
             router.Tell("a", TestActor);
-            var destinationA = ExpectMsg<ActorRef>();
+            var destinationA = ExpectMsg<IActorRef>();
             router.Tell("a", TestActor);
             ExpectMsg(destinationA);
         }
@@ -162,7 +162,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             RunOn(() =>
             {
                 Router1.Tell(new ConsistentHashableEnvelope("A", "a"));
-                var destinationA = ExpectMsg<ActorRef>();
+                var destinationA = ExpectMsg<IActorRef>();
                 Router1.Tell(new ConsistentHashableEnvelope("AA", "a"));
                 ExpectMsg(destinationA);
             }, _config.First);

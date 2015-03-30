@@ -144,7 +144,7 @@ namespace Akka.Tests.Serialization
         }
         public class SomeMessage
         {
-            public ActorRef ActorRef { get; set; }
+            public IActorRef ActorRef { get; set; }
         }
 
         [Fact]

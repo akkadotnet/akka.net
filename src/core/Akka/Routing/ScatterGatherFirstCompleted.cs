@@ -35,7 +35,7 @@ namespace Akka.Routing
             _within = within;
         }
 
-        public override void Send(object message, ActorRef sender)
+        public override void Send(object message, IActorRef sender)
         {
             var tasks = new List<Task>();
             foreach(var routee in _routees)
@@ -106,7 +106,7 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="routees">The routees.</param>
         /// <param name="within">Expect a response within the given timespan</param>
-        public ScatterGatherFirstCompletedGroup(IEnumerable<ActorRef> routees,TimeSpan within) : base(routees)
+        public ScatterGatherFirstCompletedGroup(IEnumerable<IActorRef> routees,TimeSpan within) : base(routees)
         {
             Within = within;
         }

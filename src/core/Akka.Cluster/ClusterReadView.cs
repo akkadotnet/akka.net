@@ -51,7 +51,7 @@ namespace Akka.Cluster
             get { return _selfAddress; }
         }
 
-        readonly ActorRef _eventBusListener;
+        readonly IActorRef _eventBusListener;
 
         private readonly Cluster _cluster;
 

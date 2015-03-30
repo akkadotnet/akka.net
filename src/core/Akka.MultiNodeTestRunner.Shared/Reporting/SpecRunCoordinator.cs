@@ -17,7 +17,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             MethodName = methodName;
             ClassName = className;
             FactData = new FactData(string.Format("{0}.{1}", className, methodName));
-            _nodeActors = new Dictionary<int, ActorRef>();
+            _nodeActors = new Dictionary<int, IActorRef>();
             SetReceive();
         }
 
@@ -35,7 +35,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// <summary>
         /// Internal dictionary used to route messages to their discrete nodes
         /// </summary>
-        private readonly Dictionary<int, ActorRef> _nodeActors;
+        private readonly Dictionary<int, IActorRef> _nodeActors;
 
         #region Actor Lifecycle
 

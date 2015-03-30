@@ -27,14 +27,14 @@ namespace Akka.Actor
     /// </summary>
     public static class GracefulStopSupport
     {
-        public static Task<bool> GracefulStop(this ActorRef target, TimeSpan timeout)
+        public static Task<bool> GracefulStop(this IActorRef target, TimeSpan timeout)
         {
             return GracefulStop(target, timeout, PoisonPill.Instance);
         }
 
-        public static Task<bool> GracefulStop(this ActorRef target, TimeSpan timeout, object stopMessage)
+        public static Task<bool> GracefulStop(this IActorRef target, TimeSpan timeout, object stopMessage)
         {
-            var internalTarget = target.AsInstanceOf<InternalActorRef>();
+            var internalTarget = target.AsInstanceOf<IInternalActorRef>();
             if (internalTarget.IsTerminated) return Task.Run(() => true);
 
             var provider = Futures.ResolveProvider(target);
@@ -52,7 +52,7 @@ namespace Akka.Actor
 
             var fref = new FutureActorRef(promise, unregister, path);
             internalTarget.Tell(new Watch(internalTarget, fref));
-            target.Tell(stopMessage, ActorRef.NoSender);
+            target.Tell(stopMessage, ActorRefs.NoSender);
             return promise.Task.ContinueWith(t =>
             {
                 var returnResult = false;

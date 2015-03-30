@@ -22,13 +22,13 @@ namespace Akka.Actor
         /// <typeparam name="TS">The type of the state being used in this finite state machine.</typeparam>
         public class CurrentState<TS>
         {
-            public CurrentState(ActorRef fsmRef, TS state)
+            public CurrentState(IActorRef fsmRef, TS state)
             {
                 State = state;
                 FsmRef = fsmRef;
             }
 
-            public ActorRef FsmRef { get; private set; }
+            public IActorRef FsmRef { get; private set; }
 
             public TS State { get; private set; }
         }
@@ -40,14 +40,14 @@ namespace Akka.Actor
         /// <typeparam name="TS">The type of state used</typeparam>
         public class Transition<TS>
         {
-            public Transition(ActorRef fsmRef, TS @from, TS to)
+            public Transition(IActorRef fsmRef, TS @from, TS to)
             {
                 To = to;
                 From = @from;
                 FsmRef = fsmRef;
             }
 
-            public ActorRef FsmRef { get; private set; }
+            public IActorRef FsmRef { get; private set; }
 
             public TS From { get; private set; }
 
@@ -66,12 +66,12 @@ namespace Akka.Actor
         /// </summary>
         public class SubscribeTransitionCallBack
         {
-            public SubscribeTransitionCallBack(ActorRef actorRef)
+            public SubscribeTransitionCallBack(IActorRef actorRef)
             {
                 ActorRef = actorRef;
             }
 
-            public ActorRef ActorRef { get; private set; }
+            public IActorRef ActorRef { get; private set; }
         }
 
         /// <summary>
@@ -80,12 +80,12 @@ namespace Akka.Actor
         /// </summary>
         public class UnsubscribeTransitionCallBack
         {
-            public UnsubscribeTransitionCallBack(ActorRef actorRef)
+            public UnsubscribeTransitionCallBack(IActorRef actorRef)
             {
                 ActorRef = actorRef;
             }
 
-            public ActorRef ActorRef { get; private set; }
+            public IActorRef ActorRef { get; private set; }
         }
 
         /// <summary>
@@ -168,7 +168,7 @@ namespace Akka.Actor
 
             public IActorContext Context { get; private set; }
 
-            public void Schedule(ActorRef actor, TimeSpan timeout)
+            public void Schedule(IActorRef actor, TimeSpan timeout)
             {
                 var name = Name;
                 var message = Message;
@@ -849,7 +849,7 @@ namespace Akka.Actor
             if(s != null) return s;
             var timer = source as Timer;
             if(timer != null) return "timer '" + timer.Name + "'";
-            var actorRef = source as ActorRef;
+            var actorRef = source as IActorRef;
             if(actorRef != null) return actorRef.ToString();
             return "unknown";
         }

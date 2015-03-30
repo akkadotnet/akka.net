@@ -14,8 +14,8 @@ namespace Akka.Tests.Actor.Scheduler
             ITellScheduler scheduler = new TaskBasedScheduler();
 
             var canceled = Cancelable.CreateCanceled();
-            scheduler.ScheduleTellOnce(0, TestActor, "Test", ActorRef.NoSender, canceled);
-            scheduler.ScheduleTellOnce(1, TestActor, "Test", ActorRef.NoSender, canceled);
+            scheduler.ScheduleTellOnce(0, TestActor, "Test", ActorRefs.NoSender, canceled);
+            scheduler.ScheduleTellOnce(1, TestActor, "Test", ActorRefs.NoSender, canceled);
 
             //Validate that no messages were sent
             ExpectNoMsg(100);
@@ -28,8 +28,8 @@ namespace Akka.Tests.Actor.Scheduler
             ITellScheduler scheduler = new TaskBasedScheduler();
 
             var canceled = Cancelable.CreateCanceled();
-            scheduler.ScheduleTellRepeatedly(0, 2, TestActor, "Test", ActorRef.NoSender, canceled);
-            scheduler.ScheduleTellRepeatedly(1, 2, TestActor, "Test", ActorRef.NoSender, canceled);
+            scheduler.ScheduleTellRepeatedly(0, 2, TestActor, "Test", ActorRefs.NoSender, canceled);
+            scheduler.ScheduleTellRepeatedly(1, 2, TestActor, "Test", ActorRefs.NoSender, canceled);
 
             //Validate that no messages were sent
             ExpectNoMsg(100);
@@ -42,7 +42,7 @@ namespace Akka.Tests.Actor.Scheduler
             IScheduler scheduler = new TaskBasedScheduler();
 
             var cancelable = new Cancelable(scheduler);
-            scheduler.ScheduleTellOnce(100, TestActor, "Test", ActorRef.NoSender, cancelable);
+            scheduler.ScheduleTellOnce(100, TestActor, "Test", ActorRefs.NoSender, cancelable);
             cancelable.Cancel();
 
             //Validate that no messages were sent
@@ -57,7 +57,7 @@ namespace Akka.Tests.Actor.Scheduler
             IScheduler scheduler = new TaskBasedScheduler();
 
             var cancelable = new Cancelable(scheduler);
-            scheduler.ScheduleTellRepeatedly(100, 2, TestActor, "Test", ActorRef.NoSender, cancelable);
+            scheduler.ScheduleTellRepeatedly(100, 2, TestActor, "Test", ActorRefs.NoSender, cancelable);
             cancelable.Cancel();
 
             //Validate that no messages were sent
@@ -72,7 +72,7 @@ namespace Akka.Tests.Actor.Scheduler
             IScheduler scheduler = new TaskBasedScheduler();
 
             var cancelable = new Cancelable(scheduler);
-            scheduler.ScheduleTellRepeatedly(0, 150, TestActor, "Test", ActorRef.NoSender, cancelable);
+            scheduler.ScheduleTellRepeatedly(0, 150, TestActor, "Test", ActorRefs.NoSender, cancelable);
             ExpectMsg("Test");
             cancelable.Cancel();
 
@@ -87,7 +87,7 @@ namespace Akka.Tests.Actor.Scheduler
             IScheduler scheduler = new TaskBasedScheduler();
 
             var cancelableOdd = new Cancelable(scheduler);
-            scheduler.ScheduleTellRepeatedly(1, 150, TestActor, "Test", ActorRef.NoSender, cancelableOdd);
+            scheduler.ScheduleTellRepeatedly(1, 150, TestActor, "Test", ActorRefs.NoSender, cancelableOdd);
             cancelableOdd.CancelAfter(50);
 
             //Expect one message

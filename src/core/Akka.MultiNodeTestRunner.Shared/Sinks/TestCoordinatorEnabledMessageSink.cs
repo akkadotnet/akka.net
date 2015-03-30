@@ -11,7 +11,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// </summary>
     public abstract class TestCoordinatorEnabledMessageSink : MessageSinkActor
     {
-        protected ActorRef TestCoordinatorActorRef;
+        protected IActorRef TestCoordinatorActorRef;
         protected bool UseTestCoordinator;
 
         protected TestCoordinatorEnabledMessageSink(bool useTestCoordinator)

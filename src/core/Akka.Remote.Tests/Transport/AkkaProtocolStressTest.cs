@@ -64,10 +64,10 @@ namespace Akka.Remote.Tests.Transport
             private int MaxSeq = -1;
             private int Losses = 0;
 
-            private ActorRef _remote;
-            private ActorRef _controller;
+            private IActorRef _remote;
+            private IActorRef _controller;
 
-            public SequenceVerifier(ActorRef remote, ActorRef controller)
+            public SequenceVerifier(IActorRef remote, IActorRef controller)
             {
                 _remote = remote;
                 _controller = controller;
@@ -139,7 +139,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         private ActorSystem systemB;
-        private ActorRef remote;
+        private IActorRef remote;
 
         private Address AddressB
         {
@@ -151,7 +151,7 @@ namespace Akka.Remote.Tests.Transport
             get { return new RootActorPath(AddressB); }
         }
 
-        private ActorRef Here
+        private IActorRef Here
         {
             get
             {

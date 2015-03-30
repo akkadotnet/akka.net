@@ -63,7 +63,7 @@ namespace Akka.Remote
         /// <summary>
         /// Sends the given message to the recipient, supplying <see cref="sender"/> if any.
         /// </summary>
-        public abstract void Send(object message, ActorRef sender, RemoteActorRef recipient);
+        public abstract void Send(object message, IActorRef sender, RemoteActorRef recipient);
 
         /// <summary>
         /// Sends a management command to the underlying transport stack. The call returns with a Task that
