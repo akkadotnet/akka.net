@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Util.Internal;
@@ -711,8 +712,11 @@ namespace Akka.Cluster
                     .ToImmutableHashSet(),
                 _latestGossip.SeenBy.Select(s => s.Address).ToImmutableHashSet(),
                 _latestGossip.Leader == null ? null : _latestGossip.Leader.Address,
-                _latestGossip.AllRoles.ToImmutableDictionary(r => r, r => _latestGossip.RoleLeader(r).Address)
-                );
+                _latestGossip.AllRoles.ToImmutableDictionary(r => r, r =>
+                {
+                    var leader = _latestGossip.RoleLeader(r);
+                    return leader == null ? null : leader.Address;
+                }));
             receiver.Tell(state);
         }
 
