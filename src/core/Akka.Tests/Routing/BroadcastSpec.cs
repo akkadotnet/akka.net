@@ -49,7 +49,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void BroadcastGroup_router_must_broadcast_message_using_Tell()
         {
-            var doneLatch = new TestLatch(Sys, 2);
+            var doneLatch = new TestLatch(2);
             var counter1 = new AtomicCounter(0);
             var counter2 = new AtomicCounter(0);
             var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
@@ -68,7 +68,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void BroadcastGroup_router_must_broadcast_message_using_Ask()
         {
-            var doneLatch = new TestLatch(Sys, 2);
+            var doneLatch = new TestLatch(2);
             var counter1 = new AtomicCounter(0);
             var counter2 = new AtomicCounter(0);
             var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));

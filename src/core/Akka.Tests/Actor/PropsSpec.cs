@@ -26,8 +26,8 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Props_must_create_actor_by_producer()
         {
-            TestLatch latchProducer = new TestLatch(Sys);
-            TestLatch latchActor = new TestLatch(Sys);
+            TestLatch latchProducer = new TestLatch();
+            TestLatch latchActor = new TestLatch();
             var props = Props.CreateBy<TestProducer>(latchProducer, latchActor);
             ActorRef actor = Sys.ActorOf(props);
             latchActor.Ready(TimeSpan.FromSeconds(1));

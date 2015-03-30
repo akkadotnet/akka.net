@@ -11,6 +11,33 @@ using Akka.Configuration;
 
 namespace Akka.Dispatch
 {
+
+
+    public static class DispatcherExtensions
+    {
+        /// <summary>
+        /// Schedules the specified run and returns a continuation task.
+        /// </summary>
+        public static Task<T> ScheduleAsync<T>(this MessageDispatcher dispatcher, Func<T> fn)
+        {
+            var promise = new TaskCompletionSource<T>();
+            dispatcher.Schedule(() =>
+            {
+                try
+                {
+                    var result = fn();
+                    promise.SetResult(result);
+                }
+                catch (Exception e)
+                {
+                    promise.SetException(e);
+                }
+            });
+
+            return promise.Task;
+        }
+    }
+
     /// <summary>
     ///     Class ThreadPoolDispatcher.
     /// </summary>

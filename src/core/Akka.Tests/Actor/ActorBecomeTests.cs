@@ -86,7 +86,7 @@ namespace Akka.Tests.Actor
                         Become(OnReceive2);
                         break;
                     case "BECOMESTACKED":
-                        Become(OnReceive2,discardOld: false);
+                        BecomeStacked(OnReceive2);
                         break;
                     default:
                         Sender.Tell("1:" + s, Self);
@@ -100,7 +100,7 @@ namespace Akka.Tests.Actor
                 switch(s)
                 {
                     case "UNBECOME":
-                        Unbecome();
+                        UnbecomeStacked();
                         break;
                     default:
                         Sender.Tell("2:" + s, Self);
@@ -120,7 +120,7 @@ namespace Akka.Tests.Actor
                         Become(OnReceive2);
                         break;
                     case "BECOMESTACKED":
-                        Become(OnReceive2, discardOld: false);
+                        BecomeStacked(OnReceive2);
                         break;
                     default:
                         Sender.Tell("1:" + s, Self);
@@ -137,10 +137,10 @@ namespace Akka.Tests.Actor
                         Become(OnReceive3);
                         break;
                     case "BECOMESTACKED":
-                        Become(OnReceive3, discardOld: false);
+                        BecomeStacked(OnReceive3);
                         break;
                     case "UNBECOME":
-                        Unbecome();
+                        UnbecomeStacked();
                         break;
                     default:
                         Sender.Tell("2:" + s, Self);
@@ -154,7 +154,7 @@ namespace Akka.Tests.Actor
                 switch(s)
                 {
                     case "UNBECOME":
-                        Unbecome();
+                        UnbecomeStacked();
                         break;
                     default:
                         Sender.Tell("3:" + s, Self);

@@ -143,10 +143,38 @@ namespace Akka.Persistence
 
         protected abstract void OnCommand(object message);
         protected abstract void OnRecover(object message);
+
+        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
         protected void Become(UntypedReceive receive, bool discardOld = true)
         {
-            Context.Become(receive, discardOld);
+            if (discardOld)
+                Context.Become(receive);
+            else
+                Context.BecomeStacked(receive);
         }
+
+
+        /// <summary>
+        /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
+        /// </summary>
+        /// <param name="receive">The new message handler.</param>
+        protected void Become(UntypedReceive receive)
+        {
+            Context.Become(receive);
+        }
+
+        /// <summary>
+        /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
+        /// The current handler is stored on a stack, and you can revert to it by calling <see cref="IUntypedActorContext.UnbecomeStacked"/>
+        /// <remarks>Please note, that in order to not leak memory, make sure every call to <see cref="BecomeStacked"/>
+        /// is matched with a call to <see cref="IUntypedActorContext.UnbecomeStacked"/>.</remarks>
+        /// </summary>
+        /// <param name="receive">The new message handler.</param>
+        protected void BecomeStacked(UntypedReceive receive)
+        {
+            Context.BecomeStacked(receive);
+        }
+
 
         protected static new IUntypedActorContext Context { get { return (IUntypedActorContext)ActorBase.Context; } }
     }

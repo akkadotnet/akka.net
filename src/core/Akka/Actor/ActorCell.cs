@@ -17,7 +17,7 @@ namespace Akka.Actor
         private Props _props;
         private static readonly Props terminatedProps=new TerminatedProps();
 
-        protected Stack<Receive> behaviorStack = new Stack<Receive>();
+        private Stack<Receive> _behaviorStack = new Stack<Receive>(1);
         private long _uid;
         private ActorBase _actor;
         private bool _actorHasBeenCleared;
@@ -135,23 +135,57 @@ namespace Akka.Actor
             return ChildrenContainer.Children;
         }
 
-
-        public void Become(Receive receive, bool discardOld = true)
+        public void Become(Receive receive)
         {
-            if(discardOld && behaviorStack.Count > 1) //We should never pop off the initial receiver
-                behaviorStack.Pop();
-            behaviorStack.Push(receive);
+            if(_behaviorStack.Count > 1) //We should never pop off the initial receiver
+                _behaviorStack.Pop();
+            _behaviorStack.Push(receive);
         }
 
-        public void Unbecome()
+        public void BecomeStacked(Receive receive)
         {
-            if (behaviorStack.Count > 1) //We should never pop off the initial receiver
-                behaviorStack.Pop();                
+            _behaviorStack.Push(receive);
         }
-  
+
+
+        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
+        void IActorContext.Become(Receive receive, bool discardOld = true)
+        {
+            if(discardOld)
+                Become(receive);
+            else
+                BecomeStacked(receive);
+        }
+
+        [Obsolete("Use UnbecomeStacked instead. This method will be removed in future versions")]
+        void IActorContext.Unbecome()
+        {
+            UnbecomeStacked();
+        }
+
+        public void UnbecomeStacked()
+        {
+            if (_behaviorStack.Count > 1) //We should never pop off the initial receiver
+                _behaviorStack.Pop();                
+        }
+
+        void IUntypedActorContext.Become(UntypedReceive receive)
+        {
+            Become(m => { receive(m); return true; });
+        }
+
+        void IUntypedActorContext.BecomeStacked(UntypedReceive receive)
+        {
+            BecomeStacked(m => { receive(m); return true; });
+        }
+
+        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
         void IUntypedActorContext.Become(UntypedReceive receive, bool discardOld)
         {
-            Become(m => { receive(m); return true; }, discardOld);
+            if (discardOld)
+                Become(m => { receive(m); return true; });
+            else
+                BecomeStacked(m => { receive(m); return true; });
         }
 
         private long NewUid()
@@ -167,7 +201,7 @@ namespace Akka.Actor
             //set the thread static context or things will break
             UseThreadContext(() =>
             {
-                behaviorStack = new Stack<Receive>();
+                _behaviorStack = new Stack<Receive>(1);
                 instance = CreateNewActorInstance();
                 instance.SupervisorStrategyInternal = _props.SupervisorStrategy;
                 //defaults to null - won't affect lazy instantiation unless explicitly set in props
@@ -265,12 +299,12 @@ namespace Akka.Actor
             }
             _actorHasBeenCleared = true;
             CurrentMessage = null;
-            behaviorStack = null;
+            _behaviorStack = null;
         }
 
         protected void PrepareForNewActor()
         {
-            behaviorStack = new Stack<Receive>();
+            _behaviorStack = new Stack<Receive>(1);
             _actorHasBeenCleared = false;
         }
         protected void SetActorFields(ActorBase actor)

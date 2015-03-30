@@ -45,7 +45,7 @@ namespace Akka.Tests.Actor.Stash
         [Fact]
         public void An_actor_Must_throw_an_exception_if_the_same_message_is_stashed_twice()
         {
-            _state.ExpectedException = new TestLatch(Sys);
+            _state.ExpectedException = new TestLatch();
             var stasher = ActorOf<StashingTwiceActor>("stashing-actor");
             stasher.Tell("hello");
             _state.ExpectedException.Ready(TimeSpan.FromSeconds(3));
