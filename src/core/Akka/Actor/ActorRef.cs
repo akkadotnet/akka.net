@@ -451,7 +451,15 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             return ActorRefs.Nobody;
         }
 
-        public void ForeachActorRef(Action<IInternalActorRef> action)
+        public bool HasChildren
+        {
+            get
+            {
+                return !_children.IsEmpty;
+            }
+        }
+
+        public void ForEachChild(Action<IInternalActorRef> action)
         {
             foreach (IInternalActorRef child in _children.Values)
             {
