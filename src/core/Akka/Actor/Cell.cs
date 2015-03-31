@@ -5,11 +5,10 @@ using Akka.Actor.Internals;
 
 namespace Akka.Actor
 {
-    // ReSharper disable once InconsistentNaming
     /// <summary>
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    public interface Cell
+    public interface ICell
     {
         /// <summary>Gets the “self” reference which this Cell is attached to.</summary>
         IActorRef Self { get; }

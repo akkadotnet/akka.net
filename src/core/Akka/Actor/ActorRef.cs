@@ -332,7 +332,7 @@ namespace Akka.Actor
 
     public abstract class ActorRefWithCell : InternalActorRefBase
     {
-        public abstract Cell Underlying { get; }
+        public abstract ICell Underlying { get; }
 
         public abstract IEnumerable<IActorRef> Children { get; }
 
