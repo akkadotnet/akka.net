@@ -8,7 +8,7 @@ namespace Akka.Util
         T Resolve<T>(object[] args);
     }
 
-    public abstract class Resolve : IndirectActorProducer
+    public abstract class Resolve : IIndirectActorProducer
     {
         public abstract ActorBase Produce();
         public abstract Type ActorType { get; }
