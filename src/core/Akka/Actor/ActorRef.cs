@@ -39,7 +39,7 @@ namespace Akka.Actor
     /// actor refs will have the same behavior.
     /// INTERNAL
     /// </summary>
-    public interface RepointableRef : IActorRefScope
+    public interface IRepointableRef : IActorRefScope
     {
         bool IsStarted { get; }
     }

@@ -11,7 +11,7 @@ using Akka.Pattern;
 
 namespace Akka.Actor
 {
-    public class RepointableActorRef : ActorRefWithCell, RepointableRef
+    public class RepointableActorRef : ActorRefWithCell, IRepointableRef
     {
         private volatile Cell _underlying_DoNotCallMeDirectly;
         private volatile Cell _lookup_DoNotCallMeDirectly;
