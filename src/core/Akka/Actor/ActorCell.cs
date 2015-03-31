@@ -9,7 +9,7 @@ using Akka.Serialization;
 
 namespace Akka.Actor
 {
-    public partial class ActorCell : IUntypedActorContext, Cell 
+    public partial class ActorCell : IUntypedActorContext, ICell 
     {
         /// <summary>NOTE! Only constructor and ClearActorFields is allowed to update this</summary>
         private IInternalActorRef _self;

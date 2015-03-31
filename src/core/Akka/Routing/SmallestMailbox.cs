@@ -55,7 +55,7 @@ namespace Akka.Routing
             return winner;
         }
 
-        private Cell TryGetActorCell(Routee routee)
+        private ICell TryGetActorCell(Routee routee)
         {
             var refRoutee = routee as ActorRefRoutee;
             if (refRoutee != null)

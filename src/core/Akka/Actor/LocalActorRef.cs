@@ -60,7 +60,7 @@ namespace Akka.Actor
         }
 
 
-        public override Cell Underlying
+        public override ICell Underlying
         {
             get { return _cell; }
         }
