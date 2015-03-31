@@ -33,7 +33,7 @@ namespace Akka.Tests.Actor
             latchActor.Ready(TimeSpan.FromSeconds(1));
         }
 
-        private class TestProducer : IndirectActorProducer
+        private class TestProducer : IIndirectActorProducer
         {
             TestLatch latchActor;
 
