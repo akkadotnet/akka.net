@@ -103,7 +103,7 @@ namespace Akka.Remote
             {
                 var addressTerminated = (AddressTerminated) message;
                 //stop any remote actors that belong to this address
-                ForeachActorRef(@ref =>
+                ForEachChild(@ref =>
                 {
                     if(@ref.Parent.Path.Address == addressTerminated.Address) _system.Stop(@ref);
                 });
