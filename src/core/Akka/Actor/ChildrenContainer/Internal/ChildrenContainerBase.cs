@@ -7,9 +7,9 @@ namespace Akka.Actor.Internal
 {
     public abstract class ChildrenContainerBase : IChildrenContainer
     {
-        private readonly IImmutableMap<string, ChildStats> _children;
+        private readonly IImmutableMap<string, IChildStats> _children;
 
-        protected ChildrenContainerBase(IImmutableMap<string, ChildStats> children)
+        protected ChildrenContainerBase(IImmutableMap<string, IChildStats> children)
         {
             _children = children;
         }
@@ -44,9 +44,9 @@ namespace Akka.Actor.Internal
             }
         }
 
-        protected IImmutableMap<string, ChildStats> InternalChildren { get { return _children; } }
+        protected IImmutableMap<string, IChildStats> InternalChildren { get { return _children; } }
 
-        public bool TryGetByName(string name, out ChildStats stats)
+        public bool TryGetByName(string name, out IChildStats stats)
         {
             if (InternalChildren.TryGet(name, out stats)) return true;
             stats = null;
@@ -55,7 +55,7 @@ namespace Akka.Actor.Internal
 
         public bool TryGetByRef(IActorRef actor, out ChildRestartStats childRestartStats)
         {
-            ChildStats stats;
+            IChildStats stats;
             if (InternalChildren.TryGet(actor.Path.Name, out stats))
             {
                 //Since the actor exists, ChildRestartStats is the only valid ChildStats.
@@ -76,7 +76,7 @@ namespace Akka.Actor.Internal
             return TryGetByRef(actor, out stats);
         }
 
-        protected void ChildStatsAppender(StringBuilder sb, IKeyValuePair<string, ChildStats> kvp, int index)
+        protected void ChildStatsAppender(StringBuilder sb, IKeyValuePair<string, IChildStats> kvp, int index)
         {
             sb.Append('<');
             var childStats = kvp.Value;
