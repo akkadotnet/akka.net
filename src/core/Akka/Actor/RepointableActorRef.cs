@@ -185,7 +185,7 @@ namespace Akka.Actor
                         break;
                     default:
                         var nameAndUid = ActorCell.SplitNameAndUid(element);
-                        ChildStats stats;
+                        IChildStats stats;
                         if (Lookup.TryGetChildStatsByName(nameAndUid.Name, out stats))
                         {
                             var crs = stats as ChildRestartStats;
@@ -296,7 +296,7 @@ namespace Akka.Actor
             return Nobody.Instance;
         }
 
-        public bool TryGetChildStatsByName(string name, out ChildStats child)
+        public bool TryGetChildStatsByName(string name, out IChildStats child)
         {
             child = null;
             return false;

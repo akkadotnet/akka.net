@@ -19,12 +19,12 @@ namespace Akka.Actor.Internal
         private readonly IImmutableSet<IActorRef> _toDie;
         private readonly SuspendReason _reason;
 
-        public TerminatingChildrenContainer(IImmutableMap<string, ChildStats> children, IActorRef toDie, SuspendReason reason)
+        public TerminatingChildrenContainer(IImmutableMap<string, IChildStats> children, IActorRef toDie, SuspendReason reason)
             : this(children, ImmutableTreeSet<IActorRef>.Create(toDie), reason)
         {
             //Intentionally left blank
         }
-        public TerminatingChildrenContainer(IImmutableMap<string, ChildStats> children, IImmutableSet<IActorRef> toDie, SuspendReason reason)
+        public TerminatingChildrenContainer(IImmutableMap<string, IChildStats> children, IImmutableSet<IActorRef> toDie, SuspendReason reason)
             : base(children)
         {
             _toDie = toDie;
@@ -66,7 +66,7 @@ namespace Akka.Actor.Internal
 
         public override IChildrenContainer Unreserve(string name)
         {
-            ChildStats stats;
+            IChildStats stats;
             if (!InternalChildren.TryGet(name, out stats))
                 return this;
             return new TerminatingChildrenContainer(InternalChildren.Remove(name), _toDie, _reason);

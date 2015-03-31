@@ -81,7 +81,7 @@ namespace Akka.Actor
         /// indicating that only a name has been reserved for the child, or a <see cref="ChildRestartStats"/> for a child that 
         /// has been initialized/created.
         /// </summary>
-        bool TryGetChildStatsByName(string name, out ChildStats child); //This is called getChildByName in Akka JVM
+        bool TryGetChildStatsByName(string name, out IChildStats child); //This is called getChildByName in Akka JVM
 
 
 

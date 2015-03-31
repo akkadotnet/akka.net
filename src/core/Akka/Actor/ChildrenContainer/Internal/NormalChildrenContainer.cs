@@ -11,12 +11,12 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class NormalChildrenContainer : ChildrenContainerBase
     {
-        private NormalChildrenContainer(IImmutableMap<string, ChildStats> children)
+        private NormalChildrenContainer(IImmutableMap<string, IChildStats> children)
             : base(children)
         {
         }
 
-        public static IChildrenContainer Create(IImmutableMap<string, ChildStats> children)
+        public static IChildrenContainer Create(IImmutableMap<string, IChildStats> children)
         {
             if (children.IsEmpty) return EmptyChildrenContainer.Instance;
             return new NormalChildrenContainer(children);
@@ -46,7 +46,7 @@ namespace Akka.Actor.Internal
 
         public override IChildrenContainer Unreserve(string name)
         {
-            ChildStats stats;
+            IChildStats stats;
             if (InternalChildren.TryGet(name, out stats) && (stats is ChildNameReserved))
             {
                 return Create(InternalChildren.Remove(name));

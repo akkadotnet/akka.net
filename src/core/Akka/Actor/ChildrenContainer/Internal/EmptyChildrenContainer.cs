@@ -8,7 +8,7 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class EmptyChildrenContainer : IChildrenContainer
     {
-        private static readonly ImmutableTreeMap<string, ChildStats> _emptyStats = ImmutableTreeMap<string, ChildStats>.Empty;
+        private static readonly ImmutableTreeMap<string, IChildStats> _emptyStats = ImmutableTreeMap<string, IChildStats>.Empty;
         private static readonly IChildrenContainer _instance = new EmptyChildrenContainer();
 
         protected EmptyChildrenContainer()
@@ -29,7 +29,7 @@ namespace Akka.Actor.Internal
             return this;
         }
 
-        public bool TryGetByName(string name, out ChildStats stats)
+        public bool TryGetByName(string name, out IChildStats stats)
         {
             stats = null;
             return false;
