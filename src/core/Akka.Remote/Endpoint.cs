@@ -67,7 +67,7 @@ namespace Akka.Remote
             }
 
             //message is intended for a local recipient
-            else if ((recipient is LocalRef || recipient is RepointableActorRef) && recipient.IsLocal)
+            else if ((recipient is ILocalRef || recipient is RepointableActorRef) && recipient.IsLocal)
             {
                 if (settings.LogReceive) log.Debug("received local message [{0}]", msgLog);
                 payload.Match()

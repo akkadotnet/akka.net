@@ -29,7 +29,7 @@ namespace Akka.Actor
     /// Marker interface for Actors that are deployed within local scope, 
     /// i.e. <see cref="IActorRefScope.IsLocal"/> always returns <c>true</c>.
     /// </summary>
-    internal interface LocalRef : IActorRefScope { }
+    internal interface ILocalRef : IActorRefScope { }
 
     /// <summary>
     /// RepointableActorRef (and potentially others) may change their locality at
@@ -267,7 +267,7 @@ namespace Akka.Actor
         public abstract bool IsLocal { get; }
     }
 
-    public abstract class MinimalActorRef : InternalActorRefBase, LocalRef
+    public abstract class MinimalActorRef : InternalActorRefBase, ILocalRef
     {
         public override IInternalActorRef Parent
         {
