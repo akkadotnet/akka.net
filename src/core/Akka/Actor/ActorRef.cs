@@ -20,18 +20,16 @@ namespace Akka.Actor
     /// method provided on the scope.
     /// INTERNAL
     /// </summary>
-    // ReSharper disable once InconsistentNaming
-    public interface ActorRefScope
+    public interface IActorRefScope
     {
         bool IsLocal { get; }
     }
 
     /// <summary>
     /// Marker interface for Actors that are deployed within local scope, 
-    /// i.e. <see cref="ActorRefScope.IsLocal"/> always returns <c>true</c>.
+    /// i.e. <see cref="IActorRefScope.IsLocal"/> always returns <c>true</c>.
     /// </summary>
-    // ReSharper disable once InconsistentNaming
-    internal interface LocalRef : ActorRefScope { }
+    internal interface LocalRef : IActorRefScope { }
 
     /// <summary>
     /// RepointableActorRef (and potentially others) may change their locality at
@@ -41,7 +39,7 @@ namespace Akka.Actor
     /// actor refs will have the same behavior.
     /// INTERNAL
     /// </summary>
-    public interface RepointableRef : ActorRefScope
+    public interface RepointableRef : IActorRefScope
     {
         bool IsStarted { get; }
     }
@@ -222,7 +220,7 @@ namespace Akka.Actor
     }
 
 
-    public interface IInternalActorRef : IActorRef, ActorRefScope
+    public interface IInternalActorRef : IActorRef, IActorRefScope
     {
         IInternalActorRef Parent { get; }
         IActorRefProvider Provider { get; }
