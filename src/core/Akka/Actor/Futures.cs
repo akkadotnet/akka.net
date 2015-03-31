@@ -24,7 +24,7 @@ namespace Akka.Actor
 
         public static async Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout = null)
         {
-            IActorRefProvider provider = ResolveProvider(self);
+            ActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new NotSupportedException("Unable to resolve the target Provider");
 
@@ -41,7 +41,7 @@ namespace Akka.Actor
             return null;
         }
 
-        internal static IActorRefProvider ResolveProvider(ICanTell self)
+        internal static ActorRefProvider ResolveProvider(ICanTell self)
         {
             if (ActorCell.Current != null)
                 return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
@@ -55,7 +55,7 @@ namespace Akka.Actor
             return null;
         }
 
-        private static Task<object> Ask(ICanTell self, object message, IActorRefProvider provider,
+        private static Task<object> Ask(ICanTell self, object message, ActorRefProvider provider,
             TimeSpan? timeout)
         {
             var result = new TaskCompletionSource<object>(TaskContinuationOptions.AttachedToParent);
@@ -86,14 +86,14 @@ namespace Akka.Actor
     /// </summary>
     internal sealed class PromiseActorRef : MinimalActorRef
     {
-        public PromiseActorRef(IActorRefProvider provider, TaskCompletionSource<object> result, string mcn)
+        public PromiseActorRef(ActorRefProvider provider, TaskCompletionSource<object> result, string mcn)
         {
             _provider = provider;
             Result = result;
             _mcn = mcn;
         }
 
-        private readonly IActorRefProvider _provider;
+        private readonly ActorRefProvider _provider;
         public readonly TaskCompletionSource<object> Result;
 
         /// <summary>
@@ -175,7 +175,7 @@ namespace Akka.Actor
 
         private static readonly Status.Failure ActorStopResult = new Status.Failure(new ActorKilledException("Stopped"));
 
-        public static PromiseActorRef Apply(IActorRefProvider provider, TimeSpan timeout, object targetName,
+        public static PromiseActorRef Apply(ActorRefProvider provider, TimeSpan timeout, object targetName,
             string messageClassName, IActorRef sender = null)
         {
             sender = sender ?? ActorRefs.NoSender;
@@ -217,7 +217,7 @@ namespace Akka.Actor
             return _watchedByDoNotCallMeDirectly.CompareAndSet(oldWatchedBy, newWatchedBy);
         }
 
-        public override IActorRefProvider Provider
+        public override ActorRefProvider Provider
         {
             get { return _provider; }
         }

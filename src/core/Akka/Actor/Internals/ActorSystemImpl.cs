@@ -21,7 +21,7 @@ namespace Akka.Actor.Internals
         private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
 
         private LoggingAdapter _log;
-        private IActorRefProvider _provider;
+        private ActorRefProvider _provider;
         private Settings _settings;
         private readonly string _name;
         private Serialization.Serialization _serialization;
@@ -55,7 +55,7 @@ namespace Akka.Actor.Internals
             ConfigureActorProducerPipeline();
         }
 
-        public override IActorRefProvider Provider { get { return _provider; } }
+        public override ActorRefProvider Provider { get { return _provider; } }
         public override Settings Settings { get { return _settings; } }
         public override string Name { get { return _name; } }
         public override Serialization.Serialization Serialization { get { return _serialization; } }
@@ -257,7 +257,7 @@ namespace Akka.Actor.Internals
         {
             Type providerType = Type.GetType(_settings.ProviderClass);
             global::System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
-            var provider = (IActorRefProvider)Activator.CreateInstance(providerType, _name, _settings, _eventStream);
+            var provider = (ActorRefProvider)Activator.CreateInstance(providerType, _name, _settings, _eventStream);
             _provider = provider;
         }
 

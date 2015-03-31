@@ -20,16 +20,18 @@ namespace Akka.Actor
     /// method provided on the scope.
     /// INTERNAL
     /// </summary>
-    public interface IActorRefScope
+    // ReSharper disable once InconsistentNaming
+    public interface ActorRefScope
     {
         bool IsLocal { get; }
     }
 
     /// <summary>
     /// Marker interface for Actors that are deployed within local scope, 
-    /// i.e. <see cref="IActorRefScope.IsLocal"/> always returns <c>true</c>.
+    /// i.e. <see cref="ActorRefScope.IsLocal"/> always returns <c>true</c>.
     /// </summary>
-    internal interface ILocalRef : IActorRefScope { }
+    // ReSharper disable once InconsistentNaming
+    internal interface LocalRef : ActorRefScope { }
 
     /// <summary>
     /// RepointableActorRef (and potentially others) may change their locality at
@@ -39,7 +41,7 @@ namespace Akka.Actor
     /// actor refs will have the same behavior.
     /// INTERNAL
     /// </summary>
-    public interface IRepointableRef : IActorRefScope
+    public interface RepointableRef : ActorRefScope
     {
         bool IsStarted { get; }
     }
@@ -66,7 +68,7 @@ namespace Akka.Actor
             get { return _path; }
         }
 
-        public override IActorRefProvider Provider
+        public override ActorRefProvider Provider
         {
             get { throw new NotImplementedException(); }
         }
@@ -220,10 +222,10 @@ namespace Akka.Actor
     }
 
 
-    public interface IInternalActorRef : IActorRef, IActorRefScope
+    public interface IInternalActorRef : IActorRef, ActorRefScope
     {
         IInternalActorRef Parent { get; }
-        IActorRefProvider Provider { get; }
+        ActorRefProvider Provider { get; }
         bool IsTerminated { get; }
 
         /// <summary>
@@ -246,7 +248,7 @@ namespace Akka.Actor
     public abstract class InternalActorRefBase : ActorRefBase, IInternalActorRef
     {
         public abstract IInternalActorRef Parent { get; }
-        public abstract IActorRefProvider Provider { get; }
+        public abstract ActorRefProvider Provider { get; }
 
         /// <summary>
         /// Obtain a child given the paths element to that actor, by possibly traversing the actor tree or 
@@ -267,7 +269,7 @@ namespace Akka.Actor
         public abstract bool IsLocal { get; }
     }
 
-    public abstract class MinimalActorRef : InternalActorRefBase, ILocalRef
+    public abstract class MinimalActorRef : InternalActorRefBase, LocalRef
     {
         public override IInternalActorRef Parent
         {
@@ -323,7 +325,7 @@ namespace Akka.Actor
 
         public override ActorPath Path { get { return _path; } }
 
-        public override IActorRefProvider Provider
+        public override ActorRefProvider Provider
         {
             get { throw new NotSupportedException("Nobody does not provide"); }
         }
@@ -332,7 +334,7 @@ namespace Akka.Actor
 
     public abstract class ActorRefWithCell : InternalActorRefBase
     {
-        public abstract ICell Underlying { get; }
+        public abstract Cell Underlying { get; }
 
         public abstract IEnumerable<IActorRef> Children { get; }
 
@@ -358,12 +360,12 @@ namespace Akka.Actor
     {
         private readonly IInternalActorRef _parent;
         private readonly LoggingAdapter _log;
-        private readonly IActorRefProvider _provider;
+        private readonly ActorRefProvider _provider;
         private readonly ActorPath _path;
 
         private readonly ConcurrentDictionary<string, IInternalActorRef> _children = new ConcurrentDictionary<string, IInternalActorRef>();
 
-        public VirtualPathContainer(IActorRefProvider provider, ActorPath path, IInternalActorRef parent, LoggingAdapter log)
+        public VirtualPathContainer(ActorRefProvider provider, ActorPath path, IInternalActorRef parent, LoggingAdapter log)
         {
             _parent = parent;
             _log = log;
@@ -371,7 +373,7 @@ namespace Akka.Actor
             _path = path;
         }
 
-        public override IActorRefProvider Provider
+        public override ActorRefProvider Provider
         {
             get { return _provider; }
         }

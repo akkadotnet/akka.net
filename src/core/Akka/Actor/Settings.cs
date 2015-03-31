@@ -56,7 +56,7 @@ namespace Akka.Actor
             var providerType = Type.GetType(ProviderClass);
             if (providerType == null)
                 throw new ConfigurationException(string.Format("'akka.actor.provider' is not a valid type name : '{0}'", ProviderClass));
-            if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
+            if (!typeof(ActorRefProvider).IsAssignableFrom(providerType))
                 throw new ConfigurationException(string.Format("'akka.actor.provider' is not a valid actor ref provider: '{0}'", ProviderClass));
             
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy");

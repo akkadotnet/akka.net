@@ -9,7 +9,7 @@ using Akka.Serialization;
 
 namespace Akka.Actor
 {
-    public partial class ActorCell : IUntypedActorContext, ICell 
+    public partial class ActorCell : IUntypedActorContext, Cell 
     {
         /// <summary>NOTE! Only constructor and ClearActorFields is allowed to update this</summary>
         private IInternalActorRef _self;
@@ -217,7 +217,7 @@ namespace Akka.Actor
             var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
             pipeline.AfterActorIncarnated(actor, this);
             
-            var initializableActor = actor as IInitializableActor;
+            var initializableActor = actor as InitializableActor;
             if(initializableActor != null)
             {
                 initializableActor.Init();

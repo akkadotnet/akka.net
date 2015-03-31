@@ -41,7 +41,7 @@ namespace Akka.Actor
 
             try
             {
-                var autoReceivedMessage = message as IAutoReceivedMessage;
+                var autoReceivedMessage = message as AutoReceivedMessage;
                 if (autoReceivedMessage != null)
                     AutoReceiveMessage(envelope);
                 else

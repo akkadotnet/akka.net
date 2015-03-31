@@ -376,7 +376,7 @@ namespace Akka.Actor
     /// </summary>
     /// <typeparam name="TState">The state name type</typeparam>
     /// <typeparam name="TData">The state data type</typeparam>
-    public abstract class FSM<TState, TData> : FSMBase, IListeners, IInternalSupportsTestFSMRef<TState,TData>
+    public abstract class FSM<TState, TData> : FSMBase, IListeners, InternalSupportsTestFSMRef<TState,TData>
     {
         private readonly LoggingAdapter _log = Context.GetLogger();
         protected FSM()
@@ -552,7 +552,7 @@ namespace Akka.Actor
         }
 
         //Internal API
-        bool IInternalSupportsTestFSMRef<TState, TData>.IsStateTimerActive
+        bool InternalSupportsTestFSMRef<TState, TData>.IsStateTimerActive
         {
             get
             {
@@ -855,7 +855,7 @@ namespace Akka.Actor
         }
 
         //Internal API
-        void IInternalSupportsTestFSMRef<TState, TData>.ApplyState(State<TState, TData> upcomingState)
+        void InternalSupportsTestFSMRef<TState, TData>.ApplyState(State<TState, TData> upcomingState)
         {
             ApplyState(upcomingState);
         }

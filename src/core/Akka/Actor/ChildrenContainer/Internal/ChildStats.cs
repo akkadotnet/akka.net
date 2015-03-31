@@ -2,11 +2,12 @@
 
 namespace Akka.Actor.Internal
 {
-    public interface IChildStats
+    // ReSharper disable once InconsistentNaming
+    public interface ChildStats
     {
     }
 
-    public class ChildNameReserved : IChildStats
+    public class ChildNameReserved : ChildStats
     {
         private static readonly ChildNameReserved _instance = new ChildNameReserved();
         private ChildNameReserved() {/* Intentionally left blank */}
@@ -22,7 +23,7 @@ namespace Akka.Actor.Internal
     /// ChildRestartStats is the statistics kept by every parent Actor for every child Actor
     /// and is used for SupervisorStrategies to know how to deal with problems that occur for the children.
     /// </summary>
-    public class ChildRestartStats : IChildStats
+    public class ChildRestartStats : ChildStats
     {
         private readonly IInternalActorRef _child;
         private uint _maxNrOfRetriesCount;

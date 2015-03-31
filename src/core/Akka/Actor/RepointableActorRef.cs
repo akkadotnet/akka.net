@@ -11,10 +11,10 @@ using Akka.Pattern;
 
 namespace Akka.Actor
 {
-    public class RepointableActorRef : ActorRefWithCell, IRepointableRef
+    public class RepointableActorRef : ActorRefWithCell, RepointableRef
     {
-        private volatile ICell _underlying_DoNotCallMeDirectly;
-        private volatile ICell _lookup_DoNotCallMeDirectly;
+        private volatile Cell _underlying_DoNotCallMeDirectly;
+        private volatile Cell _lookup_DoNotCallMeDirectly;
         private readonly ActorSystemImpl _system;
         private readonly Props _props;
         private readonly MessageDispatcher _dispatcher;
@@ -33,8 +33,8 @@ namespace Akka.Actor
         }
 
 
-        public override ICell Underlying { get { return _underlying_DoNotCallMeDirectly; } }
-        public ICell Lookup { get { return _lookup_DoNotCallMeDirectly; } }
+        public override Cell Underlying { get { return _underlying_DoNotCallMeDirectly; } }
+        public Cell Lookup { get { return _lookup_DoNotCallMeDirectly; } }
 
         public override bool IsTerminated
         {
@@ -42,7 +42,7 @@ namespace Akka.Actor
         }
 
 
-        public void SwapUnderlying(ICell cell)
+        public void SwapUnderlying(Cell cell)
         {
             #pragma warning disable 0420
             //Ok to ignore CS0420 "a reference to a volatile field will not be treated as volatile" for interlocked calls http://msdn.microsoft.com/en-us/library/4bw5ewxy(VS.80).aspx
@@ -50,7 +50,7 @@ namespace Akka.Actor
             #pragma warning restore 0420
         }
 
-        private void SwapLookup(ICell cell)
+        private void SwapLookup(Cell cell)
         {
             #pragma warning disable 0420
             //Ok to ignore CS0420 "a reference to a volatile field will not be treated as volatile" for interlocked calls http://msdn.microsoft.com/en-us/library/4bw5ewxy(VS.80).aspx
@@ -124,7 +124,7 @@ namespace Akka.Actor
 
         public override IInternalActorRef Parent { get { return Underlying.Parent; } }
 
-        public override IActorRefProvider Provider { get { return _system.Provider; } }
+        public override ActorRefProvider Provider { get { return _system.Provider; } }
 
         public override bool IsLocal { get { return Underlying.IsLocal; } }
 
@@ -185,7 +185,7 @@ namespace Akka.Actor
                         break;
                     default:
                         var nameAndUid = ActorCell.SplitNameAndUid(element);
-                        IChildStats stats;
+                        ChildStats stats;
                         if (Lookup.TryGetChildStatsByName(nameAndUid.Name, out stats))
                         {
                             var crs = stats as ChildRestartStats;
@@ -214,7 +214,7 @@ namespace Akka.Actor
 
     }
 
-    public class UnstartedCell : ICell
+    public class UnstartedCell : Cell
     {
         private readonly ActorSystemImpl _system;
         private readonly RepointableActorRef _self;
@@ -233,7 +233,7 @@ namespace Akka.Actor
             _timeout = _system.Settings.UnstartedPushTimeout;
         }
 
-        public void ReplaceWith(ICell cell)
+        public void ReplaceWith(Cell cell)
         {
             lock(_lock)
             {
@@ -296,7 +296,7 @@ namespace Akka.Actor
             return Nobody.Instance;
         }
 
-        public bool TryGetChildStatsByName(string name, out IChildStats child)
+        public bool TryGetChildStatsByName(string name, out ChildStats child)
         {
             child = null;
             return false;
@@ -400,7 +400,7 @@ namespace Akka.Actor
 
         public bool IsLocal { get { return true; } }
 
-        private bool CellIsReady(ICell cell)
+        private bool CellIsReady(Cell cell)
         {
             return !ReferenceEquals(cell, this) && !ReferenceEquals(cell, null);
         }

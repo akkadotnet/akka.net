@@ -7,7 +7,7 @@ using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
-    public class LocalActorRef : ActorRefWithCell, ILocalRef
+    public class LocalActorRef : ActorRefWithCell, LocalRef
     {
         private readonly ActorSystem _system;
         private readonly Props _props;
@@ -60,7 +60,7 @@ namespace Akka.Actor
         }
 
 
-        public override ICell Underlying
+        public override Cell Underlying
         {
             get { return _cell; }
         }
@@ -70,7 +70,7 @@ namespace Akka.Actor
             get { return _cell; }
         }
 
-        public override IActorRefProvider Provider
+        public override ActorRefProvider Provider
         {
             get { return _cell.SystemImpl.Provider; }
         }

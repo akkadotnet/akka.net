@@ -11,42 +11,42 @@ namespace Akka.Actor.Internal
     /// </summary>
     public class NormalChildrenContainer : ChildrenContainerBase
     {
-        private NormalChildrenContainer(IImmutableMap<string, IChildStats> children)
+        private NormalChildrenContainer(IImmutableMap<string, ChildStats> children)
             : base(children)
         {
         }
 
-        public static IChildrenContainer Create(IImmutableMap<string, IChildStats> children)
+        public static ChildrenContainer Create(IImmutableMap<string, ChildStats> children)
         {
             if (children.IsEmpty) return EmptyChildrenContainer.Instance;
             return new NormalChildrenContainer(children);
         }
 
-        public override IChildrenContainer Add(string name, ChildRestartStats stats)
+        public override ChildrenContainer Add(string name, ChildRestartStats stats)
         {
             return Create(InternalChildren.AddOrUpdate(name, stats));
         }
 
-        public override IChildrenContainer Remove(IActorRef child)
+        public override ChildrenContainer Remove(IActorRef child)
         {
             return Create(InternalChildren.Remove(child.Path.Name));
         }
 
-        public override IChildrenContainer ShallDie(IActorRef actor)
+        public override ChildrenContainer ShallDie(IActorRef actor)
         {
             return new TerminatingChildrenContainer(InternalChildren, actor, SuspendReason.UserRequest.Instance);
         }
 
-        public override IChildrenContainer Reserve(string name)
+        public override ChildrenContainer Reserve(string name)
         {
             if (InternalChildren.Contains(name))
                 throw new InvalidActorNameException(string.Format("Actor name \"{0}\" is not unique!", name));
             return new NormalChildrenContainer(InternalChildren.AddOrUpdate(name, ChildNameReserved.Instance));
         }
 
-        public override IChildrenContainer Unreserve(string name)
+        public override ChildrenContainer Unreserve(string name)
         {
-            IChildStats stats;
+            ChildStats stats;
             if (InternalChildren.TryGet(name, out stats) && (stats is ChildNameReserved))
             {
                 return Create(InternalChildren.Remove(name));

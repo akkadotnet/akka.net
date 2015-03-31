@@ -5,7 +5,8 @@ namespace Akka.Actor.Internal
     /// This is used to let TestFSMRef in TestKit access to internal methods.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    public interface IInternalSupportsTestFSMRef<TState, TData>
+    // ReSharper disable once InconsistentNaming
+    public interface InternalSupportsTestFSMRef<TState, TData>
     {
         /// <summary>
         /// INTERNAL API. Used for testing.

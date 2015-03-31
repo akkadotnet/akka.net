@@ -183,11 +183,11 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// <see cref="IInboxable"/> is an actor-like object to be listened by external objects.
+    /// <see cref="Inboxable"/> is an actor-like object to be listened by external objects.
     /// It can watch other actors lifecycle and contains inner actor, which could be passed
     /// as reference to other actors.
     /// </summary>
-    public interface IInboxable : ICanWatch
+    public interface Inboxable : ICanWatch
     {
         /// <summary>
         /// Get a reference to internal actor. It may be for example registered in event stream.
@@ -195,13 +195,13 @@ namespace Akka.Actor
         IActorRef Receiver { get; }
 
         /// <summary>
-        /// Receive a next message from current <see cref="IInboxable"/> with default timeout. This call will return immediately,
+        /// Receive a next message from current <see cref="Inboxable"/> with default timeout. This call will return immediately,
         /// if the internal actor previously received a message, or will block until it'll receive a message.
         /// </summary>
         object Receive();
 
         /// <summary>
-        /// Receive a next message from current <see cref="IInboxable"/>. This call will return immediately,
+        /// Receive a next message from current <see cref="Inboxable"/>. This call will return immediately,
         /// if the internal actor previously received a message, or will block for time specified by 
         /// <paramref name="timeout"/> until it'll receive a message.
         /// </summary>
@@ -229,7 +229,7 @@ namespace Akka.Actor
         void Send(IActorRef target, object message);
     }
 
-    public class Inbox : IInboxable, IDisposable
+    public class Inbox : Inboxable, IDisposable
     {
         private static int inboxNr = 0;
         private readonly ISet<IObserver<object>> _subscribers;

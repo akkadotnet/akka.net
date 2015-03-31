@@ -197,7 +197,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class ActorSelectionMessage.
     /// </summary>
-    public class ActorSelectionMessage : IAutoReceivedMessage, PossiblyHarmful
+    public class ActorSelectionMessage : AutoReceivedMessage, PossiblyHarmful
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorSelectionMessage" /> class.

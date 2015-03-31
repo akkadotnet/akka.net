@@ -19,12 +19,12 @@ namespace Akka.Actor.Internal
         private readonly IImmutableSet<IActorRef> _toDie;
         private readonly SuspendReason _reason;
 
-        public TerminatingChildrenContainer(IImmutableMap<string, IChildStats> children, IActorRef toDie, SuspendReason reason)
+        public TerminatingChildrenContainer(IImmutableMap<string, ChildStats> children, IActorRef toDie, SuspendReason reason)
             : this(children, ImmutableTreeSet<IActorRef>.Create(toDie), reason)
         {
             //Intentionally left blank
         }
-        public TerminatingChildrenContainer(IImmutableMap<string, IChildStats> children, IImmutableSet<IActorRef> toDie, SuspendReason reason)
+        public TerminatingChildrenContainer(IImmutableMap<string, ChildStats> children, IImmutableSet<IActorRef> toDie, SuspendReason reason)
             : base(children)
         {
             _toDie = toDie;
@@ -33,13 +33,13 @@ namespace Akka.Actor.Internal
 
         public SuspendReason Reason { get { return _reason; } }
 
-        public override IChildrenContainer Add(string name, ChildRestartStats stats)
+        public override ChildrenContainer Add(string name, ChildRestartStats stats)
         {
             var newMap = InternalChildren.AddOrUpdate(name, stats);
             return new TerminatingChildrenContainer(newMap, _toDie, _reason);
         }
 
-        public override IChildrenContainer Remove(IActorRef child)
+        public override ChildrenContainer Remove(IActorRef child)
         {
             var set = _toDie.Remove(child);
             if (set.IsEmpty)
@@ -50,12 +50,12 @@ namespace Akka.Actor.Internal
             return new TerminatingChildrenContainer(InternalChildren.Remove(child.Path.Name), set, _reason);
         }
 
-        public override IChildrenContainer ShallDie(IActorRef actor)
+        public override ChildrenContainer ShallDie(IActorRef actor)
         {
             return new TerminatingChildrenContainer(InternalChildren, _toDie.Add(actor), _reason);
         }
 
-        public override IChildrenContainer Reserve(string name)
+        public override ChildrenContainer Reserve(string name)
         {
             if (_reason is SuspendReason.Termination) throw new InvalidOperationException(string.Format("Cannot reserve actor name\"{0}\". Is terminating.", name));
             if (InternalChildren.Contains(name))
@@ -64,9 +64,9 @@ namespace Akka.Actor.Internal
                 return new TerminatingChildrenContainer(InternalChildren.AddOrUpdate(name, ChildNameReserved.Instance), _toDie, _reason);
         }
 
-        public override IChildrenContainer Unreserve(string name)
+        public override ChildrenContainer Unreserve(string name)
         {
-            IChildStats stats;
+            ChildStats stats;
             if (!InternalChildren.TryGet(name, out stats))
                 return this;
             return new TerminatingChildrenContainer(InternalChildren.Remove(name), _toDie, _reason);
@@ -99,7 +99,7 @@ namespace Akka.Actor.Internal
             return sb.ToString();
         }
 
-        public IChildrenContainer CreateCopyWithReason(SuspendReason reason)
+        public ChildrenContainer CreateCopyWithReason(SuspendReason reason)
         {
             return new TerminatingChildrenContainer(InternalChildren, _toDie, reason);
         }

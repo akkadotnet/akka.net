@@ -96,7 +96,7 @@ namespace Akka.Tests.Actor
                 get { return _path; }
             }
 
-            public override IActorRefProvider Provider
+            public override ActorRefProvider Provider
             {
                 get { throw new System.NotImplementedException(); }
             }

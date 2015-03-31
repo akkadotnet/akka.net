@@ -6,7 +6,7 @@ namespace Akka.DI.Core
     /// <summary>
     /// Dependency Injection Backed IndirectActorProducer
     /// </summary>
-    public class DIActorProducer : IIndirectActorProducer
+    public class DIActorProducer : IndirectActorProducer
     {
         private IDependencyResolver dependencyResolver;
         private string actorName;

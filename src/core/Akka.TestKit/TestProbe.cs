@@ -94,11 +94,11 @@ namespace Akka.TestKit
             return TestActor.ToSurrogate(system);
         }
 
-        bool IActorRefScope.IsLocal { get { return ((IInternalActorRef) TestActor).IsLocal; } }
+        bool ActorRefScope.IsLocal { get { return ((IInternalActorRef) TestActor).IsLocal; } }
 
         IInternalActorRef IInternalActorRef.Parent { get { return ((IInternalActorRef)TestActor).Parent; } }
 
-        IActorRefProvider IInternalActorRef.Provider { get { return ((IInternalActorRef)TestActor).Provider; } }
+        ActorRefProvider IInternalActorRef.Provider { get { return ((IInternalActorRef)TestActor).Provider; } }
 
         bool IInternalActorRef.IsTerminated { get { return ((IInternalActorRef)TestActor).IsTerminated; } }
 

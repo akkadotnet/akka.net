@@ -11,7 +11,7 @@ namespace Akka.Actor.Internal
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
         // ReSharper disable once InconsistentNaming
-        public interface IWaitingForChildren
+        public interface WaitingForChildren
         {
             //Intentionally left blank
         }
@@ -19,7 +19,7 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
-        public class Creation : SuspendReason, IWaitingForChildren
+        public class Creation : SuspendReason, WaitingForChildren
         {
             //Intentionally left blank
         }
@@ -27,7 +27,7 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
-        public class Recreation : SuspendReason, IWaitingForChildren
+        public class Recreation : SuspendReason, WaitingForChildren
         {
             private readonly Exception _cause;
 

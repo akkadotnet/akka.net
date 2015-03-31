@@ -129,7 +129,7 @@ namespace Akka.Actor
 
         private void SendTerminated(bool ifLocal, IActorRef watcher)
         {
-            if (((IActorRefScope)watcher).IsLocal == ifLocal && !watcher.Equals(Parent))
+            if (((ActorRefScope)watcher).IsLocal == ifLocal && !watcher.Equals(Parent))
             {
                 ((IInternalActorRef)watcher).Tell(new DeathWatchNotification(Self, true, false));
             }
@@ -280,7 +280,7 @@ namespace Akka.Actor
             get { return _ref.Path.WithUid(ActorCell.UndefinedUid); }
         }
 
-        public override IActorRefProvider Provider
+        public override ActorRefProvider Provider
         {
             get
             {

@@ -6,11 +6,11 @@ namespace Akka.Actor
 {
     public class EmptyLocalActorRef : MinimalActorRef
     {
-        private readonly IActorRefProvider _provider;
+        private readonly ActorRefProvider _provider;
         private readonly ActorPath _path;
         private readonly EventStream _eventStream;
 
-        public EmptyLocalActorRef(IActorRefProvider provider, ActorPath path, EventStream eventStream)
+        public EmptyLocalActorRef(ActorRefProvider provider, ActorPath path, EventStream eventStream)
         {
             _provider = provider;
             _path = path;
@@ -19,7 +19,7 @@ namespace Akka.Actor
 
         public override ActorPath Path { get { return _path; } }
 
-        public override IActorRefProvider Provider { get { return _provider; } }
+        public override ActorRefProvider Provider { get { return _provider; } }
         public override bool IsTerminated { get { return true; } }
 
         protected override void TellInternal(object message, IActorRef sender)

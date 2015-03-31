@@ -95,7 +95,7 @@ namespace Akka.TestKit
             //Wait for the testactor to start
             AwaitCondition(() =>
             {
-                var repRef = testActor as IRepointableRef;
+                var repRef = testActor as RepointableRef;
                 return repRef == null || repRef.IsStarted;
             }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(10));
 
