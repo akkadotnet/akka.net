@@ -188,7 +188,7 @@ namespace Akka.Actor
             get
             {
                 var terminating = ChildrenContainer as TerminatingChildrenContainer;
-                return terminating != null && terminating.Reason is SuspendReason.WaitingForChildren;
+                return terminating != null && terminating.Reason is SuspendReason.IWaitingForChildren;
             }
         }
 
