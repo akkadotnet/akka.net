@@ -2,12 +2,12 @@
 
 namespace Akka.Actor
 {
-    public interface AutoReceivedMessage : NoSerializationVerificationNeeded
+    public interface IAutoReceivedMessage : NoSerializationVerificationNeeded
     {
     }
 
     public sealed class
-        Terminated : AutoReceivedMessage, PossiblyHarmful
+        Terminated : IAutoReceivedMessage, PossiblyHarmful
     {
         public Terminated(IActorRef actorRef, bool existenceConfirmed, bool addressTerminated)
         {
@@ -30,7 +30,7 @@ namespace Akka.Actor
     }
 
     //request to an actor ref, to get back the identity of the underlying actors
-    public sealed class Identify : AutoReceivedMessage
+    public sealed class Identify : IAutoReceivedMessage
     {
         public Identify(object messageId)
         {
@@ -71,7 +71,7 @@ namespace Akka.Actor
     /// it processes the message, which gets handled using the normal supervisor mechanism, and
     /// <see cref="IActorContext.Stop"/> which causes the actor to stop without processing any more messages. </para>
     /// </summary>
-    public sealed class PoisonPill : AutoReceivedMessage
+    public sealed class PoisonPill : IAutoReceivedMessage
     {
         private PoisonPill() { }
         private static readonly PoisonPill _instance = new PoisonPill();
@@ -97,7 +97,7 @@ namespace Akka.Actor
     /// is processed, without throwing an exception, and 
     /// <see cref="IActorContext.Stop"/> which causes the actor to stop without processing any more messages. </para>
     /// </summary>
-    public sealed class Kill : AutoReceivedMessage
+    public sealed class Kill : IAutoReceivedMessage
     {
         private Kill() { }
 
@@ -128,7 +128,7 @@ namespace Akka.Actor
     /// The watcher <see cref="DeathWatch"/> subscribes to the <see cref="AddressTerminatedTopic"/> and translates this
     /// event to <see cref="Terminated"/>, which is sent to itself.
     /// </summary>
-    internal class AddressTerminated : AutoReceivedMessage, PossiblyHarmful
+    internal class AddressTerminated : IAutoReceivedMessage, PossiblyHarmful
     {
         public AddressTerminated(Address address)
         {
