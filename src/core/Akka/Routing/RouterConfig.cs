@@ -34,7 +34,7 @@ namespace Akka.Routing
         public virtual bool IsManagementMessage(object message)
         {
             return
-                message is AutoReceivedMessage ||
+                message is IAutoReceivedMessage ||
                 // in akka.net this message is a subclass of AutoReceivedMessage - so removed condition that "message is Terminated ||"
                 message is RouterManagementMesssage;
         }
