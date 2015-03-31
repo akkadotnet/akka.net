@@ -13,7 +13,7 @@ using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
-    public interface ActorRefProvider
+    public interface IActorRefProvider
     {
         /// <summary>
         /// Reference to the supervisor of guardian and systemGuardian; this is
@@ -89,7 +89,7 @@ namespace Akka.Actor
         IActorRef ResolveActorRef(ActorPath actorPath);
 
         /// <summary>
-        /// This Future is completed upon termination of this <see cref="ActorRefProvider"/>, which
+        /// This Future is completed upon termination of this <see cref="IActorRefProvider"/>, which
         /// is usually initiated by stopping the guardian via <see cref="ActorSystem.Stop"/>.
         /// </summary>
         Task TerminationTask { get; }
@@ -109,7 +109,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class LocalActorRefProvider. This class cannot be inherited.
     /// </summary>
-    public sealed class LocalActorRefProvider : ActorRefProvider
+    public sealed class LocalActorRefProvider : IActorRefProvider
     {
         private readonly Settings _settings;
         private readonly EventStream _eventStream;

@@ -124,7 +124,7 @@ namespace Akka.Actor
 
         public override IInternalActorRef Parent { get { return Underlying.Parent; } }
 
-        public override ActorRefProvider Provider { get { return _system.Provider; } }
+        public override IActorRefProvider Provider { get { return _system.Provider; } }
 
         public override bool IsLocal { get { return Underlying.IsLocal; } }
 

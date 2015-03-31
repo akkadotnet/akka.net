@@ -68,7 +68,7 @@ namespace Akka.Actor
             get { return _path; }
         }
 
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { throw new NotImplementedException(); }
         }
@@ -225,7 +225,7 @@ namespace Akka.Actor
     public interface IInternalActorRef : IActorRef, ActorRefScope
     {
         IInternalActorRef Parent { get; }
-        ActorRefProvider Provider { get; }
+        IActorRefProvider Provider { get; }
         bool IsTerminated { get; }
 
         /// <summary>
@@ -248,7 +248,7 @@ namespace Akka.Actor
     public abstract class InternalActorRefBase : ActorRefBase, IInternalActorRef
     {
         public abstract IInternalActorRef Parent { get; }
-        public abstract ActorRefProvider Provider { get; }
+        public abstract IActorRefProvider Provider { get; }
 
         /// <summary>
         /// Obtain a child given the paths element to that actor, by possibly traversing the actor tree or 
@@ -325,7 +325,7 @@ namespace Akka.Actor
 
         public override ActorPath Path { get { return _path; } }
 
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { throw new NotSupportedException("Nobody does not provide"); }
         }
@@ -360,12 +360,12 @@ namespace Akka.Actor
     {
         private readonly IInternalActorRef _parent;
         private readonly LoggingAdapter _log;
-        private readonly ActorRefProvider _provider;
+        private readonly IActorRefProvider _provider;
         private readonly ActorPath _path;
 
         private readonly ConcurrentDictionary<string, IInternalActorRef> _children = new ConcurrentDictionary<string, IInternalActorRef>();
 
-        public VirtualPathContainer(ActorRefProvider provider, ActorPath path, IInternalActorRef parent, LoggingAdapter log)
+        public VirtualPathContainer(IActorRefProvider provider, ActorPath path, IInternalActorRef parent, LoggingAdapter log)
         {
             _parent = parent;
             _log = log;
@@ -373,7 +373,7 @@ namespace Akka.Actor
             _path = path;
         }
 
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { return _provider; }
         }

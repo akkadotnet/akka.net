@@ -280,7 +280,7 @@ namespace Akka.Actor
             get { return _ref.Path.WithUid(ActorCell.UndefinedUid); }
         }
 
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get
             {
