@@ -217,7 +217,7 @@ namespace Akka.Actor
             var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
             pipeline.AfterActorIncarnated(actor, this);
             
-            var initializableActor = actor as InitializableActor;
+            var initializableActor = actor as IInitializableActor;
             if(initializableActor != null)
             {
                 initializableActor.Init();
