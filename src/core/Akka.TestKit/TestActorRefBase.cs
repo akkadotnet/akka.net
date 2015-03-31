@@ -189,7 +189,7 @@ namespace Akka.TestKit
             return _internalRef.ToSurrogate(system);
         }
 
-        bool ActorRefScope.IsLocal { get { return _internalRef.IsLocal; } }
+        bool IActorRefScope.IsLocal { get { return _internalRef.IsLocal; } }
 
         IInternalActorRef IInternalActorRef.Parent { get { return _internalRef.Parent; } }
 
