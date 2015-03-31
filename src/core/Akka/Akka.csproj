@@ -234,6 +234,21 @@
     <Compile Include="Pattern\BackoffSupervisor.cs" />
     <Compile Include="Routing\ConsistentHashRouter.cs" />
     <Compile Include="Serialization\JavaSerializer.cs" />
+    <Compile Include="IO\ByteBuffer.cs" />
+    <Compile Include="IO\DirectByteBufferPool.cs" />
+    <Compile Include="IO\Inet.cs" />
+    <Compile Include="IO\IO.cs" />
+    <Compile Include="IO\SelectionHandler.cs" />
+    <Compile Include="IO\SocketAsyncEventArgsPool.cs" />
+    <Compile Include="IO\SocketChannel.cs" />
+    <Compile Include="IO\Tcp.cs" />
+    <Compile Include="IO\TcpConnection.cs" />
+    <Compile Include="IO\TcpIncomingConnection.cs" />
+    <Compile Include="IO\TcpListener.cs" />
+    <Compile Include="IO\TcpManager.cs" />
+    <Compile Include="IO\TcpOutgoingConnection.cs" />
+    <Compile Include="Util\ByteIterator.cs" />
+    <Compile Include="Util\ByteString.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
     <Compile Include="Util\Internal\Collections\EnumeratorExtensions.cs" />
     <Compile Include="Util\Internal\Collections\Iterator.cs" />
@@ -344,6 +359,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
