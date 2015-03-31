@@ -16,35 +16,35 @@ namespace Akka.Actor.Internal
         {
         }
 
-        public static ChildrenContainer Create(IImmutableMap<string, ChildStats> children)
+        public static IChildrenContainer Create(IImmutableMap<string, ChildStats> children)
         {
             if (children.IsEmpty) return EmptyChildrenContainer.Instance;
             return new NormalChildrenContainer(children);
         }
 
-        public override ChildrenContainer Add(string name, ChildRestartStats stats)
+        public override IChildrenContainer Add(string name, ChildRestartStats stats)
         {
             return Create(InternalChildren.AddOrUpdate(name, stats));
         }
 
-        public override ChildrenContainer Remove(IActorRef child)
+        public override IChildrenContainer Remove(IActorRef child)
         {
             return Create(InternalChildren.Remove(child.Path.Name));
         }
 
-        public override ChildrenContainer ShallDie(IActorRef actor)
+        public override IChildrenContainer ShallDie(IActorRef actor)
         {
             return new TerminatingChildrenContainer(InternalChildren, actor, SuspendReason.UserRequest.Instance);
         }
 
-        public override ChildrenContainer Reserve(string name)
+        public override IChildrenContainer Reserve(string name)
         {
             if (InternalChildren.Contains(name))
                 throw new InvalidActorNameException(string.Format("Actor name \"{0}\" is not unique!", name));
             return new NormalChildrenContainer(InternalChildren.AddOrUpdate(name, ChildNameReserved.Instance));
         }
 
-        public override ChildrenContainer Unreserve(string name)
+        public override IChildrenContainer Unreserve(string name)
         {
             ChildStats stats;
             if (InternalChildren.TryGet(name, out stats) && (stats is ChildNameReserved))

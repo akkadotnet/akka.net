@@ -6,25 +6,25 @@ namespace Akka.Actor.Internal
     /// <summary>
     /// This is the empty container, shared among all leaf actors.
     /// </summary>
-    public class EmptyChildrenContainer : ChildrenContainer
+    public class EmptyChildrenContainer : IChildrenContainer
     {
         private static readonly ImmutableTreeMap<string, ChildStats> _emptyStats = ImmutableTreeMap<string, ChildStats>.Empty;
-        private static readonly ChildrenContainer _instance = new EmptyChildrenContainer();
+        private static readonly IChildrenContainer _instance = new EmptyChildrenContainer();
 
         protected EmptyChildrenContainer()
         {
             //Intentionally left blank
         }
 
-        public static ChildrenContainer Instance { get { return _instance; } }
+        public static IChildrenContainer Instance { get { return _instance; } }
 
-        public virtual ChildrenContainer Add(string name, ChildRestartStats stats)
+        public virtual IChildrenContainer Add(string name, ChildRestartStats stats)
         {
             var newMap = _emptyStats.Add(name, stats);
             return NormalChildrenContainer.Create(newMap);
         }
 
-        public ChildrenContainer Remove(IActorRef child)
+        public IChildrenContainer Remove(IActorRef child)
         {
             return this;
         }
@@ -50,17 +50,17 @@ namespace Akka.Actor.Internal
 
         public IReadOnlyList<ChildRestartStats> Stats { get { return EmptyReadOnlyCollections<ChildRestartStats>.List; } }
 
-        public ChildrenContainer ShallDie(IActorRef actor)
+        public IChildrenContainer ShallDie(IActorRef actor)
         {
             return this;
         }
 
-        public virtual ChildrenContainer Reserve(string name)
+        public virtual IChildrenContainer Reserve(string name)
         {
             return NormalChildrenContainer.Create(_emptyStats.Add(name, ChildNameReserved.Instance));
         }
 
-        public ChildrenContainer Unreserve(string name)
+        public IChildrenContainer Unreserve(string name)
         {
             return this;
         }

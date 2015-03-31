@@ -33,13 +33,13 @@ namespace Akka.Actor.Internal
 
         public SuspendReason Reason { get { return _reason; } }
 
-        public override ChildrenContainer Add(string name, ChildRestartStats stats)
+        public override IChildrenContainer Add(string name, ChildRestartStats stats)
         {
             var newMap = InternalChildren.AddOrUpdate(name, stats);
             return new TerminatingChildrenContainer(newMap, _toDie, _reason);
         }
 
-        public override ChildrenContainer Remove(IActorRef child)
+        public override IChildrenContainer Remove(IActorRef child)
         {
             var set = _toDie.Remove(child);
             if (set.IsEmpty)
@@ -50,12 +50,12 @@ namespace Akka.Actor.Internal
             return new TerminatingChildrenContainer(InternalChildren.Remove(child.Path.Name), set, _reason);
         }
 
-        public override ChildrenContainer ShallDie(IActorRef actor)
+        public override IChildrenContainer ShallDie(IActorRef actor)
         {
             return new TerminatingChildrenContainer(InternalChildren, _toDie.Add(actor), _reason);
         }
 
-        public override ChildrenContainer Reserve(string name)
+        public override IChildrenContainer Reserve(string name)
         {
             if (_reason is SuspendReason.Termination) throw new InvalidOperationException(string.Format("Cannot reserve actor name\"{0}\". Is terminating.", name));
             if (InternalChildren.Contains(name))
@@ -64,7 +64,7 @@ namespace Akka.Actor.Internal
                 return new TerminatingChildrenContainer(InternalChildren.AddOrUpdate(name, ChildNameReserved.Instance), _toDie, _reason);
         }
 
-        public override ChildrenContainer Unreserve(string name)
+        public override IChildrenContainer Unreserve(string name)
         {
             ChildStats stats;
             if (!InternalChildren.TryGet(name, out stats))
@@ -99,7 +99,7 @@ namespace Akka.Actor.Internal
             return sb.ToString();
         }
 
-        public ChildrenContainer CreateCopyWithReason(SuspendReason reason)
+        public IChildrenContainer CreateCopyWithReason(SuspendReason reason)
         {
             return new TerminatingChildrenContainer(InternalChildren, _toDie, reason);
         }
