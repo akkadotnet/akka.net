@@ -7,7 +7,7 @@ using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
-    public class LocalActorRef : ActorRefWithCell, LocalRef
+    public class LocalActorRef : ActorRefWithCell, ILocalRef
     {
         private readonly ActorSystem _system;
         private readonly Props _props;
