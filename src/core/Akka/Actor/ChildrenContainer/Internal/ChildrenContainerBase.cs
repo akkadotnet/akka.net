@@ -5,7 +5,7 @@ using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor.Internal
 {
-    public abstract class ChildrenContainerBase : ChildrenContainer
+    public abstract class ChildrenContainerBase : IChildrenContainer
     {
         private readonly IImmutableMap<string, ChildStats> _children;
 
@@ -16,11 +16,11 @@ namespace Akka.Actor.Internal
 
         public virtual bool IsTerminating { get { return false; } }
         public virtual bool IsNormal { get { return true; } }
-        public abstract ChildrenContainer Add(string name, ChildRestartStats stats);
-        public abstract ChildrenContainer Remove(IActorRef child);
-        public abstract ChildrenContainer Reserve(string name);
-        public abstract ChildrenContainer ShallDie(IActorRef actor);
-        public abstract ChildrenContainer Unreserve(string name);
+        public abstract IChildrenContainer Add(string name, ChildRestartStats stats);
+        public abstract IChildrenContainer Remove(IActorRef child);
+        public abstract IChildrenContainer Reserve(string name);
+        public abstract IChildrenContainer ShallDie(IActorRef actor);
+        public abstract IChildrenContainer Unreserve(string name);
 
         public IReadOnlyList<IInternalActorRef> Children
         {
