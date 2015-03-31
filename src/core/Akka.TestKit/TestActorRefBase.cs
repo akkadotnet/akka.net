@@ -193,7 +193,7 @@ namespace Akka.TestKit
 
         IInternalActorRef IInternalActorRef.Parent { get { return _internalRef.Parent; } }
 
-        ActorRefProvider IInternalActorRef.Provider { get { return _internalRef.Provider; } }
+        IActorRefProvider IInternalActorRef.Provider { get { return _internalRef.Provider; } }
 
         bool IInternalActorRef.IsTerminated { get { return _internalRef.IsTerminated; } }
 

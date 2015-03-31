@@ -77,7 +77,7 @@ namespace Akka.Remote
         /// Gets the provider.
         /// </summary>
         /// <value>The provider.</value>
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { return Remote.Provider; }
         }

@@ -70,7 +70,7 @@ namespace Akka.Actor
             get { return _cell; }
         }
 
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { return _cell.SystemImpl.Provider; }
         }

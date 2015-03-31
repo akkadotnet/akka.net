@@ -16,9 +16,9 @@ namespace Akka.Actor
         private readonly TaskCompletionSource<Status> _terminationPromise;
         private readonly ActorPath _path;
         private readonly Switch _stopped=new Switch(false);
-        private readonly ActorRefProvider _provider;
+        private readonly IActorRefProvider _provider;
 
-        public RootGuardianSupervisor(RootActorPath root, ActorRefProvider provider, TaskCompletionSource<Status> terminationPromise, LoggingAdapter log)
+        public RootGuardianSupervisor(RootActorPath root, IActorRefProvider provider, TaskCompletionSource<Status> terminationPromise, LoggingAdapter log)
         {
             _log = log;
             _terminationPromise = terminationPromise;
@@ -89,7 +89,7 @@ namespace Akka.Actor
             get { return _path; }
         }
 
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { return _provider; }
         }

@@ -419,7 +419,7 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    /// Used to tell <see cref="ActorRefProvider"/> to create router based on what's stored in configuration.
+    /// Used to tell <see cref="IActorRefProvider"/> to create router based on what's stored in configuration.
     /// 
     /// For example:
     /// <code>
