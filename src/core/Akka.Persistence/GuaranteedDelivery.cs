@@ -134,7 +134,7 @@ namespace Akka.Persistence
     /// Support for snapshot is provided by get and set delivery snapshot methods. These snapshots contains full
     /// delivery state including unconfirmed messages. For custom snapshots remember to include those delivery ones.
     /// </summary>
-    public abstract class GuaranteedDeliveryActor : PersistentActor, InitializableActor
+    public abstract class GuaranteedDeliveryActor : PersistentActor, IInitializableActor
     {
         private ICancelable _redeliverScheduleCancelable;
         private long _deliverySequenceNr = 0L;
