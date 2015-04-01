@@ -28,7 +28,7 @@ namespace Akka.Remote
         {
             _acceptableHeartbeatPause = acceptableHeartbeatPause;
             _acceptableHeartbeatMillis = Convert.ToInt64(acceptableHeartbeatPause.TotalMilliseconds);
-            Guard.Assert(_acceptableHeartbeatPause > TimeSpan.Zero, "acceptable-heartbeat-pause must be greater than zero");
+            if (_acceptableHeartbeatPause <= TimeSpan.Zero) throw new ArgumentException("acceptable-heartbeat-pause must be greater than zero");
         }
 
         /// <summary>
