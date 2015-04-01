@@ -14,5 +14,5 @@
     /// this is used to block messages coming in over remoting.
     /// </summary>
 // ReSharper disable once InconsistentNaming
-    public interface PossiblyHarmful { }
+    public interface IPossiblyHarmful { }
 }

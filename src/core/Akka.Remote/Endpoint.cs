@@ -76,7 +76,7 @@ namespace Akka.Remote
                         var actorPath = "/" + string.Join("/", sel.Elements.Select(x => x.ToString()));
                         if (settings.UntrustedMode
                             && (!settings.TrustedSelectionPaths.Contains(actorPath)
-                            || sel.Message is PossiblyHarmful
+                            || sel.Message is IPossiblyHarmful
                             || recipient != provider.Guardian))
                         {
                             log.Debug(
@@ -90,11 +90,11 @@ namespace Akka.Remote
                             ActorSelection.DeliverSelection(recipient, sender, sel);
                         }
                     })
-                    .With<PossiblyHarmful>(msg =>
+                    .With<IPossiblyHarmful>(msg =>
                     {
                         if (settings.UntrustedMode)
                         {
-                            log.Debug("operating in UntrustedMode, dropping inbound PossiblyHarmful message of type {0}", msg.GetType());
+                            log.Debug("operating in UntrustedMode, dropping inbound IPossiblyHarmful message of type {0}", msg.GetType());
                         }
                     })
                     .With<SystemMessage>(msg => { recipient.Tell(msg); })
