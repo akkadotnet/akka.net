@@ -140,7 +140,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         private void ReceiveBeginSpecRun(BeginNewSpec spec)
         {
-            Guard.Assert(_currentSpecRunActor == null, "EndSpec has not been called for previous run yet. Cannot begin next run.");
+            if (_currentSpecRunActor != null) throw new InvalidOperationException("EndSpec has not been called for previous run yet. Cannot begin next run.");
 
             //Create the new spec run actor
             _currentSpecRunActor =

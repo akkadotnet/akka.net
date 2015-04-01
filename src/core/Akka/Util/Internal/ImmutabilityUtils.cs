@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -16,7 +17,7 @@ namespace Akka.Util.Internal
 
         public static HashSet<T> CopyAndAdd<T>(this HashSet<T> set, T item)
         {
-            Guard.Assert(set != null, "set cannot be null");
+            if (set == null) throw new ArgumentNullException("set");
             // ReSharper disable once PossibleNullReferenceException
             var copy = new T[set.Count + 1];
             set.CopyTo(copy);
@@ -26,7 +27,7 @@ namespace Akka.Util.Internal
 
         public static HashSet<T> CopyAndRemove<T>(this HashSet<T> set, T item)
         {
-            Guard.Assert(set != null, "set cannot be null");
+            if (set == null) throw new ArgumentNullException("set");
             // ReSharper disable once PossibleNullReferenceException
             var copy = new T[set.Count];
             set.CopyTo(copy);
