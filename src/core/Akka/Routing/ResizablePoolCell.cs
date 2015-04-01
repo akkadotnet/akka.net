@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internals;
@@ -25,8 +26,7 @@ namespace Akka.Routing
         public ResizablePoolCell(ActorSystemImpl system, IInternalActorRef self, Props routerProps, MessageDispatcher dispatcher, Props routeeProps, IInternalActorRef supervisor, Pool pool)
             : base(system,self, routerProps,dispatcher, routeeProps, supervisor)
         {
-
-            Guard.Assert(pool.Resizer != null, "RouterConfig must be a Pool with defined resizer");
+            if (pool.Resizer == null) throw new ArgumentException("RouterConfig must be a Pool with defined resizer");
 
             resizer = pool.Resizer;
             _routerProps = routerProps;

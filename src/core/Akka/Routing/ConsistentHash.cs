@@ -26,7 +26,7 @@ namespace Akka.Routing
         {
             _nodes = nodes;
 
-            Guard.Assert(virtualNodesFactor >= 1, "virtualNodesFactor must be >= 1");
+            if (virtualNodesFactor < 1) throw new ArgumentException("virtualNodesFactor must be >= 1");
 
             _virtualNodesFactor = virtualNodesFactor;
         }
@@ -102,7 +102,7 @@ namespace Akka.Routing
         /// </summary>
         public T NodeFor(byte[] key)
         {
-            Guard.Assert(!IsEmpty, string.Format("Can't get node for [{0}] from an empty node ring", key));
+            if (IsEmpty) throw new InvalidOperationException(string.Format("Can't get node for [{0}] from an empty node ring", key));
 
             return NodeRing[Idx(Array.BinarySearch(NodeHashRing, ConsistentHash.HashFor(key)))];
         }
@@ -114,7 +114,7 @@ namespace Akka.Routing
         /// </summary>
         public T NodeFor(string key)
         {
-            Guard.Assert(!IsEmpty, string.Format("Can't get node for [{0}] from an empty node ring", key));
+            if (IsEmpty) throw new InvalidOperationException(string.Format("Can't get node for [{0}] from an empty node ring", key));
 
             return NodeRing[Idx(Array.BinarySearch(NodeHashRing, ConsistentHash.HashFor(key)))];
         }

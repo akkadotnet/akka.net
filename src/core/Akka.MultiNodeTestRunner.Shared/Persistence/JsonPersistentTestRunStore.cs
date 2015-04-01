@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Reflection;
 using System.Text;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
@@ -53,8 +54,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Persistence
 
         public bool SaveTestRun(string filePath, TestRunTree data)
         {
-            Guard.Assert(data != null, "TestRunTree must not be null.");
-            Guard.Assert(!string.IsNullOrEmpty(filePath), "filePath must not be null or empty");
+            if (data == null) throw new ArgumentNullException("data");
+            if (string.IsNullOrEmpty(filePath)) throw new ArgumentException("filePath must not be null or empty");
 
 
 // ReSharper disable once AssignNullToNotNullAttribute //already made this null check with Guard
@@ -74,7 +75,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Persistence
 
         public TestRunTree FetchTestRun(string filePath)
         {
-            Guard.Assert(!string.IsNullOrEmpty(filePath), "filePath must not be null or empty");
+            if (string.IsNullOrEmpty(filePath)) throw new ArgumentException("filePath must not be null or empty");
             // ReSharper disable once AssignNullToNotNullAttribute //already made this null check with Guard
             var finalPath = Path.GetFullPath(filePath);
             var fileText = File.ReadAllText(finalPath, Encoding.UTF8);
