@@ -2,18 +2,17 @@
 
 namespace Akka.Actor.Internal
 {
-    // ReSharper disable once InconsistentNaming
-    public interface ChildrenContainer
+    public interface IChildrenContainer
     {
-        ChildrenContainer Add(string name, ChildRestartStats stats);
-        ChildrenContainer Remove(IActorRef child);
-        bool TryGetByName(string name, out ChildStats stats);
+        IChildrenContainer Add(string name, ChildRestartStats stats);
+        IChildrenContainer Remove(IActorRef child);
+        bool TryGetByName(string name, out IChildStats stats);
         bool TryGetByRef(IActorRef actor, out ChildRestartStats stats);
         IReadOnlyList<IInternalActorRef> Children { get; }
         IReadOnlyList<ChildRestartStats> Stats { get; }
-        ChildrenContainer ShallDie(IActorRef actor);
-        ChildrenContainer Reserve(string name);
-        ChildrenContainer Unreserve(string name);
+        IChildrenContainer ShallDie(IActorRef actor);
+        IChildrenContainer Reserve(string name);
+        IChildrenContainer Unreserve(string name);
         bool IsTerminating { get; }
         bool IsNormal { get; }
         bool Contains(IActorRef actor);

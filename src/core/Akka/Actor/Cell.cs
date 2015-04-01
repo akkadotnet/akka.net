@@ -5,11 +5,10 @@ using Akka.Actor.Internals;
 
 namespace Akka.Actor
 {
-    // ReSharper disable once InconsistentNaming
     /// <summary>
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    public interface Cell
+    public interface ICell
     {
         /// <summary>Gets the “self” reference which this Cell is attached to.</summary>
         IActorRef Self { get; }
@@ -82,7 +81,7 @@ namespace Akka.Actor
         /// indicating that only a name has been reserved for the child, or a <see cref="ChildRestartStats"/> for a child that 
         /// has been initialized/created.
         /// </summary>
-        bool TryGetChildStatsByName(string name, out ChildStats child); //This is called getChildByName in Akka JVM
+        bool TryGetChildStatsByName(string name, out IChildStats child); //This is called getChildByName in Akka JVM
 
 
 

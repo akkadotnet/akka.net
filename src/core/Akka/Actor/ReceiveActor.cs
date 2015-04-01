@@ -8,7 +8,7 @@ using Akka.Tools.MatchHandler;
 namespace Akka.Actor
 {
 
-    public abstract class ReceiveActor : UntypedActor, InitializableActor
+    public abstract class ReceiveActor : UntypedActor, IInitializableActor
     {
         private bool _shouldUnhandle = true;
         private readonly Stack<MatchBuilder> _matchHandlerBuilders = new Stack<MatchBuilder>();
@@ -20,7 +20,7 @@ namespace Akka.Actor
             PrepareConfigureMessageHandlers();
         }
 
-        void InitializableActor.Init()
+        void IInitializableActor.Init()
         {
             //This might be called directly after the constructor, or when the same actor instance has been returned
             //during recreate. Make sure what happens here is idempotent

@@ -27,7 +27,7 @@ namespace Akka.Event
         /// </summary>
         /// <value>The provider.</value>
         /// <exception cref="System.Exception">StandardOutLogged does not provide</exception>
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { throw new Exception("StandardOutLogger does not provide"); }
         }

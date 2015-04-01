@@ -179,7 +179,7 @@ namespace Akka.Persistence
         protected static new IUntypedActorContext Context { get { return (IUntypedActorContext)ActorBase.Context; } }
     }
 
-    public abstract class ReceivePersistentActor : UntypedPersistentActor, InitializableActor
+    public abstract class ReceivePersistentActor : UntypedPersistentActor, IInitializableActor
     {
         
         private bool _shouldUnhandle = true;
@@ -194,7 +194,7 @@ namespace Akka.Persistence
             PrepareConfigureMessageHandlers();
         }
 
-        void InitializableActor.Init()
+        void IInitializableActor.Init()
         {
             //This might be called directly after the constructor, or when the same actor instance has been returned
             //during recreate. Make sure what happens here is idempotent

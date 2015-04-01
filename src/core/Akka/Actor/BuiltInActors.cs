@@ -148,7 +148,7 @@ namespace Akka.Actor
     {
         private readonly EventStream _eventStream;
 
-        public DeadLetterActorRef(ActorRefProvider provider, ActorPath path, EventStream eventStream)
+        public DeadLetterActorRef(IActorRefProvider provider, ActorPath path, EventStream eventStream)
             : base(provider, path, eventStream)
         {
             _eventStream = eventStream;

@@ -135,7 +135,7 @@ namespace Akka.Actor
         /// <summary>
         ///     The default producer
         /// </summary>
-        private static readonly IndirectActorProducer defaultProducer = new DefaultProducer();
+        private static readonly IIndirectActorProducer defaultProducer = new DefaultProducer();
 
         /// <summary>
         ///     The intern type of the actor or the producer
@@ -150,7 +150,7 @@ namespace Akka.Actor
         /// <summary>
         ///     The producer of the actor
         /// </summary>
-        private IndirectActorProducer producer;
+        private IIndirectActorProducer producer;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Props" /> class.
@@ -361,7 +361,7 @@ namespace Akka.Actor
         /// <typeparam name="TProducer">The type of the actor producer</typeparam>
         /// <param name="args">The arguments</param>
         /// <returns>Props</returns>
-        public static Props CreateBy<TProducer>(params object[] args) where TProducer : class, IndirectActorProducer
+        public static Props CreateBy<TProducer>(params object[] args) where TProducer : class, IIndirectActorProducer
         {
             return new Props(typeof(TProducer), args);
         }
@@ -512,7 +512,7 @@ namespace Akka.Actor
             }
         }
 
-        private class DefaultProducer : IndirectActorProducer
+        private class DefaultProducer : IIndirectActorProducer
         {
             public ActorBase Produce()
             {
@@ -525,7 +525,7 @@ namespace Akka.Actor
             }
         }
 
-        private class ActivatorProducer : IndirectActorProducer
+        private class ActivatorProducer : IIndirectActorProducer
         {
             private readonly Type _actorType;
             private readonly object[] _args;
@@ -547,7 +547,7 @@ namespace Akka.Actor
             }
         }
 
-        private class FactoryConsumer<TActor> : IndirectActorProducer where TActor : ActorBase
+        private class FactoryConsumer<TActor> : IIndirectActorProducer where TActor : ActorBase
         {
             private readonly Func<TActor> _factory;
 
@@ -569,13 +569,13 @@ namespace Akka.Actor
 
         #endregion
 
-        private static IndirectActorProducer CreateProducer(Type type, object[] args)
+        private static IIndirectActorProducer CreateProducer(Type type, object[] args)
         {
             if (type == null) {
                 return defaultProducer;
             }
-            if (typeof(IndirectActorProducer).IsAssignableFrom(type)) {
-                return Activator.CreateInstance(type, args).AsInstanceOf<IndirectActorProducer>();
+            if (typeof(IIndirectActorProducer).IsAssignableFrom(type)) {
+                return Activator.CreateInstance(type, args).AsInstanceOf<IIndirectActorProducer>();
             }
             if (typeof(ActorBase).IsAssignableFrom(type)) {
                 return new ActivatorProducer(type, args);
@@ -657,7 +657,7 @@ namespace Akka.Actor
     ///     subclass. It can be used to allow a dependency injection framework to
     ///     determine the actual actor class and how it shall be instantiated.
     /// </summary>
-    public interface IndirectActorProducer
+    public interface IIndirectActorProducer
     {
         /// <summary>
         ///     This factory method must produce a fresh actor instance upon each

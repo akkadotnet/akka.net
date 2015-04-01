@@ -104,7 +104,7 @@ namespace Akka.Routing
         private void StopIfChild(Routee routee)
         {
             var actorRefRoutee = routee as ActorRefRoutee;
-            ChildStats childActorStats;
+            IChildStats childActorStats;
             if (actorRefRoutee != null && TryGetChildStatsByName(actorRefRoutee.Actor.Path.Name, out childActorStats))
             {
                 // The reason for the delay is to give concurrent

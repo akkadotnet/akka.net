@@ -12,7 +12,7 @@
     {
         /// <summary>Gets the provider.</summary>
         /// <value>The provider.</value>
-        public abstract ActorRefProvider Provider { get; }
+        public abstract IActorRefProvider Provider { get; }
 
         /// <summary>
         /// Gets the top-level supervisor of all user actors created using 
