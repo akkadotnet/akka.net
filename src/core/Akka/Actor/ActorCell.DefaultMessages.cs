@@ -122,7 +122,7 @@ namespace Akka.Actor
 
         internal void ReceiveMessage(object message)
         {
-            var wasHandled = _actor.AroundReceive(_behaviorStack.Peek(), message);
+            var wasHandled = _actor.AroundReceive(_state.GetCurrentBehavior(), message);
 
             if (System.Settings.AddLoggingReceive && _actor is ILogReceive)
             {
