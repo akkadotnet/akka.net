@@ -148,7 +148,7 @@
     <Compile Include="Actor\Stash\StashOverflowException.cs" />
     <Compile Include="Actor\Stash\Internal\UnboundedStashImpl.cs" />
     <Compile Include="Actor\Stash\UntypedActorWithUnboundedStash.cs" />
-    <Compile Include="Actor\Stash\WithBoundedStash.cs" />
+    <Compile Include="Actor\Stash\IWithBoundedStash.cs" />
     <Compile Include="Actor\Stash\WithUnboundedStash.cs" />
     <Compile Include="Actor\Scheduler\TaskBasedScheduler.cs" />
     <Compile Include="Configuration\ConfigurationException.cs" />

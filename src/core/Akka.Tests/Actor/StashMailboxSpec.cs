@@ -38,7 +38,7 @@ namespace Akka.Tests.Actor
         {
             public IStash Stash { get; set; }
         }
-        private class BoundedStashActor : BlackHoleActor, WithBoundedStash
+        private class BoundedStashActor : BlackHoleActor, IWithBoundedStash
         {
             public IStash Stash { get; set; }
         }
