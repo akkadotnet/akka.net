@@ -218,7 +218,7 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        internal class Connected : NoSerializationVerificationNeeded
+        internal class Connected : INoSerializationVerificationNeeded
         {
             readonly RemoteConnection _channel;
             public RemoteConnection Channel{get { return _channel; }}

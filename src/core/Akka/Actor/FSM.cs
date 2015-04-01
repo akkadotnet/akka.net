@@ -138,7 +138,7 @@ namespace Akka.Actor
             public long Generation { get; private set; }
         }
         [DebuggerDisplay("Timer {Name,nq}, message: {Message")]
-        internal class Timer : NoSerializationVerificationNeeded
+        internal class Timer : INoSerializationVerificationNeeded
         {
             private readonly LoggingAdapter _debugLog;
 
@@ -331,7 +331,7 @@ namespace Akka.Actor
         /// which allows pattern matching to extract both state and data.
         /// </summary>
         /// <typeparam name="TD">The state data for this event</typeparam>
-        public class Event<TD> : NoSerializationVerificationNeeded
+        public class Event<TD> : INoSerializationVerificationNeeded
         {
             public Event(object fsmEvent, TD stateData)
             {
@@ -352,7 +352,7 @@ namespace Akka.Actor
         /// <summary>
         /// Class representing the state of the <see cref="FSM{TS,TD}"/> within the OnTermination block.
         /// </summary>
-        public class StopEvent<TS, TD> : NoSerializationVerificationNeeded
+        public class StopEvent<TS, TD> : INoSerializationVerificationNeeded
         {
             public StopEvent(Reason reason, TS terminatedState, TD stateData)
             {

@@ -70,7 +70,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Marker interface for events that the registered listener for a <see cref="AssociationHandle"/> might receive.
     /// </summary>
-    public interface IHandleEvent : NoSerializationVerificationNeeded { }
+    public interface IHandleEvent : INoSerializationVerificationNeeded { }
 
     /// <summary>
     /// Message sent to the listener registered to an association (via the TaskCompletionSource returned by <see cref="AssociationHandle.ReadHandlerSource"/>)

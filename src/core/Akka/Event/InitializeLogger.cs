@@ -5,7 +5,7 @@ namespace Akka.Event
     /// <summary>
     ///     Class InitializeLogger.
     /// </summary> 
-    public class InitializeLogger : NoSerializationVerificationNeeded
+    public class InitializeLogger : INoSerializationVerificationNeeded
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="InitializeLogger" /> class.

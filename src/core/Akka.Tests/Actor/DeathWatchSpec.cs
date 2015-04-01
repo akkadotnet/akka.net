@@ -437,7 +437,7 @@ namespace Akka.Tests.Actor
             public Failed Fail { get; private set; }
         }
 
-        internal struct Latches : NoSerializationVerificationNeeded
+        internal struct Latches : INoSerializationVerificationNeeded
         {
 
             public Latches(TestLatch t1, TestLatch t2)

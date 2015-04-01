@@ -1340,7 +1340,7 @@ namespace Akka.Remote
         /// associations from the same remote endpoint: when a parallel inbound association is detected, the old one is removed and the new
         /// one is used instead.
         /// </summary>
-        public sealed class TakeOver : NoSerializationVerificationNeeded
+        public sealed class TakeOver : INoSerializationVerificationNeeded
         {
             /// <summary>
             /// Create a new TakeOver command
@@ -1357,7 +1357,7 @@ namespace Akka.Remote
             public IActorRef ReplyTo { get; private set; }
         }
 
-        public sealed class TookOver : NoSerializationVerificationNeeded
+        public sealed class TookOver : INoSerializationVerificationNeeded
         {
             public TookOver(IActorRef writer, AkkaProtocolHandle protocolHandle)
             {
@@ -1398,7 +1398,7 @@ namespace Akka.Remote
             public static FlushAndStopTimeout Instance { get { return _instance; } }
         }
 
-        public sealed class Handle : NoSerializationVerificationNeeded
+        public sealed class Handle : INoSerializationVerificationNeeded
         {
             public Handle(AkkaProtocolHandle protocolHandle)
             {

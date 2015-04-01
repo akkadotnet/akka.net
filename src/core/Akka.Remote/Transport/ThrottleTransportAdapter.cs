@@ -143,7 +143,7 @@ namespace Akka.Remote.Transport
     {
         #region Internal message classes
 
-        internal sealed class Checkin : NoSerializationVerificationNeeded
+        internal sealed class Checkin : INoSerializationVerificationNeeded
         {
             public Checkin(Address origin, ThrottlerHandle handle)
             {
@@ -156,7 +156,7 @@ namespace Akka.Remote.Transport
             public ThrottlerHandle ThrottlerHandle { get; private set; }
         }
 
-        internal sealed class AssociateResult : NoSerializationVerificationNeeded
+        internal sealed class AssociateResult : INoSerializationVerificationNeeded
         {
             public AssociateResult(AssociationHandle associationHandle, TaskCompletionSource<AssociationHandle> statusPromise)
             {
@@ -169,7 +169,7 @@ namespace Akka.Remote.Transport
             public TaskCompletionSource<AssociationHandle> StatusPromise { get; private set; }
         }
 
-        internal sealed class ListenerAndMode : NoSerializationVerificationNeeded
+        internal sealed class ListenerAndMode : INoSerializationVerificationNeeded
         {
             public ListenerAndMode(IHandleEventListener handleEventListener, ThrottleMode mode)
             {
@@ -182,7 +182,7 @@ namespace Akka.Remote.Transport
             public ThrottleMode Mode { get; private set; }
         }
 
-        internal sealed class Handle : NoSerializationVerificationNeeded
+        internal sealed class Handle : INoSerializationVerificationNeeded
         {
             public Handle(ThrottlerHandle throttlerHandle)
             {
@@ -192,7 +192,7 @@ namespace Akka.Remote.Transport
             public ThrottlerHandle ThrottlerHandle { get; private set; }
         }
 
-        internal sealed class Listener : NoSerializationVerificationNeeded
+        internal sealed class Listener : INoSerializationVerificationNeeded
         {
             public Listener(IHandleEventListener handleEventListener)
             {
@@ -450,7 +450,7 @@ namespace Akka.Remote.Transport
         #endregion
     }
 
-    public abstract class ThrottleMode : NoSerializationVerificationNeeded
+    public abstract class ThrottleMode : INoSerializationVerificationNeeded
     {
         public abstract Tuple<ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens);
         public abstract TimeSpan TimeToAvailable(long currentNanoTime, int tokens);

@@ -131,7 +131,7 @@
     <Compile Include="Actor\FSM.cs" />
     <Compile Include="Actor\GracefulStopSupport.cs" />
     <Compile Include="Actor\IUntypedActorContext.cs" />
-    <Compile Include="Actor\NoSerializationVerificationNeeded.cs" />
+    <Compile Include="Actor\INoSerializationVerificationNeeded.cs" />
     <Compile Include="Actor\PipeToSupport.cs" />
     <Compile Include="Actor\Receive.cs" />
     <Compile Include="Actor\Scheduler\ITellScheduler.cs" />

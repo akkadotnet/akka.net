@@ -399,7 +399,7 @@ namespace Akka.Remote
 
         #region Internals
 
-        class Internals : NoSerializationVerificationNeeded
+        class Internals : INoSerializationVerificationNeeded
         {
             public Internals(RemoteTransport transport, Akka.Serialization.Serialization serialization, IInternalActorRef remoteDaemon)
             {

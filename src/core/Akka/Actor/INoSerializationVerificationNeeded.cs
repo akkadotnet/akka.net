@@ -1,11 +1,11 @@
 ﻿namespace Akka.Actor
 {
     /// <summary>
-    ///     Marker Interface NoSerializationVerificationNeeded, this interface prevents
+    ///     Marker Interface INoSerializationVerificationNeeded, this interface prevents
     ///     implementing message types from being serialized if configuration setting 'akka.actor.serialize-messages' is "on"
     /// </summary>
 // ReSharper disable once InconsistentNaming
-    public interface NoSerializationVerificationNeeded
+    public interface INoSerializationVerificationNeeded
     {
     }
 

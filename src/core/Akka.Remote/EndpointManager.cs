@@ -78,7 +78,7 @@ namespace Akka.Remote
         /// <summary>
         /// Messages sent between <see cref="Remoting"/> and <see cref="EndpointManager"/>
         /// </summary>
-        public abstract class RemotingCommand : NoSerializationVerificationNeeded { }
+        public abstract class RemotingCommand : INoSerializationVerificationNeeded { }
 
         public sealed class Listen : RemotingCommand
         {
@@ -171,9 +171,9 @@ namespace Akka.Remote
 
         #region Messages internal to EndpointManager
 
-        public sealed class Prune : NoSerializationVerificationNeeded { }
+        public sealed class Prune : INoSerializationVerificationNeeded { }
 
-        public sealed class ListensResult : NoSerializationVerificationNeeded
+        public sealed class ListensResult : INoSerializationVerificationNeeded
         {
             public ListensResult(TaskCompletionSource<IList<ProtocolTransportAddressPair>> addressesPromise, List<Tuple<ProtocolTransportAddressPair, TaskCompletionSource<IAssociationEventListener>>> results)
             {
@@ -187,7 +187,7 @@ namespace Akka.Remote
             { get; private set; }
         }
 
-        public sealed class ListensFailure : NoSerializationVerificationNeeded
+        public sealed class ListensFailure : INoSerializationVerificationNeeded
         {
             public ListensFailure(TaskCompletionSource<IList<ProtocolTransportAddressPair>> addressesPromise, Exception cause)
             {
@@ -381,7 +381,7 @@ namespace Akka.Remote
         protected override void OnReceive(object message)
         {
             message.Match()
-                .With<Listen>(listen => Listens.ContinueWith<NoSerializationVerificationNeeded>(listens =>
+                .With<Listen>(listen => Listens.ContinueWith<INoSerializationVerificationNeeded>(listens =>
                 {
                     if (listens.IsFaulted)
                     {

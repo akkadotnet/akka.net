@@ -4,7 +4,7 @@ using Akka.TestKit.Internal;
 
 namespace Akka.TestKit.TestEvent
 {
-    public sealed class Unmute : NoSerializationVerificationNeeded
+    public sealed class Unmute : INoSerializationVerificationNeeded
     {
         private readonly IReadOnlyCollection<EventFilterBase> _filters;
 

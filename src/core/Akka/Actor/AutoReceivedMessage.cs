@@ -2,7 +2,7 @@
 
 namespace Akka.Actor
 {
-    public interface AutoReceivedMessage : NoSerializationVerificationNeeded
+    public interface AutoReceivedMessage : INoSerializationVerificationNeeded
     {
     }
 
