@@ -156,7 +156,7 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
-    class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, LoggingFSM
+    class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
         //TODO: RequireMessageQueue
     {
         public enum State

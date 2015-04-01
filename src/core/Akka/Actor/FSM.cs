@@ -198,7 +198,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Log entry of the <see cref="LoggingFSM"/> - can be obtained by calling <see cref="GetLog"/>
+        /// Log entry of the <see cref="ILoggingFSM"/> - can be obtained by calling <see cref="GetLog"/>
         /// </summary>
         /// <typeparam name="TS">The name of the state</typeparam>
         /// <typeparam name="TD">The data of the state</typeparam>
@@ -381,7 +381,7 @@ namespace Akka.Actor
         private readonly LoggingAdapter _log = Context.GetLogger();
         protected FSM()
         {
-            if(this is LoggingFSM)
+            if(this is ILoggingFSM)
                 DebugEvent = Context.System.Settings.FsmDebugEvent;
         }
         
@@ -969,5 +969,5 @@ namespace Akka.Actor
     /// Marker interface to let the setting "akka.actor.debug.fsm" control if logging should occur in <see cref="FSM{TS,TD}"/>
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public interface LoggingFSM { }
+    public interface ILoggingFSM { }
 }
