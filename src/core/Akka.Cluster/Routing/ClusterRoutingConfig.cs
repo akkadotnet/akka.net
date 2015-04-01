@@ -175,7 +175,6 @@ namespace Akka.Cluster.Routing
                 throw new ConfigurationException("Resizer can't be used together with cluster router.");
             _settings = settings;
             _local = local;
-            Guard.Assert(local.Resizer == null, "Resizer can't be used together with cluster router.");
         }
 
         private readonly AtomicCounter _childNameCounter = new AtomicCounter(0);
