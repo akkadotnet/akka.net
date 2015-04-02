@@ -1,6 +1,6 @@
 ﻿namespace Akka.Dispatch
 {
-    public interface IRequiresMessageQueue<T> where T:Semantics
+    public interface IRequiresMessageQueue<T> where T:ISemantics
     {
     }
 }

@@ -183,7 +183,7 @@
     <Compile Include="Dispatch\MessageQueues\BlockingMessageQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\BoundedMessageQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\DequeWrapperMessageQueue.cs" />
-    <Compile Include="Dispatch\Semantics.cs" />
+    <Compile Include="Dispatch\ISemantics.cs" />
     <Compile Include="Dispatch\MessageQueues\UnboundedDequeMessageQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\UnboundedPriorityMailboxQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\UnboundedMailboxQueue.cs" />

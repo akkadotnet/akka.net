@@ -6,28 +6,28 @@ namespace Akka.Dispatch
     /// <summary>
     /// 
     /// </summary>
-    public interface Semantics
+    public interface ISemantics
     {
     }
 
     /// <summary> 
     /// Semantics for message queues that support multiple consumers 
     /// </summary>
-    public interface IMultipleConsumerSemantics : Semantics
+    public interface IMultipleConsumerSemantics : ISemantics
     {
     }
 
     /// <summary> 
     /// Semantics for message queues that have an unbounded size 
     /// </summary>
-    public interface UnboundedMessageQueueSemantics : Semantics
+    public interface UnboundedMessageQueueSemantics : ISemantics
     {
     }
 
     /// <summary> 
     /// Semantics for message queues that have a bounded size 
     /// </summary>
-    public interface IBoundedMessageQueueSemantics : Semantics
+    public interface IBoundedMessageQueueSemantics : ISemantics
     {
         /// <summary> 
         /// The enqueue time to wait until message is dropped to deadletters if the message queue is full 
@@ -49,7 +49,7 @@ namespace Akka.Dispatch
     /// <summary>
     /// Semantics for message queues that are Double-Ended.
     /// </summary>
-    public interface IDequeBasedMessageQueueSemantics : Semantics
+    public interface IDequeBasedMessageQueueSemantics : ISemantics
     {
         void EnqueueFirst(Envelope envelope);
     }
