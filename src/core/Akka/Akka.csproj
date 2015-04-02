@@ -111,7 +111,7 @@
     <Compile Include="Actor\Deploy.cs" />
     <Compile Include="Actor\ExtendedActorSystem.cs" />
     <Compile Include="Actor\Futures.cs" />
-    <Compile Include="Actor\AutoReceivedMessage.cs" />
+    <Compile Include="Actor\IAutoReceivedMessage.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Actor\Cell.cs" />
     <Compile Include="Actor\ChildrenContainer.cs" />

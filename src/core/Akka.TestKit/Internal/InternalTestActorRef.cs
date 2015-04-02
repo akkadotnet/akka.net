@@ -190,7 +190,7 @@ namespace Akka.TestKit.Internal
         }
 
 
-        public class InternalGetActor : AutoReceivedMessage, IPossiblyHarmful
+        public class InternalGetActor : IAutoReceivedMessage, IPossiblyHarmful
         {
             public static readonly InternalGetActor Instance = new InternalGetActor();
             private InternalGetActor() { }
