@@ -19,7 +19,7 @@ namespace HelloAkka
             // send a message to the actor
             greeter.Tell(new Greet("World"));
 
-            // prevent the application from exiting befor message is handled
+            // prevent the application from exiting before message is handled
             Console.ReadLine();
         }
     }
