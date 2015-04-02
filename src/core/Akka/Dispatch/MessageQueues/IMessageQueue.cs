@@ -5,7 +5,7 @@ namespace Akka.Dispatch.MessageQueues
     /// <summary> 
     /// Interface to be implemented by all mailbox message queues 
     /// </summary>
-    public interface MessageQueue
+    public interface IMessageQueue
     {
         /// <summary> 
         /// Tests if the message queue contains any messages 

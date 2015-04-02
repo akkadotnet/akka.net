@@ -7,7 +7,7 @@ namespace Akka.Dispatch.MessageQueues
     /// <summary> 
     /// Base class for blocking message queues. Allows non thread safe data structures to be used as message queues. 
     /// </summary>
-    public abstract class BlockingMessageQueue : MessageQueue, IBlockingMessageQueueSemantics
+    public abstract class BlockingMessageQueue : IMessageQueue, IBlockingMessageQueueSemantics
     {
         private readonly object _lock = new object();
         private TimeSpan _blockTimeOut = TimeSpan.FromSeconds(1);

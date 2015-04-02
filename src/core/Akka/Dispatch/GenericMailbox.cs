@@ -10,8 +10,8 @@ namespace Akka.Dispatch
     /// Class Mailbox of TSys,TUser.
     /// </summary>
     public abstract class Mailbox<TSys, TUser> : MessageQueueMailbox
-        where TSys : MessageQueue
-        where TUser : MessageQueue
+        where TSys : IMessageQueue
+        where TUser : IMessageQueue
     {
         private Stopwatch _deadLineTimer;
         private volatile bool _isClosed;
@@ -236,7 +236,7 @@ namespace Akka.Dispatch
             //   }
         }
 
-        public override MessageQueue MessageQueue
+        public override IMessageQueue MessageQueue
         {
             get { return _userMessages; }
         }

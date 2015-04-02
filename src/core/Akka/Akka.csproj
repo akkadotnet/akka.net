@@ -198,7 +198,7 @@
     <Compile Include="Actor\Message.cs" />
     <Compile Include="Actor\UntypedReceive.cs" />
     <Compile Include="Dispatch\Mailboxes.cs" />
-    <Compile Include="Dispatch\MessageQueues\MessageQueue.cs" />
+    <Compile Include="Dispatch\MessageQueues\IMessageQueue.cs" />
     <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
     <Compile Include="Dispatch\TaskDispatcher.cs" />
     <Compile Include="Dispatch\ThreadPoolBuilder.cs" />

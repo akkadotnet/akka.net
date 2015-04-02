@@ -8,16 +8,16 @@ namespace Akka.Dispatch.MessageQueues
     /// 
     /// Uses a <see cref="Stack{Envelope}"/> internally - each individual <see cref="EnqueueFirst"/>
     /// </summary>
-    public class DequeWrapperMessageQueue : MessageQueue, IDequeBasedMessageQueueSemantics
+    public class DequeWrapperMessageQueue : IMessageQueue, IDequeBasedMessageQueueSemantics
     {
         private readonly Stack<Envelope> _prependBuffer = new Stack<Envelope>();
-        private readonly MessageQueue _messageQueue;
+        private readonly IMessageQueue _messageQueue;
         /// <summary>
         /// Takes another <see cref="MessageQueue"/> as an argument - wraps <see cref="messageQueue"/>
         /// in order to provide it with prepend (<see cref="EnqueueFirst"/>) semantics.
         /// </summary>
         /// <param name="messageQueue"></param>
-        public DequeWrapperMessageQueue(MessageQueue messageQueue)
+        public DequeWrapperMessageQueue(IMessageQueue messageQueue)
         {
             _messageQueue = messageQueue;
         }
