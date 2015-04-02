@@ -65,7 +65,7 @@ namespace Akka.Dispatch
     /// <summary>
     /// Semantics for message queues that are Double-Ended and bounded
     /// </summary>
-    public interface BoundedDequeBasedMessageQueueSemantics : DequeBasedMessageQueueSemantics,
+    public interface IBoundedDequeBasedMessageQueueSemantics : DequeBasedMessageQueueSemantics,
         UnboundedMessageQueueSemantics //TODO: make this Bounded once we have BoundedMessageQueues
     {
     }

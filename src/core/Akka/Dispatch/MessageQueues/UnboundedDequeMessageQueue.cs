@@ -6,7 +6,7 @@
         {
         }
     }
-    public class BoundedDequeMessageQueue : DequeWrapperMessageQueue, BoundedDequeBasedMessageQueueSemantics
+    public class BoundedDequeMessageQueue : DequeWrapperMessageQueue, IBoundedDequeBasedMessageQueueSemantics
     {
         public BoundedDequeMessageQueue()
             : base(new BoundedMessageQueue())
