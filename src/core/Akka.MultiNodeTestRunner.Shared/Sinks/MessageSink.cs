@@ -282,31 +282,31 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             if (messageType == MultiNodeTestRunnerMessageType.NodeLogMessage)
             {
                 LogMessageForNode log;
-                Guard.Assert(TryParseLogMessage(messageStr, out log), "could not parse log message: " + messageStr);
+                if (!TryParseLogMessage(messageStr, out log)) throw new InvalidOperationException("could not parse log message: " + messageStr);
                 MessageSinkActorRef.Tell(log);
             }
             else if (messageType == MultiNodeTestRunnerMessageType.RunnerLogMessage)
             {
                 LogMessageForTestRunner runnerLog;
-                Guard.Assert(TryParseLogMessage(messageStr, out runnerLog), "could not parse test runner log message: " + messageStr);
+                if (!TryParseLogMessage(messageStr, out runnerLog)) throw new InvalidOperationException("could not parse test runner log message: " + messageStr);
                 MessageSinkActorRef.Tell(runnerLog);
             }
             else if (messageType == MultiNodeTestRunnerMessageType.NodePassMessage)
             {
                 NodeCompletedSpecWithSuccess nodePass;
-                Guard.Assert(TryParseSuccessMessage(messageStr, out nodePass), "could not parse node spec pass message: " + messageStr);
+                if (!TryParseSuccessMessage(messageStr, out nodePass)) throw new InvalidOperationException("could not parse node spec pass message: " + messageStr);
                 MessageSinkActorRef.Tell(nodePass);
             }
             else if (messageType == MultiNodeTestRunnerMessageType.NodeFailMessage)
             {
                 NodeCompletedSpecWithFail nodeFail;
-                Guard.Assert(TryParseFailureMessage(messageStr, out nodeFail), "could not parse node spec fail message: " + messageStr);
+                if (!TryParseFailureMessage(messageStr, out nodeFail)) throw new InvalidOperationException("could not parse node spec fail message: " + messageStr);
                 MessageSinkActorRef.Tell(nodeFail);
             }
             else if (messageType == MultiNodeTestRunnerMessageType.NodeFailureException)
             {
                 NodeCompletedSpecWithFail nodeFail;
-                Guard.Assert(TryParseFailureExceptionMessage(messageStr, out nodeFail), "could not parse node spec failure + EXCEPTION message: " + messageStr);
+                if (!TryParseFailureExceptionMessage(messageStr, out nodeFail)) throw new InvalidOperationException("could not parse node spec failure + EXCEPTION message: " + messageStr);
                 MessageSinkActorRef.Tell(nodeFail);
             }
         }
