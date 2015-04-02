@@ -20,18 +20,16 @@ namespace Akka.Actor
     /// method provided on the scope.
     /// INTERNAL
     /// </summary>
-    // ReSharper disable once InconsistentNaming
-    public interface ActorRefScope
+    public interface IActorRefScope
     {
         bool IsLocal { get; }
     }
 
     /// <summary>
     /// Marker interface for Actors that are deployed within local scope, 
-    /// i.e. <see cref="ActorRefScope.IsLocal"/> always returns <c>true</c>.
+    /// i.e. <see cref="IActorRefScope.IsLocal"/> always returns <c>true</c>.
     /// </summary>
-    // ReSharper disable once InconsistentNaming
-    internal interface LocalRef : ActorRefScope { }
+    internal interface ILocalRef : IActorRefScope { }
 
     /// <summary>
     /// RepointableActorRef (and potentially others) may change their locality at
@@ -41,7 +39,7 @@ namespace Akka.Actor
     /// actor refs will have the same behavior.
     /// INTERNAL
     /// </summary>
-    public interface RepointableRef : ActorRefScope
+    public interface IRepointableRef : IActorRefScope
     {
         bool IsStarted { get; }
     }
@@ -68,7 +66,7 @@ namespace Akka.Actor
             get { return _path; }
         }
 
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { throw new NotImplementedException(); }
         }
@@ -222,10 +220,10 @@ namespace Akka.Actor
     }
 
 
-    public interface IInternalActorRef : IActorRef, ActorRefScope
+    public interface IInternalActorRef : IActorRef, IActorRefScope
     {
         IInternalActorRef Parent { get; }
-        ActorRefProvider Provider { get; }
+        IActorRefProvider Provider { get; }
         bool IsTerminated { get; }
 
         /// <summary>
@@ -248,7 +246,7 @@ namespace Akka.Actor
     public abstract class InternalActorRefBase : ActorRefBase, IInternalActorRef
     {
         public abstract IInternalActorRef Parent { get; }
-        public abstract ActorRefProvider Provider { get; }
+        public abstract IActorRefProvider Provider { get; }
 
         /// <summary>
         /// Obtain a child given the paths element to that actor, by possibly traversing the actor tree or 
@@ -269,7 +267,7 @@ namespace Akka.Actor
         public abstract bool IsLocal { get; }
     }
 
-    public abstract class MinimalActorRef : InternalActorRefBase, LocalRef
+    public abstract class MinimalActorRef : InternalActorRefBase, ILocalRef
     {
         public override IInternalActorRef Parent
         {
@@ -325,7 +323,7 @@ namespace Akka.Actor
 
         public override ActorPath Path { get { return _path; } }
 
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { throw new NotSupportedException("Nobody does not provide"); }
         }
@@ -334,7 +332,7 @@ namespace Akka.Actor
 
     public abstract class ActorRefWithCell : InternalActorRefBase
     {
-        public abstract Cell Underlying { get; }
+        public abstract ICell Underlying { get; }
 
         public abstract IEnumerable<IActorRef> Children { get; }
 
@@ -360,12 +358,12 @@ namespace Akka.Actor
     {
         private readonly IInternalActorRef _parent;
         private readonly LoggingAdapter _log;
-        private readonly ActorRefProvider _provider;
+        private readonly IActorRefProvider _provider;
         private readonly ActorPath _path;
 
         private readonly ConcurrentDictionary<string, IInternalActorRef> _children = new ConcurrentDictionary<string, IInternalActorRef>();
 
-        public VirtualPathContainer(ActorRefProvider provider, ActorPath path, IInternalActorRef parent, LoggingAdapter log)
+        public VirtualPathContainer(IActorRefProvider provider, ActorPath path, IInternalActorRef parent, LoggingAdapter log)
         {
             _parent = parent;
             _log = log;
@@ -373,7 +371,7 @@ namespace Akka.Actor
             _path = path;
         }
 
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { return _provider; }
         }
@@ -451,7 +449,15 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             return ActorRefs.Nobody;
         }
 
-        public void ForeachActorRef(Action<IInternalActorRef> action)
+        public bool HasChildren
+        {
+            get
+            {
+                return !_children.IsEmpty;
+            }
+        }
+
+        public void ForEachChild(Action<IInternalActorRef> action)
         {
             foreach (IInternalActorRef child in _children.Values)
             {

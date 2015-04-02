@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
@@ -39,10 +40,12 @@ namespace Akka.Actor
     public class SystemGuardianActor : ActorBase
     {
         private readonly IActorRef _userGuardian;
+        private readonly HashSet<IActorRef> _terminationHooks;
 
         public SystemGuardianActor(IActorRef userGuardian)
         {
             _userGuardian = userGuardian;
+            _terminationHooks = new HashSet<IActorRef>();
         }
 
         /// <summary>
@@ -51,7 +54,6 @@ namespace Akka.Actor
         /// <param name="message"></param>
         protected override bool Receive(object message)
         {
-            //TODO need to add termination hook support
             var terminated = message as Terminated;
             if(terminated != null)
             {
@@ -62,24 +64,21 @@ namespace Akka.Actor
                     // termination hooks, they will reply with TerminationHookDone
                     // and when all are done the systemGuardian is stopped
                     Context.Become(Terminating);
-                    //TODO: Send TerminationHook to all registered termination hooks
-                    //foreach(var terminationHook in _terminationHooks)
-                    //{
-                    //    terminationHook.Tell(terminationHook.Instance);
-                    //}
+                    foreach(var terminationHook in _terminationHooks)
+                    {
+                        terminationHook.Tell(TerminationHook.Instance);
+                    }
                     StopWhenAllTerminationHooksDone();
                 }
                 else
                 {
                     // a registered, and watched termination hook terminated before
                     // termination process of guardian has started
-                    //TODO: Implement termination hook support
-                    //_terminationHooks.Remove(terminatedActor)
+                    _terminationHooks.Remove(terminatedActor);
                 }
                 return true;
             }
-
-
+            
             var stopChild = message as StopChild;
             if(stopChild != null)
             {
@@ -87,14 +86,14 @@ namespace Akka.Actor
                 return true;
             }
             var sender = Sender;
-            //TODO: Implement termination hook support
-            //var registerTerminationHook = message as RegisterTerminationHook;
-            //if(registerTerminationHook != null && !ReferenceEquals(sender, Context.System.DeadLetters))
-            //{
-            //    _terminationHooks.Add(sender);
-            //    Context.Watch(sender);
-            //    return true;
-            //}
+            
+            var registerTerminationHook = message as RegisterTerminationHook;
+            if(registerTerminationHook != null && !ReferenceEquals(sender, Context.System.DeadLetters))
+            {
+                _terminationHooks.Add(sender);
+                Context.Watch(sender);
+                return true;
+            }
             Context.System.DeadLetters.Tell(new DeadLetter(message, sender, Self), sender);
             return true;
         }
@@ -108,28 +107,26 @@ namespace Akka.Actor
                 return true;
             }
             var sender = Sender;
-            //TODO: Implement termination hook support
-            //var terminationHookDone = message as TerminationHookDone;
-            //if(terminationHookDone != null)
-            //{
-            //    StopWhenAllTerminationHooksDone(sender);
-            //    return true;
-            //}
+
+            var terminationHookDone = message as TerminationHookDone;
+            if(terminationHookDone != null)
+            {
+                StopWhenAllTerminationHooksDone(sender);
+                return true;
+            }
             Context.System.DeadLetters.Tell(new DeadLetter(message, sender, Self), sender);
             return true;
         }
 
-        private void StopWhenAllTerminationHooksDone(IActorRef remove)
+        private void StopWhenAllTerminationHooksDone(IActorRef terminatedActor)
         {
-            //TODO: Implement termination hook support
-            //_terminationHooks.Remove(terminatedActor)
+            _terminationHooks.Remove(terminatedActor);
             StopWhenAllTerminationHooksDone();
         }
 
         private void StopWhenAllTerminationHooksDone()
         {
-            //TODO: Implement termination hook support
-            //if(_terminationHooks.Count == 0)
+            if(_terminationHooks.Count == 0)
             {
                 var actorSystem = Context.System;
                 actorSystem.EventStream.StopDefaultLoggers(actorSystem);
@@ -151,7 +148,7 @@ namespace Akka.Actor
     {
         private readonly EventStream _eventStream;
 
-        public DeadLetterActorRef(ActorRefProvider provider, ActorPath path, EventStream eventStream)
+        public DeadLetterActorRef(IActorRefProvider provider, ActorPath path, EventStream eventStream)
             : base(provider, path, eventStream)
         {
             _eventStream = eventStream;

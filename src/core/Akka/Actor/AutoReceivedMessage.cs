@@ -30,7 +30,7 @@ namespace Akka.Actor
     }
 
     //request to an actor ref, to get back the identity of the underlying actors
-    public sealed class Identify : AutoReceivedMessage
+    public sealed class Identify : IAutoReceivedMessage
     {
         public Identify(object messageId)
         {
@@ -71,7 +71,7 @@ namespace Akka.Actor
     /// it processes the message, which gets handled using the normal supervisor mechanism, and
     /// <see cref="IActorContext.Stop"/> which causes the actor to stop without processing any more messages. </para>
     /// </summary>
-    public sealed class PoisonPill : AutoReceivedMessage
+    public sealed class PoisonPill : IAutoReceivedMessage
     {
         private PoisonPill() { }
         private static readonly PoisonPill _instance = new PoisonPill();
@@ -97,7 +97,7 @@ namespace Akka.Actor
     /// is processed, without throwing an exception, and 
     /// <see cref="IActorContext.Stop"/> which causes the actor to stop without processing any more messages. </para>
     /// </summary>
-    public sealed class Kill : AutoReceivedMessage
+    public sealed class Kill : IAutoReceivedMessage
     {
         private Kill() { }
 

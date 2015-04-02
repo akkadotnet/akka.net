@@ -16,7 +16,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    public class RemoteActorRefProvider : ActorRefProvider
+    public class RemoteActorRefProvider : IActorRefProvider
     {
         private readonly LoggingAdapter _log;
 
@@ -460,7 +460,7 @@ namespace Akka.Remote
 
         private class RemoteDeadLetterActorRef : DeadLetterActorRef
         {
-            public RemoteDeadLetterActorRef(ActorRefProvider provider, ActorPath actorPath, EventStream eventStream)
+            public RemoteDeadLetterActorRef(IActorRefProvider provider, ActorPath actorPath, EventStream eventStream)
                 : base(provider, actorPath, eventStream)
             {
             }

@@ -9,16 +9,16 @@ namespace Akka.Actor
 {
     public partial class ActorCell
     {
-        private ChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
+        private IChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
         private long _nextRandomNameDoNotCallMeDirectly;
 
         [Obsolete("Use ChildrenContainer instead", true)]
-        private ChildrenContainer ChildrenRefs
+        private IChildrenContainer ChildrenRefs
         {
             get { return ChildrenContainer; }
         }
 
-        private ChildrenContainer ChildrenContainer
+        private IChildrenContainer ChildrenContainer
         {
             get { return _childrenContainerDoNotCallMeDirectly; }   //TODO: Hmm do we need memory barriers here???
         }
@@ -30,7 +30,7 @@ namespace Akka.Actor
 
         private bool TryGetChild(string name, out IActorRef child)
         {
-            ChildStats stats;
+            IChildStats stats;
             if (ChildrenContainer.TryGetByName(name, out stats))
             {
                 var restartStats = stats as ChildRestartStats;
@@ -104,7 +104,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="updater">A function that returns a new container.</param>
         /// <returns>The third value of the tuple that <paramref name="updater"/> returned.</returns>
-        private TReturn UpdateChildrenRefs<TReturn>(Func<ChildrenContainer, Tuple<bool, ChildrenContainer, TReturn>> updater)
+        private TReturn UpdateChildrenRefs<TReturn>(Func<IChildrenContainer, Tuple<bool, IChildrenContainer, TReturn>> updater)
         {
             return InterlockedSpin.ConditionallySwap(ref _childrenContainerDoNotCallMeDirectly, updater);
         }
@@ -117,7 +117,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="updater">A function that returns a new container.</param>
         /// <returns>The new updated <see cref="ChildrenContainer"/></returns>
-        private ChildrenContainer UpdateChildrenRefs(Func<ChildrenContainer, ChildrenContainer> updater)
+        private IChildrenContainer UpdateChildrenRefs(Func<IChildrenContainer, IChildrenContainer> updater)
         {
             return InterlockedSpin.Swap(ref _childrenContainerDoNotCallMeDirectly, updater);
         }
@@ -138,7 +138,7 @@ namespace Akka.Actor
         {
             return UpdateChildrenRefs(cc =>
             {
-                ChildStats stats;
+                IChildStats stats;
                 var name = actor.Path.Name;
                 if (cc.TryGetByName(name, out stats))
                 {
@@ -146,18 +146,18 @@ namespace Akka.Actor
                     if (old != null)
                     {
                         //Do not update. Return old
-                        return new Tuple<bool, ChildrenContainer, ChildRestartStats>(false, cc, old);
+                        return new Tuple<bool, IChildrenContainer, ChildRestartStats>(false, cc, old);
                     }
                     if (stats is ChildNameReserved)
                     {
                         var crs = new ChildRestartStats(actor);
                         var updatedContainer = cc.Add(name, crs);
                         //Update (if it's still cc) and return the new crs
-                        return new Tuple<bool, ChildrenContainer, ChildRestartStats>(true, updatedContainer, crs);
+                        return new Tuple<bool, IChildrenContainer, ChildRestartStats>(true, updatedContainer, crs);
                     }
                 }
                 //Do not update. Return null
-                return new Tuple<bool, ChildrenContainer, ChildRestartStats>(false, cc, null);
+                return new Tuple<bool, IChildrenContainer, ChildRestartStats>(false, cc, null);
             });
         }
 
@@ -168,10 +168,10 @@ namespace Akka.Actor
                 var c = cc as TerminatingChildrenContainer;
                 if (c != null)
                     //The arguments says: Update; with a new reason; and return true
-                    return new Tuple<bool, ChildrenContainer, bool>(true, c.CreateCopyWithReason(reason), true);
+                    return new Tuple<bool, IChildrenContainer, bool>(true, c.CreateCopyWithReason(reason), true);
                 
                 //The arguments says:Do NOT update; any container will do since it wont be updated; return false 
-                return new Tuple<bool, ChildrenContainer, bool>(false, cc, false);
+                return new Tuple<bool, IChildrenContainer, bool>(false, cc, false);
             });
         }
 
@@ -188,7 +188,7 @@ namespace Akka.Actor
             get
             {
                 var terminating = ChildrenContainer as TerminatingChildrenContainer;
-                return terminating != null && terminating.Reason is SuspendReason.WaitingForChildren;
+                return terminating != null && terminating.Reason is SuspendReason.IWaitingForChildren;
             }
         }
 
@@ -234,7 +234,7 @@ namespace Akka.Actor
         /// indicating that only a name has been reserved for the child, or a <see cref="ChildRestartStats"/> for a child that 
         /// has been initialized/created.
         /// </summary>
-        public bool TryGetChildStatsByName(string name, out ChildStats child)   //This is called getChildByName in Akka JVM
+        public bool TryGetChildStatsByName(string name, out IChildStats child)   //This is called getChildByName in Akka JVM
         {
             return ChildrenContainer.TryGetByName(name, out child);
         }
@@ -244,7 +244,7 @@ namespace Akka.Actor
         /// </summary>
         private bool TryGetChildRestartStatsByName(string name, out ChildRestartStats child)
         {
-            ChildStats stats;
+            IChildStats stats;
             if (ChildrenContainer.TryGetByName(name, out stats))
             {
                 child = stats as ChildRestartStats;
@@ -257,7 +257,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// Tries to get the stats for the specified child.
-        /// <remarks>Since the child exists <see cref="ChildRestartStats"/> is the only valid <see cref="ChildStats"/>.</remarks>
+        /// <remarks>Since the child exists <see cref="ChildRestartStats"/> is the only valid <see cref="IChildStats"/>.</remarks>
         /// </summary>
         protected bool TryGetChildStatsByRef(IActorRef actor, out ChildRestartStats child)   //This is called getChildByRef in Akka JVM
         {

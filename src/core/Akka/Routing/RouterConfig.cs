@@ -34,7 +34,7 @@ namespace Akka.Routing
         public virtual bool IsManagementMessage(object message)
         {
             return
-                message is AutoReceivedMessage ||
+                message is IAutoReceivedMessage ||
                 // in akka.net this message is a subclass of AutoReceivedMessage - so removed condition that "message is Terminated ||"
                 message is RouterManagementMesssage;
         }
@@ -419,7 +419,7 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    /// Used to tell <see cref="ActorRefProvider"/> to create router based on what's stored in configuration.
+    /// Used to tell <see cref="IActorRefProvider"/> to create router based on what's stored in configuration.
     /// 
     /// For example:
     /// <code>

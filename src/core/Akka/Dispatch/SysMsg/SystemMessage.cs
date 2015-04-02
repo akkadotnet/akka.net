@@ -501,4 +501,61 @@ namespace Akka.Dispatch.SysMsg
             return "<Create>" + (_failure == null ? "" : " Failure: " + _failure);
         }
     }
+
+    public sealed class RegisterTerminationHook 
+    {
+        private RegisterTerminationHook() { }
+        private static readonly RegisterTerminationHook _instance = new RegisterTerminationHook();
+        public static RegisterTerminationHook Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
+
+        public override string ToString()
+        {
+            return "<RegisterTerminationHook>";
+        }
+    }
+
+    public sealed class TerminationHook
+    {
+        private TerminationHook() { }
+        private static readonly TerminationHook _instance = new TerminationHook();
+        public static TerminationHook Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
+
+        public override string ToString()
+        {
+            return "<TerminationHook>";
+        }
+    }
+
+    /// <summary>
+    ///     Class Terminate.
+    /// </summary>
+    public sealed class TerminationHookDone
+    {
+        private TerminationHookDone() { }
+        private static readonly TerminationHookDone _instance = new TerminationHookDone();
+        public static TerminationHookDone Instance
+        {
+            get
+            {
+                return _instance;
+            }
+        }
+
+        public override string ToString()
+        {
+            return "<TerminationHookDone>";
+        }
+    }
 }
