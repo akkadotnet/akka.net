@@ -13,7 +13,7 @@ namespace Akka.Dispatch
     /// <summary> 
     /// Semantics for message queues that support multiple consumers 
     /// </summary>
-    public interface MultipleConsumerSemantics : Semantics
+    public interface IMultipleConsumerSemantics : Semantics
     {
     }
 
@@ -38,7 +38,7 @@ namespace Akka.Dispatch
     /// <summary> 
     /// Semantics for message queues that are blocking 
     /// </summary>
-    public interface IBlockingMessageQueueSemantics : MultipleConsumerSemantics
+    public interface IBlockingMessageQueueSemantics : IMultipleConsumerSemantics
     {
         /// <summary> 
         /// The time to wait on a lock before throwing an timeout exception. 
