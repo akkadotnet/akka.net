@@ -37,4 +37,4 @@ Scale up, scale out, fault-tolerance / HA
 Scale up, scale out, fault-tolerance / HA
 
 #### Complex Event Stream Processing
-Scale up, scale out, fault-tolerance / HA## Heading ##
+Scale up, scale out, fault-tolerance / HA
