@@ -4,11 +4,11 @@ using Akka.Actor;
 namespace Akka.Dispatch.MessageQueues
 {
     /// <summary>
-    /// Message queue for supporting <see cref="DequeBasedMessageQueueSemantics"/> within <see cref="Mailbox"/> instances.
+    /// Message queue for supporting <see cref="IDequeBasedMessageQueueSemantics"/> within <see cref="Mailbox"/> instances.
     /// 
     /// Uses a <see cref="Stack{Envelope}"/> internally - each individual <see cref="EnqueueFirst"/>
     /// </summary>
-    public class DequeWrapperMessageQueue : MessageQueue, DequeBasedMessageQueueSemantics
+    public class DequeWrapperMessageQueue : MessageQueue, IDequeBasedMessageQueueSemantics
     {
         private readonly Stack<Envelope> _prependBuffer = new Stack<Envelope>();
         private readonly MessageQueue _messageQueue;

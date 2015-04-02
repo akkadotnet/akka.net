@@ -49,7 +49,7 @@ namespace Akka.Dispatch
     /// <summary>
     /// Semantics for message queues that are Double-Ended.
     /// </summary>
-    public interface DequeBasedMessageQueueSemantics : Semantics
+    public interface IDequeBasedMessageQueueSemantics : Semantics
     {
         void EnqueueFirst(Envelope envelope);
     }
@@ -57,7 +57,7 @@ namespace Akka.Dispatch
     /// <summary>
     /// Semantics for message queues that are Double-Ended and unbounded
     /// </summary>
-    public interface UnboundedDequeBasedMessageQueueSemantics : DequeBasedMessageQueueSemantics,
+    public interface UnboundedDequeBasedMessageQueueSemantics : IDequeBasedMessageQueueSemantics,
         UnboundedMessageQueueSemantics
     {
     }
@@ -65,7 +65,7 @@ namespace Akka.Dispatch
     /// <summary>
     /// Semantics for message queues that are Double-Ended and bounded
     /// </summary>
-    public interface IBoundedDequeBasedMessageQueueSemantics : DequeBasedMessageQueueSemantics,
+    public interface IBoundedDequeBasedMessageQueueSemantics : IDequeBasedMessageQueueSemantics,
         UnboundedMessageQueueSemantics //TODO: make this Bounded once we have BoundedMessageQueues
     {
     }
