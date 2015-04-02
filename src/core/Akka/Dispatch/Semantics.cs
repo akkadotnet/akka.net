@@ -27,7 +27,7 @@ namespace Akka.Dispatch
     /// <summary> 
     /// Semantics for message queues that have a bounded size 
     /// </summary>
-    public interface BoundedMessageQueueSemantics : Semantics
+    public interface IBoundedMessageQueueSemantics : Semantics
     {
         /// <summary> 
         /// The enqueue time to wait until message is dropped to deadletters if the message queue is full 

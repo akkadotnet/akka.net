@@ -6,7 +6,7 @@ using Akka.Configuration;
 namespace Akka.Dispatch.MessageQueues
 {
     /// <summary>An Bounded mailbox message queue.</summary>
-    public class BoundedMessageQueue : MessageQueue, BoundedMessageQueueSemantics
+    public class BoundedMessageQueue : MessageQueue, IBoundedMessageQueueSemantics
     {
         private readonly BlockingCollection<Envelope> _queue;
 
