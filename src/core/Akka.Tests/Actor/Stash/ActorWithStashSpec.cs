@@ -130,7 +130,7 @@ namespace Akka.Tests.Actor.Stash
             ExpectMsg("terminated2");
         }
 
-        private class UnboundedStashActor : BlackHoleActor, WithUnboundedStash
+        private class UnboundedStashActor : BlackHoleActor, IWithUnboundedStash
         {
             public IStash Stash { get; set; }
         }
@@ -140,7 +140,7 @@ namespace Akka.Tests.Actor.Stash
             public IStash Stash { get; set; }
         }
 
-        private class StashingActor : TestReceiveActor, WithUnboundedStash
+        private class StashingActor : TestReceiveActor, IWithUnboundedStash
         {
             public StashingActor()
             {
@@ -166,7 +166,7 @@ namespace Akka.Tests.Actor.Stash
             public IStash Stash { get; set; }
         }
 
-        private class StashEverythingActor : ReceiveActor, WithUnboundedStash
+        private class StashEverythingActor : ReceiveActor, IWithUnboundedStash
         {
             public StashEverythingActor()
             {
@@ -175,7 +175,7 @@ namespace Akka.Tests.Actor.Stash
             public IStash Stash { get; set; }
         }
 
-        private class StashingTwiceActor : TestReceiveActor, WithUnboundedStash
+        private class StashingTwiceActor : TestReceiveActor, IWithUnboundedStash
         {
             public StashingTwiceActor()
             {
@@ -207,7 +207,7 @@ namespace Akka.Tests.Actor.Stash
             public IStash Stash { get; set; }
         }
 
-        private class SlaveActor : TestReceiveActor, WithUnboundedStash
+        private class SlaveActor : TestReceiveActor, IWithUnboundedStash
         {
             private readonly TestLatch _restartLatch;
 
@@ -232,7 +232,7 @@ namespace Akka.Tests.Actor.Stash
             public IStash Stash { get; set; }
         }
 
-        private class ActorsThatClearsStashOnPreRestart : TestReceiveActor, WithUnboundedStash
+        private class ActorsThatClearsStashOnPreRestart : TestReceiveActor, IWithUnboundedStash
         {
             private readonly TestLatch _restartLatch;
 
@@ -257,7 +257,7 @@ namespace Akka.Tests.Actor.Stash
 
         }
 
-        private class TerminatedMessageStashingActor : TestReceiveActor, WithUnboundedStash
+        private class TerminatedMessageStashingActor : TestReceiveActor, IWithUnboundedStash
         {
             public TerminatedMessageStashingActor(IActorRef probe)
             {

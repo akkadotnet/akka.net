@@ -99,7 +99,7 @@ module Actors =
     [<AbstractClass>]
     type Actor() = 
         inherit UntypedActor()
-        interface WithUnboundedStash with
+        interface IWithUnboundedStash with
             member val Stash = null with get, set
 
     /// <summary>
@@ -221,9 +221,9 @@ module Actors =
                         member __.Unwatch(aref:IActorRef) = context.Unwatch aref
                         member __.Log = lazy (Akka.Event.Logging.GetLogger(context))
                         member __.Defer fn = deferables <- fn::deferables 
-                        member __.Stash() = (this :> WithUnboundedStash).Stash.Stash()
-                        member __.Unstash() = (this :> WithUnboundedStash).Stash.Unstash()
-                        member __.UnstashAll() = (this :> WithUnboundedStash).Stash.UnstashAll() }
+                        member __.Stash() = (this :> IWithUnboundedStash).Stash.Stash()
+                        member __.Unstash() = (this :> IWithUnboundedStash).Stash.Unstash()
+                        member __.UnstashAll() = (this :> IWithUnboundedStash).Stash.UnstashAll() }
     
         new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile () ())
         member __.Sender() : IActorRef = base.Sender

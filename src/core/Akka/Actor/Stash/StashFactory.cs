@@ -27,7 +27,7 @@ namespace Akka.Actor
                 return new BoundedStashImpl(context);
             }
 
-            if(actorType.Implements<WithUnboundedStash>())
+            if(actorType.Implements<IWithUnboundedStash>())
             {
                 return new UnboundedStashImpl(context);
             }

@@ -34,7 +34,7 @@ namespace Akka.Tests.Actor
             throw new Exception("Incomplete. Remove the comment on the line above this, and remove this line, when we have BoundedDequeBasedMailbox");
         }
 
-        private class UnboundedStashActor : BlackHoleActor, WithUnboundedStash
+        private class UnboundedStashActor : BlackHoleActor, IWithUnboundedStash
         {
             public IStash Stash { get; set; }
         }

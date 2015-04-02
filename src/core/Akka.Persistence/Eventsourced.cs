@@ -44,7 +44,7 @@ namespace Akka.Persistence
         public Action<object> Handler { get; private set; }
     }
 
-    public abstract partial class Eventsourced : ActorBase, IPersistentIdentity, WithUnboundedStash
+    public abstract partial class Eventsourced : ActorBase, IPersistentIdentity, IWithUnboundedStash
     {
         private static readonly AtomicCounter InstanceCounter = new AtomicCounter(1);
 
