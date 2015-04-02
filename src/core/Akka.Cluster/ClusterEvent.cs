@@ -638,7 +638,7 @@ namespace Akka.Cluster
     }
 
 
-    //TODO: RequiresMessageQueue? 
+    //TODO: IRequiresMessageQueue? 
     sealed class ClusterDomainEventPublisher : UntypedActor
     {
         Gossip _latestGossip;

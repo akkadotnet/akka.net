@@ -47,7 +47,7 @@ namespace Akka.Remote.TestKit
                 _system.ActorOf(new Props(typeof (ClientFSM),
                     new object[] {name, controllerAddr}), "TestConductorClient");
             
-            //TODO: RequiresMessageQueue
+            //TODO: IRequiresMessageQueue
             var a = _system.ActorOf(Props.Create<WaitForClientFSMToConnect>());
 
             return a.Ask<Done>(_client);

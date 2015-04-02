@@ -252,7 +252,7 @@
     <Compile Include="Event\UnhandledMessage.cs" />
     <Compile Include="Event\Warning.cs" />
     <Compile Include="Util\Internal\Extensions.cs" />
-    <Compile Include="Dispatch\RequiresMessageQueue.cs" />
+    <Compile Include="Dispatch\IRequiresMessageQueue.cs" />
     <Compile Include="Routing\SmallestMailbox.cs" />
     <Compile Include="Routing\TailChoppingRoutingLogic.cs" />
     <Compile Include="Serialization\ByteArraySerializer.cs" />

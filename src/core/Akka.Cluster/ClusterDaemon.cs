@@ -543,7 +543,7 @@ namespace Akka.Cluster
         }
     }
 
-    //TODO: RequiresMessageQueue?
+    //TODO: IRequiresMessageQueue?
     /// <summary>
     /// Supervisor managing the different Cluster daemons.
     /// </summary>
