@@ -211,7 +211,10 @@ namespace Akka.Actor
             try
             {
                 var finalAddr = addr;
-				if(!Uri.IsWellFormedUriString(addr, UriKind.Relative)) return null;
+                // need to add a special case for URI fragments containing #, since those don't get counted
+                // as relative URIs by C#
+				if(Uri.IsWellFormedUriString(addr, UriKind.Absolute) || (!Uri.IsWellFormedUriString(addr, UriKind.Relative) 
+                    && !addr.Contains("#"))) return null;
 				if(!addr.StartsWith("/"))
                 {
                     //hack to cause the URI not to explode when we're only given an actor name
