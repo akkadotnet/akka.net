@@ -231,7 +231,6 @@
     <Compile Include="Helios.Concurrency.DedicatedThreadPool.cs" />
     <Compile Include="Routing\ConsistentHashRouter.cs" />
     <Compile Include="Routing\TailChoppingPool.cs" />
-    <Compile Include="Util\Guard.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
     <Compile Include="Util\Internal\ImmutabilityUtils.cs" />
     <Compile Include="Util\Internal\InterlockedSpin.cs" />
