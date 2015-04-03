@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -42,6 +42,7 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>true</Prefer32Bit>
+    <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug Mono|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
@@ -52,6 +53,8 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>true</Prefer32Bit>
+    <WarningLevel>4</WarningLevel>
+    <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -71,15 +74,15 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka.Remote\Akka.Remote.csproj">
-      <Project>{ea4ff8fd-7c53-49c8-b9aa-02e458b3e6a7}</Project>
+      <Project>{EA4FF8FD-7C53-49C8-B9AA-02E458B3E6A7}</Project>
       <Name>Akka.Remote</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\..\core\Akka\Akka.csproj">
-      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
     <ProjectReference Include="..\Shared\Shared.csproj">
-      <Project>{93edacd8-f6ba-43a7-9fd7-d3d4156adbc0}</Project>
+      <Project>{93EDACD8-F6BA-43A7-9FD7-D3D4156ADBC0}</Project>
       <Name>Shared</Name>
     </ProjectReference>
   </ItemGroup>

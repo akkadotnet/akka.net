@@ -55,7 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka\Akka.csproj">
-      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>

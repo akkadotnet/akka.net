@@ -211,13 +211,12 @@ namespace Akka.Actor
             try
             {
                 var finalAddr = addr;
-                if (!Uri.IsWellFormedUriString(addr, UriKind.RelativeOrAbsolute))
+				if(!Uri.IsWellFormedUriString(addr, UriKind.Relative)) return null;
+				if(!addr.StartsWith("/"))
                 {
                     //hack to cause the URI not to explode when we're only given an actor name
                     finalAddr = "/" + addr;
                 }
-                var uri = new Uri(finalAddr, UriKind.RelativeOrAbsolute);
-                if (uri.IsAbsoluteUri) return null;
 
                 return finalAddr.Split('/').SkipWhile(string.IsNullOrEmpty);
             }

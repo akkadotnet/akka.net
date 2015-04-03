@@ -1,11 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>8c261ca2-3cad-42ff-b21c-c32e7d718f95</ProjectGuid>
+    <ProjectGuid>{8C261CA2-3CAD-42FF-B21C-C32E7D718F95}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>PersistenceExample.FsApi</RootNamespace>
     <AssemblyName>PersistenceExample.FsApi</AssemblyName>
@@ -69,37 +68,34 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
-    <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-      <Private>True</Private>
-    </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
+      <Package>monodevelop</Package>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
+    <Reference Include="FSharp.Core, Version=4.3.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+      <Private>True</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\core\Akka.FSharp\Akka.FSharp.fsproj">
       <Name>Akka.FSharp</Name>
-      <Project>{81574240-bc31-4be4-b447-adf0d32f4246}</Project>
-      <Private>True</Private>
+      <Project>{81574240-BC31-4BE4-B447-ADF0D32F4246}</Project>
     </ProjectReference>
     <ProjectReference Include="..\..\core\Akka.Persistence.FSharp\Akka.Persistence.FSharp.fsproj">
       <Name>Akka.Persistence.FSharp</Name>
-      <Project>{d22c316e-991e-432a-950c-29bc3c45c07b}</Project>
-      <Private>True</Private>
+      <Project>{D22C316E-991E-432A-950C-29BC3C45C07B}</Project>
     </ProjectReference>
     <ProjectReference Include="..\..\core\Akka.Persistence\Akka.Persistence.csproj">
       <Name>Akka.Persistence</Name>
-      <Project>{fca84dea-c118-424b-9eb8-34375dfef18a}</Project>
-      <Private>True</Private>
+      <Project>{FCA84DEA-C118-424B-9EB8-34375DFEF18A}</Project>
     </ProjectReference>
     <ProjectReference Include="..\..\core\Akka\Akka.csproj">
       <Name>Akka</Name>
-      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
-      <Private>True</Private>
+      <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
     </ProjectReference>
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
