@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -41,7 +41,6 @@
     <Reference Include="System.Xml" />
     <Reference Include="xunit">
       <HintPath>..\..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
-      <Private>True</Private>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -62,15 +61,15 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj">
-      <Project>{11f4d4b8-7e07-4457-abf2-609b3e7b2649}</Project>
+      <Project>{11F4D4B8-7E07-4457-ABF2-609B3E7B2649}</Project>
       <Name>Akka.TestKit.Xunit</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj">
-      <Project>{0d3cbad0-bbdb-43e5-afc4-ed1d3ecdc224}</Project>
+      <Project>{0D3CBAD0-BBDB-43E5-AFC4-ED1D3ECDC224}</Project>
       <Name>Akka.TestKit</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka\Akka.csproj">
-      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>

@@ -740,7 +740,13 @@ namespace Akka.Cluster
         private PerformanceCounter _systemLoadAverageCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total", true);
         private PerformanceCounter _systemAvailableMemory = new PerformanceCounter("Memory", "Available MBytes", true);
 
-        #endregion
+#if MONO 
+		// Mono doesn't support Microsoft.VisualBasic, so need an alternative way of sampling this value
+		// see http://stackoverflow.com/questions/105031/how-do-you-get-total-amount-of-ram-the-computer-has
+		private PerformanceCounter _systemMaxMemory = new PerformanceCounter("Mono Memory", "Total Physical Memory");
+#endif
+
+		#endregion
 
         public Address Address { get; private set; }
 
@@ -801,7 +807,12 @@ namespace Akka.Cluster
         public Metric SystemMaxMemory()
         {
             return Metric.Create(StandardMetrics.SystemMemoryMax,
-                new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory);
+#if MONO
+					_systemMaxMemory.RawValue
+#else
+					new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory
+#endif
+			);
         }
 
         #endregion

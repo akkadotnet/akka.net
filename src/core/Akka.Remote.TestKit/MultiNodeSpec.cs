@@ -287,7 +287,7 @@ namespace Akka.Remote.TestKit
                     _serverPort = string.IsNullOrEmpty(serverPortStr) ? ServerPortDefault : Int32.Parse(serverPortStr);
                 }
 
-                if (!(_selfPort > 0 && _selfPort < 65535)) throw new InvalidOperationException("multinode.server-port is out of bounds: " + _selfPort);
+                if (!(_serverPort > 0 && _serverPort < 65535)) throw new InvalidOperationException("multinode.server-port is out of bounds: " + _serverPort);
                 return _serverPort;
             }
         }
