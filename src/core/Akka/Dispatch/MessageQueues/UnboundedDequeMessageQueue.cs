@@ -1,6 +1,6 @@
 ﻿namespace Akka.Dispatch.MessageQueues
 {
-    public class UnboundedDequeMessageQueue : DequeWrapperMessageQueue, UnboundedDequeBasedMessageQueueSemantics
+    public class UnboundedDequeMessageQueue : DequeWrapperMessageQueue, IUnboundedDequeBasedMessageQueueSemantics
     {
         public UnboundedDequeMessageQueue() : base(new UnboundedMessageQueue())
         {

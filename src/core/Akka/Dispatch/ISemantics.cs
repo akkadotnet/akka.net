@@ -57,7 +57,7 @@ namespace Akka.Dispatch
     /// <summary>
     /// Semantics for message queues that are Double-Ended and unbounded
     /// </summary>
-    public interface UnboundedDequeBasedMessageQueueSemantics : IDequeBasedMessageQueueSemantics,
+    public interface IUnboundedDequeBasedMessageQueueSemantics : IDequeBasedMessageQueueSemantics,
         UnboundedMessageQueueSemantics
     {
     }
