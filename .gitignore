@@ -22,6 +22,9 @@ us.stackdump
 *.user
 *.sln.docstates
 
+#MonoDevelop
+*.userprefs
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
