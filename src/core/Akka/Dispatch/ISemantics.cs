@@ -20,7 +20,7 @@ namespace Akka.Dispatch
     /// <summary> 
     /// Semantics for message queues that have an unbounded size 
     /// </summary>
-    public interface UnboundedMessageQueueSemantics : ISemantics
+    public interface IUnboundedMessageQueueSemantics : ISemantics
     {
     }
 
@@ -58,7 +58,7 @@ namespace Akka.Dispatch
     /// Semantics for message queues that are Double-Ended and unbounded
     /// </summary>
     public interface IUnboundedDequeBasedMessageQueueSemantics : IDequeBasedMessageQueueSemantics,
-        UnboundedMessageQueueSemantics
+        IUnboundedMessageQueueSemantics
     {
     }
 
@@ -66,7 +66,7 @@ namespace Akka.Dispatch
     /// Semantics for message queues that are Double-Ended and bounded
     /// </summary>
     public interface IBoundedDequeBasedMessageQueueSemantics : IDequeBasedMessageQueueSemantics,
-        UnboundedMessageQueueSemantics //TODO: make this Bounded once we have BoundedMessageQueues
+        IUnboundedMessageQueueSemantics //TODO: make this Bounded once we have BoundedMessageQueues
     {
     }
 }
