@@ -25,6 +25,8 @@ let description = "Akka.NET is a port of the popular Java/Scala framework Akka t
 let tags = ["akka";"actors";"actor";"model";"Akka";"concurrency"]
 let configuration = "Release"
 let nugetTitleSuffix = " - BETA"
+let toolDir = "tools"
+let CloudCopyDir = toolDir @@ "CloudCopy"
 
 // Read release notes and version
 
@@ -37,6 +39,7 @@ let parsedRelease =
 //See https://github.com/fsharp/FAKE/issues/522
 //TODO: When this has been fixed, switch to DateTime.UtcNow.ToString("yyyyMMddHHmmss")
 let preReleaseVersion = parsedRelease.AssemblyVersion + "-" + (getBuildParamOrDefault "nugetprerelease" "pre") + DateTime.UtcNow.ToString("yyMMddHHmm")
+let isUnstableDocs = hasBuildParam "unstable"
 let isPreRelease = hasBuildParam "nugetprerelease"
 let release = if isPreRelease then ReleaseNotesHelper.ReleaseNotes.New(parsedRelease.AssemblyVersion, preReleaseVersion, parsedRelease.Notes) else parsedRelease
 
@@ -51,6 +54,7 @@ let nugetDir = binDir @@ "nuget"
 let workingDir = binDir @@ "build"
 let libDir = workingDir @@ @"lib\net45\"
 let nugetExe = FullName @"src\.nuget\NuGet.exe"
+let docDir = "bin" @@ "doc"
 
 
 //--------------------------------------------------------------------------------
@@ -113,6 +117,41 @@ Target "Docs" <| fun _ ->
     !! "documentation/akkadoc.shfbproj"
     |> MSBuildRelease "" "Rebuild"
     |> ignore
+
+//--------------------------------------------------------------------------------
+// Push DOCs content to Windows Azure blob storage
+Target "AzureDocsDeploy" (fun _ ->
+    let rec pushToAzure docDir azureUrl container azureAccount azureKey trialsLeft =
+        let tracing = enableProcessTracing
+        enableProcessTracing <- false
+        let arguments = sprintf "%s\* %s DefaultEndpointsProtocol=https;AccountName=%s;AccountKey=%s -Z" (Path.GetFullPath docDir) (azureUrl @@ container) azureAccount azureKey
+        tracefn "Pushing docs to %s. Attempts left: %d" (azureUrl) trialsLeft
+        try 
+            
+            let result = ExecProcess(fun info ->
+                info.FileName <- CloudCopyDir @@ "CloudCopy.exe"
+                info.Arguments <- arguments) (TimeSpan.FromMinutes 120.0) //takes a very long time to upload
+            if result <> 0 then failwithf "Error during CloudCopy.exe upload to azure."
+        with exn -> 
+            if (trialsLeft > 0) then (pushToAzure docDir azureUrl container azureAccount azureKey (trialsLeft-1))
+            else raise exn
+    let canPush = hasBuildParam "azureKey" && hasBuildParam "azureAccount" && hasBuildParam "azureUrl" && hasBuildParam "azureKey"
+    if (canPush) then
+         printfn "Uploading API docs to Azure..."
+         let azureUrl = getBuildParam "azureUrl"
+         let azureAccount = getBuildParam "azureAccount"
+         let azureKey = (getBuildParam "azureKey") + "==" //hack, because it looks like FAKE arg parsing chops off the "==" that gets tacked onto the end of each Azure storage key
+         if(isUnstableDocs) then
+            pushToAzure docDir azureUrl "unstable" azureAccount azureKey 3
+         if(not isUnstableDocs) then
+            pushToAzure docDir azureUrl "stable" azureAccount azureKey 3
+            pushToAzure docDir azureUrl release.NugetVersion azureAccount azureKey 3
+    if(not canPush) then
+        printfn "Missing required paraments to push docs to Azure. Run build HelpDocs to find out!"
+            
+)
+
+Target "PublishDocs" DoNothing
 
 //--------------------------------------------------------------------------------
 // Copy the build output to bin directory
@@ -371,6 +410,7 @@ Target "Help" <| fun _ ->
       " Other Targets"
       " * Help       Display this help" 
       " * HelpNuget  Display help about creating and pushing nuget packages" 
+      " * HelpDocs   Display help about creating and pushing API docs" 
       ""]
 
 Target "HelpNuget" <| fun _ ->
@@ -413,6 +453,46 @@ Target "HelpNuget" <| fun _ ->
       "                                   and symbols packages to http://xyz"
       ""]
 
+Target "HelpDocs" <| fun _ ->
+    List.iter printfn [
+      "usage: "
+      "build Docs"
+      "Just builds the API docs for Akka.NET locally. Does not attempt to publish."
+      ""
+      "build PublishDocs azureKey=<key> "
+      "                  azureAccount=<account> "
+      "                  azureUrl=<url> "
+      "                 [unstable=true]"
+      ""
+      "Arguments for PublishDocs target:"
+      "   azureKey=<key>             Azure blob storage key."
+      "                              Used to authenticate to the storage account."
+      ""
+      "   azureAccount=<account>     Azure storage account name."
+      "                              Used to identify the storage account."
+      ""
+      "   azureUrl=<url>             Base URL for Azure storage container."
+      "                              FAKE will automatically set container"
+      "                              names based on build parameters."
+      ""
+      "   [unstable=true]            Indicates that we'll publish to an Azure"
+      "                              container named 'unstable'. If this param"
+      "                              is not present we'll publish to containers"
+      "                              'stable' and the 'release.version'"
+      ""
+      "In order to publish documentation all of these values must be provided."
+      "Examples:"
+      "  build PublishDocs azureKey=1s9HSAHA+... azureAccount=fooaccount"
+      "                    azureUrl=http://fooaccount.blob.core.windows.net/docs"
+      "                                   Build and publish docs to http://fooaccount.blob.core.windows.net/docs/stable"
+      "                                   and http://fooaccount.blob.core.windows.net/docs/{release.version}"
+      ""
+      "  build PublishDocs azureKey=1s9HSAHA+... azureAccount=fooaccount"
+      "                    azureUrl=http://fooaccount.blob.core.windows.net/docs"
+      "                    unstable=true"
+      "                                   Build and publish docs to http://fooaccount.blob.core.windows.net/docs/unstable"
+      ""]
+
 //--------------------------------------------------------------------------------
 //  Target dependencies
 //--------------------------------------------------------------------------------
@@ -428,7 +508,7 @@ Target "HelpNuget" <| fun _ ->
 "CleanNuget" ==> "BuildRelease" ==> "Nuget"
 
 //docs dependencies
-"BuildRelease" ==> "Docs"
+"BuildRelease" ==> "Docs" ==> "AzureDocsDeploy" ==> "PublishDocs"
 
 Target "All" DoNothing
 "BuildRelease" ==> "All"
