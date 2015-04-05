@@ -33,6 +33,22 @@ namespace Akka.Tests.Actor
             latchActor.Ready(TimeSpan.FromSeconds(1));
         }
 
+        [Fact]
+        public void Props_created_without_strategy_must_have_it_null()
+        {
+            var props = Props.Create(() => new PropsTestActor());
+            Assert.Null(props.SupervisorStrategy);
+        }
+
+        [Fact]
+        public void Props_created_with_strategy_must_have_it_set()
+        {
+            var strategy = new OneForOneStrategy(_ => Directive.Stop);
+            var props = Props.Create(() => new PropsTestActor(), strategy);
+
+            Assert.Equal(strategy, props.SupervisorStrategy);
+        }
+
         private class TestProducer : IIndirectActorProducer
         {
             TestLatch latchActor;

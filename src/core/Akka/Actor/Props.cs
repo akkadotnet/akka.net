@@ -342,7 +342,7 @@ namespace Akka.Actor
 
             object[] args = newExpression.GetArguments().ToArray();
 
-            return new Props(typeof (TActor), args);
+            return new Props(typeof (TActor), supervisorStrategy, args);
         }
 
         /// <summary>
