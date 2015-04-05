@@ -14,7 +14,7 @@ system.ActorOf<Worker>("Worker3");
 system.ActorOf<Worker>("Worker4");
 
 //create the router using round robin strategy
-var router = system.ActorOf(new Props().WithRouter(new RoundRobinGroup(
+var router = system.ActorOf(Props.Empty.WithRouter(new RoundRobinGroup(
 "user/Worker1", "user/Worker2", "user/Worker3", "user/Worker4")));
 
 //pass messages via the router to the routees
