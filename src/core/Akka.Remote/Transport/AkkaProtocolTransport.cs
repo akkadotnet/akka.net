@@ -833,7 +833,7 @@ namespace Akka.Remote.Transport
             }
             else
             {
-                //send diassociate just to be sure
+                //send disassociate just to be sure
                 SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
                 return Stop(new Failure(new TimeoutReason("No response from remote. Handshake timed out or transport failure detector triggered.")));
             }

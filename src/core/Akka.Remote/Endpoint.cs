@@ -286,9 +286,9 @@ namespace Akka.Remote
         public int? Uid { get; set; }
 
         /// <summary>
-        /// Processing of <see cref="Ack"/>s has to be delayed until the UID is discovered after a reconnect. Dependig whether the
+        /// Processing of <see cref="Ack"/>s has to be delayed until the UID is discovered after a reconnect. Depending whether the
         /// UID matches the expected one, pending Acks can be processed or must be dropped. It is guaranteed that for any inbound
-        /// connectiosn (calling <see cref="CreateWriter"/>) the first message from that connection is <see cref="GotUid"/>, therefore it serves
+        /// connections (calling <see cref="CreateWriter"/>) the first message from that connection is <see cref="GotUid"/>, therefore it serves
         /// a separator.
         /// 
         /// If we already have an inbound handle then UID is initially confirmed.
@@ -474,7 +474,7 @@ namespace Akka.Remote
                         if (!UidConfirmed && BailoutAt.IsOverdue)
                         {
                             throw new InvalidAssociation(localAddress, remoteAddress,
-                                new TimeoutException("Delivery of system messages timed out and theywere dropped"));
+                                new TimeoutException("Delivery of system messages timed out and they were dropped"));
                         }
 
                         _writer = CreateWriter();
@@ -1054,7 +1054,7 @@ namespace Akka.Remote
         {
             if (_handle == null)
             {
-                throw new EndpointException("Internal error: No handle was presentduring serialization of outbound message.");
+                throw new EndpointException("Internal error: No handle was present during serialization of outbound message.");
             }
 
             Akka.Serialization.Serialization.CurrentTransportInformation = new Information() { Address = _handle.LocalAddress, System = _system };
@@ -1303,7 +1303,7 @@ namespace Akka.Remote
                     if (now - _largeBufferLogTimestamp >= LogBufferSizeInterval)
                     {
                         _log.Warning("[{0}] buffered messages in EndpointWriter for [{1}]. " +
-                                     "You should probablyimplement flow control to avoid flooding the remote connection.", size, RemoteAddress);
+                                     "You should probably implement flow control to avoid flooding the remote connection.", size, RemoteAddress);
                         _largeBufferLogTimestamp = now;
                     }
                 }
@@ -1455,14 +1455,14 @@ namespace Akka.Remote
         public EndpointReader(Address localAddress, Address remoteAddress, AkkaProtocolTransport transport,
             RemoteSettings settings, AkkaPduCodec codec, InboundMessageDispatcher msgDispatch, bool inbound,
             int uid, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
-            IActorRef reliableDelvierySupervisor = null) :
+            IActorRef reliableDeliverySupervisor = null) :
             base(localAddress, remoteAddress, transport, settings)
         {
             _receiveBuffers = receiveBuffers;
             _msgDispatch = msgDispatch;
             Inbound = inbound;
             _uid = uid;
-            _reliableDeliverySupervisor = reliableDelvierySupervisor;
+            _reliableDeliverySupervisor = reliableDeliverySupervisor;
             _codec = codec;
             _provider = RARP.For(Context.System).Provider;
         }

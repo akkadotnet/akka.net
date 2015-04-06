@@ -35,7 +35,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Marker interface used to distinguish a unqiue ActorSystem extensions
+    /// Marker interface used to distinguish a unique ActorSystem extensions
     /// </summary>
     public interface IExtensionId<out T> : IExtensionId where T:IExtension
     {

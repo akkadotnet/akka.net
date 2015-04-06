@@ -213,10 +213,10 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// Checks that configuration provides a sectionfor the given dispatcher.
-        /// This does not gaurantee that no <see cref="ConfigurationException"/> will be thrown
+        /// Checks that configuration provides a section for the given dispatcher.
+        /// This does not guarantee that no <see cref="ConfigurationException"/> will be thrown
         /// when using the dispatcher, because the details can only be checked by trying to
-        /// instantiate it, which might be undersirable when just checking.
+        /// instantiate it, which might be undesirable when just checking.
         /// </summary>
         public bool HasDispatcher(string id)
         {
@@ -271,7 +271,7 @@ namespace Akka.Dispatch
         /// and <see cref="HasDispatcher"/> instead of looking up the configurator from the system
         /// configuration.
         /// 
-        /// This enables dynamic addtition of dispatchers.
+        /// This enables dynamic addition of dispatchers.
         /// 
         /// <remarks>
         /// A <see cref="MessageDispatcherConfigurator"/> for a certain id can only be registered once,
@@ -279,7 +279,7 @@ namespace Akka.Dispatch
         /// first registration will be used.
         /// </remarks>
         /// </summary>
-        /// <returns>This method returns <c>true</c> if the specified configurator was successfully regisetered.</returns>
+        /// <returns>This method returns <c>true</c> if the specified configurator was successfully registered.</returns>
         public bool RegisterConfigurator(string id, MessageDispatcherConfigurator configurator)
         {
             return _dispatcherConfigurators.TryAdd(id, configurator);

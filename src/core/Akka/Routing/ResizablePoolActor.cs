@@ -44,7 +44,7 @@ namespace Akka.Routing
     /// <summary>
     /// Command used to resize a <see cref="ResizablePoolActor"/>
     /// </summary>
-    public class Resize : RouterManagementMesssage
+    public class Resize : RouterManagementMessage
     { }
 
 }

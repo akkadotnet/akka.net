@@ -333,7 +333,7 @@ namespace Akka.Cluster.Proto
             Func<EWMA, Msg.NodeMetrics.Types.EWMA.Builder> ewmaToProto = ewma => ewma == null ? null :
                 Msg.NodeMetrics.Types.EWMA.CreateBuilder().SetAlpha(ewma.Alpha).SetValue(ewma.Value);
 
-            // we set all metric types as doubles, since we don't have a convenienent Number base class like Scala
+            // we set all metric types as doubles, since we don't have a convenient Number base class like Scala
             Func<double, Msg.NodeMetrics.Types.Number.Builder> numberToProto = d => Msg.NodeMetrics.Types.Number.CreateBuilder()
                 .SetType(Msg.NodeMetrics.Types.NumberType.Double)
                 .SetValue64((ulong) BitConverter.DoubleToInt64Bits(d));

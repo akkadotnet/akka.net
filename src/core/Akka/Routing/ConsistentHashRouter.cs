@@ -157,7 +157,7 @@ namespace Akka.Routing
                 }
                 catch (Exception ex)
                 {
-                    //serializationfailed
+                    //serialization failed
                     _log.Value.Warning("Couldn't route message with consistent hash key [{0}] due to [{1}]", hashData,
                         ex.Message);
                     return Routee.NoRoutee;

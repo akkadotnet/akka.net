@@ -110,7 +110,7 @@ namespace Akka.Actor
                 cell.Start();
                 unstartedCell.ReplaceWith(cell);
             }
-            // underlying not beeing UnstartedCell happens routinely for things which were created async=false
+            // underlying not being UnstartedCell happens routinely for things which were created async=false
         }
 
         protected virtual ActorCell NewCell()

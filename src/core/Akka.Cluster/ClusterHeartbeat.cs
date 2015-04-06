@@ -95,7 +95,7 @@ namespace Akka.Cluster
             Receive<HeartbeatRsp>(rsp => DoHeartbeatRsp(rsp.From));
             Receive<ClusterEvent.MemberUp>(up => AddMember(up.Member));
             Receive<ClusterEvent.MemberRemoved>(removed => RemoveMember(removed.Member));
-            Receive<ClusterEvent.IMemberEvent>(@event => { }); //we don't care about other member evets
+            Receive<ClusterEvent.IMemberEvent>(@event => { }); //we don't care about other member events
             Receive<ExpectedFirstHeartbeat>(heartbeat => TriggerFirstHeart(heartbeat.From));
         }
 

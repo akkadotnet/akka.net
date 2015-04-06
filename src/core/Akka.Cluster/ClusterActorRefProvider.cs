@@ -20,7 +20,7 @@ namespace Akka.Cluster
     /// </summary>
     public class ClusterActorRefProvider : RemoteActorRefProvider
     {
-        public ClusterActorRefProvider(string systemName, Settings settings, EventStream eventStream /*DynamicAcccess*/)
+        public ClusterActorRefProvider(string systemName, Settings settings, EventStream eventStream /*DynamicAccess*/)
             : base(systemName, settings, eventStream)
         {
             var clusterConfig = ClusterConfigFactory.Default();

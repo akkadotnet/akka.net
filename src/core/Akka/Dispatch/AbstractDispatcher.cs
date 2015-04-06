@@ -209,7 +209,7 @@ namespace Akka.Dispatch
         public const int DefaultThroughput = 100;
 
         /// <summary>
-        /// The configuator used to configure this message dispatcher.
+        /// The configurator used to configure this message dispatcher.
         /// </summary>
         public MessageDispatcherConfigurator Configurator { get; private set; }
 

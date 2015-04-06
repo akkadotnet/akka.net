@@ -77,7 +77,7 @@ namespace Akka.Tests.Actor
             //arrange
 
             //act
-            //the timeout in state TestStateTieout is 800ms, then it will change back to Initial
+            //the timeout in state TestStateTimeout is 800ms, then it will change back to Initial
             Within(TimeSpan.FromMilliseconds(400), () =>
             {
                 fsm.Tell(State.TestStateTimeoutOverride, Self);
@@ -228,7 +228,7 @@ namespace Akka.Tests.Actor
             TestSingleTimer,
             TestSingleTimerResubmit,
             TestRepeatedTimer,
-            TestUnandled,
+            TestUnhandled,
             TestCancelTimer,
             TestCancelStateTimerInNamedTimerMessage,
             TestCancelStateTimerInNamedTimerMessage2
@@ -440,7 +440,7 @@ namespace Akka.Tests.Actor
                     return nextState;
                 });
 
-                When(State.TestUnandled, @event =>
+                When(State.TestUnhandled, @event =>
                 {
                     State<State, int> nextState = null;
 

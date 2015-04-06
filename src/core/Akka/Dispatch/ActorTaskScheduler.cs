@@ -125,7 +125,7 @@ namespace Akka.Dispatch
                         Faulted,
                         TaskContinuationOptions.OnlyOnFaulted);
 
-                //if reentrancy was suspended, make sure we re-enable messageprocessing again
+                //if reentrancy was suspended, make sure we re-enable message processing again
                 if (behavior == AsyncBehavior.Suspend)
                 {
                     context.ResumeReentrancy();

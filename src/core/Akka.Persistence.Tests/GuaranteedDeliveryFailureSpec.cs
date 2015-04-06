@@ -330,7 +330,7 @@ namespace Akka.Persistence.Tests
             var chaos2 = Sys.ActorOf(Props.Create(() => new ChaosApp(TestActor)), "chaosApp2");
             ExpectDone();   // by sender
 
-            // destination won't receive message again, beacuse all of the has already been confirmed
+            // destination won't receive message again, because all of the has already been confirmed
         }
 
         private void ExpectDone()

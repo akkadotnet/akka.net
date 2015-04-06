@@ -295,7 +295,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void PersistentActor_should_support_the_same_event_being_PersistAsynced_mutliple_times()
+        public void PersistentActor_should_support_the_same_event_being_PersistAsynced_multiple_times()
         {
             var pref = ActorOf(Props.Create(() => new AsyncPersistSameEventTwiceActor(Name)));
             pref.Tell(new Cmd("x"));

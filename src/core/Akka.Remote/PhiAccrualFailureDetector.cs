@@ -142,7 +142,7 @@ namespace Akka.Remote
             if (!oldState.TimeStamp.HasValue)
             {
                 //this is a heartbeat for a new resource
-                //add starter recods for this new resource
+                //add starter records for this new resource
                 newHistory = FirstHeartBeat;
             }
             else

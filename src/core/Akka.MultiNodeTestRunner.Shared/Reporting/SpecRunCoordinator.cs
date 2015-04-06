@@ -100,7 +100,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// <summary>
         /// When the result of a <see cref="HandleEndSpec"/> finally gets finished...
         /// </summary>
-        /// <param name="nodeDatum">An evenlope with all of the <see cref="NodeData"/> messages we processed from earilier</param>
+        /// <param name="nodeDatum">An envelope with all of the <see cref="NodeData"/> messages we processed from earlier</param>
         private void HandleNodeDatum(NodeData[] nodeDatum)
         {
             FactData.AddNodes(nodeDatum);

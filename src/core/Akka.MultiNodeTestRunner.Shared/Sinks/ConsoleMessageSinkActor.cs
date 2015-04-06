@@ -9,7 +9,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// <summary>
     /// <see cref="MessageSinkActor"/> implementation that logs all of its output directly to the <see cref="Console"/>.
     /// 
-    /// Has no persitence capabilities. Can optionally use a <see cref="TestRunCoordinator"/> to provide total "end of test" reporting.
+    /// Has no persistence capabilities. Can optionally use a <see cref="TestRunCoordinator"/> to provide total "end of test" reporting.
     /// </summary>
     public class ConsoleMessageSinkActor : TestCoordinatorEnabledMessageSink
     {

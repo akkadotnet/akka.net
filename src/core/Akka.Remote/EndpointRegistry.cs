@@ -57,7 +57,7 @@ namespace Akka.Remote
                 if (addressToWritable[address] is EndpointManager.EndpointPolicy)
                 {
                     var policy = addressToWritable[address];
-                    //if there is already a tombestone directive, leave it there
+                    //if there is already a tombstone directive, leave it there
                     //otherwise, remove this address from the writeable address range
                     if (!policy.IsTombstone)
                     {

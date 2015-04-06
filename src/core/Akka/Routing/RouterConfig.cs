@@ -36,7 +36,7 @@ namespace Akka.Routing
             return
                 message is IAutoReceivedMessage ||
                 // in akka.net this message is a subclass of AutoReceivedMessage - so removed condition that "message is Terminated ||"
-                message is RouterManagementMesssage;
+                message is RouterManagementMessage;
         }
 
         public virtual bool Equals(RouterConfig other)
@@ -350,7 +350,7 @@ namespace Akka.Routing
 
         protected RouterConfig OverrideUnsetConfig(RouterConfig other)
         {
-            if (other is NoRouter) return this; // NoRouter is thedefault, hence "neutral"
+            if (other is NoRouter) return this; // NoRouter is the default, hence "neutral"
             if (other is Pool)
             {
                 Pool wssConf;

@@ -191,8 +191,8 @@ namespace Akka.Tests
             }
         }
 
-        [Fact(DisplayName="log failues in postStop")]
-        public void LogFailutresInPostStop()
+        [Fact(DisplayName="log failures in postStop")]
+        public void LogFailuresInPostStop()
         {
             var a = Sys.ActorOf<EmptyActor>();
             EventFilter.Exception<Exception>(message: "hurrah").ExpectOne(() =>

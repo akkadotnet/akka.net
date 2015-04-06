@@ -9,7 +9,7 @@ using Akka.Util.Internal;
 namespace Akka.Routing
 {
     /// <summary>
-    /// Consistent Hashing node ring implementaiton.
+    /// Consistent Hashing node ring implementation.
     /// 
     ///  A good explanation of Consistent Hashing:
     /// http://weblogs.java.net/blog/tomwhite/archive/2007/11/consistent_hash.html

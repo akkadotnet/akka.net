@@ -233,7 +233,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="actor">The actor whose constructor or postRestart() hook failed.</param>
         /// <param name="cause">Cause is the exception thrown by that actor within preRestart().</param>
-        /// <param name="originalCause">The original causeis the exception which caused the restart in the first place.</param>
+        /// <param name="originalCause">The original cause is the exception which caused the restart in the first place.</param>
         public PostRestartException(IActorRef actor, Exception cause, Exception originalCause)
             :base(actor,"Exception post restart (" + (originalCause == null ?"null" : originalCause.GetType().ToString()) + ")", cause)
         {
