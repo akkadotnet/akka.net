@@ -79,15 +79,15 @@ Use `mailbox.Defer (deferredFunc)` in situations when you must ensure operation 
 Example:
 
 ```fsharp
-    let disposableActor (mailbox:Actor<_>) =
-        let resource = new DisposableResource()
-        mailbox.Defer ((resource :> IDisposable).Dispose)
-        let rec loop () = 
-            actor {
-                let! msg = mailbox.Receive()
-                return! loop ()   
-            }
-        loop()
+let disposableActor (mailbox:Actor<_>) =
+    let resource = new DisposableResource()
+    mailbox.Defer ((resource :> IDisposable).Dispose)
+    let rec loop () = 
+        actor {
+            let! msg = mailbox.Receive()
+            return! loop ()   
+        }
+    loop()
 ```
 
 ### Actor spawning options
