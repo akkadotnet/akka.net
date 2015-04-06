@@ -9,7 +9,7 @@ namespace Akka.Actor
     /// <code>public IStash Stash { get; set; }</code>
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public interface WithUnboundedStash : IActorStash, RequiresMessageQueue<UnboundedDequeBasedMessageQueueSemantics>
+    public interface IWithUnboundedStash : IActorStash, IRequiresMessageQueue<IUnboundedDequeBasedMessageQueueSemantics>
     {
     }
 }

@@ -26,7 +26,7 @@ namespace Akka.Persistence
         {
             var cell = (ActorCell)context;
             var mailbox = (Mailbox<UnboundedMessageQueue, UnboundedDequeMessageQueue>)cell.Mailbox;
-            var queue = (UnboundedDequeBasedMessageQueueSemantics)mailbox.MessageQueue;
+            var queue = (IUnboundedDequeBasedMessageQueueSemantics)mailbox.MessageQueue;
             queue.EnqueueFirst(new Envelope { Sender = context.Sender, Message = message });
         }
     }

@@ -21,7 +21,7 @@ namespace Akka.Remote.TestKit
     ///
     ///INTERNAL API.
     /// </summary>
-    internal class BarrierCoordinator : FSM<BarrierCoordinator.State, BarrierCoordinator.Data>, LoggingFSM
+    internal class BarrierCoordinator : FSM<BarrierCoordinator.State, BarrierCoordinator.Data>, ILoggingFSM
     {
         #region State types and messages
 

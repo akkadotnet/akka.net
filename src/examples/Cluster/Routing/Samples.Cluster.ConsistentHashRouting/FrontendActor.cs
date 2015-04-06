@@ -4,7 +4,7 @@ using Akka.Cluster;
 
 namespace Samples.Cluster.ConsistentHashRouting
 {
-    public class FrontendActor : UntypedActor, WithUnboundedStash
+    public class FrontendActor : UntypedActor, IWithUnboundedStash
     {
         protected readonly IActorRef BackendRouter;
         protected int jobCount = 0;

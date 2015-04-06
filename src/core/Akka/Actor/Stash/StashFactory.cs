@@ -22,12 +22,12 @@ namespace Akka.Actor
 
         public static IStash CreateStash(this IActorContext context, Type actorType)
         {
-            if(actorType.Implements<WithBoundedStash>())
+            if(actorType.Implements<IWithBoundedStash>())
             {
                 return new BoundedStashImpl(context);
             }
 
-            if(actorType.Implements<WithUnboundedStash>())
+            if(actorType.Implements<IWithUnboundedStash>())
             {
                 return new UnboundedStashImpl(context);
             }

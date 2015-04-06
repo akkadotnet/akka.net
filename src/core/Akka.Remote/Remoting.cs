@@ -317,7 +317,7 @@ namespace Akka.Remote
         #endregion
     }
 
-    internal sealed class RegisterTransportActor : NoSerializationVerificationNeeded
+    internal sealed class RegisterTransportActor : INoSerializationVerificationNeeded
     {
         public RegisterTransportActor(Props props, string name)
         {

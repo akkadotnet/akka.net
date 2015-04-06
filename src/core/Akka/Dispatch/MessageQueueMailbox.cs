@@ -4,6 +4,6 @@ namespace Akka.Dispatch
 {
     public abstract class MessageQueueMailbox : Mailbox
     {
-        public abstract MessageQueue MessageQueue { get; }
+        public abstract IMessageQueue MessageQueue { get; }
     }
 }

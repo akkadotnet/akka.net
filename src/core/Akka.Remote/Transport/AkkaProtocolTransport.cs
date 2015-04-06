@@ -190,7 +190,7 @@ namespace Akka.Remote.Transport
         #endregion
     }
 
-    internal class AssociateUnderlyingRefuseUid : NoSerializationVerificationNeeded
+    internal class AssociateUnderlyingRefuseUid : INoSerializationVerificationNeeded
     {
         public AssociateUnderlyingRefuseUid(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusCompletionSource, int? refuseUid = null)
         {
@@ -305,9 +305,9 @@ namespace Akka.Remote.Transport
         Open = 2
     }
 
-    internal class HeartbeatTimer : NoSerializationVerificationNeeded { }
+    internal class HeartbeatTimer : INoSerializationVerificationNeeded { }
 
-    internal sealed class HandleMsg : NoSerializationVerificationNeeded
+    internal sealed class HandleMsg : INoSerializationVerificationNeeded
     {
         public HandleMsg(AssociationHandle handle)
         {
@@ -317,7 +317,7 @@ namespace Akka.Remote.Transport
         public AssociationHandle Handle { get; private set; }
     }
 
-    internal sealed class HandleListenerRegistered : NoSerializationVerificationNeeded
+    internal sealed class HandleListenerRegistered : INoSerializationVerificationNeeded
     {
         public HandleListenerRegistered(IHandleEventListener listener)
         {

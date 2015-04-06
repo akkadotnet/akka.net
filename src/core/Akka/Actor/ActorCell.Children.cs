@@ -334,7 +334,7 @@ namespace Akka.Actor
             //       val ser = SerializationExtension(cell.system)
             //       props.args forall (arg ⇒
             //         arg == null ||
-            //           arg.isInstanceOf[NoSerializationVerificationNeeded] ||
+            //           arg.isInstanceOf[INoSerializationVerificationNeeded] ||
             //           ser.deserialize(ser.serialize(arg.asInstanceOf[AnyRef]).get, arg.getClass).get != null)
             //     } catch {
             //       case NonFatal(e) ⇒ throw new IllegalArgumentException(s"pre-creation serialization check failed at [${cell.self.path}/$name]", e)

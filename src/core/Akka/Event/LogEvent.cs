@@ -7,7 +7,7 @@ namespace Akka.Event
     /// <summary>
     ///     Class LogEvent.
     /// </summary>
-    public abstract class LogEvent : NoSerializationVerificationNeeded
+    public abstract class LogEvent : INoSerializationVerificationNeeded
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="LogEvent" /> class.

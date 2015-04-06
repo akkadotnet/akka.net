@@ -76,7 +76,7 @@ namespace Akka.Remote
                         var actorPath = "/" + string.Join("/", sel.Elements.Select(x => x.ToString()));
                         if (settings.UntrustedMode
                             && (!settings.TrustedSelectionPaths.Contains(actorPath)
-                            || sel.Message is PossiblyHarmful
+                            || sel.Message is IPossiblyHarmful
                             || recipient != provider.Guardian))
                         {
                             log.Debug(
@@ -90,11 +90,11 @@ namespace Akka.Remote
                             ActorSelection.DeliverSelection(recipient, sender, sel);
                         }
                     })
-                    .With<PossiblyHarmful>(msg =>
+                    .With<IPossiblyHarmful>(msg =>
                     {
                         if (settings.UntrustedMode)
                         {
-                            log.Debug("operating in UntrustedMode, dropping inbound PossiblyHarmful message of type {0}", msg.GetType());
+                            log.Debug("operating in UntrustedMode, dropping inbound IPossiblyHarmful message of type {0}", msg.GetType());
                         }
                     })
                     .With<SystemMessage>(msg => { recipient.Tell(msg); })
@@ -1340,7 +1340,7 @@ namespace Akka.Remote
         /// associations from the same remote endpoint: when a parallel inbound association is detected, the old one is removed and the new
         /// one is used instead.
         /// </summary>
-        public sealed class TakeOver : NoSerializationVerificationNeeded
+        public sealed class TakeOver : INoSerializationVerificationNeeded
         {
             /// <summary>
             /// Create a new TakeOver command
@@ -1357,7 +1357,7 @@ namespace Akka.Remote
             public IActorRef ReplyTo { get; private set; }
         }
 
-        public sealed class TookOver : NoSerializationVerificationNeeded
+        public sealed class TookOver : INoSerializationVerificationNeeded
         {
             public TookOver(IActorRef writer, AkkaProtocolHandle protocolHandle)
             {
@@ -1398,7 +1398,7 @@ namespace Akka.Remote
             public static FlushAndStopTimeout Instance { get { return _instance; } }
         }
 
-        public sealed class Handle : NoSerializationVerificationNeeded
+        public sealed class Handle : INoSerializationVerificationNeeded
         {
             public Handle(AkkaProtocolHandle protocolHandle)
             {

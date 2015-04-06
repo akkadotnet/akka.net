@@ -7,7 +7,7 @@
     /// <see cref="ActorBase.SetReceiveTimeout">SetReceiveTimeout</see>
     /// and no message has been sent to the actor during the specified amount of time.
     /// </summary>
-    public class ReceiveTimeout : PossiblyHarmful
+    public class ReceiveTimeout : IPossiblyHarmful
     {
         private ReceiveTimeout() { }
         private static readonly ReceiveTimeout _instance = new ReceiveTimeout();

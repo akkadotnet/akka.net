@@ -425,7 +425,7 @@ namespace Akka.Cluster
         /// Command to <see cref="Akka.Cluster.ClusterDaemon"/> to create a
         /// <see cref="Akka.Cluster.OnMemberUpListener"/>
         /// </summary>
-        public sealed class AddOnMemberUpListener : NoSerializationVerificationNeeded
+        public sealed class AddOnMemberUpListener : INoSerializationVerificationNeeded
         {
             readonly Action _callback;
 
@@ -543,7 +543,7 @@ namespace Akka.Cluster
         }
     }
 
-    //TODO: RequiresMessageQueue?
+    //TODO: IRequiresMessageQueue?
     /// <summary>
     /// Supervisor managing the different Cluster daemons.
     /// </summary>

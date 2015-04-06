@@ -6,28 +6,28 @@ namespace Akka.Dispatch
     /// <summary>
     /// 
     /// </summary>
-    public interface Semantics
+    public interface ISemantics
     {
     }
 
     /// <summary> 
     /// Semantics for message queues that support multiple consumers 
     /// </summary>
-    public interface MultipleConsumerSemantics : Semantics
+    public interface IMultipleConsumerSemantics : ISemantics
     {
     }
 
     /// <summary> 
     /// Semantics for message queues that have an unbounded size 
     /// </summary>
-    public interface UnboundedMessageQueueSemantics : Semantics
+    public interface IUnboundedMessageQueueSemantics : ISemantics
     {
     }
 
     /// <summary> 
     /// Semantics for message queues that have a bounded size 
     /// </summary>
-    public interface BoundedMessageQueueSemantics : Semantics
+    public interface IBoundedMessageQueueSemantics : ISemantics
     {
         /// <summary> 
         /// The enqueue time to wait until message is dropped to deadletters if the message queue is full 
@@ -38,7 +38,7 @@ namespace Akka.Dispatch
     /// <summary> 
     /// Semantics for message queues that are blocking 
     /// </summary>
-    public interface BlockingMessageQueueSemantics : MultipleConsumerSemantics
+    public interface IBlockingMessageQueueSemantics : IMultipleConsumerSemantics
     {
         /// <summary> 
         /// The time to wait on a lock before throwing an timeout exception. 
@@ -49,7 +49,7 @@ namespace Akka.Dispatch
     /// <summary>
     /// Semantics for message queues that are Double-Ended.
     /// </summary>
-    public interface DequeBasedMessageQueueSemantics : Semantics
+    public interface IDequeBasedMessageQueueSemantics : ISemantics
     {
         void EnqueueFirst(Envelope envelope);
     }
@@ -57,16 +57,16 @@ namespace Akka.Dispatch
     /// <summary>
     /// Semantics for message queues that are Double-Ended and unbounded
     /// </summary>
-    public interface UnboundedDequeBasedMessageQueueSemantics : DequeBasedMessageQueueSemantics,
-        UnboundedMessageQueueSemantics
+    public interface IUnboundedDequeBasedMessageQueueSemantics : IDequeBasedMessageQueueSemantics,
+        IUnboundedMessageQueueSemantics
     {
     }
 
     /// <summary>
     /// Semantics for message queues that are Double-Ended and bounded
     /// </summary>
-    public interface BoundedDequeBasedMessageQueueSemantics : DequeBasedMessageQueueSemantics,
-        UnboundedMessageQueueSemantics //TODO: make this Bounded once we have BoundedMessageQueues
+    public interface IBoundedDequeBasedMessageQueueSemantics : IDequeBasedMessageQueueSemantics,
+        IUnboundedMessageQueueSemantics //TODO: make this Bounded once we have BoundedMessageQueues
     {
     }
 }

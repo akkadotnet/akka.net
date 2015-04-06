@@ -5,7 +5,7 @@ namespace Akka.Event
     /// <summary>
     ///     Class LoggerInitialized.
     /// </summary>
-    public class LoggerInitialized : NoSerializationVerificationNeeded
+    public class LoggerInitialized : INoSerializationVerificationNeeded
     {
     }
 }

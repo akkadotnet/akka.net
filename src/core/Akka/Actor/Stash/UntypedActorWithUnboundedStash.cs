@@ -6,8 +6,8 @@ namespace Akka.Actor
     /// <summary>
     /// An UntypedActor with Unbounded Stash capabilities
     /// </summary>
-    [Obsolete("Inherit from UntypedActor and WithBoundedStash instead. This class will be removed in a future release.")]
-    public abstract class UntypedActorWithUnboundedStash : UntypedActor, WithUnboundedStash
+    [Obsolete("Inherit from UntypedActor and IWithBoundedStash instead. This class will be removed in a future release.")]
+    public abstract class UntypedActorWithUnboundedStash : UntypedActor, IWithUnboundedStash
     {
 
         private IStash _stash = new UnboundedStashImpl(Context);

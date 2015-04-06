@@ -263,7 +263,7 @@ namespace Akka.Tests.Actor
         }
 
 
-        public class StateMachine : FSM<State, int>, LoggingFSM
+        public class StateMachine : FSM<State, int>, ILoggingFSM
         {
             public StateMachine(IActorRef tester)
             {

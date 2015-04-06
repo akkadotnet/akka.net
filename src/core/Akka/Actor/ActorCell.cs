@@ -250,7 +250,7 @@ namespace Akka.Actor
                 //this._systemImpl.DeadLetters.Tell(new DeadLetter(message, sender, this.Self));
             }
 
-            if (_systemImpl.Settings.SerializeAllMessages && !(message is NoSerializationVerificationNeeded))
+            if (_systemImpl.Settings.SerializeAllMessages && !(message is INoSerializationVerificationNeeded))
             {
                 Serializer serializer = _systemImpl.Serialization.FindSerializerFor(message);
                 byte[] serialized = serializer.ToBinary(message);

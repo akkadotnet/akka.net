@@ -47,7 +47,7 @@ namespace Akka.Remote.TestKit
                 _system.ActorOf(new Props(typeof (ClientFSM),
                     new object[] {name, controllerAddr}), "TestConductorClient");
             
-            //TODO: RequiresMessageQueue
+            //TODO: IRequiresMessageQueue
             var a = _system.ActorOf(Props.Create<WaitForClientFSMToConnect>());
 
             return a.Ask<Done>(_client);
@@ -156,7 +156,7 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
-    class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, LoggingFSM
+    class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
         //TODO: RequireMessageQueue
     {
         public enum State
@@ -218,7 +218,7 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        internal class Connected : NoSerializationVerificationNeeded
+        internal class Connected : INoSerializationVerificationNeeded
         {
             readonly RemoteConnection _channel;
             public RemoteConnection Channel{get { return _channel; }}

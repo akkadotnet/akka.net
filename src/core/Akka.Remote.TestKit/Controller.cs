@@ -171,7 +171,7 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        public sealed class CreateServerFSM : NoSerializationVerificationNeeded
+        public sealed class CreateServerFSM : INoSerializationVerificationNeeded
         {
             public CreateServerFSM(RemoteConnection channel)
             {

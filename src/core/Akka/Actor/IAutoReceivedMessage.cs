@@ -2,12 +2,12 @@
 
 namespace Akka.Actor
 {
-    public interface IAutoReceivedMessage : NoSerializationVerificationNeeded
+    public interface IAutoReceivedMessage : INoSerializationVerificationNeeded
     {
     }
 
     public sealed class
-        Terminated : IAutoReceivedMessage, PossiblyHarmful
+        Terminated : IAutoReceivedMessage, IPossiblyHarmful
     {
         public Terminated(IActorRef actorRef, bool existenceConfirmed, bool addressTerminated)
         {
@@ -128,7 +128,7 @@ namespace Akka.Actor
     /// The watcher <see cref="DeathWatch"/> subscribes to the <see cref="AddressTerminatedTopic"/> and translates this
     /// event to <see cref="Terminated"/>, which is sent to itself.
     /// </summary>
-    internal class AddressTerminated : IAutoReceivedMessage, PossiblyHarmful
+    internal class AddressTerminated : IAutoReceivedMessage, IPossiblyHarmful
     {
         public AddressTerminated(Address address)
         {

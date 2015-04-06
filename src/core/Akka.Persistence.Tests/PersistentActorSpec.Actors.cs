@@ -62,7 +62,7 @@ namespace Akka.Persistence.Tests
     {
 
 
-        internal class LatchCmd : NoSerializationVerificationNeeded
+        internal class LatchCmd : INoSerializationVerificationNeeded
         {
             public LatchCmd(TestLatch latch, object data)
             {

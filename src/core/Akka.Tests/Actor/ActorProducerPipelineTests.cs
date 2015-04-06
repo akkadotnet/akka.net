@@ -97,7 +97,7 @@ namespace Akka.Tests.Actor
             private StashStatus() { }
         }
 
-        internal class StashingActor: ReceiveActor, WithUnboundedStash
+        internal class StashingActor: ReceiveActor, IWithUnboundedStash
         {
             public StashingActor()
             {

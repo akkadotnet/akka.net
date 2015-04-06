@@ -72,7 +72,7 @@ namespace Akka.Dispatch
             var actortype = props.Type;
             var interfaces = actortype.GetInterfaces()
                 .Where(i => i.IsGenericType)
-                .Where(i => i.GetGenericTypeDefinition() == typeof (RequiresMessageQueue<>))
+                .Where(i => i.GetGenericTypeDefinition() == typeof (IRequiresMessageQueue<>))
                 .Select(i => i.GetGenericArguments().First())
                 .ToList();
 

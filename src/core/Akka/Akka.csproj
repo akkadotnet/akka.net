@@ -113,7 +113,7 @@
     <Compile Include="Actor\Deploy.cs" />
     <Compile Include="Actor\ExtendedActorSystem.cs" />
     <Compile Include="Actor\Futures.cs" />
-    <Compile Include="Actor\AutoReceivedMessage.cs" />
+    <Compile Include="Actor\IAutoReceivedMessage.cs" />
     <Compile Include="Actor\BuiltInActors.cs" />
     <Compile Include="Actor\Cell.cs" />
     <Compile Include="Actor\ChildrenContainer.cs" />
@@ -133,7 +133,7 @@
     <Compile Include="Actor\FSM.cs" />
     <Compile Include="Actor\GracefulStopSupport.cs" />
     <Compile Include="Actor\IUntypedActorContext.cs" />
-    <Compile Include="Actor\NoSerializationVerificationNeeded.cs" />
+    <Compile Include="Actor\INoSerializationVerificationNeeded.cs" />
     <Compile Include="Actor\PipeToSupport.cs" />
     <Compile Include="Actor\Receive.cs" />
     <Compile Include="Actor\Scheduler\ITellScheduler.cs" />
@@ -150,8 +150,8 @@
     <Compile Include="Actor\Stash\StashOverflowException.cs" />
     <Compile Include="Actor\Stash\Internal\UnboundedStashImpl.cs" />
     <Compile Include="Actor\Stash\UntypedActorWithUnboundedStash.cs" />
-    <Compile Include="Actor\Stash\WithBoundedStash.cs" />
-    <Compile Include="Actor\Stash\WithUnboundedStash.cs" />
+    <Compile Include="Actor\Stash\IWithBoundedStash.cs" />
+    <Compile Include="Actor\Stash\IWithUnboundedStash.cs" />
     <Compile Include="Actor\Scheduler\TaskBasedScheduler.cs" />
     <Compile Include="Configuration\ConfigurationException.cs" />
     <Compile Include="Configuration\ConfigurationFactory.cs" />
@@ -185,7 +185,7 @@
     <Compile Include="Dispatch\MessageQueues\BlockingMessageQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\BoundedMessageQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\DequeWrapperMessageQueue.cs" />
-    <Compile Include="Dispatch\Semantics.cs" />
+    <Compile Include="Dispatch\ISemantics.cs" />
     <Compile Include="Dispatch\MessageQueues\UnboundedDequeMessageQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\UnboundedPriorityMailboxQueue.cs" />
     <Compile Include="Dispatch\MessageQueues\UnboundedMailboxQueue.cs" />
@@ -200,7 +200,7 @@
     <Compile Include="Actor\Message.cs" />
     <Compile Include="Actor\UntypedReceive.cs" />
     <Compile Include="Dispatch\Mailboxes.cs" />
-    <Compile Include="Dispatch\MessageQueues\MessageQueue.cs" />
+    <Compile Include="Dispatch\MessageQueues\IMessageQueue.cs" />
     <Compile Include="Dispatch\SysMsg\SystemMessage.cs" />
     <Compile Include="Dispatch\TaskDispatcher.cs" />
     <Compile Include="Dispatch\ThreadPoolBuilder.cs" />
@@ -253,7 +253,7 @@
     <Compile Include="Event\UnhandledMessage.cs" />
     <Compile Include="Event\Warning.cs" />
     <Compile Include="Util\Internal\Extensions.cs" />
-    <Compile Include="Dispatch\RequiresMessageQueue.cs" />
+    <Compile Include="Dispatch\IRequiresMessageQueue.cs" />
     <Compile Include="Routing\SmallestMailbox.cs" />
     <Compile Include="Routing\TailChoppingRoutingLogic.cs" />
     <Compile Include="Serialization\ByteArraySerializer.cs" />

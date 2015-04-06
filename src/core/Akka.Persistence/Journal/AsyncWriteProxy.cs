@@ -151,7 +151,7 @@ namespace Akka.Persistence.Journal
         #endregion
     }
 
-    public abstract class AsyncWriteProxy : AsyncWriteJournal, WithUnboundedStash
+    public abstract class AsyncWriteProxy : AsyncWriteJournal, IWithUnboundedStash
     {
         private readonly Receive _initialized;
         private IActorRef _store;

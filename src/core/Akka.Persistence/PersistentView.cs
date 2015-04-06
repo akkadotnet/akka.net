@@ -76,7 +76,7 @@ namespace Akka.Persistence
     /// `akka.persistence.view.auto-update-interval` configuration key. Applications may trigger additional
     /// view updates by sending the view <see cref="Update"/> requests. See also methods
     /// </summary>
-    public abstract partial class PersistentView : ActorBase, ISnapshotter, IPersistentIdentity, WithUnboundedStash
+    public abstract partial class PersistentView : ActorBase, ISnapshotter, IPersistentIdentity, IWithUnboundedStash
     {
         protected readonly PersistenceExtension Extension;
 
