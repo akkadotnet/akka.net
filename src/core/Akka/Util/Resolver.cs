@@ -18,6 +18,12 @@ namespace Akka.Util
         {
             Resolver = resolver;
         }
+
+
+        public void Release(ActorBase actor)
+        {
+            actor = null;
+        }
     }
 
     public class Resolve<TActor> : Resolve where TActor : ActorBase
