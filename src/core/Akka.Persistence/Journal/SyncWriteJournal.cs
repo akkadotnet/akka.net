@@ -77,9 +77,10 @@ namespace Akka.Persistence.Journal
 
         private void HandleReplayMessages(ReplayMessages msg)
         {
+            var sender = Sender;
             ReplayMessagesAsync(msg.PersistenceId, msg.FromSequenceNr, msg.ToSequenceNr, msg.Max, persistent =>
             {
-                if (!persistent.IsDeleted || msg.ReplayDeleted) msg.PersistentActor.Tell(new ReplayedMessage(persistent), persistent.Sender);
+                if (!persistent.IsDeleted || msg.ReplayDeleted) msg.PersistentActor.Tell(new ReplayedMessage(persistent), sender);
             })
             .NotifyAboutReplayCompletion(msg.PersistentActor)
             .ContinueWith(t =>
