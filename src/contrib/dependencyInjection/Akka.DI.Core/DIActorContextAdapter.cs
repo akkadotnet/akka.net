@@ -17,7 +17,7 @@ namespace Akka.DI.Core
             this.context = context;
             this.producer = context.System.GetExtension<DIExt>();
         }
-        public ActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase, new()
+        public IActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase, new()
         {
             return context.ActorOf(producer.Props(typeof(TActor).Name), name);
         }
