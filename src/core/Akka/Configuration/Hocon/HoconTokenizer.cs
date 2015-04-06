@@ -606,7 +606,7 @@ namespace Akka.Configuration.Hocon
             }
 
             throw new Exception(
-                "Expected value: Null literal, Array, Number, Boolean, Quoted Text, Unquoted Text, Tripple quoted Text, Object or End of array");
+                "Expected value: Null literal, Array, Number, Boolean, Quoted Text, Unquoted Text, Triple quoted Text, Object or End of array");
         }
 
         /// <summary>

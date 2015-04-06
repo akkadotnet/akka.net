@@ -295,7 +295,7 @@ namespace Akka.Remote.Transport
                  * doesn't cause any exceptions to be thrown upstream - it just times out
                  * and propagates a failed Future.
                  * 
-                 * In the CLR, a CancellationExcepiton gets thrown and causes all
+                 * In the CLR, a CancellationException gets thrown and causes all
                  * parent tasks chaining back to the EndPointManager to fail due
                  * to an Ask timeout.
                  * 
@@ -324,7 +324,7 @@ namespace Akka.Remote.Transport
                  * doesn't cause any exceptions to be thrown upstream - it just times out
                  * and propagates a failed Future.
                  * 
-                 * In the CLR, a CancellationExcepiton gets thrown and causes all
+                 * In the CLR, a CancellationException gets thrown and causes all
                  * parent tasks chaining back to the EndPointManager to fail due
                  * to an Ask timeout.
                  * 

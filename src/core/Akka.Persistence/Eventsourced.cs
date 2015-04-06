@@ -203,12 +203,12 @@ namespace Akka.Persistence
         }
 
         /// <summary> 
-        /// Asynchronously persists an <paramref name="event"/>. On successfull persistence, the <paramref name="handler"/>
+        /// Asynchronously persists an <paramref name="event"/>. On successful persistence, the <paramref name="handler"/>
         /// is called with the persisted event. Unlike <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> method,
-        /// this one will continue to receive incomming commands between calls and executing it's event <paramref name="handler"/>.
+        /// this one will continue to receive incoming commands between calls and executing it's event <paramref name="handler"/>.
         /// 
         /// 
-        /// This version should be used in favour of <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> 
+        /// This version should be used in favor of <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> 
         /// method when throughput is more important that commands execution precedence.
         /// 
         /// 
@@ -251,7 +251,7 @@ namespace Akka.Persistence
         /// 
         /// 
         /// This call will NOT result in persisted event. If it should be possible to replay use persist method instead.
-        /// If there are not awaiting persist handler calls, the <paramref name="handler"/> will be invoced immediately.
+        /// If there are not awaiting persist handler calls, the <paramref name="handler"/> will be invoiced immediately.
         /// 
         /// </summary>
         public void Defer<TEvent>(TEvent evt, Action<TEvent> handler)

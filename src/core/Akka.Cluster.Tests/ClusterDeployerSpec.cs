@@ -78,6 +78,6 @@ namespace Akka.Cluster.Tests
             deployment.Dispatcher.ShouldBe("mydispatcher");
         }
 
-        //todo: implement "have correct router mappings" test for adapative load-balancing routers (not yet implemented)
+        //todo: implement "have correct router mappings" test for adaptive load-balancing routers (not yet implemented)
     }
 }

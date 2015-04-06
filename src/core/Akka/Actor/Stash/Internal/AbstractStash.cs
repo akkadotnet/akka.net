@@ -37,7 +37,7 @@ An (unbounded) deque-based mailbox can be configured as follows:
             _theStash = new LinkedList<Envelope>();
             _actorCell = actorCell;
 
-            // TODO: capacity needs to come from dispatcher or mailbox confg
+            // TODO: capacity needs to come from dispatcher or mailbox config
             // https://github.com/akka/akka/blob/master/akka-actor/src/main/scala/akka/actor/Stash.scala#L126
             _capacity = capacity;
         }

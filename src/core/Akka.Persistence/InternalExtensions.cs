@@ -19,7 +19,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Enqueues provided <paramref name="message"/> at the beggining of the internal actor cell mailbox message queue.
+        /// Enqueues provided <paramref name="message"/> at the beginning of the internal actor cell mailbox message queue.
         /// Requires current actor to use unbounded deque-based message queue. It will fail otherwise.
         /// </summary>
         public static void EnqueueMessageFirst(this IActorContext context, object message)

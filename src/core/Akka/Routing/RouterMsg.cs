@@ -16,16 +16,16 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    /// Class RouterManagementMesssage.
+    /// Class RouterManagementMessage.
     /// </summary>
-    public abstract class RouterManagementMesssage
+    public abstract class RouterManagementMessage
     {
     }
 
     /// <summary>
     /// Class GetRoutees. This class cannot be inherited.
     /// </summary>
-    public sealed class GetRoutees : RouterManagementMesssage
+    public sealed class GetRoutees : RouterManagementMessage
     {
     }
 
@@ -58,7 +58,7 @@ namespace Akka.Routing
     /// to the routee. Precautions are taken to reduce the risk of dropping messages that are concurrently
     /// being routed to the remove routee, but there are no guarantees. 
     /// </summary>
-    public sealed class RemoveRoutee : RouterManagementMesssage
+    public sealed class RemoveRoutee : RouterManagementMessage
     {
         public RemoveRoutee(Routee routee)
         {
@@ -72,7 +72,7 @@ namespace Akka.Routing
     /// Add a routee by sending this message to the router.
     /// It may be handled after other messages.
     /// </summary>
-    public sealed class AddRoutee : RouterManagementMesssage
+    public sealed class AddRoutee : RouterManagementMessage
     {
         public AddRoutee(Routee routee)
         {
@@ -92,7 +92,7 @@ namespace Akka.Routing
     /// Precautions are taken to reduce the risk of dropping messages that are concurrently
     /// being routed to the remove routee, but there are no guarantees. 
     /// </summary>
-    public sealed class AdjustPoolSize : RouterManagementMesssage
+    public sealed class AdjustPoolSize : RouterManagementMessage
     {
         public AdjustPoolSize(int change)
         {

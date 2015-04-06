@@ -141,7 +141,7 @@ namespace Akka.Persistence
 
         /// <summary>
         /// Processes all remaining replayed messages and changes to <see cref="PrepareRestart"/>.
-        /// Message that caused and exception during replay, is readded to the mailbox and re-received
+        /// Message that caused and exception during replay, is re-added to the mailbox and re-received
         /// in <see cref="PrepareRestart"/> state.
         /// </summary>
         private EventsourcedState ReplayFailed(Exception cause, object failureMessage)

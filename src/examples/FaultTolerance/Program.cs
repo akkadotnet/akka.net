@@ -297,7 +297,7 @@ namespace FaultTolerance
             if (counter == null)
             {
                 if (backlog.Count >= MAX_BACKLOG)
-                    throw new ServiceUnavailableException("CounterService nto available, lack of initial value");
+                    throw new ServiceUnavailableException("CounterService not available, lack of initial value");
 
                 backlog.Add(new SenderMessagePair(Sender, message));
             }

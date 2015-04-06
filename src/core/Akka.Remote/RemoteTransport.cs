@@ -91,7 +91,7 @@ namespace Akka.Remote
 
     /// <summary>
     /// Represents a general failure within a <see cref="RemoteTransport"/>, such as
-    /// the inabiltiy to start, wrong configuration, etc...
+    /// the inability to start, wrong configuration, etc...
     /// </summary>
     public class RemoteTransportException : AkkaException
     {

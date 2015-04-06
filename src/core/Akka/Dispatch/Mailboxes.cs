@@ -95,7 +95,7 @@ namespace Akka.Dispatch
         /// <returns>Mailbox.</returns>
         public Type FromConfig(string path)
         {
-            //TODO: this should not exist, its a temp hack because we are not serializing mailbox info when doing remote deply..
+            //TODO: this should not exist, its a temp hack because we are not serializing mailbox info when doing remote deploy..
             if (string.IsNullOrEmpty(path))
             {
                 return typeof (UnboundedMailbox);

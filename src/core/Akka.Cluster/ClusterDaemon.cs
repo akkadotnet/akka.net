@@ -1803,10 +1803,10 @@ namespace Akka.Cluster
     /// 
     /// Used only for the first seed node.
     /// Sends <see cref="InternalClusterAction.InitJoin"/> to all seed nodes except itself.
-    /// If other seed nodes are not part of the clsuter yet they will reply with 
+    /// If other seed nodes are not part of the cluster yet they will reply with 
     /// <see cref="InternalClusterAction.InitJoinNack"/> or not respond at all and then the
     /// first seed node will join itself to initialize the new cluster. When the first seed 
-    /// node is restarted, and some otehr seed node is part of the cluster it will reply with
+    /// node is restarted, and some other seed node is part of the cluster it will reply with
     /// <see cref="InternalClusterAction.InitJoinAck"/> and then the first seed node will
     /// join that other seed node to join the existing cluster.
     /// </summary>

@@ -95,7 +95,7 @@ namespace Akka.Util
         /// <param name="hash">The prior hash value</param>
         /// <param name="value">The new value to incorporate</param>
         /// <param name="magicA">A magic integer from the left of the stream</param>
-        /// <param name="magicB">A magic integer froma different stream</param>
+        /// <param name="magicB">A magic integer from a different stream</param>
         /// <returns>The updated hash value</returns>
         public static uint ExtendHash(uint hash, uint value, uint magicA, uint magicB)
         {

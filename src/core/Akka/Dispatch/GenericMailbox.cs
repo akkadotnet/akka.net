@@ -132,7 +132,7 @@ namespace Akka.Dispatch
                     //but that doesn't matter, since if the above "if" misses
                     //the "Post" that adds the new message will still schedule
                     //this specific call is just to deal with existing messages
-                    //that wasn't scheduled due to dispatcher throughput beeing reached
+                    //that wasn't scheduled due to dispatcher throughput being reached
                     //or system messages arriving during user message processing
                     Schedule();
                 }

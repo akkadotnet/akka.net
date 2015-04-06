@@ -240,7 +240,7 @@ namespace Akka.Cluster.Tests.MultiNode
         /// Initialize the cluster of the specified member nodes (<see cref="roles"/>)
         /// and wait until all joined and <see cref="MemberStatus.Up"/>.
         /// 
-        /// First node will be started firat and others will join the first.
+        /// First node will be started first and others will join the first.
         /// </summary>
         public void AwaitClusterUp(params RoleName[] roles)
         {
@@ -426,7 +426,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             if (IsFailureDetectorPuppet())
             {
-                // before marking it as unavailble there should be at least one heartbeat
+                // before marking it as unavailable there should be at least one heartbeat
                 // to create the FailureDetectorPuppet in the FailureDetectorRegistry
                 Cluster.FailureDetector.Heartbeat(address);
                 var puppet = FailureDetectorPuppet(address);

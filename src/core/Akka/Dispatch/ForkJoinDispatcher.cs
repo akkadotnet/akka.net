@@ -8,7 +8,7 @@ namespace Akka.Dispatch
     /// <summary>
     /// <see cref="MessageDispatcherConfigurator"/> for the <see cref="ForkJoinDispatcher"/>.
     /// 
-    /// Creates a single <see cref="ForkJoinDispatcher"/> instance and returns the same instace
+    /// Creates a single <see cref="ForkJoinDispatcher"/> instance and returns the same instance
     /// each time <see cref="Dispatcher"/> is called.
     /// </summary>
     public class ForkJoinDispatcherConfigurator : MessageDispatcherConfigurator

@@ -127,7 +127,7 @@ namespace Akka.Persistence
     /// 
     /// This actor type has state consisting of unconfirmed messages and a sequence number. It doesn't store it by
     /// itself, so you must persist corresponding events so that state can be restored by calling the same 
-    /// delivery-related methods during recovery phase of the persisten actor. During recovery calls to 
+    /// delivery-related methods during recovery phase of the persistent actor. During recovery calls to 
     /// <see cref="Deliver"/> won't send out a message, but it will be sent later if no <see cref="ConfirmDelivery"/>
     /// call was performed.
     /// 
@@ -241,7 +241,7 @@ namespace Akka.Persistence
 
         /// <summary>
         /// If snapshot from <see cref="GetDeliverySnapshot"/> was saved, it will be received during recovery phase in a
-        /// <see cref="SnapshotOffer"/> meesage and should be set with this method.
+        /// <see cref="SnapshotOffer"/> message and should be set with this method.
         /// </summary>
         /// <param name="snapshot"></param>
         public void SetDeliverySnapshot(GuaranteedDeliverySnapshot snapshot)

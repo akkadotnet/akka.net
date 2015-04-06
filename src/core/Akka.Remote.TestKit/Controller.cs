@@ -238,7 +238,7 @@ namespace Akka.Remote.TestKit
             return Directive.Restart;
         }
 
-        //TODO: Logging receieve?
+        //TODO: Logging receive?
         protected override void OnReceive(object message)
         {
             var createServerFSM = message as CreateServerFSM;
