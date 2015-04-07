@@ -95,7 +95,7 @@
     <Compile Include="EventFilter\Internal\WarningFilter.cs" />
     <Compile Include="EventFilter\TestEvent\Mute.cs" />
     <Compile Include="EventFilter\TestEvent\Unmute.cs" />
-    <Compile Include="EventFilter\UnmutableFilter.cs" />
+    <Compile Include="EventFilter\IUnmutableFilter.cs" />
     <Compile Include="FSMSpecHelpers.cs" />
     <Compile Include="AutoPilots.cs" />
     <Compile Include="NoImplicitSender.cs" />

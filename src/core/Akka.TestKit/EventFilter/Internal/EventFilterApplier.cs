@@ -80,7 +80,7 @@ namespace Akka.TestKit.Internal
             Intercept<object>(() => { action(); return null; }, _testkit.Sys, null, null);
         }
 
-        public UnmutableFilter Mute()
+        public IUnmutableFilter Mute()
         {
             _testkit.Sys.EventStream.Publish(new Mute(_filters));
             return new InternalUnmutableFilter(_filters, _testkit.Sys);
@@ -169,7 +169,7 @@ namespace Akka.TestKit.Internal
             }
         }
 
-        protected class InternalUnmutableFilter : UnmutableFilter
+        protected class InternalUnmutableFilter : IUnmutableFilter
         {
             private IReadOnlyCollection<EventFilterBase> _filters;
             private readonly ActorSystem _system;
