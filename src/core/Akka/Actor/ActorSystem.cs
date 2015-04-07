@@ -26,7 +26,7 @@ namespace Akka.Actor
     ///     </b>
     ///     This class is not meant to be extended by user code.
     /// </summary>
-    public abstract class ActorSystem : ActorRefFactory, IDisposable
+    public abstract class ActorSystem : IActorRefFactory, IDisposable
     {
         /// <summary>Gets the settings.</summary>
         /// <value>The settings.</value>

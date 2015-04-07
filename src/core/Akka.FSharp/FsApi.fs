@@ -41,7 +41,7 @@ module Actors =
     /// </summary>
     [<Interface>]
     type Actor<'Message> = 
-        inherit ActorRefFactory
+        inherit IActorRefFactory
         inherit ICanWatch
     
         /// <summary>
@@ -106,7 +106,7 @@ module Actors =
     /// Returns an instance of <see cref="ActorSelection" /> for specified path. 
     /// If no matching receiver will be found, a <see cref="ActorRefs.NoSender" /> instance will be returned. 
     /// </summary>
-    let inline select (path : string) (selector : ActorRefFactory) : ActorSelection = selector.ActorSelection path
+    let inline select (path : string) (selector : IActorRefFactory) : ActorSelection = selector.ActorSelection path
         
     /// Gives access to the next message throu let! binding in actor computation expression.
     type Cont<'In, 'Out> = 
@@ -475,7 +475,7 @@ module Spawn =
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="expr">F# expression compiled down to receive function used by actor for response for incoming request</param>
     /// <param name="options">List of options used to configure actor creation</param>
-    let spawne (actorFactory : ActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) 
+    let spawne (actorFactory : IActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) 
         (options : SpawnOption list) : IActorRef = 
         let e = Linq.Expression.ToExpression(fun () -> new FunActor<'Message, 'Returned>(expr))
         let props = applySpawnOptions (Props.Create e) options
@@ -489,7 +489,7 @@ module Spawn =
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used by actor for handling response for incoming request</param>
     /// <param name="options">List of options used to configure actor creation</param>
-    let spawnOpt (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) 
+    let spawnOpt (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) 
         (options : SpawnOption list) : IActorRef = 
         let e = Linq.Expression.ToExpression(fun () -> new FunActor<'Message, 'Returned>(f))
         let props = applySpawnOptions (Props.Create e) options
@@ -502,7 +502,7 @@ module Spawn =
     /// <param name="actorFactory">Either actor system or parent actor</param>
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used by actor for handling response for incoming request</param>
-    let spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : IActorRef = 
+    let spawn (actorFactory : IActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : IActorRef = 
         spawnOpt actorFactory name f []
 
     /// <summary>
@@ -513,7 +513,7 @@ module Spawn =
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used to create a new instance of the actor</param>
     /// <param name="options">List of options used to configure actor creation</param>
-    let spawnObjOpt (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) 
+    let spawnObjOpt (actorFactory : IActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) 
         (options : SpawnOption list) : IActorRef = 
         let e = Linq.Expression.ToExpression<'Actor> f
         let props = applySpawnOptions (Props.Create e) options
@@ -526,7 +526,7 @@ module Spawn =
     /// <param name="actorFactory">Either actor system or parent actor</param>
     /// <param name="name">Name of spawned child actor</param>
     /// <param name="f">Used to create a new instance of the actor</param>
-    let spawnObj (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : IActorRef = 
+    let spawnObj (actorFactory : IActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : IActorRef = 
         spawnObjOpt actorFactory name f []
 
     /// <summary>

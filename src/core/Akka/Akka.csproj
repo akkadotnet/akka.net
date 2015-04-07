@@ -191,7 +191,7 @@
     <Compile Include="Dispatch\MessageQueues\UnboundedMailboxQueue.cs" />
     <Compile Include="Dispatch\FutureActor.cs" />
     <Compile Include="Actor\IActorContext.cs" />
-    <Compile Include="Actor\ActorRefFactory.cs" />
+    <Compile Include="Actor\IActorRefFactory.cs" />
     <Compile Include="Dispatch\Mailbox.cs" />
     <Compile Include="Actor\Props.cs" />
     <Compile Include="Actor\SupervisorStrategy.cs" />

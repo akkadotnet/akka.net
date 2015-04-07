@@ -1,10 +1,10 @@
 ﻿namespace Akka.Actor
 {
     /// <summary>
-    /// Interface ActorRefFactory
+    /// Interface IActorRefFactory
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public interface ActorRefFactory
+    public interface IActorRefFactory
     {
         //TODO: Fix comment
         /// <summary>
