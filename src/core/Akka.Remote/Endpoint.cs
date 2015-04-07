@@ -19,7 +19,7 @@ namespace Akka.Remote
     /// INTERNAL API
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    internal interface InboundMessageDispatcher
+    internal interface IInboundMessageDispatcher
     {
         void Dispatch(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
             IActorRef senderOption = null);
@@ -28,7 +28,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class DefaultMessageDispatcher : InboundMessageDispatcher
+    internal class DefaultMessageDispatcher : IInboundMessageDispatcher
     {
         private ActorSystem system;
         private RemoteActorRefProvider provider;
@@ -779,7 +779,7 @@ namespace Akka.Remote
 
         private IActorRef _reader;
         private readonly AtomicCounter _readerId = new AtomicCounter(0);
-        private readonly InboundMessageDispatcher _msgDispatcher;
+        private readonly IInboundMessageDispatcher _msgDispatcher;
 
         private Ack _lastAck = null;
         private Deadline _ackDeadline;
@@ -1453,7 +1453,7 @@ namespace Akka.Remote
     internal class EndpointReader : EndpointActor
     {
         public EndpointReader(Address localAddress, Address remoteAddress, AkkaProtocolTransport transport,
-            RemoteSettings settings, AkkaPduCodec codec, InboundMessageDispatcher msgDispatch, bool inbound,
+            RemoteSettings settings, AkkaPduCodec codec, IInboundMessageDispatcher msgDispatch, bool inbound,
             int uid, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
             IActorRef reliableDeliverySupervisor = null) :
             base(localAddress, remoteAddress, transport, settings)
@@ -1471,7 +1471,7 @@ namespace Akka.Remote
         private IActorRef _reliableDeliverySupervisor;
         private ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
         private int _uid;
-        private InboundMessageDispatcher _msgDispatch;
+        private IInboundMessageDispatcher _msgDispatch;
 
         private RemoteActorRefProvider _provider;
         private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new AckedReceiveBuffer<Message>();
@@ -1649,7 +1649,7 @@ namespace Akka.Remote
         #region Static members
 
         public static Props ReaderProps(Address localAddress, Address remoteAddress, AkkaProtocolTransport transport,
-            RemoteSettings settings, AkkaPduCodec codec, InboundMessageDispatcher dispatcher, bool inbound, int uid,
+            RemoteSettings settings, AkkaPduCodec codec, IInboundMessageDispatcher dispatcher, bool inbound, int uid,
             ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
             IActorRef reliableDeliverySupervisor = null)
         {
