@@ -43,7 +43,7 @@ namespace Akka.TestKit
         /// <param name="contains">Optional. If specified (and neither <paramref name="message"/> nor <paramref name="start"/> are specified), the event must contain the string to be filtered.</param>
         /// <param name="source">Optional. The event source.</param>
         /// <returns>The new filter</returns>
-        public EventFilterApplier Error(string message = null, string start = null, string contains = null, string source = null)
+        public IEventFilterApplier Error(string message = null, string start = null, string contains = null, string source = null)
         {				    
             var messageMatcher = CreateMessageMatcher(message, start, contains);   //This file has been auto generated. Do NOT modify this file directly
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
@@ -64,7 +64,7 @@ namespace Akka.TestKit
         /// <param name="pattern">The event must match the pattern to be filtered.</param>
         /// <param name="source">>Optional. The event source.</param>
         /// <returns>The new filter</returns>
-        public EventFilterApplier Error(Regex pattern, string source = null)
+        public IEventFilterApplier Error(Regex pattern, string source = null)
         {
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new ErrorFilter(new RegexMatcher(pattern), sourceMatcher);
@@ -100,7 +100,7 @@ namespace Akka.TestKit
         /// <param name="contains">Optional. If specified (and neither <paramref name="message"/> nor <paramref name="start"/> are specified), the event must contain the string to be filtered.</param>
         /// <param name="source">Optional. The event source.</param>
         /// <returns>The new filter</returns>
-        public EventFilterApplier Warning(string message = null, string start = null, string contains = null, string source = null)
+        public IEventFilterApplier Warning(string message = null, string start = null, string contains = null, string source = null)
         {				    
             var messageMatcher = CreateMessageMatcher(message, start, contains);   //This file has been auto generated. Do NOT modify this file directly
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
@@ -121,7 +121,7 @@ namespace Akka.TestKit
         /// <param name="pattern">The event must match the pattern to be filtered.</param>
         /// <param name="source">>Optional. The event source.</param>
         /// <returns>The new filter</returns>
-        public EventFilterApplier Warning(Regex pattern, string source = null)
+        public IEventFilterApplier Warning(Regex pattern, string source = null)
         {
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new WarningFilter(new RegexMatcher(pattern), sourceMatcher);
@@ -157,7 +157,7 @@ namespace Akka.TestKit
         /// <param name="contains">Optional. If specified (and neither <paramref name="message"/> nor <paramref name="start"/> are specified), the event must contain the string to be filtered.</param>
         /// <param name="source">Optional. The event source.</param>
         /// <returns>The new filter</returns>
-        public EventFilterApplier Info(string message = null, string start = null, string contains = null, string source = null)
+        public IEventFilterApplier Info(string message = null, string start = null, string contains = null, string source = null)
         {				    
             var messageMatcher = CreateMessageMatcher(message, start, contains);   //This file has been auto generated. Do NOT modify this file directly
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
@@ -178,7 +178,7 @@ namespace Akka.TestKit
         /// <param name="pattern">The event must match the pattern to be filtered.</param>
         /// <param name="source">>Optional. The event source.</param>
         /// <returns>The new filter</returns>
-        public EventFilterApplier Info(Regex pattern, string source = null)
+        public IEventFilterApplier Info(Regex pattern, string source = null)
         {
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new InfoFilter(new RegexMatcher(pattern), sourceMatcher);
@@ -214,7 +214,7 @@ namespace Akka.TestKit
         /// <param name="contains">Optional. If specified (and neither <paramref name="message"/> nor <paramref name="start"/> are specified), the event must contain the string to be filtered.</param>
         /// <param name="source">Optional. The event source.</param>
         /// <returns>The new filter</returns>
-        public EventFilterApplier Debug(string message = null, string start = null, string contains = null, string source = null)
+        public IEventFilterApplier Debug(string message = null, string start = null, string contains = null, string source = null)
         {				    
             var messageMatcher = CreateMessageMatcher(message, start, contains);   //This file has been auto generated. Do NOT modify this file directly
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
@@ -235,7 +235,7 @@ namespace Akka.TestKit
         /// <param name="pattern">The event must match the pattern to be filtered.</param>
         /// <param name="source">>Optional. The event source.</param>
         /// <returns>The new filter</returns>
-        public EventFilterApplier Debug(Regex pattern, string source = null)
+        public IEventFilterApplier Debug(Regex pattern, string source = null)
         {
             var sourceMatcher = source == null ? null : new EqualsStringAndPathMatcher(source);
             var filter = new DebugFilter(new RegexMatcher(pattern), sourceMatcher);

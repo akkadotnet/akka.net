@@ -3,7 +3,7 @@ using System;
 namespace Akka.TestKit
 {
     // ReSharper disable once InconsistentNaming
-    public interface EventFilterApplier
+    public interface IEventFilterApplier
     {
         /// <summary>
         /// Executes <paramref name="action"/> and

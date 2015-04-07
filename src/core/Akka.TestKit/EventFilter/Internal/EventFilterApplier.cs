@@ -10,7 +10,7 @@ namespace Akka.TestKit.Internal
     /// <summary>
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    public class InternalEventFilterApplier : EventFilterApplier
+    public class InternalEventFilterApplier : IEventFilterApplier
     {
         private readonly IReadOnlyList<EventFilterBase> _filters;
         private readonly TestKitBase _testkit;
