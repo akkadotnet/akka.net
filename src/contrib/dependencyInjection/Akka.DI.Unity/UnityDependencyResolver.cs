@@ -46,6 +46,11 @@ namespace Akka.DI.Unity
 	    {
 		    return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
 	    }
+
+	    public void Release(ActorBase actor)
+	    {
+		    container.Teardown(actor);
+	    }
     }
 
 	internal static class Extensions
