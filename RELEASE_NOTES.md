@@ -1,6 +1,280 @@
-#### 1.0.0 Mar 15 2015
+#### 1.0.0 Apr 09 2015
 
-TBD
+**Akka.NET is officially no longer in beta status**. The APIs introduced in Akka.NET v1.0 will enjoy long-term support from the Akka.NET development team and all of its professional support partners.
+
+Many breaking changes were introduced between v0.8 and v1.0 in order to provide better future extensibility and flexibility for Akka.NET, and we will outline the major changes in detail in these release notes.
+
+However, if you want full API documentation we recommend going to the following:
+
+* **[Latest Stable Akka.NET API Docs](http://api.getakka.net/docs/stable/index.html "Akka.NET Latest Stable API Docs")**
+* **[Akka.NET Wiki](http://getakka.net/wiki/ "Akka.NET Wiki")**
+
+----
+
+**Updated Packages with 1.0 Stable Release**
+
+All of the following NuGet packages have been upgraded to 1.0 for stable release:
+
+- Akka.NET Core
+- Akka.FSharp
+- Akka.Remote
+- Akka.TestKit
+- Akka.DI (dependency injection)
+- Akka.Loggers (logging)
+
+The following packages (and modules dependent on them) are still in *pre-release* status:
+
+- Akka.Cluster
+- Akka.Persistence
+
+----
+**Introducing Full Mono Support for Akka.NET**
+
+One of the biggest changes in Akka.NET v1.0 is the introduction of full Mono support across all modules; we even have [Raspberry PI machines talking to laptops over Akka.Remote](https://twitter.com/AkkaDotNET/status/584109606714093568)!
+
+We've tested everything using Mono v3.12.1 across OS X and Ubuntu. 
+
+**[Please let us know how well Akka.NET + Mono runs on your environment](https://github.com/akkadotnet/akka.net/issues/694)!**
+
+----
+
+**API Changes in v1.0**
+
+**All methods returning an `ActorRef` now return `IActorRef`**
+This is the most significant breaking change introduced in AKka.NET v1.0. Rather than returning the `ActorRef` abstract base class from all of the `ActorOf`, `Sender` and other methods we now return an instance of the `IActorRef` interface instead.
+
+This was done in order to guarantee greater future extensibility without additional breaking changes, so we decided to pay off that technical debt now that we're supporting these APIs long-term.
+
+Here's the set of breaking changes you need to be aware of:
+
+- Renamed:
+  - `ActorRef`          --> `IActorRef`
+  - `ActorRef.Nobody`   --> `ActorRefs.Nobody`
+  - `ActorRef.NoSender` --> `ActorRefs.NoSender`
+- `ActorRef`'s  operators `==` and `!=` has been removed. This means all expressions like `actorRef1 == actorRef2` must be replaced with `Equals(actorRef1, actorRef2)`
+- `Tell(object message)`, i.e. the implicit sender overload, has been moved
+to an extension method, and requires `using Akka.Actor;` to be accessible.
+- Implicit cast from `ActorRef` to `Routee` has been replaced with `Routee.FromActorRef(actorRef)`
+
+**`async` / `await` Support**
+
+`ReceiveActor`s now support Async/Await out of the box.
+
+```csharp
+public class MyActor : ReceiveActor
+{
+       public MyActor()
+       {
+             Receive<SomeMessage>(async some => {
+                    //we can now safely use await inside this receive handler
+                    await SomeAsyncIO(some.Data);
+                    Sender.Tell(new EverythingIsAllOK());                   
+             });
+       }
+}
+```
+
+It is also possible to specify the behavior for the async handler, using `AsyncBehavior.Suspend` and  `AsyncBehavior.Reentrant` as the first argument.
+When using `Suspend` the normal actor semantics will be preserved, the actor will not be able to process any new messages until the current async operation is completed.
+While using `Reentrant` will allow the actor to multiplex messages during the `await` period.
+This does not mean that messages are processed in parallel, we still stay true to "one message at a time", but each await continuation will be piped back to the actor as a message and continue under the actors concurrency constraint.
+
+However, `PipeTo` pattern is still the preferred way to perform async operations inside an actor, as it is more explicit and clearly states what is going on.
+
+
+**Switchable Behaviors**
+In order to make the switchable behavior APIs more understandable for both `UntypedActor` and `ReceiveActor` we've updated the methods to the following:
+
+``` C#
+Become(newHandler); // become newHandler, without adding previous behavior to the stack (default)
+BecomeStacked(newHandler); // become newHandler, without adding previous behavior to the stack (default)
+UnbecomeStacked(); //revert to the previous behavior in the stack
+```
+
+The underlying behavior-switching implementation hasn't changed at all - only the names of the methods.
+
+**Scheduler APIs**
+The `Context.System.Scheduler` API has been overhauled to be both more extensible and understandable going forward. All of the previous capabilities for the `Scheduler` are still available, only in different packaging than they were before.
+
+Here are the new APIs:
+
+``` C#
+Context.System.Scheduler
+  .ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, ActorRef sender);
+  .ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, ActorRef sender, ICancelable cancelable);
+  .ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, ActorRef sender);
+  .ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, ActorRef sender, ICancelable cancelable);
+
+Context.System.Scheduler.Advanced
+  .ScheduleOnce(TimeSpan delay, Action action);
+  .ScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable);
+  .ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action);
+  .ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable);
+```
+
+There's also a set of extension methods for specifying delays and intervals in milliseconds as well as methods for all four variants (`ScheduleTellOnceCancelable`, `ScheduleTellRepeatedlyCancelable`, `ScheduleOnceCancelable`, `ScheduleRepeatedlyCancelable`) that creates a cancelable, schedules, and returns the cancelable. 
+
+**Akka.NET `Config` now loaded automatically from App.config and Web.config**
+In previous versions Akka.NET users had to do the following to load Akka.NET HOCON configuration sections from App.config or Web.config:
+
+```csharp
+var section = (AkkaConfigurationSection)ConfigurationManager.GetSection("akka");
+var config = section.AkkaConfig;
+var actorSystem = ActorSystem.Create("MySystem", config);
+```
+
+As of Akka.NET v1.0 this is now done for you automatically:
+
+```csharp
+var actorSystem = ActorSystem.Create("MySystem"); //automatically loads App/Web.config, if any
+```
+
+**Dispatchers**
+Akka.NET v1.0 introduces the `ForkJoinDispatcher` as well as general purpose dispatcher re-use.
+
+**Using ForkJoinDispatcher**
+ForkJoinDispatcher is special - it uses [`Helios.Concurrency.DedicatedThreadPool`](https://github.com/helios-io/DedicatedThreadPool) to create a dedicated set of threads for the exclusive use of the actors configured to use a particular `ForkJoinDispatcher` instance. All of the remoting actors depend on the `default-remote-dispatcher` for instance.
+
+Here's how you can create your own ForkJoinDispatcher instances via Config:
+
+```
+myapp{
+  my-forkjoin-dispatcher{
+    type = ForkJoinDispatcher
+    throughput = 100
+    dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
+      thread-count = 3 #number of threads
+      #deadlock-timeout = 3s #optional timeout for deadlock detection
+      threadtype = background #values can be "background" or "foreground"
+    }
+  }
+}
+}
+```
+
+You can then use this specific `ForkJoinDispatcher` instance by configuring specific actors to use it, whether it's via config or the fluent interface on `Props`:
+
+**Config**
+```
+akka.actor.deploy{
+     /myActor1{
+       dispatcher = myapp.my-forkjoin-dispatcher
+     }
+}
+```
+
+**Props**
+```csharp
+var actor = Sys.ActorOf(Props.Create<Foo>().WithDispatcher("myapp.my-forkjoin-dispatcher"));
+```
+
+**FluentConfiguration [REMOVED]**
+`FluentConfig` has been removed as we've decided to standardize on HOCON configuration, but if you still want to use the old FluentConfig bits you can find them here: https://github.com/rogeralsing/Akka.FluentConfig
+
+**F# API**
+The F# API has changed to reflect the other C# interface changes, as well as unique additions specific to F#.
+
+In addition to updating the F# API, we've also fixed a long-standing bug with being able to serialize discriminated unions over the wire. This has been resolved.
+
+**Interface Renames**
+In order to comply with .NET naming conventions and standards, all of the following interfaces have been renamed with the `I{InterfaceName}` prefix.
+
+The following interfaces have all been renamed to include the `I` prefix:
+
+- [X] `Akka.Actor.ActorRefProvider, Akka` (Public)
+- [X] `Akka.Actor.ActorRefScope, Akka` (Public)
+- [X] `Akka.Actor.AutoReceivedMessage, Akka` (Public)
+- [X] `Akka.Actor.Cell, Akka` (Public)
+- [X] `Akka.Actor.Inboxable, Akka` (Public)
+- [X] `Akka.Actor.IndirectActorProducer, Akka` (Public)
+- [X] `Akka.Actor.Internal.ChildrenContainer, Akka` (Public)
+- [X] `Akka.Actor.Internal.ChildStats, Akka` (Public)
+- [X] `Akka.Actor.Internal.InternalSupportsTestFSMRef`2, Akka` (Public)
+- [X] `Akka.Actor.Internal.SuspendReason+WaitingForChildren, Akka`
+- [X] `Akka.Actor.Internals.InitializableActor, Akka` (Public)
+- [X] `Akka.Actor.LocalRef, Akka`
+- [X] `Akka.Actor.LoggingFSM, Akka` (Public)
+- [X] `Akka.Actor.NoSerializationVerificationNeeded, Akka` (Public)
+- [X] `Akka.Actor.PossiblyHarmful, Akka` (Public)
+- [X] `Akka.Actor.RepointableRef, Akka` (Public)
+- [X] `Akka.Actor.WithBoundedStash, Akka` (Public)
+- [X] `Akka.Actor.WithUnboundedStash, Akka` (Public)
+- [X] `Akka.Dispatch.BlockingMessageQueueSemantics, Akka` (Public)
+- [X] `Akka.Dispatch.BoundedDequeBasedMessageQueueSemantics, Akka` (Public)
+- [X] `Akka.Dispatch.BoundedMessageQueueSemantics, Akka` (Public)
+- [X] `Akka.Dispatch.DequeBasedMailbox, Akka` (Public)
+- [X] `Akka.Dispatch.DequeBasedMessageQueueSemantics, Akka` (Public)
+- [X] `Akka.Dispatch.MessageQueues.MessageQueue, Akka` (Public)
+- [X] `Akka.Dispatch.MultipleConsumerSemantics, Akka` (Public)
+- [X] `Akka.Dispatch.RequiresMessageQueue`1, Akka` (Public)
+- [X] `Akka.Dispatch.Semantics, Akka` (Public)
+- [X] `Akka.Dispatch.SysMsg.SystemMessage, Akka` (Public)
+- [X] `Akka.Dispatch.UnboundedDequeBasedMessageQueueSemantics, Akka` (Public)
+- [X] `Akka.Dispatch.UnboundedMessageQueueSemantics, Akka` (Public)
+- [X] `Akka.Event.LoggingAdapter, Akka` (Public)
+- [X] `Akka.FluentConfigInternals, Akka` (Public)
+- [X] `Akka.Remote.InboundMessageDispatcher, Akka.Remote`
+- [X] `Akka.Remote.RemoteRef, Akka.Remote`
+- [X] `Akka.Routing.ConsistentHashable, Akka` (Public)
+
+**`ConsistentHashRouter` and `IConsistentHashable`**
+Akka.NET v1.0 introduces the idea of virtual nodes to the `ConsistentHashRouter`, which are designed to provide more even distributions of hash ranges across a relatively small number of routees. You can take advantage of virtual nodes via configuration:
+
+```xml
+akka.actor.deployment {
+	/router1 {
+		router = consistent-hashing-pool
+		nr-of-instances = 3
+		virtual-nodes-factor = 17
+	}
+}
+```
+
+Or via code:
+
+```csharp
+var router4 = Sys.ActorOf(Props.Empty.WithRouter(
+	new ConsistentHashingGroup(new[]{c},hashMapping: hashMapping)
+	.WithVirtualNodesFactor(5)), 
+	"router4");
+```
+
+**`ConsistentHashMapping` Delegate**
+There are three ways to instruct a router to hash a message:
+1. Wrap the message in a `ConsistentHashableEnvelope`;
+2. Implement the `IConsistentHashable` interface on your message types; or
+3. Or, write a `ConsistentHashMapper` delegate and pass it to a `ConsistentHashingGroup` or a `ConsistentHashingPool` programmatically at create time.
+
+Here's an example, taken from the `ConsistentHashSpecs`:
+
+```csharp
+ConsistentHashMapping hashMapping = msg =>
+{
+    if (msg is Msg2)
+    {
+        var m2 = msg as Msg2;
+        return m2.Key;
+    }
+
+    return null;
+};
+var router2 =
+    Sys.ActorOf(new ConsistentHashingPool(1, null, null, null, hashMapping: hashMapping)
+    .Props(Props.Create<Echo>()), "router2");
+```
+
+Alternatively, you don't have to pass the `ConsistentHashMapping` into the constructor - you can use the `WithHashMapping` fluent interface built on top of both `ConsistentHashingGroup` and `ConsistentHashingPool`:
+
+```csharp
+var router2 =
+    Sys.ActorOf(new ConsistentHashingPool(1).WithHashMapping(hashMapping)
+    .Props(Props.Create<Echo>()), "router2");
+```
+
+**`ConsistentHashable` renamed to `IConsistentHashable`**
+Any objects you may have decorated with the `ConsistentHashable` interface to work with `ConsistentHashRouter` instances will need to implement `IConsistentHashable` going forward, as all interfaces have been renamed with the `I-` prefix per .NET naming conventions.
+
+----
 
 #### 0.8.0 Feb 11 2015
 
