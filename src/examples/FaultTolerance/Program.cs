@@ -32,7 +32,7 @@ namespace FaultTolerance
     // Listens on progress from the worker and shuts down the system when enough work has been done.
     public class Listener : UntypedActor
     {
-        LoggingAdapter log = Logging.GetLogger(Context);
+        ILoggingAdapter log = Logging.GetLogger(Context);
 
         protected override void PreRestart(Exception reason, object message)
         {
@@ -97,7 +97,7 @@ namespace FaultTolerance
     // The Worker supervise the CounterService.
     public class Worker : UntypedActor
     {
-        LoggingAdapter log = Logging.GetLogger(Context);
+        ILoggingAdapter log = Logging.GetLogger(Context);
 
         // The sender of the initial Start message will continuously be notified about progress
         IActorRef progressListener;
@@ -195,7 +195,7 @@ namespace FaultTolerance
     // supervise Storage and Counter.
     public class CounterService : UntypedActor
     {
-        LoggingAdapter log = Logging.GetLogger(Context);
+        ILoggingAdapter log = Logging.GetLogger(Context);
 
         string key = Context.Self.Path.Name;
         IActorRef storage;
@@ -347,7 +347,7 @@ namespace FaultTolerance
     // if there is any storage available at the moment.
     public class Counter : UntypedActor
     {
-        LoggingAdapter log = Logging.GetLogger(Context);
+        ILoggingAdapter log = Logging.GetLogger(Context);
         string key;
         long count;
         IActorRef storage;

@@ -304,7 +304,7 @@ namespace Akka.Actor
 
         public void Post(IActorRef sender, object message)
         {
-            if(message is SystemMessage)
+            if(message is ISystemMessage)
                 SendSystemMessage(message, sender);
             else
                 SendMessage(message, sender);
@@ -382,7 +382,7 @@ namespace Akka.Actor
                 {
                     var queuedMessage = _messageQueue[queueIndex];
                     queueIndex++;
-                    if(queuedMessage.Message is SystemMessage)
+                    if(queuedMessage.Message is ISystemMessage)
                         insertIntoIndex = queueIndex;
                 }
                 else if(insertIntoIndex == -1)

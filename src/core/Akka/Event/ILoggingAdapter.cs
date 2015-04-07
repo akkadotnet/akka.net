@@ -6,7 +6,7 @@ namespace Akka.Event
     /// Capable of logging 
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public interface LoggingAdapter
+    public interface ILoggingAdapter
     {
         /// <summary>Returns <c>true</c> if Debug level is enabled.</summary>
         bool IsDebugEnabled { get; }

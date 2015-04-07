@@ -163,7 +163,7 @@ namespace Akka.Dispatch
                 return;
 
             hasUnscheduledMessages = true;
-            if (envelope.Message is SystemMessage)
+            if (envelope.Message is ISystemMessage)
             {
                 Mailbox.DebugPrint("{0} enqueued system message {1} to {2}", ActorCell.Self, envelope, ActorCell.Self.Equals(receiver) ? "itself" : receiver.ToString());
                 _systemMessages.Enqueue(envelope);

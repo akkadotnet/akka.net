@@ -278,7 +278,7 @@ namespace Akka.Remote.TestKit
             }            
         }
 
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         readonly TestConductorSettings _settings;
         readonly PlayerHandler _handler;
         readonly RoleName _name;
@@ -512,14 +512,14 @@ namespace Akka.Remote.TestKit
         readonly TimeSpan _backoff;
         readonly int _poolSize;
         readonly IActorRef _fsm;
-        readonly LoggingAdapter _log;
+        readonly ILoggingAdapter _log;
         readonly IScheduler _scheduler;
         private bool _loggedDisconnect = false;
         
         Deadline _nextAttempt;
         
         public PlayerHandler(INode server, int reconnects, TimeSpan backoff, int poolSize, IActorRef fsm,
-            LoggingAdapter log, IScheduler scheduler)
+            ILoggingAdapter log, IScheduler scheduler)
         {
             _server = server;
             _reconnects = reconnects;

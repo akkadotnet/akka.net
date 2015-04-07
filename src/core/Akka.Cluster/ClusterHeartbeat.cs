@@ -44,7 +44,7 @@ namespace Akka.Cluster
 
         private readonly Cluster _cluster;
 
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         public ClusterHeartbeatSender()
         {

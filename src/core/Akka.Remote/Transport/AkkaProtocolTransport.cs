@@ -437,7 +437,7 @@ namespace Akka.Remote.Transport
 
     internal class ProtocolStateActor : FSM<AssociationState, ProtocolStateData>
     {
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         private InitialProtocolStateData _initialData;
         private HandshakeInfo _localHandshakeInfo;
         private int? _refuseUid;

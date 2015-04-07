@@ -85,7 +85,7 @@ namespace Akka.TestKit
                 var warning = new Warning(recipientPath, recipientType, message);
                 if(!ShouldFilter(warning))
                 {
-                    var msgStr = (msg is SystemMessage)
+                    var msgStr = (msg is ISystemMessage)
                         ? "Received dead system message: " + msg
                         : "Received dead letter from " + snd + ": " + msg;
                     var warning2 = new Warning(recipientPath, recipientType, new DeadLetter(msgStr,snd,rcp));

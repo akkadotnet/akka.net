@@ -529,6 +529,6 @@ namespace Akka.Remote
             }
         }
 
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
     }
 }

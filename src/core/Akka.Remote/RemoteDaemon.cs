@@ -76,7 +76,7 @@ namespace Akka.Remote
         /// <param name="path">The path.</param>
         /// <param name="parent">The parent.</param>
         /// <param name="log"></param>
-        public RemoteDaemon(ActorSystemImpl system, ActorPath path, IInternalActorRef parent, LoggingAdapter log)
+        public RemoteDaemon(ActorSystemImpl system, ActorPath path, IInternalActorRef parent, ILoggingAdapter log)
             : base(system.Provider, path, parent, log)
         {
             _system = system;

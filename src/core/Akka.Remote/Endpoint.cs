@@ -19,7 +19,7 @@ namespace Akka.Remote
     /// INTERNAL API
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    internal interface InboundMessageDispatcher
+    internal interface IInboundMessageDispatcher
     {
         void Dispatch(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
             IActorRef senderOption = null);
@@ -28,15 +28,15 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class DefaultMessageDispatcher : InboundMessageDispatcher
+    internal class DefaultMessageDispatcher : IInboundMessageDispatcher
     {
         private ActorSystem system;
         private RemoteActorRefProvider provider;
-        private LoggingAdapter log;
+        private ILoggingAdapter log;
         private IInternalActorRef remoteDaemon;
         private RemoteSettings settings;
 
-        public DefaultMessageDispatcher(ActorSystem system, RemoteActorRefProvider provider, LoggingAdapter log)
+        public DefaultMessageDispatcher(ActorSystem system, RemoteActorRefProvider provider, ILoggingAdapter log)
         {
             this.system = system;
             this.provider = provider;
@@ -97,7 +97,7 @@ namespace Akka.Remote
                             log.Debug("operating in UntrustedMode, dropping inbound IPossiblyHarmful message of type {0}", msg.GetType());
                         }
                     })
-                    .With<SystemMessage>(msg => { recipient.Tell(msg); })
+                    .With<ISystemMessage>(msg => { recipient.Tell(msg); })
                     .Default(msg =>
                     {
                         recipient.Tell(msg, sender);
@@ -105,7 +105,7 @@ namespace Akka.Remote
             }
 
             // message is intended for a remote-deployed recipient
-            else if ((recipient is RemoteRef || recipient is RepointableActorRef) && !recipient.IsLocal && !settings.UntrustedMode)
+            else if ((recipient is IRemoteRef || recipient is RepointableActorRef) && !recipient.IsLocal && !settings.UntrustedMode)
             {
                 if (settings.LogReceive) log.Debug("received remote-destined message {0}", msgLog);
                 if (provider.Transport.Addresses.Contains(recipientAddress))
@@ -252,7 +252,7 @@ namespace Akka.Remote
     /// </summary>
     internal class ReliableDeliverySupervisor : UntypedActor
     {
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         private AkkaProtocolHandle handleOrActive;
         private Address localAddress;
@@ -488,7 +488,7 @@ namespace Akka.Remote
                 })
                 .With<EndpointManager.Send>(send =>
                 {
-                    if (send.Message is SystemMessage)
+                    if (send.Message is ISystemMessage)
                     {
                         TryBuffer(send.Copy(NextSeq()));
                     }
@@ -570,7 +570,7 @@ namespace Akka.Remote
 
         private void HandleSend(EndpointManager.Send send)
         {
-            if (send.Message is SystemMessage)
+            if (send.Message is ISystemMessage)
             {
                 var sequencedSend = send.Copy(NextSeq());
                 TryBuffer(sequencedSend);
@@ -635,7 +635,7 @@ namespace Akka.Remote
         protected RemoteSettings Settings;
         protected AkkaProtocolTransport Transport;
 
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         protected readonly EventPublisher EventPublisher;
         protected bool Inbound { get; set; }
@@ -685,7 +685,7 @@ namespace Akka.Remote
     /// </summary>
     internal abstract class EndpointActor<TS, TD> : FSM<TS, TD>
     {
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         protected readonly Address LocalAddress;
         protected Address RemoteAddress;
@@ -767,7 +767,7 @@ namespace Akka.Remote
             }
         }
 
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         private AkkaProtocolHandle _handleOrActive;
         private readonly int? _refuseUid;
         private readonly AkkaPduCodec _codec;
@@ -779,7 +779,7 @@ namespace Akka.Remote
 
         private IActorRef _reader;
         private readonly AtomicCounter _readerId = new AtomicCounter(0);
-        private readonly InboundMessageDispatcher _msgDispatcher;
+        private readonly IInboundMessageDispatcher _msgDispatcher;
 
         private Ack _lastAck = null;
         private Deadline _ackDeadline;
@@ -1453,7 +1453,7 @@ namespace Akka.Remote
     internal class EndpointReader : EndpointActor
     {
         public EndpointReader(Address localAddress, Address remoteAddress, AkkaProtocolTransport transport,
-            RemoteSettings settings, AkkaPduCodec codec, InboundMessageDispatcher msgDispatch, bool inbound,
+            RemoteSettings settings, AkkaPduCodec codec, IInboundMessageDispatcher msgDispatch, bool inbound,
             int uid, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
             IActorRef reliableDeliverySupervisor = null) :
             base(localAddress, remoteAddress, transport, settings)
@@ -1471,7 +1471,7 @@ namespace Akka.Remote
         private IActorRef _reliableDeliverySupervisor;
         private ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
         private int _uid;
-        private InboundMessageDispatcher _msgDispatch;
+        private IInboundMessageDispatcher _msgDispatch;
 
         private RemoteActorRefProvider _provider;
         private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new AckedReceiveBuffer<Message>();
@@ -1649,7 +1649,7 @@ namespace Akka.Remote
         #region Static members
 
         public static Props ReaderProps(Address localAddress, Address remoteAddress, AkkaProtocolTransport transport,
-            RemoteSettings settings, AkkaPduCodec codec, InboundMessageDispatcher dispatcher, bool inbound, int uid,
+            RemoteSettings settings, AkkaPduCodec codec, IInboundMessageDispatcher dispatcher, bool inbound, int uid,
             ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
             IActorRef reliableDeliverySupervisor = null)
         {

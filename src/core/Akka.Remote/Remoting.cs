@@ -86,7 +86,7 @@ namespace Akka.Remote
     /// </summary>
     internal class Remoting : RemoteTransport
     {
-        private readonly LoggingAdapter log;
+        private readonly ILoggingAdapter log;
         private volatile IDictionary<string, HashSet<ProtocolTransportAddressPair>> _transportMapping;
         private volatile IActorRef _endpointManager;
 

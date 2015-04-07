@@ -254,7 +254,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// Dispatches a <see cref="SystemMessage"/> from a mailbox to an <see cref="ActorCell"/>        
+        /// Dispatches a <see cref="ISystemMessage"/> from a mailbox to an <see cref="ActorCell"/>        
         /// </summary>
         public virtual void SystemDispatch(ActorCell cell, Envelope envelope)
         {

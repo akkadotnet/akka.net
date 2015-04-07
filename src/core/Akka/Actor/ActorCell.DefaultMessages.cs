@@ -360,7 +360,7 @@ namespace Akka.Actor
             SendSystemMessage(Dispatch.SysMsg.ResumeReentrancy.Instance);
         }
 
-        private void SendSystemMessage(SystemMessage systemMessage)
+        private void SendSystemMessage(ISystemMessage systemMessage)
         {
             try
             {

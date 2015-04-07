@@ -245,7 +245,7 @@ namespace Akka.Cluster
 
         internal ActorSystemImpl System { get; private set; }
 
-        readonly LoggingAdapter _log;
+        readonly ILoggingAdapter _log;
         readonly ClusterReadView _readView;
         public ClusterReadView ReadView {get { return _readView; }}
 

@@ -63,9 +63,9 @@ namespace Akka.Persistence.Tests
         internal class CrashingActor : GuaranteedDeliveryActor
         {
             private readonly IActorRef _testProbe;
-            private LoggingAdapter _adapter;
+            private ILoggingAdapter _adapter;
 
-            LoggingAdapter Log { get { return _adapter ?? (_adapter = Context.GetLogger()); } }
+            ILoggingAdapter Log { get { return _adapter ?? (_adapter = Context.GetLogger()); } }
 
             public CrashingActor(IActorRef testProbe)
             {

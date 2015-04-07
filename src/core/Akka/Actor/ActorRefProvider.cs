@@ -116,7 +116,7 @@ namespace Akka.Actor
         private readonly Deployer _deployer;
         private readonly IInternalActorRef _deadLetters;
         private readonly RootActorPath _rootPath;
-        private readonly LoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
         private readonly AtomicCounterLong _tempNumber;
         private readonly ActorPath _tempNode;
         private ActorSystemImpl _system;
@@ -439,6 +439,6 @@ namespace Akka.Actor
 
         public Address DefaultAddress { get { return _rootPath.Address; } }
 
-        public LoggingAdapter Log { get { return _log; } }
+        public ILoggingAdapter Log { get { return _log; } }
     }
 }

@@ -20,7 +20,7 @@ namespace TimeServer
 
         public class TimeServerActor : TypedActor, IHandle<string>
         {
-            private readonly LoggingAdapter _log = Context.GetLogger();
+            private readonly ILoggingAdapter _log = Context.GetLogger();
 
             public void Handle(string message)
             {

@@ -318,9 +318,9 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, IActorRef sender)
         {
-            if (message is SystemMessage)
+            if (message is ISystemMessage)
             {
-                SendSystemMessage(message as SystemMessage); 
+                SendSystemMessage(message as ISystemMessage); 
                 return;
             }
 
@@ -339,7 +339,7 @@ namespace Akka.Actor
         }
 
         //TODO: isn't SendSystemMessage supposed to be a part of ActorRef? Why isn't it overridable?
-        private void SendSystemMessage(SystemMessage message)
+        private void SendSystemMessage(ISystemMessage message)
         {
             if(message is Terminate) Stop();
             else if (message is DeathWatchNotification)

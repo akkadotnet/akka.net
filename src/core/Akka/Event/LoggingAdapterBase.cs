@@ -2,7 +2,7 @@
 
 namespace Akka.Event
 {
-    public abstract class LoggingAdapterBase : LoggingAdapter
+    public abstract class LoggingAdapterBase : ILoggingAdapter
     {
         private readonly ILogMessageFormatter _logMessageFormatter;
 

@@ -9,12 +9,12 @@ namespace Akka.Remote
     /// Marker interface for Actors that are deployed in a remote scope
     /// </summary>
 // ReSharper disable once InconsistentNaming
-    internal interface RemoteRef : IActorRefScope { }
+    internal interface IRemoteRef : IActorRefScope { }
 
     /// <summary>
     /// Class RemoteActorRef.
     /// </summary>
-    public class RemoteActorRef : InternalActorRefBase, RemoteRef
+    public class RemoteActorRef : InternalActorRefBase, IRemoteRef
     {
         /// <summary>
         /// The deploy
@@ -143,7 +143,7 @@ namespace Akka.Remote
         /// Sends the system message.
         /// </summary>
         /// <param name="message">The message.</param>
-        private void SendSystemMessage(SystemMessage message)
+        private void SendSystemMessage(ISystemMessage message)
         {
             Remote.Send(message, null, this);
             Remote.Provider.AfterSendSystemMessage(message);
@@ -157,7 +157,7 @@ namespace Akka.Remote
         protected override void TellInternal(object message, IActorRef sender)
         {
             Remote.Send(message, sender, this);
-            var systemMessage = message as SystemMessage;
+            var systemMessage = message as ISystemMessage;
             if (systemMessage != null) Remote.Provider.AfterSendSystemMessage(systemMessage);
         }
 

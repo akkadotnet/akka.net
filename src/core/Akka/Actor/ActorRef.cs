@@ -80,9 +80,9 @@ namespace Akka.Actor
         protected override void TellInternal(object message, IActorRef sender)
         {
 
-            if (message is SystemMessage) //we have special handling for system messages
+            if (message is ISystemMessage) //we have special handling for system messages
             {
-                SendSystemMessage(message.AsInstanceOf<SystemMessage>(), sender);
+                SendSystemMessage(message.AsInstanceOf<ISystemMessage>(), sender);
             }
             else
             {
@@ -94,7 +94,7 @@ namespace Akka.Actor
             }
         }
 
-        protected void SendSystemMessage(SystemMessage message, IActorRef sender)
+        protected void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
             var d = message as DeathWatchNotification;
             if (message is Terminate)
@@ -357,13 +357,13 @@ namespace Akka.Actor
     internal class VirtualPathContainer : MinimalActorRef
     {
         private readonly IInternalActorRef _parent;
-        private readonly LoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
         private readonly IActorRefProvider _provider;
         private readonly ActorPath _path;
 
         private readonly ConcurrentDictionary<string, IInternalActorRef> _children = new ConcurrentDictionary<string, IInternalActorRef>();
 
-        public VirtualPathContainer(IActorRefProvider provider, ActorPath path, IInternalActorRef parent, LoggingAdapter log)
+        public VirtualPathContainer(IActorRefProvider provider, ActorPath path, IInternalActorRef parent, ILoggingAdapter log)
         {
             _parent = parent;
             _log = log;
@@ -386,7 +386,7 @@ namespace Akka.Actor
             get { return _path; }
         }
 
-        public LoggingAdapter Log
+        public ILoggingAdapter Log
         {
             get { return _log; }
         }

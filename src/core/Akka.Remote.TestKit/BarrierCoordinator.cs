@@ -376,7 +376,7 @@ namespace Akka.Remote.TestKit
 
         //this shall be set to true if all subsequent barriers shall fail
         private bool _failed = false;
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         protected override void PreRestart(Exception reason, object message) { }
         protected override void PostRestart(Exception reason)

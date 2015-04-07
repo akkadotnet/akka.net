@@ -8,19 +8,19 @@ namespace Akka.Dispatch.SysMsg
  * public API
  */
     //@SerialVersionUID(1L)
-    //private[akka] case class Create(failure: Option[ActorInitializationException]) extends SystemMessage // sent to self from Dispatcher.register
+    //private[akka] case class Create(failure: Option[ActorInitializationException]) extends ISystemMessage // sent to self from Dispatcher.register
     /// <summary>
-    ///     Class SystemMessage.
+    ///     Class ISystemMessage.
     /// </summary>
     /// **
-    public interface SystemMessage : INoSerializationVerificationNeeded
+    public interface ISystemMessage : INoSerializationVerificationNeeded
     {
     }
 
     /// <summary>
     ///     Class NoMessage.
     /// </summary>
-    public sealed class NoMessage : SystemMessage
+    public sealed class NoMessage : ISystemMessage
     {
         public override string ToString()
         {
@@ -31,7 +31,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class DeathWatchNotification.
     /// </summary>
-    public sealed class DeathWatchNotification : SystemMessage
+    public sealed class DeathWatchNotification : ISystemMessage
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="DeathWatchNotification" /> class.
@@ -73,7 +73,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Failed.
     /// </summary>
-    public sealed class Failed : SystemMessage
+    public sealed class Failed : ISystemMessage
     {
         private readonly long _uid;
         private readonly Exception _cause;
@@ -115,7 +115,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Supervise.
     /// </summary>
-    public sealed class Supervise : SystemMessage
+    public sealed class Supervise : ISystemMessage
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="Supervise" /> class.
@@ -150,7 +150,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Watch.
     /// </summary>
-    public class Watch : SystemMessage
+    public class Watch : ISystemMessage
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="Watch" /> class.
@@ -185,7 +185,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Unwatch.
     /// </summary>
-    public sealed class Unwatch : SystemMessage
+    public sealed class Unwatch : ISystemMessage
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="Unwatch" /> class.
@@ -219,7 +219,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class ActorTask.
     /// </summary>
-    public sealed class ActorTask : SystemMessage
+    public sealed class ActorTask : ISystemMessage
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="ActorTask" /> class.
@@ -237,7 +237,7 @@ namespace Akka.Dispatch.SysMsg
         public Task Task { get; private set; }
     }
 
-    public sealed class CompleteTask : SystemMessage
+    public sealed class CompleteTask : ISystemMessage
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="CompleteTask" /> class.
@@ -267,7 +267,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Restart.
     /// </summary>
-    public sealed class Restart : SystemMessage
+    public sealed class Restart : ISystemMessage
     {
         private Restart() { }
         private static readonly Restart _instance = new Restart();
@@ -283,7 +283,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Recreate.
     /// </summary>
-    public sealed class Recreate : SystemMessage
+    public sealed class Recreate : ISystemMessage
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="Recreate" /> class.
@@ -309,7 +309,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Resume.
     /// </summary>
-    public sealed class Resume : SystemMessage
+    public sealed class Resume : ISystemMessage
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="Resume" /> class.
@@ -335,7 +335,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Suspend.
     /// </summary>
-    public sealed class Suspend : SystemMessage
+    public sealed class Suspend : ISystemMessage
     {
         private Suspend() { }
         private static readonly Suspend _instance = new Suspend();
@@ -356,7 +356,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class SuspendReentrancy.
     /// </summary>
-    public sealed class SuspendReentrancy : SystemMessage
+    public sealed class SuspendReentrancy : ISystemMessage
     {
         private SuspendReentrancy() { }
         private static readonly SuspendReentrancy _instance = new SuspendReentrancy();
@@ -372,7 +372,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class ResumeReentrancy.
     /// </summary>
-    public sealed class ResumeReentrancy : SystemMessage
+    public sealed class ResumeReentrancy : ISystemMessage
     {
         private ResumeReentrancy() { }
         private static readonly ResumeReentrancy _instance = new ResumeReentrancy();
@@ -388,7 +388,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Stop.
     /// </summary>
-    public sealed class Stop : SystemMessage
+    public sealed class Stop : ISystemMessage
     {
         private Stop() { }
         private static readonly Stop _instance = new Stop();
@@ -409,7 +409,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     INTERNAL
     /// </summary>
-    public sealed class StopChild   //StopChild is NOT a SystemMessage
+    public sealed class StopChild   //StopChild is NOT a ISystemMessage
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="StopChild" /> class.
@@ -436,7 +436,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Escalate.
     /// </summary>
-    public sealed class Escalate : SystemMessage
+    public sealed class Escalate : ISystemMessage
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="Escalate" /> class.
@@ -464,7 +464,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class Terminate.
     /// </summary>
-    public sealed class Terminate : SystemMessage
+    public sealed class Terminate : ISystemMessage
     {
         private Terminate() { }
         private static readonly Terminate _instance = new Terminate();
@@ -482,7 +482,7 @@ namespace Akka.Dispatch.SysMsg
         }
     }
 
-    public sealed class Create : SystemMessage
+    public sealed class Create : ISystemMessage
     {
         private readonly ActorInitializationException _failure;
 

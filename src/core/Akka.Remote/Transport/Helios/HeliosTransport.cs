@@ -165,7 +165,7 @@ namespace Akka.Remote.Transport.Helios
             }
         }
 
-        protected LoggingAdapter Log;
+        protected ILoggingAdapter Log;
 
         /// <summary>
         /// maintains a list of all established connections, so we can close them easily

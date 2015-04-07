@@ -196,6 +196,6 @@ namespace Akka.Cluster
             _pendingUnreachable = _pendingUnreachable.Remove(node);
         }
 
-        public LoggingAdapter Log { get; private set; }
+        public ILoggingAdapter Log { get; private set; }
     }
 }

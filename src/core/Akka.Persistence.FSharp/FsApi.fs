@@ -43,7 +43,7 @@ type Eventsourced<'Command, 'Event, 'State> =
     /// <summary>
     /// Lazy logging adapter. It won't be initialized until logging function will be called. 
     /// </summary>
-    abstract Log : Lazy<Akka.Event.LoggingAdapter>
+    abstract Log : Lazy<Akka.Event.ILoggingAdapter>
 
     /// <summary>
     /// Defers a function execution to the moment, when actor is suposed to end it's lifecycle.
@@ -181,7 +181,7 @@ type View<'Event, 'State> =
     /// <summary>
     /// Lazy logging adapter. It won't be initialized until logging function will be called. 
     /// </summary>
-    abstract Log : Lazy<Akka.Event.LoggingAdapter>
+    abstract Log : Lazy<Akka.Event.ILoggingAdapter>
 
     /// <summary>
     /// Defers a function execution to the moment, when actor is suposed to end it's lifecycle.

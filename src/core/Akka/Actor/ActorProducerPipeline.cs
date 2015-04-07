@@ -91,7 +91,7 @@ namespace Akka.Actor
     /// </summary>
     public class ActorProducerPipelineResolver
     {
-        private readonly Lazy<LoggingAdapter> _log;
+        private readonly Lazy<ILoggingAdapter> _log;
         private readonly List<IActorProducerPlugin> _plugins = new List<IActorProducerPlugin>
         {   
             // collection of plugins loaded by default
@@ -105,9 +105,9 @@ namespace Akka.Actor
         /// </summary>
         public int TotalPluginCount { get { return _plugins.Count; } }
 
-        public ActorProducerPipelineResolver(Func<LoggingAdapter> logBuilder)
+        public ActorProducerPipelineResolver(Func<ILoggingAdapter> logBuilder)
         {
-            _log = new Lazy<LoggingAdapter>(logBuilder);
+            _log = new Lazy<ILoggingAdapter>(logBuilder);
         }
 
         /// <summary>
@@ -187,10 +187,10 @@ namespace Akka.Actor
 
     public class ActorProducerPipeline : IEnumerable<IActorProducerPlugin>
     {
-        private Lazy<LoggingAdapter> _log;
+        private Lazy<ILoggingAdapter> _log;
         private readonly List<IActorProducerPlugin> _plugins;
 
-        public ActorProducerPipeline(Lazy<LoggingAdapter> log, IEnumerable<IActorProducerPlugin> plugins)
+        public ActorProducerPipeline(Lazy<ILoggingAdapter> log, IEnumerable<IActorProducerPlugin> plugins)
         {
             _log = log;
             _plugins = new List<IActorProducerPlugin>(plugins);

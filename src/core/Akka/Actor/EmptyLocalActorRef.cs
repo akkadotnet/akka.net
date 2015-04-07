@@ -24,7 +24,7 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, IActorRef sender)
         {
-            var systemMessage = message as SystemMessage;
+            var systemMessage = message as ISystemMessage;
             if(systemMessage != null)
             {
                 SendSystemMessage(systemMessage);
@@ -54,7 +54,7 @@ namespace Akka.Actor
             SpecialHandle(deadLetter.Message, deadLetter.Sender);
         }
 
-        private void SendSystemMessage(SystemMessage message)
+        private void SendSystemMessage(ISystemMessage message)
         {
             Mailbox.DebugPrint("EmptyLocalActorRef {0} having enqueued {1}", Path, message);
             SpecialHandle(message, _provider.DeadLetters);

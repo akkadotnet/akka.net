@@ -582,7 +582,7 @@ namespace Akka.Cluster
                     });
         }
 
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
     }
 
     /// <summary>
@@ -594,7 +594,7 @@ namespace Akka.Cluster
         readonly IActorRef _publisher;
         readonly IActorRef _coreDaemon;
 
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         public ClusterCoreSupervisor()
         {
@@ -1708,7 +1708,7 @@ namespace Akka.Cluster
             _publisher.Tell(new ClusterEvent.CurrentInternalStats(_gossipStats, vclockStats));
         }
 
-        readonly LoggingAdapter _log = Context.GetLogger();
+        readonly ILoggingAdapter _log = Context.GetLogger();
     }
 
     /// <summary>
@@ -1737,7 +1737,7 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class JoinSeedNodeProcess : UntypedActor
     {
-        readonly LoggingAdapter _log = Context.GetLogger();
+        readonly ILoggingAdapter _log = Context.GetLogger();
 
         readonly ImmutableList<Address> _seeds;
         readonly Address _selfAddress;
@@ -1812,7 +1812,7 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class FirstSeedNodeProcess : UntypedActor
     {
-        readonly LoggingAdapter _log = Context.GetLogger();
+        readonly ILoggingAdapter _log = Context.GetLogger();
 
         private ImmutableList<Address> _remainingSeeds;
         readonly Address _selfAddress;
@@ -1970,7 +1970,7 @@ namespace Akka.Cluster
     class OnMemberUpListener : ReceiveActor
     {
         readonly Action _callback;
-        readonly LoggingAdapter _log = Context.GetLogger();
+        readonly ILoggingAdapter _log = Context.GetLogger();
         readonly Cluster _cluster;
 
         public OnMemberUpListener(Action callback)
