@@ -9,12 +9,12 @@ namespace Akka.Remote
     /// Marker interface for Actors that are deployed in a remote scope
     /// </summary>
 // ReSharper disable once InconsistentNaming
-    internal interface RemoteRef : IActorRefScope { }
+    internal interface IRemoteRef : IActorRefScope { }
 
     /// <summary>
     /// Class RemoteActorRef.
     /// </summary>
-    public class RemoteActorRef : InternalActorRefBase, RemoteRef
+    public class RemoteActorRef : InternalActorRefBase, IRemoteRef
     {
         /// <summary>
         /// The deploy

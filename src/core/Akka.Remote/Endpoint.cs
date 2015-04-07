@@ -105,7 +105,7 @@ namespace Akka.Remote
             }
 
             // message is intended for a remote-deployed recipient
-            else if ((recipient is RemoteRef || recipient is RepointableActorRef) && !recipient.IsLocal && !settings.UntrustedMode)
+            else if ((recipient is IRemoteRef || recipient is RepointableActorRef) && !recipient.IsLocal && !settings.UntrustedMode)
             {
                 if (settings.LogReceive) log.Debug("received remote-destined message {0}", msgLog);
                 if (provider.Transport.Addresses.Contains(recipientAddress))
