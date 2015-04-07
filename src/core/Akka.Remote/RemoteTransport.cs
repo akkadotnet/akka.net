@@ -47,7 +47,7 @@ namespace Akka.Remote
         /// <summary>
         /// A logger that can be used to log issues that may occur
         /// </summary>
-        public LoggingAdapter Log { get; protected set; }
+        public ILoggingAdapter Log { get; protected set; }
 
         /// <summary>
         /// Start up the transport, i.e. enable incoming connections

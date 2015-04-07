@@ -140,9 +140,9 @@ namespace Akka.Actor
         [DebuggerDisplay("Timer {Name,nq}, message: {Message")]
         internal class Timer : INoSerializationVerificationNeeded
         {
-            private readonly LoggingAdapter _debugLog;
+            private readonly ILoggingAdapter _debugLog;
 
-            public Timer(string name, object message, bool repeat, int generation, IActorContext context, LoggingAdapter debugLog)
+            public Timer(string name, object message, bool repeat, int generation, IActorContext context, ILoggingAdapter debugLog)
             {
                 _debugLog = debugLog;
                 Context = context;
@@ -378,7 +378,7 @@ namespace Akka.Actor
     /// <typeparam name="TData">The state data type</typeparam>
     public abstract class FSM<TState, TData> : FSMBase, IListeners, IInternalSupportsTestFSMRef<TState,TData>
     {
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         protected FSM()
         {
             if(this is ILoggingFSM)

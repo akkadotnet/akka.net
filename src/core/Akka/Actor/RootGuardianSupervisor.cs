@@ -12,13 +12,13 @@ namespace Akka.Actor
     /// </summary>
     public class RootGuardianSupervisor : MinimalActorRef
     {
-        private readonly LoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
         private readonly TaskCompletionSource<Status> _terminationPromise;
         private readonly ActorPath _path;
         private readonly Switch _stopped=new Switch(false);
         private readonly IActorRefProvider _provider;
 
-        public RootGuardianSupervisor(RootActorPath root, IActorRefProvider provider, TaskCompletionSource<Status> terminationPromise, LoggingAdapter log)
+        public RootGuardianSupervisor(RootActorPath root, IActorRefProvider provider, TaskCompletionSource<Status> terminationPromise, ILoggingAdapter log)
         {
             _log = log;
             _terminationPromise = terminationPromise;

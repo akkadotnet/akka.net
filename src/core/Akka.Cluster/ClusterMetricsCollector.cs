@@ -25,7 +25,7 @@ namespace Akka.Cluster
     /// </summary>
     internal class ClusterMetricsCollector : ReceiveActor
     {
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         /// <summary>
         /// The node ring gossiped that contains only members that are <see cref="MemberStatus.Up"/>

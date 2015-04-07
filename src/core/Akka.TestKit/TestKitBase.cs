@@ -37,7 +37,7 @@ namespace Akka.TestKit
         private readonly IActorRef _testActor;
         private TimeSpan? _end;
         private bool _lastWasNoMsg; //if last assertion was expectNoMsg, disable timing failure upon within() block end.
-        private readonly LoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
         private readonly EventFilterFactory _eventFilterFactory;
 
         /// <summary>
@@ -115,7 +115,7 @@ namespace Akka.TestKit
         public static Config DefaultConfig { get { return _defaultConfig; } }
         public static Config FullDebugConfig { get { return _fullDebugConfig; } }
         public static TimeSpan Now { get { return TimeSpan.FromTicks(DateTime.UtcNow.Ticks); } }
-        public LoggingAdapter Log { get { return _log; } }
+        public ILoggingAdapter Log { get { return _log; } }
         public object LastMessage { get { return _lastMessage.Message; } }
 
         /// <summary>

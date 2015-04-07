@@ -20,7 +20,7 @@ namespace Akka.Actor.Internals
         private IActorRef _logDeadLetterListener;
         private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
 
-        private LoggingAdapter _log;
+        private ILoggingAdapter _log;
         private IActorRefProvider _provider;
         private Settings _settings;
         private readonly string _name;
@@ -64,7 +64,7 @@ namespace Akka.Actor.Internals
         public override Dispatchers Dispatchers { get { return _dispatchers; } }
         public override Mailboxes Mailboxes { get { return _mailboxes; } }
         public override IScheduler Scheduler { get { return _scheduler; } }
-        public override LoggingAdapter Log { get { return _log; } }
+        public override ILoggingAdapter Log { get { return _log; } }
 
         public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
 

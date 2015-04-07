@@ -6,7 +6,7 @@ namespace Samples.Cluster.Simple
 {
     public class SimpleClusterListener : UntypedActor
     {
-        protected LoggingAdapter Log = Context.GetLogger();
+        protected ILoggingAdapter Log = Context.GetLogger();
         protected Akka.Cluster.Cluster Cluster = Akka.Cluster.Cluster.Get(Context.System);
 
         /// <summary>

@@ -11,7 +11,7 @@ namespace Akka.Logger.slf4net
         //private string mdcAkkaSourceAttributeName = "akkaSource";
         //private string mdcAkkaTimestamp = "akkaTimestamp";
 
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         private void WithMDC(Action<ILogger> logStatement)
         {

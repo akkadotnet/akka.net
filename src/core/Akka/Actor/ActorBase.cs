@@ -56,7 +56,7 @@ namespace Akka.Actor
     [Obsolete()]
     public interface IActorLogging
     {
-        LoggingAdapter Log { get; }
+        ILoggingAdapter Log { get; }
     }
 
     /// <summary>

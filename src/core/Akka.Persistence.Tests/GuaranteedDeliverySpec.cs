@@ -22,7 +22,7 @@ namespace Akka.Persistence.Tests
             private readonly int _redeliveryBurstLimit;
             private readonly bool _isAsync;
             private readonly IDictionary<string, ActorPath> _destinations;
-            private readonly LoggingAdapter _log;
+            private readonly ILoggingAdapter _log;
             private IActorRef _lastSnapshotAskedForBy;
 
             public Sender(IActorRef testActor, string name, TimeSpan redeliverInterval, int warn, int redeliveryBurstLimit, bool isAsync, IDictionary<string, ActorPath> destinations)

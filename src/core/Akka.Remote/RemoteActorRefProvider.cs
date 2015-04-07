@@ -18,7 +18,7 @@ namespace Akka.Remote
     /// </summary>
     public class RemoteActorRefProvider : IActorRefProvider
     {
-        private readonly LoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
 
         public RemoteActorRefProvider(string systemName, Settings settings, EventStream eventStream)
         {

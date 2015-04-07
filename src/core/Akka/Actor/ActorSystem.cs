@@ -64,7 +64,7 @@ namespace Akka.Actor
         public abstract IScheduler Scheduler { get; }
 
         /// <summary>Gets the log</summary>
-        public abstract LoggingAdapter Log { get; }
+        public abstract ILoggingAdapter Log { get; }
 
         /// <summary>
         ///     Creates a new ActorSystem with the specified name, and the specified Config

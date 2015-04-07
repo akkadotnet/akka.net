@@ -72,7 +72,7 @@ module Actors =
         /// <summary>
         /// Lazy logging adapter. It won't be initialized until logging function will be called. 
         /// </summary>
-        abstract Log : Lazy<Akka.Event.LoggingAdapter>
+        abstract Log : Lazy<Akka.Event.ILoggingAdapter>
 
         /// <summary>
         /// Defers provided function to be invoked when actor stops, regardless of reasons.

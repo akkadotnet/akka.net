@@ -85,7 +85,7 @@ namespace Akka.Routing
     /// </summary>
     public class ConsistentHashingRoutingLogic : RoutingLogic
     {
-        private readonly Lazy<LoggingAdapter> _log;
+        private readonly Lazy<ILoggingAdapter> _log;
         private ConsistentHashMapping _hashMapping;
         private readonly ActorSystem _system;
 
@@ -105,7 +105,7 @@ namespace Akka.Routing
             ConsistentHashMapping hashMapping)
         {
             _system = system;
-            _log = new Lazy<LoggingAdapter>(() => Logging.GetLogger(_system, this), true);
+            _log = new Lazy<ILoggingAdapter>(() => Logging.GetLogger(_system, this), true);
             _hashMapping = hashMapping;
             _selfAddress = system.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
             _vnodes = virtualNodesFactor == 0 ? system.Settings.DefaultVirtualNodesFactor : virtualNodesFactor;

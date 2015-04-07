@@ -242,11 +242,11 @@ namespace Akka.Remote.TestKit
     /// </summary>
     internal class ConductorHandler : IHeliosConnectionHandler
     {
-        private readonly LoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
         private readonly IActorRef _controller;
         private readonly ConcurrentDictionary<IConnection, IActorRef> _clients = new ConcurrentDictionary<IConnection, IActorRef>();
 
-        public ConductorHandler(IActorRef controller, LoggingAdapter log)
+        public ConductorHandler(IActorRef controller, ILoggingAdapter log)
         {
             _controller = controller;
             _log = log;
@@ -309,7 +309,7 @@ namespace Akka.Remote.TestKit
     /// </summary>
     class ServerFSM : FSM<ServerFSM.State, IActorRef>, ILoggingFSM
     {
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         readonly RemoteConnection _channel;
         readonly IActorRef _controller;        
         RoleName _roleName;

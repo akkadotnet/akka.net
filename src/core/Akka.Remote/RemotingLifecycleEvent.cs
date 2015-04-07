@@ -196,11 +196,11 @@ namespace Akka.Remote
     {
         public ActorSystem System { get; private set; }
 
-        public LoggingAdapter Log { get; private set; }
+        public ILoggingAdapter Log { get; private set; }
 
         public readonly LogLevel LogLevel;
 
-        public EventPublisher(ActorSystem system, LoggingAdapter log, LogLevel logLevel)
+        public EventPublisher(ActorSystem system, ILoggingAdapter log, LogLevel logLevel)
         {
             System = system;
             Log = log;

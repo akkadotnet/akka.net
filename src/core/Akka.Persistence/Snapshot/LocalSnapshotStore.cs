@@ -62,8 +62,8 @@ namespace Akka.Persistence.Snapshot
         private readonly StoreSettings _settings;
         public StoreSettings Settings { get { return _settings; } }
 
-        private LoggingAdapter _log;
-        public LoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+        private ILoggingAdapter _log;
+        public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
 
         protected override void PreStart()
         {

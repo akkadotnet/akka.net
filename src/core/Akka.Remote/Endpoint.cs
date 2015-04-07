@@ -32,11 +32,11 @@ namespace Akka.Remote
     {
         private ActorSystem system;
         private RemoteActorRefProvider provider;
-        private LoggingAdapter log;
+        private ILoggingAdapter log;
         private IInternalActorRef remoteDaemon;
         private RemoteSettings settings;
 
-        public DefaultMessageDispatcher(ActorSystem system, RemoteActorRefProvider provider, LoggingAdapter log)
+        public DefaultMessageDispatcher(ActorSystem system, RemoteActorRefProvider provider, ILoggingAdapter log)
         {
             this.system = system;
             this.provider = provider;
@@ -252,7 +252,7 @@ namespace Akka.Remote
     /// </summary>
     internal class ReliableDeliverySupervisor : UntypedActor
     {
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         private AkkaProtocolHandle handleOrActive;
         private Address localAddress;
@@ -635,7 +635,7 @@ namespace Akka.Remote
         protected RemoteSettings Settings;
         protected AkkaProtocolTransport Transport;
 
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         protected readonly EventPublisher EventPublisher;
         protected bool Inbound { get; set; }
@@ -685,7 +685,7 @@ namespace Akka.Remote
     /// </summary>
     internal abstract class EndpointActor<TS, TD> : FSM<TS, TD>
     {
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         protected readonly Address LocalAddress;
         protected Address RemoteAddress;
@@ -767,7 +767,7 @@ namespace Akka.Remote
             }
         }
 
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         private AkkaProtocolHandle _handleOrActive;
         private readonly int? _refuseUid;
         private readonly AkkaPduCodec _codec;

@@ -247,7 +247,7 @@ namespace Akka.Remote
 
         #endregion
 
-        public EndpointManager(Config config, LoggingAdapter log)
+        public EndpointManager(Config config, ILoggingAdapter log)
         {
             conf = config;
             settings = new RemoteSettings(conf);
@@ -263,7 +263,7 @@ namespace Akka.Remote
         private readonly RemoteSettings settings;
         private readonly Config conf;
         private AtomicCounterLong endpointId = new AtomicCounterLong(0L);
-        private LoggingAdapter log;
+        private ILoggingAdapter log;
         private EventPublisher eventPublisher;
 
         /// <summary>

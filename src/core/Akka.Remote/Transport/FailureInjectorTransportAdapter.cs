@@ -108,7 +108,7 @@ namespace Akka.Remote.Transport
             _shouldDebugLog = ExtendedActorSystem.Settings.Config.GetBoolean("akka.remote.gremlin.debug");
         }
 
-        private LoggingAdapter _log;
+        private ILoggingAdapter _log;
         private Random Rng
         {
             get { return ThreadLocalRandom.Current; }
