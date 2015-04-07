@@ -12,7 +12,7 @@ namespace Akka.TestKit.Internal
     /// error messages.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    public abstract class EventFilterBase : EventFilter
+    public abstract class EventFilterBase : IEventFilter
     {
         private readonly IStringMatcher _sourceMatcher;
         private readonly IStringMatcher _messageMatcher;

@@ -74,7 +74,7 @@
     <Compile Include="EventFilter\DeadLettersFilter.cs" />
     <Compile Include="EventFilter\Internal\DebugFilter.cs" />
     <Compile Include="EventFilter\Internal\ErrorFilter.cs" />
-    <Compile Include="EventFilter\EventFilter.cs" />
+    <Compile Include="EventFilter\IEventFilter.cs" />
     <Compile Include="EventFilter\Internal\EventFilterApplier.cs" />
     <Compile Include="EventFilter\Internal\StringMatcher\ContainsString.cs" />
     <Compile Include="EventFilter\Internal\StringMatcher\EqualsString.cs" />
@@ -95,10 +95,10 @@
     <Compile Include="EventFilter\Internal\WarningFilter.cs" />
     <Compile Include="EventFilter\TestEvent\Mute.cs" />
     <Compile Include="EventFilter\TestEvent\Unmute.cs" />
-    <Compile Include="EventFilter\UnmutableFilter.cs" />
+    <Compile Include="EventFilter\IUnmutableFilter.cs" />
     <Compile Include="FSMSpecHelpers.cs" />
     <Compile Include="AutoPilots.cs" />
-    <Compile Include="NoImplicitSender.cs" />
+    <Compile Include="INoImplicitSender.cs" />
     <Compile Include="Internal\BlockingCollectionTestActorQueue.cs" />
     <Compile Include="Internal\InternalTestActor.cs" />
     <Compile Include="Internal\InternalTestActorRef.cs" />

@@ -15,7 +15,7 @@ namespace Akka.TestKit
     /// </summary>
     public class TestEventListener : DefaultLogger
     {
-        private readonly List<EventFilter> _filters = new List<EventFilter>();
+        private readonly List<IEventFilter> _filters = new List<IEventFilter>();
 
         protected override bool Receive(object message)
         {
@@ -98,12 +98,12 @@ namespace Akka.TestKit
             }
         }
 
-        private void AddFilter(EventFilter filter)
+        private void AddFilter(IEventFilter filter)
         {
             _filters.Add(filter);
         }
 
-        private void RemoveFilter(EventFilter filter)
+        private void RemoveFilter(IEventFilter filter)
         {
             _filters.Remove(filter);
         }

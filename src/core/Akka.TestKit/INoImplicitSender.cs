@@ -6,7 +6,7 @@ namespace Akka.TestKit
     /// Normally test classes has <see cref="TestKitBase.TestActor">TestActor</see> as implicit sender.
     /// So when no sender is specified when sending messages, <see cref="TestKitBase.TestActor">TestActor</see>
     /// is used.
-    /// When a a test class implements <see cref="NoImplicitSender"/> this behavior is removed and the normal
+    /// When a a test class implements <see cref="INoImplicitSender"/> this behavior is removed and the normal
     /// behavior is restored, i.e. <see cref="NoSender"/> is used as sender when no sender has been specified.
     /// <example>
     /// <code>
@@ -20,7 +20,7 @@ namespace Akka.TestKit
     ///    }
     /// }
     /// 
-    /// public class WithNoImplicitSender : TestKit, NoImplicitSender
+    /// public class WithNoImplicitSender : TestKit, INoImplicitSender
     /// {
     ///    public void TheTestMethod()
     ///    {
@@ -32,7 +32,7 @@ namespace Akka.TestKit
     /// </example>
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public interface NoImplicitSender
+    public interface INoImplicitSender
     {
     }
 }

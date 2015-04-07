@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Akka.Tests.Actor
 {
-    public class ActorRefSpec : AkkaSpec, NoImplicitSender
+    public class ActorRefSpec : AkkaSpec, INoImplicitSender
     {
         [Fact]
         public void An_ActorRef_should_equal_itself()
