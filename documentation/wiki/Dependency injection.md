@@ -71,6 +71,21 @@ var system = ActorSystem.Create("MySystem");
 var propsResolver = new NinjectDependencyResolver(container,system);
 ``` 
 
+## Unity
+
+In order to use this plugin, install the Nuget package with `Install-Package Akka.DI.Unity`, then follow the instructions:
+
+```csharp
+// Create and build your container
+var container = new UnityContainer();
+container.RegisterType<TypedWorker>();
+container.RegisterType<IWorkerService, WorkerService>();
+
+// Create the ActorSystem and Dependency Resolver
+var system = ActorSystem.Create("MySystem");
+var propsResolver = new UnityDependencyResolver(container, system);
+``` 
+
 Support for additional dependency injection frameworks may be added in the future, but you can easily implement your own by implementing an [Actor Producer Extension](DI Core).
 
 > **Warning** You might be tempted at times to use an IndirectActorProducer which always returns the same instance, e.g. by using a static field. This is not supported, as it goes against the meaning of an actor restart, which is described here: [[What Restarting Means]].
