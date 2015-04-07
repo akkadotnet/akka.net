@@ -172,6 +172,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FaultToletance", "FaultTole
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FaultTolerance", "examples\FaultTolerance\FaultTolerance.csproj", "{FBEBD803-AEFC-44B1-A429-6143C3288CA4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.Unity", "contrib\dependencyInjection\Akka.DI.Unity\Akka.DI.Unity.csproj", "{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug Mono|Any CPU = Debug Mono|Any CPU
@@ -609,6 +611,14 @@ Global
 		{FBEBD803-AEFC-44B1-A429-6143C3288CA4}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{FBEBD803-AEFC-44B1-A429-6143C3288CA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FBEBD803-AEFC-44B1-A429-6143C3288CA4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -684,5 +694,6 @@ Global
 		{7086D308-1046-40D6-824A-2C379334E599} = {19FD9F6D-7ED2-4DF6-98EE-348027F8D5DA}
 		{85D1D513-2F94-404A-A99C-37F2BAD0D7BE} = {69279534-1DBA-4115-BF8B-03F77FC8125E}
 		{FBEBD803-AEFC-44B1-A429-6143C3288CA4} = {85D1D513-2F94-404A-A99C-37F2BAD0D7BE}
+		{2065C3A2-8C15-4912-BCF5-AE89E3DDA079} = {B1D10183-8FAE-4506-B935-403FCED89BDB}
 	EndGlobalSection
 EndGlobal
