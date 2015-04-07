@@ -182,6 +182,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{D1
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.Unity", "contrib\dependencyInjection\Akka.DI.Unity\Akka.DI.Unity.csproj", "{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.Unity", "contrib\dependencyInjection\Akka.DI.Unity\Akka.DI.Unity.csproj", "{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug Mono|Any CPU = Debug Mono|Any CPU
