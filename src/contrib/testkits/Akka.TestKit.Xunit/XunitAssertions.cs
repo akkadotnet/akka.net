@@ -7,7 +7,7 @@ namespace Akka.TestKit.Xunit
     /// <summary>
     /// Assertions for xUnit
     /// </summary>
-    public class XunitAssertions : TestKitAssertions
+    public class XunitAssertions : ITestKitAssertions
     {
         public void Fail(string format = "", params object[] args)
         {
