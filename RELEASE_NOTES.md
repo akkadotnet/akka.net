@@ -11,7 +11,7 @@ However, if you want full API documentation we recommend going to the following:
 
 ----
 
-## Updated Packages with 1.0 Stable Release
+**Updated Packages with 1.0 Stable Release**
 
 All of the following NuGet packages have been upgraded to 1.0 for stable release:
 
@@ -28,7 +28,7 @@ The following packages (and modules dependent on them) are still in *pre-release
 - Akka.Persistence
 
 ----
-## Introducing Full Mono Support for Akka.NET
+**Introducing Full Mono Support for Akka.NET**
 
 One of the biggest changes in Akka.NET v1.0 is the introduction of full Mono support across all modules; we even have [Raspberry PI machines talking to laptops over Akka.Remote](https://twitter.com/AkkaDotNET/status/584109606714093568)!
 
@@ -38,7 +38,7 @@ We've tested everything using Mono v3.12.1 across OS X and Ubuntu.
 
 ----
 
-## API Changes in v1.0
+**API Changes in v1.0**
 
 **All methods returning an `ActorRef` now return `IActorRef`**
 This is the most significant breaking change introduced in AKka.NET v1.0. Rather than returning the `ActorRef` abstract base class from all of the `ActorOf`, `Sender` and other methods we now return an instance of the `IActorRef` interface instead.
@@ -57,7 +57,7 @@ to an extension method, and requires `using Akka.Actor;` to be accessible.
 - Implicit cast from `ActorRef` to `Routee` has been replaced with `Routee.FromActorRef(actorRef)`
 
 
-### Switchable Behaviors
+**Switchable Behaviors**
 In order to make the switchable behavior APIs more understandable for both `UntypedActor` and `ReceiveActor` we've updated the methods to the following:
 
 ``` C#
@@ -68,7 +68,7 @@ UnbecomeStacked(); //revert to the previous behavior in the stack
 
 The underlying behavior-switching implementation hasn't changed at all - only the names of the methods.
 
-### Scheduler APIs
+**Scheduler APIs**
 The `Context.System.Scheduler` API has been overhauled to be both more extensible and understandable going forward. All of the previous capabilities for the `Scheduler` are still available, only in different packaging than they were before.
 
 Here are the new APIs:
@@ -89,7 +89,7 @@ Context.System.Scheduler.Advanced
 
 There's also a set of extension methods for specifying delays and intervals in milliseconds as well as methods for all four variants (`ScheduleTellOnceCancelable`, `ScheduleTellRepeatedlyCancelable`, `ScheduleOnceCancelable`, `ScheduleRepeatedlyCancelable`) that creates a cancelable, schedules, and returns the cancelable. 
 
-### Akka.NET `Config` now loaded automatically from App.config and Web.config
+**Akka.NET `Config` now loaded automatically from App.config and Web.config**
 In previous versions Akka.NET users had to do the following to load Akka.NET HOCON configuration sections from App.config or Web.config:
 
 ```csharp
@@ -104,7 +104,7 @@ As of Akka.NET v1.0 this is now done for you automatically:
 var actorSystem = ActorSystem.Create("MySystem"); //automatically loads App/Web.config, if any
 ```
 
-### Dispatchers
+**Dispatchers**
 Akka.NET v1.0 introduces the `ForkJoinDispatcher` as well as general purpose dispatcher re-use.
 
 ##### Using ForkJoinDispatcher
@@ -143,7 +143,7 @@ akka.actor.deploy{
 var actor = Sys.ActorOf(Props.Create<Foo>().WithDispatcher("myapp.my-forkjoin-dispatcher"));
 ```
 
-### FluentConfiguration [REMOVED]
+**FluentConfiguration [REMOVED]**
 `FluentConfig` has been removed as we've decided to standardize on HOCON configuration, but if you still want to use the old FluentConfig bits you can find them here: https://github.com/rogeralsing/Akka.FluentConfig
 
 ### F# API
@@ -192,7 +192,7 @@ The following interfaces have all been renamed to include the `I` prefix:
 - [X] `Akka.Remote.RemoteRef, Akka.Remote`
 - [X] `Akka.Routing.ConsistentHashable, Akka` (Public)
 
-### `ConsistentHashRouter` and `IConsistentHashable`
+**`ConsistentHashRouter` and `IConsistentHashable`**
 Akka.NET v1.0 introduces the idea of virtual nodes to the `ConsistentHashRouter`, which are designed to provide more even distributions of hash ranges across a relatively small number of routees. You can take advantage of virtual nodes via configuration:
 
 ```xml
@@ -214,7 +214,7 @@ var router4 = Sys.ActorOf(Props.Empty.WithRouter(
 	"router4");
 ```
 
-##### `ConsistentHashMapping` Delegate
+**`ConsistentHashMapping` Delegate**
 There are three ways to instruct a router to hash a message:
 1. Wrap the message in a `ConsistentHashableEnvelope`;
 2. Implement the `IConsistentHashable` interface on your message types; or
@@ -246,7 +246,7 @@ var router2 =
     .Props(Props.Create<Echo>()), "router2");
 ```
 
-##### `ConsistentHashable` renamed to `IConsistentHashable`
+**`ConsistentHashable` renamed to `IConsistentHashable`**
 Any objects you may have decorated with the `ConsistentHashable` interface to work with `ConsistentHashRouter` instances will need to implement `IConsistentHashable` going forward, as all interfaces have been renamed with the `I-` prefix per .NET naming conventions.
 
 ----
