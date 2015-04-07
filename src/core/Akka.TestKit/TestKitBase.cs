@@ -99,7 +99,7 @@ namespace Akka.TestKit
                 return repRef == null || repRef.IsStarted;
             }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(10));
 
-            if(!(this is NoImplicitSender))
+            if(!(this is INoImplicitSender))
             {
                 InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)testActor).Underlying;
             }

@@ -10,7 +10,7 @@ namespace Akka.TestKit
     /// Use <see cref="TestKitBase.CreateTestProbe(string)" /> inside your test 
     /// to create new instances.
     /// </summary>
-    public class TestProbe : TestKitBase, NoImplicitSender, IInternalActorRef
+    public class TestProbe : TestKitBase, INoImplicitSender, IInternalActorRef
     {      
         public TestProbe(ActorSystem system, TestKitAssertions assertions, string testProbeName=null)
             : base(assertions, system, testProbeName)

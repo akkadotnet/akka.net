@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Akka.Testkit.Tests
 {
-    public class NoImplicitSenderSpec : AkkaSpec, NoImplicitSender
+    public class NoImplicitSenderSpec : AkkaSpec, INoImplicitSender
     {
         [Fact]
         public void When_Not_ImplicitSender_then_testActor_is_not_sender()
