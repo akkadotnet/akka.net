@@ -16,7 +16,7 @@ type Snapshotter<'State> =
 
 [<Interface>]
 type Eventsourced<'Command, 'Event, 'State> =
-    inherit ActorRefFactory
+    inherit IActorRefFactory
     inherit ICanWatch
     inherit Snapshotter<'State>
         
@@ -154,7 +154,7 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
 
 [<Interface>]
 type View<'Event, 'State> =
-    inherit ActorRefFactory
+    inherit IActorRefFactory
     inherit ICanWatch
     inherit Snapshotter<'State>
 
@@ -372,7 +372,7 @@ module Linq =
 /// <param name="name">Identifies uniquely current actor across different incarnations. It's necessary to identify it's event source.</param>
 /// <param name="aggregate">Aggregate containing state of the actor, but also an event- and command-handling behavior.</param>
 /// <param name="options">Additional spawning options.</param>
-let spawnPersist (actorFactory : ActorRefFactory) (name : PersistenceId) (aggregate: Aggregate<'Command, 'Event, 'State>) (options : SpawnOption list) : IActorRef =
+let spawnPersist (actorFactory : IActorRefFactory) (name : PersistenceId) (aggregate: Aggregate<'Command, 'Event, 'State>) (options : SpawnOption list) : IActorRef =
     let e = Linq.PersistentExpression.ToExpression(fun () -> new FunPersistentActor<'Command, 'Event, 'State>(aggregate, name))
     let props = applySpawnOptions (Props.Create e) options
     actorFactory.ActorOf(props, name)
@@ -385,7 +385,7 @@ let spawnPersist (actorFactory : ActorRefFactory) (name : PersistenceId) (aggreg
 /// <param name="viewName">Identifies uniquely current view's state. It's different that event source, since many views with different internal states can relate to single event source.</param>
 /// <param name="aggregate">Aggregate containing state of the actor, but also an command-handling behavior.</param>
 /// <param name="options">Additional spawning options.</param>
-let spawnView (actorFactory : ActorRefFactory) (viewName: PersistenceId) (name : PersistenceId)  (perspective: Perspective<'Event, 'State>) (options : SpawnOption list) : IActorRef =
+let spawnView (actorFactory : IActorRefFactory) (viewName: PersistenceId) (name : PersistenceId)  (perspective: Perspective<'Event, 'State>) (options : SpawnOption list) : IActorRef =
     let e = Linq.PersistentExpression.ToExpression(fun () -> new FunPersistentView<'Event, 'State>(perspective, name, viewName))
     let props = applySpawnOptions (Props.Create e) options
     actorFactory.ActorOf(props, viewName)
@@ -397,7 +397,7 @@ let spawnView (actorFactory : ActorRefFactory) (viewName: PersistenceId) (name :
 /// <param name="name">Identifies uniquely current actor across different incarnations. It's necessary to identify it's event source.</param>
 /// <param name="aggregate">Aggregate containing state of the actor, but also an event- and command-handling behavior.</param>
 /// <param name="options">Additional spawning options.</param>
-let spawnDeliverer (actorFactory : ActorRefFactory) (name : PersistenceId) (aggregate: DeliveryAggregate<'Command, 'Event, 'State>) (options : SpawnOption list) : IActorRef =
+let spawnDeliverer (actorFactory : IActorRefFactory) (name : PersistenceId) (aggregate: DeliveryAggregate<'Command, 'Event, 'State>) (options : SpawnOption list) : IActorRef =
     let e = Linq.PersistentExpression.ToExpression(fun () -> new Deliverer<'Command, 'Event, 'State>(aggregate, name))
     let props = applySpawnOptions (Props.Create e) options
     actorFactory.ActorOf(props, name)

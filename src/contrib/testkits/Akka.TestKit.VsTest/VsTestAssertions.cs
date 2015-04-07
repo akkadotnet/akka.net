@@ -6,7 +6,7 @@ namespace Akka.TestKit.VsTest
     /// <summary>
     /// Assertions for Visual Studio Unit Testing Framework
     /// </summary>
-    public class VsTestAssertions : TestKitAssertions
+    public class VsTestAssertions : ITestKitAssertions
     {
         public void Fail(string format = "", params object[] args)
         {

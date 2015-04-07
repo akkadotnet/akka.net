@@ -7,7 +7,7 @@ namespace Akka.Actor
     /// <summary>
     /// This class contains implementations originally found in Akka´s trait ActorRefFactory in ActorRefProvider.scala
     /// https://github.com/akka/akka/blob/master/akka-actor/src/main/scala/akka/actor/ActorRefProvider.scala#L180
-    /// <see cref="ActorRefFactory"/> corresponds to that trait, but since it is an interface it
+    /// <see cref="IActorRefFactory"/> corresponds to that trait, but since it is an interface it
     /// cannot contain any code, hence this class.
     /// </summary>
     public static class ActorRefFactoryShared

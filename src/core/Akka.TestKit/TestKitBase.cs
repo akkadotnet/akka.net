@@ -12,7 +12,7 @@ namespace Akka.TestKit
     /// <summary>
     /// <remarks>Unless you're creating a TestKit for a specific test framework, you should probably not inherit directly from this class.</remarks>
     /// </summary>
-    public abstract partial class TestKitBase : ActorRefFactory
+    public abstract partial class TestKitBase : IActorRefFactory
     {
         private static readonly Config _defaultConfig = ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internal.Reference.conf");
         private static readonly Config _fullDebugConfig = ConfigurationFactory.ParseString(@"
@@ -28,7 +28,7 @@ namespace Akka.TestKit
                 akka.loglevel = DEBUG
                 akka.stdout-loglevel = DEBUG");
 
-        private readonly TestKitAssertions _assertions;
+        private readonly ITestKitAssertions _assertions;
         private readonly ActorSystem _system;
         private readonly TestKitSettings _testKitSettings;
         private readonly BlockingQueue<MessageEnvelope> _queue;
@@ -48,7 +48,7 @@ namespace Akka.TestKit
         /// <param name="assertions"></param>
         /// <param name="system">Optional: The actor system.</param>
         /// <param name="testActorName">Optional: The name of the TestActor.</param>
-        protected TestKitBase(TestKitAssertions assertions, ActorSystem system = null, string testActorName=null)
+        protected TestKitBase(ITestKitAssertions assertions, ActorSystem system = null, string testActorName=null)
             : this(assertions, system, _defaultConfig, null, testActorName)
         {
         }
@@ -61,12 +61,12 @@ namespace Akka.TestKit
         /// <param name="testActorName">Optional: The name of the TestActor.</param>
         /// <param name="assertions"></param>
         /// <param name="actorSystemName"></param>
-        protected TestKitBase(TestKitAssertions assertions, Config config, string actorSystemName = null, string testActorName = null)
+        protected TestKitBase(ITestKitAssertions assertions, Config config, string actorSystemName = null, string testActorName = null)
             : this(assertions, null, config ?? ConfigurationFactory.Empty, actorSystemName, testActorName)
         {
         }
 
-        private TestKitBase(TestKitAssertions assertions, ActorSystem system, Config config, string actorSystemName, string testActorName)
+        private TestKitBase(ITestKitAssertions assertions, ActorSystem system, Config config, string actorSystemName, string testActorName)
         {
             if(assertions == null) throw new ArgumentNullException("assertions");
             if(system == null)

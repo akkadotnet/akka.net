@@ -3,7 +3,7 @@ using System;
 namespace Akka.TestKit
 {
 // ReSharper disable once InconsistentNaming
-    public interface TestKitAssertions
+    public interface ITestKitAssertions
     {
         void Fail(string format = "", params object[] args);
         void AssertTrue(bool condition, string format = "", params object[] args);

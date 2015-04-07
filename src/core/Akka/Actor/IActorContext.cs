@@ -25,7 +25,7 @@ namespace Akka.Actor
         IActorRef Unwatch(IActorRef subject);
     }
 
-    public interface IActorContext : ActorRefFactory, ICanWatch
+    public interface IActorContext : IActorRefFactory, ICanWatch
     {
         /// <summary>
         /// Gets the <see cref="IActorRef"/> belonging to the current actor.

@@ -12,7 +12,7 @@ namespace Akka.TestKit
     /// </summary>
     public class TestProbe : TestKitBase, INoImplicitSender, IInternalActorRef
     {      
-        public TestProbe(ActorSystem system, TestKitAssertions assertions, string testProbeName=null)
+        public TestProbe(ActorSystem system, ITestKitAssertions assertions, string testProbeName=null)
             : base(assertions, system, testProbeName)
         {
         }

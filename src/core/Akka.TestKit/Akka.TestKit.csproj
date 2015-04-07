@@ -110,7 +110,7 @@
     <Compile Include="TestActors\EchoActor.cs" />
     <Compile Include="TestBarrier.cs" />
     <Compile Include="TestFSMRef.cs" />
-    <Compile Include="TestKitAssertions.cs" />
+    <Compile Include="ITestKitAssertions.cs" />
     <Compile Include="MessageEnvelope.cs" />
     <Compile Include="NullMessageEnvelope.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

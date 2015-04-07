@@ -177,12 +177,12 @@ namespace Akka.Actor.Dsl
 
     public static class ActExtensions
     {
-        public static IActorRef ActorOf(this ActorRefFactory factory, Action<IActorDsl> config, string name = null)
+        public static IActorRef ActorOf(this IActorRefFactory factory, Action<IActorDsl> config, string name = null)
         {
             return factory.ActorOf(Props.Create(() => new Act(config)), name);
         }
 
-        public static IActorRef ActorOf(this ActorRefFactory factory, Action<IActorDsl, IActorContext> config, string name = null)
+        public static IActorRef ActorOf(this IActorRefFactory factory, Action<IActorDsl, IActorContext> config, string name = null)
         {
             return factory.ActorOf(Props.Create(() => new Act(config)), name);
         }

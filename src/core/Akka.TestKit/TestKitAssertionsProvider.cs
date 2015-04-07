@@ -3,17 +3,17 @@ using Akka.Actor;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// Contains <see cref="TestKitAssertions"/>.
+    /// Contains <see cref="ITestKitAssertions"/>.
     /// </summary>
     public class TestKitAssertionsProvider : IExtension
     {
-        private readonly TestKitAssertions _assertions;
+        private readonly ITestKitAssertions _assertions;
 
-        public TestKitAssertionsProvider(TestKitAssertions assertions)
+        public TestKitAssertionsProvider(ITestKitAssertions assertions)
         {
             _assertions = assertions;
         }
 
-        public TestKitAssertions Assertions { get { return _assertions; } }
+        public ITestKitAssertions Assertions { get { return _assertions; } }
     }
 }

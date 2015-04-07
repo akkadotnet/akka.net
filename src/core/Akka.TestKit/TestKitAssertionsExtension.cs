@@ -4,9 +4,9 @@ namespace Akka.TestKit
 {
     public class TestKitAssertionsExtension : ExtensionIdProvider<TestKitAssertionsProvider>
     {
-        private readonly TestKitAssertions _assertions;
+        private readonly ITestKitAssertions _assertions;
 
-        public TestKitAssertionsExtension(TestKitAssertions assertions)
+        public TestKitAssertionsExtension(ITestKitAssertions assertions)
         {
             _assertions = assertions;
         }

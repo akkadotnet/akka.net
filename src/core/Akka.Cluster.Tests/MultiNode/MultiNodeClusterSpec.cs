@@ -129,7 +129,7 @@ namespace Akka.Cluster.Tests.MultiNode
             }
         }
 
-        readonly TestKitAssertions _assertions;
+        readonly ITestKitAssertions _assertions;
 
         protected MultiNodeClusterSpec(MultiNodeConfig config)
             : base(config)
