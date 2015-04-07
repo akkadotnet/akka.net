@@ -107,8 +107,8 @@ var actorSystem = ActorSystem.Create("MySystem"); //automatically loads App/Web.
 **Dispatchers**
 Akka.NET v1.0 introduces the `ForkJoinDispatcher` as well as general purpose dispatcher re-use.
 
-##### Using ForkJoinDispatcher
-So ForkJoinDispatcher is special - it uses [`Helios.Concurrency.DedicatedThreadPool`](https://github.com/helios-io/DedicatedThreadPool) to create a dedicated set of threads for the exclusive use of the actors configured to use a particular `ForkJoinDispatcher` instance. All of the remoting actors depend on the `default-remote-dispatcher` for instance.
+**Using ForkJoinDispatcher**
+ForkJoinDispatcher is special - it uses [`Helios.Concurrency.DedicatedThreadPool`](https://github.com/helios-io/DedicatedThreadPool) to create a dedicated set of threads for the exclusive use of the actors configured to use a particular `ForkJoinDispatcher` instance. All of the remoting actors depend on the `default-remote-dispatcher` for instance.
 
 Here's how you can create your own ForkJoinDispatcher instances via Config:
 
@@ -146,12 +146,12 @@ var actor = Sys.ActorOf(Props.Create<Foo>().WithDispatcher("myapp.my-forkjoin-di
 **FluentConfiguration [REMOVED]**
 `FluentConfig` has been removed as we've decided to standardize on HOCON configuration, but if you still want to use the old FluentConfig bits you can find them here: https://github.com/rogeralsing/Akka.FluentConfig
 
-### F# API
+**F# API**
 The F# API has changed to reflect the other C# interface changes, as well as unique additions specific to F#.
 
 TODO: need help from F# team to sort this out
 
-### Interface Renames
+**Interface Renames**
 In order to comply with .NET naming conventions and standards, all of the following interfaces have been renamed with the `I{InterfaceName}` prefix.
 
 The following interfaces have all been renamed to include the `I` prefix:
