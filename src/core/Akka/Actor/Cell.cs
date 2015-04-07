@@ -125,6 +125,6 @@ namespace Akka.Actor
         //    * schedule the actor to run, depending on which type of cell it is.
         //    * Is only allowed to throw Fatal Throwables.
         //    */
-        //    def sendSystemMessage(msg: SystemMessage): Unit
+        //    def sendSystemMessage(msg: ISystemMessage): Unit
     }
 }

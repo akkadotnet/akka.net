@@ -80,9 +80,9 @@ namespace Akka.Actor
         protected override void TellInternal(object message, IActorRef sender)
         {
 
-            if (message is SystemMessage) //we have special handling for system messages
+            if (message is ISystemMessage) //we have special handling for system messages
             {
-                SendSystemMessage(message.AsInstanceOf<SystemMessage>(), sender);
+                SendSystemMessage(message.AsInstanceOf<ISystemMessage>(), sender);
             }
             else
             {
@@ -94,7 +94,7 @@ namespace Akka.Actor
             }
         }
 
-        protected void SendSystemMessage(SystemMessage message, IActorRef sender)
+        protected void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
             var d = message as DeathWatchNotification;
             if (message is Terminate)

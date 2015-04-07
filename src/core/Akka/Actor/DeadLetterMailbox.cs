@@ -16,7 +16,7 @@ namespace Akka.Actor
         public override void Post(IActorRef receiver, Envelope envelope)
         {
             var message = envelope.Message;
-            if(message is SystemMessage)
+            if(message is ISystemMessage)
             {
                 Mailbox.DebugPrint("DeadLetterMailbox forwarded system message " + envelope+ " as a DeadLetter");
                 _deadLetters.Tell(new DeadLetter(message, receiver, receiver), receiver);

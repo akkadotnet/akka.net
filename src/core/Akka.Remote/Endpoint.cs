@@ -97,7 +97,7 @@ namespace Akka.Remote
                             log.Debug("operating in UntrustedMode, dropping inbound IPossiblyHarmful message of type {0}", msg.GetType());
                         }
                     })
-                    .With<SystemMessage>(msg => { recipient.Tell(msg); })
+                    .With<ISystemMessage>(msg => { recipient.Tell(msg); })
                     .Default(msg =>
                     {
                         recipient.Tell(msg, sender);
@@ -488,7 +488,7 @@ namespace Akka.Remote
                 })
                 .With<EndpointManager.Send>(send =>
                 {
-                    if (send.Message is SystemMessage)
+                    if (send.Message is ISystemMessage)
                     {
                         TryBuffer(send.Copy(NextSeq()));
                     }
@@ -570,7 +570,7 @@ namespace Akka.Remote
 
         private void HandleSend(EndpointManager.Send send)
         {
-            if (send.Message is SystemMessage)
+            if (send.Message is ISystemMessage)
             {
                 var sequencedSend = send.Copy(NextSeq());
                 TryBuffer(sequencedSend);

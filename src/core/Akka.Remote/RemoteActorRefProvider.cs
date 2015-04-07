@@ -387,7 +387,7 @@ namespace Akka.Remote
         ///     Afters the send system message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void AfterSendSystemMessage(SystemMessage message)
+        public void AfterSendSystemMessage(ISystemMessage message)
         {
             message.Match()
                 .With<RemoteWatcher.Rewatch>(rew => _remoteWatcher.Tell(new RemoteWatcher.RewatchRemote(rew.Watchee, rew.Watcher)))

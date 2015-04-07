@@ -28,7 +28,7 @@ namespace Akka.Actor
 
         protected override void TellInternal(object message, IActorRef sender)
         {
-            var systemMessage = message as SystemMessage;
+            var systemMessage = message as ISystemMessage;
             if(systemMessage!=null)
             {
                 SendSystemMessage(systemMessage);
@@ -43,7 +43,7 @@ namespace Akka.Actor
             }
         }
 
-        private void SendSystemMessage(SystemMessage systemMessage)
+        private void SendSystemMessage(ISystemMessage systemMessage)
         {
             _stopped.IfOff(() =>
             {

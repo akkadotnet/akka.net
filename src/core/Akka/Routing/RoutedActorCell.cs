@@ -151,7 +151,7 @@ namespace Akka.Routing
 
         public override void Post(IActorRef sender, object message)
         {
-            if (message is SystemMessage) base.Post(sender, message);
+            if (message is ISystemMessage) base.Post(sender, message);
             else SendMessage(sender, message);
         }
 
