@@ -3,7 +3,7 @@
 namespace Akka.TestKit
 {
     // ReSharper disable once InconsistentNaming
-    public interface EventFilter
+    public interface IEventFilter
     {
         bool Apply(LogEvent logEvent);
     }

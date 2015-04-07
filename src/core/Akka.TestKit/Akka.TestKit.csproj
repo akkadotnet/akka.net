@@ -74,7 +74,7 @@
     <Compile Include="EventFilter\DeadLettersFilter.cs" />
     <Compile Include="EventFilter\Internal\DebugFilter.cs" />
     <Compile Include="EventFilter\Internal\ErrorFilter.cs" />
-    <Compile Include="EventFilter\EventFilter.cs" />
+    <Compile Include="EventFilter\IEventFilter.cs" />
     <Compile Include="EventFilter\Internal\EventFilterApplier.cs" />
     <Compile Include="EventFilter\Internal\StringMatcher\ContainsString.cs" />
     <Compile Include="EventFilter\Internal\StringMatcher\EqualsString.cs" />
