@@ -27,6 +27,7 @@ let configuration = "Release"
 let nugetTitleSuffix = " - BETA"
 let toolDir = "tools"
 let CloudCopyDir = toolDir @@ "CloudCopy"
+let AzCopyDir = toolDir @@ "AzCopy"
 
 // Read release notes and version
 
@@ -124,14 +125,14 @@ Target "AzureDocsDeploy" (fun _ ->
     let rec pushToAzure docDir azureUrl container azureAccount azureKey trialsLeft =
         let tracing = enableProcessTracing
         enableProcessTracing <- false
-        let arguments = sprintf "%s\* %s DefaultEndpointsProtocol=https;AccountName=%s;AccountKey=%s -Z" (Path.GetFullPath docDir) (azureUrl @@ container) azureAccount azureKey
+        let arguments = sprintf "/Source:%s /Dest:%s /DestKey:%s /S" (Path.GetFullPath docDir) (azureUrl @@ container) azureKey
         tracefn "Pushing docs to %s. Attempts left: %d" (azureUrl) trialsLeft
         try 
             
             let result = ExecProcess(fun info ->
-                info.FileName <- CloudCopyDir @@ "CloudCopy.exe"
+                info.FileName <- AzCopyDir @@ "AzCopy.exe"
                 info.Arguments <- arguments) (TimeSpan.FromMinutes 120.0) //takes a very long time to upload
-            if result <> 0 then failwithf "Error during CloudCopy.exe upload to azure."
+            if result <> 0 then failwithf "Error during AzCopy.exe upload to azure."
         with exn -> 
             if (trialsLeft > 0) then (pushToAzure docDir azureUrl container azureAccount azureKey (trialsLeft-1))
             else raise exn
