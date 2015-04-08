@@ -36,7 +36,7 @@ Function AddHeaderToSourceFile($sourcePath) {
 
         $fileLines = (Get-Content $sourcePath) -join "`n"
     
-        $content = $noticeToInsert + $fileLines
+        $content = $noticeToInsert + $fileLines + "`r`n"
 
         $content | Out-File $sourcePath -Encoding utf8
 
