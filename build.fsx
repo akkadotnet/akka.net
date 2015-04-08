@@ -136,7 +136,7 @@ Target "AzureDocsDeploy" (fun _ ->
         with exn -> 
             if (trialsLeft > 0) then (pushToAzure docDir azureUrl container azureAccount azureKey (trialsLeft-1))
             else raise exn
-    let canPush = hasBuildParam "azureKey" && hasBuildParam "azureAccount" && hasBuildParam "azureUrl" && hasBuildParam "azureKey"
+    let canPush = hasBuildParam "azureKey" && hasBuildParam "azureUrl" && hasBuildParam "azureKey"
     if (canPush) then
          printfn "Uploading API docs to Azure..."
          let azureUrl = getBuildParam "azureUrl"
