@@ -1,10 +1,3 @@
-Ôªø//-----------------------------------------------------------------------
-// <copyright file="TerminatingChildrenContainer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
-
 using System;
 using System.Text;
 using Akka.Util.Internal;
@@ -19,7 +12,7 @@ namespace Akka.Actor.Internal
     /// or Terminating.
     /// Removing the last child which was supposed to be terminating will return a different
     /// type of container, depending on whether or not children are left and whether or not
-    /// the reason was ‚ÄúTerminating‚Äù.
+    /// the reason was ìTerminatingî.
     /// </summary>
     public class TerminatingChildrenContainer : ChildrenContainerBase
     {
