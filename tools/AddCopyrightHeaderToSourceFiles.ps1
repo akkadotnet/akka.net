@@ -43,5 +43,8 @@ Function AddHeaderToSourceFile($sourcePath) {
     }
 }
 
-$startingPath = "..\src"
+$scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
+$parent = (get-item $scriptPath).Parent.FullName
+$startingPath = "$parent\src"
 Get-ChildItem  $startingPath\*.cs -Recurse | Select FullName | Foreach-Object { AddHeaderToSourceFile($_.FullName)}
+Get-ChildItem  $startingPath\*.fs -Recurse | Select FullName | Foreach-Object { AddHeaderToSourceFile($_.FullName)}
