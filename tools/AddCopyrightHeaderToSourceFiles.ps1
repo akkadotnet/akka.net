@@ -1,4 +1,5 @@
-﻿$noticeTemplate = "//-----------------------------------------------------------------------`n// <copyright file=`"[FileName]`" company=`"Akka.NET Project`">`n//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>`n//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>`n// </copyright>`n//-----------------------------------------------------------------------`n`n"
+﻿$lineBreak = "`r`n"
+$noticeTemplate = "//-----------------------------------------------------------------------$lineBreak// <copyright file=`"[FileName]`" company=`"Akka.NET Project`">$lineBreak//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>$lineBreak//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>$lineBreak// </copyright>$lineBreak//-----------------------------------------------------------------------$lineBreak$lineBreak"
 $tokenToReplace = [regex]::Escape("[FileName]")
 
 Function CreateFileSpecificNotice($sourcePath){
@@ -34,9 +35,9 @@ Function AddHeaderToSourceFile($sourcePath) {
         #"Source file does not contain notice -- adding"
         $noticeToInsert = CreateFileSpecificNotice($sourcePath)
 
-        $fileLines = (Get-Content $sourcePath) -join "`n"
+        $fileLines = (Get-Content $sourcePath) -join $lineBreak
     
-        $content = $noticeToInsert + $fileLines + "`r`n"
+        $content = $noticeToInsert + $fileLines + $lineBreak
 
         $content | Out-File $sourcePath -Encoding utf8
 
