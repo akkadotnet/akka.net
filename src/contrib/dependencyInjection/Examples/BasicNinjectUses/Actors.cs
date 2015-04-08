@@ -1,4 +1,11 @@
-﻿﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Actors.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+﻿using Akka.Actor;
 using Akka.Routing;
 using System;
 public class AnotherMessage
@@ -47,3 +54,4 @@ public class TypedWorker : TypedActor, IHandle<TypedActorMessage>, IHandle<Anoth
         Console.WriteLine("{0} received other {1}", Self.Path.Name, message);
     }
 }
+

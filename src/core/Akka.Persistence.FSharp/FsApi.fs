@@ -1,4 +1,11 @@
-﻿module Akka.Persistence.FSharp
+﻿//-----------------------------------------------------------------------
+// <copyright file="FsApi.fs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+module Akka.Persistence.FSharp
 
 open System
 open Akka.Actor
@@ -401,3 +408,4 @@ let spawnDeliverer (actorFactory : IActorRefFactory) (name : PersistenceId) (agg
     let e = Linq.PersistentExpression.ToExpression(fun () -> new Deliverer<'Command, 'Event, 'State>(aggregate, name))
     let props = applySpawnOptions (Props.Create e) options
     actorFactory.ActorOf(props, name)
+

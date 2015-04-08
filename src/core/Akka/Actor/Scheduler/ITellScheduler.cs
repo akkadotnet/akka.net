@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="ITellScheduler.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 
 namespace Akka.Actor
@@ -40,3 +47,4 @@ namespace Akka.Actor
         void ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable);
     }
 }
+

@@ -1,4 +1,11 @@
-﻿namespace System
+﻿//-----------------------------------------------------------------------
+// <copyright file="AssemblyInfo.fs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+namespace System
 open System
 open System.Reflection
 open System.Runtime.InteropServices
@@ -16,3 +23,4 @@ do ()
 
 module internal AssemblyVersionInformation =
     let [<Literal>] Version = "1.0.0.0"
+

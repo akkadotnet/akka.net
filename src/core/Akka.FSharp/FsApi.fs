@@ -1,4 +1,11 @@
-﻿namespace Akka.FSharp
+﻿//-----------------------------------------------------------------------
+// <copyright file="FsApi.fs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+namespace Akka.FSharp
 
 open Akka.Actor
 open System
@@ -632,3 +639,4 @@ module EventStreaming =
     /// Publishes an event on the provided event stream. Event channel is resolved from event's type.
     /// </summary>
     let publish (event: 'Event) (eventStream: Akka.Event.EventStream) : unit = eventStream.Publish event
+

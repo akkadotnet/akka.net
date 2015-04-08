@@ -1,4 +1,11 @@
-﻿using System.Configuration;
+﻿//-----------------------------------------------------------------------
+// <copyright file="CDataConfigurationElement.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Configuration;
 using System.Xml;
 
 namespace Akka.Configuration.Hocon
@@ -27,3 +34,4 @@ namespace Akka.Configuration.Hocon
         }
     }
 }
+
