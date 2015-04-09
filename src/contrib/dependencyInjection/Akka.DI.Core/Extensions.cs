@@ -1,8 +1,12 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Extensions.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using Akka.Actor;
 
 namespace Akka.DI.Core
 {
@@ -20,9 +24,16 @@ namespace Akka.DI.Core
         {
             if (system == null) throw new ArgumentNullException("system");
             if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
-            system.RegisterExtension((IExtensionId)DIExtension.DIExtensionProvider);
+            system.RegisterExtension(DIExtension.DIExtensionProvider);
             DIExtension.DIExtensionProvider.Get(system).Initialize(dependencyResolver);
         }
         
+
+        public static DIActorContextAdapter DI(this IActorContext context)
+        {
+            return new DIActorContextAdapter(context);
+        }
+
     }
 }
+

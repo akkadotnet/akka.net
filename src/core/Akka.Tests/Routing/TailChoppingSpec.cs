@@ -1,14 +1,18 @@
-﻿using Akka.Actor;
-using Akka.Routing;
-using Akka.TestKit;
-using Akka.Util;
-using Akka.Util.Internal;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TailChoppingSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Routing;
+using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Routing
@@ -85,7 +89,7 @@ namespace Akka.Tests.Routing
             }
         }
 
-        public Func<Func<ActorRef, int>, bool> OneOfShouldEqual(int what, IEnumerable<ActorRef> actors)
+        public Func<Func<IActorRef, int>, bool> OneOfShouldEqual(int what, IEnumerable<IActorRef> actors)
         {
             return func =>
             {
@@ -94,7 +98,7 @@ namespace Akka.Tests.Routing
             };
         }
 
-        public Func<Func<ActorRef, int>, bool> AllShouldEqual(int what, IEnumerable<ActorRef> actors)
+        public Func<Func<IActorRef, int>, bool> AllShouldEqual(int what, IEnumerable<IActorRef> actors)
         {
             return func =>
             {
@@ -106,7 +110,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Tail_chopping_router_must_deliver_a_broadcast_message_using_tell()
         {
-            var doneLatch = new TestLatch(Sys, 2);
+            var doneLatch = new TestLatch(2);
             var counter1 = new AtomicCounter(0);
             var counter2 = new AtomicCounter(0);
 
@@ -140,7 +144,7 @@ namespace Akka.Tests.Routing
             probe.Send(routedActor, "");
             probe.ExpectMsg("ack");
 
-            var actorList = new List<ActorRef> { actor1, actor2 };
+            var actorList = new List<IActorRef> { actor1, actor2 };
             Assert.True(OneOfShouldEqual(1, actorList)((x => (int)x.Ask("times").Result)));
 
             routedActor.Tell(new Broadcast("stop"));
@@ -160,10 +164,11 @@ namespace Akka.Tests.Routing
             probe.Send(routedActor, "");
             probe.ExpectMsg<Status.Failure>();
 
-            var actorList = new List<ActorRef> { actor1, actor2 };
+            var actorList = new List<IActorRef> { actor1, actor2 };
             Assert.True(AllShouldEqual(1, actorList)((x => (int)x.Ask("times").Result)));
 
             routedActor.Tell(new Broadcast("stop"));
         }
     }
 }
+

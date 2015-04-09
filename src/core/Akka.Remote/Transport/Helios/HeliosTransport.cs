@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="HeliosTransport.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -6,7 +13,6 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
-using Helios.Buffers;
 using Helios.Exceptions;
 using Helios.Net;
 using Helios.Net.Bootstrap;
@@ -166,7 +172,7 @@ namespace Akka.Remote.Transport.Helios
             }
         }
 
-        protected LoggingAdapter Log;
+        protected ILoggingAdapter Log;
 
         /// <summary>
         /// maintains a list of all established connections, so we can close them easily
@@ -395,3 +401,4 @@ namespace Akka.Remote.Transport.Helios
         }
     }
 }
+

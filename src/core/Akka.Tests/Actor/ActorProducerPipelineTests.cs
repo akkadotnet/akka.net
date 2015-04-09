@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorProducerPipelineTests.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.TestKit;
@@ -97,7 +104,7 @@ namespace Akka.Tests.Actor
             private StashStatus() { }
         }
 
-        internal class StashingActor: ReceiveActor, WithUnboundedStash
+        internal class StashingActor: ReceiveActor, IWithUnboundedStash
         {
             public StashingActor()
             {
@@ -195,3 +202,4 @@ namespace Akka.Tests.Actor
         }
     }
 }
+

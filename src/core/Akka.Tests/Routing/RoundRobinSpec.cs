@@ -1,11 +1,14 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RoundRobinSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Akka.Tests.Routing
@@ -38,7 +41,7 @@ namespace Akka.Tests.Routing
         public void RoundRobin_must_be_able_to_shut_down_its_instance()
         {
             const int routeeCount = 7;
-            var testLatch = new TestLatch(Sys, routeeCount);
+            var testLatch = new TestLatch(routeeCount);
             var router = Sys.ActorOf(new RoundRobinPool(routeeCount).Props(Props.Create(() => new HelloWorldActor(testLatch))));
             router.Tell("hello", TestActor);
             router.Tell("hello", TestActor);
@@ -61,3 +64,4 @@ namespace Akka.Tests.Routing
         }
     }
 }
+

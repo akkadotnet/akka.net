@@ -1,4 +1,10 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="EmptyLocalActorRef.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -7,11 +13,11 @@ namespace Akka.Actor
 {
     public class EmptyLocalActorRef : MinimalActorRef
     {
-        private readonly ActorRefProvider _provider;
+        private readonly IActorRefProvider _provider;
         private readonly ActorPath _path;
         private readonly EventStream _eventStream;
 
-        public EmptyLocalActorRef(ActorRefProvider provider, ActorPath path, EventStream eventStream)
+        public EmptyLocalActorRef(IActorRefProvider provider, ActorPath path, EventStream eventStream)
         {
             _provider = provider;
             _path = path;
@@ -20,12 +26,12 @@ namespace Akka.Actor
 
         public override ActorPath Path { get { return _path; } }
 
-        public override ActorRefProvider Provider { get { return _provider; } }
+        public override IActorRefProvider Provider { get { return _provider; } }
         public override bool IsTerminated { get { return true; } }
 
-        protected override void TellInternal(object message, ActorRef sender)
+        protected override void TellInternal(object message, IActorRef sender)
         {
-            var systemMessage = message as SystemMessage;
+            var systemMessage = message as ISystemMessage;
             if(systemMessage != null)
             {
                 SendSystemMessage(systemMessage);
@@ -34,7 +40,7 @@ namespace Akka.Actor
             SendUserMessage(message, sender);
         }
 
-        protected virtual void SendUserMessage(object message, ActorRef sender)
+        protected virtual void SendUserMessage(object message, IActorRef sender)
         {
             if(message == null) throw new InvalidMessageException();
             var deadLetter = message as DeadLetter;
@@ -55,13 +61,13 @@ namespace Akka.Actor
             SpecialHandle(deadLetter.Message, deadLetter.Sender);
         }
 
-        private void SendSystemMessage(SystemMessage message)
+        private void SendSystemMessage(ISystemMessage message)
         {
             Mailbox.DebugPrint("EmptyLocalActorRef {0} having enqueued {1}", Path, message);
             SpecialHandle(message, _provider.DeadLetters);
         }
 
-        protected virtual bool SpecialHandle(object message, ActorRef sender)
+        protected virtual bool SpecialHandle(object message, IActorRef sender)
         {
             var w = message as Watch;
             if(w != null)
@@ -99,3 +105,4 @@ namespace Akka.Actor
         }
     }
 }
+

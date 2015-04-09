@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Props.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -23,8 +30,29 @@ namespace Akka.Actor
     ///   private Props otherProps = props.WithDeploy(deployment info);
     ///  </code>
     /// </summary>
-    public class Props : IEquatable<Props>
+    public class Props : IEquatable<Props> , ISurrogated
     {
+        public class PropsSurrogate : ISurrogate
+        {
+            public Type Type { get; set; }
+            public Deploy Deploy { get; set; }
+            public object[] Arguments { get; set; }
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new Props(Deploy, Type, Arguments);
+            }
+        }
+
+        public ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new PropsSurrogate()
+            {
+                Arguments = Arguments,
+                Type = Type,
+                Deploy = Deploy,
+            };
+        }
+
         public bool Equals(Props other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -89,6 +117,8 @@ namespace Akka.Actor
             }
         }
 
+
+
         /// <summary>
         ///     The default deploy
         /// </summary>
@@ -112,7 +142,7 @@ namespace Akka.Actor
         /// <summary>
         ///     The default producer
         /// </summary>
-        private static readonly IndirectActorProducer defaultProducer = new DefaultProducer();
+        private static readonly IIndirectActorProducer defaultProducer = new DefaultProducer();
 
         /// <summary>
         ///     The intern type of the actor or the producer
@@ -127,7 +157,7 @@ namespace Akka.Actor
         /// <summary>
         ///     The producer of the actor
         /// </summary>
-        private IndirectActorProducer producer;
+        private IIndirectActorProducer producer;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Props" /> class.
@@ -319,7 +349,7 @@ namespace Akka.Actor
 
             object[] args = newExpression.GetArguments().ToArray();
 
-            return new Props(typeof (TActor), args);
+            return new Props(typeof (TActor), supervisorStrategy, args);
         }
 
         /// <summary>
@@ -338,7 +368,7 @@ namespace Akka.Actor
         /// <typeparam name="TProducer">The type of the actor producer</typeparam>
         /// <param name="args">The arguments</param>
         /// <returns>Props</returns>
-        public static Props CreateBy<TProducer>(params object[] args) where TProducer : class, IndirectActorProducer
+        public static Props CreateBy<TProducer>(params object[] args) where TProducer : class, IIndirectActorProducer
         {
             return new Props(typeof(TProducer), args);
         }
@@ -415,14 +445,23 @@ namespace Akka.Actor
             // TODO: this is a hack designed to preserve explicit router deployments https://github.com/akkadotnet/akka.net/issues/546
             // in reality, we should be able to do copy.Deploy = deploy.WithFallback(copy.Deploy); but that blows up at the moment
             // - Aaron Stannard
-            if (!(original.RouterConfig is NoRouter || original.RouterConfig is FromConfig) && deploy.RouterConfig is NoRouter)
-            {
-                copy.Deploy = deploy.WithRouterConfig(original.RouterConfig);
-            }
-            else
-            {
-                copy.Deploy = deploy;
-            }
+            copy.Deploy = deploy.WithFallback(copy.Deploy);
+            //if (!(original.RouterConfig is NoRouter || original.RouterConfig is FromConfig) && deploy.RouterConfig is NoRouter)
+            //{
+            //    copy.Deploy = deploy.WithFallback(copy.Deploy);
+            //    copy.Deploy = deploy.WithRouterConfig(original.RouterConfig);
+            //}
+            ////both configs describe valid, programmatically defined routers (usually clustered routers)
+            //else if (!(original.RouterConfig is NoRouter || original.RouterConfig is FromConfig) &&
+            //         !(deploy.RouterConfig is FromConfig))
+            //{
+            //    var deployedRouter = deploy.RouterConfig.WithFallback(original.RouterConfig);
+            //    copy.Deploy = copy.Deploy.WithRouterConfig(deployedRouter);
+            //}
+            //else
+            //{
+            //    copy.Deploy = deploy;
+            //}
             
             return copy;
         }
@@ -480,7 +519,7 @@ namespace Akka.Actor
             }
         }
 
-        private class DefaultProducer : IndirectActorProducer
+        private class DefaultProducer : IIndirectActorProducer
         {
             public ActorBase Produce()
             {
@@ -491,9 +530,15 @@ namespace Akka.Actor
             {
                 get { return typeof(ActorBase); }
             }
+
+
+            public void Release(ActorBase actor)
+            {
+                actor = null;
+            }
         }
 
-        private class ActivatorProducer : IndirectActorProducer
+        private class ActivatorProducer : IIndirectActorProducer
         {
             private readonly Type _actorType;
             private readonly object[] _args;
@@ -513,9 +558,15 @@ namespace Akka.Actor
             {
                 get { return _actorType; }
             }
+
+
+            public void Release(ActorBase actor)
+            {
+                actor = null;
+            }
         }
 
-        private class FactoryConsumer<TActor> : IndirectActorProducer where TActor : ActorBase
+        private class FactoryConsumer<TActor> : IIndirectActorProducer where TActor : ActorBase
         {
             private readonly Func<TActor> _factory;
 
@@ -533,22 +584,41 @@ namespace Akka.Actor
             {
                 get { return typeof(TActor); }
             }
+
+
+            public void Release(ActorBase actor)
+            {
+                actor = null;
+            }
         }
 
         #endregion
 
-        private static IndirectActorProducer CreateProducer(Type type, object[] args)
+        private static IIndirectActorProducer CreateProducer(Type type, object[] args)
         {
             if (type == null) {
                 return defaultProducer;
             }
-            if (typeof(IndirectActorProducer).IsAssignableFrom(type)) {
-                return Activator.CreateInstance(type, args).AsInstanceOf<IndirectActorProducer>();
+            if (typeof(IIndirectActorProducer).IsAssignableFrom(type)) {
+                return Activator.CreateInstance(type, args).AsInstanceOf<IIndirectActorProducer>();
             }
             if (typeof(ActorBase).IsAssignableFrom(type)) {
                 return new ActivatorProducer(type, args);
             }
             throw new ArgumentException(string.Format("Unknown actor producer [{0}]", type.FullName));
+        }
+
+        internal void Release(ActorBase actor)
+        {
+            try
+            {
+                if (this.producer != null) this.producer.Release(actor);
+            }
+            finally
+            {
+                actor = null;	
+            }
+
         }
     }
 
@@ -625,7 +695,7 @@ namespace Akka.Actor
     ///     subclass. It can be used to allow a dependency injection framework to
     ///     determine the actual actor class and how it shall be instantiated.
     /// </summary>
-    public interface IndirectActorProducer
+    public interface IIndirectActorProducer
     {
         /// <summary>
         ///     This factory method must produce a fresh actor instance upon each
@@ -640,5 +710,13 @@ namespace Akka.Actor
         ///     be created. The returned type is not used to produce the actor.
         /// </summary>
         Type ActorType { get; }
+
+        /// <summary>
+        /// This method is used by [[Props]] to signal the Producer that it can
+        /// release it's reference.  <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501/ref=sr_1_1?ie=UTF8&qid=1425861096&sr=8-1&keywords=mark+seemann">HERE</see> 
+        /// </summary>
+        /// <param name="actor"></param>
+        void Release(ActorBase actor);
     }
 }
+

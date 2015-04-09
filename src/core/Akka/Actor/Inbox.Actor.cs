@@ -1,7 +1,13 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Inbox.Actor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using Akka.Event;
 
 namespace Akka.Actor
@@ -16,10 +22,10 @@ namespace Akka.Actor
 
         private object _currentMessage;
         private Select? _currentSelect;
-        private Tuple<DateTime, CancellationTokenSource> _currentDeadline;
+        private Tuple<DateTime, ICancelable> _currentDeadline;
 
         private int _size;
-        private LoggingAdapter _log = Context.GetLogger();
+        private ILoggingAdapter _log = Context.GetLogger();
 
         public InboxActor(int size)
         {
@@ -163,11 +169,9 @@ namespace Akka.Actor
                     {
                         _currentDeadline.Item2.Cancel();
                     }
-                    var cancellationTokenSource = new CancellationTokenSource();
-                    Context.System.Scheduler.ScheduleOnce(next.Deadline - DateTime.Now, Self, new Kick(),
-                        cancellationTokenSource.Token);
+                    var cancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(next.Deadline - DateTime.Now, Self, new Kick(), Self);
 
-                    _currentDeadline = Tuple.Create(next.Deadline, cancellationTokenSource);
+                    _currentDeadline = Tuple.Create(next.Deadline, cancelable);
                 }
             }
 
@@ -176,3 +180,4 @@ namespace Akka.Actor
     }
 
 }
+

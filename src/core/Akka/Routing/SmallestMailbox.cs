@@ -1,8 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="SmallestMailbox.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util;
 
 namespace Akka.Routing
 {
@@ -56,7 +62,7 @@ namespace Akka.Routing
             return winner;
         }
 
-        private Cell TryGetActorCell(Routee routee)
+        private ICell TryGetActorCell(Routee routee)
         {
             var refRoutee = routee as ActorRefRoutee;
             if (refRoutee != null)
@@ -73,6 +79,32 @@ namespace Akka.Routing
 
     public class SmallestMailboxPool : Pool
     {
+        public class SmallestMailboxPoolSurrogate : ISurrogate
+        {
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new SmallestMailboxPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+            }
+
+            public int NrOfInstances { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Resizer Resizer { get; set; }
+            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public string RouterDispatcher { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new SmallestMailboxPoolSurrogate
+            {
+                NrOfInstances = NrOfInstances,
+                UsePoolDispatcher = UsePoolDispatcher,
+                Resizer = Resizer,
+                SupervisorStrategy = SupervisorStrategy,
+                RouterDispatcher = RouterDispatcher,
+            };
+        }
+
         /// <summary>
         /// </summary>
         /// <param name="nrOfInstances">The nr of instances.</param>
@@ -91,15 +123,32 @@ namespace Akka.Routing
             
         }
 
-        protected SmallestMailboxPool()
-        {            
-        }
-
         public SmallestMailboxPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null) { }
 
         public override Router CreateRouter(ActorSystem system)
         {
             return new Router(new SmallestMailboxRoutingLogic());
         }
+
+        public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
+        {
+            return new SmallestMailboxPool(NrOfInstances, Resizer, strategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        public override Pool WithResizer(Resizer resizer)
+        {
+            return new SmallestMailboxPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        public override Pool WithDispatcher(string dispatcher)
+        {
+            return new SmallestMailboxPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher, UsePoolDispatcher);
+        }
+
+        public override RouterConfig WithFallback(RouterConfig routerConfig)
+        {
+            return OverrideUnsetConfig(routerConfig);
+        }
     }
 }
+

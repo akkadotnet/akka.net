@@ -1,9 +1,16 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RoundRobin.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
+using Akka.Util;
 
 namespace Akka.Routing
 {
@@ -15,7 +22,7 @@ namespace Akka.Routing
         /// <summary>
         ///     The next
         /// </summary>
-        private int next = -1;
+        private int _next = -1;
 
         /// <summary>
         ///     Selects the specified message.
@@ -29,7 +36,7 @@ namespace Akka.Routing
             {
                 return Routee.NoRoutee;
             }
-            return routees[Interlocked.Increment(ref next)%routees.Length];
+            return routees[Interlocked.Increment(ref _next)%routees.Length];
         }
     }
 
@@ -43,10 +50,24 @@ namespace Akka.Routing
     /// </summary>
     public class RoundRobinGroup : Group
     {
-        protected RoundRobinGroup()
+        public class RoundRobinGroupSurrogate : ISurrogate
         {
-            
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new RoundRobinGroup(Paths);
+            }
+
+            public string[] Paths { get; set; }
         }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new RoundRobinGroupSurrogate
+            {
+                Paths = Paths,
+            };
+        }
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="RoundRobinGroup" /> class.
         /// </summary>
@@ -77,7 +98,7 @@ namespace Akka.Routing
         ///     Initializes a new instance of the <see cref="RoundRobinGroup" /> class.
         /// </summary>
         /// <param name="routees">The routees.</param>
-        public RoundRobinGroup(IEnumerable<ActorRef> routees) : base(routees)
+        public RoundRobinGroup(IEnumerable<IActorRef> routees) : base(routees)
         {
         }
 
@@ -89,6 +110,11 @@ namespace Akka.Routing
         {
             return new Router(new RoundRobinRoutingLogic());
         }
+
+        public override Group WithDispatcher(string dispatcher)
+        {
+            return new RoundRobinGroup(Paths){ RouterDispatcher = dispatcher};
+        }
     }
 
     /// <summary>
@@ -96,6 +122,32 @@ namespace Akka.Routing
     /// </summary>
     public class RoundRobinPool : Pool
     {
+        public class RoundRobinPoolSurrogate : ISurrogate
+        {
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new RoundRobinPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+            }
+
+            public int NrOfInstances { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Resizer Resizer { get; set; }
+            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public string RouterDispatcher { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new RoundRobinPoolSurrogate
+            {
+                NrOfInstances = NrOfInstances,
+                UsePoolDispatcher = UsePoolDispatcher,
+                Resizer = Resizer,
+                SupervisorStrategy = SupervisorStrategy,
+                RouterDispatcher = RouterDispatcher,
+            };
+        }
+
         /// <summary>
 
         /// </summary>
@@ -115,23 +167,18 @@ namespace Akka.Routing
             
         }
 
-        protected RoundRobinPool()
-        {
-            
-        }
-
         /// <summary>
         /// Simple form of RoundRobin constructor
         /// </summary>
         /// <param name="nrOfInstances">The nr of instances.</param>
-        public RoundRobinPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null) { }
+        public RoundRobinPool(int nrOfInstances) : base(nrOfInstances, null, DefaultStrategy, null) { }
 
         /// <summary>
         /// Simple form of RoundRobin constructor
         /// </summary>
         /// <param name="nrOfInstances">The nr of instances.</param>
         /// <param name="resizer">A <see cref="Resizer"/> for specifying how to grow the pool of underlying routees based on pressure</param>
-        public RoundRobinPool(int nrOfInstances, Resizer resizer) : base(nrOfInstances, resizer, Pool.DefaultStrategy, null) { }
+        public RoundRobinPool(int nrOfInstances, Resizer resizer) : base(nrOfInstances, resizer, DefaultStrategy, null) { }
 
         /// <summary>
         ///     Creates the router.
@@ -141,5 +188,26 @@ namespace Akka.Routing
         {
             return new Router(new RoundRobinRoutingLogic());
         }
+
+        public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
+        {
+            return new RoundRobinPool(NrOfInstances, Resizer, strategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        public override Pool WithResizer(Resizer resizer)
+        {
+            return new RoundRobinPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        public override Pool WithDispatcher(string dispatcher)
+        {
+            return new RoundRobinPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher, UsePoolDispatcher);
+        }
+
+        public override RouterConfig WithFallback(RouterConfig routerConfig)
+        {
+            return OverrideUnsetConfig(routerConfig);
+        }
     }
 }
+

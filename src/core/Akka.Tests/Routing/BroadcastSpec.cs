@@ -1,14 +1,16 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="BroadcastSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Akka.Util;
-using Xunit;
 using Akka.Util.Internal;
+using Xunit;
 
 namespace Akka.Tests.Routing
 {
@@ -54,7 +56,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void BroadcastGroup_router_must_broadcast_message_using_Tell()
         {
-            var doneLatch = new TestLatch(Sys, 2);
+            var doneLatch = new TestLatch(2);
             var counter1 = new AtomicCounter(0);
             var counter2 = new AtomicCounter(0);
             var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
@@ -73,7 +75,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void BroadcastGroup_router_must_broadcast_message_using_Ask()
         {
-            var doneLatch = new TestLatch(Sys, 2);
+            var doneLatch = new TestLatch(2);
             var counter1 = new AtomicCounter(0);
             var counter2 = new AtomicCounter(0);
             var actor1 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter1)));
@@ -90,3 +92,4 @@ namespace Akka.Tests.Routing
         }
     }
 }
+

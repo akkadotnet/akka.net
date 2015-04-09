@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="EventStream.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 
 namespace Akka.Event
@@ -29,7 +36,7 @@ namespace Akka.Event
         /// <param name="channel">The channel.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         /// <exception cref="System.ArgumentNullException">subscriber</exception>
-        public override bool Subscribe(ActorRef subscriber, Type channel)
+        public override bool Subscribe(IActorRef subscriber, Type channel)
         {
             if (subscriber == null)
                 throw new ArgumentNullException("subscriber");
@@ -46,7 +53,7 @@ namespace Akka.Event
         /// <param name="channel">The channel.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         /// <exception cref="System.ArgumentNullException">subscriber</exception>
-        public override bool Unsubscribe(ActorRef subscriber, Type channel)
+        public override bool Unsubscribe(IActorRef subscriber, Type channel)
         {
             if (subscriber == null)
                 throw new ArgumentNullException("subscriber");
@@ -64,7 +71,7 @@ namespace Akka.Event
         /// <param name="subscriber">The subscriber.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         /// <exception cref="System.ArgumentNullException">subscriber</exception>
-        public override bool Unsubscribe(ActorRef subscriber)
+        public override bool Unsubscribe(IActorRef subscriber)
         {
             if (subscriber == null)
                 throw new ArgumentNullException("subscriber");
@@ -76,3 +83,4 @@ namespace Akka.Event
         }
     }
 }
+

@@ -1,6 +1,12 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="InboxSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -99,11 +105,11 @@ namespace Akka.Tests.Actor
                     o.ShouldBe(0);
                 }
 
-                //The inbox should be empty now, so receiving should result in a timeout                
-                Assert.Throws<TimeoutException>(() =>
+                //The inbox should be empty now, so receiving should result in a timeout             
+                Intercept<TimeoutException>(() =>
                 {
-                    var received=_inbox.Receive(TimeSpan.FromSeconds(1));
-                    Log.Error("Received "+received);
+                    var received = _inbox.Receive(TimeSpan.FromSeconds(1));
+                    Log.Error("Received " + received);
                 });
             }
             finally
@@ -118,12 +124,12 @@ namespace Akka.Tests.Actor
         {
             Within(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(6), () =>
             {
-                Assert.Throws<TimeoutException>(() => _inbox.Receive());
+                Intercept<TimeoutException>(() => _inbox.Receive());
                 return true;
             });
             Within(TimeSpan.FromSeconds(1), () =>
             {
-                Assert.Throws<TimeoutException>(() => _inbox.Receive(TimeSpan.FromMilliseconds(100)));
+                Intercept<TimeoutException>(() => _inbox.Receive(TimeSpan.FromMilliseconds(100)));
                 return true;
             });
         }
@@ -146,3 +152,4 @@ namespace Akka.Tests.Actor
 
     }
 }
+

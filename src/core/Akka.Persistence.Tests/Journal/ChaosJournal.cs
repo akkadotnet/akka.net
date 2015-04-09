@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ChaosJournal.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -77,7 +84,7 @@ namespace Akka.Persistence.Tests.Journal
                 return Task.FromResult(HighestSequenceNr(persistenceId));
         }
 
-        protected override void WriteMessages(IEnumerable<IPersistentRepresentation> messages)
+        public override void WriteMessages(IEnumerable<IPersistentRepresentation> messages)
         {
             if (ChaosSupportExtensions.ShouldFail(_writeFailureRate))
                 throw new WriteFailedException(messages);
@@ -90,7 +97,7 @@ namespace Akka.Persistence.Tests.Journal
             }
         }
 
-        protected override void DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent)
+        public override void DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent)
         {
             foreach (var sequenceNr in Enumerable.Range(1, (int)toSequenceNr))
             {
@@ -173,3 +180,4 @@ namespace Akka.Persistence.Tests.Journal
         #endregion
     }
 }
+

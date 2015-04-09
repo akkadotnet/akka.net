@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="FSMTransitionSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -8,7 +15,7 @@ namespace Akka.Tests.Actor
     
     public class FSMTransitionSpec : AkkaSpec
     {
-        public ActorRef Self { get { return TestActor; } }
+        public IActorRef Self { get { return TestActor; } }
 
         
             
@@ -90,7 +97,7 @@ namespace Akka.Tests.Actor
 
         public class MyFSM : FSM<int, object>
         {
-            public MyFSM(ActorRef target)
+            public MyFSM(IActorRef target)
             {
                 Target = target;
                 StartWith(0, new object());
@@ -115,7 +122,7 @@ namespace Akka.Tests.Actor
                 Initialize();
             }
 
-            public ActorRef Target { get; private set; }
+            public IActorRef Target { get; private set; }
 
             protected override void PreRestart(Exception reason, object message)
             {
@@ -125,7 +132,7 @@ namespace Akka.Tests.Actor
 
         public class OtherFSM : FSM<int, int>
         {
-            public OtherFSM(ActorRef target)
+            public OtherFSM(IActorRef target)
             {
                 Target = target;
                 StartWith(0, 0);
@@ -146,10 +153,10 @@ namespace Akka.Tests.Actor
                 });
             }
 
-            public ActorRef Target { get; private set; }
+            public IActorRef Target { get; private set; }
         }
 
-        public class LeakyFSM : FSM<int, ActorRef>
+        public class LeakyFSM : FSM<int, IActorRef>
         {
             public LeakyFSM()
             {
@@ -191,12 +198,12 @@ namespace Akka.Tests.Actor
 
         public class Forwarder : UntypedActor
         {
-            public Forwarder(ActorRef target)
+            public Forwarder(IActorRef target)
             {
                 Target = target;
             }
 
-            public ActorRef Target { get; private set; }
+            public IActorRef Target { get; private set; }
 
             protected override void OnReceive(object message)
             {
@@ -207,3 +214,4 @@ namespace Akka.Tests.Actor
         #endregion
     }
 }
+

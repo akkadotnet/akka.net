@@ -1,15 +1,22 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="FrontendActor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Cluster;
 
 namespace Samples.Cluster.ConsistentHashRouting
 {
-    public class FrontendActor : UntypedActor, WithUnboundedStash
+    public class FrontendActor : UntypedActor, IWithUnboundedStash
     {
-        protected readonly ActorRef BackendRouter;
+        protected readonly IActorRef BackendRouter;
         protected int jobCount = 0;
 
-        public FrontendActor(ActorRef backendRouter)
+        public FrontendActor(IActorRef backendRouter)
         {
             BackendRouter = backendRouter;
         }
@@ -72,3 +79,4 @@ namespace Samples.Cluster.ConsistentHashRouting
         public IStash Stash { get; set; }
     }
 }
+

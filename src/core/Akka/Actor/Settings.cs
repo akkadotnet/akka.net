@@ -1,6 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Settings.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using Akka.Configuration;
+using Akka.Dispatch;
+using Akka.Routing;
 
 namespace Akka.Actor
 {
@@ -19,7 +28,11 @@ namespace Akka.Actor
         /// </summary>
         private void RebuildConfig()
         {
-            this.Config = _userConfig.SafeWithFallback(_fallbackConfig);
+            Config = _userConfig.SafeWithFallback(_fallbackConfig);
+
+            //if we get a new config definition loaded after all ActorRefProviders have been started, such as Akka.Persistence...
+            if(System != null && System.Dispatchers != null)
+                System.Dispatchers.ReloadPrerequisites(new DefaultDispatcherPrerequisites(System.EventStream, System.Scheduler, this, System.Mailboxes));
         }
 
         /// <summary>
@@ -50,7 +63,7 @@ namespace Akka.Actor
             var providerType = Type.GetType(ProviderClass);
             if (providerType == null)
                 throw new ConfigurationException(string.Format("'akka.actor.provider' is not a valid type name : '{0}'", ProviderClass));
-            if (!typeof(ActorRefProvider).IsAssignableFrom(providerType))
+            if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
                 throw new ConfigurationException(string.Format("'akka.actor.provider' is not a valid actor ref provider: '{0}'", ProviderClass));
             
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy");
@@ -91,9 +104,9 @@ namespace Akka.Actor
             FsmDebugEvent = Config.GetBoolean("akka.actor.debug.fsm");
             DebugEventStream = Config.GetBoolean("akka.actor.debug.event-stream");
             DebugUnhandledMessage = Config.GetBoolean("akka.actor.debug.unhandled");
-            DebugRouterMisConfiguration = Config.GetBoolean("akka.actor.debug.router-misconfiguration");
+            DebugRouterMisconfiguration = Config.GetBoolean("akka.actor.debug.router-misconfiguration");
             Home = Config.GetString("akka.home") ?? "";
-
+            DefaultVirtualNodesFactor = Config.GetInt("akka.actor.deployment.default.virtual-nodes-factor");
             //TODO: dunno.. we dont have FiniteStateMachines, dont know what the rest is
             /*              
                 final val SchedulerClass: String = getString("akka.scheduler.implementation")
@@ -235,18 +248,17 @@ namespace Akka.Actor
         public string Home { get; private set; }
 
         /// <summary>
-        ///     Gets a value indicating whether [debug router mis configuration].
-        /// </summary>
-        /// <value><c>true</c> if [debug router mis configuration]; otherwise, <c>false</c>.</value>
-        public bool DebugRouterMisConfiguration { get; private set; }
-
-        /// <summary>
         ///     Gets a value indicating whether [debug lifecycle].
         /// </summary>
         /// <value><c>true</c> if [debug lifecycle]; otherwise, <c>false</c>.</value>
         public bool DebugLifecycle { get; private set; }
 
         public bool FsmDebugEvent { get; private set; }
+
+        /// <summary>
+        /// The number of default virtual nodes to use with <see cref="ConsistentHashingRoutingLogic"/>.
+        /// </summary>
+        public int DefaultVirtualNodesFactor { get; private set; }
 
         /// <summary>
         ///     Returns a <see cref="string" /> that represents this instance.
@@ -258,3 +270,4 @@ namespace Akka.Actor
         }
     }
 }
+

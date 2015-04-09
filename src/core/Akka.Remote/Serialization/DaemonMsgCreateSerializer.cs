@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DaemonMsgCreateSerializer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Configuration;
@@ -24,7 +31,7 @@ namespace Akka.Remote.Serialization
             get { return false; }
         }
 
-        private ActorRefData SerializeActorRef(ActorRef @ref)
+        private ActorRefData SerializeActorRef(IActorRef @ref)
         {
             return ActorRefData.CreateBuilder()
                 .SetPath(Akka.Serialization.Serialization.SerializedActorPath(@ref))
@@ -168,7 +175,7 @@ namespace Akka.Remote.Serialization
             return args;
         }
 
-        private ActorRef DeserializeActorRef(ActorRefData actorRefData)
+        private IActorRef DeserializeActorRef(ActorRefData actorRefData)
         {
             var path = actorRefData.Path;
             var @ref = system.Provider.ResolveActorRef(path);
@@ -176,3 +183,4 @@ namespace Akka.Remote.Serialization
         }
     }
 }
+

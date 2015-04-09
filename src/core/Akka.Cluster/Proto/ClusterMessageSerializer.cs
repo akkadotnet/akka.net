@@ -1,15 +1,20 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterMessageSerializer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
-using System.Runtime.Remoting;
-using Akka.Util;
-using Akka.Util.Internal;
-using Google.ProtocolBuffers;
 using Akka.Actor;
 using Akka.Serialization;
-using System.IO.Compression;
+using Akka.Util.Internal;
+using Google.ProtocolBuffers;
 
 namespace Akka.Cluster.Proto
 {
@@ -335,7 +340,7 @@ namespace Akka.Cluster.Proto
             Func<EWMA, Msg.NodeMetrics.Types.EWMA.Builder> ewmaToProto = ewma => ewma == null ? null :
                 Msg.NodeMetrics.Types.EWMA.CreateBuilder().SetAlpha(ewma.Alpha).SetValue(ewma.Value);
 
-            // we set all metric types as doubles, since we don't have a convenienent Number base class like Scala
+            // we set all metric types as doubles, since we don't have a convenient Number base class like Scala
             Func<double, Msg.NodeMetrics.Types.Number.Builder> numberToProto = d => Msg.NodeMetrics.Types.Number.CreateBuilder()
                 .SetType(Msg.NodeMetrics.Types.NumberType.Double)
                 .SetValue64((ulong) BitConverter.DoubleToInt64Bits(d));
@@ -488,3 +493,4 @@ namespace Akka.Cluster.Proto
         #endregion
     }
 }
+

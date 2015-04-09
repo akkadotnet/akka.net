@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence;
@@ -32,8 +39,8 @@ namespace PersistenceExample
             var pref = system.ActorOf(Props.Create<ViewExampleActor>());
             var view = system.ActorOf(Props.Create<ExampleView>());
 
-            system.Scheduler.Schedule(TimeSpan.Zero, TimeSpan.FromSeconds(2), pref, "scheduled");
-            system.Scheduler.Schedule(TimeSpan.Zero, TimeSpan.FromSeconds(5), view, "snap");
+            system.Scheduler.ScheduleTellRepeatedly(TimeSpan.Zero, TimeSpan.FromSeconds(2), pref, "scheduled", ActorRefs.NoSender);
+            system.Scheduler.ScheduleTellRepeatedly(TimeSpan.Zero, TimeSpan.FromSeconds(5), view, "snap", ActorRefs.NoSender);
         }
 
         private static void SnapshotedActor(ActorSystem system)
@@ -131,3 +138,4 @@ namespace PersistenceExample
         }
     }
 }
+

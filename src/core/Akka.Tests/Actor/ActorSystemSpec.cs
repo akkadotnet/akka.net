@@ -1,4 +1,11 @@
-﻿using System.Threading.Tasks;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorSystemSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -74,7 +81,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void AnActorSystem_Must_Support_Dynamically_Regsitered_Extensions()
+        public void AnActorSystem_Must_Support_Dynamically_Registered_Extensions()
         {
             Assert.False(Sys.HasExtension<OtherTestExtensionImpl>());
             var otherTestExtension = Sys.WithExtension<OtherTestExtensionImpl>(typeof(OtherTestExtension));
@@ -121,3 +128,4 @@ namespace Akka.Tests.Actor
         public ActorSystem System { get; private set; }
     }
 }
+

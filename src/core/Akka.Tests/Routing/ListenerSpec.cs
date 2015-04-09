@@ -1,10 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ListenerSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
-using Xunit;
-using Akka.Util;
 using Akka.Util.Internal;
+using Xunit;
 
 namespace Akka.Tests.Routing
 {
@@ -15,8 +20,8 @@ namespace Akka.Tests.Routing
         public void Listener_must_listen_in()
         {
             //arrange
-            var fooLatch = new TestLatch(Sys, 2);
-            var barLatch = new TestLatch(Sys, 2);
+            var fooLatch = new TestLatch(2);
+            var barLatch = new TestLatch(2);
             var barCount = new AtomicCounter(0);
 
             var broadcast = Sys.ActorOf<BroadcastActor>();
@@ -109,3 +114,4 @@ namespace Akka.Tests.Routing
         #endregion
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Deployer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -62,9 +69,10 @@ namespace Akka.Actor
                         var curPath = t;
                         if (string.IsNullOrEmpty(curPath))
                             throw new IllegalActorNameException(string.Format("Actor name in deployment [{0}] must not be empty", d.Path));
-                        if (!ActorPath.ElementRegex.IsMatch(t))
+                        if (!ActorPath.IsValidPathElement(t))
                         {
-                            throw new IllegalActorNameException(string.Format("Actor name in deployment [{0}] must conform to {1}", d.Path, ActorPath.ElementRegex));
+                            throw new IllegalActorNameException(
+                                string.Format("Illegal actor name [{0}] in deployment [${1}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${2}.", t, d.Path, new String(ActorPath.ValidSymbols)));
                         }
                     }
                     set = _deployments.CompareAndSet(w, w.Insert(path.GetEnumerator(), d));
@@ -100,3 +108,4 @@ namespace Akka.Actor
         }
     }
 }
+

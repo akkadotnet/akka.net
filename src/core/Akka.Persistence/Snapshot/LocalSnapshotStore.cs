@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="LocalSnapshotStore.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,6 +19,35 @@ namespace Akka.Persistence.Snapshot
 {
     public class LocalSnapshotStore : SnapshotStore
     {
+        #region settings class
+
+        public class StoreSettings
+        {
+            /// <summary>
+            /// Storage location of snapshot files;
+            /// </summary>
+            public readonly string Dir;
+
+            /// <summary>
+            /// Dispatcher for streaming snapshot IO.
+            /// </summary>
+            public readonly string StreamDispatcher;
+
+            /// <summary>
+            /// Number of attempts made to load a subsequent snapshots in case they were corrupted.
+            /// </summary>
+            public readonly int LoadAttempts;
+
+            public StoreSettings(Config config)
+            {
+                Dir = config.GetString("dir");
+                StreamDispatcher = config.GetString("stream-dispatcher");
+                LoadAttempts = config.GetInt("load-attempts");
+            }
+        }
+
+        #endregion
+
         private static readonly Regex FilenameRegex = new Regex(@"^snapshot-(.+)-(\d+)-(\d+)", RegexOptions.Compiled);
 
         private readonly DirectoryInfo _snapshotDirectory;
@@ -23,21 +59,18 @@ namespace Akka.Persistence.Snapshot
         public LocalSnapshotStore()
         {
             var config = Context.System.Settings.Config.GetConfig("akka.persistence.snapshot-store.local");
-            _snapshotDirectory = new DirectoryInfo(config.GetString("dir"));
-            ResolveDispatcher(config);
+            _settings = new StoreSettings(config);
+            _snapshotDirectory = new DirectoryInfo(_settings.Dir);
+            _streamDispatcher = Context.System.Dispatchers.Lookup(_settings.StreamDispatcher);
             _saving = new SortedSet<SnapshotMetadata>(SnapshotMetadata.TimestampComparer);
             _serialization = Context.System.Serialization;
-            _streamDispatcher = ResolveDispatcher(config);
         }
 
-        private MessageDispatcher ResolveDispatcher(Config config)
-        {
-            var dispatcherConfigPath = config.GetString("stream-dispatcher");
-            return Context.System.Dispatchers.Lookup(dispatcherConfigPath);
-        }
+        private readonly StoreSettings _settings;
+        public StoreSettings Settings { get { return _settings; } }
 
-        private LoggingAdapter _log;
-        public LoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+        private ILoggingAdapter _log;
+        public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
 
         protected override void PreStart()
         {
@@ -51,17 +84,18 @@ namespace Akka.Persistence.Snapshot
 
         protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
-            // Heurisitics: take 3 latest snapshots
-            //TODO: convert 3 to configurable value
             var metas = GetSnapshotMetadata(persistenceId, criteria);
-            return Task.FromResult(Load(metas, 3));
+            return RunWithStreamDispatcher(() => Load(metas.Reverse().GetEnumerator(), Settings.LoadAttempts));
         }
 
         protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
             _saving.Add(metadata);
-            Save(metadata, snapshot);
-            return Task.FromResult(new object());
+            return RunWithStreamDispatcher(() =>
+            {
+                Save(metadata, snapshot);
+                return new object();
+            });
         }
 
         protected override void Saved(SnapshotMetadata metadata)
@@ -83,13 +117,13 @@ namespace Akka.Persistence.Snapshot
             }
         }
 
-        private SelectedSnapshot Load(IEnumerable<SnapshotMetadata> metas, int dec)
+        private SelectedSnapshot Load(IEnumerator<SnapshotMetadata> metas, int dec)
         {
             if (dec > 0)
             {
-                var metadata = metas.LastOrDefault();
-                if (metadata != null)
+                if (metas.MoveNext())
                 {
+                    var metadata = metas.Current;
                     using (var stream = ReadableStream(metadata))
                     {
                         try
@@ -101,8 +135,9 @@ namespace Akka.Persistence.Snapshot
                         catch (Exception exc)
                         {
                             Log.Error(exc, "Error loading a snapshot [{0}]", exc.Message);
-                            return Load(metas.Skip(1), dec - 1);
+                            return Load(metas, dec - 1);
                         }
+
                     }
                 }
             }
@@ -152,7 +187,7 @@ namespace Akka.Persistence.Snapshot
             var snapshots = _snapshotDirectory
                 .EnumerateFiles("snapshot-" + persistenceId + "-*", SearchOption.TopDirectoryOnly)
                 .Select(ExtractSnapshotMetadata)
-                .Where(metadata => metadata != null && criteria.IsMatch(metadata) && !_saving.Contains(metadata));
+                .Where(metadata => metadata != null && criteria.IsMatch(metadata) && !_saving.Contains(metadata)).ToList();
 
             return snapshots;    // guaranteed to be not null in previous constraint
         }
@@ -182,5 +217,26 @@ namespace Akka.Persistence.Snapshot
             var file = _snapshotDirectory.GetFiles(filename, SearchOption.TopDirectoryOnly).FirstOrDefault();
             return file ?? new FileInfo(Path.Combine(_snapshotDirectory.FullName, filename));
         }
+
+        private Task<T> RunWithStreamDispatcher<T>(Func<T> fn)
+        {
+            var promise = new TaskCompletionSource<T>();
+
+            _streamDispatcher.Schedule(() =>
+            {
+                try
+                {
+                    var result = fn();
+                    promise.SetResult(result);
+                }
+                catch (Exception e)
+                {
+                    promise.SetException(e);
+                }
+            });
+
+            return promise.Task;
+        }
     }
 }
+

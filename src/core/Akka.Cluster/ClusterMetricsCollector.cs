@@ -1,9 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterMetricsCollector.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -27,7 +32,7 @@ namespace Akka.Cluster
     /// </summary>
     internal class ClusterMetricsCollector : ReceiveActor
     {
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         /// <summary>
         /// The node ring gossiped that contains only members that are <see cref="MemberStatus.Up"/>
@@ -47,18 +52,18 @@ namespace Akka.Cluster
         /// <summary>
         /// Start periodic gossip to random nodes in the cluster
         /// </summary>
-        private CancellationTokenSource _gossipTask;
+        private ICancelable _gossipCancelable;
 
         /// <summary>
         /// Start periodic metrics collection
         /// </summary>
-        private CancellationTokenSource _metricsTask;
+        private ICancelable _metricsCancelable;
 
         private Cluster _cluster;
 
-        private readonly ActorRef _publisher;
+        private readonly IActorRef _publisher;
 
-        public ClusterMetricsCollector(ActorRef publisher)
+        public ClusterMetricsCollector(IActorRef publisher)
         {
             _publisher = publisher;
             _cluster = Cluster.Get(Context.System);
@@ -66,13 +71,13 @@ namespace Akka.Cluster
             LatestGossip = MetricsGossip.Empty;
             Nodes = ImmutableHashSet.Create<Address>();
 
-            _metricsTask = new CancellationTokenSource();
-            Context.System.Scheduler.Schedule(_cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.MetricsInterval), 
-                _cluster.Settings.MetricsInterval, Self, InternalClusterAction.MetricsTick.Instance, _metricsTask.Token);
+            _metricsCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
+                _cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.MetricsInterval),
+                _cluster.Settings.MetricsInterval, Self, InternalClusterAction.MetricsTick.Instance, Self);
 
-            _gossipTask = new CancellationTokenSource();
-            Context.System.Scheduler.Schedule(_cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.GossipInterval),
-                _cluster.Settings.GossipInterval, Self, InternalClusterAction.GossipTick.Instance, _gossipTask.Token);
+            _gossipCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
+                _cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.GossipInterval), 
+                _cluster.Settings.GossipInterval, Self, InternalClusterAction.GossipTick.Instance, Self);
 
             Receive<InternalClusterAction.GossipTick>(tick => Gossip());
             Receive<InternalClusterAction.MetricsTick>(tick => Collect());
@@ -98,8 +103,8 @@ namespace Akka.Cluster
         protected override void PostStop()
         {
             _cluster.Unsubscribe(Self);
-            _gossipTask.Cancel();
-            _metricsTask.Cancel();
+            _gossipCancelable.Cancel();
+            _metricsCancelable.Cancel();
             Collector.Dispose();
         }
 
@@ -742,7 +747,13 @@ namespace Akka.Cluster
         private PerformanceCounter _systemLoadAverageCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total", true);
         private PerformanceCounter _systemAvailableMemory = new PerformanceCounter("Memory", "Available MBytes", true);
 
-        #endregion
+#if MONO 
+		// Mono doesn't support Microsoft.VisualBasic, so need an alternative way of sampling this value
+		// see http://stackoverflow.com/questions/105031/how-do-you-get-total-amount-of-ram-the-computer-has
+		private PerformanceCounter _systemMaxMemory = new PerformanceCounter("Mono Memory", "Total Physical Memory");
+#endif
+
+		#endregion
 
         public Address Address { get; private set; }
 
@@ -803,7 +814,12 @@ namespace Akka.Cluster
         public Metric SystemMaxMemory()
         {
             return Metric.Create(StandardMetrics.SystemMemoryMax,
-                new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory);
+#if MONO
+					_systemMaxMemory.RawValue
+#else
+					new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory
+#endif
+			);
         }
 
         #endregion
@@ -849,3 +865,4 @@ namespace Akka.Cluster
         }
     }
 }
+

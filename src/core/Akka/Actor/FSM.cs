@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="FSM.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -22,13 +29,13 @@ namespace Akka.Actor
         /// <typeparam name="TS">The type of the state being used in this finite state machine.</typeparam>
         public class CurrentState<TS>
         {
-            public CurrentState(ActorRef fsmRef, TS state)
+            public CurrentState(IActorRef fsmRef, TS state)
             {
                 State = state;
                 FsmRef = fsmRef;
             }
 
-            public ActorRef FsmRef { get; private set; }
+            public IActorRef FsmRef { get; private set; }
 
             public TS State { get; private set; }
         }
@@ -40,14 +47,14 @@ namespace Akka.Actor
         /// <typeparam name="TS">The type of state used</typeparam>
         public class Transition<TS>
         {
-            public Transition(ActorRef fsmRef, TS @from, TS to)
+            public Transition(IActorRef fsmRef, TS @from, TS to)
             {
                 To = to;
                 From = @from;
                 FsmRef = fsmRef;
             }
 
-            public ActorRef FsmRef { get; private set; }
+            public IActorRef FsmRef { get; private set; }
 
             public TS From { get; private set; }
 
@@ -66,12 +73,12 @@ namespace Akka.Actor
         /// </summary>
         public class SubscribeTransitionCallBack
         {
-            public SubscribeTransitionCallBack(ActorRef actorRef)
+            public SubscribeTransitionCallBack(IActorRef actorRef)
             {
                 ActorRef = actorRef;
             }
 
-            public ActorRef ActorRef { get; private set; }
+            public IActorRef ActorRef { get; private set; }
         }
 
         /// <summary>
@@ -80,12 +87,12 @@ namespace Akka.Actor
         /// </summary>
         public class UnsubscribeTransitionCallBack
         {
-            public UnsubscribeTransitionCallBack(ActorRef actorRef)
+            public UnsubscribeTransitionCallBack(IActorRef actorRef)
             {
                 ActorRef = actorRef;
             }
 
-            public ActorRef ActorRef { get; private set; }
+            public IActorRef ActorRef { get; private set; }
         }
 
         /// <summary>
@@ -138,11 +145,11 @@ namespace Akka.Actor
             public long Generation { get; private set; }
         }
         [DebuggerDisplay("Timer {Name,nq}, message: {Message")]
-        internal class Timer : NoSerializationVerificationNeeded
+        internal class Timer : INoSerializationVerificationNeeded
         {
-            private readonly LoggingAdapter _debugLog;
+            private readonly ILoggingAdapter _debugLog;
 
-            public Timer(string name, object message, bool repeat, int generation, IActorContext context, LoggingAdapter debugLog)
+            public Timer(string name, object message, bool repeat, int generation, IActorContext context, ILoggingAdapter debugLog)
             {
                 _debugLog = debugLog;
                 Context = context;
@@ -150,12 +157,13 @@ namespace Akka.Actor
                 Repeat = repeat;
                 Message = message;
                 Name = name;
-                _scheduler = context.System.Scheduler;
-                _ref = new CancellationTokenSource();
+                var scheduler = context.System.Scheduler;
+                _scheduler = scheduler;
+                _ref = new Cancelable(scheduler);
             }
 
-            private readonly Scheduler _scheduler;
-            private readonly CancellationTokenSource _ref;
+            private readonly IScheduler _scheduler;
+            private readonly ICancelable _ref;
 
             public string Name { get; private set; }
 
@@ -167,7 +175,7 @@ namespace Akka.Actor
 
             public IActorContext Context { get; private set; }
 
-            public void Schedule(ActorRef actor, TimeSpan timeout)
+            public void Schedule(IActorRef actor, TimeSpan timeout)
             {
                 var name = Name;
                 var message = Message;
@@ -183,8 +191,8 @@ namespace Akka.Actor
                 else
                     send = () => actor.Tell(this, Context.Self);
 
-                if(Repeat) _scheduler.Schedule(timeout, timeout, send, _ref.Token);
-                else _scheduler.ScheduleOnce(timeout, send, _ref.Token);
+                if(Repeat) _scheduler.Advanced.ScheduleRepeatedly(timeout, timeout, send, _ref);
+                else _scheduler.Advanced.ScheduleOnce(timeout, send, _ref);
             }
 
             public void Cancel()
@@ -197,7 +205,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Log entry of the <see cref="LoggingFSM"/> - can be obtained by calling <see cref="GetLog"/>
+        /// Log entry of the <see cref="ILoggingFSM"/> - can be obtained by calling <see cref="GetLog"/>
         /// </summary>
         /// <typeparam name="TS">The name of the state</typeparam>
         /// <typeparam name="TD">The data of the state</typeparam>
@@ -330,7 +338,7 @@ namespace Akka.Actor
         /// which allows pattern matching to extract both state and data.
         /// </summary>
         /// <typeparam name="TD">The state data for this event</typeparam>
-        public class Event<TD> : NoSerializationVerificationNeeded
+        public class Event<TD> : INoSerializationVerificationNeeded
         {
             public Event(object fsmEvent, TD stateData)
             {
@@ -351,7 +359,7 @@ namespace Akka.Actor
         /// <summary>
         /// Class representing the state of the <see cref="FSM{TS,TD}"/> within the OnTermination block.
         /// </summary>
-        public class StopEvent<TS, TD> : NoSerializationVerificationNeeded
+        public class StopEvent<TS, TD> : INoSerializationVerificationNeeded
         {
             public StopEvent(Reason reason, TS terminatedState, TD stateData)
             {
@@ -375,12 +383,12 @@ namespace Akka.Actor
     /// </summary>
     /// <typeparam name="TState">The state name type</typeparam>
     /// <typeparam name="TData">The state data type</typeparam>
-    public abstract class FSM<TState, TData> : FSMBase, IListeners, InternalSupportsTestFSMRef<TState,TData>
+    public abstract class FSM<TState, TData> : FSMBase, IListeners, IInternalSupportsTestFSMRef<TState,TData>
     {
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         protected FSM()
         {
-            if(this is LoggingFSM)
+            if(this is ILoggingFSM)
                 DebugEvent = Context.System.Settings.FsmDebugEvent;
         }
         
@@ -551,7 +559,7 @@ namespace Akka.Actor
         }
 
         //Internal API
-        bool InternalSupportsTestFSMRef<TState, TData>.IsStateTimerActive
+        bool IInternalSupportsTestFSMRef<TState, TData>.IsStateTimerActive
         {
             get
             {
@@ -644,7 +652,7 @@ namespace Akka.Actor
         /// </summary>
         private State<TState, TData> _currentState;
 
-        private CancellationTokenSource _timeoutFuture;
+        private ICancelable _timeoutFuture;
         private State<TState, TData> _nextState;
         private long _generation = 0L;
 
@@ -848,13 +856,13 @@ namespace Akka.Actor
             if(s != null) return s;
             var timer = source as Timer;
             if(timer != null) return "timer '" + timer.Name + "'";
-            var actorRef = source as ActorRef;
+            var actorRef = source as IActorRef;
             if(actorRef != null) return actorRef.ToString();
             return "unknown";
         }
 
         //Internal API
-        void InternalSupportsTestFSMRef<TState, TData>.ApplyState(State<TState, TData> upcomingState)
+        void IInternalSupportsTestFSMRef<TState, TData>.ApplyState(State<TState, TData> upcomingState)
         {
             ApplyState(upcomingState);
         }
@@ -902,9 +910,7 @@ namespace Akka.Actor
                     var t = timeout.Value;
                     if (t < TimeSpan.MaxValue)
                     {
-                        _timeoutFuture = new CancellationTokenSource();
-                        Context.System.Scheduler.ScheduleOnce(t, Self,
-                            new TimeoutMarker(_generation), _timeoutFuture.Token);
+                        _timeoutFuture = Context.System.Scheduler.ScheduleTellOnceCancelable(t, Context.Self, new TimeoutMarker(_generation), Context.Self);
                     }
                 }
             }
@@ -970,5 +976,6 @@ namespace Akka.Actor
     /// Marker interface to let the setting "akka.actor.debug.fsm" control if logging should occur in <see cref="FSM{TS,TD}"/>
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public interface LoggingFSM { }
+    public interface ILoggingFSM { }
 }
+

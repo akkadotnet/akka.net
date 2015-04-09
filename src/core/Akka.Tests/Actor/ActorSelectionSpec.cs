@@ -1,13 +1,16 @@
-﻿using Akka.TestKit;
-using Akka.TestKit.TestActors;
-using Akka.Util;
-using Xunit;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorSelectionSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.TestKit;
+using Akka.TestKit.TestActors;
+using Xunit;
 
 namespace Akka.Tests.Actor
 {
@@ -15,8 +18,8 @@ namespace Akka.Tests.Actor
     public class ActorSelectionSpec : AkkaSpec
     {
         // ReSharper disable NotAccessedField.Local
-        private ActorRef _echoActor;
-        private ActorRef _selectionTestActor;
+        private IActorRef _echoActor;
+        private IActorRef _selectionTestActor;
         // ReSharper restore NotAccessedField.Local
 
         public ActorSelectionSpec()
@@ -57,7 +60,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void CanResolveWildcardQuestionmark()
+        public void CanResolveWildcardQuestionMark()
         {
             Sys.ActorSelection("user/t?st").Tell("hello2");
             ExpectMsg("hello2");
@@ -131,3 +134,4 @@ namespace Akka.Tests.Actor
 
     }
 }
+

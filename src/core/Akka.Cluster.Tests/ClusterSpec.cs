@@ -1,4 +1,11 @@
-﻿using System.Collections.Immutable;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.TestKit;
@@ -19,7 +26,7 @@ namespace Akka.Cluster.Tests
         akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
         akka.remote.helios.tcp.port = 0";
 
-        public ActorRef Self { get { return TestActor; } }
+        public IActorRef Self { get { return TestActor; } }
 
         readonly Address _selfAddress;
         readonly Cluster _cluster;
@@ -109,3 +116,4 @@ namespace Akka.Cluster.Tests
         }
     }
 }
+

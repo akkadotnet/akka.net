@@ -1,7 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AkkaPduCodec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using Akka.Actor;
 using Google.ProtocolBuffers;
+using System.Runtime.Serialization;
 
 namespace Akka.Remote.Transport
 {
@@ -11,6 +19,11 @@ namespace Akka.Remote.Transport
     internal class PduCodecException : AkkaException
     {
         public PduCodecException(string msg, Exception cause = null) : base(msg, cause) { }
+
+        protected PduCodecException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /*
@@ -51,7 +64,7 @@ namespace Akka.Remote.Transport
 
     internal sealed class Message : IAkkaPdu, IHasSequenceNumber
     {
-        public Message(InternalActorRef recipient, Address recipientAddress, SerializedMessage serializedMessage, ActorRef senderOptional = null, SeqNo seq = null)
+        public Message(IInternalActorRef recipient, Address recipientAddress, SerializedMessage serializedMessage, IActorRef senderOptional = null, SeqNo seq = null)
         {
             Seq = seq;
             SenderOptional = senderOptional;
@@ -60,13 +73,13 @@ namespace Akka.Remote.Transport
             Recipient = recipient;
         }
 
-        public InternalActorRef Recipient { get; private set; }
+        public IInternalActorRef Recipient { get; private set; }
 
         public Address RecipientAddress { get; private set; }
 
         public SerializedMessage SerializedMessage { get; private set; }
 
-        public ActorRef SenderOptional { get; private set; }
+        public IActorRef SenderOptional { get; private set; }
 
         public bool ReliableDeliveryEnabled { get { return Seq != null; } }
 
@@ -132,8 +145,8 @@ namespace Akka.Remote.Transport
 
         public abstract AckAndMessage DecodeMessage(ByteString raw, RemoteActorRefProvider provider, Address localAddress);
 
-        public abstract ByteString ConstructMessage(Address localAddress, ActorRef recipient,
-            SerializedMessage serializedMessage, ActorRef senderOption = null, SeqNo seqOption = null, Ack ackOption = null);
+        public abstract ByteString ConstructMessage(Address localAddress, IActorRef recipient,
+            SerializedMessage serializedMessage, IActorRef senderOption = null, SeqNo seqOption = null, Ack ackOption = null);
 
         public abstract ByteString ConstructPureAck(Ack ack);
     }
@@ -210,7 +223,7 @@ namespace Akka.Remote.Transport
                     Address recipientAddress;
                     ActorPath.TryParseAddress(envelopeContainer.Recipient.Path, out recipientAddress);
                     var serializedMessage = envelopeContainer.Message;
-                    ActorRef senderOption = null;
+                    IActorRef senderOption = null;
                     if (envelopeContainer.HasSender)
                     {
                         senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
@@ -239,8 +252,8 @@ namespace Akka.Remote.Transport
             return ack.Nacks.Aggregate(ackBuilder, (current, nack) => current.AddNacks((ulong) nack.RawValue));
         }
 
-        public override ByteString ConstructMessage(Address localAddress, ActorRef recipient, SerializedMessage serializedMessage,
-            ActorRef senderOption = null, SeqNo seqOption = null, Ack ackOption = null)
+        public override ByteString ConstructMessage(Address localAddress, IActorRef recipient, SerializedMessage serializedMessage,
+            IActorRef senderOption = null, SeqNo seqOption = null, Ack ackOption = null)
         {
             var ackAndEnvelopeBuilder = AckAndEnvelopeContainer.CreateBuilder();
             var envelopeBuilder = RemoteEnvelope.CreateBuilder().SetRecipient(SerializeActorRef(recipient.Path.Address, recipient));
@@ -318,7 +331,7 @@ namespace Akka.Remote.Transport
             return new Address(origin.Protocol, origin.System, origin.Hostname, (int)origin.Port);
         }
 
-        private ActorRefData SerializeActorRef(Address defaultAddress, ActorRef actorRef)
+        private ActorRefData SerializeActorRef(Address defaultAddress, IActorRef actorRef)
         {
             return ActorRefData.CreateBuilder()
                 .SetPath((!string.IsNullOrEmpty(actorRef.Path.Address.Host))
@@ -341,3 +354,4 @@ namespace Akka.Remote.Transport
         #endregion
     }
 }
+

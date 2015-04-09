@@ -1,5 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterReadView.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
@@ -52,7 +58,7 @@ namespace Akka.Cluster
             get { return _selfAddress; }
         }
 
-        readonly ActorRef _eventBusListener;
+        readonly IActorRef _eventBusListener;
 
         private readonly Cluster _cluster;
 
@@ -260,8 +266,18 @@ namespace Akka.Cluster
 
         public void Dispose()
         {
-            //shutdown
-            _eventBusListener.Tell(PoisonPill.Instance);
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                //shutdown
+                _eventBusListener.Tell(PoisonPill.Instance);
+            }
         }
     }
 }
+

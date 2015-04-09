@@ -1,12 +1,16 @@
-﻿using Akka.Actor;
-using Akka.Actor.Internals;
-using Akka.Configuration;
-using Akka.TestKit;
+﻿//-----------------------------------------------------------------------
+// <copyright file="LocalActorRefProviderSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Actor.Internals;
+using Akka.TestKit;
 using Xunit;
 using Xunit.Extensions;
 
@@ -21,7 +25,7 @@ namespace Akka.Tests.Actor
         {
             var parent = Sys.ActorOf(Props.Create(() => new ParentActor()));
             parent.Tell("GetChild", TestActor);
-            var child = ExpectMsg<ActorRef>();
+            var child = ExpectMsg<IActorRef>();
             var childPropsBeforeTermination = ((LocalActorRef)child).Underlying.Props;
             Assert.Equal(Props.Empty, childPropsBeforeTermination);
             Watch(parent);
@@ -67,10 +71,18 @@ namespace Akka.Tests.Actor
 
         [Theory]
         [InlineData("", "empty")]
-        [InlineData("$hello", "conform")]
-        [InlineData("a%", "conform")]
-        [InlineData("a?", "conform")]
-        [InlineData("åäö", "conform")]
+        [InlineData("$hello", "not start with `$`")]
+        [InlineData("a%", "Illegal actor name")]
+        [InlineData("%3","Illegal actor name")]
+        [InlineData("%xx","Illegal actor name")]
+        [InlineData("%0G","Illegal actor name")]
+        [InlineData("%gg","Illegal actor name")]
+        [InlineData("%","Illegal actor name")]
+        [InlineData("%1t","Illegal actor name")]
+        [InlineData("a?","Illegal actor name")]
+        [InlineData("üß","include only ASCII")]
+        [InlineData("a?", "Illegal actor name")]
+        [InlineData("åäö", "Illegal actor name")]
         public void An_ActorRefFactory_must_throw_suitable_exceptions_for_malformed_actor_names(string name, string expectedExceptionMessageSubstring)
         {
             var exception = Assert.Throws<InvalidActorNameException>(() =>
@@ -96,7 +108,7 @@ namespace Akka.Tests.Actor
 
         private class ParentActor : ActorBase
         {
-            private readonly ActorRef childActorRef;
+            private readonly IActorRef childActorRef;
 
             public ParentActor()
             {
@@ -115,3 +127,4 @@ namespace Akka.Tests.Actor
         }
     }
 }
+

@@ -1,8 +1,14 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="SupervisorHierarchySpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Dsl;
-using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Tests.TestUtils;
@@ -98,12 +104,12 @@ namespace Akka.Tests.Actor
 
             Func<Exception, Directive> decider = _ => { return Directive.Escalate; };
             var managerProps = new PropsWithName(Props.Create(() => new CountDownActor(countDown, new AllForOneStrategy(decider))), "manager");
-            var manager = boss.Ask<ActorRef>(managerProps, TestKitSettings.DefaultTimeout).Result;
+            var manager = boss.Ask<IActorRef>(managerProps, TestKitSettings.DefaultTimeout).Result;
 
             var workerProps = Props.Create(() => new CountDownActor(countDown, SupervisorStrategy.DefaultStrategy));
-            var worker1 = manager.Ask<ActorRef>(new PropsWithName(workerProps, "worker1"), TestKitSettings.DefaultTimeout).Result;
-            var worker2 = manager.Ask<ActorRef>(new PropsWithName(workerProps, "worker2"), TestKitSettings.DefaultTimeout).Result;
-            var worker3 = manager.Ask<ActorRef>(new PropsWithName(workerProps, "worker3"), TestKitSettings.DefaultTimeout).Result;
+            var worker1 = manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker1"), TestKitSettings.DefaultTimeout).Result;
+            var worker2 = manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker2"), TestKitSettings.DefaultTimeout).Result;
+            var worker3 = manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker3"), TestKitSettings.DefaultTimeout).Result;
 
             EventFilter.Exception<ActorKilledException>().ExpectOne(() =>
             {
@@ -161,9 +167,9 @@ namespace Akka.Tests.Actor
             //    worker
             var boss = ActorOf<Resumer>("resumer");
             boss.Tell("spawn:middle");
-            var middle = ExpectMsg<ActorRef>();
+            var middle = ExpectMsg<IActorRef>();
             middle.Tell("spawn:worker");
-            var worker = ExpectMsg<ActorRef>();
+            var worker = ExpectMsg<IActorRef>();
 
             //Check everything is in place by sending ping to worker and expect it to respond with pong
             worker.Tell("ping");
@@ -202,11 +208,11 @@ namespace Akka.Tests.Actor
             //      |
             //    worker
             slowResumer.Tell("spawn:boss");
-            var boss = ExpectMsg<ActorRef>();
+            var boss = ExpectMsg<IActorRef>();
             boss.Tell("spawn:middle");
-            var middle = ExpectMsg<ActorRef>();
+            var middle = ExpectMsg<IActorRef>();
             middle.Tell("spawn:worker");
-            var worker = ExpectMsg<ActorRef>();
+            var worker = ExpectMsg<IActorRef>();
 
             //Check everything is in place by sending ping to worker and expect it to respond with pong
             worker.Tell("ping");
@@ -232,7 +238,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void A_supervisor_hierarchy_must_handle_failure_in_creation_when_supervision_startegy_returns_Resume_and_Restart()
+        public void A_supervisor_hierarchy_must_handle_failure_in_creation_when_supervision_strategy_returns_Resume_and_Restart()
         {
             var createAttempt = new AtomicCounter(0);
             var preStartCalled = new AtomicCounter(0);
@@ -279,3 +285,4 @@ namespace Akka.Tests.Actor
 
     }
 }
+

@@ -33,6 +33,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <DocumentationFile>bin\Release\Akka.DI.Ninject.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Ninject">
@@ -55,11 +56,11 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka\Akka.csproj">
-      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka.DI.Core\Akka.DI.Core.csproj">
-      <Project>{fdf09d18-b68e-4b95-b1f6-b89d9c6c3ae9}</Project>
+      <Project>{FDF09D18-B68E-4B95-B1F6-B89D9C6C3AE9}</Project>
       <Name>Akka.DI.Core</Name>
     </ProjectReference>
   </ItemGroup>

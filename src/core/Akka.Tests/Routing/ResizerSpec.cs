@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ResizerSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
@@ -55,6 +62,7 @@ namespace Akka.Tests.Routing
                 new ActorRefRoutee(Sys.ActorOf<ResizerTestActor>()),
                 new ActorRefRoutee(Sys.ActorOf<ResizerTestActor>())
             };
+            Thread.Sleep(100);
             var c2 = resizer.Capacity(current);
             c2.ShouldBe(0);
         }
@@ -89,7 +97,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void DefaultResizer_must_be_possible_to_define_programmatically()
         {
-            var latch = new TestLatch(Sys, 3);
+            var latch = new TestLatch(3);
             var resizer = new DefaultResizer(2, 3);
             var router = Sys.ActorOf(Props.Create<ResizerTestActor>().WithRouter(new RoundRobinPool(0, resizer)));
 
@@ -106,7 +114,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public void DefaultResizer_must_be_possible_to_define_in_configuration()
         {
-            var latch = new TestLatch(Sys, 3);
+            var latch = new TestLatch(3);
             var router = Sys.ActorOf(Props.Create<ResizerTestActor>().WithRouter(FromConfig.Instance), "router1");
 
             router.Tell(latch);
@@ -137,7 +145,7 @@ namespace Akka.Tests.Routing
             }
         }
 
-        [Fact(Skip = "weird resizer behavior causes build server to fail")]
+        [Fact]
         public void DefaultResizer_must_grow_as_needed_under_pressure()
         {
             var resizer = new DefaultResizer(3, 5, pressureThreshold: 1, rampupRate: 0.1d, backoffRate: 0.0d,
@@ -147,7 +155,7 @@ namespace Akka.Tests.Routing
 
             //first message should create the minimum number of routees
             router.Tell("echo", TestActor);
-            ExpectMsg("reply", TimeSpan.FromSeconds(1));
+            ExpectMsg("reply");
 
             (RouteeSize(router)).ShouldBe(resizer.LowerBound);
 
@@ -160,7 +168,7 @@ namespace Akka.Tests.Routing
                     Thread.Sleep(TimeSpan.FromMilliseconds(20));
                 }
                 Within(
-                    TimeSpan.FromMilliseconds(span.TotalMilliseconds * loops / resizer.LowerBound) + TimeSpan.FromSeconds(2.5),
+                    TimeSpan.FromMilliseconds((span.TotalMilliseconds * loops) / resizer.LowerBound) + TimeSpan.FromSeconds(2),
                     () =>
                     {
                         for (var i = 0; i < loops; i++) ExpectMsg("done");
@@ -176,7 +184,7 @@ namespace Akka.Tests.Routing
 
 
             // a whole bunch should max it out
-            loop(20, TimeSpan.FromMilliseconds(500));
+            loop(50, TimeSpan.FromMilliseconds(500));
             RouteeSize(router).ShouldBe(resizer.UpperBound);
 
         }
@@ -194,37 +202,40 @@ namespace Akka.Tests.Routing
             }
         }
 
-        [Fact(Timeout = 10000)]
-        public void DefaultResizer_must_backoff_within_10_seconds()
+        [Fact]
+        public void DefaultResizer_must_backoff()
         {
-            var resizer = new DefaultResizer(2, 5, pressureThreshold: 1, rampupRate: 1.0d, backoffRate: 1.0d,
+            Within(TimeSpan.FromSeconds(10), () =>
+            {   
+               var resizer = new DefaultResizer(2, 5, pressureThreshold: 1, rampupRate: 1.0d, backoffRate: 1.0d,
                messagesPerResize: 2, backoffThreshold: 0.4d);
 
-            var router = Sys.ActorOf(Props.Create<BackoffActor>().WithRouter(new RoundRobinPool(0, resizer)));
+                var router = Sys.ActorOf(Props.Create<BackoffActor>().WithRouter(new RoundRobinPool(0, resizer)));
 
-            // put some pressure on the router
-            for (var i = 0; i < 15; i++)
-            {
-                router.Tell(150);
-                Thread.Sleep(20);
-            }
+                // put some pressure on the router
+                for (var i = 0; i < 25; i++)
+                {
+                    router.Tell(150);
+                    Thread.Sleep(20);
+                }
 
-            var z = RouteeSize(router);
-            Assert.True(z > 2);
-            Thread.Sleep(300);
+                var z = RouteeSize(router);
+                Assert.True(z > 2);
+                Thread.Sleep(300);
 
-            // let it cool down
-            AwaitCondition(() =>
-            {
-                router.Tell(0); //trigger resize
-                Thread.Sleep(20);
-                return RouteeSize(router) < z;
-            }, TimeSpan.FromMilliseconds(500));
+                // let it cool down
+                AwaitCondition(() =>
+                {
+                    router.Tell(0); //trigger resize
+                    Thread.Sleep(20);
+                    return RouteeSize(router) < z;
+                }, null, TimeSpan.FromMilliseconds(500));
+            });
         }
 
         #region Internal methods
 
-        private int RouteeSize(ActorRef router)
+        private int RouteeSize(IActorRef router)
         {
             var routeesTask = router.Ask<Routees>(new GetRoutees(), TestKitSettings.DefaultTimeout);
             routeesTask.Wait(TestKitSettings.DefaultTimeout);
@@ -234,3 +245,4 @@ namespace Akka.Tests.Routing
         #endregion
     }
 }
+

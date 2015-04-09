@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="GuaranteedDeliverySpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
@@ -15,24 +22,33 @@ namespace Akka.Persistence.Tests
 
         class Sender : GuaranteedDeliveryActor
         {
-            private readonly ActorRef _testActor;
+            private readonly IActorRef _testActor;
             private readonly string _name;
+            private readonly TimeSpan _redeliverInterval;
+            private readonly int _warn;
+            private readonly int _redeliveryBurstLimit;
             private readonly bool _isAsync;
-            private readonly IDictionary<string, string> _destinations;
-            private readonly LoggingAdapter _log;
-            private ActorRef _lastSnapshotAskedForBy;
+            private readonly IDictionary<string, ActorPath> _destinations;
+            private readonly ILoggingAdapter _log;
+            private IActorRef _lastSnapshotAskedForBy;
 
-            public Sender(ActorRef testActor, string name, TimeSpan redeliverInterval, int warn, bool isAsync, IDictionary<string, string> destinations)
+            public Sender(IActorRef testActor, string name, TimeSpan redeliverInterval, int warn, int redeliveryBurstLimit, bool isAsync, IDictionary<string, ActorPath> destinations)
                 : base()
             {
                 _testActor = testActor;
                 _name = name;
+                _redeliverInterval = redeliverInterval;
+                _warn = warn;
+                _redeliveryBurstLimit = redeliveryBurstLimit;
                 _isAsync = isAsync;
                 _destinations = destinations;
                 _log = Context.GetLogger();
             }
 
             public override string PersistenceId { get { return _name; } }
+            public override TimeSpan RedeliverInterval { get { return _redeliverInterval; } }
+            public override int UnconfirmedDeliveryAttemptsToWarn { get { return _warn; } }
+            public override int RedeliveryBurstLimit { get { return _redeliveryBurstLimit; } }
 
             protected override bool ReceiveRecover(object message)
             {
@@ -122,7 +138,7 @@ namespace Akka.Persistence.Tests
         {
             private readonly ISet<long> _allReceived;
 
-            public Destination(ActorRef testActor)
+            public Destination(IActorRef testActor)
             {
                 _allReceived = new HashSet<long>();
                 Receive<Action>(a =>
@@ -140,7 +156,7 @@ namespace Akka.Persistence.Tests
         class Unreliable : ReceiveActor
         {
             private int _count = 0;
-            public Unreliable(int dropMod, ActorRef target)
+            public Unreliable(int dropMod, IActorRef target)
             {
                 Receive<object>((message) =>
                 {
@@ -294,8 +310,8 @@ namespace Akka.Persistence.Tests
         public void GuaranteedDelivery_must_deliver_messages_in_order_when_nothing_is_lost()
         {
             var probe = CreateTestProbe();
-            var destinations = new Dictionary<string, string> { { "A", Sys.ActorOf(Props.Create(() => new Destination(probe.Ref))).Path.ToString() } };
-            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, false, destinations)), Name);
+            var destinations = new Dictionary<string, ActorPath> { { "A", Sys.ActorOf(Props.Create(() => new Destination(probe.Ref))).Path } };
+            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, 1000, false, destinations)), Name);
 
             sender.Tell(new Req("a"));
             ExpectMsg(ReqAck.Instance);
@@ -308,8 +324,8 @@ namespace Akka.Persistence.Tests
         {
             var probe = CreateTestProbe();
             var dest = Sys.ActorOf(Props.Create(() => new Destination(probe.Ref)));
-            var destinations = new Dictionary<string, string> { { "A", Sys.ActorOf(Props.Create(() => new Unreliable(3, dest))).Path.ToString() } };
-            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, false, destinations)), Name);
+            var destinations = new Dictionary<string, ActorPath> { { "A", Sys.ActorOf(Props.Create(() => new Unreliable(3, dest))).Path } };
+            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, 1000, false, destinations)), Name);
 
             sender.Tell(new Req("a-1"));
             ExpectMsg(ReqAck.Instance);
@@ -335,8 +351,8 @@ namespace Akka.Persistence.Tests
         {
             var probe = CreateTestProbe();
             var dest = Sys.ActorOf(Props.Create(() => new Destination(probe.Ref)));
-            var destinations = new Dictionary<string, string> { { "A", Sys.ActorOf(Props.Create(() => new Unreliable(3, dest))).Path.ToString() } };
-            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, false, destinations)), Name);
+            var destinations = new Dictionary<string, ActorPath> { { "A", Sys.ActorOf(Props.Create(() => new Unreliable(3, dest))).Path } };
+            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, 1000, false, destinations)), Name);
 
             sender.Tell(new Req("a-1"));
             ExpectMsg(ReqAck.Instance);
@@ -369,8 +385,8 @@ namespace Akka.Persistence.Tests
         {
             var probe = CreateTestProbe();
             var dest = Sys.ActorOf(Props.Create(() => new Destination(probe.Ref)));
-            var destinations = new Dictionary<string, string> { { "A", Sys.ActorOf(Props.Create(() => new Unreliable(2, dest))).Path.ToString() } };
-            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, false, destinations)), Name);
+            var destinations = new Dictionary<string, ActorPath> { { "A", Sys.ActorOf(Props.Create(() => new Unreliable(2, dest))).Path } };
+            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, 1000, false, destinations)), Name);
 
             sender.Tell(new Req("a-1"));
             ExpectMsg(ReqAck.Instance);
@@ -403,13 +419,13 @@ namespace Akka.Persistence.Tests
             probe.ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
-        [Fact(Skip = "FIXME")]
+        [Fact]
         public void GuaranteedDelivery_must_restore_state_from_snapshot()
         {
             var probe = CreateTestProbe();
             var dest = Sys.ActorOf(Props.Create(() => new Destination(probe.Ref)));
-            var destinations = new Dictionary<string, string> { { "A", Sys.ActorOf(Props.Create(() => new Unreliable(3, dest))).Path.ToString() } };
-            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, false, destinations)), Name);
+            var destinations = new Dictionary<string, ActorPath> { { "A", Sys.ActorOf(Props.Create(() => new Unreliable(3, dest))).Path } };
+            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, 1000, false, destinations)), Name);
 
             sender.Tell(new Req("a-1"));
             ExpectMsg(ReqAck.Instance);
@@ -428,7 +444,6 @@ namespace Akka.Persistence.Tests
 
             probe.ExpectMsg<Action>(a => a.Id == 4 && a.Payload == "a-4");
 
-            //FIXME: must have serializable ActorPath to work (github issue: #553)
             // after snapshot succeed
             ExpectMsg<SaveSnapshotSuccess>();
             // trigger restart
@@ -443,14 +458,14 @@ namespace Akka.Persistence.Tests
             probe.ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
-        [Fact(Skip = "FIXME")]
+        [Fact]
         public void GuaranteedDelivery_must_warn_about_unconfirmed_messages()
         {
             var probeA = CreateTestProbe();
             var probeB = CreateTestProbe();
 
-            var destinations = new Dictionary<string, string> { { "A", probeA.Ref.Path.ToString() }, { "B", probeB.Ref.Path.ToString() } };
-            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 3, false, destinations)), Name);
+            var destinations = new Dictionary<string, ActorPath> { { "A", probeA.Ref.Path }, { "B", probeB.Ref.Path } };
+            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 3, 1000, false, destinations)), Name);
 
             sender.Tell(new Req("a-1"));
             sender.Tell(new Req("b-1"));
@@ -463,8 +478,8 @@ namespace Akka.Persistence.Tests
                 x is UnconfirmedWarning ? ((UnconfirmedWarning)x).UnconfirmedDeliveries : Enumerable.Empty<UnconfirmedDelivery>())
                 .SelectMany(e => e).ToArray();
 
-            var resultDestinations = unconfirmed.Select(x => x.Destination.ToString()).Distinct().ToArray();
-            resultDestinations.ShouldOnlyContainInOrder(probeA.Ref.Path.ToString(), probeB.Ref.Path.ToString());
+            var resultDestinations = unconfirmed.Select(x => x.Destination).Distinct().ToArray();
+            resultDestinations.ShouldOnlyContainInOrder(probeA.Ref.Path, probeB.Ref.Path);
             var resultMessages = unconfirmed.Select(x => x.Message).Distinct().ToArray();
             resultMessages.ShouldOnlyContainInOrder(new Action(1, "a-1"), new Action(2, "b-1"), new Action(3, "b-2"));
 
@@ -480,13 +495,13 @@ namespace Akka.Persistence.Tests
             var destA = Sys.ActorOf(Props.Create(() => new Destination(probeA.Ref)), "destination-a");
             var destB = Sys.ActorOf(Props.Create(() => new Destination(probeB.Ref)), "destination-b");
             var destC = Sys.ActorOf(Props.Create(() => new Destination(probeC.Ref)), "destination-c");
-            var destinations = new Dictionary<string, string>
+            var destinations = new Dictionary<string, ActorPath>
             {
-                { "A", Sys.ActorOf(Props.Create(() => new Unreliable(2, destA)), "unreliable-a").Path.ToString() },
-                { "B", Sys.ActorOf(Props.Create(() => new Unreliable(5, destB)), "unreliable-b").Path.ToString() },
-                { "C", Sys.ActorOf(Props.Create(() => new Unreliable(3, destC)), "unreliable-c").Path.ToString() }
+                { "A", Sys.ActorOf(Props.Create(() => new Unreliable(2, destA)), "unreliable-a").Path },
+                { "B", Sys.ActorOf(Props.Create(() => new Unreliable(5, destB)), "unreliable-b").Path },
+                { "C", Sys.ActorOf(Props.Create(() => new Unreliable(3, destC)), "unreliable-c").Path }
             };
-            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 3, false, destinations)), Name);
+            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(1000), 5, 1000, true, destinations)), Name);
 
             const int n = 100;
             var a = new string[n];
@@ -500,20 +515,20 @@ namespace Akka.Persistence.Tests
             }
             for (int i = 0; i < n; i++)
             {
-                var x = "a-" + i;
+                var x = "b-" + i;
                 b[i] = x;
-                sender.Tell(new Req("b-" + i));
+                sender.Tell(new Req(x));
             }
             for (int i = 0; i < n; i++)
             {
-                var x = "a-" + i;
+                var x = "c-" + i;
                 c[i] = x;
-                sender.Tell(new Req("c-" + i));
+                sender.Tell(new Req(x));
             }
-            var deliverWithin = TimeSpan.FromSeconds(30);
-            var resA = probeA.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload).Distinct().ToArray();
-            var resB = probeB.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload).Distinct().ToArray();
-            var resC = probeC.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload).Distinct().ToArray();
+            var deliverWithin = TimeSpan.FromSeconds(20);
+            var resA = new SortedSet<string>(probeA.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload));
+            var resB = new SortedSet<string>(probeB.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload));
+            var resC = new SortedSet<string>(probeC.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload));
 
             resA.ShouldOnlyContainInOrder(a);
             resB.ShouldOnlyContainInOrder(b);
@@ -521,3 +536,4 @@ namespace Akka.Persistence.Tests
         }
     }
 }
+

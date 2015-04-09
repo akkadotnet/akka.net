@@ -1,4 +1,10 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="HoconTests.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System.Linq;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -76,7 +82,7 @@ namespace Akka.Tests.Configuration
 
 
         [Fact]
-        public void CanConcatinateSubstitutedUnquotedString()
+        public void CanConcatenateSubstitutedUnquotedString()
         {
             var hocon = @"a {
   name = Roger
@@ -86,7 +92,7 @@ namespace Akka.Tests.Configuration
         }
 
         [Fact]
-        public void CanConcatinateSubstitutedArray()
+        public void CanConcatenateSubstitutedArray()
         {
             var hocon = @"a {
   b = [1,2,3]
@@ -372,7 +378,7 @@ a.b.e.f=3
         }
 
         [Fact]
-        public void CanAssignTrippleQuotedStringToField()
+        public void CanAssignTripleQuotedStringToField()
         {
             var hocon = @"a=""""""hello""""""";
             Assert.Equal("hello", ConfigurationFactory.ParseString(hocon).GetString("a"));
@@ -595,3 +601,4 @@ test.value = 456
         }
     }
 }
+

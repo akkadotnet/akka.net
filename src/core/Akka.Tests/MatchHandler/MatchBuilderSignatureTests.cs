@@ -1,4 +1,11 @@
-﻿using Akka.Tools.MatchHandler;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MatchBuilderSignatureTests.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Tools.MatchHandler;
 using Xunit;
 
 namespace Akka.Tests.MatchHandler
@@ -133,7 +140,7 @@ namespace Akka.Tests.MatchHandler
             Assert.True(signature2.Equals(signature1));
         }
         [Fact]
-        public void Equals_with_same_elements_in_signature_but_feweer_in_one_should_be_false()
+        public void Equals_with_same_elements_in_signature_but_fewer_in_one_should_be_false()
         {
             var signature1 = new MatchBuilderSignature(new object[] { 4711, "42", new object() });
             var signature2 = new MatchBuilderSignature(new object[] { 4711, "42" });
@@ -143,3 +150,4 @@ namespace Akka.Tests.MatchHandler
 
     }
 }
+

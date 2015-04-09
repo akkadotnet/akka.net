@@ -1,4 +1,11 @@
-﻿using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MemberOrderingSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
@@ -55,7 +62,7 @@ namespace Akka.Cluster.Tests
             var m11 = Member.Create(new UniqueAddress(address, -3), ImmutableHashSet.Create<string>());
             var m2 = m1.Copy(status: MemberStatus.Up);
             var m22 = m11.Copy(status: MemberStatus.Up);
-            var m3 = TestMember.Create(address.Copy(port: 10000), MemberStatus.Up);
+            var m3 = TestMember.Create(address.WithPort(10000), MemberStatus.Up);
 
             Assert.Equal(m1, m2);
             Assert.Equal(m1.GetHashCode(), m2.GetHashCode());
@@ -67,10 +74,10 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void MemberOrderingMustConsitentOrderingAndEquals()
+        public void MemberOrderingMustConsistentOrderingAndEquals()
         {
             var address1 = new Address("akka.tcp", "sys1", "host1", 9001);
-            var address2 = address1.Copy(port: 9002);
+            var address2 = address1.WithPort(9002);
 
             var x = TestMember.Create(address1, MemberStatus.Exiting);
             var y = TestMember.Create(address1, MemberStatus.Removed);
@@ -89,8 +96,8 @@ namespace Akka.Cluster.Tests
         public void MemberOrderingMustWorkWithSortedSet()
         {
             var address1 = new Address("akka.tcp", "sys1", "host1", 9001);
-            var address2 = address1.Copy(port: 9002);
-            var address3 = address1.Copy(port: 9003);
+            var address2 = address1.WithPort(9002);
+            var address3 = address1.WithPort(9003);
 
             var set = new SortedSet<Member>
             {
@@ -190,13 +197,13 @@ namespace Akka.Cluster.Tests
         {
             var address = new Address("akka.tcp", "sys1", "host1", 5000);
             var m1 = TestMember.Create(address, MemberStatus.Joining);
-            var m2 = TestMember.Create(address.Copy(port:7000), MemberStatus.Joining);
-            var m3 = TestMember.Create(address.Copy(port: 3000), MemberStatus.Exiting);
-            var m4 = TestMember.Create(address.Copy(port: 6000), MemberStatus.Exiting);
-            var m5 = TestMember.Create(address.Copy(port: 2000), MemberStatus.Down);
-            var m6 = TestMember.Create(address.Copy(port: 4000), MemberStatus.Down);
-            var m7 = TestMember.Create(address.Copy(port: 8000), MemberStatus.Up);
-            var m8 = TestMember.Create(address.Copy(port: 9000), MemberStatus.Up);
+            var m2 = TestMember.Create(address.WithPort(7000), MemberStatus.Joining);
+            var m3 = TestMember.Create(address.WithPort(3000), MemberStatus.Exiting);
+            var m4 = TestMember.Create(address.WithPort(6000), MemberStatus.Exiting);
+            var m5 = TestMember.Create(address.WithPort(2000), MemberStatus.Down);
+            var m6 = TestMember.Create(address.WithPort(4000), MemberStatus.Down);
+            var m7 = TestMember.Create(address.WithPort(8000), MemberStatus.Up);
+            var m8 = TestMember.Create(address.WithPort(9000), MemberStatus.Up);
 
             var expected = new List<Member> {m7, m8, m1, m2, m3, m4, m5, m6};
             var shuffled = expected.Shuffle();
@@ -224,3 +231,4 @@ namespace Akka.Cluster.Tests
         }
     }
 }
+

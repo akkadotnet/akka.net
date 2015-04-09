@@ -1,8 +1,17 @@
-﻿using System;
-using Akka.Util.Internal;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RemoteScope.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// Used to deploy actors on remote nodes at the specified <see cref="Address"/>.
+    /// </summary>
     public class RemoteScope : Scope, IEquatable<RemoteScope>
     {
         protected RemoteScope()
@@ -35,5 +44,16 @@ namespace Akka.Actor
         {
             return (Address != null ? Address.GetHashCode() : 0);
         }
+
+        public override Scope WithFallback(Scope other)
+        {
+            return this;
+        }
+
+        public override Scope Copy()
+        {
+            return new RemoteScope(Address);
+        }
     }
 }
+

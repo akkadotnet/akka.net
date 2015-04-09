@@ -1,6 +1,12 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Sink.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using Xunit;
@@ -30,7 +36,7 @@ namespace Akka.NodeTestRunner
             var testPassed = message as ITestPassed;
             if (testPassed != null)
             {
-                //the MultiNodeTestRuner uses 1-based indexing, which is why we have to add 1 to the index.
+                //the MultiNodeTestRunner uses 1-based indexing, which is why we have to add 1 to the index.
                 var specPass = new SpecPass(_nodeIndex + 1, testPassed.TestCase.DisplayName);
                 Console.WriteLine(specPass);
                 Passed = true;
@@ -39,7 +45,7 @@ namespace Akka.NodeTestRunner
             var testFailed = message as ITestFailed;
             if (testFailed != null)
             {
-                //the MultiNodeTestRuner uses 1-based indexing, which is why we have to add 1 to the index.
+                //the MultiNodeTestRunner uses 1-based indexing, which is why we have to add 1 to the index.
                 var specFail = new SpecFail(_nodeIndex + 1, testFailed.TestCase.DisplayName);
                 foreach (var failedMessage in testFailed.Messages) specFail.FailureMessages.Add(failedMessage);
                 foreach (var stackTrace in testFailed.StackTraces) specFail.FailureStackTraces.Add(stackTrace);
@@ -140,3 +146,4 @@ namespace Akka.NodeTestRunner
         }
     }
 }
+

@@ -1,6 +1,12 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="HoconObject.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
@@ -24,7 +30,7 @@ namespace Akka.Configuration.Hocon
                     HoconObject obj = v.Value.GetObject();
                     if (obj != null)
                         return (object) obj.Unwrapped;
-                    return null;
+                    return v.Value;
                 });
             }
         }
@@ -98,3 +104,4 @@ namespace Akka.Configuration.Hocon
         }
     }
 }
+

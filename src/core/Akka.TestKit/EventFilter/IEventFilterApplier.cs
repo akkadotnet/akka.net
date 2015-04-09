@@ -1,9 +1,16 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="IEventFilterApplier.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 
 namespace Akka.TestKit
 {
     // ReSharper disable once InconsistentNaming
-    public interface EventFilterApplier
+    public interface IEventFilterApplier
     {
         /// <summary>
         /// Executes <paramref name="action"/> and
@@ -116,7 +123,7 @@ namespace Akka.TestKit
 
         /// <summary>
         /// Prevents events from being logged from now on. To allow events to be logged again, call 
-        /// <see cref="UnmutableFilter.Unmute">Unmute</see> on the returned object.
+        /// <see cref="IUnmutableFilter.Unmute">Unmute</see> on the returned object.
         /// <example>
         /// <code>
         /// var filter = EventFilter.Debug().Mute();
@@ -134,7 +141,7 @@ namespace Akka.TestKit
         /// </code>
         /// </example>
         /// </summary>
-        UnmutableFilter Mute();
+        IUnmutableFilter Mute();
 
 
         /// <summary>
@@ -143,3 +150,4 @@ namespace Akka.TestKit
         EventFilterFactory And { get; }
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -6,7 +13,6 @@ using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.MultiNodeTestRunner.Shared;
-using Akka.MultiNodeTestRunner.Shared.Reporting;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.Remote.TestKit;
 using Xunit;
@@ -20,7 +26,7 @@ namespace Akka.MultiNodeTestRunner
     {
         protected static ActorSystem TestRunSystem;
 
-        protected static ActorRef SinkCoordinator;
+        protected static IActorRef SinkCoordinator;
 
         
 
@@ -54,7 +60,7 @@ namespace Akka.MultiNodeTestRunner
         static void Main(string[] args)
         {
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
-            SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>());
+            SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>(), "sinkCoordinator");
 
             var assemblyName = args[0];
 
@@ -67,7 +73,7 @@ namespace Akka.MultiNodeTestRunner
                     controller.Find(false, discovery, new TestFrameworkOptions());
                     discovery.Finished.WaitOne();
 
-                    foreach (var test in discovery.Tests)
+                    foreach (var test in discovery.Tests.Reverse())
                     {
                         PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
 
@@ -172,7 +178,8 @@ namespace Akka.MultiNodeTestRunner
 
         static void PublishToAllSinks(string message)
         {
-            SinkCoordinator.Tell(message);
+            SinkCoordinator.Tell(message, ActorRefs.NoSender);
         }
     }
 }
+

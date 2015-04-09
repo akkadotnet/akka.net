@@ -1,4 +1,11 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PropsSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Actor;
 using Akka.TestKit;
 using System;
 using Xunit;
@@ -19,21 +26,37 @@ namespace Akka.Tests.Actor
         public void Props_must_create_actor_by_expression()
         {
             var props = Props.Create(() => new PropsTestActor());
-            ActorRef actor = Sys.ActorOf(props);
+            IActorRef actor = Sys.ActorOf(props);
             Assert.NotNull(actor);
         }
 
         [Fact]
         public void Props_must_create_actor_by_producer()
         {
-            TestLatch latchProducer = new TestLatch(Sys);
-            TestLatch latchActor = new TestLatch(Sys);
+            TestLatch latchProducer = new TestLatch();
+            TestLatch latchActor = new TestLatch();
             var props = Props.CreateBy<TestProducer>(latchProducer, latchActor);
-            ActorRef actor = Sys.ActorOf(props);
+            IActorRef actor = Sys.ActorOf(props);
             latchActor.Ready(TimeSpan.FromSeconds(1));
         }
 
-        private class TestProducer : IndirectActorProducer
+        [Fact]
+        public void Props_created_without_strategy_must_have_it_null()
+        {
+            var props = Props.Create(() => new PropsTestActor());
+            Assert.Null(props.SupervisorStrategy);
+        }
+
+        [Fact]
+        public void Props_created_with_strategy_must_have_it_set()
+        {
+            var strategy = new OneForOneStrategy(_ => Directive.Stop);
+            var props = Props.Create(() => new PropsTestActor(), strategy);
+
+            Assert.Equal(strategy, props.SupervisorStrategy);
+        }
+
+        private class TestProducer : IIndirectActorProducer
         {
             TestLatch latchActor;
 
@@ -54,6 +77,12 @@ namespace Akka.Tests.Actor
             {
                 get { return typeof(PropsTestActor); }
             }
+
+
+            public void Release(ActorBase actor)
+            {
+                actor = null;
+            }
         }
 
         private class PropsTestActor : ActorBase
@@ -65,3 +94,4 @@ namespace Akka.Tests.Actor
         }
     }
 }
+

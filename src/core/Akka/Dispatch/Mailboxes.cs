@@ -1,6 +1,12 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Mailboxes.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
@@ -73,7 +79,7 @@ namespace Akka.Dispatch
             var actortype = props.Type;
             var interfaces = actortype.GetInterfaces()
                 .Where(i => i.IsGenericType)
-                .Where(i => i.GetGenericTypeDefinition() == typeof (RequiresMessageQueue<>))
+                .Where(i => i.GetGenericTypeDefinition() == typeof (IRequiresMessageQueue<>))
                 .Select(i => i.GetGenericArguments().First())
                 .ToList();
 
@@ -96,7 +102,7 @@ namespace Akka.Dispatch
         /// <returns>Mailbox.</returns>
         public Type FromConfig(string path)
         {
-            //TODO: this should not exist, its a temp hack because we are not serializing mailbox info when doing remote deply..
+            //TODO: this should not exist, its a temp hack because we are not serializing mailbox info when doing remote deploy..
             if (string.IsNullOrEmpty(path))
             {
                 return typeof (UnboundedMailbox);
@@ -115,3 +121,4 @@ stash-capacity = -1
         }
     }
 }
+

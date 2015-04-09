@@ -1,9 +1,12 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.Actor;
 
 namespace HelloAkka
 {
@@ -23,8 +26,9 @@ namespace HelloAkka
             // send a message to the actor
             greeter.Tell(new Greet("World"));
 
-            // prevent the application from exiting befor message is handled
+            // prevent the application from exiting before message is handled
             Console.ReadLine();
         }
     }
 }
+

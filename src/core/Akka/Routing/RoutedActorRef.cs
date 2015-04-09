@@ -1,8 +1,14 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RoutedActorRef.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Dispatch;
-using Akka.Dispatch.SysMsg;
 
 namespace Akka.Routing
 {
@@ -13,10 +19,10 @@ namespace Akka.Routing
         private readonly MessageDispatcher _routerDispatcher;
         private readonly Func<Mailbox> _createMailbox;
         private readonly Props _routeeProps;
-        private readonly InternalActorRef _supervisor;
+        private readonly IInternalActorRef _supervisor;
 
         public RoutedActorRef(ActorSystemImpl system, Props routerProps, MessageDispatcher routerDispatcher,
-            Func<Mailbox> createMailbox, Props routeeProps, InternalActorRef supervisor, ActorPath path)
+            Func<Mailbox> createMailbox, Props routeeProps, IInternalActorRef supervisor, ActorPath path)
             : base(system, routerProps, routerDispatcher, createMailbox, supervisor, path)
         {
             _system = system;
@@ -54,3 +60,4 @@ namespace Akka.Routing
         }
     }
 }
+

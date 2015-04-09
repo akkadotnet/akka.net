@@ -1,8 +1,16 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorRefProvider.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor.Internals;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -12,20 +20,20 @@ using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
-    public interface ActorRefProvider
+    public interface IActorRefProvider
     {
         /// <summary>
         /// Reference to the supervisor of guardian and systemGuardian; this is
         /// exposed so that the ActorSystemImpl can use it as lookupRoot, i.e.
         /// for anchoring absolute actor look-ups.
         /// </summary>
-        InternalActorRef RootGuardian { get; }
+        IInternalActorRef RootGuardian { get; }
 
         /// <summary>Reference to the supervisor of guardian and systemGuardian at the specified address;
         /// this is exposed so that the ActorRefFactory can use it as lookupRoot, i.e.
         /// for anchoring absolute actor selections.
         /// </summary>
-        ActorRef RootGuardianAt(Address address);
+        IActorRef RootGuardianAt(Address address);
 
         /// <summary> Gets the supervisor used for all top-level user actors.</summary>
         LocalActorRef Guardian { get; }
@@ -34,7 +42,7 @@ namespace Akka.Actor
         LocalActorRef SystemGuardian { get; }
 
         /// <summary>Gets the dead letters.</summary>
-        ActorRef DeadLetters { get; }
+        IActorRef DeadLetters { get; }
 
         /// <summary>
         /// Gets the root path for all actors within this actor system, not including any remote address information.
@@ -43,7 +51,6 @@ namespace Akka.Actor
 
         /// <summary>Gets the settings.</summary>
         Settings Settings { get; }
-
 
         /// <summary>
         /// Initialization of an ActorRefProvider happens in two steps: first
@@ -60,17 +67,16 @@ namespace Akka.Actor
         ActorPath TempPath();
 
         /// <summary>Returns the actor reference representing the "/temp" path.</summary>
-        InternalActorRef TempContainer { get; }
+        IInternalActorRef TempContainer { get; }
 
         /// <summary>Registers an actorRef at a path returned by <see cref="TempPath"/>; do NOT pass in any other path.</summary>
         /// <param name="actorRef">The actor reference.</param>
         /// <param name="path">A path returned by <see cref="TempPath"/>. Do NOT pass in any other path!</param>
-        void RegisterTempActor(InternalActorRef actorRef, ActorPath path);
+        void RegisterTempActor(IInternalActorRef actorRef, ActorPath path);
 
         /// <summary>Unregister a temporary actor (i.e. obtained from <see cref="TempPath"/>); do NOT pass in any other path.</summary>
         /// <param name="path">A path returned by <see cref="TempPath"/>. Do NOT pass in any other path!</param>
         void UnregisterTempActor(ActorPath path);
-
 
         /// <summary>
         /// Actor factory with create-only semantics: will create an actor as
@@ -81,16 +87,16 @@ namespace Akka.Actor
         /// but it should be overridable from external configuration; the lookup of
         /// the latter can be suppressed by setting "lookupDeploy" to "false".
         /// </summary>
-        InternalActorRef ActorOf(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async);
+        IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async);
 
         /// <summary>Get the actor reference for a specified path. If no such actor exists, it will be (equivalent to) a dead letter reference.</summary>
-        ActorRef ResolveActorRef(string path);
+        IActorRef ResolveActorRef(string path);
 
         /// <summary>Get the actor reference for a specified path. If no such actor exists, it will be (equivalent to) a dead letter reference.</summary>
-        ActorRef ResolveActorRef(ActorPath actorPath);
+        IActorRef ResolveActorRef(ActorPath actorPath);
 
         /// <summary>
-        /// This Future is completed upon termination of this <see cref="ActorRefProvider"/>, which
+        /// This Future is completed upon termination of this <see cref="IActorRefProvider"/>, which
         /// is usually initiated by stopping the guardian via <see cref="ActorSystem.Stop"/>.
         /// </summary>
         Task TerminationTask { get; }
@@ -110,18 +116,18 @@ namespace Akka.Actor
     /// <summary>
     ///     Class LocalActorRefProvider. This class cannot be inherited.
     /// </summary>
-    public sealed class LocalActorRefProvider : ActorRefProvider
+    public sealed class LocalActorRefProvider : IActorRefProvider
     {
         private readonly Settings _settings;
         private readonly EventStream _eventStream;
         private readonly Deployer _deployer;
-        private readonly InternalActorRef _deadLetters;
+        private readonly IInternalActorRef _deadLetters;
         private readonly RootActorPath _rootPath;
-        private readonly LoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
         private readonly AtomicCounterLong _tempNumber;
         private readonly ActorPath _tempNode;
         private ActorSystemImpl _system;
-        private readonly Dictionary<string, InternalActorRef> _extraNames = new Dictionary<string, InternalActorRef>();
+        private readonly Dictionary<string, IInternalActorRef> _extraNames = new Dictionary<string, IInternalActorRef>();
         private readonly TaskCompletionSource<Status> _terminationPromise = new TaskCompletionSource<Status>();
         private readonly SupervisorStrategy _systemGuardianStrategy;
         private VirtualPathContainer _tempContainer;
@@ -136,7 +142,7 @@ namespace Akka.Actor
             //Intentionally left blank
         }
 
-        public LocalActorRefProvider(string systemName, Settings settings, EventStream eventStream, Deployer deployer, Func<ActorPath, InternalActorRef> deadLettersFactory)
+        public LocalActorRefProvider(string systemName, Settings settings, EventStream eventStream, Deployer deployer, Func<ActorPath, IInternalActorRef> deadLettersFactory)
         {
             _settings = settings;
             _eventStream = eventStream;
@@ -154,11 +160,11 @@ namespace Akka.Actor
 
         }
 
-        public ActorRef DeadLetters { get { return _deadLetters; } }
+        public IActorRef DeadLetters { get { return _deadLetters; } }
 
         public Deployer Deployer { get { return _deployer; } }
 
-        public InternalActorRef RootGuardian { get { return _rootGuardian; } }
+        public IInternalActorRef RootGuardian { get { return _rootGuardian; } }
 
         public ActorPath RootPath { get { return _rootPath; } }
 
@@ -166,7 +172,7 @@ namespace Akka.Actor
 
         public LocalActorRef SystemGuardian { get { return _systemGuardian; } }
 
-        public InternalActorRef TempContainer { get { return _tempContainer; } }
+        public IInternalActorRef TempContainer { get { return _tempContainer; } }
 
         public Task TerminationTask { get { return _terminationPromise.Task; } }
 
@@ -192,7 +198,7 @@ namespace Akka.Actor
         /// Just be careful to complete all this before <see cref="ActorSystem.Start"/> finishes,
         /// or before you start your own auto-spawned actors.
         /// </summary>
-        public void RegisterExtraName(string name, InternalActorRef actor)
+        public void RegisterExtraName(string name, IInternalActorRef actor)
         {
             _extraNames.Add(name, actor);
         }
@@ -212,7 +218,7 @@ namespace Akka.Actor
             return rootGuardian;
         }
 
-        public ActorRef RootGuardianAt(Address address)
+        public IActorRef RootGuardianAt(Address address)
         {
             return address == _rootPath.Address ? _rootGuardian : _deadLetters;
         }
@@ -249,7 +255,7 @@ namespace Akka.Actor
             return child;
         }
 
-        public void RegisterTempActor(InternalActorRef actorRef, ActorPath path)
+        public void RegisterTempActor(IInternalActorRef actorRef, ActorPath path)
         {
             if(path.Parent != _tempNode)
                 throw new Exception("Cannot RegisterTempActor() with anything not obtained from tempPath()");
@@ -283,7 +289,7 @@ namespace Akka.Actor
             _eventStream.StartDefaultLoggers(_system);
         }
 
-        public ActorRef ResolveActorRef(string path)
+        public IActorRef ResolveActorRef(string path)
         {
             ActorPath actorPath;
             if(ActorPath.TryParse(path, out actorPath) && actorPath.Address == _rootPath.Address)
@@ -298,7 +304,7 @@ namespace Akka.Actor
         /// <param name="path">The actor path.</param>
         /// <returns>ActorRef.</returns>
         /// <exception cref="System.NotSupportedException">The provided actor path is not valid in the LocalActorRefProvider</exception>
-        public ActorRef ResolveActorRef(ActorPath path)
+        public IActorRef ResolveActorRef(ActorPath path)
         {
             if(path.Root == _rootPath)
                 return ResolveActorRef(_rootGuardian, path.Elements);
@@ -325,7 +331,7 @@ namespace Akka.Actor
             //throw new NotSupportedException("The provided actor path is not valid in the LocalActorRefProvider");
         }
 
-        private ActorRef ResolveActorRef(InternalActorRef actorRef, IReadOnlyCollection<string> pathElements)
+        private IActorRef ResolveActorRef(IInternalActorRef actorRef, IReadOnlyCollection<string> pathElements)
         {
             if(pathElements.Count == 0)
             {
@@ -342,69 +348,95 @@ namespace Akka.Actor
         }
 
 
-        public InternalActorRef ActorOf(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
+        public IInternalActorRef ActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor, ActorPath path, bool systemService, Deploy deploy, bool lookupDeploy, bool async)
         {
-            //TODO: This does not match Akka's ActorOf at all
-
-            Deploy configDeploy = _system.Provider.Deployer.Lookup(path);
-            deploy = configDeploy ?? props.Deploy ?? Deploy.None;
-            if(deploy.Mailbox != Deploy.NoMailboxGiven)
-                props = props.WithMailbox(deploy.Mailbox);
-            if(deploy.Dispatcher != Deploy.NoDispatcherGiven)
-                props = props.WithDispatcher(deploy.Dispatcher);
-
-            //TODO: how should this be dealt with?
-            //akka simply passes the "deploy" var from remote daemon to ActorOf
-            //so it atleast seems like they ignore if remote scope is provided here.
-            //leaving this for now since it does work
-
-            if(props.RouterConfig.NoRouter())
+            if (props.Deploy.RouterConfig.NoRouter())
             {
-                return CreateNoRouter(system, props, supervisor, path, deploy, async);
+                if (Settings.DebugRouterMisconfiguration)
+                {
+                    var d = Deployer.Lookup(path);
+                    if (d != null && d.RouterConfig != RouterConfig.NoRouter)
+                        Log.Warning(
+                            string.Format(
+                                "Configuration says that [{0}] should be a router, but code disagrees. Remove the config or add a RouterConfig to its Props.",
+                                path));
+                }
+
+                var props2 = props;
+
+                // mailbox and dispatcher defined in deploy should override props
+                var propsDeploy = lookupDeploy ? Deployer.Lookup(path) : deploy;
+                if (propsDeploy != null)
+                {
+                    if (propsDeploy.Mailbox != Deploy.NoMailboxGiven)
+                        props2 = props2.WithMailbox(propsDeploy.Mailbox);
+                    if (propsDeploy.Dispatcher != Deploy.NoDispatcherGiven)
+                        props2 = props2.WithDispatcher(propsDeploy.Dispatcher);
+                }
+
+                if (!system.Dispatchers.HasDispatcher(props2.Dispatcher))
+                {
+                    throw new ConfigurationException(string.Format("Dispatcher [{0}] not configured for path {1}", props2.Dispatcher, path));
+                }
+
+                try
+                {
+                    // for consistency we check configuration of dispatcher and mailbox locally
+                    var dispatcher = _system.Dispatchers.Lookup(props2.Dispatcher);
+                    var mailboxType = _system.Mailboxes.GetMailboxType(props2, ConfigurationFactory.Empty);
+
+                    if (async)
+                        return
+                            new RepointableActorRef(system, props2, dispatcher,
+                                () => _system.Mailboxes.CreateMailbox(props2, ConfigurationFactory.Empty), supervisor,
+                                path).Initialize(async);
+                    return new LocalActorRef(system, props2, dispatcher,
+                        () => _system.Mailboxes.CreateMailbox(props2, ConfigurationFactory.Empty), supervisor, path);
+                }
+                catch (Exception ex)
+                {
+                    throw new ConfigurationException(
+                        string.Format(
+                            "Configuration problem while creating {0} with dispatcher [{1}] and mailbox [{2}]", path,
+                            props.Dispatcher, props.Mailbox), ex);
+                }
             }
-
-            return CreateWithRouter(system, props, supervisor, path, deploy, async);
-        }
-
-        private InternalActorRef CreateWithRouter(ActorSystemImpl system, Props props, InternalActorRef supervisor,
-            ActorPath path, Deploy deploy, bool async)
-        {
-            //if no Router config value was specified, override with procedural input
-            if (deploy.RouterConfig.NoRouter())
+            else //routers!!!
             {
-                deploy = deploy.WithRouterConfig(props.RouterConfig);
+                var lookup = (lookupDeploy ? Deployer.Lookup(path) : null) ?? Deploy.None;
+                var fromProps = new List<Deploy>() { props.Deploy, deploy, lookup };
+                var d = fromProps.Where(x => x != null).Aggregate((deploy1, deploy2) => deploy2.WithFallback(deploy1));
+                var p = props.WithRouter(d.RouterConfig);
+
+      
+                if (!system.Dispatchers.HasDispatcher(p.Dispatcher))
+                    throw new ConfigurationException(string.Format("Dispatcher [{0}] not configured for routees of path {1}", p.Dispatcher, path));
+                if (!system.Dispatchers.HasDispatcher(d.RouterConfig.RouterDispatcher))
+                    throw new ConfigurationException(string.Format("Dispatcher [{0}] not configured for router of path {1}", p.RouterConfig.RouterDispatcher, path));
+
+                var routerProps = Props.Empty.WithRouter(p.Deploy.RouterConfig).WithDispatcher(p.RouterConfig.RouterDispatcher);
+                var routeeProps = props.WithRouter(RouterConfig.NoRouter);
+
+                try
+                {
+                    // routers use context.actorOf() to create the routees, which does not allow us to pass
+                    // these through, but obtain them here for early verification
+                    var routerDispatcher = system.Dispatchers.Lookup(props.RouterConfig.RouterDispatcher);
+                    var routerMailbox = _system.Mailboxes.CreateMailbox(props, null);
+
+                    var routedActorRef = new RoutedActorRef(system, routerProps, routerDispatcher, () => routerMailbox, routeeProps,
+                        supervisor, path);
+                    routedActorRef.Initialize(async);
+                    return routedActorRef;
+                }
+                catch (Exception ex)
+                {
+                    throw new ConfigurationException(string.Format("Configuration problem while creating [{0}] with router dispatcher [{1}] and mailbox {2}" +
+                                                                   " and routee dispatcher [{3}] and mailbox [{4}].", path, routerProps.Dispatcher, routerProps.Mailbox,
+                                                                   routeeProps.Dispatcher, routeeProps.Mailbox));
+                }
+
             }
-
-            var routerDispatcher = system.Dispatchers.FromConfig(props.RouterConfig.RouterDispatcher);
-            var routerMailbox = _system.Mailboxes.CreateMailbox(props, null);
-            //TODO: Should be val routerMailbox = system.mailboxes.getMailboxType(routerProps, routerDispatcher.configurator.config)
-
-            // routers use context.actorOf() to create the routees, which does not allow us to pass
-            // these through, but obtain them here for early verification
-            var routerProps = Props.Empty.WithDeploy(deploy);
-            var routeeProps = props.WithRouter(RouterConfig.NoRouter);
-
-            var routedActorRef = new RoutedActorRef(system, routerProps, routerDispatcher, () => routerMailbox, routeeProps,
-                supervisor, path);
-            routedActorRef.Initialize(async);
-            return routedActorRef;
-        }
-
-        private InternalActorRef CreateNoRouter(ActorSystemImpl system, Props props, InternalActorRef supervisor, ActorPath path,
-            Deploy deploy, bool async)
-        {
-            if(props.Deploy != deploy)
-                props = props.WithDeploy(deploy);
-            var dispatcher = system.Dispatchers.FromConfig(props.Dispatcher);
-            var mailbox = _system.Mailboxes.CreateMailbox(props, null /*dispatcher.Configurator.Config*/);
-            //TODO: Should be: system.mailboxes.getMailboxType(props2, dispatcher.configurator.config)
-            if (async)
-            {
-                var reActorRef = new RepointableActorRef(system, props, dispatcher, () => mailbox, supervisor, path);
-                reActorRef.Initialize(async: true);
-                return reActorRef;
-            }
-            return new LocalActorRef(system, props, dispatcher, () => mailbox, supervisor, path);
         }
 
         public Address GetExternalAddressFor(Address address)
@@ -414,6 +446,7 @@ namespace Akka.Actor
 
         public Address DefaultAddress { get { return _rootPath.Address; } }
 
-        public LoggingAdapter Log { get { return _log; } }
+        public ILoggingAdapter Log { get { return _log; } }
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DeadLetter.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Actor;
 
 namespace Akka.Event
 {
@@ -13,7 +20,7 @@ namespace Akka.Event
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
         /// <param name="recipient">The recipient.</param>
-        public DeadLetter(object message, ActorRef sender, ActorRef recipient)
+        public DeadLetter(object message, IActorRef sender, IActorRef recipient)
         {
             Message = message;
             Sender = sender;
@@ -30,13 +37,13 @@ namespace Akka.Event
         /// Gets the recipient.
         /// </summary>
         /// <value>The recipient.</value>
-        public ActorRef Recipient { get; private set; }
+        public IActorRef Recipient { get; private set; }
 
         /// <summary>
         /// Gets the sender.
         /// </summary>
         /// <value>The sender.</value>
-        public ActorRef Sender { get; private set; }
+        public IActorRef Sender { get; private set; }
 
         public override string ToString()
         {
@@ -44,3 +51,4 @@ namespace Akka.Event
         }
     }
 }
+

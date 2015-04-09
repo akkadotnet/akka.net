@@ -1,9 +1,14 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="FSMTimingSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Event;
 using Akka.TestKit;
-using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
 
@@ -12,11 +17,11 @@ namespace Akka.Tests.Actor
 
     public class FSMTimingSpec : AkkaSpec
     {
-        public ActorRef Self { get { return TestActor; } }
+        public IActorRef Self { get { return TestActor; } }
 
-        public ActorRef _fsm;
+        public IActorRef _fsm;
 
-        public ActorRef fsm
+        public IActorRef fsm
         {
             get { return _fsm ?? (_fsm = Sys.ActorOf(Props.Create(() => new StateMachine(Self)), "fsm")); }
         }
@@ -79,7 +84,7 @@ namespace Akka.Tests.Actor
             //arrange
 
             //act
-            //the timeout in state TestStateTieout is 800ms, then it will change back to Initial
+            //the timeout in state TestStateTimeout is 800ms, then it will change back to Initial
             Within(TimeSpan.FromMilliseconds(400), () =>
             {
                 fsm.Tell(State.TestStateTimeoutOverride, Self);
@@ -210,13 +215,13 @@ namespace Akka.Tests.Actor
 
         #region Actors
 
-        static void Suspend(ActorRef actorRef)
+        static void Suspend(IActorRef actorRef)
         {
             actorRef.Match()
                 .With<ActorRefWithCell>(l => l.Suspend());
         }
 
-        static void Resume(ActorRef actorRef)
+        static void Resume(IActorRef actorRef)
         {
             actorRef.Match()
                 .With<ActorRefWithCell>(l => l.Resume());
@@ -230,7 +235,7 @@ namespace Akka.Tests.Actor
             TestSingleTimer,
             TestSingleTimerResubmit,
             TestRepeatedTimer,
-            TestUnandled,
+            TestUnhandled,
             TestCancelTimer,
             TestCancelStateTimerInNamedTimerMessage,
             TestCancelStateTimerInNamedTimerMessage2
@@ -265,9 +270,9 @@ namespace Akka.Tests.Actor
         }
 
 
-        public class StateMachine : FSM<State, int>, LoggingFSM
+        public class StateMachine : FSM<State, int>, ILoggingFSM
         {
-            public StateMachine(ActorRef tester)
+            public StateMachine(IActorRef tester)
             {
                 Tester = tester;
                 StartWith(State.Initial, 0);
@@ -442,7 +447,7 @@ namespace Akka.Tests.Actor
                     return nextState;
                 });
 
-                When(State.TestUnandled, @event =>
+                When(State.TestUnhandled, @event =>
                 {
                     State<State, int> nextState = null;
 
@@ -468,9 +473,10 @@ namespace Akka.Tests.Actor
 
 
 
-            public ActorRef Tester { get; private set; }
+            public IActorRef Tester { get; private set; }
         }
 
         #endregion
     }
 }
+

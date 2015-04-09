@@ -1,9 +1,15 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="HeliosTcpTransport.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Event;
 using Google.ProtocolBuffers;
 using Helios.Exceptions;
 using Helios.Net;
@@ -212,3 +218,4 @@ namespace Akka.Remote.Transport.Helios
         }
     }
 }
+

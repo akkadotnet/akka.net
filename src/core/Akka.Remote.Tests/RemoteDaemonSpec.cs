@@ -1,11 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RemoteDaemonSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Threading;
+using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.TestKit;
 using Xunit;
-using Akka.Actor;
-using Akka.Configuration;
-using System.Collections.Concurrent;
-using System.Threading;
 
 namespace Akka.Remote.Tests
 {
@@ -82,3 +86,4 @@ akka {
         }
     }
 }
+

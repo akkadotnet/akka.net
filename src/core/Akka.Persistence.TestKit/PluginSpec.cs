@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PluginSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -32,14 +39,22 @@ namespace Akka.Persistence.TestKit
         public string Pid { get { return _pid; } }
         public PersistenceExtension Extension { get { return _extension; } }
 
-        public void Subscribe<T>(ActorRef subscriber)
+        public void Subscribe<T>(IActorRef subscriber)
         {
             Sys.EventStream.Subscribe(subscriber, typeof (T));
         }
 
         public void Dispose()
         {
-            Shutdown();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+                Shutdown();
         }
     }
 }
+

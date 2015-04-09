@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="GuaranteedDeliveryFailureSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
@@ -124,22 +131,22 @@ namespace Akka.Persistence.Tests
 
         internal interface IChaosSupport
         {
-            ActorRef Probe { get; }
+            IActorRef Probe { get; }
             List<int> State { get; set; }
         }
 
         internal class ChaosSender : GuaranteedDeliveryActor
         {
             private readonly string _persistenceId;
-            private readonly ActorRef _destination;
+            private readonly IActorRef _destination;
             private readonly Config _config;
             private readonly double _liveProcessingFailureRate;
             private readonly double _replayProcessingFailureRate;
-            private LoggingAdapter _log;
+            private ILoggingAdapter _log;
 
-            public LoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); }}
+            public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); }}
 
-            public ChaosSender(ActorRef destination, ActorRef probe)
+            public ChaosSender(IActorRef destination, IActorRef probe)
             {
                 _destination = destination;
                 Probe = probe;
@@ -229,7 +236,7 @@ namespace Akka.Persistence.Tests
             }
 
 
-            public ActorRef Probe { get; private set; }
+            public IActorRef Probe { get; private set; }
             public List<int> State { get; set; }
         }
 
@@ -237,11 +244,11 @@ namespace Akka.Persistence.Tests
         {
             private readonly Config _config;
             private readonly double _confirmFailureRate;
-            private LoggingAdapter _log;
+            private ILoggingAdapter _log;
 
-            public LoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+            public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
 
-            public ChaosDestination(ActorRef probe)
+            public ChaosDestination(IActorRef probe)
             {
                 Probe = probe;
                 State = new List<int>();
@@ -268,17 +275,17 @@ namespace Akka.Persistence.Tests
                 });
             }
 
-            public ActorRef Probe { get; private set; }
+            public IActorRef Probe { get; private set; }
             public List<int> State { get; set; }
         }
 
         internal class ChaosApp : ReceiveActor
         {
-            private readonly ActorRef _probe;
-            private readonly ActorRef _destination;
-            private readonly ActorRef _sender;
+            private readonly IActorRef _probe;
+            private readonly IActorRef _destination;
+            private readonly IActorRef _sender;
 
-            public ChaosApp(ActorRef probe)
+            public ChaosApp(IActorRef probe)
             {
                 _probe = probe;
                 _destination = Context.ActorOf(Props.Create(() => new ChaosDestination(_probe)), "destination");
@@ -330,7 +337,7 @@ namespace Akka.Persistence.Tests
             var chaos2 = Sys.ActorOf(Props.Create(() => new ChaosApp(TestActor)), "chaosApp2");
             ExpectDone();   // by sender
 
-            // destination won't receive message again, beacuse all of the has already been confirmed
+            // destination won't receive message again, because all of the has already been confirmed
         }
 
         private void ExpectDone()
@@ -344,3 +351,4 @@ namespace Akka.Persistence.Tests
     }
 
 }
+

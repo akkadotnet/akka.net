@@ -1,4 +1,10 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RemoteRouterSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
@@ -6,7 +12,6 @@ using Akka.Configuration;
 using Akka.Remote.Routing;
 using Akka.Routing;
 using Akka.TestKit;
-using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
 using Xunit;
 
@@ -37,6 +42,8 @@ namespace Akka.Remote.Tests
 
         public RemoteRouterSpec()
             : base(@"
+            akka.test.single-expect-default = 6s #to help overcome issues with GC pauses on build server
+            akka.remote.retry-gate-closed-for = 1 s #in the event of a Sys <--> System2 whoosh (both tried to connect to eachother), retry quickly
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
             akka.remote.helios.tcp {
                 hostname = localhost
@@ -96,6 +103,11 @@ namespace Akka.Remote.Tests
                 .Replace("${port}", port.ToString()));
         }
 
+        protected override void AfterTermination()
+        {
+            Shutdown(masterActorSystem);
+        }
+
         [Fact]
         public void RemoteRouter_must_deploy_its_children_on_remote_host_driven_by_configuration()
         {
@@ -105,7 +117,7 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<IActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -116,7 +128,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void RemoteRouter_must_deploy_its_children_on_remote_host_driven_by_programatic_definition()
+        public void RemoteRouter_must_deploy_its_children_on_remote_host_driven_by_programmatic_definition()
         {
             var probe = CreateTestProbe(masterActorSystem);
             var router = masterActorSystem.ActorOf(new RemoteRouterConfig(new RoundRobinPool(2), new[] { new Address("akka.tcp", sysName, "localhost", port) })
@@ -125,7 +137,7 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<IActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -145,7 +157,7 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5000; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<IActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -166,7 +178,7 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<IActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -184,7 +196,7 @@ namespace Akka.Remote.Tests
             var probe = CreateTestProbe(masterActorSystem);
             var router = masterActorSystem.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>())
                 .WithDeploy(
-                new Deploy(new RemoteScope(intendedRemoteAddress.Copy()))), "remote-blub2");
+                new Deploy(new RemoteScope(intendedRemoteAddress))), "remote-blub2");
 
             router.Path.Address.ShouldBe(intendedRemoteAddress);
 
@@ -192,7 +204,7 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<IActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -205,19 +217,19 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void RemoteRouter_must_let_remote_deployment_be_overriden_by_local_configuration()
+        public void RemoteRouter_must_let_remote_deployment_be_overridden_by_local_configuration()
         {
             var probe = CreateTestProbe(masterActorSystem);
             var router = masterActorSystem.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>())
                 .WithDeploy(
-                new Deploy(new RemoteScope(intendedRemoteAddress.Copy()))), "local-blub");
+                new Deploy(new RemoteScope(intendedRemoteAddress))), "local-blub");
             router.Path.Address.ToString().ShouldBe(string.Format("akka://{0}", masterActorSystem.Name));
 
             var replies = new HashSet<ActorPath>();
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<IActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -230,21 +242,20 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void RemoteRouter_must_let_remote_deployment_router_be_overriden_by_local_configuration()
+        public void RemoteRouter_must_let_remote_deployment_router_be_overridden_by_local_configuration()
         {
             var probe = CreateTestProbe(masterActorSystem);
             var router = masterActorSystem.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>())
                 .WithDeploy(
-                new Deploy(new RemoteScope(intendedRemoteAddress.Copy()))), "local-blub2");
+                new Deploy(new RemoteScope(intendedRemoteAddress))), "local-blub2");
 
-            // This line was subject to a bug in the original Akka - this router should be locally-deployed.
-            router.Path.Address.ToString().ShouldBe(string.Format("akka://{0}", masterActorSystem.Name));
+            router.Path.Address.ShouldBe(intendedRemoteAddress);
 
             var replies = new HashSet<ActorPath>();
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<IActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -257,12 +268,12 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void RemoteRouter_must_let_remote_deployment_be_overriden_by_remote_configuration()
+        public void RemoteRouter_must_let_remote_deployment_be_overridden_by_remote_configuration()
         {
             var probe = CreateTestProbe(masterActorSystem);
             var router = masterActorSystem.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>())
                 .WithDeploy(
-                new Deploy(new RemoteScope(intendedRemoteAddress.Copy()))), "remote-override");
+                new Deploy(new RemoteScope(intendedRemoteAddress))), "remote-override");
 
             router.Path.Address.ShouldBe(intendedRemoteAddress);
 
@@ -270,7 +281,7 @@ namespace Akka.Remote.Tests
             for (var i = 0; i < 5; i++)
             {
                 router.Tell("", probe.Ref);
-                var expected = probe.ExpectMsg<ActorRef>();
+                var expected = probe.ExpectMsg<IActorRef>(GetTimeoutOrDefault(null));
                 replies.Add(expected.Path);
             }
 
@@ -308,3 +319,4 @@ namespace Akka.Remote.Tests
         }
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MessageSinkActor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Actor;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
@@ -18,14 +25,14 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /// </summary>
         public class BeginSinkTerminate
         {
-            public BeginSinkTerminate(TestRunTree testRun, ActorRef subscriber)
+            public BeginSinkTerminate(TestRunTree testRun, IActorRef subscriber)
             {
                 Subscriber = subscriber;
                 TestRun = testRun;
             }
 
             public TestRunTree TestRun { get; private set; }
-            public ActorRef Subscriber { get; private set; }
+            public IActorRef Subscriber { get; private set; }
         }
 
         /// <summary>
@@ -99,3 +106,4 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         #endregion
     }
 }
+

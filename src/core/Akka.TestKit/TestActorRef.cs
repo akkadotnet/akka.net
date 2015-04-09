@@ -1,5 +1,10 @@
-﻿using System;
-using System.Linq.Expressions;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestActorRef.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using Akka.Actor;
 
 namespace Akka.TestKit
@@ -8,8 +13,8 @@ namespace Akka.TestKit
     /// This special ActorRef is exclusively for use during unit testing in a single-threaded environment. Therefore, it
     /// overrides the dispatcher to <see cref="CallingThreadDispatcher"/> and sets the receiveTimeout to None. Otherwise,
     /// it acts just like a normal ActorRef. You may retrieve a reference to the underlying actor to test internal logic.
-    /// A <see cref="TestActorRef{TActor}"/> can be implicitly casted to an <see cref="ActorRef"/> or you can get the actual
-    /// <see cref="ActorRef"/> from the <see cref="TestActorRefBase{TActor}.Ref">Ref</see> property.
+    /// A <see cref="TestActorRef{TActor}"/> can be implicitly casted to an <see cref="IActorRef"/> or you can get the actual
+    /// <see cref="IActorRef"/> from the <see cref="TestActorRefBase{TActor}.Ref">Ref</see> property.
     /// </summary>
     /// <typeparam name="TActor">The type of actor</typeparam>
     public class TestActorRef<TActor> : TestActorRefBase<TActor> where TActor : ActorBase
@@ -21,37 +26,32 @@ namespace Akka.TestKit
         /// <param name="actorProps">The actor props.</param>
         /// <param name="supervisor">Optional: The supervisor.</param>
         /// <param name="name">Optional: The name.</param>
-        public TestActorRef(ActorSystem system, Props actorProps, ActorRef supervisor = null, string name = null) : base(system, actorProps, supervisor, name)
+        public TestActorRef(ActorSystem system, Props actorProps, IActorRef supervisor = null, string name = null) : base(system, actorProps, supervisor, name)
         {
         }
 
-        public static bool operator ==(TestActorRef<TActor> testActorRef, ActorRef actorRef)
+        public static bool operator ==(TestActorRef<TActor> testActorRef, IActorRef actorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
             return testActorRef.Equals(actorRef);
         }
 
-        public static bool operator !=(TestActorRef<TActor> testActorRef, ActorRef actorRef)
+        public static bool operator !=(TestActorRef<TActor> testActorRef, IActorRef actorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
             return !testActorRef.Equals(actorRef);
         }
 
-        public static bool operator ==(ActorRef actorRef, TestActorRef<TActor> testActorRef)
+        public static bool operator ==(IActorRef actorRef, TestActorRef<TActor> testActorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return ReferenceEquals(actorRef, null);
             return testActorRef.Equals(actorRef);
         }
 
-        public static bool operator !=(ActorRef actorRef, TestActorRef<TActor> testActorRef)
+        public static bool operator !=(IActorRef actorRef, TestActorRef<TActor> testActorRef)
         {
             if(ReferenceEquals(testActorRef, null)) return !ReferenceEquals(actorRef, null);
             return !testActorRef.Equals(actorRef);
-        }
-
-        public static implicit operator ActorRef(TestActorRef<TActor> actorRef)
-        {
-            return actorRef.Ref;
         }
 
         //Here to suppress CS0660, 'class' defines operator == or operator != but does not override Object.Equals(object o)
@@ -69,3 +69,4 @@ namespace Akka.TestKit
         }
     }
 }
+

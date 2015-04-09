@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="UntypedActorWithBoundedStash.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor.Internal;
 
 namespace Akka.Actor
@@ -6,8 +13,8 @@ namespace Akka.Actor
     /// <summary>
     /// An UntypedActor with bounded Stash capabilities
     /// </summary>
-    [Obsolete("Inherit from UntypedActor and WithBoundedStash instead. This class will be removed in a future release.")]
-    public abstract class UntypedActorWithBoundedStash : UntypedActor, WithBoundedStash
+    [Obsolete("Inherit from UntypedActor and IWithBoundedStash instead. This class will be removed in a future release.")]
+    public abstract class UntypedActorWithBoundedStash : UntypedActor, IWithBoundedStash
     {
 
         private IStash _stash = new BoundedStashImpl(Context);
@@ -91,3 +98,4 @@ namespace Akka.Actor
         #endregion
     }
 }
+

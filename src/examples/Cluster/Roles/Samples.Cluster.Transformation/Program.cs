@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Configuration;
 using Akka.Actor;
 using Akka.Configuration;
@@ -50,10 +57,11 @@ namespace Samples.Cluster.Transformation
             var interval = TimeSpan.FromSeconds(2);
             var timeout = TimeSpan.FromSeconds(5);
             var counter = new AtomicCounter();
-            system.Scheduler.Schedule(interval, interval, 
+            system.Scheduler.Advanced.ScheduleRepeatedly(interval, interval, 
                 () => frontend.Ask(new TransformationMessages.TransformationJob("hello-" + counter.GetAndIncrement()), timeout)
-                .ContinueWith(
-                    r => Console.WriteLine(r.Result)));
+                    .ContinueWith(
+                        r => Console.WriteLine(r.Result)));
         }
     }
 }
+

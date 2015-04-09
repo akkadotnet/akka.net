@@ -1,9 +1,11 @@
-﻿using Akka.Actor;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿//-----------------------------------------------------------------------
+// <copyright file="UnhandledMessage.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Actor;
 
 namespace Akka.Event
 {
@@ -18,7 +20,7 @@ namespace Akka.Event
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
         /// <param name="recipient">The recipient.</param>
-        internal UnhandledMessage(object message, ActorRef sender, ActorRef recipient)
+        internal UnhandledMessage(object message, IActorRef sender, IActorRef recipient)
         {
             Message = message;
             Sender = sender;
@@ -35,12 +37,13 @@ namespace Akka.Event
         ///     Gets the sender.
         /// </summary>
         /// <value>The sender.</value>
-        public ActorRef Sender { get; private set; }
+        public IActorRef Sender { get; private set; }
 
         /// <summary>
         ///     Gets the recipient.
         /// </summary>
         /// <value>The recipient.</value>
-        public ActorRef Recipient { get; private set; }
+        public IActorRef Recipient { get; private set; }
     }
 }
+

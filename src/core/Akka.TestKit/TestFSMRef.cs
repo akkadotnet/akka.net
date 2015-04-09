@@ -1,12 +1,18 @@
-﻿using System;
-using System.Linq.Expressions;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestFSMRef.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Actor.Internal;
 
 namespace Akka.TestKit
 {
     /// <summary>
-    /// This is a specialized form of the <see cref="TestActorRef"/> with support for querying and
+    /// This is a specialized form of the <see cref="TestActorRef{TActor}"/> with support for querying and
     /// setting the state of a <see cref="FSM{TState,TData}"/>. 
     /// </summary>
     /// <typeparam name="TActor">The type of the actor.</typeparam>
@@ -14,7 +20,7 @@ namespace Akka.TestKit
     /// <typeparam name="TData">The type of the data.</typeparam>
     public class TestFSMRef<TActor, TState, TData> : TestActorRefBase<TActor> where TActor : FSM<TState, TData>
     {
-        public TestFSMRef(ActorSystem system, Props props, ActorRef supervisor = null, string name = null, bool activateLogging = false)
+        public TestFSMRef(ActorSystem system, Props props, IActorRef supervisor = null, string name = null, bool activateLogging = false)
             : base(system, props, supervisor, name)
         {
             if(activateLogging)
@@ -64,7 +70,7 @@ namespace Akka.TestKit
         /// </summary>
         public void SetState(TState stateName, TData stateData, TimeSpan? timeout = null, FSMBase.Reason stopReason = null)
         {
-            var fsm = ((InternalSupportsTestFSMRef<TState, TData>)UnderlyingActor);
+            var fsm = ((IInternalSupportsTestFSMRef<TState, TData>)UnderlyingActor);
             InternalRef.Cell.UseThreadContext(() => fsm.ApplyState(new FSMBase.State<TState, TData>(stateName, stateData, timeout, stopReason)));
         }
 
@@ -99,9 +105,10 @@ namespace Akka.TestKit
         /// <returns><c>true</c> if the FSM has a active state timer active; <c>false</c> otherwise</returns>
         public bool IsStateTimerActive()
         {
-            var fsm = ((InternalSupportsTestFSMRef<TState, TData>)UnderlyingActor);
+            var fsm = ((IInternalSupportsTestFSMRef<TState, TData>)UnderlyingActor);
             return fsm.IsStateTimerActive;
         }
     }
 
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MultiNodeClusterSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -10,9 +17,6 @@ using Akka.Dispatch.SysMsg;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
-using Akka.TestKit.Internal;
-using Akka.TestKit.Internal.StringMatcher;
-using Akka.TestKit.TestEvent;
 using Akka.TestKit.Xunit;
 using Xunit;
 
@@ -102,10 +106,10 @@ namespace Akka.Cluster.Tests.MultiNode
                 }
             }
 
-            readonly ActorRef _testActor;
+            readonly IActorRef _testActor;
             readonly Address _target;
 
-            public EndActor(ActorRef testActor, Address target)
+            public EndActor(IActorRef testActor, Address target)
             {
                 _testActor = testActor;
                 _target = target;
@@ -132,7 +136,7 @@ namespace Akka.Cluster.Tests.MultiNode
             }
         }
 
-        readonly TestKitAssertions _assertions;
+        readonly ITestKitAssertions _assertions;
 
         protected MultiNodeClusterSpec(MultiNodeConfig config)
             : base(config)
@@ -243,7 +247,7 @@ namespace Akka.Cluster.Tests.MultiNode
         /// Initialize the cluster of the specified member nodes (<see cref="roles"/>)
         /// and wait until all joined and <see cref="MemberStatus.Up"/>.
         /// 
-        /// First node will be started firat and others will join the first.
+        /// First node will be started first and others will join the first.
         /// </summary>
         public void AwaitClusterUp(params RoleName[] roles)
         {
@@ -351,14 +355,14 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         foreach (var a in canNotBePartOfMemberRing)
-                            _assertions.AssertFalse(ClusterView.Members.Select(m => m.Address).Contains(a));
+                            ClusterView.Members.Select(m => m.Address).Contains(a).ShouldBeFalse();
                     });
-                AwaitAssert(() => _assertions.AssertEqual(numbersOfMembers, ClusterView.Members.Count));
-                AwaitAssert(() => _assertions.AssertTrue(ClusterView.Members.All(m => m.Status == MemberStatus.Up)));
+                AwaitAssert(() => ClusterView.Members.Count.ShouldBe(numbersOfMembers));
+                AwaitAssert(() => ClusterView.Members.All(m => m.Status == MemberStatus.Up).ShouldBeTrue("All members should be up"));
                 // clusterView.leader is updated by LeaderChanged, await that to be updated also
                 var firstMember = ClusterView.Members.FirstOrDefault();
                 var expectedLeader = firstMember == null ? null : firstMember.Address;
-                AwaitAssert(() => _assertions.AssertEqual(expectedLeader, ClusterView.Leader));
+                AwaitAssert(() => ClusterView.Leader.ShouldBe(expectedLeader));
             });
         }
 
@@ -429,7 +433,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             if (IsFailureDetectorPuppet())
             {
-                // before marking it as unavailble there should be at least one heartbeat
+                // before marking it as unavailable there should be at least one heartbeat
                 // to create the FailureDetectorPuppet in the FailureDetectorRegistry
                 Cluster.FailureDetector.Heartbeat(address);
                 var puppet = FailureDetectorPuppet(address);
@@ -448,3 +452,4 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 }
+

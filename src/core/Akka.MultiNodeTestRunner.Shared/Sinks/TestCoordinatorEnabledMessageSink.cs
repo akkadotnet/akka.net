@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestCoordinatorEnabledMessageSink.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -11,7 +18,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// </summary>
     public abstract class TestCoordinatorEnabledMessageSink : MessageSinkActor
     {
-        protected ActorRef TestCoordinatorActorRef;
+        protected IActorRef TestCoordinatorActorRef;
         protected bool UseTestCoordinator;
 
         protected TestCoordinatorEnabledMessageSink(bool useTestCoordinator)
@@ -22,9 +29,12 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 if (UseTestCoordinator)
                 {
                     TestCoordinatorActorRef.Ask<TestRunTree>(new TestRunCoordinator.RequestTestRunState())
-                        .ContinueWith(task => new SinkCoordinator.RecommendedExitCode(task.Result.Passed.GetValueOrDefault(false)
-                            ? 0
-                            : 1), TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
+                        .ContinueWith(task =>
+                        {
+                            return new SinkCoordinator.RecommendedExitCode(task.Result.Passed.GetValueOrDefault(false)
+                                ? 0
+                                : 1);
+                        }, TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
                             .PipeTo(Sender, Self);
                 }
             });
@@ -135,3 +145,4 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         }
     }
 }
+

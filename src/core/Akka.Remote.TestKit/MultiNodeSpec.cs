@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MultiNodeSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -64,6 +71,7 @@ namespace Akka.Remote.TestKit
                         fsm = on
                     }
                     akka.remote.log-remote-lifecycle-events = on
+                    akka.log-dead-letters = on
                 ");
             return ConfigurationFactory.Empty;
         }
@@ -181,7 +189,7 @@ namespace Akka.Remote.TestKit
                     _maxNodes = CommandLine.GetInt32("multinode.max-nodes");
                 }
 
-                Guard.Assert(_maxNodes > 0, "multinode.max-nodes must be greater than 0");
+                if (_maxNodes <= 0) throw new InvalidOperationException("multinode.max-nodes must be greater than 0");
                 return _maxNodes;
             }
         }
@@ -207,7 +215,7 @@ namespace Akka.Remote.TestKit
                 }
 
                 //Run this assertion every time. Consistency is more important than performance.
-                Guard.Assert(!string.IsNullOrEmpty(_multiNodeHost), "multinode.host must not be empty");
+                if (string.IsNullOrEmpty(_multiNodeHost)) throw new InvalidOperationException("multinode.host must not be empty");
                 return _multiNodeHost;
             }
         }
@@ -234,7 +242,7 @@ namespace Akka.Remote.TestKit
                     _selfPort = string.IsNullOrEmpty(selfPortStr) ? 0 : Int32.Parse(selfPortStr);
                 }
 
-                Guard.Assert(_selfPort >= 0 && _selfPort < 65535, "multinode.port is out of bounds: " + _selfPort);
+                if (!(_selfPort >= 0 && _selfPort < 65535)) throw new InvalidOperationException("multinode.port is out of bounds: " + _selfPort);
                 return _selfPort;
             }
         }
@@ -254,7 +262,7 @@ namespace Akka.Remote.TestKit
                 {
                     _serverName = CommandLine.GetProperty("multinode.server-host");
                 }
-                Guard.Assert(!string.IsNullOrEmpty(_serverName), "multinode.server-host must not be empty");
+                if (string.IsNullOrEmpty(_serverName)) throw new InvalidOperationException("multinode.server-host must not be empty");
                 return _serverName;
             }
         }
@@ -286,7 +294,7 @@ namespace Akka.Remote.TestKit
                     _serverPort = string.IsNullOrEmpty(serverPortStr) ? ServerPortDefault : Int32.Parse(serverPortStr);
                 }
 
-                Guard.Assert(_serverPort > 0 && _serverPort < 65535, "multinode.server-port is out of bounds: " + _serverPort);
+                if (!(_serverPort > 0 && _serverPort < 65535)) throw new InvalidOperationException("multinode.server-port is out of bounds: " + _serverPort);
                 return _serverPort;
             }
         }
@@ -312,7 +320,7 @@ namespace Akka.Remote.TestKit
                     _selfIndex = CommandLine.GetInt32("multinode.index");
                 }
 
-                Guard.Assert(_selfIndex >= 0 && _selfIndex < MaxNodes, "multinode.index is out of bounds: " + _selfIndex);
+                if (!(_selfIndex >= 0 && _selfIndex < MaxNodes)) throw new InvalidOperationException("multinode.index is out of bounds: " + _selfIndex);
                 return _selfIndex;
             }
         }
@@ -370,7 +378,7 @@ namespace Akka.Remote.TestKit
 
         readonly RoleName _myself;
         public RoleName Myself { get { return _myself; } }
-        readonly LoggingAdapter _log;
+        readonly ILoggingAdapter _log;
         readonly ImmutableList<RoleName> _roles;
         readonly Func<RoleName, ImmutableList<string>> _deployments;
         readonly ImmutableDictionary<RoleName, Replacement> _replacements;
@@ -469,8 +477,8 @@ namespace Akka.Remote.TestKit
             get
             {
                 var initialParticipants = InitialParticipantsValueFactory;
-                Guard.Assert(initialParticipants > 0, "InitialParticipantsValueFactory must be populated early on, and it must be greater zero");
-                Guard.Assert(initialParticipants <= MaxNodes, "not enough nodes to run this test");
+                if (initialParticipants <= 0) throw new InvalidOperationException("InitialParticipantsValueFactory must be populated early on, and it must be greater zero");
+                if (initialParticipants > MaxNodes) throw new InvalidOperationException("not enough nodes to run this test");
                 return initialParticipants;
             }
 
@@ -651,3 +659,4 @@ namespace Akka.Remote.TestKit
         void MultiNodeSpecAfterAll();
     }
 }
+

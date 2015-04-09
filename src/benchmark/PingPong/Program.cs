@@ -1,17 +1,18 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Management;
-using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Dispatch.SysMsg;
-using Akka.Event;
 
 namespace PingPong
 {
@@ -27,7 +28,7 @@ namespace PingPong
         public static uint CpuSpeed()
         {
 #if !mono
-            var mo = new ManagementObject("Win32_Processor.DeviceID='CPU0'");
+            var mo = new System.Management.ManagementObject("Win32_Processor.DeviceID='CPU0'");
             var sp = (uint)(mo["CurrentClockSpeed"]);
             mo.Dispose();
             return sp;
@@ -130,7 +131,7 @@ namespace PingPong
 
             var countdown = new CountdownEvent(numberOfClients * 2);
             var waitForStartsActor = system.ActorOf(Props.Create(() => new WaitForStarts(countdown)), "wait-for-starts");
-            var clients = new List<ActorRef>();
+            var clients = new List<IActorRef>();
             var tasks = new List<Task>();
             var started = new Messages.Started();
             for(int i = 0; i < numberOfClients; i++)
@@ -236,3 +237,4 @@ namespace PingPong
 
 
 }
+

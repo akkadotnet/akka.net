@@ -1,11 +1,18 @@
-﻿using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TransformationFrontend.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Generic;
 using Akka.Actor;
 
 namespace Samples.Cluster.Transformation
 {
     public class TransformationFrontend : UntypedActor
     {
-        protected List<ActorRef> Backends = new List<ActorRef>();
+        protected List<IActorRef> Backends = new List<IActorRef>();
         protected int Jobs = 0;
 
         protected override void OnReceive(object message)
@@ -38,3 +45,4 @@ namespace Samples.Cluster.Transformation
         }
     }
 }
+

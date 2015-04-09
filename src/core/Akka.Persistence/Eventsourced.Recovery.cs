@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Eventsourced.Recovery.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
@@ -141,7 +148,7 @@ namespace Akka.Persistence
 
         /// <summary>
         /// Processes all remaining replayed messages and changes to <see cref="PrepareRestart"/>.
-        /// Message that caused and exception during replay, is readded to the mailbox and re-received
+        /// Message that caused and exception during replay, is re-added to the mailbox and re-received
         /// in <see cref="PrepareRestart"/> state.
         /// </summary>
         private EventsourcedState ReplayFailed(Exception cause, object failureMessage)
@@ -318,7 +325,7 @@ namespace Akka.Persistence
                     TryFirstInvocationHandler(m.Message, onWriteMessageComplete);
                 }
             }
-            else if (message is WriteMessagesSuccessull || message is WriteMessagesFailed)
+            else if (message is WriteMessagesSuccessful || message is WriteMessagesFailed)
             {
                 if (_journalBatch.Count == 0) _isWriteInProgress = false;
                 else FlushJournalBatch();
@@ -358,3 +365,4 @@ namespace Akka.Persistence
         }
     }
 }
+

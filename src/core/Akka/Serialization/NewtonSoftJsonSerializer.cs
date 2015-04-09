@@ -1,10 +1,20 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="NewtonSoftJsonSerializer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Akka.Actor;
 using Akka.Util;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace Akka.Serialization
@@ -14,7 +24,9 @@ namespace Akka.Serialization
     /// </summary>
     public class NewtonSoftJsonSerializer : Serializer
     {
-        private readonly JsonSerializerSettings _settings;     
+        private readonly JsonSerializerSettings _settings;
+
+        public JsonSerializerSettings Settings { get { return _settings; } }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="NewtonSoftJsonSerializer" /> class.
@@ -105,17 +117,54 @@ namespace Akka.Serialization
             string data = Encoding.Default.GetString(bytes);
 
             object res = JsonConvert.DeserializeObject(data, _settings);
-            return TranslateSurrogate(res,system);
+            return TranslateSurrogate(res, system, type);
         }
 
-        private static object TranslateSurrogate(object deserializedValue,ActorSystem system)
+        private static object TranslateSurrogate(object deserializedValue,ActorSystem system,Type type)
         {
+            var j = deserializedValue as JObject;
+            if (j != null)
+            {
+                if (j["$"] != null)
+                {
+                    var value = j["$"].Value<string>();
+                    return GetValue(value);
+                }
+
+                if (j["Case"] != null)
+                {
+                    var caseTypeName = j["Case"].Value<string>();
+                    var caseType = type.GetNestedType(caseTypeName);
+                    var ctor = caseType.GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)[0];
+                    var paramTypes = ctor.GetParameters().Select(p => p.ParameterType).ToArray();
+                    var values =
+                        j["Fields"].ToObject<object[]>()
+                            .Select((o, i) => TranslateSurrogate(o, system, paramTypes[i]))
+                            .ToArray();
+                    var res = ctor.Invoke(values.ToArray());
+                    return res;
+                }
+            }
             var surrogate = deserializedValue as ISurrogate;
             if (surrogate != null)
             {
                 return surrogate.FromSurrogate(system);
             }
             return deserializedValue;
+        }
+
+        private static object GetValue(string V)
+        {
+            var t = V.Substring(0, 1);
+            var v = V.Substring(1);
+            if (t == "I")
+                return int.Parse(v, NumberFormatInfo.InvariantInfo);
+            if (t == "F")
+                return float.Parse(v, NumberFormatInfo.InvariantInfo);
+            if (t == "M")
+                return decimal.Parse(v, NumberFormatInfo.InvariantInfo);
+
+            throw new NotSupportedException();
         }
 
         public class SurrogateConverter : JsonConverter
@@ -132,7 +181,16 @@ namespace Akka.Serialization
             /// <returns><c>true</c> if this instance can convert the specified object type; otherwise, <c>false</c>.</returns>
             public override bool CanConvert(Type objectType)
             {
-                return (typeof(ISurrogated).IsAssignableFrom(objectType));
+                if (objectType == typeof (int) || objectType == typeof (float) || objectType == typeof (decimal))
+                    return true;
+
+                if (typeof (ISurrogated).IsAssignableFrom(objectType))
+                    return true;
+
+                if (objectType == typeof (object))
+                    return true;
+
+                return false;
             }
 
             /// <summary>
@@ -146,8 +204,15 @@ namespace Akka.Serialization
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue,
                 JsonSerializer serializer)
             {
-                var surrogate = serializer.Deserialize<ISurrogate>(reader);
-                return TranslateSurrogate(surrogate, _system);
+                return DeserializeFromReader(reader, serializer, objectType);
+            }
+
+
+
+            private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer,Type objecType)
+            {
+                var surrogate = serializer.Deserialize(reader);
+                return TranslateSurrogate(surrogate, _system, objecType);
             }
 
             /// <summary>
@@ -158,10 +223,40 @@ namespace Akka.Serialization
             /// <param name="serializer">The calling serializer.</param>
             public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
             {
-                var surrogated = (ISurrogated)value;
-                var surrogate = surrogated.ToSurrogate(_system);
-                serializer.Serialize(writer, surrogate);
+                if (value is int || value is decimal || value is float)
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("$");
+                    writer.WriteValue(GetString(value));
+                    writer.WriteEndObject();
+                }
+                else
+                {
+                    var value1 = value as ISurrogated;
+                    if (value1 != null)
+                    {
+                        var surrogated = value1;
+                        var surrogate = surrogated.ToSurrogate(_system);
+                        serializer.Serialize(writer, surrogate);
+                    }
+                    else
+                    {
+                        serializer.Serialize(writer, value);
+                    }
+                }
+            }           
+
+            private object GetString(object value)
+            {
+                if (value is int)
+                    return "I" + ((int) value).ToString(NumberFormatInfo.InvariantInfo);
+                if (value is float)
+                    return "F" + ((float)value).ToString(NumberFormatInfo.InvariantInfo);
+                if (value is decimal)
+                    return "M" + ((decimal)value).ToString(NumberFormatInfo.InvariantInfo);
+                throw new NotSupportedException();
             }
         }
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AddressTerminatedTopic.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Util;
 
@@ -21,30 +28,30 @@ namespace Akka.Event
     /// </summary>
     internal sealed class AddressTerminatedTopic : IExtension
     {
-        private readonly AtomicReference<HashSet<ActorRef>> _subscribers = new AtomicReference<HashSet<ActorRef>>(new HashSet<ActorRef>());
+        private readonly AtomicReference<HashSet<IActorRef>> _subscribers = new AtomicReference<HashSet<IActorRef>>(new HashSet<IActorRef>());
 
         public static AddressTerminatedTopic Get(ActorSystem system)
         {
             return system.WithExtension<AddressTerminatedTopic>(typeof(AddressTerminatedTopicProvider));
         }
 
-        public void Subscribe(ActorRef subscriber)
+        public void Subscribe(IActorRef subscriber)
         {
             while (true)
             {
                 var current = _subscribers;
-                if (!_subscribers.CompareAndSet(current, new HashSet<ActorRef>(current.Value) {subscriber}))
+                if (!_subscribers.CompareAndSet(current, new HashSet<IActorRef>(current.Value) {subscriber}))
                     continue;
                 break;
             }
         }
 
-        public void Unsubscribe(ActorRef subscriber)
+        public void Unsubscribe(IActorRef subscriber)
         {
             while (true)
             {
                 var current = _subscribers;
-                var newSet = new HashSet<ActorRef>(_subscribers.Value);
+                var newSet = new HashSet<IActorRef>(_subscribers.Value);
                 newSet.Remove(subscriber);
                 if (!_subscribers.CompareAndSet(current, newSet))
                     continue;
@@ -56,8 +63,9 @@ namespace Akka.Event
         {
             foreach (var subscriber in _subscribers.Value)
             {
-                subscriber.Tell(msg, ActorRef.NoSender);
+                subscriber.Tell(msg, ActorRefs.NoSender);
             }
         }
     }
 }
+

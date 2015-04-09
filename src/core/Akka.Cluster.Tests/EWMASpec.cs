@@ -1,10 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="EWMASpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Akka.TestKit;
 using Akka.Util;
 using Xunit;
@@ -74,7 +78,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void DataStream_must_calcualte_sane_alpha_from_short_halflife()
+        public void DataStream_must_calculate_sane_alpha_from_short_halflife()
         {
             var alpha = EWMA.CalculateAlpha(TimeSpan.FromMilliseconds(1), TimeSpan.FromSeconds(3));
             Assert.True(alpha <= 1.0d);
@@ -83,7 +87,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void DataStream_must_calcualte_sane_alpha_from_long_halflife()
+        public void DataStream_must_calculate_sane_alpha_from_long_halflife()
         {
             var alpha = EWMA.CalculateAlpha(TimeSpan.FromDays(1), TimeSpan.FromSeconds(3));
             Assert.True(alpha <= 1.0d);
@@ -122,12 +126,22 @@ namespace Akka.Cluster.Tests
 
         #region IDisposable members
 
-        public new void Dispose()
+        public void Dispose()
         {
-            _collector.Dispose();
-            base.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _collector.Dispose();
+                base.Dispose();
+            }
         }
 
         #endregion
     }
 }
+

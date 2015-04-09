@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterConfigSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Dispatch;
@@ -14,7 +21,7 @@ namespace Akka.Cluster.Tests
         public ClusterConfigSpec() : base(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""") { }
 
         [Fact]
-        public void ClusteringMustBeAbleToPareseGenericClusterConfigElements()
+        public void ClusteringMustBeAbleToParseGenericClusterConfigElements()
         {
             var settings = new ClusterSettings(Sys.Settings.Config, Sys.Name);
             Assert.True(settings.LogInfo);
@@ -53,3 +60,4 @@ namespace Akka.Cluster.Tests
         }
     }
 }
+

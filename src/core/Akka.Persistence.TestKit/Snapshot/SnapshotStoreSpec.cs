@@ -1,6 +1,12 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="SnapshotStoreSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -17,6 +23,15 @@ namespace Akka.Persistence.TestKit.Snapshot
         protected static readonly Config Config =
             ConfigurationFactory.ParseString("akka.persistence.publish-plugin-commands = on");
 
+        private static readonly string _specConfigTemplate = @"
+            akka.persistence.snapshot-store {
+                plugin = ""akka.persistence.snapshot-store.my""
+                my {
+                    class = ""TestPersistencePlugin.MySnapshotStore, TestPersistencePlugin""
+                    plugin-dispatcher = ""akka.persistence.dispatchers.default-plugin-dispatcher""
+                }
+            }";
+
         private readonly TestProbe _senderProbe;
         protected List<SnapshotMetadata> Metadata;
         
@@ -26,7 +41,17 @@ namespace Akka.Persistence.TestKit.Snapshot
             _senderProbe = CreateTestProbe();
         }
 
-        protected ActorRef SnapshotStore { get { return Extension.SnapshotStoreFor(null); } }
+        protected SnapshotStoreSpec(Type snapshotStoreType, string actorSystemName = null)
+            : base(ConfigFromTemplate(snapshotStoreType), actorSystemName)
+        {
+        }
+
+        protected IActorRef SnapshotStore { get { return Extension.SnapshotStoreFor(null); } }
+
+        private static Config ConfigFromTemplate(Type snapshotStoreType)
+        {
+            return ConfigurationFactory.ParseString(string.Format(_specConfigTemplate, snapshotStoreType.FullName));
+        }
 
         protected IEnumerable<SnapshotMetadata> WriteSnapshots()
         {
@@ -152,3 +177,4 @@ namespace Akka.Persistence.TestKit.Snapshot
         }
     }
 }
+

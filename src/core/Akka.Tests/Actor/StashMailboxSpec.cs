@@ -1,5 +1,11 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿//-----------------------------------------------------------------------
+// <copyright file="StashMailboxSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.TestKit;
@@ -35,13 +41,14 @@ namespace Akka.Tests.Actor
             throw new Exception("Incomplete. Remove the comment on the line above this, and remove this line, when we have BoundedDequeBasedMailbox");
         }
 
-        private class UnboundedStashActor : BlackHoleActor, WithUnboundedStash
+        private class UnboundedStashActor : BlackHoleActor, IWithUnboundedStash
         {
             public IStash Stash { get; set; }
         }
-        private class BoundedStashActor : BlackHoleActor, WithBoundedStash
+        private class BoundedStashActor : BlackHoleActor, IWithBoundedStash
         {
             public IStash Stash { get; set; }
         }
     }
 }
+

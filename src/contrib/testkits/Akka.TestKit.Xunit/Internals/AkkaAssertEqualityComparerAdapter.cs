@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="AkkaAssertEqualityComparerAdapter.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,7 +23,7 @@ namespace Akka.TestKit.Xunit.Internals
         readonly IEqualityComparer<T> innerComparer;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AssertEqualityComparerAdapter{T}"/> class.
+        /// Initializes a new instance of the <see cref="AkkaAssertEqualityComparerAdapter{T}"/> class.
         /// </summary>
         /// <param name="innerComparer">The comparer that is being adapted.</param>
         public AkkaAssertEqualityComparerAdapter(IEqualityComparer<T> innerComparer)
@@ -37,3 +44,4 @@ namespace Akka.TestKit.Xunit.Internals
         }
     }
 }
+

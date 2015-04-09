@@ -1,8 +1,16 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Transport.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Google.ProtocolBuffers;
+using System.Runtime.Serialization;
 
 namespace Akka.Remote.Transport
 {
@@ -59,12 +67,17 @@ namespace Akka.Remote.Transport
             : base(message, cause)
         {
         }
+
+        protected InvalidAssociationException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /// <summary>
     /// Marker interface for events that the registered listener for a <see cref="AssociationHandle"/> might receive.
     /// </summary>
-    public interface IHandleEvent : NoSerializationVerificationNeeded { }
+    public interface IHandleEvent : INoSerializationVerificationNeeded { }
 
     /// <summary>
     /// Message sent to the listener registered to an association (via the TaskCompletionSource returned by <see cref="AssociationHandle.ReadHandlerSource"/>)
@@ -129,14 +142,14 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// Converts an <see cref="ActorRef"/> instance into an <see cref="IHandleEventListener"/>, so <see cref="IHandleEvent"/> messages
+    /// Converts an <see cref="IActorRef"/> instance into an <see cref="IHandleEventListener"/>, so <see cref="IHandleEvent"/> messages
     /// can be passed directly to the Actor.
     /// </summary>
     public sealed class ActorHandleEventListener : IHandleEventListener
     {
-        public readonly ActorRef Actor;
+        public readonly IActorRef Actor;
 
-        public ActorHandleEventListener(ActorRef actor)
+        public ActorHandleEventListener(IActorRef actor)
         {
             Actor = actor;
         }
@@ -179,17 +192,17 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// Converts an <see cref="ActorRef"/> instance into an <see cref="IAssociationEventListener"/>, so <see cref="IAssociationEvent"/> messages
+    /// Converts an <see cref="IActorRef"/> instance into an <see cref="IAssociationEventListener"/>, so <see cref="IAssociationEvent"/> messages
     /// can be passed directly to the Actor.
     /// </summary>
     public sealed class ActorAssociationEventListener : IAssociationEventListener
     {
-        public ActorAssociationEventListener(ActorRef actor)
+        public ActorAssociationEventListener(IActorRef actor)
         {
             Actor = actor;
         }
 
-        public ActorRef Actor { get; private set; }
+        public IActorRef Actor { get; private set; }
 
         public void Notify(IAssociationEvent ev)
         {
@@ -277,3 +290,4 @@ namespace Akka.Remote.Transport
         }
     }
 }
+

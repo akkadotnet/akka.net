@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -34,21 +34,21 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release Mono|AnyCPU'">
     <OutputPath>bin\Release Mono\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;MONO;</DefineConstants>
     <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug Mono|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\Debug Mono\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>DEBUG;TRACE;MONO;</DefineConstants>
     <DebugType>full</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>4</WarningLevel>
+    <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Google.ProtocolBuffers">
@@ -57,13 +57,12 @@
     <Reference Include="Google.ProtocolBuffers.Serialization">
       <HintPath>..\..\packages\Google.ProtocolBuffers.2.4.1.521\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
     </Reference>
-    <Reference Include="Helios, Version=1.3.5.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Helios.1.3.6.0\lib\net45\Helios.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Web" />
+    <Reference Include="Helios">
+      <HintPath>..\..\packages\Helios.1.4.0\lib\net45\Helios.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\SharedAssemblyInfo.cs">
@@ -73,7 +72,6 @@
     <Compile Include="AddressUidExtension.cs" />
     <Compile Include="AkkaProtocolSettings.cs" />
     <Compile Include="AssociationEvent.cs" />
-    <Compile Include="Configuration\FluentConfigRemote.cs" />
     <Compile Include="Configuration\RemoteConfigFactory.cs" />
     <Compile Include="Deadline.cs" />
     <Compile Include="DeadlineFailureDetector.cs" />
@@ -102,8 +100,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteActorRefProvider.cs" />
     <Compile Include="Transport\AkkaPduCodec.cs" />
+    <Compile Include="Transport\FailureInjectorTransportAdapter.cs" />
     <Compile Include="Transport\Helios\HeliosHelpers.cs" />
     <Compile Include="Transport\Helios\HeliosTcpTransport.cs" />
+    <Compile Include="SystemNanoTime.cs" />
     <Compile Include="Transport\ThrottleTransportAdapter.cs" />
     <Compile Include="Transport\TransportAdapters.cs" />
     <Compile Include="Transport\AkkaProtocolTransport.cs" />
@@ -119,7 +119,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka\Akka.csproj">
-      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>

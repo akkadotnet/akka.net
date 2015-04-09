@@ -1,15 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
-using System.Runtime.Remoting.Contexts;
-using System.Text;
-using System.Threading.Tasks;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ReceiveTimeoutSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Event;
-using Xunit;
 using Akka.TestKit;
-using Akka.Tests;
+using Xunit;
 
 
 namespace Akka.Tests.Actor
@@ -73,7 +73,7 @@ namespace Akka.Tests.Actor
         [Fact(DisplayName="An actor with receive timeout must get timeout")]
         public void GetTimeout()
         {
-            var timeoutLatch = new TestLatch(Sys);
+            var timeoutLatch = new TestLatch();
             var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch)));
 
             timeoutLatch.Ready(TestLatch.DefaultTimeout);
@@ -84,7 +84,7 @@ namespace Akka.Tests.Actor
         [Fact(DisplayName = "An actor with receive timeout must reschedule timeout after regular receive")]
         public void RescheduleTimeout()
         {
-            var timeoutLatch = new TestLatch(Sys);
+            var timeoutLatch = new TestLatch();
             var timeoutActor = Sys.ActorOf(Props.Create(() => new TimeoutActor(timeoutLatch)));
             timeoutActor.Tell(Tick);
             timeoutLatch.Ready(TestLatch.DefaultTimeout);
@@ -94,7 +94,7 @@ namespace Akka.Tests.Actor
         [Fact(DisplayName = "An actor with receive timeout must not receive timeout message when not specified")]
         public void NotGetTimeout()
         {
-            var timeoutLatch = new TestLatch(Sys);
+            var timeoutLatch = new TestLatch();
             var timeoutActor = Sys.ActorOf(Props.Create(() => new NoTimeoutActor(timeoutLatch)));
             Assert.Throws<TimeoutException>(() => timeoutLatch.Ready(TestLatch.DefaultTimeout));
             Sys.Stop(timeoutActor);
@@ -124,3 +124,4 @@ namespace Akka.Tests.Actor
         }
     }
 }
+

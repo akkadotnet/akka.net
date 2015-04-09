@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="LocalActorRef.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor.Internals;
@@ -7,13 +14,13 @@ using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
-    public class LocalActorRef : ActorRefWithCell, LocalRef
+    public class LocalActorRef : ActorRefWithCell, ILocalRef
     {
         private readonly ActorSystem _system;
         private readonly Props _props;
         private readonly MessageDispatcher _dispatcher;
         private readonly Func<Mailbox> _createMailbox;
-        private readonly InternalActorRef _supervisor;
+        private readonly IInternalActorRef _supervisor;
         private readonly ActorPath _path;
         private ActorCell _cell;
 
@@ -33,7 +40,7 @@ namespace Akka.Actor
         //      actorCell.init(sendSupervise = true, _mailboxType)
         //      ...
         //    }
-        public LocalActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, InternalActorRef supervisor, ActorPath path) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType      
+        public LocalActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, IInternalActorRef supervisor, ActorPath path) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType      
             : this(system, props, dispatcher, createMailbox, supervisor, path, self =>
             {
                 var cell= new ActorCell(system, self, props, dispatcher, supervisor);
@@ -48,7 +55,7 @@ namespace Akka.Actor
         /// <summary>
         /// Inheritors should only call this constructor
         /// </summary>
-        internal protected  LocalActorRef(ActorSystem system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, InternalActorRef supervisor, ActorPath path, Func<LocalActorRef, ActorCell> createActorCell) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType      
+        internal protected  LocalActorRef(ActorSystem system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, IInternalActorRef supervisor, ActorPath path, Func<LocalActorRef, ActorCell> createActorCell) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType      
         {
             _system = system;
             _props = props;
@@ -60,7 +67,7 @@ namespace Akka.Actor
         }
 
 
-        public override Cell Underlying
+        public override ICell Underlying
         {
             get { return _cell; }
         }
@@ -70,17 +77,17 @@ namespace Akka.Actor
             get { return _cell; }
         }
 
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { return _cell.SystemImpl.Provider; }
         }
 
-        public override InternalActorRef Parent
+        public override IInternalActorRef Parent
         {
             get { return _cell.Parent; }
         }
 
-        public override IEnumerable<ActorRef> Children
+        public override IEnumerable<IActorRef> Children
         {
             get { return _cell.GetChildren(); }
         }
@@ -116,7 +123,7 @@ namespace Akka.Actor
 
         protected MessageDispatcher Dispatcher{get { return _dispatcher; }}
 
-        protected InternalActorRef Supervisor{get { return _supervisor; }}
+        protected IInternalActorRef Supervisor{get { return _supervisor; }}
 
         public override bool IsTerminated { get { return _cell.IsTerminated; } }
 
@@ -135,20 +142,20 @@ namespace Akka.Actor
             _cell.Restart(cause);
         }
 
-        protected override void TellInternal(object message, ActorRef sender)
+        protected override void TellInternal(object message, IActorRef sender)
         {
             _cell.Post(sender, message);
         }
 
-        public override InternalActorRef GetSingleChild(string name)
+        public override IInternalActorRef GetSingleChild(string name)
         {
-            InternalActorRef child;
-            return _cell.TryGetSingleChild(name, out child) ? child : Nobody;
+            IInternalActorRef child;
+            return _cell.TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
         }
 
-        public override ActorRef GetChild(IEnumerable<string> name)
+        public override IActorRef GetChild(IEnumerable<string> name)
         {
-            var current = (ActorRef) this;
+            var current = (IActorRef) this;
             int index = 0;
             foreach (string element in name)
             {
@@ -173,7 +180,7 @@ namespace Akka.Actor
                     if (current != null)
                     {
                         var rest = name.Skip(index).ToList();
-                        return current.AsInstanceOf<InternalActorRef>().GetChild(rest);
+                        return current.AsInstanceOf<IInternalActorRef>().GetChild(rest);
                     }
                     throw new NotSupportedException("Bug, we should not get here");
                 }
@@ -183,3 +190,4 @@ namespace Akka.Actor
         }
     }
 }
+

@@ -1,6 +1,12 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AutoDown.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
-using System.Threading;
 using Akka.Actor;
 using Akka.Event;
 
@@ -48,7 +54,7 @@ namespace Akka.Cluster
             get { return _cluster.SelfAddress; }
         }
 
-        public override Scheduler Scheduler
+        public override IScheduler Scheduler
         {
             get { return _cluster.Scheduler; }
         }
@@ -79,8 +85,8 @@ namespace Akka.Cluster
         readonly ImmutableHashSet<MemberStatus> _skipMemberStatus =
             Gossip.ConvergenceSkipUnreachableWithMemberStatus;
 
-        ImmutableDictionary<UniqueAddress, CancellationTokenSource> _scheduledUnreachable =
-            ImmutableDictionary.Create<UniqueAddress, CancellationTokenSource>();
+        ImmutableDictionary<UniqueAddress, ICancelable> _scheduledUnreachable =
+            ImmutableDictionary.Create<UniqueAddress, ICancelable>();
         ImmutableHashSet<UniqueAddress> _pendingUnreachable = ImmutableHashSet.Create<UniqueAddress>();
         protected bool _leader = false;
 
@@ -98,7 +104,7 @@ namespace Akka.Cluster
 
         public abstract Address SelfAddress { get; }
 
-        public abstract Scheduler Scheduler { get; }
+        public abstract IScheduler Scheduler { get; }
 
         public abstract void Down(Address node);
 
@@ -170,9 +176,8 @@ namespace Akka.Cluster
             }
             else
             {
-                var cancellationSource = new CancellationTokenSource();
-                Scheduler.ScheduleOnce(_autoDownUnreachableAfter, Self, new AutoDown.UnreachableTimeout(node), cancellationSource.Token);
-                _scheduledUnreachable = _scheduledUnreachable.Add(node, cancellationSource);
+                var cancelable = Scheduler.ScheduleTellOnceCancelable(_autoDownUnreachableAfter, Self, new AutoDown.UnreachableTimeout(node), Self);
+                _scheduledUnreachable = _scheduledUnreachable.Add(node, cancelable);
             }
         }
 
@@ -192,12 +197,13 @@ namespace Akka.Cluster
 
         private void Remove(UniqueAddress node)
         {
-            CancellationTokenSource source;
+            ICancelable source;
             if(_scheduledUnreachable.TryGetValue(node, out source)) source.Cancel();
             _scheduledUnreachable = _scheduledUnreachable.Remove(node);
             _pendingUnreachable = _pendingUnreachable.Remove(node);
         }
 
-        public LoggingAdapter Log { get; private set; }
+        public ILoggingAdapter Log { get; private set; }
     }
 }
+

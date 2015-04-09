@@ -1,5 +1,11 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="IMatchExpressionBuilder.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System.Collections.Generic;
-using System.Security.Cryptography.X509Certificates;
 
 namespace Akka.Tools.MatchHandler
 {
@@ -9,3 +15,4 @@ namespace Akka.Tools.MatchHandler
         object[] CreateArgumentValuesArray(IReadOnlyList<Argument> arguments);
     }
 }
+

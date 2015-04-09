@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterRouterSupervisorSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Cluster.Routing;
 using Akka.Routing;
@@ -22,9 +29,9 @@ namespace Akka.Cluster.Tests.Routing
 
         class KillableActor : ReceiveActor
         {
-            private readonly ActorRef TestActor;
+            private readonly IActorRef TestActor;
 
-            public KillableActor(ActorRef testActor)
+            public KillableActor(IActorRef testActor)
             {
                 TestActor = testActor;
                 Receive<string>(s => s == "go away", s =>
@@ -55,3 +62,4 @@ namespace Akka.Cluster.Tests.Routing
         #endregion
     }
 }
+

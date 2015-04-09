@@ -1,7 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterEvent.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Util.Internal;
@@ -637,7 +645,7 @@ namespace Akka.Cluster
     }
 
 
-    //TODO: RequiresMessageQueue? 
+    //TODO: IRequiresMessageQueue? 
     sealed class ClusterDomainEventPublisher : UntypedActor
     {
         Gossip _latestGossip;
@@ -661,12 +669,40 @@ namespace Akka.Cluster
 
         protected override void OnReceive(object message)
         {
-            message.Match()
-                .With<InternalClusterAction.PublishChanges>(m => PublishChanges(m.NewGossip))
-                .With<ClusterEvent.CurrentInternalStats>(PublishInternalStats)
-                .With<InternalClusterAction.SendCurrentClusterState>(m => SendCurrentClusterState(m.Receiver))
-                .With<InternalClusterAction.Subscribe>(m => Subscribe(m.Subscriber, m.InitialStateMode, m.To))
-                .With<InternalClusterAction.PublishEvent>(Publish);
+            if (message is InternalClusterAction.PublishChanges)
+            {
+                var p = message as InternalClusterAction.PublishChanges;
+                PublishChanges(p.NewGossip);
+            }
+            else if (message is ClusterEvent.CurrentInternalStats)
+            {
+                var i = message as ClusterEvent.CurrentInternalStats;
+                PublishInternalStats(i);
+            }
+            else if (message is InternalClusterAction.SendCurrentClusterState)
+            {
+                var sc = message as InternalClusterAction.SendCurrentClusterState;
+                SendCurrentClusterState(sc.Receiver);
+            }
+            else if (message is InternalClusterAction.Subscribe)
+            {
+                var sub = message as InternalClusterAction.Subscribe;
+                Subscribe(sub.Subscriber, sub.InitialStateMode, sub.To);
+            }
+            else if (message is InternalClusterAction.PublishEvent)
+            {
+                var pub = message as InternalClusterAction.PublishEvent;
+                Publish(pub);
+            }
+            else if (message is InternalClusterAction.Unsubscribe)
+            {
+                var unsub = message as InternalClusterAction.Unsubscribe;
+                Unsubscribe(unsub.Subscriber, unsub.To);
+            }
+            else
+            {
+                Unhandled(message);
+            }
         }
 
         readonly EventStream _eventStream;
@@ -675,7 +711,7 @@ namespace Akka.Cluster
         /// The current snapshot state corresponding to latest gossip 
         /// to mimic what you would have seen if you were listening to the events.
         /// </summary>
-        private void SendCurrentClusterState(ActorRef receiver)
+        private void SendCurrentClusterState(IActorRef receiver)
         {
             var state = new ClusterEvent.CurrentClusterState(
                 _latestGossip.Members,
@@ -683,12 +719,15 @@ namespace Akka.Cluster
                     .ToImmutableHashSet(),
                 _latestGossip.SeenBy.Select(s => s.Address).ToImmutableHashSet(),
                 _latestGossip.Leader == null ? null : _latestGossip.Leader.Address,
-                _latestGossip.AllRoles.ToImmutableDictionary(r => r, r => _latestGossip.RoleLeader(r).Address)
-                );
+                _latestGossip.AllRoles.ToImmutableDictionary(r => r, r =>
+                {
+                    var leader = _latestGossip.RoleLeader(r);
+                    return leader == null ? null : leader.Address;
+                }));
             receiver.Tell(state);
         }
 
-        private void Subscribe(ActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initMode,
+        private void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initMode,
             IEnumerable<Type> to)
         {
             if (initMode == ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents)
@@ -710,7 +749,7 @@ namespace Akka.Cluster
             foreach (var t in to) _eventStream.Subscribe(subscriber, t);
         }
 
-        private void Unsubscribe(ActorRef subscriber, Type to)
+        private void Unsubscribe(IActorRef subscriber, Type to)
         {
             if (to == null) _eventStream.Unsubscribe(subscriber);
             else _eventStream.Unsubscribe(subscriber, to);
@@ -751,4 +790,5 @@ namespace Akka.Cluster
         }
     }
 }
+
 

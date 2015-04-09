@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClientReceiveActor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -6,7 +13,7 @@ namespace PingPong
 {
     public class ClientReceiveActor : ReceiveActor
     {
-        public ClientReceiveActor(ActorRef actor, long repeat, TaskCompletionSource<bool> latch)
+        public ClientReceiveActor(IActorRef actor, long repeat, TaskCompletionSource<bool> latch)
         {
             var received=0L;
             var sent=0L;
@@ -36,3 +43,4 @@ namespace PingPong
         }
     }
 }
+

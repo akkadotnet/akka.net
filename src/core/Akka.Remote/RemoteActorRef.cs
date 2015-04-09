@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RemoteActorRef.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
@@ -9,12 +16,12 @@ namespace Akka.Remote
     /// Marker interface for Actors that are deployed in a remote scope
     /// </summary>
 // ReSharper disable once InconsistentNaming
-    internal interface RemoteRef : ActorRefScope { }
+    internal interface IRemoteRef : IActorRefScope { }
 
     /// <summary>
     /// Class RemoteActorRef.
     /// </summary>
-    public class RemoteActorRef : InternalActorRef, RemoteRef
+    public class RemoteActorRef : InternalActorRefBase, IRemoteRef
     {
         /// <summary>
         /// The deploy
@@ -26,7 +33,7 @@ namespace Akka.Remote
         /// <summary>
         /// The parent
         /// </summary>
-        private readonly InternalActorRef _parent;
+        private readonly IInternalActorRef _parent;
         /// <summary>
         /// The props
         /// </summary>
@@ -41,7 +48,7 @@ namespace Akka.Remote
         /// <param name="parent">The parent.</param>
         /// <param name="props">The props.</param>
         /// <param name="deploy">The deploy.</param>
-        internal RemoteActorRef(RemoteTransport remote, Address localAddressToUse, ActorPath path, InternalActorRef parent,
+        internal RemoteActorRef(RemoteTransport remote, Address localAddressToUse, ActorPath path, IInternalActorRef parent,
             Props props, Deploy deploy)
         {
             Remote = remote;
@@ -68,7 +75,7 @@ namespace Akka.Remote
         /// Gets the parent.
         /// </summary>
         /// <value>The parent.</value>
-        public override InternalActorRef Parent
+        public override IInternalActorRef Parent
         {
             get { return _parent; }
         }
@@ -77,7 +84,7 @@ namespace Akka.Remote
         /// Gets the provider.
         /// </summary>
         /// <value>The provider.</value>
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { return Remote.Provider; }
         }
@@ -90,7 +97,7 @@ namespace Akka.Remote
         /// <param name="name">The name.</param>
         /// <returns>ActorRef.</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public override ActorRef GetChild(IEnumerable<string> name)
+        public override IActorRef GetChild(IEnumerable<string> name)
         {
             throw new NotImplementedException();
         }
@@ -143,7 +150,7 @@ namespace Akka.Remote
         /// Sends the system message.
         /// </summary>
         /// <param name="message">The message.</param>
-        private void SendSystemMessage(SystemMessage message)
+        private void SendSystemMessage(ISystemMessage message)
         {
             Remote.Send(message, null, this);
             Remote.Provider.AfterSendSystemMessage(message);
@@ -154,10 +161,10 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
-        protected override void TellInternal(object message, ActorRef sender)
+        protected override void TellInternal(object message, IActorRef sender)
         {
             Remote.Send(message, sender, this);
-            var systemMessage = message as SystemMessage;
+            var systemMessage = message as ISystemMessage;
             if (systemMessage != null) Remote.Provider.AfterSendSystemMessage(systemMessage);
         }
 
@@ -171,3 +178,4 @@ namespace Akka.Remote
         }
     }
 }
+
