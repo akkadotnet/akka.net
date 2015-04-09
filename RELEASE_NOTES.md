@@ -274,6 +274,15 @@ var router2 =
 **`ConsistentHashable` renamed to `IConsistentHashable`**
 Any objects you may have decorated with the `ConsistentHashable` interface to work with `ConsistentHashRouter` instances will need to implement `IConsistentHashable` going forward, as all interfaces have been renamed with the `I-` prefix per .NET naming conventions.
 
+**Akka.DI.Unity NuGet Package**
+Akka.NET now ships with dependency injection support for [Unity](http://unity.codeplex.com/).
+
+You can install our Unity package via the following command in the NuGet package manager console:
+
+```
+PM> Install-Package Akka.DI.Unity
+```
+
 ----
 
 #### 0.8.0 Feb 11 2015
