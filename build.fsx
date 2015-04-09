@@ -122,10 +122,10 @@ Target "Docs" <| fun _ ->
 //--------------------------------------------------------------------------------
 // Push DOCs content to Windows Azure blob storage
 Target "AzureDocsDeploy" (fun _ ->
-    let rec pushToAzure docDir azureUrl container azureAccount azureKey trialsLeft =
+    let rec pushToAzure docDir azureUrl container azureKey trialsLeft =
         let tracing = enableProcessTracing
         enableProcessTracing <- false
-        let arguments = sprintf "/Source:%s /Dest:%s /DestKey:%s /S" (Path.GetFullPath docDir) (azureUrl @@ container) azureKey
+        let arguments = sprintf "/Source:%s /Dest:%s /DestKey:%s /S /Y" (Path.GetFullPath docDir) (azureUrl @@ container) azureKey
         tracefn "Pushing docs to %s. Attempts left: %d" (azureUrl) trialsLeft
         try 
             
@@ -134,19 +134,18 @@ Target "AzureDocsDeploy" (fun _ ->
                 info.Arguments <- arguments) (TimeSpan.FromMinutes 120.0) //takes a very long time to upload
             if result <> 0 then failwithf "Error during AzCopy.exe upload to azure."
         with exn -> 
-            if (trialsLeft > 0) then (pushToAzure docDir azureUrl container azureAccount azureKey (trialsLeft-1))
+            if (trialsLeft > 0) then (pushToAzure docDir azureUrl container azureKey (trialsLeft-1))
             else raise exn
     let canPush = hasBuildParam "azureKey" && hasBuildParam "azureUrl"
     if (canPush) then
          printfn "Uploading API docs to Azure..."
          let azureUrl = getBuildParam "azureUrl"
-         let azureAccount = getBuildParam "azureAccount"
          let azureKey = (getBuildParam "azureKey") + "==" //hack, because it looks like FAKE arg parsing chops off the "==" that gets tacked onto the end of each Azure storage key
          if(isUnstableDocs) then
-            pushToAzure docDir azureUrl "unstable" azureAccount azureKey 3
+            pushToAzure docDir azureUrl "unstable" azureKey 3
          if(not isUnstableDocs) then
-            pushToAzure docDir azureUrl "stable" azureAccount azureKey 3
-            pushToAzure docDir azureUrl release.NugetVersion azureAccount azureKey 3
+            pushToAzure docDir azureUrl "stable" azureKey 3
+            pushToAzure docDir azureUrl release.NugetVersion azureKey 3
     if(not canPush) then
         printfn "Missing required paraments to push docs to Azure. Run build HelpDocs to find out!"
             
@@ -461,16 +460,12 @@ Target "HelpDocs" <| fun _ ->
       "Just builds the API docs for Akka.NET locally. Does not attempt to publish."
       ""
       "build PublishDocs azureKey=<key> "
-      "                  azureAccount=<account> "
       "                  azureUrl=<url> "
       "                 [unstable=true]"
       ""
       "Arguments for PublishDocs target:"
       "   azureKey=<key>             Azure blob storage key."
       "                              Used to authenticate to the storage account."
-      ""
-      "   azureAccount=<account>     Azure storage account name."
-      "                              Used to identify the storage account."
       ""
       "   azureUrl=<url>             Base URL for Azure storage container."
       "                              FAKE will automatically set container"
@@ -483,12 +478,12 @@ Target "HelpDocs" <| fun _ ->
       ""
       "In order to publish documentation all of these values must be provided."
       "Examples:"
-      "  build PublishDocs azureKey=1s9HSAHA+... azureAccount=fooaccount"
+      "  build PublishDocs azureKey=1s9HSAHA+..."
       "                    azureUrl=http://fooaccount.blob.core.windows.net/docs"
       "                                   Build and publish docs to http://fooaccount.blob.core.windows.net/docs/stable"
       "                                   and http://fooaccount.blob.core.windows.net/docs/{release.version}"
       ""
-      "  build PublishDocs azureKey=1s9HSAHA+... azureAccount=fooaccount"
+      "  build PublishDocs azureKey=1s9HSAHA+..."
       "                    azureUrl=http://fooaccount.blob.core.windows.net/docs"
       "                    unstable=true"
       "                                   Build and publish docs to http://fooaccount.blob.core.windows.net/docs/unstable"
