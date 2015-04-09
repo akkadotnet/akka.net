@@ -1,4 +1,11 @@
-﻿module MapReduce
+﻿//-----------------------------------------------------------------------
+// <copyright file="MapReduce.fs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+module MapReduce
 
 open System
 open System.Collections.Concurrent
@@ -60,3 +67,4 @@ let main() =
             printfn "%s\t%d" k v
         system.Shutdown()
     } |> Async.RunSynchronously
+

@@ -1,4 +1,11 @@
-﻿[<AutoOpen>]
+﻿//-----------------------------------------------------------------------
+// <copyright file="Schedulers.fs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+[<AutoOpen>]
 module Schedulers
 
 open Akka.Actor
@@ -65,3 +72,4 @@ type Akka.Actor.ITellScheduler with
         match cancelable with
         | Some c -> this.ScheduleTellOnce(after, receiver, message, s, c)
         | None -> this.ScheduleTellOnce(after, receiver, message, s)
+
