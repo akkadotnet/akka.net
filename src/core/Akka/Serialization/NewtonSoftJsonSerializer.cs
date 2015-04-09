@@ -129,10 +129,12 @@ namespace Akka.Serialization
                     var caseTypeName = j["Case"].Value<string>();
                     var caseType = type.GetNestedType(caseTypeName);
                     var ctor = caseType.GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)[0];
-                    //var values = ????? j["Fields"]["$values"].Values<object>();
-
-                    //var res = ctor.Invoke(values.ToArray());
-                    return null;
+                    var values =
+                        j["Fields"].ToObject<object[]>()
+                            .Select(o => TranslateSurrogate(o, system, typeof (object)))
+                            .ToArray();
+                    var res = ctor.Invoke(values.ToArray());
+                    return res;
                 }
             }
             var surrogate = deserializedValue as ISurrogate;
