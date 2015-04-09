@@ -31,3 +31,31 @@ let ``can serialize expression decider`` () =
     des.Decide (Exception())
     |> equals (Directive.Resume)
 
+type TestUnion = 
+    | A of string
+    | B of int * string
+
+type TestUnion2 = 
+    | C of string * TestUnion
+    | D of int
+
+
+[<Fact>]
+let ``can serialize discriminated unions`` () =
+    let x = B (23,"hello")
+    use sys = System.create "system" (Configuration.defaultConfig())
+    let serializer = sys.Serialization.FindSerializerFor x
+    let bytes = serializer.ToBinary x
+    let des = serializer.FromBinary (bytes, typeof<TestUnion>) :?> TestUnion
+    des
+    |> equals x
+
+[<Fact>]
+let ``can serialize nested discriminated unions`` () =
+    let x = C("bar",B (23,"hello"))
+    use sys = System.create "system" (Configuration.defaultConfig())
+    let serializer = sys.Serialization.FindSerializerFor x
+    let bytes = serializer.ToBinary x
+    let des = serializer.FromBinary (bytes, typeof<TestUnion2>) :?> TestUnion2
+    des
+    |> equals x
