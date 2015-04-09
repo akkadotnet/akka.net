@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Akka.Actor;
@@ -109,10 +110,10 @@ namespace Akka.Serialization
             string data = Encoding.Default.GetString(bytes);
 
             object res = JsonConvert.DeserializeObject(data, _settings);
-            return TranslateSurrogate(res,system);
+            return TranslateSurrogate(res, system, type);
         }
 
-        private static object TranslateSurrogate(object deserializedValue,ActorSystem system)
+        private static object TranslateSurrogate(object deserializedValue,ActorSystem system,Type type)
         {
             var j = deserializedValue as JObject;
             if (j != null)
@@ -121,6 +122,17 @@ namespace Akka.Serialization
                 {
                     var value = j["$"].Value<string>();
                     return GetValue(value);
+                }
+
+                if (j["Case"] != null)
+                {
+                    var caseTypeName = j["Case"].Value<string>();
+                    var caseType = type.GetNestedType(caseTypeName);
+                    var ctor = caseType.GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)[0];
+                    //var values = ????? j["Fields"]["$values"].Values<object>();
+
+                    //var res = ctor.Invoke(values.ToArray());
+                    return null;
                 }
             }
             var surrogate = deserializedValue as ISurrogate;
@@ -182,15 +194,15 @@ namespace Akka.Serialization
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue,
                 JsonSerializer serializer)
             {
-                return DeserializeFromReader(reader, serializer);
+                return DeserializeFromReader(reader, serializer, objectType);
             }
 
 
 
-            private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer)
+            private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer,Type objecType)
             {
                 var surrogate = serializer.Deserialize(reader);
-                return TranslateSurrogate(surrogate, _system);
+                return TranslateSurrogate(surrogate, _system, objecType);
             }
 
             /// <summary>
@@ -208,6 +220,10 @@ namespace Akka.Serialization
                     writer.WriteValue(GetString(value));
                     writer.WriteEndObject();
                 }
+                else if (IsDiscriminatedUnion(value))
+                {
+                    
+                }
                 else
                 {
                     var value1 = value as ISurrogated;
@@ -222,6 +238,27 @@ namespace Akka.Serialization
                         serializer.Serialize(writer, value);
                     }
                 }
+            }
+
+            private bool IsDiscriminatedUnion(object value)
+            {
+                var result = false;
+                var type = value.GetType();
+                var attributes = type.GetCustomAttributes(true);
+                foreach (object attribute in attributes)
+                {
+                    Type attributeType = attribute.GetType();
+                    if (attributeType.FullName == "Microsoft.FSharp.Core.CompilationMappingAttribute")
+                    {
+                        var fsharpReflectionAssembly = attributeType.Assembly;
+                        var fsharpType = fsharpReflectionAssembly.GetType("Microsoft.FSharp.Reflection.FSharpType");
+                        var isUnionMethodInfo = fsharpType.GetMethod("IsUnion", BindingFlags.Public | BindingFlags.Static);
+
+                        result = (bool)isUnionMethodInfo.Invoke(null, new[] { value });
+                        if (result) break;
+                    }
+                }
+                return result;
             }
 
             private object GetString(object value)

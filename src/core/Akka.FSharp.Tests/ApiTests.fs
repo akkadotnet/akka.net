@@ -23,3 +23,17 @@ let ``can serialize expression decider`` () =
     let des = serializer.FromBinary (bytes, typeof<ExprDecider>) :?> IDecider
     des.Decide (Exception())
     |> equals (Directive.Resume)
+
+type TestUnion = 
+    | A of string
+    | B of int * string
+
+[<Fact>]
+let ``can serialize discriminated unions`` () =
+    let x = B (23,"hello")
+    use sys = System.create "system" (Configuration.defaultConfig())
+    let serializer = sys.Serialization.FindSerializerFor x
+    let bytes = serializer.ToBinary x
+    let des = serializer.FromBinary (bytes, typeof<TestUnion>) :?> TestUnion
+    des
+    |> equals x
