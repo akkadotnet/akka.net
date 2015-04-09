@@ -125,7 +125,7 @@ Target "AzureDocsDeploy" (fun _ ->
     let rec pushToAzure docDir azureUrl container azureKey trialsLeft =
         let tracing = enableProcessTracing
         enableProcessTracing <- false
-        let arguments = sprintf "/Source:%s /Dest:%s /DestKey:%s /S /Y" (Path.GetFullPath docDir) (azureUrl @@ container) azureKey
+        let arguments = sprintf "/Source:%s /Dest:%s /DestKey:%s /S /Y /SetContentType" (Path.GetFullPath docDir) (azureUrl @@ container) azureKey
         tracefn "Pushing docs to %s. Attempts left: %d" (azureUrl) trialsLeft
         try 
             
