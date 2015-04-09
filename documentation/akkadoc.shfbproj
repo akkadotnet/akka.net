@@ -41,9 +41,9 @@
     <RootNamespaceContainer>True</RootNamespaceContainer>
     <PresentationStyle>VS2013</PresentationStyle>
     <Preliminary>False</Preliminary>
-    <NamingMethod>Guid</NamingMethod>
+    <NamingMethod>HashedMemberName</NamingMethod>
     <HelpTitle>Akka.NET Documentation</HelpTitle>
-    <FooterText>&amp;lt%3ba href=&amp;quot%3bhttp://getakka.net/&amp;quot%3b&amp;gt%3bAkka.NET Home&amp;lt%3b/a&amp;gt%3b</FooterText>
+    <FooterText>&amp;lt%3ba href=&amp;quot%3bhttp://getakka.net/&amp;quot%3b&amp;gt%3bAkka.NET Home&amp;lt%3b/a&amp;gt%3b | &amp;lt%3ba href=&amp;quot%3bhttp://learnakka.net&amp;quot%3b&amp;gt%3bLearn Akka.NET&amp;lt%3b/a&amp;gt%3b</FooterText>
     <ContentPlacement>AboveNamespaces</ContentPlacement>
     <RootNamespaceTitle>API Reference</RootNamespaceTitle>
     <VisibleItems>InheritedMembers, InheritedFrameworkMembers, Protected, SealedProtected, ProtectedInternalAsProtected</VisibleItems>
@@ -51,42 +51,43 @@
     </WorkingPath>
     <DocumentationSources>
       <DocumentationSource sourceFile="..\src\core\Akka.Cluster\bin\Release\Akka.Cluster.dll" />
-<DocumentationSource sourceFile="..\src\core\Akka.Cluster\bin\Release\Akka.Cluster.xml" />
-<DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.AutoFac\bin\Release\Akka.DI.AutoFac.dll" />
-<DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.AutoFac\bin\Release\Akka.DI.AutoFac.xml" />
-<DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.CastleWindsor\bin\Release\Akka.DI.CastleWindsor.dll" />
-<DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.CastleWindsor\bin\Release\Akka.DI.CastleWindsor.xml" />
-<DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Core\bin\Release\Akka.DI.Core.dll" />
-<DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Core\bin\Release\Akka.DI.Core.xml" />
-<DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Ninject\bin\Release\Akka.DI.Ninject.dll" />
-<DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Ninject\bin\Release\Akka.DI.Ninject.xml" />
-<DocumentationSource sourceFile="..\src\core\Akka\bin\Release\Akka.dll" />
-<DocumentationSource sourceFile="..\src\core\Akka\bin\Release\Akka.ExternalAnnotations.xml" />
-<DocumentationSource sourceFile="..\src\core\Akka.FSharp\bin\Release\Akka.FSharp.dll" />
-<DocumentationSource sourceFile="..\src\core\Akka.FSharp\bin\Release\Akka.FSharp.xml" />
-<DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.NLog\bin\Release\Akka.Logger.NLog.dll" />
-<DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.NLog\bin\Release\Akka.Logger.NLog.xml" />
-<DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.Serilog\bin\Release\Akka.Logger.Serilog.dll" />
-<DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.Serilog\bin\Release\Akka.Logger.Serilog.xml" />
-<DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.slf4net\bin\Release\Akka.Logger.slf4net.dll" />
-<DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.slf4net\bin\Release\Akka.Logger.slf4net.xml" />
-<DocumentationSource sourceFile="..\src\core\Akka.Persistence\bin\Release\Akka.Persistence.dll" />
-<DocumentationSource sourceFile="..\src\core\Akka.Persistence.FSharp\bin\Release\Akka.Persistence.FSharp.dll" />
-<DocumentationSource sourceFile="..\src\core\Akka.Persistence.FSharp\bin\Release\Akka.Persistence.FSharp.xml" />
-<DocumentationSource sourceFile="..\src\core\Akka.Persistence.TestKit\bin\Release\Akka.Persistence.TestKit.dll" />
-<DocumentationSource sourceFile="..\src\core\Akka.Persistence.TestKit\bin\Release\Akka.Persistence.TestKit.xml" />
-<DocumentationSource sourceFile="..\src\core\Akka.Persistence\bin\Release\Akka.Persistence.xml" />
-<DocumentationSource sourceFile="..\src\core\Akka.Remote\bin\Release\Akka.Remote.dll" />
-<DocumentationSource sourceFile="..\src\core\Akka.Remote.TestKit\bin\Release\Akka.Remote.TestKit.dll" />
-<DocumentationSource sourceFile="..\src\core\Akka.Remote.TestKit\bin\Release\Akka.Remote.TestKit.xml" />
-<DocumentationSource sourceFile="..\src\core\Akka.Remote\bin\Release\Akka.Remote.xml" />
-<DocumentationSource sourceFile="..\src\core\Akka.TestKit\bin\Release\Akka.TestKit.dll" />
-<DocumentationSource sourceFile="..\src\contrib\testkits\Akka.TestKit.VsTest\bin\Release\Akka.TestKit.VsTest.dll" />
-<DocumentationSource sourceFile="..\src\contrib\testkits\Akka.TestKit.VsTest\bin\Release\Akka.TestKit.VsTest.xml" />
-<DocumentationSource sourceFile="..\src\core\Akka.TestKit\bin\Release\Akka.TestKit.xml" />
-<DocumentationSource sourceFile="..\src\contrib\testkits\Akka.TestKit.Xunit\bin\Release\Akka.TestKit.Xunit.dll" />
-<DocumentationSource sourceFile="..\src\contrib\testkits\Akka.TestKit.Xunit\bin\Release\Akka.TestKit.Xunit.xml" />
-<DocumentationSource sourceFile="..\src\core\Akka\bin\Release\Akka.xml" /></DocumentationSources>
+      <DocumentationSource sourceFile="..\src\core\Akka.Cluster\bin\Release\Akka.Cluster.xml" />
+      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.AutoFac\bin\Release\Akka.DI.AutoFac.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.AutoFac\bin\Release\Akka.DI.AutoFac.xml" />
+      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.CastleWindsor\bin\Release\Akka.DI.CastleWindsor.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.CastleWindsor\bin\Release\Akka.DI.CastleWindsor.xml" />
+      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Core\bin\Release\Akka.DI.Core.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Core\bin\Release\Akka.DI.Core.xml" />
+      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Ninject\bin\Release\Akka.DI.Ninject.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\dependencyInjection\Akka.DI.Ninject\bin\Release\Akka.DI.Ninject.xml" />
+      <DocumentationSource sourceFile="..\src\core\Akka\bin\Release\Akka.dll" />
+      <DocumentationSource sourceFile="..\src\core\Akka\bin\Release\Akka.ExternalAnnotations.xml" />
+      <DocumentationSource sourceFile="..\src\core\Akka.FSharp\bin\Release\Akka.FSharp.dll" />
+      <DocumentationSource sourceFile="..\src\core\Akka.FSharp\bin\Release\Akka.FSharp.xml" />
+      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.NLog\bin\Release\Akka.Logger.NLog.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.NLog\bin\Release\Akka.Logger.NLog.xml" />
+      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.Serilog\bin\Release\Akka.Logger.Serilog.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.Serilog\bin\Release\Akka.Logger.Serilog.xml" />
+      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.slf4net\bin\Release\Akka.Logger.slf4net.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\loggers\Akka.Logger.slf4net\bin\Release\Akka.Logger.slf4net.xml" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Persistence\bin\Release\Akka.Persistence.dll" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Persistence.FSharp\bin\Release\Akka.Persistence.FSharp.dll" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Persistence.FSharp\bin\Release\Akka.Persistence.FSharp.xml" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Persistence.TestKit\bin\Release\Akka.Persistence.TestKit.dll" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Persistence.TestKit\bin\Release\Akka.Persistence.TestKit.xml" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Persistence\bin\Release\Akka.Persistence.xml" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Remote\bin\Release\Akka.Remote.dll" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Remote.TestKit\bin\Release\Akka.Remote.TestKit.dll" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Remote.TestKit\bin\Release\Akka.Remote.TestKit.xml" />
+      <DocumentationSource sourceFile="..\src\core\Akka.Remote\bin\Release\Akka.Remote.xml" />
+      <DocumentationSource sourceFile="..\src\core\Akka.TestKit\bin\Release\Akka.TestKit.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\testkits\Akka.TestKit.VsTest\bin\Release\Akka.TestKit.VsTest.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\testkits\Akka.TestKit.VsTest\bin\Release\Akka.TestKit.VsTest.xml" />
+      <DocumentationSource sourceFile="..\src\core\Akka.TestKit\bin\Release\Akka.TestKit.xml" />
+      <DocumentationSource sourceFile="..\src\contrib\testkits\Akka.TestKit.Xunit\bin\Release\Akka.TestKit.Xunit.dll" />
+      <DocumentationSource sourceFile="..\src\contrib\testkits\Akka.TestKit.Xunit\bin\Release\Akka.TestKit.Xunit.xml" />
+      <DocumentationSource sourceFile="..\src\core\Akka\bin\Release\Akka.xml" />
+    </DocumentationSources>
   </PropertyGroup>
   <!-- There are no properties for these groups.  AnyCPU needs to appear in order for Visual Studio to perform
 			 the build.  The others are optional common platform types that may appear. -->
