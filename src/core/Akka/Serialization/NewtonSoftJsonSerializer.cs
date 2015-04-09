@@ -222,10 +222,6 @@ namespace Akka.Serialization
                     writer.WriteValue(GetString(value));
                     writer.WriteEndObject();
                 }
-                else if (IsDiscriminatedUnion(value))
-                {
-                    
-                }
                 else
                 {
                     var value1 = value as ISurrogated;
@@ -240,28 +236,7 @@ namespace Akka.Serialization
                         serializer.Serialize(writer, value);
                     }
                 }
-            }
-
-            private bool IsDiscriminatedUnion(object value)
-            {
-                var result = false;
-                var type = value.GetType();
-                var attributes = type.GetCustomAttributes(true);
-                foreach (object attribute in attributes)
-                {
-                    Type attributeType = attribute.GetType();
-                    if (attributeType.FullName == "Microsoft.FSharp.Core.CompilationMappingAttribute")
-                    {
-                        var fsharpReflectionAssembly = attributeType.Assembly;
-                        var fsharpType = fsharpReflectionAssembly.GetType("Microsoft.FSharp.Reflection.FSharpType");
-                        var isUnionMethodInfo = fsharpType.GetMethod("IsUnion", BindingFlags.Public | BindingFlags.Static);
-
-                        result = (bool)isUnionMethodInfo.Invoke(null, new[] { value });
-                        if (result) break;
-                    }
-                }
-                return result;
-            }
+            }           
 
             private object GetString(object value)
             {
