@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Akka.Actor;
@@ -109,10 +110,10 @@ namespace Akka.Serialization
             string data = Encoding.Default.GetString(bytes);
 
             object res = JsonConvert.DeserializeObject(data, _settings);
-            return TranslateSurrogate(res,system);
+            return TranslateSurrogate(res, system, type);
         }
 
-        private static object TranslateSurrogate(object deserializedValue,ActorSystem system)
+        private static object TranslateSurrogate(object deserializedValue,ActorSystem system,Type type)
         {
             var j = deserializedValue as JObject;
             if (j != null)
@@ -121,6 +122,20 @@ namespace Akka.Serialization
                 {
                     var value = j["$"].Value<string>();
                     return GetValue(value);
+                }
+
+                if (j["Case"] != null)
+                {
+                    var caseTypeName = j["Case"].Value<string>();
+                    var caseType = type.GetNestedType(caseTypeName);
+                    var ctor = caseType.GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)[0];
+                    var paramTypes = ctor.GetParameters().Select(p => p.ParameterType).ToArray();
+                    var values =
+                        j["Fields"].ToObject<object[]>()
+                            .Select((o, i) => TranslateSurrogate(o, system, paramTypes[i]))
+                            .ToArray();
+                    var res = ctor.Invoke(values.ToArray());
+                    return res;
                 }
             }
             var surrogate = deserializedValue as ISurrogate;
@@ -182,15 +197,15 @@ namespace Akka.Serialization
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue,
                 JsonSerializer serializer)
             {
-                return DeserializeFromReader(reader, serializer);
+                return DeserializeFromReader(reader, serializer, objectType);
             }
 
 
 
-            private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer)
+            private object DeserializeFromReader(JsonReader reader, JsonSerializer serializer,Type objecType)
             {
                 var surrogate = serializer.Deserialize(reader);
-                return TranslateSurrogate(surrogate, _system);
+                return TranslateSurrogate(surrogate, _system, objecType);
             }
 
             /// <summary>
@@ -222,7 +237,7 @@ namespace Akka.Serialization
                         serializer.Serialize(writer, value);
                     }
                 }
-            }
+            }           
 
             private object GetString(object value)
             {
