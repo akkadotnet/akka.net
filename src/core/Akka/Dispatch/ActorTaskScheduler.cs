@@ -130,7 +130,7 @@ namespace Akka.Dispatch
                     .ContinueWith(
                         Rethrow,
                         Faulted,
-                        TaskContinuationOptions.OnlyOnFaulted);
+                        TaskContinuationOptions.None);
 
                 //if reentrancy was suspended, make sure we re-enable message processing again
                 if (behavior == AsyncBehavior.Suspend)
