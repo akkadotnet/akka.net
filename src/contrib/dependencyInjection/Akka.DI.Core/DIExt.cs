@@ -26,9 +26,9 @@ namespace Akka.DI.Core
             if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
             this.dependencyResolver = dependencyResolver;
         }
-        public Props Props(String actorName)
+        public Props Props(Type actorType)
         {
-            return new Props(typeof(DIActorProducer), new object[] { dependencyResolver, actorName });
+            return new Props(typeof(DIActorProducer), new object[] { dependencyResolver, actorType });
         }
 
     }

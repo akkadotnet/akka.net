@@ -55,10 +55,11 @@ namespace BasicUnityUses
 
                     }
                 }
+                Console.WriteLine("Hit Enter to exit");
+                Console.ReadLine();
             }
 
 
-            Console.ReadLine();
         }
 	}
 }

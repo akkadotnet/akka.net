@@ -54,10 +54,13 @@ namespace BasicAutoFacUses
 
                     }
                 }
+                Console.WriteLine("Hit Enter to close");
+                Console.ReadLine();
             }
 
-            Console.ReadLine();
+            
         }
+
     }
 }
 

@@ -40,18 +40,17 @@ namespace Akka.DI.Unity
             return typeCache[actorName];
 	    }
 
-	    public Func<ActorBase> CreateActorFactory(string actorName)
+        public Func<ActorBase> CreateActorFactory(Type actorType)
 	    {
 			return () =>
 			{
-				var actorType = GetType(actorName);
 				return (ActorBase)container.Resolve(actorType);
 			};
 	    }
 
 	    public Props Create<TActor>() where TActor : ActorBase
 	    {
-		    return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
+		    return system.GetExtension<DIExt>().Props(typeof(TActor));
 	    }
 
 	    public void Release(ActorBase actor)

@@ -73,11 +73,10 @@ namespace Akka.DI.AutoFac
         /// </summary>
         /// <param name="actorName">Name of the ActorType</param>
         /// <returns>factory delegate</returns>
-        public Func<ActorBase> CreateActorFactory(string actorName)
+        public Func<ActorBase> CreateActorFactory(Type actorType)
         {
             return () =>
             {
-                Type actorType = this.GetType(actorName);
                 var scope = container.BeginLifetimeScope();
                 var actor = (ActorBase)scope.Resolve(actorType);
                 references.Add(actor, scope);
@@ -91,7 +90,7 @@ namespace Akka.DI.AutoFac
         /// <returns>Props configuration instance</returns>
         public Props Create<TActor>() where TActor : ActorBase
         {
-            return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
+            return system.GetExtension<DIExt>().Props(typeof(TActor));
         }
 
         /// <summary>
