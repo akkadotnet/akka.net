@@ -9,11 +9,29 @@ using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
+using Akka.Event;
 using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Tests.Dispatch
 {
+    class AsyncActor : ReceiveActor
+    {
+        public AsyncActor()
+        {
+            Receive<string>(AsyncBehavior.Suspend, async s =>
+            {
+                await Task.Yield();
+                if (s == "stop")
+                {
+                    Sender.Tell("done");
+                }
+            });
+        }
+
+        ILoggingAdapter Log = Context.GetLogger();
+    }
+
     public class SuspendActor : ReceiveActor
     {
         public SuspendActor()
@@ -313,8 +331,22 @@ namespace Akka.Tests.Dispatch
         public async Task Actors_should_be_able_to_suspend_reentrancy()
         {
             var asker = Sys.ActorOf(Props.Create(() => new SuspendActor()));
-            var res = await asker.Ask<int>("start", TimeSpan.FromSeconds(555));
+            var res = await asker.Ask<int>("start", TimeSpan.FromSeconds(5));
             res.ShouldBe(0);
+        }
+
+        [Fact]
+        public async Task Actor_should_be_able_to_resume_suspend()
+        {
+            var asker = Sys.ActorOf<AsyncActor>();
+
+            for (var i = 0; i < 10; i++)
+            {
+                asker.Tell("msg #" + i);
+            }
+
+            var res = await asker.Ask<string>("stop", TimeSpan.FromSeconds(55555));
+            res.ShouldBe("done");
         }
     }
 }
