@@ -56,12 +56,10 @@ namespace Akka.DI.Ninject
         /// </summary>
         /// <param name="actorName">Name of the ActorType</param>
         /// <returns>factory delegate</returns>
-        public Func<ActorBase> CreateActorFactory(string actorName)
+        public Func<ActorBase> CreateActorFactory(Type actorType)
         {
             return () =>
             {
-                Type actorType = this.GetType(actorName);
-
                 return (ActorBase)container.GetService(actorType);
             };
         }
@@ -72,7 +70,7 @@ namespace Akka.DI.Ninject
         /// <returns>Props configuration instance</returns>
         public Props Create<TActor>() where TActor : ActorBase
         {
-            return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
+            return system.GetExtension<DIExt>().Props(typeof(TActor));
         }
 
         /// <summary>

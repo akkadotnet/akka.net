@@ -64,9 +64,9 @@ namespace Akka.DI.CastleWindsor
         /// </summary>
         /// <param name="actorName">Name of the ActorType</param>
         /// <returns>factory delegate</returns>
-        public Func<ActorBase> CreateActorFactory(string actorName)
+        public Func<ActorBase> CreateActorFactory(Type actorType)
         {
-            return () => (ActorBase)container.Resolve(GetType(actorName));
+            return () => (ActorBase)container.Resolve(actorType);
         }
         /// <summary>
         /// Used Register the Configuration for the ActorType specified in TActor
@@ -75,7 +75,7 @@ namespace Akka.DI.CastleWindsor
         /// <returns>Props configuration instance</returns>
         public Props Create<TActor>() where TActor : ActorBase
         {
-            return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
+            return system.GetExtension<DIExt>().Props(typeof(TActor));
         }
 
         /// <summary>
