@@ -19,9 +19,10 @@ namespace Akka.Tests.Dispatch
     {
         public AsyncActor()
         {
-            Receive<string>(AsyncBehavior.Suspend, async s =>
+            Receive<string>( async s =>
             {
                 await Task.Yield();
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
                 if (s == "stop")
                 {
                     Sender.Tell("done");
@@ -345,7 +346,7 @@ namespace Akka.Tests.Dispatch
                 asker.Tell("msg #" + i);
             }
 
-            var res = await asker.Ask<string>("stop", TimeSpan.FromSeconds(55555));
+            var res = await asker.Ask<string>("stop", TimeSpan.FromSeconds(5));
             res.ShouldBe("done");
         }
     }
