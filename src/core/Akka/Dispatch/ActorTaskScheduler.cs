@@ -65,6 +65,7 @@ namespace Akka.Dispatch
 
             s.Self.Tell(new CompleteTask(s, () =>
             {
+                SetCurrentState(s.Self,s.Sender,s.Message);
                 TryExecuteTask(task);
                 if (task.IsFaulted)
                     Rethrow(task, null);
