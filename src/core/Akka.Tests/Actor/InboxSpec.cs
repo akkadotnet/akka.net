@@ -19,7 +19,8 @@ namespace Akka.Tests.Actor
 {
     public class InboxSpec : AkkaSpec
     {
-        private Inbox _inbox;
+        private readonly Inbox _inbox;
+
         public InboxSpec()
             : base("akka.actor.inbox.inbox-size=1000")  //Default is 1000 but just to make sure these tests don't fail we set it
         {
@@ -117,7 +118,6 @@ namespace Akka.Tests.Actor
                 Sys.EventStream.Unsubscribe(TestActor, typeof(Warning));
             }
         }
-
 
         [Fact]
         public void Inbox_have_a_default_and_custom_timeouts()
