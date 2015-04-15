@@ -105,7 +105,7 @@ namespace Akka.Tests.Actor
                     o.ShouldBe(0);
                 }
 
-                //The inbox should be empty now, so receiving should result in a timeout             
+                //The inbox should be empty now, so receiving should result in a timeout
                 Intercept<TimeoutException>(() =>
                 {
                     var received = _inbox.Receive(TimeSpan.FromSeconds(1));
@@ -122,11 +122,12 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Inbox_have_a_default_and_custom_timeouts()
         {
-            Within(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(6), () =>
+            Within(TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(6), () =>
             {
                 Intercept<TimeoutException>(() => _inbox.Receive());
                 return true;
             });
+
             Within(TimeSpan.FromSeconds(1), () =>
             {
                 Intercept<TimeoutException>(() => _inbox.Receive(TimeSpan.FromMilliseconds(100)));
