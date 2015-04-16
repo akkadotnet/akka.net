@@ -100,48 +100,6 @@ namespace Akka.Dispatch
     }
 
     /// <summary>
-    ///     Class SingleThreadDispatcher.
-    /// </summary>
-    public class SingleThreadDispatcher : MessageDispatcher
-    {
-        /// <summary>
-        ///     The queue
-        /// </summary>
-        private readonly BlockingCollection<Action> queue = new BlockingCollection<Action>();
-
-        /// <summary>
-        ///     The running
-        /// </summary>
-        private volatile bool running = true;
-
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="SingleThreadDispatcher" /> class.
-        /// </summary>
-        public SingleThreadDispatcher(MessageDispatcherConfigurator configurator)
-            : base(configurator)
-        {
-            var thread = new Thread(_ =>
-            {
-                foreach (var next in queue.GetConsumingEnumerable())
-                {
-                    next();
-                    if (!running) return;
-                }
-            });
-            thread.Start(); //thread won't start automatically without this
-        }
-
-        /// <summary>
-        ///     Schedules the specified run.
-        /// </summary>
-        /// <param name="run">The run.</param>
-        public override void Schedule(Action run)
-        {
-            queue.Add(run);
-        }
-    }
-
-    /// <summary>
     /// The registry of all <see cref="MessageDispatcher"/> instances available to this <see cref="ActorSystem"/>.
     /// </summary>
     public class Dispatchers

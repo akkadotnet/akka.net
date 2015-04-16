@@ -69,6 +69,7 @@ namespace Akka.Actor
         public void Init(bool sendSupervise, Func<Mailbox> createMailbox /*, MailboxType mailboxType*/) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType
         {
             var mailbox = createMailbox(); //Akka: dispatcher.createMailbox(this, mailboxType)
+            Dispatcher.Attach(this);
             mailbox.Setup(Dispatcher);
             mailbox.SetActor(this);
             _mailbox = mailbox;

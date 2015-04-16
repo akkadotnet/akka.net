@@ -172,6 +172,15 @@ namespace Akka.Tests.Dispatch
             d1.ShouldNotBeSame(d3);
         }
 
+
+        [Fact]
+        public void PinnedDispatchers_must_return_new_instance_each_time()
+        {
+            var d1 = Lookup("myapp.my-pinned-dispatcher");
+            var d2 = Lookup("myapp.my-pinned-dispatcher");
+            d1.ShouldNotBeSame(d2);
+        }
+
         #endregion
 
         #region Support methods and classes

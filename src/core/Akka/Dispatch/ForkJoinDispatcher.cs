@@ -23,11 +23,11 @@ namespace Akka.Dispatch
         public ForkJoinDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
         {
             var dtp = config.GetConfig("dedicated-thread-pool");
-            if(dtp.IsEmpty) throw new ConfigurationException(string.Format("must define section dedicated-thread-pool for ForkJoinDispatcher {0}", config.GetString("id", "unknown")));
+            if (dtp == null || dtp.IsEmpty) throw new ConfigurationException(string.Format("must define section dedicated-thread-pool for ForkJoinDispatcher {0}", config.GetString("id", "unknown")));
 
-            var settings = new DedicatedThreadPoolSettings(dtp.GetInt("thread-count"),
-                ConfigureThreadType(dtp.GetString("threadtype", ThreadType.Background.ToString())),
-                GetSafeDeadlockTimeout(dtp));
+            var settings = new DedicatedThreadPoolSettings(dtp.GetInt("thread-count"), 
+                DedicatedThreadPoolConfigHelpers.ConfigureThreadType(dtp.GetString("threadtype", ThreadType.Background.ToString())), 
+                DedicatedThreadPoolConfigHelpers.GetSafeDeadlockTimeout(dtp));
             _instance = new ForkJoinDispatcher(this, settings);
         }
 
@@ -36,20 +36,6 @@ namespace Akka.Dispatch
         public override MessageDispatcher Dispatcher()
         {
             return _instance;
-        }
-
-        private static TimeSpan? GetSafeDeadlockTimeout(Config cfg)
-        {
-            var timespan = cfg.GetTimeSpan("deadlock-timeout", TimeSpan.FromSeconds(-1));
-            if (timespan.TotalSeconds < 0)
-                return null;
-            return timespan;
-        }
-
-        private static ThreadType ConfigureThreadType(string threadType)
-        {
-            return string.Compare(threadType, ThreadType.Foreground.ToString(), StringComparison.InvariantCultureIgnoreCase) == 0 ?
-                ThreadType.Foreground : ThreadType.Background;
         }
     }
 
