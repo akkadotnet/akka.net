@@ -87,9 +87,9 @@ namespace PersistenceExample
     /// </summary>
     public class GuaranteedDeliveryExampleActor : GuaranteedDeliveryActor
     {
-        public string DeliveryPath { get; private set; }
+        public ActorPath DeliveryPath { get; private set; }
 
-        public GuaranteedDeliveryExampleActor(string deliveryPath)
+        public GuaranteedDeliveryExampleActor(ActorPath deliveryPath)
         {
             this.DeliveryPath = deliveryPath;
         }
@@ -130,7 +130,7 @@ namespace PersistenceExample
             {
                 this.Persist(message as Message, m =>
                 {
-                    Deliver(ActorPath.Parse(DeliveryPath),
+                    Deliver(DeliveryPath,
                         id =>
                         {
                             Console.WriteLine("sending: {0}, with deliveryId: {1}", m.Data, id);
@@ -143,8 +143,8 @@ namespace PersistenceExample
                 this.Persist(message as Confirmation, m => ConfirmDelivery(m.DeliveryId));                
             }
             else return false;
-            return true;
-            
+
+            return true;            
         }
 
 

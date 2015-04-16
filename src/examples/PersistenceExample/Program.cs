@@ -33,7 +33,7 @@ namespace PersistenceExample
             Console.WriteLine("\n--- GUARANTEED DELIVERY EXAMPLE ---\n");
             var delivery = system.ActorOf(Props.Create(()=> new DeliveryActor()),"delivery");
 
-            var deliverer = system.ActorOf(Props.Create(() => new GuaranteedDeliveryExampleActor(delivery.Path.ToString())));
+            var deliverer = system.ActorOf(Props.Create(() => new GuaranteedDeliveryExampleActor(delivery.Path)));
             delivery.Tell("start");
             deliverer.Tell(new Message("foo"));
             
