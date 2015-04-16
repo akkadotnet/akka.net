@@ -159,34 +159,37 @@ namespace Akka.Tests.Routing
 
             (RouteeSize(router)).ShouldBe(resizer.LowerBound);
 
-            Action<int, TimeSpan> loop = (loops, span) =>
+            Action<int, TimeSpan, int?> loop = (loops, span, expectedBound) =>
             {
                 for (var i = 0; i < loops; i++)
                 {
                     router.Tell(span, TestActor);
+                    if (expectedBound.HasValue && RouteeSize(router) >= expectedBound.Value)
+                    {
+                        return;
+                    }
+
                     //sending too quickly will result in skipped resize due to many resizeInProgress conflicts
                     Thread.Sleep(TimeSpan.FromMilliseconds(20));
                 }
-                Within(
-                    TimeSpan.FromMilliseconds((span.TotalMilliseconds * loops) / resizer.LowerBound) + TimeSpan.FromSeconds(2),
-                    () =>
-                    {
-                        for (var i = 0; i < loops; i++) ExpectMsg("done");
-                        return true;
-                    });
+
+                var max = TimeSpan.FromMilliseconds((span.TotalMilliseconds*loops)/resizer.LowerBound) +
+                          TimeSpan.FromSeconds(2);
+
+                Within(max, () =>
+                {
+                    for (var i = 0; i < loops; i++) ExpectMsg("done");
+                    return true;
+                });
             };
 
-            
-
             // 2 more should go through without triggering more
-            loop(2, TimeSpan.FromMilliseconds(200));
+            loop(2, TimeSpan.FromMilliseconds(200), null);
             RouteeSize(router).ShouldBe(resizer.LowerBound);
 
-
             // a whole bunch should max it out
-            loop(50, TimeSpan.FromMilliseconds(500));
+            loop(100, TimeSpan.FromMilliseconds(500), resizer.UpperBound);
             RouteeSize(router).ShouldBe(resizer.UpperBound);
-
         }
 
         class BackoffActor : UntypedActor
@@ -213,9 +216,12 @@ namespace Akka.Tests.Routing
                 var router = Sys.ActorOf(Props.Create<BackoffActor>().WithRouter(new RoundRobinPool(0, resizer)));
 
                 // put some pressure on the router
-                for (var i = 0; i < 25; i++)
+                for (var i = 0; i < 50; i++)
                 {
                     router.Tell(150);
+                    if (RouteeSize(router) > 2) 
+                        break;
+
                     Thread.Sleep(20);
                 }
 
