@@ -119,27 +119,33 @@ namespace Akka.Routing
             var completion = new TaskCompletionSource<object>();
             var cancelable = new Cancelable(_scheduler);
 
-            _scheduler.Advanced.ScheduleRepeatedly(TimeSpan.Zero, _interval, async () => 
+            completion.Task.ContinueWith(task => cancelable.Cancel(false));
+
+            if (_routees.Length == 0)
             {
-                var currentIndex = routeeIndex.GetAndIncrement();
-                if(currentIndex < _routees.Length)
+                completion.TrySetResult(NoRoutee);
+            }
+            else
+            {
+                _scheduler.Advanced.ScheduleRepeatedly(TimeSpan.Zero, _interval, async () =>
                 {
-                    completion.TrySetResult(await ((Task<object>)_routees[currentIndex].Ask(message, null)));
-                }
-            }, cancelable);
+                    var currentIndex = routeeIndex.GetAndIncrement();
+                    if (currentIndex >= _routees.Length) return;
 
-            _scheduler.Advanced.ScheduleOnce(_within, () => 
-            {
-                completion.TrySetException(new TimeoutException(String.Format("Ask timed out on {0} after {1}", sender, _within)));
-            }, cancelable);
+                    try
+                    {
+                        completion.TrySetResult(await ((Task<object>)_routees[currentIndex].Ask(message, _within)));
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        completion.TrySetResult(
+                            new Status.Failure(
+                                new TimeoutException(String.Format("Ask timed out on {0} after {1}", sender, _within))));
+                    }
+                }, cancelable);
+            }
 
-            var request = completion.Task;
-            completion.Task.ContinueWith(task => 
-            {
-                cancelable.Cancel(false);
-            });
-
-            request.PipeTo(sender);
+            completion.Task.PipeTo(sender);
         }
     }
 
