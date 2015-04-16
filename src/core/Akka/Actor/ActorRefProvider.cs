@@ -429,7 +429,7 @@ namespace Akka.Actor
                     routedActorRef.Initialize(async);
                     return routedActorRef;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     throw new ConfigurationException(string.Format("Configuration problem while creating [{0}] with router dispatcher [{1}] and mailbox {2}" +
                                                                    " and routee dispatcher [{3}] and mailbox [{4}].", path, routerProps.Dispatcher, routerProps.Mailbox,

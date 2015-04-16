@@ -291,7 +291,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     {
                         Sys.AwaitTermination(timeout);
                     }
-                    catch (TimeoutException ex)
+                    catch (TimeoutException)
                     {
                         Assert.True(false, String.Format("Failed to stop [{0}] within [{1}]", Sys.Name, timeout));
                     }

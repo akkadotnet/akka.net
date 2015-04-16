@@ -37,9 +37,9 @@ namespace PersistenceExample
 
         protected override bool ReceiveCommand(object message)
         {
-            if (message == "print")
+            if (message as string == "print")
                 Console.WriteLine("Current actor's state: " + State);
-            else if (message == "snap")
+            else if (message as string == "snap")
                 SaveSnapshot(State);
             else if (message is SaveSnapshotFailure || message is SaveSnapshotSuccess) { }
             else if (message is string)
