@@ -1,28 +1,29 @@
 ﻿//-----------------------------------------------------------------------
+
+
+using System;
+using Akka.Actor;
+using System.Collections.Concurrent;
 // <copyright file="UnboundedMailboxQueue.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
 //     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
-//-----------------------------------------------------------------------
-
-using Akka.Actor;
-#if MONO
-using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
-#else
-using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope>;
-
-#endif
+//-----------------------------------------------------------------------using Akka.Actor;
 
 namespace Akka.Dispatch.MessageQueues
 {
     /// <summary> An unbounded mailbox message queue. </summary>
     public class UnboundedMessageQueue : IMessageQueue, IUnboundedMessageQueueSemantics
     {
-        private readonly TQueue _queue = new TQueue();
+	    private static readonly bool IsRunningOnMono = Type.GetType("Mono.Runtime") != null;
+
+	    private readonly IProducerConsumerCollection<Envelope> _queue = IsRunningOnMono
+			? (IProducerConsumerCollection<Envelope>)new Util.MonoConcurrentQueue<Envelope>()
+		    : new ConcurrentQueue<Envelope>();
 
         public void Enqueue(Envelope envelope)
         {
-            _queue.Enqueue(envelope);
+			_queue.TryAdd(envelope);
         }
 
         public bool HasMessages
@@ -37,7 +38,7 @@ namespace Akka.Dispatch.MessageQueues
 
         public bool TryDequeue(out Envelope envelope)
         {
-            return _queue.TryDequeue(out envelope);
+            return _queue.TryTake(out envelope);
         }
     }
 }

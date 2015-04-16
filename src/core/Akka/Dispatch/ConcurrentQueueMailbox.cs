@@ -5,17 +5,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-﻿using System.Diagnostics;
+using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Threading;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 
-#if MONO
-using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
-#else
-using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope>;
-//using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
-#endif
 
 namespace Akka.Dispatch
 {
@@ -24,8 +20,15 @@ namespace Akka.Dispatch
     /// </summary>
     public class ConcurrentQueueMailbox : Mailbox
     {
-        private readonly TQueue _systemMessages = new TQueue();
-        private readonly TQueue _userMessages = new TQueue();
+		private static readonly bool IsRunningOnMono = Type.GetType("Mono.Runtime") != null;
+
+        private readonly IProducerConsumerCollection<Envelope> _systemMessages = IsRunningOnMono
+			? (IProducerConsumerCollection<Envelope>)new Util.MonoConcurrentQueue<Envelope>()
+			: new ConcurrentQueue<Envelope>();
+
+	    private readonly IProducerConsumerCollection<Envelope> _userMessages = IsRunningOnMono
+		    ? (IProducerConsumerCollection<Envelope>) new Util.MonoConcurrentQueue<Envelope>()
+		    : new ConcurrentQueue<Envelope>();
 
         private Stopwatch _deadLineTimer;
         private volatile bool _isClosed;
@@ -58,7 +61,7 @@ namespace Akka.Dispatch
                 Envelope envelope;
 
                 //start with system messages, they have the highest priority
-                while (_systemMessages.TryDequeue(out envelope))
+                while (_systemMessages.TryTake(out envelope))
                 {
                     Mailbox.DebugPrint(ActorCell.Self + " processing system message " + envelope);
                     // TODO: Add + " with " + ActorCell.GetChildren());
@@ -69,7 +72,7 @@ namespace Akka.Dispatch
                 var left = dispatcher.Throughput;
 
                 //try dequeue a user message
-                while (!IsSuspended && !_isClosed && _userMessages.TryDequeue(out envelope))
+                while (!IsSuspended && !_isClosed && _userMessages.TryTake(out envelope))
                 {
                     Mailbox.DebugPrint(ActorCell.Self + " processing message " + envelope);
 
@@ -77,7 +80,7 @@ namespace Akka.Dispatch
                     dispatcher.Dispatch(ActorCell, envelope);
 
                     //check if any system message have arrived while processing user messages
-                    if (_systemMessages.TryDequeue(out envelope))
+                    if (_systemMessages.TryTake(out envelope))
                     {
                         //handle system message
                         Mailbox.DebugPrint(ActorCell.Self + " processing system message " + envelope);
@@ -152,12 +155,12 @@ namespace Akka.Dispatch
             if (envelope.Message is ISystemMessage)
             {
                 Mailbox.DebugPrint("{0} enqueued system message {1} to {2}", ActorCell.Self, envelope, ActorCell.Self.Equals(receiver) ? "itself" : receiver.ToString());
-                _systemMessages.Enqueue(envelope);
+                _systemMessages.TryAdd(envelope);
             }
             else
             {
                 Mailbox.DebugPrint("{0} enqueued message {1} to {2}", ActorCell.Self, envelope, ActorCell.Self.Equals(receiver) ? "itself" : receiver.ToString());
-                _userMessages.Enqueue(envelope);
+                _userMessages.TryAdd(envelope);
             }
 
             Schedule();
@@ -195,11 +198,11 @@ namespace Akka.Dispatch
             {
                 var deadLetterMailbox = actorCell.System.Mailboxes.DeadLetterMailbox;
                 Envelope envelope;
-                while (_systemMessages.TryDequeue(out envelope))
+                while (_systemMessages.TryTake(out envelope))
                 {
                     deadLetterMailbox.Post(actorCell.Self, envelope);
                 }
-                while (_userMessages.TryDequeue(out envelope))
+                while (_userMessages.TryTake(out envelope))
                 {
                     deadLetterMailbox.Post(actorCell.Self, envelope);
                 }
