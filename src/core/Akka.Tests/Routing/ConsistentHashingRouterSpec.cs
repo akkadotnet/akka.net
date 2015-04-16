@@ -224,16 +224,14 @@ namespace Akka.Tests.Routing
             ExpectMsg(destinationC);
         }
 
-        [Fact(Skip = "Broken")] //TODO: fix this
-        public async Task ConsistentHashingRouterMustAdjustNodeRingWhenRouteeDies()
+        [Fact]
+        public void ConsistentHashingRouterMustAdjustNodeRingWhenRouteeDies()
         {
             //create pool router with two routees
             var router5 =
                 Sys.ActorOf(Props.Create<Echo>().WithRouter(new ConsistentHashingPool(2, null, null, null)), "router5");
 
-            //verify that we have at least 2 routees
-            var currentRoutees = await router5.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
-            currentRoutees.Members.Count().ShouldBe(2);
+            ((RoutedActorRef)router5).Children.Count().ShouldBe(2);
 
             router5.Tell(new Msg("a", "A"), TestActor);
             var actorWhoDies = ExpectMsg<IActorRef>();
@@ -249,8 +247,6 @@ namespace Akka.Tests.Routing
                 var actorWhoDidntDie = ExpectMsg<IActorRef>(TimeSpan.FromMilliseconds(50));
                 actorWhoDidntDie.ShouldNotBe(actorWhoDies);
             }, TimeSpan.FromSeconds(5));
-
-            
         }
     }
 }

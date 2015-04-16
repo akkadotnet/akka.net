@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
@@ -19,34 +20,29 @@ namespace Akka.Tests.Routing
 {
     public class TailChoppingSpec : AkkaSpec
     {
-        class TailChopTestActor : UntypedActor
+        class TailChopTestActor : ReceiveActor
         {
             private int _timesResponded;
 
-            private readonly int _sleepTime;
-
             public TailChopTestActor(int sleepTime)
             {
-                _sleepTime = sleepTime;
-            }
-
-            protected override void OnReceive(object message)
-            {
-                var command = message as string;
-                switch (command)
+                Receive<string>(async command =>
                 {
-                    case "stop":
-                        Context.Stop(Self);
-                        break;
-                    case "times":
-                        Sender.Tell(_timesResponded);
-                        break;
-                    default:
-                        Thread.Sleep(_sleepTime);
-                        Sender.Tell("ack");
-                        _timesResponded++;
-                        break;
-                }
+                    switch (command)
+                    {
+                        case "stop":
+                            Context.Stop(Self);
+                            break;
+                        case "times":
+                            Sender.Tell(_timesResponded);
+                            break;
+                        default:
+                            await Task.Delay(sleepTime);
+                            Sender.Tell("ack");
+                            _timesResponded++;
+                            break;
+                    }
+                });
             }
         }
 
@@ -152,8 +148,8 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Tail_chopping_router_must_throw_exception_if_no_result_will_arrive_within_the_given_time()
         {
-            var actor1 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(700)), "Actor5");
-            var actor2 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(700)), "Actor6");
+            var actor1 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(500)), "Actor5");
+            var actor2 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(500)), "Actor6");
 
             var probe = CreateTestProbe();
 
@@ -169,9 +165,7 @@ namespace Akka.Tests.Routing
                 ));
 
             probe.Send(routedActor, "");
-            probe.ExpectMsg<Status.Failure>();
-
-            Thread.Sleep(700);
+            probe.ExpectMsg<Status.Failure>(TimeSpan.FromMilliseconds(700));
 
             var actorList = new List<IActorRef> { actor1, actor2 };
             Assert.True(AllShouldEqual(1, actorList)(x => (int) x.Ask("times").Result));

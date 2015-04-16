@@ -263,7 +263,7 @@ namespace Akka.Tests.Actor
                         {
                             var ca = createAttempt.IncrementAndGet();
                             if (ca <= 6 && ca % 3 == 0)
-                                childContext.ActorOf(BlackHoleActor.Props, "workingChild");
+                                childContext.ActorOf(BlackHoleActor.Props, "workingChild" + ca);
                             if (ca < 6)
                                 throw new InvalidOperationException("OH NO!");
                             childDsl.OnPreStart = _ => preStartCalled.IncrementAndGet();
