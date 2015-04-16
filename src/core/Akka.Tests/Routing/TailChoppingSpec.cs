@@ -169,9 +169,7 @@ namespace Akka.Tests.Routing
                 ));
 
             probe.Send(routedActor, "");
-            probe.ExpectMsg<Status.Failure>();
-
-            Thread.Sleep(700);
+            probe.ExpectMsg<Status.Failure>(TimeSpan.FromMilliseconds(700));
 
             var actorList = new List<IActorRef> { actor1, actor2 };
             Assert.True(AllShouldEqual(1, actorList)(x => (int) x.Ask("times").Result));
