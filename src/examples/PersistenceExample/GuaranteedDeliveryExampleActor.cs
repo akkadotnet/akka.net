@@ -103,13 +103,21 @@ namespace PersistenceExample
         {
             if (message is Message)
             {
-                Console.WriteLine("recovered {0}", ((Message)message).Data);
-                HandleMessages(message);                
+                var messageData =  ((Message)message).Data;
+                Console.WriteLine("recovered {0}",messageData);
+                Deliver(DeliveryPath,
+                        id =>
+                        {
+                            Console.WriteLine("recovered delivery task: {0}, with deliveryId: {1}", messageData, id);
+                            return new Confirmable(id, messageData);
+                        });
+                
             }
             else if (message is Confirmation)
             {
-                Console.WriteLine("recovered confirmation {0}", ((Confirmation)message).DeliveryId);
-                HandleMessages(message);
+                var deliveryId = ((Confirmation)message).DeliveryId;
+                Console.WriteLine("recovered confirmation of {0}", deliveryId);
+                ConfirmDelivery(deliveryId);
             }
             else
                 return false;
@@ -120,15 +128,9 @@ namespace PersistenceExample
         {
             if (message == "boom")
                 throw new Exception("Controlled devastation");
-            else 
-                return HandleMessages(message);
-        }
-
-        public bool HandleMessages(Object message)
-        {
-            if (message is Message)
+            else if (message is Message)
             {
-                this.Persist(message as Message, m =>
+                Persist(message as Message, m =>
                 {
                     Deliver(DeliveryPath,
                         id =>
@@ -140,13 +142,10 @@ namespace PersistenceExample
             }
             else if (message is Confirmation)
             {
-                this.Persist(message as Confirmation, m => ConfirmDelivery(m.DeliveryId));                
+                Persist(message as Confirmation, m => ConfirmDelivery(m.DeliveryId));
             }
             else return false;
-
-            return true;            
+            return true;
         }
-
-
     }
 }
