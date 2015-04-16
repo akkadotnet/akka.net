@@ -81,7 +81,7 @@ namespace PersistenceExample
         }
     }
     /// <summary>
-    /// GuaranteedDElivery will repeat sending messages, unless confirmed by deliveryId
+    /// GuaranteedDelivery will repeat sending messages, unless confirmed by deliveryId
     /// 
     /// By default, in-memory Journal is used, so this won't survive system restarts. 
     /// </summary>
