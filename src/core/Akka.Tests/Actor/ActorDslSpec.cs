@@ -38,7 +38,7 @@ namespace Akka.Tests.Actor
                 else if (message == "switch")
                     c.BecomeStacked((msg2, ctx2) =>
                     {
-                        var message2 = msg as string;
+                        var message2 = msg2 as string;
                         if (message2 == null) return;
                         
                         if (message2 == "info")
