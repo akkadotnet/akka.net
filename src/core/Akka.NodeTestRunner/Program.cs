@@ -6,9 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Akka.Remote.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.NodeTestRunner
 {
@@ -31,12 +33,14 @@ namespace Akka.NodeTestRunner
                     Thread.Sleep(10000);
                     try
                     {
+                        var test = new Xunit1TestCase(assemblyName, null, typeName, testName, displayName, null,
+                            "MultiNodeTest");
+
                         controller.RunTests(
-                            new[]
-                            {
-                                new Xunit1TestCase(assemblyName, null, typeName, testName, displayName, null,
-                                    "MultiNodeTest")
-                            }, sink, new TestFrameworkOptions());
+                            new List<ITestCase>
+                            {  test
+                                
+                            }, sink, TestFrameworkOptions.ForExecution());
                     }
                     catch (AggregateException ex)
                     {

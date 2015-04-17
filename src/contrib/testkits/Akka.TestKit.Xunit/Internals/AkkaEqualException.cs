@@ -23,13 +23,6 @@ namespace Akka.TestKit.Xunit.Internals
             _args = args;
         }
 
-        public AkkaEqualException(object expected, object actual, bool skipPositionCheck, string format = "", params object[] args)
-            : base(expected, actual, skipPositionCheck)
-        {
-            _format = format;
-            _args = args;
-        }
-
         protected AkkaEqualException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
