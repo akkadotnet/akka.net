@@ -199,7 +199,7 @@ Target "CleanTests" <| fun _ ->
 //--------------------------------------------------------------------------------
 // Run tests
 
-open XUnitHelper
+open XUnit2Helper
 Target "RunTests" <| fun _ ->  
     let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
     let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
@@ -210,7 +210,7 @@ Target "RunTests" <| fun _ ->
 
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit
+    xUnit2
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
         xunitTestAssemblies
 
@@ -221,7 +221,7 @@ Target "RunTestsMono" <| fun _ ->
 
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit
+    xUnit2
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
         xunitTestAssemblies
 
