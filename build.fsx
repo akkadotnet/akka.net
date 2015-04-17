@@ -57,6 +57,14 @@ let nugetExe = FullName @"src\.nuget\NuGet.exe"
 let docDir = "bin" @@ "doc"
 
 
+Target "RestorePackages" (fun _ -> 
+     "./src/Akka.sln"
+     |> RestoreMSSolutionPackages (fun p ->
+         { p with
+             OutputPath = "./src/packages"
+             Retries = 4 })
+ )
+
 //--------------------------------------------------------------------------------
 // Clean build results
 
@@ -65,7 +73,6 @@ Target "Clean" <| fun _ ->
 
 //--------------------------------------------------------------------------------
 // Generate AssemblyInfo files with the version for release notes 
-
 
 open AssemblyInfoFile
 Target "AssemblyInfo" <| fun _ ->
@@ -492,7 +499,7 @@ Target "HelpDocs" <| fun _ ->
 //--------------------------------------------------------------------------------
 
 // build dependencies
-"Clean" ==> "AssemblyInfo" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
+"Clean" ==> "AssemblyInfo" ==> "RestorePackages" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
 
 // tests dependencies
 "CleanTests" ==> "RunTests"
