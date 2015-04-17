@@ -57,6 +57,14 @@ let nugetExe = FullName @"src\.nuget\NuGet.exe"
 let docDir = "bin" @@ "doc"
 
 
+Target "RestorePackages" (fun _ -> 
+     "./src/Akka.sln"
+     |> RestoreMSSolutionPackages (fun p ->
+         { p with
+             OutputPath = "./src/packages"
+             Retries = 4 })
+ )
+
 //--------------------------------------------------------------------------------
 // Clean build results
 
@@ -65,7 +73,6 @@ Target "Clean" <| fun _ ->
 
 //--------------------------------------------------------------------------------
 // Generate AssemblyInfo files with the version for release notes 
-
 
 open AssemblyInfoFile
 Target "AssemblyInfo" <| fun _ ->
@@ -199,7 +206,7 @@ Target "CleanTests" <| fun _ ->
 //--------------------------------------------------------------------------------
 // Run tests
 
-open XUnitHelper
+open XUnit2Helper
 Target "RunTests" <| fun _ ->  
     let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
     let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
@@ -208,9 +215,9 @@ Target "RunTests" <| fun _ ->
 
     MSTest (fun p -> p) msTestAssemblies
 
-    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
+    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit
+    xUnit2
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
         xunitTestAssemblies
 
@@ -219,9 +226,9 @@ Target "RunTestsMono" <| fun _ ->
 
     mkdir testOutput
 
-    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
+    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit
+    xUnit2
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
         xunitTestAssemblies
 
@@ -492,7 +499,7 @@ Target "HelpDocs" <| fun _ ->
 //--------------------------------------------------------------------------------
 
 // build dependencies
-"Clean" ==> "AssemblyInfo" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
+"Clean" ==> "AssemblyInfo" ==> "RestorePackages" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
 
 // tests dependencies
 "CleanTests" ==> "RunTests"
