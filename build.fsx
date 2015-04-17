@@ -208,7 +208,7 @@ Target "RunTests" <| fun _ ->
 
     MSTest (fun p -> p) msTestAssemblies
 
-    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
+    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
     xUnit
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
@@ -219,7 +219,7 @@ Target "RunTestsMono" <| fun _ ->
 
     mkdir testOutput
 
-    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
+    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
     xUnit
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })

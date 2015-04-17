@@ -8,6 +8,7 @@
 using System;
 using System.Threading;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
@@ -73,6 +74,7 @@ namespace Akka.Tests.Actor
         public void An_ActorRef_should_not_allow_actors_to_be_created_outside_an_ActorOf()
         {
             Shutdown();
+            InternalCurrentActorCellKeeper.Current = null;
             Intercept<ActorInitializationException>(() =>
             {
                 new BlackHoleActor();
