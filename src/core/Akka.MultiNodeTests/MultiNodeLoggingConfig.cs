@@ -8,7 +8,7 @@
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.MultiNodeTests
 {
     /// <summary>
     /// Static <see cref="Config"/> provider that allows toggleable logging

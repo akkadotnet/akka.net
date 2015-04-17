@@ -72,11 +72,12 @@ namespace Akka.Tests.Routing
 
             Watch(router);
             Watch(c2);
-            Sys.Stop(c2);
+
+            c2.Tell(PoisonPill.Instance);
+
+            ExpectMsg<Terminated>();
 
             AwaitCondition(() => ((RoutedActorRef) router).Children.Count() == 1);
-
-            ExpectTerminated(c2).ExistenceConfirmed.ShouldBe(true);
 
             router.Tell("", TestActor);
             var msg1 = ExpectMsg<IActorRef>();
@@ -85,9 +86,6 @@ namespace Akka.Tests.Routing
             router.Tell("", TestActor);
             var msg2 = ExpectMsg<IActorRef>();
             msg2.ShouldBe(c1);
-
-            Sys.Stop(c1);
-            ExpectTerminated(router).ExistenceConfirmed.ShouldBe(true);
         }
 
         public class TestResizer : Resizer

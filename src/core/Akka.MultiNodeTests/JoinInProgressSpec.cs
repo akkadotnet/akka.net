@@ -12,7 +12,7 @@ using Akka.Remote;
 using Akka.Remote.TestKit;
 using Xunit;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.MultiNodeTests
 {
     public class JoinInProgressMultiNodeConfig : MultiNodeConfig
     {

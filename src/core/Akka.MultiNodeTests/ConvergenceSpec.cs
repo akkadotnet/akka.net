@@ -8,13 +8,14 @@
 using System;
 using System.Linq;
 using System.Threading;
+using Akka.Actor;
+using Akka.Cluster;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Xunit;
-using Address = Akka.Actor.Address;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.MultiNodeTests
 {
     public class ConvergenceSpecConfig : MultiNodeConfig
     {

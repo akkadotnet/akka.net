@@ -34,6 +34,8 @@ namespace Akka.Remote.Tests.Serialization
         public DaemonMsgCreateSerializerSpec()
             : base(@"akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""")
         {
+            Akka.Serialization.Serialization.CurrentTransportInformation = null;
+
             ser = Sys.Serialization;
             supervisor = Sys.ActorOf(Props.Create<MyActor>(), "supervisor");
         }

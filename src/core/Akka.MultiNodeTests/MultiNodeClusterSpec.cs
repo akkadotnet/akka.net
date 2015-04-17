@@ -12,15 +12,16 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Akka.Actor;
+using Akka.Cluster;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
-using Akka.TestKit.Xunit;
+using Akka.TestKit.Xunit2;
 using Xunit;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.MultiNodeTests
 {
     //TODO: WatchedByCoroner?
     //@Aaronontheweb: Coroner is a JVM-specific instrument used to report deadlocks and other fun stuff.
@@ -30,7 +31,7 @@ namespace Akka.Cluster.Tests.MultiNode
         public static Config ClusterConfigWithFailureDetectorPuppet()
         {
             return ConfigurationFactory.ParseString(
-                @"akka.cluster.failure-detector.implementation-class = ""Akka.Cluster.Tests.FailureDetectorPuppet, Akka.Cluster.Tests""")
+                @"akka.cluster.failure-detector.implementation-class = ""Akka.MultiNodeTests.FailureDetectorPuppet, Akka.MultiNodeTests""")
                 .WithFallback(ClusterConfig());
         }
 
@@ -229,7 +230,7 @@ namespace Akka.Cluster.Tests.MultiNode
         /// <summary>
         /// Get the cluster node to use.
         /// </summary>
-        public Cluster Cluster { get { return Cluster.Get(Sys); } }
+        public Cluster.Cluster Cluster { get { return Akka.Cluster.Cluster.Get(Sys); } }
 
         /// <summary>
         /// Use this method for the initial startup of the cluster node
