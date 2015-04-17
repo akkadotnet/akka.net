@@ -11,7 +11,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.MultiNodeTests
 {
     public class JoinSeedNodeConfig : MultiNodeConfig
     {

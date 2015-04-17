@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Cluster.Tests
@@ -163,22 +164,13 @@ namespace Akka.Cluster.Tests
                 {nodeE, ImmutableHashSet.Create(nodeA)}
             }.ToImmutableDictionary();
 
-            Assert.Equal<KeyValuePair<UniqueAddress, ImmutableHashSet<UniqueAddress>>>(expected, r.ObserversGroupedByUnreachable, new DictionaryOfHashsetComparer());
-        }
+            r.ObserversGroupedByUnreachable
+                .Should()
+                .HaveCount(3);
 
-        class DictionaryOfHashsetComparer : IEqualityComparer<KeyValuePair<UniqueAddress, ImmutableHashSet<UniqueAddress>>>
-        {
-            public bool Equals(KeyValuePair<UniqueAddress, ImmutableHashSet<UniqueAddress>> x, KeyValuePair<UniqueAddress, ImmutableHashSet<UniqueAddress>> y)
+            foreach (var pair in r.ObserversGroupedByUnreachable)
             {
-                 if (!x.Key.Equals(y.Key)) return false;
-
-                if (!x.Value.SequenceEqual(y.Value)) return false;
-                return true;
-            }
-
-            public int GetHashCode(KeyValuePair<UniqueAddress, ImmutableHashSet<UniqueAddress>> obj)
-            {
-                return obj.GetHashCode();
+                pair.Value.ShouldBeEquivalentTo(expected[pair.Key]);
             }
         }
 

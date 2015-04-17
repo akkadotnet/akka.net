@@ -56,9 +56,9 @@
     <Compile Include="TestRunShutdownSpec.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj">
-      <Project>{11F4D4B8-7E07-4457-ABF2-609B3E7B2649}</Project>
-      <Name>Akka.TestKit.Xunit</Name>
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj">
+      <Project>{7dbd5c17-5e9d-40c4-9201-d092751532a7}</Project>
+      <Name>Akka.TestKit.Xunit2</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka.MultiNodeTestRunner.Shared\Akka.MultiNodeTestRunner.Shared.csproj">
       <Project>{964F0EC5-FBE6-47C5-8AE6-145114D5DB8C}</Project>

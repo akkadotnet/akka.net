@@ -4,6 +4,7 @@
 
 open System
 open System.IO
+open System.Text
 open Fake
 open Fake.FileUtils
 open Fake.MSTest
@@ -58,6 +59,14 @@ let nugetExe = FullName @"src\.nuget\NuGet.exe"
 let docDir = "bin" @@ "doc"
 
 
+Target "RestorePackages" (fun _ -> 
+     "./src/Akka.sln"
+     |> RestoreMSSolutionPackages (fun p ->
+         { p with
+             OutputPath = "./src/packages"
+             Retries = 4 })
+ )
+
 //--------------------------------------------------------------------------------
 // Clean build results
 
@@ -66,7 +75,6 @@ Target "Clean" <| fun _ ->
 
 //--------------------------------------------------------------------------------
 // Generate AssemblyInfo files with the version for release notes 
-
 
 open AssemblyInfoFile
 Target "AssemblyInfo" <| fun _ ->
@@ -182,6 +190,7 @@ Target "CopyOutput" <| fun _ ->
       "contrib/dependencyinjection/Akka.DI.Ninject"
       "contrib/testkits/Akka.TestKit.Xunit" 
       "contrib/testkits/Akka.TestKit.NUnit" 
+      "contrib/testkits/Akka.TestKit.Xunit2" 
       ]
     |> List.iter copyOutput
 
@@ -201,7 +210,7 @@ Target "CleanTests" <| fun _ ->
 //--------------------------------------------------------------------------------
 // Run tests
 
-open XUnitHelper
+open XUnit2Helper
 Target "RunTests" <| fun _ ->  
     let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
     let nunitTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
@@ -219,9 +228,9 @@ Target "RunTests" <| fun _ ->
             DisableShadowCopy = true; 
             OutputFile = testOutput + @"\NUnitTestResults.xml"})
 
-    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
+    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit
+    xUnit2
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
         xunitTestAssemblies
 
@@ -230,9 +239,9 @@ Target "RunTestsMono" <| fun _ ->
 
     mkdir testOutput
 
-    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
+    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit
+    xUnit2
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
         xunitTestAssemblies
 
@@ -240,8 +249,14 @@ Target "MultiNodeTests" <| fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" "bin/core/Akka.MultiNodeTestRunner*"
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
+    let spec = getBuildParam "spec"
 
-    let args = "Akka.Cluster.Tests.dll -Dmultinode.enable-filesink=on"
+    let args = new StringBuilder()
+                |> append "Akka.MultiNodeTests.dll"
+                |> append "-Dmultinode.enable-filesink=on"
+                |> appendIfNotNullOrEmpty spec "-Dmultinode.test-spec="
+                |> toText
+
     let result = ExecProcess(fun info -> 
         info.FileName <- multiNodeTestPath
         info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
@@ -308,7 +323,7 @@ let createNugetPackages _ =
         let projectDir = Path.GetDirectoryName nuspec
         let projectFile = (!! (projectDir @@ project + ".*sproj")) |> Seq.head
         let releaseDir = projectDir @@ @"bin\Release"
-        let packages = projectDir @@ "packages.config"        
+        let packages = projectDir @@ "packages.config"
         let packageDependencies = if (fileExists packages) then (getDependencies packages) else []
         let dependencies = packageDependencies @ getAkkaDependency project
         let releaseVersion = getProjectVersion project
@@ -511,7 +526,7 @@ Target "HelpDocs" <| fun _ ->
 //--------------------------------------------------------------------------------
 
 // build dependencies
-"Clean" ==> "AssemblyInfo" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
+"Clean" ==> "AssemblyInfo" ==> "RestorePackages" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
 
 // tests dependencies
 "CleanTests" ==> "RunTests"

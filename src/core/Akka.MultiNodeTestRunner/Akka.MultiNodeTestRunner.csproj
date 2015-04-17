@@ -36,11 +36,13 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="xunit.abstractions">
-      <HintPath>..\..\packages\xunit.abstractions.2.0.0-beta4-build2738\lib\net35\xunit.abstractions.dll</HintPath>
+    <Reference Include="xunit.abstractions, Version=2.0.0.0, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\xunit.abstractions.2.0.0\lib\net35\xunit.abstractions.dll</HintPath>
     </Reference>
-    <Reference Include="xunit.runner.utility">
-      <HintPath>..\..\packages\xunit.runner.utility.2.0.0-beta4-build2738\lib\net35\xunit.runner.utility.dll</HintPath>
+    <Reference Include="xunit.runner.utility.desktop, Version=2.1.0.2981, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\xunit.runner.utility.2.1.0-beta2-build2981\lib\net35\xunit.runner.utility.desktop.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -60,13 +62,13 @@
       <Project>{A8AA2D7E-3D35-44DF-AF92-80A2C39C1F4D}</Project>
       <Name>Akka.Logger.NLog</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Akka.Cluster.Tests\Akka.Cluster.Tests.csproj">
-      <Project>{C8D6A95C-50BF-4416-A212-86B18B87220D}</Project>
-      <Name>Akka.Cluster.Tests</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Akka.MultiNodeTestRunner.Shared\Akka.MultiNodeTestRunner.Shared.csproj">
       <Project>{964F0EC5-FBE6-47C5-8AE6-145114D5DB8C}</Project>
       <Name>Akka.MultiNodeTestRunner.Shared</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.MultiNodeTests\Akka.MultiNodeTests.csproj">
+      <Project>{f0781bea-5ba0-4af0-bb15-e3f209b681f5}</Project>
+      <Name>Akka.MultiNodeTests</Name>
     </ProjectReference>
     <ProjectReference Include="..\Akka.NodeTestRunner\Akka.NodeTestRunner.csproj">
       <Project>{28520F30-2868-4BD3-9CAE-AC27226C24E3}</Project>
