@@ -249,6 +249,7 @@
     <Compile Include="Util\Internal\Collections\ImmutableTreeSet.cs" />
     <Compile Include="Util\Internal\StringBuilderExtensions.cs" />
     <Compile Include="Util\ISurrogate.cs" />
+    <Compile Include="Util\MonotonicClock.cs" />
     <Compile Include="Util\StandardOutWriter.cs" />
     <Compile Include="Event\Subscription.cs" />
     <Compile Include="Event\TraceLogger.cs" />
