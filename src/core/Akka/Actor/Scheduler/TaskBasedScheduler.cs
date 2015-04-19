@@ -18,6 +18,8 @@ namespace Akka.Actor
     {
 
         protected override DateTimeOffset TimeNow { get { return DateTimeOffset.Now; } }
+        public override TimeSpan MonotonicClock { get { return Util.MonotonicClock.Elapsed; } }
+        public override TimeSpan HighResMonotonicClock { get { return Util.MonotonicClock.ElapsedHighRes; } }
 
         protected override void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
         {

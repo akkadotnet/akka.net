@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace Akka.Util
 {
-	public static class MonotonicClock
+	internal static class MonotonicClock
 	{
 		private static readonly Stopwatch Stopwatch = Stopwatch.StartNew();
 		private static readonly bool IsMono = Type.GetType("Mono.Runtime") != null;
