@@ -57,11 +57,11 @@ namespace PersistenceExample
 
         protected override void OnReceive(object message)
         {
-            if (message == "start")
+            if (message as string == "start")
             {
                 Confirming = true;
             }
-            if (message == "stop")
+            if (message as string == "stop")
             {
                 Confirming = false;
             }
@@ -126,7 +126,7 @@ namespace PersistenceExample
 
         protected override bool ReceiveCommand(object message)
         {
-            if (message == "boom")
+            if (message as string == "boom")
                 throw new Exception("Controlled devastation");
             else if (message is Message)
             {

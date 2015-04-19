@@ -32,9 +32,9 @@ namespace PersistenceExample
 
         protected override bool ReceiveCommand(object message)
         {
-            if (message == "print")
+            if (message as string == "print")
                 Console.WriteLine("Received: " + string.Join(";, ", Enumerable.Reverse(Received)));
-            else if (message == "boom")
+            else if (message as string == "boom")
                 throw new Exception("controlled demolition");
             else if (message is string)
                 Persist(message.ToString(), s => Received.AddFirst(s));

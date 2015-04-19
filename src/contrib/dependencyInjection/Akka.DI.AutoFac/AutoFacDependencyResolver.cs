@@ -13,8 +13,6 @@ using System.Text;
 using Akka.DI.Core;
 using System.Runtime.CompilerServices;
 using Autofac;
-using System.Text;
-using System.Runtime.CompilerServices;
 
 namespace Akka.DI.AutoFac
 {

@@ -63,7 +63,7 @@ namespace Akka.Persistence.Journal
 
                 if (CanPublish) Context.System.EventStream.Publish(msg);
             }
-            catch (Exception e) { /* do nothing */ }
+            catch (Exception) { /* do nothing */ }
         }
 
         private void HandleReadHighestSequenceNr(ReadHighestSequenceNr msg)

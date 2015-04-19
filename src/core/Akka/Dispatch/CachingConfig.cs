@@ -125,7 +125,7 @@ namespace Akka.Dispatch
                                 pathEntry = new ValuePathEntry(true, true, configValue.AtKey("cached"));
                             }
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
                             pathEntry = EmptyPathEntry;
                         }
@@ -135,7 +135,7 @@ namespace Akka.Dispatch
                         pathEntry = NonExistingPathEntry;
                     }
                 }
-                catch (Exception ex) //configuration threw some sort of error
+                catch (Exception) //configuration threw some sort of error
                 {
                     pathEntry = InvalidPathEntry;
                 }

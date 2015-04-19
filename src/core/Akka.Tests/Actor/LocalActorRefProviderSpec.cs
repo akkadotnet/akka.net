@@ -96,7 +96,7 @@ namespace Akka.Tests.Actor
         {
             protected override bool Receive(object message)
             {
-                if (message == "")
+                if (message as string == "")
                 {
                     var a = Context.ActorOf(Props.Empty, "duplicate");
                     var b = Context.ActorOf(Props.Empty, "duplicate");
@@ -117,7 +117,7 @@ namespace Akka.Tests.Actor
 
             protected override bool Receive(object message)
             {
-                if (message == "GetChild")
+                if (message as string == "GetChild")
                 {
                     Sender.Tell(this.childActorRef);
                     return true;

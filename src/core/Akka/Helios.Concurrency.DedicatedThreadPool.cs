@@ -419,7 +419,7 @@ namespace Helios.Concurrency
                             if (_pool.ShutdownRequested) return;
                             action();
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
                             Failover(true);
                             return;
