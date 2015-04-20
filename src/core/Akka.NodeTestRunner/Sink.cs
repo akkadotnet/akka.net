@@ -14,6 +14,7 @@ using Xunit.Abstractions;
 
 namespace Akka.NodeTestRunner
 {
+    [Serializable]
     class Sink : IMessageSink, IDisposable
     {
         public bool Passed { get; private set; }

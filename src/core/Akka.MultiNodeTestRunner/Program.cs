@@ -63,7 +63,6 @@ namespace Akka.MultiNodeTestRunner
             SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>(), "sinkCoordinator");
 
             var assemblyName = args[0];
-
             EnableAllSinks(assemblyName);
 
             using (var controller = new XunitFrontController(assemblyName))
@@ -73,7 +72,7 @@ namespace Akka.MultiNodeTestRunner
                     controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
                     discovery.Finished.WaitOne();
 
-                    foreach (var test in discovery.Tests.Reverse())
+                    foreach (var test in discovery.TestCases.Reverse())
                     {
                         PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
 
@@ -181,5 +180,6 @@ namespace Akka.MultiNodeTestRunner
             SinkCoordinator.Tell(message, ActorRefs.NoSender);
         }
     }
+
 }
 
