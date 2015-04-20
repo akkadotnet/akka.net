@@ -107,20 +107,37 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActoRef_should_return_EmptyLocalActorRef_on_deserialize_if_not_present_in_actor_hierarchy_and_remoting_is_not_enabled()
+        public void
+            An_ActoRef_should_return_EmptyLocalActorRef_on_deserialize_if_not_present_in_actor_hierarchy_and_remoting_is_not_enabled
+            ()
         {
             var aref = ActorOf<BlackHoleActor>("non-existing");
-            var aserializer = Sys.Serialization.FindSerializerForType(typeof(IActorRef));
+            var aserializer = Sys.Serialization.FindSerializerForType(typeof (IActorRef));
             var binary = aserializer.ToBinary(aref);
 
+            Watch(aref);
+
             aref.Tell(PoisonPill.Instance);
-            VerifyActorTermination(aref);
+
+            ExpectMsg<Terminated>();
 
             var bserializer = Sys.Serialization.FindSerializerForType(typeof (IActorRef));
-            var bref = (IActorRef)bserializer.FromBinary(binary, typeof(IActorRef));
 
-            bref.GetType().ShouldBe(typeof(EmptyLocalActorRef));
-            bref.Path.ShouldBe(aref.Path);
+            AwaitCondition(() =>
+            {
+                var bref = (IActorRef) bserializer.FromBinary(binary, typeof (IActorRef));
+                try
+                {
+                    bref.GetType().ShouldBe(typeof (EmptyLocalActorRef));
+                    bref.Path.ShouldBe(aref.Path);
+
+                    return true;
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            });
         }
 
         [Fact]
