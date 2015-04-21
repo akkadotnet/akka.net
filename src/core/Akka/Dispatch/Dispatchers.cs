@@ -50,6 +50,9 @@ namespace Akka.Dispatch
     /// </summary>
     public class ThreadPoolDispatcher : MessageDispatcher
     {
+
+        private static readonly bool _isFullTrusted = AppDomain.CurrentDomain.IsFullyTrusted;
+
         /// <summary>
         /// Takes a <see cref="MessageDispatcherConfigurator"/>
         /// </summary>
@@ -64,8 +67,11 @@ namespace Akka.Dispatch
         public override void Schedule(Action run)
         {
             var wc = new WaitCallback(_ => run());
-            ThreadPool.UnsafeQueueUserWorkItem(wc, null);
-            //ThreadPool.QueueUserWorkItem(wc, null);
+            // we use unsafe version if current application domain is FullTrusted
+            if (_isFullTrusted)
+                ThreadPool.UnsafeQueueUserWorkItem(wc, null);
+            else
+                ThreadPool.QueueUserWorkItem(wc, null);
         }
     }
 
