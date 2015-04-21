@@ -31,6 +31,9 @@ namespace Akka.DI.Core
             return new Props(typeof(DIActorProducer), new object[] { dependencyResolver, actorType });
         }
 
+        public Props Props<TActor>() {
+            return Props(typeof(TActor));
+        }
     }
 }
 
