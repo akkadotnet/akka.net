@@ -119,13 +119,13 @@ namespace Akka.Cluster.Tests
 
         #region IDisposable members
 
-        protected override void Dispose(bool disposing)
+        /// <summary>
+        /// Needs to hide previous Dispose implementation in order to avoid recursive disposal.
+        /// </summary>
+        public new void Dispose()
         {
-            if (disposing)
-            {
-                _collector.Dispose();
-                base.Dispose();
-            }
+            _collector.Dispose();
+            base.Dispose();
         }
 
         #endregion
