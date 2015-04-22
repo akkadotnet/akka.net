@@ -19,6 +19,7 @@ namespace Akka.Cluster.Tests.MultiNode
 // ReSharper disable once InconsistentNaming
         private static readonly Config _loggingConfig =
             ConfigurationFactory.ParseString(@"
+                akka.loglevel = WARNING
                 akka.loggers = [""Akka.Event.DefaultLogger""]");
 
         /// <summary>

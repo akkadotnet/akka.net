@@ -62,7 +62,8 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             _second = Role("second");
             _third = Role("third");
 
-            CommonConfig = MultiNodeLoggingConfig.LoggingConfig.WithFallback(DebugConfig(false))
+            CommonConfig = MultiNodeLoggingConfig.LoggingConfig
+                .WithFallback(DebugConfig(false))
                 .WithFallback(ConfigurationFactory.ParseString(@"
                     akka.cluster.publish-stats-interval = 5s
                 "))

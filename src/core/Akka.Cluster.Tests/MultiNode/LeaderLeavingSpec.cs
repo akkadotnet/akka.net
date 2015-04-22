@@ -43,7 +43,7 @@ namespace Akka.Cluster.Tests.MultiNode
             _third = Role("third");
 
             CommonConfig = MultiNodeLoggingConfig.LoggingConfig
-                .WithFallback(DebugConfig(true))
+                .WithFallback(DebugConfig(false))
                 .WithFallback(@"akka.cluster.auto-down-unreachable-after = 0s
 akka.cluster.publish-stats-interval = 25 s")
                 .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
@@ -110,7 +110,7 @@ akka.cluster.publish-stats-interval = 25 s")
                         EnterBarrier("leader-left");
 
                         // verify that the LEADER is EXITING
-                        exitingLatch.Ready(TestLatch.DefaultTimeout);
+                        exitingLatch.Ready();
 
                         EnterBarrier("leader-shutdown");
                         MarkNodeAsUnavailable(oldLeaderAddress);

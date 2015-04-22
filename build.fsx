@@ -4,6 +4,7 @@
 
 open System
 open System.IO
+open System.Text
 open Fake
 open Fake.FileUtils
 open Fake.MSTest
@@ -236,8 +237,14 @@ Target "MultiNodeTests" <| fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" "bin/core/Akka.MultiNodeTestRunner*"
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
+    let spec = getBuildParam "spec"
 
-    let args = "Akka.Cluster.Tests.dll -Dmultinode.enable-filesink=on"
+    let args = new StringBuilder()
+                |> append "Akka.Cluster.Tests.dll"
+                |> append "-Dmultinode.enable-filesink=on"
+                |> appendIfNotNullOrEmpty spec "-Dmultinode.test-spec="
+                |> toText
+
     let result = ExecProcess(fun info -> 
         info.FileName <- multiNodeTestPath
         info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))

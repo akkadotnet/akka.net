@@ -14,6 +14,7 @@ using Akka.Remote.TestKit;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.Cluster.Tests.MultiNode.Routing
 {
@@ -43,7 +44,8 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             _second = Role("second");
             _third = Role("third");
 
-            CommonConfig = MultiNodeLoggingConfig.LoggingConfig.WithFallback(DebugConfig(true))
+            CommonConfig = MultiNodeLoggingConfig.LoggingConfig
+                .WithFallback(DebugConfig(false))
                 .WithFallback(ConfigurationFactory.ParseString(@"
                     common-router-settings = {
                         router = consistent-hashing-pool
@@ -118,8 +120,17 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 CurrentRoutees(router).Members.Count().ShouldBe(6);
             });
             var routees = CurrentRoutees(router);
-            var routerMembers = routees.Members.Select(x => FullAddress(((ActorRefRoutee)x).Actor)).Distinct().ToList();
-            routerMembers.ShouldBe(Roles.Select(GetAddress).ToList());
+
+            var routerMembers = routees.Members
+                .Select(x => FullAddress(((ActorRefRoutee)x).Actor))
+                .Distinct()
+                .ToList();
+
+            var expectedMembers = Roles
+                .Select(GetAddress)
+                .ToList();
+
+            routerMembers.ShouldBeEquivalentTo(expectedMembers);
 
             router.Tell("a", TestActor);
             var destinationA = ExpectMsg<IActorRef>();
@@ -214,8 +225,17 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                     members.ShouldBe(6);
                 });
                 var routees = CurrentRoutees(router2);
-                var routerMembers = routees.Members.Select(x => FullAddress(((ActorRefRoutee)x).Actor)).Distinct().ToList();
-                routerMembers.ShouldBe(Roles.Select(GetAddress).ToList());
+
+                var routerMembers = routees.Members
+                    .Select(x => FullAddress(((ActorRefRoutee)x).Actor))
+                    .Distinct()
+                    .ToList();
+
+                var expectedMembers = Roles
+                    .Select(GetAddress)
+                    .ToList();
+
+                routerMembers.ShouldBeEquivalentTo(expectedMembers);
             }, _config.First);
 
             EnterBarrier("after-5");

@@ -147,6 +147,8 @@ namespace Akka.Cluster.Tests.MultiNode
                 MarkNodeAsUnavailable(thirdAddress);
             }, _config.First);
 
+            RunOn(() => AwaitAssert(() => Cluster.IsTerminated.ShouldBeTrue()), _config.Third);
+
             RunOn(() => Within(TimeSpan.FromSeconds(28), () =>
             {
                 //third becomes unreachable
@@ -156,19 +158,18 @@ namespace Akka.Cluster.Tests.MultiNode
                 ClusterView.UnreachableMembers.Count.ShouldBe(1);
                 ClusterView.UnreachableMembers.First().Address.ShouldBe(thirdAddress);
                 ClusterView.Members.Count.ShouldBe(3);
-            }), _config.First, _config.Second);
 
-            EnterBarrier("after-2");
+                EnterBarrier("after-2");
+            }), _config.First, _config.Second);
         }
 
         public void AClusterOf3MembersMustNotMoveANewJoiningNodeToUpWhileThereIsNoConvergence()
         {
             RunOn(() => Cluster.Join(GetAddress(_config.First)), _config.Fourth);
 
-            EnterBarrier("after-join");
-
             RunOn(() =>
             {
+                EnterBarrier("after-join");
                 for (var i = 0; i < 5; i++)
                 {
                     AwaitAssert(() => ClusterView.Members.Count.ShouldBe(3));
@@ -180,9 +181,10 @@ namespace Akka.Cluster.Tests.MultiNode
                     //TODO: Dilation?
                     Thread.Sleep(TimeSpan.FromSeconds(1));
                 }
+
+                EnterBarrier("after-3");
             }, _config.First, _config.Second, _config.Fourth);
 
-            EnterBarrier("after-3");
         }
 
         MemberStatus? MemberStatus(Address address)

@@ -26,15 +26,16 @@ namespace Akka.Cluster.Tests.MultiNode
             _first = Role("first");
             _second = Role("second");
 
-            CommonConfig = MultiNodeLoggingConfig.LoggingConfig.WithFallback(DebugConfig(true)).WithFallback(
-                ConfigurationFactory.ParseString(@"
-                    akka.stdout-loglevel = DEBUG
+            CommonConfig = MultiNodeLoggingConfig.LoggingConfig
+                .WithFallback(DebugConfig(false))
+                .WithFallback(
+                    ConfigurationFactory.ParseString(@"
                     akka.cluster {
                         # simulate delay in gossip by turning it off
                         gossip-interval = 300 s
                         failure-detector {
                             threshold = 4
-                            acceptable-heartbeat-pause = 1 second
+                            acceptable-heartbeat-pause = 10 s
                         }
                     }").WithFallback(MultiNodeClusterSpec.ClusterConfig()));
         }

@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch.SysMsg;
 using Akka.Remote;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
@@ -137,6 +138,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     ExpectMsg(path2);
                     ExpectNoMsg(TimeSpan.FromSeconds(2));
                     EnterBarrier("second-terminated");
+
                     MarkNodeAsUnavailable(GetAddress(_config.Third));
                     AwaitAssert(() => Assert.True(ClusterView.UnreachableMembers.Select(x => x.Address).Contains(GetAddress(_config.Third))));
                     Cluster.Down(GetAddress(_config.Third));

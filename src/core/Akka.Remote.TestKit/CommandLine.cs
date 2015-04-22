@@ -7,6 +7,8 @@
 
 using System;
 using System.Collections.Specialized;
+using System.Configuration;
+using Akka.Util.Internal;
 
 namespace Akka.Remote.TestKit
 {   
@@ -26,10 +28,12 @@ namespace Akka.Remote.TestKit
     /// </summary>
     public class CommandLine
     {
+        private static string[] _args;
+
         private readonly static Lazy<StringDictionary> Values = new Lazy<StringDictionary>(() =>
         {
             var dictionary = new StringDictionary();
-            foreach (var arg in Environment.GetCommandLineArgs())
+            foreach (var arg in GetArgs())
             {
                 if (!arg.StartsWith("-D")) continue;
                 var tokens = arg.Substring(2).Split('=');
@@ -38,14 +42,28 @@ namespace Akka.Remote.TestKit
             return dictionary;
         });
 
+        public static void SetArgs(string[] args)
+        {
+            _args = args;
+        }
+
         public static string GetProperty(string key)
         {
-            return Values.Value[key];
+            return ConfigurationManager.AppSettings[key] ?? Values.Value[key];
         }
 
         public static int GetInt32(string key)
         {
             return Convert.ToInt32(GetProperty(key));
+        }
+
+        private static string[] GetArgs()
+        {
+            var environmentArgs = Environment.GetEnvironmentVariable("args");
+
+            return environmentArgs != null
+                ? environmentArgs.Split('^')
+                : _args ?? Environment.GetCommandLineArgs();
         }
     }
 }

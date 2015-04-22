@@ -466,7 +466,7 @@ namespace Akka.Remote.TestKit
                             Context.System.Shutdown();
                             return Stay();
                         }
-                        if (terminateMsg.ShutdownOrExit.IsLeft && terminateMsg.ShutdownOrExit.ToLeft().Value == true)
+                        if (terminateMsg.ShutdownOrExit.IsLeft && terminateMsg.ShutdownOrExit.ToLeft().Value)
                         {
                             //TODO: terminate more aggressively with Abort
                             //Context.System.AsInstanceOf<ActorSystemImpl>().Abort();
@@ -475,11 +475,15 @@ namespace Akka.Remote.TestKit
                         }
                         if (terminateMsg.ShutdownOrExit.IsRight)
                         {
-                            Environment.Exit(terminateMsg.ShutdownOrExit.ToRight().Value);
+                            Context.System.Shutdown();
                             return Stay();
                         }
                     }
                     if (@event.FsmEvent is Done) return Stay(); //FIXME what should happen?
+                }
+                else if (@event.FsmEvent is Terminated)
+                {
+                    return Stay();
                 }
                 return null;
             });
@@ -521,7 +525,7 @@ namespace Akka.Remote.TestKit
         readonly IActorRef _fsm;
         readonly ILoggingAdapter _log;
         readonly IScheduler _scheduler;
-        private bool _loggedDisconnect = false;
+        private bool _loggedDisconnect;
         
         Deadline _nextAttempt;
         
@@ -539,7 +543,7 @@ namespace Akka.Remote.TestKit
             Reconnect();
         }
 
-        public void OnException(Exception ex, IConnection erroredChannel)
+        public void OnException(Exception ex, IConnection erroredChannel = null)
         {
             _log.Debug("channel {0} exception {1}", erroredChannel, ex);
             if (ex is HeliosConnectionException && _reconnects > 0)
@@ -553,8 +557,15 @@ namespace Akka.Remote.TestKit
 
         private void Reconnect()
         {
-            _nextAttempt = Deadline.Now + _backoff;
-            RemoteConnection.CreateConnection(Role.Client, _server, _poolSize, this);
+            try
+            {
+                RemoteConnection.CreateConnection(Role.Client, _server, _poolSize, this);
+            }
+            catch (Exception e)
+            {
+                _nextAttempt = Deadline.Now + _backoff;
+                OnException(e);
+            }
         }
 
         public void OnConnect(INode remoteAddress, IConnection responseChannel)

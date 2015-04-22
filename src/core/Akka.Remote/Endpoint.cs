@@ -467,8 +467,17 @@ namespace Akka.Remote
         protected void Gated(object message)
         {
             message.Match()
-                .With<Terminated>(
-                    terminated => Context.System.Scheduler.ScheduleTellOnce(settings.RetryGateClosedFor, Self, new Ungate(), Self))
+                .With<Terminated>(terminated =>
+                {
+                    currentHandle = null;
+                    Context.Parent.Tell(new EndpointWriter.StoppedReading(Self));
+                    if (_resendBuffer.NonAcked.Count > 0 || _resendBuffer.Nacked.Count > 0)
+                        Context.System.Scheduler.ScheduleTellOnce(settings.SysResendTimeout, Self,
+                            new AttemptSysMsgRedelivery(), Self);
+                    Context.Become(Idle);
+                })
+                //.With<Terminated>(
+                //    terminated => Context.System.Scheduler.ScheduleTellOnce(settings.RetryGateClosedFor, Self, new Ungate(), Self))
                 .With<Ungate>(ungate =>
                 {
                     if (_resendBuffer.NonAcked.Count > 0 || _resendBuffer.Nacked.Count > 0)
@@ -669,7 +678,7 @@ namespace Akka.Remote
             TryPublish(new DisassociatedEvent(LocalAddress, RemoteAddress, Inbound));
         }
 
-        private void TryPublish(RemotingLifecycleEvent ev)
+        private void TryPublish(AssociationEvent ev)
         {
             try
             {
@@ -824,8 +833,9 @@ namespace Akka.Remote
         {
             if (_handle == null)
             {
-                Transport.Associate(RemoteAddress, _refuseUid).ContinueWith(x => new Handle(x.Result),
-                    TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
+                Transport
+                    .Associate(RemoteAddress, _refuseUid)
+                    .ContinueWith(x => new Handle(x.Result), TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
                     .PipeTo(Self);
             }
             else
@@ -1038,7 +1048,8 @@ namespace Akka.Remote
 
         private void PublishAndThrow(Exception reason, LogLevel level)
         {
-            reason.Match().With<EndpointDisassociatedException>(endpoint => PublishDisassociated())
+            reason.Match()
+                .With<EndpointDisassociatedException>(endpoint => PublishDisassociated())
                 .Default(msg => PublishError(reason, level));
 
             throw reason;

@@ -104,8 +104,8 @@ namespace Akka.Remote.Transport
 
             manager.Tell(new AssociateUnderlyingRefuseUid(SchemeAugmenter.RemoveScheme(remoteAddress), statusPromise, refuseUid));
 
-            return statusPromise.Task.ContinueWith(result => ((AkkaProtocolHandle) result.Result),
-                TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+            return statusPromise.Task
+                .ContinueWith(result => ((AkkaProtocolHandle) result.Result),TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
         }
 
         #region Static properties

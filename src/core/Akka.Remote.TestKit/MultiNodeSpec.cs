@@ -18,7 +18,6 @@ using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Xunit;
-using Akka.Util;
 using Akka.Util.Internal;
 using Helios.Topology;
 
@@ -356,7 +355,7 @@ namespace Akka.Remote.TestKit
                             }
                           }
                         }
-                      }").WithFallback(TestKitBase.DefaultConfig);
+                      }").WithFallback(DefaultConfig);
             }
         }
 
@@ -400,7 +399,7 @@ namespace Akka.Remote.TestKit
             _log = Logging.GetLogger(Sys, this);
             _roles = roles;
             _deployments = deployments;
-            var node = new Node()
+            var node = new Node
             {
                 Host = Dns.GetHostEntry(ServerName).AddressList.First(a => a.AddressFamily == AddressFamily.InterNetwork),
                 Port = ServerPort

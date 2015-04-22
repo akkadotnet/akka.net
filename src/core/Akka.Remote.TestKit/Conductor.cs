@@ -259,12 +259,13 @@ namespace Akka.Remote.TestKit
             _log = log;
         }
 
-        public async void OnConnect(INode remoteAddress, IConnection responseChannel)
+        public void OnConnect(INode remoteAddress, IConnection responseChannel)
         {
             _log.Debug("connection from {0}", responseChannel.RemoteHost);
             //TODO: Seems wrong to create new RemoteConnection here
-            var fsm = await _controller.Ask<IActorRef>(new Controller.CreateServerFSM(new RemoteConnection(responseChannel, this)), TimeSpan.FromMilliseconds(Int32.MaxValue));
-            _clients.AddOrUpdate(responseChannel, fsm, (connection, @ref) => fsm);
+            var fsmTask = _controller.Ask<IActorRef>(new Controller.CreateServerFSM(new RemoteConnection(responseChannel, this)), TimeSpan.FromMilliseconds(Int32.MaxValue));
+            fsmTask.Wait();
+            _clients.AddOrUpdate(responseChannel, fsmTask.Result, (connection, @ref) => fsmTask.Result);
         }
 
         public void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
@@ -284,6 +285,9 @@ namespace Akka.Remote.TestKit
             _log.Debug(string.Format("message from {0}: {1}", responseChannel.RemoteHost, message));
             if (message is INetworkOp)
             {
+                if (!_clients.ContainsKey(responseChannel))
+                    OnConnect(responseChannel.RemoteHost, responseChannel);
+
                 _clients[responseChannel].Tell(message);
             }
             else

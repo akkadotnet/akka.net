@@ -38,7 +38,8 @@ namespace Akka.Cluster.Tests.MultiNode
             _ordinary1 = Role("ordinary1");
             _ordinary2 = Role("ordinary2");
 
-            CommonConfig = MultiNodeLoggingConfig.LoggingConfig.WithFallback(DebugConfig(true))
+            CommonConfig = MultiNodeLoggingConfig.LoggingConfig
+                .WithFallback(DebugConfig(false))
                 .WithFallback(ConfigurationFactory.ParseString(@"akka.cluster.publish-stats-interval = 25s"))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
@@ -74,22 +75,16 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public void AClusterWithSeedNodesMustBeAbleToStartTheSeedNodesConcurrently()
         {
-            
-
-            RunOn(() =>
-            {
-                // test that first seed doesn't have to be started first
-                Thread.Sleep(3000);
-            }, _config.Seed1);
+            // test that first seed doesn't have to be started first
+            RunOn(() => Thread.Sleep(3000), _config.Seed1);
 
             RunOn(() =>
             {
                 Cluster.JoinSeedNodes(_seedNodes);
-                RunOn(() =>
-                {
-                    //verify that we can call this multiple times with no issue                    
-                    Cluster.JoinSeedNodes(_seedNodes);
-                }, _config.Seed3);
+
+                //verify that we can call this multiple times with no issue
+                RunOn(() => Cluster.JoinSeedNodes(_seedNodes), _config.Seed3);
+
                 AwaitMembersUp(3);
             }, _config.Seed1, _config.Seed2, _config.Seed3);
 

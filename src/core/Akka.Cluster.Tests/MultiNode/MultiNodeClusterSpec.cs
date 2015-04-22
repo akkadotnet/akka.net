@@ -50,12 +50,13 @@ namespace Akka.Cluster.Tests.MultiNode
                     periodic-tasks-initial-delay        = 300 ms
                     publish-stats-interval              = 0 s # always, when it happens
                     failure-detector.heartbeat-interval = 500 ms
+                    failure-detector.acceptable-heartbeat-pause = 1 s
                 }
-                akka.loglevel = INFO
+                akka.loglevel = WARNING
                 akka.log-dead-letters = off
                 akka.log-dead-letters-during-shutdown = off
                 #akka.remote.log-remote-lifecycle-events = off
-                #akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
+                #akka.loggers = []
                 akka.test {
                     single-expect-default = 15 s
                 }
