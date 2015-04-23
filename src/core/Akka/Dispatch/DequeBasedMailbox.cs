@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Akka.Dispatch.MessageQueues;
 
 namespace Akka.Dispatch
 {

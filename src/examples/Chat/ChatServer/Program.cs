@@ -5,13 +5,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using ChatMessages;
-using Akka;
-using Akka.Actor;
 using System;
 using System.Collections.Generic;
+using Akka.Actor;
 using Akka.Configuration;
-using Akka.Event;
+using ChatMessages;
 
 namespace ChatServer
 {
@@ -27,10 +25,10 @@ akka {
     remote {
         helios.tcp {
             transport-class = ""Akka.Remote.Transport.Helios.HeliosTcpTransport, Akka.Remote""
-		    applied-adapters = []
-		    transport-protocol = tcp
-		    port = 8081
-		    hostname = localhost
+            applied-adapters = []
+            transport-protocol = tcp
+            port = 8081
+            hostname = localhost
         }
     }
 }

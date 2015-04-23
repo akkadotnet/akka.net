@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
-using Akka.Util;
 
 namespace Akka.MultiNodeTestRunner.Shared.Reporting
 {

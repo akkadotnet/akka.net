@@ -8,10 +8,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
-using Akka.Actor;
-using System.Text;
-using Akka.DI.Core;
 using System.Runtime.CompilerServices;
+using Akka.Actor;
+using Akka.DI.Core;
 using Autofac;
 
 namespace Akka.DI.AutoFac
