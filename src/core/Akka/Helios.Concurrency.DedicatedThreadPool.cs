@@ -1,12 +1,7 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Helios.Concurrency.DedicatedThreadPool.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
-//
-//     Copyright 2015 Roger Alsing, Aaron Stannard
-//     Helios.DedicatedThreadPool - https://github.com/helios-io/DedicatedThreadPool
-// </copyright>
-//-----------------------------------------------------------------------
+﻿/*
+ * Copyright 2015 Roger Alsing, Aaron Stannard
+ * Helios.DedicatedThreadPool - https://github.com/helios-io/DedicatedThreadPool
+ */
 
 using System;
 using System.Collections.Concurrent;
