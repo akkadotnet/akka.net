@@ -7,6 +7,7 @@ open System.IO
 open Fake
 open Fake.FileUtils
 open Fake.MSTest
+open Fake.NUnitCommon
 open Fake.TaskRunnerHelper
 open Fake.ProcessHelper
 
@@ -180,6 +181,7 @@ Target "CopyOutput" <| fun _ ->
       "contrib/dependencyinjection/Akka.DI.CastleWindsor"
       "contrib/dependencyinjection/Akka.DI.Ninject"
       "contrib/testkits/Akka.TestKit.Xunit" 
+      "contrib/testkits/Akka.TestKit.NUnit" 
       ]
     |> List.iter copyOutput
 
