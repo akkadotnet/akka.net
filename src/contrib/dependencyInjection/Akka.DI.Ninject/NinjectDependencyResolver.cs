@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Linq;
 using Akka.Actor;
 using Akka.DI.Core;
 using Ninject;

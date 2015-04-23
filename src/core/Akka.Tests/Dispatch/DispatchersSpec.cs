@@ -11,7 +11,6 @@
  */
 
 using System;
-using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -47,7 +46,7 @@ namespace Akka.Tests.Dispatch
                     }
                     my-synchronized-dispather{
                         type = SynchronizedDispatcher
-		                throughput = 10
+                        throughput = 10
                     }
                 }
                 akka.actor.deployment{

@@ -10,7 +10,6 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
-using Akka.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
