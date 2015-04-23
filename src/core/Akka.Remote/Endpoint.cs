@@ -467,17 +467,8 @@ namespace Akka.Remote
         protected void Gated(object message)
         {
             message.Match()
-                .With<Terminated>(terminated =>
-                {
-                    currentHandle = null;
-                    Context.Parent.Tell(new EndpointWriter.StoppedReading(Self));
-                    if (_resendBuffer.NonAcked.Count > 0 || _resendBuffer.Nacked.Count > 0)
-                        Context.System.Scheduler.ScheduleTellOnce(settings.SysResendTimeout, Self,
-                            new AttemptSysMsgRedelivery(), Self);
-                    Context.Become(Idle);
-                })
-                //.With<Terminated>(
-                //    terminated => Context.System.Scheduler.ScheduleTellOnce(settings.RetryGateClosedFor, Self, new Ungate(), Self))
+                .With<Terminated>(
+                    terminated => Context.System.Scheduler.ScheduleTellOnce(settings.RetryGateClosedFor, Self, new Ungate(), Self))
                 .With<Ungate>(ungate =>
                 {
                     if (_resendBuffer.NonAcked.Count > 0 || _resendBuffer.Nacked.Count > 0)
