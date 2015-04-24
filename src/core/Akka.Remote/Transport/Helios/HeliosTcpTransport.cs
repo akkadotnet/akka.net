@@ -6,6 +6,9 @@ using Akka.Configuration;
 using Google.ProtocolBuffers;
 using Helios.Exceptions;
 using Helios.Net;
+using Helios.Net.Bootstrap;
+using Helios.Reactor.Bootstrap;
+using Helios.Serialization;
 using Helios.Topology;
 
 namespace Akka.Remote.Transport.Helios
@@ -200,7 +203,63 @@ namespace Akka.Remote.Transport.Helios
         {
         }
 
-        protected override Task<AssociationHandle> AssociateInternal(Address remoteAddress)
+	    protected override IConnectionFactory ClientFactory
+	    {
+			get
+			{
+				return _clientFactory ?? (_clientFactory = new ClientBootstrap()
+				  .Executor(Executor)
+				  .SetTransport(InternalTransport)
+				  .WorkerThreads(Settings.ClientSocketWorkerPoolSize)
+				  .SetOption("receiveBufferSize", Settings.ReceiveBufferSize)
+				  .SetOption("sendBufferSize", Settings.SendBufferSize)
+				  .SetOption("reuseAddress", Settings.TcpReuseAddr)
+				  .SetOption("keepAlive", Settings.TcpKeepAlive)
+				  .SetOption("tcpNoDelay", Settings.TcpNoDelay)
+				  .SetOption("connectTimeout", Settings.ConnectTimeout)
+				  .SetOption("backlog", Settings.Backlog)
+				  .SetEncoder(new LengthFieldPrepender(4, false))
+				  .SetDecoder(new LengthFieldFrameBasedDecoder(Settings.MaxFrameSize, 0, 4, 0, 4, true))
+				  .Build());
+			}
+	    }
+
+	    protected override IServerFactory ServerFactory
+	    {
+			get
+			{
+				return _serverFactory ?? (_serverFactory = new ServerBootstrap()
+				  .Executor(Executor)
+				  .SetTransport(InternalTransport)
+				  .WorkerThreads(Settings.ClientSocketWorkerPoolSize)
+				  .SetOption("receiveBufferSize", Settings.ReceiveBufferSize)
+				  .SetOption("sendBufferSize", Settings.SendBufferSize)
+				  .SetOption("reuseAddress", Settings.TcpReuseAddr)
+				  .SetOption("keepAlive", Settings.TcpKeepAlive)
+				  .SetOption("tcpNoDelay", Settings.TcpNoDelay)
+				  .SetOption("connectTimeout", Settings.ConnectTimeout)
+				  .SetOption("backlog", Settings.Backlog)
+				  .SetEncoder(new LengthFieldPrepender(4, false))
+				  .SetDecoder(new LengthFieldFrameBasedDecoder(Settings.MaxFrameSize, 0, 4, 0, 4, true))
+				  .BufferSize(Settings.ReceiveBufferSize.HasValue
+					  ? (int)Settings.ReceiveBufferSize.Value
+					  : NetworkConstants.DEFAULT_BUFFER_SIZE)
+				  .WorkersAreProxies(true)
+				  .Build());
+			}
+	    }
+
+	    protected override IConnection NewServer(INode listenAddress)
+	    {
+		    return new TcpServerHandler(this, AssociationListenerPromise.Task, ServerFactory.NewReactor(listenAddress).ConnectionAdapter);
+	    }
+
+	    protected override IConnection NewClient(Address remoteAddress)
+	    {
+		    return new TcpClientHandler(this, remoteAddress, ClientFactory.NewConnection(AddressToNode(LocalAddress), AddressToNode(remoteAddress)));
+	    }
+
+	    protected override Task<AssociationHandle> AssociateInternal(Address remoteAddress)
         {
             var client = NewClient(remoteAddress);
 
@@ -209,5 +268,27 @@ namespace Akka.Remote.Transport.Helios
 
             return ((TcpClientHandler) client).StatusFuture;
         }
+
+		public override Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen()
+		{
+			var listenAddress = NodeBuilder.BuildNode().Host(Settings.Hostname).WithPort(Settings.Port);
+			var publicAddress = NodeBuilder.BuildNode().Host(Settings.PublicHostname).WithPort(Settings.Port);
+			var newServerChannel = NewServer(listenAddress);
+			newServerChannel.Open();
+			publicAddress.Port = newServerChannel.Local.Port; //use the port assigned by the transport
+
+			//Block reads until a handler actor is registered
+			//TODO
+			ConnectionGroup.TryAdd(newServerChannel);
+			ServerChannel = newServerChannel;
+
+			var addr = NodeToAddress(publicAddress, SchemeIdentifier, System.Name, Settings.PublicHostname);
+			if (addr == null) throw new HeliosNodeException("Unknown local address type {0}", newServerChannel.Local);
+			LocalAddress = addr;
+			AssociationListenerPromise.Task.ContinueWith(result => ServerChannel.BeginReceive(),
+				TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+
+			return Task.Run(() => Tuple.Create(addr, AssociationListenerPromise));
+		}
     }
 }

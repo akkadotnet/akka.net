@@ -43,7 +43,7 @@ namespace Akka.Remote.Transport.Helios
         }
     }
 
-    class HeliosTransportSettings
+	class HeliosTransportSettings
     {
         internal readonly Config Config;
 
@@ -57,9 +57,9 @@ namespace Akka.Remote.Transport.Helios
         {
             //TransportMode
             var protocolString = Config.GetString("transport-protocol");
-            if (protocolString.Equals("tcp")) TransportMode = new Tcp();
-            else if (protocolString.Equals("udp")) TransportMode = new Udp();
-            else throw new ConfigurationException(string.Format("Unknown transport transport-protocol='{0}'", protocolString));
+			if (protocolString.Equals("tcp")) TransportMode = new Tcp();
+			else if (protocolString.Equals("udp")) TransportMode = new Udp();
+			else throw new ConfigurationException(string.Format("Unknown transport transport-protocol='{0}'", protocolString));
             EnableSsl = Config.GetBoolean("enable-ssl");
             ConnectTimeout = Config.GetTimeSpan("connection-timeout");
             WriteBufferHighWaterMark = OptionSize("write-buffer-high-water-mark");
@@ -82,7 +82,7 @@ namespace Akka.Remote.Transport.Helios
             Port = Config.GetInt("port");
         }
 
-        public TransportMode TransportMode { get; private set; }
+		public TransportMode TransportMode { get; private set; }
 
         public bool EnableSsl { get; private set; }
 
@@ -183,7 +183,7 @@ namespace Akka.Remote.Transport.Helios
         /// </summary>
         protected readonly IExecutor Executor;
 
-        private TransportType InternalTransport
+        protected TransportType InternalTransport
         {
             get
             {
@@ -193,103 +193,27 @@ namespace Akka.Remote.Transport.Helios
             }
         }
 
-        private IConnectionFactory _clientFactory;
+        protected IConnectionFactory _clientFactory;
 
         /// <summary>
         /// Internal factory used for creating new outbound connection transports
         /// </summary>
-        protected IConnectionFactory ClientFactory
-        {
-            get
-            {
-                return _clientFactory ?? (_clientFactory = new ClientBootstrap()
-                    .Executor(Executor)
-                    .SetTransport(InternalTransport)
-                    .WorkerThreads(Settings.ClientSocketWorkerPoolSize)
-                    .SetOption("receiveBufferSize", Settings.ReceiveBufferSize)
-                    .SetOption("sendBufferSize", Settings.SendBufferSize)
-                    .SetOption("reuseAddress", Settings.TcpReuseAddr)
-                    .SetOption("keepAlive", Settings.TcpKeepAlive)
-                    .SetOption("tcpNoDelay", Settings.TcpNoDelay)
-                    .SetOption("connectTimeout", Settings.ConnectTimeout)
-                    .SetOption("backlog", Settings.Backlog)
-                    .SetEncoder(new LengthFieldPrepender(4, false))
-                    .SetDecoder(new LengthFieldFrameBasedDecoder(Settings.MaxFrameSize, 0, 4, 0, 4, true))
-                    .Build());
-            }
-        }
+		protected abstract IConnectionFactory ClientFactory { get; }
 
         public override bool IsResponsibleFor(Address remote)
         {
             return true;
         }
 
-        private IServerFactory _serverFactory;
+        protected IServerFactory _serverFactory;
         /// <summary>
         /// Internal factory used for creating inbound connection listeners
         /// </summary>
-        protected IServerFactory ServerFactory
-        {
-            get
-            {
-                return _serverFactory ?? (_serverFactory = new ServerBootstrap()
-                    .Executor(Executor)
-                    .SetTransport(InternalTransport)
-                    .WorkerThreads(Settings.ClientSocketWorkerPoolSize)
-                    .SetOption("receiveBufferSize", Settings.ReceiveBufferSize)
-                    .SetOption("sendBufferSize", Settings.SendBufferSize)
-                    .SetOption("reuseAddress", Settings.TcpReuseAddr)
-                    .SetOption("keepAlive", Settings.TcpKeepAlive)
-                    .SetOption("tcpNoDelay", Settings.TcpNoDelay)
-                    .SetOption("connectTimeout", Settings.ConnectTimeout)
-                    .SetOption("backlog", Settings.Backlog)
-                    .SetEncoder(new LengthFieldPrepender(4, false))
-                    .SetDecoder(new LengthFieldFrameBasedDecoder(Settings.MaxFrameSize, 0, 4, 0, 4, true))
-                    .BufferSize(Settings.ReceiveBufferSize.HasValue
-                        ? (int) Settings.ReceiveBufferSize.Value
-                        : NetworkConstants.DEFAULT_BUFFER_SIZE)
-                    .WorkersAreProxies(true)
-                    .Build());
-            }
-        }
+        protected abstract IServerFactory ServerFactory { get; }
 
-        protected IConnection NewServer(INode listenAddress)
-        {
-            if(InternalTransport == TransportType.Tcp)
-                return new TcpServerHandler(this, AssociationListenerPromise.Task, ServerFactory.NewReactor(listenAddress).ConnectionAdapter);
-            else
-                throw new NotImplementedException("Haven't implemented UDP transport at this time");
-        }
+        protected abstract IConnection NewServer(INode listenAddress);
 
-        protected IConnection NewClient(Address remoteAddress)
-        {
-            if (InternalTransport == TransportType.Tcp)
-                return new TcpClientHandler(this, remoteAddress, ClientFactory.NewConnection(AddressToNode(LocalAddress), AddressToNode(remoteAddress)));
-            else
-                throw new NotImplementedException("Haven't implemented UDP transport at this time");
-        }
-
-        public override Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen()
-        {
-            var listenAddress = NodeBuilder.BuildNode().Host(Settings.Hostname).WithPort(Settings.Port);
-            var publicAddress = NodeBuilder.BuildNode().Host(Settings.PublicHostname).WithPort(Settings.Port);
-            var newServerChannel = NewServer(listenAddress);
-            newServerChannel.Open();
-            publicAddress.Port = newServerChannel.Local.Port; //use the port assigned by the transport
-
-            //Block reads until a handler actor is registered
-            //TODO
-            ConnectionGroup.TryAdd(newServerChannel);
-            ServerChannel = newServerChannel;
-
-            var addr = NodeToAddress(publicAddress, SchemeIdentifier, System.Name, Settings.PublicHostname);
-            if(addr == null) throw new HeliosNodeException("Unknown local address type {0}", newServerChannel.Local);
-            LocalAddress = addr;
-            AssociationListenerPromise.Task.ContinueWith(result => ServerChannel.BeginReceive(),
-                TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
-
-            return Task.Run(() => Tuple.Create(addr, AssociationListenerPromise));
-        }
+        protected abstract IConnection NewClient(Address remoteAddress);
 
         public override async Task<AssociationHandle> Associate(Address remoteAddress)
         {
