@@ -7,6 +7,7 @@ open System.IO
 open Fake
 open Fake.FileUtils
 open Fake.MSTest
+open Fake.NUnitCommon
 open Fake.TaskRunnerHelper
 open Fake.ProcessHelper
 
@@ -94,7 +95,7 @@ Target "AssemblyInfo" <| fun _ ->
             Attribute.Copyright copyright
             Attribute.Trademark ""
             Attribute.Version version
-            Attribute.FileVersion version ]
+            Attribute.FileVersion version ] |> ignore
 
 //--------------------------------------------------------------------------------
 // Build the solution
@@ -180,6 +181,7 @@ Target "CopyOutput" <| fun _ ->
       "contrib/dependencyinjection/Akka.DI.CastleWindsor"
       "contrib/dependencyinjection/Akka.DI.Ninject"
       "contrib/testkits/Akka.TestKit.Xunit" 
+      "contrib/testkits/Akka.TestKit.NUnit" 
       ]
     |> List.iter copyOutput
 
@@ -202,11 +204,20 @@ Target "CleanTests" <| fun _ ->
 open XUnitHelper
 Target "RunTests" <| fun _ ->  
     let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
-    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
+    let nunitTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
+    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
+                                    "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll" -- 
+                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" 
+                                                                                                            
 
     mkdir testOutput
 
     MSTest (fun p -> p) msTestAssemblies
+    nunitTestAssemblies
+    |> NUnit (fun p -> 
+        {p with
+            DisableShadowCopy = true; 
+            OutputFile = testOutput + @"\NUnitTestResults.xml"})
 
     let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
     printfn "Using XUnit runner: %s" xunitToolPath

@@ -184,6 +184,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BasicUnityUses", "contrib\d
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.Unity", "contrib\dependencyInjection\Akka.DI.Unity\Akka.DI.Unity.csproj", "{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.NUnit", "contrib\testkits\Akka.TestKit.NUnit\Akka.TestKit.NUnit.csproj", "{BEF84A6F-32C4-4ACF-AFC3-7B5FCA6F209E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.NUnit.Tests", "contrib\testkits\Akka.TestKit.NUnit.Tests\Akka.TestKit.NUnit.Tests.csproj", "{D63223FA-03F5-4B32-A6EC-668F718C0826}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug Mono|Any CPU = Debug Mono|Any CPU
@@ -661,6 +665,22 @@ Global
 		{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2065C3A2-8C15-4912-BCF5-AE89E3DDA079}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BEF84A6F-32C4-4ACF-AFC3-7B5FCA6F209E}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{BEF84A6F-32C4-4ACF-AFC3-7B5FCA6F209E}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{BEF84A6F-32C4-4ACF-AFC3-7B5FCA6F209E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BEF84A6F-32C4-4ACF-AFC3-7B5FCA6F209E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BEF84A6F-32C4-4ACF-AFC3-7B5FCA6F209E}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{BEF84A6F-32C4-4ACF-AFC3-7B5FCA6F209E}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{BEF84A6F-32C4-4ACF-AFC3-7B5FCA6F209E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BEF84A6F-32C4-4ACF-AFC3-7B5FCA6F209E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D63223FA-03F5-4B32-A6EC-668F718C0826}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{D63223FA-03F5-4B32-A6EC-668F718C0826}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{D63223FA-03F5-4B32-A6EC-668F718C0826}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D63223FA-03F5-4B32-A6EC-668F718C0826}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D63223FA-03F5-4B32-A6EC-668F718C0826}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{D63223FA-03F5-4B32-A6EC-668F718C0826}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{D63223FA-03F5-4B32-A6EC-668F718C0826}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D63223FA-03F5-4B32-A6EC-668F718C0826}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -742,5 +762,7 @@ Global
 		{D1CCD86E-0EF8-473A-979B-25E1235FEA2D} = {B1D10183-8FAE-4506-B935-403FCED89BDB}
 		{32EABA12-DDAA-4F2A-B254-85239267D869} = {D1CCD86E-0EF8-473A-979B-25E1235FEA2D}
 		{2065C3A2-8C15-4912-BCF5-AE89E3DDA079} = {B1D10183-8FAE-4506-B935-403FCED89BDB}
+		{BEF84A6F-32C4-4ACF-AFC3-7B5FCA6F209E} = {7625FD95-4B2C-4A5B-BDD5-94B1493FAC8E}
+		{D63223FA-03F5-4B32-A6EC-668F718C0826} = {7625FD95-4B2C-4A5B-BDD5-94B1493FAC8E}
 	EndGlobalSection
 EndGlobal
