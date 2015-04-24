@@ -1169,11 +1169,11 @@ namespace Akka.Remote
         {
             if (!_buffer.Any())
             {
-                Context.Become(Writing, true);
+                Context.Become(Writing);
             }
             else
             {
-                Context.Become(Buffering, true);
+                Context.Become(Buffering);
                 SendBufferedMessages();
             }
         }

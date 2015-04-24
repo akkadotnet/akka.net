@@ -6,10 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
+using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -198,6 +200,36 @@ namespace Akka.Remote.Tests
             }
         }
 
+        [Fact]
+        public async Task Bug_884_Remoting_must_support_reply_to_Routee()
+        {
+            var router = Sys.ActorOf(new RoundRobinPool(3).Props(Props.Create(() => new Reporter(TestActor))));
+            var routees = await router.Ask<Routees>(new GetRoutees());
+
+            //have one of the routees send the message
+            var targetRoutee = routees.Members.Cast<ActorRefRoutee>().Select(x => x.Actor).First();
+            here.Tell("ping", targetRoutee);
+            var msg = ExpectMsg<Tuple<string, IActorRef>>(TimeSpan.FromSeconds(1.5));
+            Assert.Equal("pong", msg.Item1);
+            Assert.Equal(targetRoutee, msg.Item2);
+        }
+
+        [Fact]
+        public async Task Bug_884_Remoting_must_support_reply_to_child_of_Routee()
+        {
+            var props = Props.Create(() => new Reporter(TestActor));
+            var router = Sys.ActorOf(new RoundRobinPool(3).Props(Props.Create(() => new NestedDeployer(props))));
+            var routees = await router.Ask<Routees>(new GetRoutees());
+
+            //have one of the routees send the message
+            var targetRoutee = routees.Members.Cast<ActorRefRoutee>().Select(x => x.Actor).First();
+            var reporter = await targetRoutee.Ask<IActorRef>(new NestedDeployer.GetNestedReporter());
+            here.Tell("ping", reporter);
+            var msg = ExpectMsg<Tuple<string, IActorRef>>(TimeSpan.FromSeconds(1.5));
+            Assert.Equal("pong", msg.Item1);
+            Assert.Equal(reporter, msg.Item2);
+        }
+
         #endregion
 
         #region Internal Methods
@@ -303,6 +335,52 @@ namespace Akka.Remote.Tests
             }
 
             public string S { get; private set; }
+        }
+
+        class Reporter : UntypedActor
+        {
+            private IActorRef _reportTarget;
+
+            public Reporter(IActorRef reportTarget)
+            {
+                _reportTarget = reportTarget;
+            }
+
+
+            protected override void OnReceive(object message)
+            {
+                _reportTarget.Forward(message);
+            }
+        }
+
+        class NestedDeployer : UntypedActor
+        {
+            private Props _reporterProps;
+            private IActorRef _repoterActorRef;
+
+            public class GetNestedReporter { }
+
+            public NestedDeployer(Props reporterProps)
+            {
+                _reporterProps = reporterProps;
+            }
+
+            protected override void PreStart()
+            {
+                _repoterActorRef = Context.ActorOf(_reporterProps);
+            }
+
+            protected override void OnReceive(object message)
+            {
+                if (message is GetNestedReporter)
+                {
+                    Sender.Tell(_repoterActorRef);
+                }
+                else
+                {
+                    Unhandled(message);
+                }
+            }
         }
 
         class Echo1 : UntypedActor
