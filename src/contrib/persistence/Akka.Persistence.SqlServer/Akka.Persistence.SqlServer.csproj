@@ -66,6 +66,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Akka.Persistence.SqlServer.nuspec" />
     <None Include="app.config" />
     <None Include="README.md" />
   </ItemGroup>
