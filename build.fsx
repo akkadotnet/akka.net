@@ -95,7 +95,7 @@ Target "AssemblyInfo" <| fun _ ->
             Attribute.Copyright copyright
             Attribute.Trademark ""
             Attribute.Version version
-            Attribute.FileVersion version ]
+            Attribute.FileVersion version ] |> ignore
 
 //--------------------------------------------------------------------------------
 // Build the solution
@@ -204,11 +204,20 @@ Target "CleanTests" <| fun _ ->
 open XUnitHelper
 Target "RunTests" <| fun _ ->  
     let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
-    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
+    let nunitTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
+    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
+                                    "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll" -- 
+                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" 
+                                                                                                            
 
     mkdir testOutput
 
     MSTest (fun p -> p) msTestAssemblies
+    nunitTestAssemblies
+    |> NUnit (fun p -> 
+        {p with
+            DisableShadowCopy = true; 
+            OutputFile = testOutput + @"\NUnitTestResults.xml"})
 
     let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
     printfn "Using XUnit runner: %s" xunitToolPath
