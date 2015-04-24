@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence;
+using Akka.Persistence.SqlServer;
 
 namespace PersistenceExample
 {
@@ -16,12 +17,19 @@ namespace PersistenceExample
     {
         static void Main(string[] args)
         {
-            var config = ConfigurationFactory.ParseString("akka.actor.logLevel = DEBUG")
-                .WithFallback(Persistence.DefaultConfig());
+            var sqlServerConfig = ConfigurationFactory.ParseString(@"
+                akka.persistence.journal.plugin = ""akka.persistence.journal.sql-server""
+                akka.persistence.journal.sql-server.connection-string = ""Data Source=.\\SQLEXPRESS;Initial Catalog=ExampleDb;Integrated Security=True""
+                akka.persistence.journal.sql-server.auto-initialize = on
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.sql-server""
+                akka.persistence.snapshot-store.sql-server.connection-string = ""Data Source=.\\SQLEXPRESS;Initial Catalog=ExampleDb;Integrated Security=True""
+                akka.persistence.snapshot-store.sql-server.auto-initialize = on
+            ");
 
-            using (var system = ActorSystem.Create("example",  config))
+            using (var system = ActorSystem.Create("example"))
             {
-                //BasicUsage(system);
+                //SqlServerPersistence.Init(system);
+                BasicUsage(system);
 
                 //FailingActorExample(system);
 

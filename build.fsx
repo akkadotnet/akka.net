@@ -207,8 +207,8 @@ Target "RunTests" <| fun _ ->
     let nunitTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
     let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
                                     "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll" -- 
-                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" 
-                                                                                                            
+                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" --
+                                    "src/**/bin/Release/Akka.Persistence.SqlServer.Tests.dll"
 
     mkdir testOutput
 
@@ -247,6 +247,14 @@ Target "MultiNodeTests" <| fun _ ->
         info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
         info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
     if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
+
+Target "RunSqlServerTests" <| fun _ ->
+    let sqlServerTests = !! "src/**/bin/Release/Akka.Persistence.SqlServer.Tests.dll"
+    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
+    printfn "Using XUnit runner: %s" xunitToolPath
+    xUnit
+        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
+        sqlServerTests
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
