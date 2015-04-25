@@ -26,6 +26,7 @@ namespace Akka.Dispatch
         public IActorRef Self { get; set; }
         public IActorRef Sender { get; set; }
         public object Message { get; set; }
+        public AsyncBehavior AsyncBehavior { get; set; }
     }
 
     public class ActorTaskScheduler : TaskScheduler
@@ -36,13 +37,14 @@ namespace Akka.Dispatch
         private const string Faulted = "faulted";
         private static readonly object Outer = new object();
 
-        public static void SetCurrentState(IActorRef self, IActorRef sender, object message)
+        public static void SetCurrentState(IActorRef self, IActorRef sender, object message, AsyncBehavior behavior)
         {
             CallContext.LogicalSetData(StateKey, new AmbientState
             {
                 Sender = sender,
                 Self = self,
-                Message = message
+                Message = message,
+                AsyncBehavior = behavior
             });
         }
 
@@ -64,14 +66,19 @@ namespace Akka.Dispatch
             //e.g. if previous task was an IO completion
             s = CallContext.LogicalGetData(StateKey) as AmbientState;
 
-            s.Self.Tell(new CompleteTask(s, () =>
+
+            Action continuation = () =>
             {
-                SetCurrentState(s.Self,s.Sender,s.Message);
+                SetCurrentState(s.Self, s.Sender, s.Message, s.AsyncBehavior);
                 TryExecuteTask(task);
                 if (task.IsFaulted)
                     Rethrow(task, null);
 
-            }), ActorRefs.NoSender);
+            };
+            s.Self.Tell(s.AsyncBehavior == AsyncBehavior.Suspend
+                ? (object) new CompleteTask(s, continuation)
+                : new CompleteTaskReentrant(s, continuation)
+                , ActorRefs.NoSender);
         }
 
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
@@ -115,7 +122,7 @@ namespace Akka.Dispatch
                 context.SuspendReentrancy();
             }
 
-            SetCurrentState(context.Self, context.Sender, null);
+            SetCurrentState(context.Self, context.Sender, null, behavior);
 
             //wrap our action inside a task, so that everything executing 
             //directly or indirectly from the action is executed on our task scheduler
