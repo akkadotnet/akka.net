@@ -29,15 +29,14 @@ namespace Akka.Actor
             return self.Ask<object>(message, timeout);
         }
 
-        public static async Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout = null)
+        public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout = null)
         {
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new NotSupportedException("Unable to resolve the target Provider");
 
             ResolveReplyTo();
-            var result = (T)await Ask(self, message, provider, timeout);
-            return result;
+            return Ask(self, message, provider, timeout).CastTask<object, T>();
         }
 
         internal static IActorRef ResolveReplyTo()
