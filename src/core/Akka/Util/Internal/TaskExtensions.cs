@@ -18,16 +18,19 @@ namespace Akka.Util.Internal
             else
                 task.ContinueWith(_ =>
                 {
-                    if (task.IsFaulted)
+                    if (task.IsFaulted || task.Exception != null)
                         tcs.SetException(task.Exception);
-                    try
-                    {
-                        tcs.SetResult((TResult) (object) task.Result);
-                    }
-                    catch (Exception e)
-                    {
-                        tcs.SetException(e);
-                    }
+                    else if (task.IsCanceled)
+                        tcs.SetCanceled();
+                    else
+                        try
+                        {
+                            tcs.SetResult((TResult) (object) task.Result);
+                        }
+                        catch (Exception e)
+                        {
+                            tcs.SetException(e);
+                        }
                 }, TaskContinuationOptions.ExecuteSynchronously);
             return tcs.Task;
         }
