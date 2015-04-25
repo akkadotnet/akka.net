@@ -27,7 +27,8 @@ namespace Akka.Actor.Await
             _state = new AmbientState
             {
                 Sender = _context.Sender,
-                Self = _context.Self
+                Self = _context.Self,
+                Message = _context.CurrentMessage
             };
         }
 
@@ -55,7 +56,7 @@ namespace Akka.Actor.Await
             }
             _task.ContinueWith(t =>
             {
-                _state.Self.Tell(new CompleteTask(_state, () =>
+                Action callback = () =>
                 {
                     _tlsSuspendState = state;
                     try
@@ -72,7 +73,12 @@ namespace Akka.Actor.Await
                                 _context.ResumeReentrancy();
                         }
                     }
-                }), _state.Sender);
+                };
+                var message = _behavior == AsyncBehavior.Reentrant
+                    ? (object) new CompleteReentrantAwaitedTask(_state, callback)
+                    : new CompleteTask(_state, callback);
+                _context.Self.Tell(message, _state.Sender);
+
             }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
