@@ -18,10 +18,7 @@ module Scenario0 =
 
     // general update state method
     let update state e = e::state
-
-    // apply is invoked when actor receives a recovery event
-    let apply _ = update
-
+    
     // exec is invoked when a actor receives a new message from another entity
     let exec (mailbox: Eventsourced<_,_,_>) state cmd = 
         match cmd with
@@ -31,11 +28,21 @@ module Scenario0 =
     let run() =
         printfn "--- SCENARIO 0 ---\n"
         let s0 = 
-            spawnPersist system "s0" {  // s0 identifies actor uniquelly across different incarnations
-                state = []              // initial state
-                apply = apply           // recovering function
-                exec = exec             // command handler
-            } []    
+            spawnPersist system "p0" [] // pass empty list as initial state
+            <| fun aggregate ->
+                { apply = update; 
+                  exec = 
+                    let rec loop () =
+                        actor {
+                            let! msg = aggregate.Receive()
+                            let state = aggregate.State()
+                            match msg with
+                            | "print" -> printfn "%A\n" state
+                            | m -> aggregate.PersistEvent (update state) [m]
+                            return! loop ()
+                        }
+                    loop () }
+            <| []
 
         s0 <! "foo"
         s0 <! "bar"
@@ -53,45 +60,50 @@ module Scenario1 =
         | Crash                 // order actor to blow up itself with exception
 
     let update state e = (e.ToString())::state
-
-    // apply function can recover not only from received events, but also from state snapshot
-    let apply (mailbox: Eventsourced<Command,obj,string list>) state (event:obj) = 
-        match event with
-        | :? string as e -> update state e
-        | :? SnapshotOffer as o -> o.Snapshot :?> string list
-        | x -> 
-            mailbox.Unhandled x
-            state
-
-    let exec (mailbox: Eventsourced<Command,obj,string list>) state cmd =
-        match cmd with
-        | Update s -> mailbox.PersistEvent (update state) [s]
-        | TakeSnapshot -> mailbox.SaveSnapshot state
-        | Print -> printf "State is: %A\n" state
-        | Crash -> failwith "planned crash"
-
+    
     let run() =
     
         printfn "--- SCENARIO 1 ---\n"
         let s1 = 
-            spawnPersist system "s1" {
-                state = []
-                apply = apply
-                exec = exec
-            } []
+            spawnPersist system "p0" 
+            <| []   // initial state
+            <| fun aggregate ->
+                { apply = 
+                    fun state (event: obj) ->
+                        match event with
+                        | :? SnapshotOffer as o -> o.Snapshot :?> string list
+                        | :? string as e -> update state e
+                        | x -> 
+                            aggregate.Unhandled x
+                            state
+                  exec = 
+                    let rec loop () =
+                        actor {
+                            let! cmd = aggregate.Receive()
+                            let state = aggregate.State()                            
+                            match cmd with
+                            | Update s -> aggregate.PersistEvent (update state) [s]
+                            | TakeSnapshot -> aggregate.SaveSnapshot state
+                            | Print -> printf "State is: %A\n" state
+                            | Crash -> failwith "planned crash"
+                            return! loop ()
+                        }
+                    loop () }
+            <| []   // spawn options
 
-        s1 <! Update "a"
-        s1 <! Print
+        s1 <! Update "a"            // state (1-st run): [a]
+        s1 <! Print                 
         // restart
-        s1 <! Crash
+        s1 <! Crash                 // throw an exception (planned crash)
         s1 <! Print
-        s1 <! Update "b"
+        s1 <! Update "b"            // state (1-st run): [b;a]
         s1 <! Print
-        s1 <! TakeSnapshot
-        s1 <! Update "c"
+        s1 <! TakeSnapshot          // store current state on the file system - it persists program finish
+        // "c" won't be persisted in in-memory journal scenario after program finishes
+        s1 <! Update "c"            // state (1-st run): [c;b;a] 
         s1 <! Print
     
-Scenario0.run()
+Scenario1.run()
 
 Console.ReadLine()
 

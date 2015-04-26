@@ -77,8 +77,14 @@
   </Target>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.fs" />
-    <Compile Include="FsApi.fs" />
+    <Compile Include="Prelude.fs" />
+    <Compile Include="Actors.fs" />
+    <Compile Include="Serialization.fs" />
+    <Compile Include="FaultHandling.fs" />
+    <Compile Include="Spawning.fs" />
     <Compile Include="Schedulers.fs" />
+    <Compile Include="Logging.fs" />
+    <Compile Include="Utils.fs" />
     <None Include="packages.config" />
     <None Include="Akka.FSharp.nuspec" />
     <None Include="README.md" />

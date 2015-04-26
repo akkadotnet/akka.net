@@ -27,7 +27,7 @@ type SomeActor() =
         | _ -> failwith "unknown message"
 
 let main() =
-    printf "Greeter example:\n"
+    printf "\n=== Greeter example ===\n"
     let system = ConfigurationFactory.Default() |> System.create "FSharpActors"
     let actor = 
         spawn system "MyActor"
