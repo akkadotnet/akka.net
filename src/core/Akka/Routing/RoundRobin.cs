@@ -35,7 +35,7 @@ namespace Akka.Routing
             {
                 return Routee.NoRoutee;
             }
-            return routees[Interlocked.Increment(ref _next)%routees.Length];
+            return routees[(Interlocked.Increment(ref _next) & int.MaxValue) % routees.Length];
         }
     }
 
