@@ -8,39 +8,39 @@ namespace Akka.Actor
     internal interface IActorState
     {
         /// <summary>
-        /// Removes the provided `IActorRef` from the `Watching` set
+        /// Removes the provided <see cref="IActorRef"/> from the `Watching` set
         /// </summary>
-        /// <param name="actor">The `IActorRef` to be removed</param>
+        /// <param name="actor">The <see cref="IActorRef"/> to be removed</param>
         /// <returns></returns>
         IActorState RemoveWatching(IActorRef actor);
         /// <summary>
-        /// Removes the provided `IActorRef` from the `WatchedBy` set
+        /// Removes the provided <see cref="IActorRef"/> from the `WatchedBy` set
         /// </summary>
-        /// <param name="actor">The `IActorRef` to be removed</param>
+        /// <param name="actor">The <see cref="IActorRef"/> to be removed</param>
         /// <returns></returns>
         IActorState RemoveWatchedBy(IActorRef actor);
         /// <summary>
-        /// Removes the provided `IActorRef` from the `Termination queue` set
+        /// Removes the provided <see cref="IActorRef"/> from the `Termination queue` set
         /// </summary>
-        /// <param name="actor">The `IActorRef` to be removed</param>
+        /// <param name="actor">The <see cref="IActorRef"/> to be removed</param>
         /// <returns></returns>
         IActorState RemoveTerminated(IActorRef actor);
         /// <summary>
-        /// Adds the provided `IActorRef` to the `Watching` set
+        /// Adds the provided <see cref="IActorRef"/> to the `Watching` set
         /// </summary>
-        /// <param name="actor">The `IActorRef` to be added</param>
+        /// <param name="actor">The <see cref="IActorRef"/> to be added</param>
         /// <returns></returns>
         IActorState AddWatching(IActorRef actor);
         /// <summary>
-        /// Adds the provided `IActorRef` to the `WatchedBy` set
+        /// Adds the provided <see cref="IActorRef"/> to the `WatchedBy` set
         /// </summary>
-        /// <param name="actor">The `IActorRef` to be added</param>
+        /// <param name="actor">The <see cref="IActorRef"/> to be added</param>
         /// <returns></returns>
         IActorState AddWatchedBy(IActorRef actor);
         /// <summary>
-        /// Adds the provided `IActorRef` to the `Termination queue` set
+        /// Adds the provided <see cref="IActorRef"/> to the `Termination queue` set
         /// </summary>
-        /// <param name="actor">The `IActorRef` to be added</param>
+        /// <param name="actor">The <see cref="IActorRef"/> to be added</param>
         /// <returns></returns>
         IActorState AddTerminated(IActorRef actor);
         /// <summary>
@@ -59,7 +59,7 @@ namespace Akka.Actor
         /// <returns></returns>
         IActorState ClearBehaviorStack();
         /// <summary>
-        /// Replaces the current receive behavior with a new behavor
+        /// Replaces the current receive behavior with a new behavior
         /// </summary>
         /// <param name="receive">The new behavior</param>
         /// <returns></returns>
@@ -71,40 +71,40 @@ namespace Akka.Actor
         /// <returns></returns>
         IActorState BecomeStacked(Receive receive);
         /// <summary>
-        /// Removes the top level receive behavior from the `Behavor` stack
+        /// Removes the top level receive behavior from the `Behavior` stack
         /// </summary>
         /// <returns></returns>
         IActorState UnbecomeStacked();
         /// <summary>
-        /// Determines whether the provided `IActorRef` is present in the `Watching` set
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Watching` set
         /// </summary>
-        /// <param name="actor">The `IActorRef` to locate in the `Watching` set</param>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Watching` set</param>
         /// <returns></returns>
         bool ContainsWatching(IActorRef actor);
         /// <summary>
-        /// Determines whether the provided `IActorRef` is present in the `WatchedBy` set
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `WatchedBy` set
         /// </summary>
-        /// <param name="actor">The `IActorRef` to locate in the `WatchedBy` set</param>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `WatchedBy` set</param>
         /// <returns></returns>
         bool ContainsWatchedBy(IActorRef actor);
         /// <summary>
-        /// Determines whether the provided `IActorRef` is present in the `Terination queue` set
+        /// Determines whether the provided <see cref="IActorRef"/> is present in the `Termination queue` set
         /// </summary>
-        /// <param name="actor">The `IActorRef` to locate in the `Termination queue` set</param>
+        /// <param name="actor">The <see cref="IActorRef"/> to locate in the `Termination queue` set</param>
         /// <returns></returns>
         bool ContainsTerminated(IActorRef actor);
         /// <summary>
-        /// Returns an en `IEnumerable&lt;IActorRef&gt;` over the `Watching` set
+        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `Watching` set
         /// </summary>
         /// <returns></returns>
         IEnumerable<IActorRef> GetWatching();
         /// <summary>
-        /// Returns an en `IEnumerable&lt;IActorRef&gt;` over the `WatchedBy` set
+        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `WatchedBy` set
         /// </summary>
         /// <returns></returns>
         IEnumerable<IActorRef> GetWatchedBy();
         /// <summary>
-        /// Returns an en `IEnumerable&lt;IActorRef&gt;` over the `Termination queue` set
+        /// Returns an <see cref="IEnumerable{IActorRef}"/> over the `Termination queue` set
         /// </summary>
         /// <returns></returns>
         IEnumerable<IActorRef> Getterminated();
@@ -149,7 +149,7 @@ namespace Akka.Actor
         {
             //if we have no watchedBy, assign it to our local ref
             //this is a memory footprint optimization, we can have a DefaultActorState object that is watched by _one_ watcher (parent)
-            //in every other case, we escallate to FullActorState
+            //in every other case, we escalate to FullActorState
             if (_watchedBy == null)
             {
                 _watchedBy = actor;

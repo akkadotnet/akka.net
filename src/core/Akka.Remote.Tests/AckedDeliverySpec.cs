@@ -381,7 +381,7 @@ namespace Akka.Remote.Tests
             global::System.Diagnostics.Debug.WriteLine("Successfully delivered {0} messages from {1}", received.Count, msgCount);
             global::System.Diagnostics.Debug.WriteLine("Entering reliable phase");
 
-            //Finalizing pahase
+            //Finalizing phase
             for (var i = 1; i <= msgCount; i++)
             {
                 senderSteps(1, 1.0);

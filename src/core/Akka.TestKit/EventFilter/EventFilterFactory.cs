@@ -61,7 +61,7 @@ namespace Akka.TestKit
         /// <param name="exceptionType">The type of the exception. It must be a <see cref="System.Exception"/>.</param>
         /// <param name="pattern">The event must match the pattern to be filtered.</param>
         /// <param name="source">>Optional. The event source.</param>
-        /// <param name="checkInnerExceptions">Optional. When set to <c>true</c> not only the top level exception is matched, but inner exceptions are also checked until one macthes. Default: <c>false</c></param>
+        /// <param name="checkInnerExceptions">Optional. When set to <c>true</c> not only the top level exception is matched, but inner exceptions are also checked until one matches. Default: <c>false</c></param>
         /// <returns>The new filter</returns>
         public IEventFilterApplier Exception(Type exceptionType, Regex pattern, string source = null, bool checkInnerExceptions=false)
         {
@@ -118,7 +118,7 @@ namespace Akka.TestKit
         /// <param name="contains">Optional. If specified (and neither <paramref name="message"/> nor <paramref name="start"/> are specified), the event must contain the string to be filtered.</param>
         /// <param name="start">>Optional. If specified (and <paramref name="message"/> is not specified, the event must start with the string to be filtered.</param>
         /// <param name="source">>Optional. The event source.</param>
-        /// <param name="checkInnerExceptions">Optional. When set to <c>true</c> not only the top level exception is matched, but inner exceptions are also checked until one macthes. Default: <c>false</c></param>
+        /// <param name="checkInnerExceptions">Optional. When set to <c>true</c> not only the top level exception is matched, but inner exceptions are also checked until one matches. Default: <c>false</c></param>
         /// <returns>The new filter</returns>
         public IEventFilterApplier Exception(Type exceptionType, string message = null, string start = null, string contains = null, string source = null, bool checkInnerExceptions=false)
         {

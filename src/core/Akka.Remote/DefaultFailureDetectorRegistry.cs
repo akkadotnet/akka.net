@@ -65,7 +65,7 @@ namespace Akka.Remote
                 //First one wins and creates the new FailureDetector
                 lock (_failureDetectorCreationLock)
                 {
-                    // First check for non-existing key wa outside the lock, and a second thread might just have released thelock
+                    // First check for non-existing key wa outside the lock, and a second thread might just have released the lock
                     // when this one acquired it, so the second check is needed (double-check locking pattern)
                     var oldTable = new Dictionary<T, FailureDetector>(ResourceToFailureDetector);
                     if (oldTable.ContainsKey(resource))

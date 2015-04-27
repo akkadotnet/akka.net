@@ -25,7 +25,7 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
             // ReSharper disable once DoNotCallOverridableMethodsInConstructor
             SendRawLogEventMessage(initLoggerMessage);
             ExpectMsg("OK");
-            //From now on we know that all messsages will be forwarded to TestActor
+            //From now on we know that all messages will be forwarded to TestActor
         }
 
         protected abstract void SendRawLogEventMessage(object message);

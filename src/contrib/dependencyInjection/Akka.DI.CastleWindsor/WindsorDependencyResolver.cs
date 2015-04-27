@@ -15,20 +15,23 @@ using Castle.Windsor;
 namespace Akka.DI.CastleWindsor
 {
     /// <summary>
-    /// Provide services to ActorSystem Extension system used to create Actor
-    /// using the CastleWindsor IOC Container to handle wiring up dependencies to
-    /// Actors
+    /// Provides services to the <see cref="ActorSystem "/> extension system
+    /// used to create actors using the CastleWindsor IoC container.
     /// </summary>
     public class WindsorDependencyResolver : IDependencyResolver
     {
         private IWindsorContainer container;
         private ConcurrentDictionary<string, Type> typeCache;
         private ActorSystem system;
+
         /// <summary>
-        /// WindsorDependencyResolver Constructor
+        /// Initializes a new instance of the <see cref="WindsorDependencyResolver"/> class.
         /// </summary>
-        /// <param name="container">Instance of the WindsorContainer</param>
-        /// <param name="system">Instance of the ActorSystem</param>
+        /// <param name="container">The container used to resolve references</param>
+        /// <param name="system">The actor system to plug into</param>
+        /// <exception cref="ArgumentNullException">
+        /// Either the <paramref name="container"/> or the <paramref name="system"/> was null.
+        /// </exception>
         public WindsorDependencyResolver(IWindsorContainer container, ActorSystem system)
         {
             if (system == null) throw new ArgumentNullException("system");
@@ -40,13 +43,12 @@ namespace Akka.DI.CastleWindsor
         }
 
         /// <summary>
-        /// Returns the Type for the Actor Type specified in the actorName
+        /// Retrieves an actor's type with the specified name
         /// </summary>
-        /// <param name="actorName"></param>
-        /// <returns></returns>
+        /// <param name="actorName">The name of the actor to retrieve</param>
+        /// <returns>The type with the specified actor name</returns>
         public Type GetType(string actorName)
         {
- 
             typeCache.
                 TryAdd(actorName,
                         actorName.GetTypeValue() ??
@@ -59,31 +61,32 @@ namespace Akka.DI.CastleWindsor
 
             return typeCache[actorName];
         }
+
         /// <summary>
-        /// Creates a delegate factory based on the actorName
+        /// Creates a delegate factory used to create actors based on their type
         /// </summary>
-        /// <param name="actorName">Name of the ActorType</param>
-        /// <returns>factory delegate</returns>
+        /// <param name="actorType">The type of actor that the factory builds</param>
+        /// <returns>A delegate factory used to create actors</returns>
         public Func<ActorBase> CreateActorFactory(Type actorType)
         {
             return () => (ActorBase)container.Resolve(actorType);
         }
+
         /// <summary>
-        /// Used Register the Configuration for the ActorType specified in TActor
+        /// Used to register the configuration for an actor of the specified type <typeparam name="TActor"/>
         /// </summary>
-        /// <typeparam name="TActor">Tye of Actor that needs to be created</typeparam>
-        /// <returns>Props configuration instance</returns>
+        /// <typeparam name="TActor">The type of actor the configuration is based</typeparam>
+        /// <returns>The configuration object for the given actor type</returns>
         public Props Create<TActor>() where TActor : ActorBase
         {
             return system.GetExtension<DIExt>().Props(typeof(TActor));
         }
 
         /// <summary>
-        /// This method is used to signal the DI Container that it can
-        /// release it's reference to the actor.  <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501/ref=sr_1_1?ie=UTF8&qid=1425861096&sr=8-1&keywords=mark+seemann">HERE</see> 
+        /// Signals the DI container to release it's reference to the actor.
+        /// <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501/ref=sr_1_1?ie=UTF8&qid=1425861096&sr=8-1&keywords=mark+seemann">HERE</see> 
         /// </summary>
-        /// <param name="actor"></param>
-
+        /// <param name="actor">The actor to remove from the container</param>
         public void Release(ActorBase actor)
         {
             this.container.Release(actor);

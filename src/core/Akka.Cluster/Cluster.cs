@@ -205,7 +205,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Send command to DOWN the ndoe specified by <see cref="address"/>.
+        /// Send command to DOWN the node specified by <see cref="address"/>.
         /// 
         /// When a member is considered by the failure detector to be unreachable the leader is not
         /// allowed to perform its duties, such as changing status of new joining members to <see cref="MemberStatus.Up"/>.

@@ -63,7 +63,7 @@ namespace Akka.Cluster
                 ImmutableHashSet.Create<UniqueAddress>(),
                 FailureDetector);
 
-            //stat perioidic heartbeat to other nodes in cluster
+            //start periodic heartbeat to other nodes in cluster
             _heartbeatTask =
             Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
                 _cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.HeartbeatInterval), 

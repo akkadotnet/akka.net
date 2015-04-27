@@ -68,7 +68,7 @@ namespace Akka.Remote.Tests
                 ShouldBe(fd.Phi(kv.Key, 1000.0, 100.0), kv.Value, 0.1);
             }
 
-            //larger stdDeviation reuslts => lower phi
+            //larger stdDeviation results => lower phi
             Assert.True(fd.Phi(1100, 1000.0, 500.0) < fd.Phi(1100, 1000.0, 100.0));
         }
 
