@@ -297,7 +297,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     }
 
                     
-                    // signal to the first node that the fourth nodeis done
+                    // signal to the first node that the fourth node is done
                     var endSystem = ActorSystem.Create("EndSystem", Sys.Settings.Config);
                     try
                     {

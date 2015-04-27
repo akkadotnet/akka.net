@@ -11,7 +11,7 @@ using System.Threading;
 namespace Akka.Actor
 {
     /// <summary>
-    /// Siginifies something that can be canceled
+    /// Signifies something that can be canceled
     /// </summary>
     public interface ICancelable
     {

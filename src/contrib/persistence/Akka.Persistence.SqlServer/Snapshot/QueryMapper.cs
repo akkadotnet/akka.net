@@ -4,7 +4,7 @@ using System.Data.SqlClient;
 namespace Akka.Persistence.SqlServer.Snapshot
 {
     /// <summary>
-    /// Mapper used to map results of snapshot SELECT queries into valid snapsho objects.
+    /// Mapper used to map results of snapshot SELECT queries into valid snapshot objects.
     /// </summary>
     public interface ISnapshotQueryMapper
     {

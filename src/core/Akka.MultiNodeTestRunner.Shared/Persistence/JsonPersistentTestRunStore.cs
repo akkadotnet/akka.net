@@ -16,7 +16,7 @@ using Newtonsoft.Json.Serialization;
 namespace Akka.MultiNodeTestRunner.Shared.Persistence
 {
     /// <summary>
-    /// XML (omg not XML!) implementation of the <see cref="IPersistentTestRunStore"/>
+    /// JavaScript Object Notation (JSON) implementation of the <see cref="IPersistentTestRunStore"/>
     /// </summary>
     public class JsonPersistentTestRunStore : IPersistentTestRunStore
     {

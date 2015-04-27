@@ -229,7 +229,7 @@ namespace Akka.Actor
                     if (CurrentMessage is Failed)
                     {
                         var failedChild = Sender;
-                        childrenNotToSuspend = childrenNotToSuspend.Concat(failedChild); //Function handles childrenNotToSuspend beeing null
+                        childrenNotToSuspend = childrenNotToSuspend.Concat(failedChild); //Function handles childrenNotToSuspend being null
                         SetFailed(failedChild);
                     }
                     else

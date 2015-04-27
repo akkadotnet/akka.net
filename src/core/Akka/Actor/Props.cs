@@ -19,7 +19,7 @@ using Newtonsoft.Json;
 namespace Akka.Actor
 {
     /// <summary>
-    ///     Props is a configuration object using in creating an [[Actor]]; it is
+    ///     Props is a configuration object used in creating an [[Actor]]; it is
     ///     immutable, so it is thread-safe and fully shareable.
     ///     Examples on C# API:
     /// <code>
@@ -91,7 +91,7 @@ namespace Akka.Actor
                 return false;
 
             //TODO: since arguments can be serialized, we can not compare by ref
-            //arguments may also not impement equality opertators, so we can not structurally compare either
+            //arguments may also not implement equality operators, so we can not structurally compare either
             //we can not just call a serializer and compare outputs either, since different args may require diff serializer mechanics
 
             return true;
@@ -333,7 +333,7 @@ namespace Akka.Actor
         /// <summary>
         ///     Creates the specified factory.
         /// </summary>
-        /// <typeparam name="TActor">The type of the t actor.</typeparam>
+        /// <typeparam name="TActor">The type of the actor.</typeparam>
         /// <param name="factory">The factory.</param>
         /// <param name="supervisorStrategy">Optional: Supervisor strategy</param>
         /// <returns>Props.</returns>
@@ -355,7 +355,7 @@ namespace Akka.Actor
         /// <summary>
         ///     Creates this instance.
         /// </summary>
-        /// <typeparam name="TActor">The type of the t actor.</typeparam>
+        /// <typeparam name="TActor">The type of the actor.</typeparam>
         /// <returns>Props.</returns>
         public static Props Create<TActor>(params object[] args) where TActor : ActorBase
         {
@@ -377,7 +377,7 @@ namespace Akka.Actor
         /// <summary>
         ///     Creates this instance.
         /// </summary>
-        /// <typeparam name="TActor">The type of the t actor.</typeparam>
+        /// <typeparam name="TActor">The type of the actor.</typeparam>
         /// <returns>Props.</returns>
         public static Props Create<TActor>(SupervisorStrategy supervisorStrategy) where TActor : ActorBase, new()
         {
@@ -390,6 +390,7 @@ namespace Akka.Actor
         ///     Creates the specified type.
         /// </summary>
         /// <param name="type">The type.</param>
+        /// <param name="args"></param>
         /// <returns>Props.</returns>
         public static Props Create(Type type, params object[] args)
         {
@@ -635,7 +636,7 @@ namespace Akka.Actor
     ///     rather than a traditional Activator.
     ///     Intended to be used in conjunction with Dependency Injection.
     /// </summary>
-    /// <typeparam name="TActor">The type of the t actor.</typeparam>
+    /// <typeparam name="TActor">The type of the actor.</typeparam>
     internal class DynamicProps<TActor> : Props where TActor : ActorBase
     {
         /// <summary>
