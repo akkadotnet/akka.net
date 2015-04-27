@@ -35,7 +35,7 @@ namespace Akka.Routing
             var winningScore = long.MaxValue;
 
             // round robin fallback
-            var winner = routees[Interlocked.Increment(ref next) % routees.Length];
+            var winner = routees[(Interlocked.Increment(ref next) & int.MaxValue) % routees.Length];
 
             for (int i = 0; i < routees.Length; i++)
             {
