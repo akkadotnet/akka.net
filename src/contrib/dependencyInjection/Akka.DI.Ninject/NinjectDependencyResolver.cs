@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Linq;
 using Akka.Actor;
 using Akka.DI.Core;
 using Ninject;
@@ -56,12 +55,10 @@ namespace Akka.DI.Ninject
         /// </summary>
         /// <param name="actorName">Name of the ActorType</param>
         /// <returns>factory delegate</returns>
-        public Func<ActorBase> CreateActorFactory(string actorName)
+        public Func<ActorBase> CreateActorFactory(Type actorType)
         {
             return () =>
             {
-                Type actorType = this.GetType(actorName);
-
                 return (ActorBase)container.GetService(actorType);
             };
         }
@@ -72,7 +69,7 @@ namespace Akka.DI.Ninject
         /// <returns>Props configuration instance</returns>
         public Props Create<TActor>() where TActor : ActorBase
         {
-            return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
+            return system.GetExtension<DIExt>().Props(typeof(TActor));
         }
 
         /// <summary>
@@ -85,24 +82,4 @@ namespace Akka.DI.Ninject
             container.Release(actor);
         }
     }
-    internal static class Extensions
-    {
-        public static Type GetTypeValue(this string typeName)
-        {
-            var firstTry = Type.GetType(typeName);
-            Func<Type> searchForType = () =>
-            {
-                return
-                AppDomain.
-                    CurrentDomain.
-                    GetAssemblies().
-                    SelectMany(x => x.GetTypes()).
-                    Where(t => t.Name.Equals(typeName)).
-                    FirstOrDefault();
-            };
-            return firstTry ?? searchForType();
-        }
-
-    }
 }
-

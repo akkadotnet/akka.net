@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.InteropServices;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Util.Internal;

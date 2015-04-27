@@ -16,25 +16,26 @@ namespace Akka.DI.Core
     public class DIActorProducer : IIndirectActorProducer
     {
         private IDependencyResolver dependencyResolver;
-        private string actorName;
+        private Type actorType;
+
         readonly Func<ActorBase> actorFactory;
 
         public DIActorProducer(IDependencyResolver dependencyResolver,
-                               string actorName)
+                               Type actorType)
         {
             if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
-            if (actorName == null) throw new ArgumentNullException("actorName");
+            if (actorType == null) throw new ArgumentNullException("actorType");
 
             this.dependencyResolver = dependencyResolver;
-            this.actorName = actorName;
-            this.actorFactory = dependencyResolver.CreateActorFactory(actorName);
+            this.actorType = actorType;
+            this.actorFactory = dependencyResolver.CreateActorFactory(actorType);
         }
         /// <summary>
         /// The System.Type of the Actor specified in the constructor parameter actorName
         /// </summary>
         public Type ActorType
         {
-            get { return this.dependencyResolver.GetType(this.actorName); }
+            get { return this.dependencyResolver.GetType(); }
         }
         /// <summary>
         /// Creates an instance of the Actor based on the Type specified in the constructor parameter actorName

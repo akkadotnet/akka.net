@@ -69,7 +69,7 @@ public class TypedParentWorker : TypedActor, IHandle<TypedActorMessage>, IHandle
     {
         Console.WriteLine("TypedParentWorker - {0} received {1}", Self.Path.Name, message);
         var producer = Context.System.GetExtension<DIExt>();
-        Context.ActorOf(producer.Props("TypedWorker")).Tell(message);
+        Context.DI().ActorOf<TypedActor>().Tell(message);
     }
 
 

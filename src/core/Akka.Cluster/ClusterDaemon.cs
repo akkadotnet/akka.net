@@ -1065,8 +1065,7 @@ namespace Akka.Cluster
 
                     UpdateLatestGossip(newGossip);
 
-                    _log.Info("Node [{0}] is JOINING, roles [{1}]", node.Address,
-                        roles.Select(r => r.ToString()).Aggregate("", (a, b) => a + ", " + b));
+                    _log.Info("Node [{0}] is JOINING, roles [{1}]", node.Address, string.Join(",", roles));
 
                     if (!node.Equals(SelfUniqueAddress))
                     {

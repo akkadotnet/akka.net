@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using Akka.Actor;
 
 namespace Akka.DI.Core
@@ -34,6 +35,17 @@ namespace Akka.DI.Core
             return new DIActorContextAdapter(context);
         }
 
+        public static Type GetTypeValue(this string typeName)
+        {
+            var firstTry = Type.GetType(typeName);
+            Func<Type> searchForType = () =>
+                AppDomain.CurrentDomain
+                    .GetAssemblies()
+                    .SelectMany(x => x.GetTypes())
+                    .FirstOrDefault(t => t.Name.Equals(typeName));
+            
+            return firstTry ?? searchForType();
+        }
     }
 }
 

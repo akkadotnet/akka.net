@@ -6,8 +6,8 @@
 //-----------------------------------------------------------------------
 
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
+﻿using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -33,15 +33,22 @@ namespace Akka.Persistence.TestKit.Journal
             }}
         ";
 
-        private readonly TestProbe _senderProbe;
-        private readonly TestProbe _receiverProbe;
+        private TestProbe _senderProbe;
+        private TestProbe _receiverProbe;
 
         protected JournalSpec(Config config = null, string actorSystemName = null, string testActorName = null)
             : base(FromConfig(config).WithFallback(Config), actorSystemName ?? "JournalSpec", testActorName)
         {
+        }
+
+        /// <summary>
+        /// Initializes a journal with set o predefined messages.
+        /// </summary>
+        protected IEnumerable<Persistent> Initialize()
+        {
             _senderProbe = CreateTestProbe();
             _receiverProbe = CreateTestProbe();
-            WriteMessages(1, 5, Pid, _senderProbe.Ref);
+            return WriteMessages(1, 5, Pid, _senderProbe.Ref);
         }
 
         protected JournalSpec(Type journalType, string actorSystemName = null)
@@ -66,7 +73,7 @@ namespace Akka.Persistence.TestKit.Journal
                    && p.SequenceNr == seqNr;
         }
 
-        protected void WriteMessages(int from, int to, string pid, IActorRef sender)
+        private Persistent[] WriteMessages(int from, int to, string pid, IActorRef sender)
         {
             var messages = Enumerable.Range(from, to).Select(i => new Persistent("a-" + i, i, pid, false, sender)).ToArray();
             var probe = CreateTestProbe();
@@ -81,6 +88,8 @@ namespace Akka.Persistence.TestKit.Journal
                         m.Persistent.Payload.ToString() == ("a-" + n) && m.Persistent.SequenceNr == (long)n &&
                         m.Persistent.PersistenceId == Pid);
             }
+
+            return messages;
         }
 
         [Fact]

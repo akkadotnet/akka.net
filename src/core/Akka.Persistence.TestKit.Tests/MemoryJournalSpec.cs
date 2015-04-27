@@ -14,7 +14,7 @@ namespace Akka.Persistence.TestKit.Tests
         public MemoryJournalSpec()
             : base(actorSystemName: "MemoryJournalSpec")
         {
+            Initialize();
         }
     }
 }
-

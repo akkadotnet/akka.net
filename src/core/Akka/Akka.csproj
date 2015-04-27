@@ -57,10 +57,7 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -70,6 +67,7 @@
     <Compile Include="..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="ActorState.cs" />
     <Compile Include="Actor\ActorCell.DeathWatch.cs" />
     <Compile Include="Actor\ActorProducerPipeline.cs" />
     <Compile Include="Actor\ChildrenContainer\Internal\ChildrenContainer.cs" />
@@ -201,6 +199,7 @@
     <Compile Include="Actor\UntypedReceive.cs" />
     <Compile Include="Dispatch\Mailboxes.cs" />
     <Compile Include="Dispatch\MessageQueues\IMessageQueue.cs" />
+    <Compile Include="Dispatch\SingleThreadDispatcher.cs" />
     <Compile Include="Dispatch\SysMsg\ISystemMessage.cs" />
     <Compile Include="Dispatch\TaskDispatcher.cs" />
     <Compile Include="Dispatch\ThreadPoolBuilder.cs" />

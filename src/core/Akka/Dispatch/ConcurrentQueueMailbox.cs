@@ -91,7 +91,7 @@ namespace Akka.Dispatch
 
                     //if deadline time have expired, stop and break
                     if (throughputDeadlineTime.HasValue && throughputDeadlineTime.Value > 0 &&
-                        _deadLineTimer.ElapsedTicks > throughputDeadlineTime.Value)
+                        _deadLineTimer.Elapsed.Ticks > throughputDeadlineTime.Value)
                     {
                         _deadLineTimer.Stop();
                         break;

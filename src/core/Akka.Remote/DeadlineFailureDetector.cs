@@ -9,7 +9,6 @@ using System;
 using System.Threading;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.Util;
 
 namespace Akka.Remote
 {

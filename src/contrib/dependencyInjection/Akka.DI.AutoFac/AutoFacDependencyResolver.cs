@@ -8,13 +8,10 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Akka.Actor;
-using System.Text;
 using Akka.DI.Core;
-using System.Runtime.CompilerServices;
 using Autofac;
-using System.Text;
-using System.Runtime.CompilerServices;
 
 namespace Akka.DI.AutoFac
 {
@@ -73,11 +70,10 @@ namespace Akka.DI.AutoFac
         /// </summary>
         /// <param name="actorName">Name of the ActorType</param>
         /// <returns>factory delegate</returns>
-        public Func<ActorBase> CreateActorFactory(string actorName)
+        public Func<ActorBase> CreateActorFactory(Type actorType)
         {
             return () =>
             {
-                Type actorType = this.GetType(actorName);
                 var scope = container.BeginLifetimeScope();
                 var actor = (ActorBase)scope.Resolve(actorType);
                 references.Add(actor, scope);
@@ -91,7 +87,7 @@ namespace Akka.DI.AutoFac
         /// <returns>Props configuration instance</returns>
         public Props Create<TActor>() where TActor : ActorBase
         {
-            return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
+            return system.GetExtension<DIExt>().Props(typeof(TActor));
         }
 
         /// <summary>
@@ -111,24 +107,4 @@ namespace Akka.DI.AutoFac
             }
         }
     }
-    internal static class Extensions
-    {
-        public static Type GetTypeValue(this string typeName)
-        {
-            var firstTry = Type.GetType(typeName);
-            Func<Type> searchForType = () =>
-            {
-                return
-                AppDomain.
-                    CurrentDomain.
-                    GetAssemblies().
-                    SelectMany(x => x.GetTypes()).
-                    Where(t => t.Name.Equals(typeName)).
-                    FirstOrDefault();
-            };
-            return firstTry ?? searchForType();
-        }
-
-    }
 }
-

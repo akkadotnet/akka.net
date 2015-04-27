@@ -305,6 +305,7 @@ namespace Akka.Actor
                         SwapMailbox(deadLetterMailbox);
                         mailbox.BecomeClosed();
                         mailbox.CleanUp();
+                        Dispatcher.Detach(this);
                     }
                 }
                 finally

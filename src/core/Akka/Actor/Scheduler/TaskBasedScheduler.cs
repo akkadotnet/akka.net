@@ -55,7 +55,7 @@ namespace Akka.Actor
                 {
                     action();
                 }
-                catch(OperationCanceledException e) { }
+                catch(OperationCanceledException) { }
                 //TODO: Should we log other exceptions? /@hcanber
 
             }, token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Current);

@@ -54,15 +54,15 @@ namespace Akka.Persistence
 
         protected override void Unhandled(object message)
         {
-            if (message is RecoveryCompleted) ; // ignore
-            else if (message is RecoveryFailure)
+            if (message is RecoveryCompleted) return; // ignore
+            if (message is RecoveryFailure)
             {
                 var fail = (RecoveryFailure)message;
                 var errorMessage = string.Format("Persistent view killed after the recovery failure (Persistence id: {0}). To avoid killing persistent actors on recovery failures, PersistentView must handle RecoveryFailure messages. Failure was caused by: {1}", PersistenceId, fail.Cause.Message);
 
                 throw new ActorKilledException(errorMessage);
             }
-            else base.Unhandled(message);
+            base.Unhandled(message);
         }
     }
 }

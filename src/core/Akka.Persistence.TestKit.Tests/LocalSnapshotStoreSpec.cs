@@ -25,7 +25,7 @@ namespace Akka.Persistence.TestKit.Tests
             _path = Sys.Settings.Config.GetString("akka.persistence.snapshot-store.local.dir");
             Sys.CreateStorageLocations(_path);
 
-            Metadata = WriteSnapshots().ToList();
+            Initialize();
         }
 
         protected override void Dispose(bool disposing)

@@ -28,7 +28,7 @@ namespace Akka.Remote
 
         public static long GetNanos()
         {
-            return StopWatch.ElapsedTicks.ToNanos();
+            return StopWatch.Elapsed.Ticks.ToNanos();
         }
 
         internal const long NanosPerTick = 100;
