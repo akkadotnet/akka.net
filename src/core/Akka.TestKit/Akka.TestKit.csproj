@@ -68,6 +68,7 @@
     <Compile Include="..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="ActorCellKeepingSynchronizationContext.cs" />
     <Compile Include="CallingThreadDispatcher.cs" />
     <Compile Include="EventFilter\IEventFilterApplier.cs" />
     <Compile Include="EventFilter\Internal\CustomEventFilter.cs" />
