@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Actor.Internals;
@@ -31,6 +32,24 @@ namespace Akka.Actor
         private Mailbox _mailbox;
         private readonly ActorSystemImpl _systemImpl;
 
+        [Serializable]
+        internal class ReferenceHolder : ISerializable
+        {
+            public ActorCell Cell { get; private set; }
+
+            public ReferenceHolder(ActorCell cell)
+            {
+                Cell = cell;
+            }
+            public void GetObjectData(SerializationInfo info, StreamingContext context)
+            {
+                var type = typeof(Exception);
+                info.AssemblyName = type.Assembly.FullName;
+                info.FullTypeName = type.FullName;
+                new Exception("Why are you serializing me?").GetObjectData(info, context);
+            }
+        }
+        internal ReferenceHolder Reference { get; private set; }
 
         public ActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher, IInternalActorRef parent)
         {
@@ -39,7 +58,7 @@ namespace Akka.Actor
             _systemImpl = system;
             Parent = parent;
             Dispatcher = dispatcher;
-            
+            Reference = new ReferenceHolder(this);
         }
 
         public object CurrentMessage { get; private set; }
