@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.Remoting.Messaging;
+using System.Runtime.Serialization;
 
 namespace Akka.Actor.Internal
 {
@@ -14,14 +16,19 @@ namespace Akka.Actor.Internal
     /// </summary>
     public static class InternalCurrentActorCellKeeper
     {
-        [ThreadStatic]
-        private static ActorCell _current;
-
-
+	    private static readonly string Key = Guid.NewGuid().ToString();
         /// <summary>INTERNAL!
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
-        public static ActorCell Current { get { return _current; } set { _current = value; } }
+        public static ActorCell Current {
+	        get
+	        {
+		        var r = CallContext.LogicalGetData(Key) as ActorCell.ReferenceHolder;
+	            return r == null ? null : r.Cell;
+
+	        }
+	        set { CallContext.LogicalSetData(Key, value == null ? null : value.Reference); }
+        }
     }
 }
 
