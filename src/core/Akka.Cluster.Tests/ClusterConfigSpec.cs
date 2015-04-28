@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
-using Akka.Dispatch;
 using Akka.Remote;
 using Akka.TestKit;
 using Xunit;
@@ -47,7 +46,7 @@ namespace Akka.Cluster.Tests
             //TODO:
             //Assert.AreEqual(ImmutableDictionary.Create<string, int>(), settings.);
             Assert.Equal(ImmutableHashSet.Create<string>(), settings.Roles);
-            Assert.Equal(Dispatchers.DefaultDispatcherId, settings.UseDispatcher);
+            Assert.Equal("akka.cluster.default-cluster-dispatcher", settings.UseDispatcher);
             Assert.Equal(.8, settings.GossipDifferentViewProbability);
             Assert.Equal(400, settings.ReduceGossipDifferentViewProbability);
             Assert.Equal(TimeSpan.FromMilliseconds(33), settings.SchedulerTickDuration);
@@ -58,6 +57,18 @@ namespace Akka.Cluster.Tests
             Assert.Equal(TimeSpan.FromSeconds(3), settings.MetricsGossipInterval);
             Assert.Equal(TimeSpan.FromSeconds(12), settings.MetricsMovingAverageHalfLife);
         }
+
+        [Fact]
+        public void ClusteringShouldHaveCorrectDefaultForkJoinDispatcher()
+        {
+            var dispatchConfig = Sys.Settings.Config.GetConfig("akka.cluster.default-cluster-dispatcher");
+            var dispatcherThreadPoolSettings = dispatchConfig.GetConfig("dedicated-thread-pool");
+
+            var dispatcherType = dispatchConfig.GetString("type");
+            var threadCount = dispatcherThreadPoolSettings.GetInt("thread-count");
+
+            Assert.Equal("ForkJoinDispatcher", dispatcherType);
+            Assert.Equal(4, threadCount);
+        }
     }
 }
-

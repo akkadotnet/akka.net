@@ -157,7 +157,7 @@ namespace Akka.Remote.Transport
                         new AkkaPduProtobuffCodec(),
                         failureDetector)), ActorNameFor(handle.RemoteAddress));
                 })
-                .With<AssociateUnderlying>(au => CreateOutboundStateActor(au.RemoteAddress, au.StatusPromise, null)) //need to create an Outbond ProtocolStateActor
+                .With<AssociateUnderlying>(au => CreateOutboundStateActor(au.RemoteAddress, au.StatusPromise, null)) //need to create an Outbound ProtocolStateActor
                 .With<AssociateUnderlyingRefuseUid>(au => CreateOutboundStateActor(au.RemoteAddress, au.StatusCompletionSource, au.RefuseUid));
         }
 

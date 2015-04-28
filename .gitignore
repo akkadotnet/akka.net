@@ -191,6 +191,10 @@ UpgradeLog*.htm
 *.mdf
 *.ldf
 
+# make exception for Akka.Persistence.SqlServer database file
+!AkkaPersistenceSqlServerSpecDb.mdf
+!AkkaPersistenceSqlServerSpecDb_log.ldf
+
 # Business Intelligence projects
 *.rdl.data
 *.bim.layout

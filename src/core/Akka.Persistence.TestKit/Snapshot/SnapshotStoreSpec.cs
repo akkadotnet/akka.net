@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -48,12 +49,20 @@ namespace Akka.Persistence.TestKit.Snapshot
 
         protected IActorRef SnapshotStore { get { return Extension.SnapshotStoreFor(null); } }
 
+        /// <summary>
+        /// Initializes a snapshot store with set of predefined snapshots.
+        /// </summary>
+        protected IEnumerable<SnapshotMetadata> Initialize()
+        {
+            return Metadata = WriteSnapshots().ToList();
+        }
+
         private static Config ConfigFromTemplate(Type snapshotStoreType)
         {
             return ConfigurationFactory.ParseString(string.Format(_specConfigTemplate, snapshotStoreType.FullName));
         }
 
-        protected IEnumerable<SnapshotMetadata> WriteSnapshots()
+        private IEnumerable<SnapshotMetadata> WriteSnapshots()
         {
             for (int i = 1; i <= 5; i++)
             {

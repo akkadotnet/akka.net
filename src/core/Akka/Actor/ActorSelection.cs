@@ -211,6 +211,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="elements">The elements.</param>
+        /// <param name="wildCardFanOut"></param>
         public ActorSelectionMessage(object message, SelectionPathElement[] elements, bool wildCardFanOut = false)
         {
             Message = message;

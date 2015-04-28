@@ -165,7 +165,7 @@ namespace Akka.Persistence
                 }
                 else if (message is ReplayMessagesSuccess) ReplayCompleted(cause, failureMessage);
                 else if (message is ReplayedMessage) UpdateLastSequenceNr(((ReplayedMessage)message).Persistent);
-                else if (message is Recover) ;  // ignore
+                else if (message is Recover) return;  // ignore
                 else _internalStash.Stash();
             });
         }

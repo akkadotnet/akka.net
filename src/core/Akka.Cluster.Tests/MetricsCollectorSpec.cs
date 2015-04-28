@@ -119,19 +119,13 @@ namespace Akka.Cluster.Tests
 
         #region IDisposable members
 
-        public void Dispose()
+        /// <summary>
+        /// Needs to hide previous Dispose implementation in order to avoid recursive disposal.
+        /// </summary>
+        public new void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _collector.Dispose();
-                base.Dispose();
-            }
+            _collector.Dispose();
+            base.Dispose();
         }
 
         #endregion

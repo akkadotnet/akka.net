@@ -120,7 +120,7 @@ namespace Akka.TestKit
         {
             try
             {
-                actionThatThrows();                
+                actionThatThrows();
             }
             catch(Exception)
             {

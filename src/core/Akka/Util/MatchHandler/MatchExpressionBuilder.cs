@@ -135,7 +135,7 @@ namespace Akka.Tools.MatchHandler
         private static Tuple<ParameterExpression[], object[]> DecorateHandlerAndPredicateExpressions(IReadOnlyList<Argument> arguments, ParameterExpression inputParameter)
         {
             //Warning: This is using the same algorithm as CreateArgumentValuesArray.
-            //         Any updates in this shoul be made in CreateArgumentValuesArray as well.
+            //         Any updates in this should be made in CreateArgumentValuesArray as well.
             //
             //If we only have a few arguments, the parameters will be:
             //    (arguments_0, arguments_1)

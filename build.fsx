@@ -7,6 +7,7 @@ open System.IO
 open Fake
 open Fake.FileUtils
 open Fake.MSTest
+open Fake.NUnitCommon
 open Fake.TaskRunnerHelper
 open Fake.ProcessHelper
 
@@ -94,7 +95,7 @@ Target "AssemblyInfo" <| fun _ ->
             Attribute.Copyright copyright
             Attribute.Trademark ""
             Attribute.Version version
-            Attribute.FileVersion version ]
+            Attribute.FileVersion version ] |> ignore
 
 //--------------------------------------------------------------------------------
 // Build the solution
@@ -180,6 +181,7 @@ Target "CopyOutput" <| fun _ ->
       "contrib/dependencyinjection/Akka.DI.CastleWindsor"
       "contrib/dependencyinjection/Akka.DI.Ninject"
       "contrib/testkits/Akka.TestKit.Xunit" 
+      "contrib/testkits/Akka.TestKit.NUnit" 
       ]
     |> List.iter copyOutput
 
@@ -202,11 +204,20 @@ Target "CleanTests" <| fun _ ->
 open XUnitHelper
 Target "RunTests" <| fun _ ->  
     let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
-    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
+    let nunitTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
+    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
+                                    "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll" -- 
+                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" --
+                                    "src/**/bin/Release/Akka.Persistence.SqlServer.Tests.dll"
 
     mkdir testOutput
 
     MSTest (fun p -> p) msTestAssemblies
+    nunitTestAssemblies
+    |> NUnit (fun p -> 
+        {p with
+            DisableShadowCopy = true; 
+            OutputFile = testOutput + @"\NUnitTestResults.xml"})
 
     let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
     printfn "Using XUnit runner: %s" xunitToolPath
@@ -236,6 +247,14 @@ Target "MultiNodeTests" <| fun _ ->
         info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
         info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
     if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
+
+Target "RunSqlServerTests" <| fun _ ->
+    let sqlServerTests = !! "src/**/bin/Release/Akka.Persistence.SqlServer.Tests.dll"
+    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
+    printfn "Using XUnit runner: %s" xunitToolPath
+    xUnit
+        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
+        sqlServerTests
 
 //--------------------------------------------------------------------------------
 // Nuget targets 

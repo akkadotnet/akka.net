@@ -5,10 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-/**
- * Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
- * Original C# code written by Akka.NET project <http://getakka.net/>
- */
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
@@ -50,6 +46,9 @@ namespace Akka.Dispatch
     /// </summary>
     public class ThreadPoolDispatcher : MessageDispatcher
     {
+
+        private static readonly bool _isFullTrusted = AppDomain.CurrentDomain.IsFullyTrusted;
+
         /// <summary>
         /// Takes a <see cref="MessageDispatcherConfigurator"/>
         /// </summary>
@@ -64,8 +63,11 @@ namespace Akka.Dispatch
         public override void Schedule(Action run)
         {
             var wc = new WaitCallback(_ => run());
-            ThreadPool.UnsafeQueueUserWorkItem(wc, null);
-            //ThreadPool.QueueUserWorkItem(wc, null);
+            // we use unsafe version if current application domain is FullTrusted
+            if (_isFullTrusted)
+                ThreadPool.UnsafeQueueUserWorkItem(wc, null);
+            else
+                ThreadPool.QueueUserWorkItem(wc, null);
         }
     }
 
@@ -96,48 +98,6 @@ namespace Akka.Dispatch
         {
             var t = new Task(run);
             t.Start(_scheduler);
-        }
-    }
-
-    /// <summary>
-    ///     Class SingleThreadDispatcher.
-    /// </summary>
-    public class SingleThreadDispatcher : MessageDispatcher
-    {
-        /// <summary>
-        ///     The queue
-        /// </summary>
-        private readonly BlockingCollection<Action> queue = new BlockingCollection<Action>();
-
-        /// <summary>
-        ///     The running
-        /// </summary>
-        private volatile bool running = true;
-
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="SingleThreadDispatcher" /> class.
-        /// </summary>
-        public SingleThreadDispatcher(MessageDispatcherConfigurator configurator)
-            : base(configurator)
-        {
-            var thread = new Thread(_ =>
-            {
-                foreach (var next in queue.GetConsumingEnumerable())
-                {
-                    next();
-                    if (!running) return;
-                }
-            });
-            thread.Start(); //thread won't start automatically without this
-        }
-
-        /// <summary>
-        ///     Schedules the specified run.
-        /// </summary>
-        /// <param name="run">The run.</param>
-        public override void Schedule(Action run)
-        {
-            queue.Add(run);
         }
     }
 

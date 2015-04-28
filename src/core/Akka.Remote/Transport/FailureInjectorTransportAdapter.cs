@@ -38,7 +38,7 @@ namespace Akka.Remote.Transport
             Msg = msg;
         }
 
-        protected FailureInjectorException(SerializationInfo info, StreamingContext context)
+        private FailureInjectorException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }

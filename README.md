@@ -6,22 +6,16 @@
 [![Issue Stats](http://www.issuestats.com/github/akkadotnet/akka.net/badge/pr)](http://www.issuestats.com/github/akkadotnet/akka.net)
 [![Issue Stats](http://www.issuestats.com/github/akkadotnet/akka.net/badge/issue)](http://www.issuestats.com/github/akkadotnet/akka.net)
 
-**Akka.NET** is a port of the popular Java/Scala framework Akka to .NET.
-
-This is a community driven port and is not affiliated with Typesafe who makes the original Java/Scala version.
+**Akka.NET** is a community-driven port of the popular Java/Scala framework [Akka](http://akka.io) to .NET.
 
 * Subscribe to the Akka.NET dev feed: https://twitter.com/AkkaDotNet  (@AkkaDotNet)
 * Support forum: https://groups.google.com/forum/#!forum/akkadotnet-user-list
-* Mail: akkadotnet@gmail.com
-* Stackoverflow: http://stackoverflow.com/questions/tagged/akka.net
-
-## BETA
-Please note that Akka.NET is currently in beta. Some features are missing, and we have a few known bugs.
-You can follow our work towards version 1 here: https://github.com/akkadotnet/akka.net/milestones/Version%201
+* Mail: hi@getakka.net
+* Stack Overflow: http://stackoverflow.com/questions/tagged/akka.net
 
 ### Documentation and resources
 
-#### [akkadotnet.github.io](http://akkadotnet.github.io)
+#### [Akka.NET Community SIte](http://getakka.net)
 
 
 ### Install Akka.NET via NuGet

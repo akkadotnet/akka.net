@@ -65,8 +65,8 @@ namespace Akka.Persistence
         {
             return new ViewState("recovery started - replayMax: " + replayMax, true, (receive, message) =>
             {
-                if (message is Recover) ; // ignore
-                else if (message is LoadSnapshotResult)
+                if (message is Recover) return; // ignore
+                if (message is LoadSnapshotResult)
                 {
                     var loadResult = (LoadSnapshotResult)message;
                     if (loadResult.Snapshot != null)
@@ -110,7 +110,7 @@ namespace Akka.Persistence
                         _internalStash.Stash();
                     }
                 }
-                else if (message is Recover) ; // ignore
+                else if (message is Recover) return; // ignore
                 else if (message is ReplayedMessage)
                 {
                     var replayedMessage = (ReplayedMessage)message;
@@ -172,7 +172,7 @@ namespace Akka.Persistence
                 }
                 else if (message is ReplayMessagesSuccess) OnReplayFailureCompleted(receive, cause, failedMessage as IPersistentRepresentation);
                 else if (message is ReplayedMessage) UpdateLastSequenceNr(((ReplayedMessage)message).Persistent);
-                else if (message is Recover) ; // ignore
+                else if (message is Recover) return; // ignore
                 else _internalStash.Stash();
             });
         }
@@ -204,7 +204,7 @@ namespace Akka.Persistence
                     var scheduled = (ScheduledUpdate) message;
                     ChangeStateToReplayStarted(false, scheduled.ReplayMax);
                 }
-                else if (message is Recover) ; // ignore
+                else if (message is Recover) return; // ignore
                 else base.AroundReceive(receive, message);
             });
         }

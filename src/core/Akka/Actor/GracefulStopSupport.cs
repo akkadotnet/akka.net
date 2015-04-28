@@ -23,7 +23,7 @@ namespace Akka.Actor
     /// <remarks><c>IMPORTANT:</c> the actor being terminated and its supervisor being informed of the availability of the deceased actor's name
     /// are two distinct operations, which do not obey any reliable ordering.</remarks>
     /// 
-    /// If the target actor isn't terminated within the timeout the <see cref="Task"/> is complted with failure.
+    /// If the target actor isn't terminated within the timeout the <see cref="Task"/> is completed with failure.
     /// 
     /// If you want to invoke specialized stopping logic on your target actor instead of <see cref="PoisonPill"/>, you can pass your stop command as a parameter:
     /// <code>

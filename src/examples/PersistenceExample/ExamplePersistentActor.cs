@@ -99,9 +99,9 @@ namespace PersistenceExample
                 var cmd = message as Command;
                 Persist(new Event(cmd.Data + "-" + EventsCount), UpdateState);
             }
-            else if (message == "snap")
+            else if (message as string == "snap")
                 SaveSnapshot(State);
-            else if (message == "print")
+            else if (message as string == "print")
                 Console.WriteLine(State);
             else return false;
             return true;

@@ -747,11 +747,15 @@ namespace Akka.Cluster
         private PerformanceCounter _systemLoadAverageCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total", true);
         private PerformanceCounter _systemAvailableMemory = new PerformanceCounter("Memory", "Available MBytes", true);
 
-#if MONO 
+	    private static readonly bool IsRunningOnMono = Type.GetType("Mono.Runtime") != null;
+
+
 		// Mono doesn't support Microsoft.VisualBasic, so need an alternative way of sampling this value
 		// see http://stackoverflow.com/questions/105031/how-do-you-get-total-amount-of-ram-the-computer-has
-		private PerformanceCounter _systemMaxMemory = new PerformanceCounter("Mono Memory", "Total Physical Memory");
-#endif
+	    private PerformanceCounter _monoSystemMaxMemory = IsRunningOnMono
+		    ? new PerformanceCounter("Mono Memory", "Total Physical Memory")
+		    : null;
+
 
 		#endregion
 
@@ -813,14 +817,20 @@ namespace Akka.Cluster
         /// </summary>
         public Metric SystemMaxMemory()
         {
-            return Metric.Create(StandardMetrics.SystemMemoryMax,
-#if MONO
-					_systemMaxMemory.RawValue
-#else
-					new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory
-#endif
-			);
+	        return Metric.Create(StandardMetrics.SystemMemoryMax,
+		        IsRunningOnMono
+			        ? _monoSystemMaxMemory.RawValue
+			        : GetVbTotalPhysicalMemory());
         }
+
+	    double GetVbTotalPhysicalMemory()
+	    {
+#if __MonoCS__
+			throw new NotImplementedException();
+#else
+		    return new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory;
+#endif
+	    }
 
         #endregion
 

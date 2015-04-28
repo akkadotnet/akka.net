@@ -11,7 +11,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Akka.Util;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
 {

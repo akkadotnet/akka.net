@@ -34,16 +34,15 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ExamplePersistentActor.cs" />
     <Compile Include="ExamplePersistentFailingActor.cs" />
     <Compile Include="ExampleView.cs" />
+    <Compile Include="GuaranteedDeliveryExampleActor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SnapshotedExampleActor.cs" />
@@ -53,6 +52,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.SqlServer\Akka.Persistence.SqlServer.csproj">
+      <Project>{bac85686-afc4-413e-98dc-5ed8f468bc63}</Project>
+      <Name>Akka.Persistence.SqlServer</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\core\Akka.Persistence\Akka.Persistence.csproj">
       <Project>{FCA84DEA-C118-424B-9EB8-34375DFEF18A}</Project>
       <Name>Akka.Persistence</Name>
