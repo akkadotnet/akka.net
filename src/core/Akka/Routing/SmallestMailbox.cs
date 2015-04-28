@@ -14,7 +14,15 @@ namespace Akka.Routing
 {
     public class SmallestMailboxRoutingLogic : RoutingLogic
     {
-        private int next = -1;
+
+        public SmallestMailboxRoutingLogic() {}
+
+        public SmallestMailboxRoutingLogic(int next)
+        {
+            _next = next;
+        }
+
+        private int _next;
 
         public override Routee Select(object message, Routee[] routees)
         {
@@ -35,7 +43,7 @@ namespace Akka.Routing
             var winningScore = long.MaxValue;
 
             // round robin fallback
-            var winner = routees[Interlocked.Increment(ref next) % routees.Length];
+            var winner = routees[(Interlocked.Increment(ref _next) & int.MaxValue) %  routees.Length];
 
             for (int i = 0; i < routees.Length; i++)
             {
