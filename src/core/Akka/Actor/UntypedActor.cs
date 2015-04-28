@@ -22,14 +22,14 @@ namespace Akka.Actor
             return true;
         }
 
-        protected void RunTask(AsyncBehavior behavior, Action action)
+        protected void RunTask(Action action)
         {
-            ActorTaskScheduler.RunTask(behavior,action);
+            ActorTaskScheduler.RunTask(action);
         }
 
-        protected void RunTask(AsyncBehavior behavior, Func<Task> action)
+        protected void RunTask(Func<Task> action)
         {
-            ActorTaskScheduler.RunTask(behavior,action);
+            ActorTaskScheduler.RunTask(action);
         }
 
         /// <summary>
