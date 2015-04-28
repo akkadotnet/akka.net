@@ -24,7 +24,10 @@ namespace Akka.TestKit
             ThreadPool.UnsafeQueueUserWorkItem(_ =>
             {
                 var oldCell = InternalCurrentActorCellKeeper.Current;
+	            var oldContext = Current;
+				SetSynchronizationContext(this);
                 InternalCurrentActorCellKeeper.Current = _cell;
+				
                 try
                 {
                     d(state);
@@ -32,6 +35,7 @@ namespace Akka.TestKit
                 finally
                 {
                     InternalCurrentActorCellKeeper.Current = oldCell;
+					SetSynchronizationContext(oldContext);
                 }
             }, state);
         }
