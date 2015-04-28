@@ -18,10 +18,18 @@ namespace Akka.Routing
     /// </summary>
     public class RoundRobinRoutingLogic : RoutingLogic
     {
+
+        public RoundRobinRoutingLogic() : this(-1) {}
+
+        public RoundRobinRoutingLogic(int next)
+        {
+            _next = next;
+        }
+
         /// <summary>
         ///     The next
         /// </summary>
-        private int _next = -1;
+        private int _next;
 
         /// <summary>
         ///     Selects the specified message.
@@ -35,7 +43,7 @@ namespace Akka.Routing
             {
                 return Routee.NoRoutee;
             }
-            return routees[Interlocked.Increment(ref _next)%routees.Length];
+            return routees[(Interlocked.Increment(ref _next) & int.MaxValue) % routees.Length];
         }
     }
 
