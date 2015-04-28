@@ -7,11 +7,34 @@
 
 using System;
 using Akka.Configuration;
+using Helios.Concurrency;
 
 namespace Akka.Dispatch
 {
-    class ThreadPoolBuilder
+    /// <summary>
+    /// <see cref="Config"/> helper class for configuring <see cref="MessageDispatcherConfigurator"/>
+    /// instances who depend on the Helios <see cref="DedicatedThreadPool"/>.
+    /// </summary>
+    internal static class DedicatedThreadPoolConfigHelpers
     {
+        internal static TimeSpan? GetSafeDeadlockTimeout(Config cfg)
+        {
+            var timespan = cfg.GetTimeSpan("deadlock-timeout", TimeSpan.FromSeconds(-1));
+            if (timespan.TotalSeconds < 0)
+                return null;
+            return timespan;
+        }
+
+        internal static ThreadType ConfigureThreadType(string threadType)
+        {
+            return string.Compare(threadType, ThreadType.Foreground.ToString(), StringComparison.InvariantCultureIgnoreCase) == 0 ?
+                ThreadType.Foreground : ThreadType.Background;
+        }
+
+        /// <summary>
+        /// Default settings for <see cref="SingleThreadDispatcher"/> instances.
+        /// </summary>
+        internal static readonly DedicatedThreadPoolSettings DefaultSingleThreadPoolSettings = new DedicatedThreadPoolSettings(1);
     }
 
     /// <summary>

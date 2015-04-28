@@ -142,7 +142,8 @@ namespace Akka.Actor
         /// <summary>
         /// Forwards the message using the current Sender
         /// </summary>
-        /// <param name="message"></param>
+        /// <param name="receiver">The actor that receives the forward</param>
+        /// <param name="message">The message to forward</param>
         public static void Forward(this IActorRef receiver, object message)
         {
             var sender = ActorCell.GetCurrentSenderOrNoSender();

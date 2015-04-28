@@ -349,13 +349,18 @@ namespace Akka.Actor
         {
             if (task.Wait(timeout))
             {
+                var received = task.Result as Status.Failure;
+                if (received != null && received.Cause is TimeoutException)
+                {
+                    var reason = string.Format("Inbox {0} received a status failure response message: {1}", Receiver.Path, received.Cause.Message);
+                    throw new TimeoutException(reason, received.Cause);
+                }
+
                 return task.Result;
             }
-            else
-            {
-                var fmt = string.Format("Inbox {0} didn't received a response message in specified timeout {1}", Receiver.Path, timeout);
-                throw new TimeoutException(fmt);
-            }
+            
+            var fmt = string.Format("Inbox {0} didn't received a response message in specified timeout {1}", Receiver.Path, timeout);
+            throw new TimeoutException(fmt);
         }
     }
 }

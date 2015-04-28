@@ -206,7 +206,7 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void CanSerializeLong()
         {
-            var message = 123l;
+            var message = 123L;
             AssertEqual(message);
         }
 
@@ -510,7 +510,7 @@ namespace Akka.Tests.Serialization
 akka.actor {
     serializers {
         dummy = """ + typeof(DummySerializer).AssemblyQualifiedName + @"""
-	}
+    }
 
     serialization-bindings {
       ""System.String"" = dummy

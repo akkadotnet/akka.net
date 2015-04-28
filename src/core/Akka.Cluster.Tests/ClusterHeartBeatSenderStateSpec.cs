@@ -266,7 +266,7 @@ namespace Akka.Cluster.Tests
                             break;
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     Debug.WriteLine("Failure context: i = {0}, node = {1}, op={2}, unreachable={3}, ringReceivers={4}, ringNodes={5}", i, node, operation, 
                         string.Join(",",state.Unreachable), 

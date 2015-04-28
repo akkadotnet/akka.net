@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence;
+using Akka.Persistence.SqlServer;
 
 namespace PersistenceExample
 {
@@ -16,21 +17,58 @@ namespace PersistenceExample
     {
         static void Main(string[] args)
         {
-            var config = ConfigurationFactory.ParseString("akka.actor.logLevel = DEBUG")
-                .WithFallback(Persistence.DefaultConfig());
+            var sqlServerConfig = ConfigurationFactory.ParseString(@"
+                akka.persistence.journal.plugin = ""akka.persistence.journal.sql-server""
+                akka.persistence.journal.sql-server.connection-string = ""Data Source=.\\SQLEXPRESS;Initial Catalog=ExampleDb;Integrated Security=True""
+                akka.persistence.journal.sql-server.auto-initialize = on
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.sql-server""
+                akka.persistence.snapshot-store.sql-server.connection-string = ""Data Source=.\\SQLEXPRESS;Initial Catalog=ExampleDb;Integrated Security=True""
+                akka.persistence.snapshot-store.sql-server.auto-initialize = on
+            ");
 
-            using (var system = ActorSystem.Create("example",  config))
+            using (var system = ActorSystem.Create("example"))
             {
-                //BasicUsage(system);
+                //SqlServerPersistence.Init(system);
+                BasicUsage(system);
 
-                // FailingActorExample(system);
+                //FailingActorExample(system);
 
-                SnapshotedActor(system);
+                //SnapshotedActor(system);
 
                 //ViewExample(system);
 
+                GuaranteedDelivery(system);
+
                 Console.ReadLine();
             }
+        }
+
+        private static void GuaranteedDelivery(ActorSystem system)
+        {
+            Console.WriteLine("\n--- GUARANTEED DELIVERY EXAMPLE ---\n");
+            var delivery = system.ActorOf(Props.Create(()=> new DeliveryActor()),"delivery");
+
+            var deliverer = system.ActorOf(Props.Create(() => new GuaranteedDeliveryExampleActor(delivery.Path)));
+            delivery.Tell("start");
+            deliverer.Tell(new Message("foo"));
+            
+
+            System.Threading.Thread.Sleep(1000); //making sure delivery stops before send other commands
+            delivery.Tell("stop");
+
+            deliverer.Tell(new Message("bar"));
+
+            Console.WriteLine("\nSYSTEM: Throwing exception in Deliverer\n");
+            deliverer.Tell("boom");
+            System.Threading.Thread.Sleep(1000);
+
+            deliverer.Tell(new Message("bar1"));
+            Console.WriteLine("\nSYSTEM: Enabling confirmations in 3 seconds\n");
+
+            System.Threading.Thread.Sleep(3000);
+            Console.WriteLine("\nSYSTEM: Enabled confirmations\n");
+            delivery.Tell("start");
+            
         }
 
         private static void ViewExample(ActorSystem system)

@@ -193,7 +193,7 @@ namespace Akka.Tests.Actor.Stash
                     {
                         Stash.Stash();
                     }
-                    catch(IllegalActorStateException e)
+                    catch(IllegalActorStateException)
                     {
                         _state.ExpectedException.Open();
                     }

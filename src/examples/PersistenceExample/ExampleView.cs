@@ -19,7 +19,7 @@ namespace PersistenceExample
         
         protected override bool Receive(object message)
         {
-            if (message == "snap")
+            if (message as string == "snap")
             {
                 Console.WriteLine("View saving snapshot");
                 SaveSnapshot(_numReplicated);

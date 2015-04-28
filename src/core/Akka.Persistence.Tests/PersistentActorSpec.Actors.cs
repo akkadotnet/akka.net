@@ -328,8 +328,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (CommonBehavior(message)) ;
-                else if (message is Cmd) HandleCmd(message as Cmd);
+                if (CommonBehavior(message)) return true;
+                if (message is Cmd) HandleCmd(message as Cmd);
                 else if (message is SaveSnapshotSuccess) Probe.Tell("saved");
                 else if (message.ToString() == "snap") SaveSnapshot(Events);
                 else return false;
@@ -368,8 +368,8 @@ namespace Akka.Persistence.Tests
 
             private bool BecomingCommand(object message)
             {
-                if (ReceiveCommand(message)) ;
-                else if (message.ToString() == Message) Probe.Tell(Response);
+                if (ReceiveCommand(message)) return true;
+                if (message.ToString() == Message) Probe.Tell(Response);
                 else return false;
                 return true;
             }

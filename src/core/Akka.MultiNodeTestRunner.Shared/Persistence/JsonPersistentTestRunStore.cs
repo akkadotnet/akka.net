@@ -10,14 +10,13 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
-using Akka.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
 namespace Akka.MultiNodeTestRunner.Shared.Persistence
 {
     /// <summary>
-    /// XML (omg not XML!) implementation of the <see cref="IPersistentTestRunStore"/>
+    /// JavaScript Object Notation (JSON) implementation of the <see cref="IPersistentTestRunStore"/>
     /// </summary>
     public class JsonPersistentTestRunStore : IPersistentTestRunStore
     {

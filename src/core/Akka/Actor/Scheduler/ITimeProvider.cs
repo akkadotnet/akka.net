@@ -15,6 +15,8 @@ namespace Akka.Actor
         /// Gets the scheduler's notion of current time.
         /// </summary>
         DateTimeOffset Now { get; }
+        TimeSpan MonotonicClock { get; }
+        TimeSpan HighResMonotonicClock { get; }
     }
 }
 

@@ -61,7 +61,7 @@ namespace Akka.Util
                 var ci = pi * 2 + 1; // left child index of parent
                 if (ci > li) break;  // no children so done
                 var rc = ci + 1;     // right child
-                if (rc <= li && _priorityCalculator(_data[rc]).CompareTo(_priorityCalculator(_data[ci])) < 0) // if there is a rc (ci + 1), and it is smaller than left child, use the rc instead
+                if (rc <= li && _priorityCalculator(_data[rc].Message).CompareTo(_priorityCalculator(_data[ci].Message)) < 0) // if there is a rc (ci + 1), and it is smaller than left child, use the rc instead
                     ci = rc;
                 if (_priorityCalculator(_data[pi].Message).CompareTo(_priorityCalculator(_data[ci].Message)) <= 0) break; // parent is smaller than (or equal to) smallest child so done
                 var tmp = _data[pi]; _data[pi] = _data[ci]; _data[ci] = tmp; // swap parent and child

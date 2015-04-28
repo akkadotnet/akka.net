@@ -53,7 +53,8 @@ namespace Akka.Dispatch
 
         protected override void QueueTask(Task task)
         {
-            if (task.AsyncState == Outer)
+            var s = CallContext.LogicalGetData(StateKey) as AmbientState;
+            if (task.AsyncState == Outer || s == null)
             {
                 TryExecuteTask(task);
                 return;
@@ -61,10 +62,11 @@ namespace Akka.Dispatch
 
             //we get here if the task needs to be marshalled back to the mailbox
             //e.g. if previous task was an IO completion
-            var s = CallContext.LogicalGetData(StateKey) as AmbientState;
+            s = CallContext.LogicalGetData(StateKey) as AmbientState;
 
             s.Self.Tell(new CompleteTask(s, () =>
             {
+                SetCurrentState(s.Self,s.Sender,s.Message);
                 TryExecuteTask(task);
                 if (task.IsFaulted)
                     Rethrow(task, null);
@@ -130,7 +132,7 @@ namespace Akka.Dispatch
                     .ContinueWith(
                         Rethrow,
                         Faulted,
-                        TaskContinuationOptions.OnlyOnFaulted);
+                        TaskContinuationOptions.None);
 
                 //if reentrancy was suspended, make sure we re-enable message processing again
                 if (behavior == AsyncBehavior.Suspend)

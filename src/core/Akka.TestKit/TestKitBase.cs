@@ -110,6 +110,8 @@ namespace Akka.TestKit
             {
                 InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)testActor).Underlying;
             }
+            SynchronizationContext.SetSynchronizationContext(
+                new ActorCellKeepingSynchronizationContext(InternalCurrentActorCellKeeper.Current));
             _testActor = testActor;
 
         }

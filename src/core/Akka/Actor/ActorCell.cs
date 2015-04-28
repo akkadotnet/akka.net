@@ -24,7 +24,7 @@ namespace Akka.Actor
         private Props _props;
         private static readonly Props terminatedProps=new TerminatedProps();
 
-        private Stack<Receive> _behaviorStack = new Stack<Receive>(1);
+
         private long _uid;
         private ActorBase _actor;
         private bool _actorHasBeenCleared;
@@ -69,6 +69,7 @@ namespace Akka.Actor
         public void Init(bool sendSupervise, Func<Mailbox> createMailbox /*, MailboxType mailboxType*/) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType
         {
             var mailbox = createMailbox(); //Akka: dispatcher.createMailbox(this, mailboxType)
+            Dispatcher.Attach(this);
             mailbox.Setup(Dispatcher);
             mailbox.SetActor(this);
             _mailbox = mailbox;
@@ -145,14 +146,12 @@ namespace Akka.Actor
 
         public void Become(Receive receive)
         {
-            if(_behaviorStack.Count > 1) //We should never pop off the initial receiver
-                _behaviorStack.Pop();
-            _behaviorStack.Push(receive);
+            _state = _state.Become(receive);
         }
 
         public void BecomeStacked(Receive receive)
         {
-            _behaviorStack.Push(receive);
+            _state = _state.BecomeStacked(receive);
         }
 
 
@@ -173,8 +172,7 @@ namespace Akka.Actor
 
         public void UnbecomeStacked()
         {
-            if (_behaviorStack.Count > 1) //We should never pop off the initial receiver
-                _behaviorStack.Pop();                
+            _state = _state.UnbecomeStacked();
         }
 
         void IUntypedActorContext.Become(UntypedReceive receive)
@@ -209,7 +207,7 @@ namespace Akka.Actor
             //set the thread static context or things will break
             UseThreadContext(() =>
             {
-                _behaviorStack = new Stack<Receive>(1);
+                _state = _state.ClearBehaviorStack();
                 instance = CreateNewActorInstance();
                 instance.SupervisorStrategyInternal = _props.SupervisorStrategy;
                 //defaults to null - won't affect lazy instantiation unless explicitly set in props
@@ -307,12 +305,14 @@ namespace Akka.Actor
             }
             _actorHasBeenCleared = true;
             CurrentMessage = null;
-            _behaviorStack = null;
+
+            //TODO: semantics here? should all "_state" be cleared? or just behavior?
+            _state = _state.ClearBehaviorStack();
         }
 
         protected void PrepareForNewActor()
         {
-            _behaviorStack = new Stack<Receive>(1);
+            _state = _state.ClearBehaviorStack();
             _actorHasBeenCleared = false;
         }
         protected void SetActorFields(ActorBase actor)

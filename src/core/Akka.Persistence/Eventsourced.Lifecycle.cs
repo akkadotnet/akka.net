@@ -70,22 +70,22 @@ namespace Akka.Persistence
 
         protected override void Unhandled(object message)
         {
-            if (message is RecoveryCompleted) ; // ignore
-            else if (message is RecoveryFailure)
+            if (message is RecoveryCompleted) return; // ignore
+            if (message is RecoveryFailure)
             {
                 var msg = string.Format("{0} was killed after recovery failure (persistence id = {1}). To avoid killing persistent actors on recovery failure, a PersistentActor must handle RecoveryFailure messages. Recovery failure was caused by: {2}", 
                     GetType().Name, PersistenceId, (message as RecoveryFailure).Cause.Message);
 
                 throw new ActorKilledException(msg);
             }
-            else if (message is PersistenceFailure)
+            if (message is PersistenceFailure)
             {
                 var fail = message as PersistenceFailure;
                 var msg = string.Format("{0} was killed after persistence failure (persistence id = {1}, sequence nr: {2}, payload type: {3}). To avoid killing persistent actors on recovery failure, a PersistentActor must handle RecoveryFailure messages. Persistence failure was caused by: {4}",
                     GetType().Name, PersistenceId, fail.SequenceNr, fail.Payload.GetType().Name, fail.Cause.Message);
                 throw new ActorKilledException(msg);
             }
-            else base.Unhandled(message);
+            base.Unhandled(message);
         }
     }
 }

@@ -1,14 +1,8 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Helios.Concurrency.DedicatedThreadPool.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
-//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
-
-/*
+﻿/*
  * Copyright 2015 Roger Alsing, Aaron Stannard
  * Helios.DedicatedThreadPool - https://github.com/helios-io/DedicatedThreadPool
  */
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -419,7 +413,7 @@ namespace Helios.Concurrency
                             if (_pool.ShutdownRequested) return;
                             action();
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
                             Failover(true);
                             return;

@@ -15,6 +15,10 @@ namespace Akka.Actor
         private DateTimeOffsetNowTimeProvider() { }
         public DateTimeOffset Now { get { return DateTimeOffset.UtcNow; } }
 
+        public TimeSpan MonotonicClock {get { return Util.MonotonicClock.Elapsed; }}
+
+        public TimeSpan HighResMonotonicClock{get { return Util.MonotonicClock.ElapsedHighRes; }}
+
         public static DateTimeOffsetNowTimeProvider Instance { get { return _instance; } }
     }
 }

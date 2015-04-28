@@ -49,9 +49,8 @@ namespace Akka.Util
         /// <summary>
         /// If <see cref="Value"/> equals <see cref="expected"/>, then set the Value to
         /// <see cref="newValue"/>.
-        /// 
-        /// Returns true if <see cref="newValue"/> was set, false otherise.
         /// </summary>
+        /// <returns><c>true</c> if <see cref="newValue"/> was set</returns>
         public bool CompareAndSet(bool expected, bool newValue)
         {
             var expectedInt = expected ? _trueValue : _falseValue;

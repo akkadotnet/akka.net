@@ -6,9 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.DI.Unity;
@@ -17,14 +14,14 @@ using Microsoft.Practices.Unity;
 
 namespace BasicUnityUses
 {
-	class Program
-	{
-		static void Main(string[] args)
-		{
-			WithHashPool();
-		}
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            WithHashPool();
+        }
 
-		private static void WithHashPool()
+        private static void WithHashPool()
         {
             IUnityContainer container = new UnityContainer();
             container.RegisterType<TypedWorker>();
@@ -55,11 +52,12 @@ namespace BasicUnityUses
 
                     }
                 }
+                Console.WriteLine("Hit Enter to exit");
+                Console.ReadLine();
             }
 
 
-            Console.ReadLine();
         }
-	}
+    }
 }
 
