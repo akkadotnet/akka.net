@@ -7,4 +7,5 @@ root = true
 end_of_line = CRLF
 
 [*.cs]
-indent_style = tab
+indent_style = space
+indent_size = 4
