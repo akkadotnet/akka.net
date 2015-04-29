@@ -324,6 +324,9 @@ namespace Akka.Remote
         #endregion
     }
 
+    /// <summary>
+    /// Message type used to provide both <see cref="Props"/> and a name for a new transport actor
+    /// </summary>
     internal sealed class RegisterTransportActor : INoSerializationVerificationNeeded
     {
         public RegisterTransportActor(Props props, string name)
@@ -337,6 +340,9 @@ namespace Akka.Remote
         public string Name { get; private set; }
     }
 
+    /// <summary>
+    /// Actor responsible for supervising the creation of all transport actors
+    /// </summary>
     internal class TransportSupervisor : UntypedActor
     {
         private readonly SupervisorStrategy _strategy = new OneForOneStrategy(3, TimeSpan.FromMinutes(1), exception => Directive.Restart);
@@ -347,15 +353,10 @@ namespace Akka.Remote
 
         protected override void OnReceive(object message)
         {
-            PatternMatch.Match(message)
+            message.Match()
                 .With<RegisterTransportActor>(r =>
                 {
-                    /*
-                     * TODO: need to add support for RemoteDispatcher here.
-                     * See https://github.com/akka/akka/blob/master/akka-remote/src/main/scala/akka/remote/RemoteSettings.scala#L42 
-                     * and https://github.com/akka/akka/blob/master/akka-remote/src/main/scala/akka/remote/Remoting.scala#L95
-                     */
-                    Sender.Tell(Context.ActorOf(r.Props.WithDeploy(Deploy.Local), r.Name));
+                    Sender.Tell(Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(r.Props.WithDeploy(Deploy.Local)), r.Name));
                 });
         }
     }
