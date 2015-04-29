@@ -711,8 +711,8 @@ namespace Akka.Remote
 
                     // Collect all transports, listen addresses, and listener promises in one Task
                     var tasks = transports.Select(x => x.Listen().ContinueWith(
-                        result => Tuple.Create(new ProtocolTransportAddressPair(x, result.Result.Item1), result.Result.Item2), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent));
-                    _listens = Task.WhenAll(tasks).ContinueWith(transportResults => transportResults.Result.ToList(), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+                        result => Tuple.Create(new ProtocolTransportAddressPair(x, result.Result.Item1), result.Result.Item2), TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent));
+                    _listens = Task.WhenAll(tasks).ContinueWith(transportResults => transportResults.Result.ToList(), TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent);
                 }
                 return _listens;
             }

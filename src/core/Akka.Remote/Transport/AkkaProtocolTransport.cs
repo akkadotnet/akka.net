@@ -505,6 +505,11 @@ namespace Akka.Remote.Transport
                     .With<AssociationHandle>(h => fsmEvent.StateData.Match()
                         .With<OutboundUnassociated>(ou =>
                         {
+                            /*
+                             * Association has been established, but handshake is not yet complete.
+                             * This actor, the outbound ProtocolStateActor, can now set itself as 
+                             * the read handler for the remainder of the handshake process.
+                             */
                             AssociationHandle wrappedHandle = h;
                             var statusPromise = ou.StatusCompletionSource;
                             wrappedHandle.ReadHandlerSource.TrySetResult(new ActorHandleEventListener(Self));
@@ -512,14 +517,16 @@ namespace Akka.Remote.Transport
                             {
                                 _failureDetector.HeartBeat();
                                 InitTimers();
+                                // wait for reply from the inbound side of the connection (WaitHandshake)
                                 nextState =
                                     GoTo(AssociationState.WaitHandshake)
                                         .Using(new OutboundUnderlyingAssociated(statusPromise, wrappedHandle));
                             }
                             else
                             {
+                                //Otherwise, retry
                                 SetTimer("associate-retry", wrappedHandle,
-                                    ((RemoteActorRefProvider) ((ActorSystemImpl) Context.System).Provider)
+                                    ((RemoteActorRefProvider) ((ActorSystemImpl) Context.System).Provider) //TODO: rewrite using RARP ActorSystem Extension
                                         .RemoteSettings.BackoffPeriod, repeat: false);
                                 nextState = Stay();
                             }
@@ -554,6 +561,10 @@ namespace Akka.Remote.Transport
                         @event.StateData.Match()
                             .With<OutboundUnderlyingAssociated>(ola =>
                             {
+                                /*
+                                 * This state is used for OutboundProtocolState actors when they receive
+                                 * a reply back from the inbound end of the association.
+                                 */
                                 var wrappedHandle = ola.WrappedHandle;
                                 var statusCompletionSource = ola.StatusCompletionSource;
                                 pdu.Match()
@@ -593,6 +604,11 @@ namespace Akka.Remote.Transport
                             })
                             .With<InboundUnassociated>(iu =>
                             {
+                                /*
+                                 * This state is used by inbound protocol state actors
+                                 * when they receive an association attempt from the
+                                 * outbound side of the association.
+                                 */
                                 var associationHandler = iu.AssociationEventListener;
                                 var wrappedHandle = iu.WrappedHandle;
                                 pdu.Match()
@@ -775,14 +791,23 @@ namespace Akka.Remote.Transport
                 .With<InboundUnassociated>(iu =>
                     iu.WrappedHandle.Disassociate()));
 
+            /*
+             * Set the initial ProtocolStateActor state to CLOSED if OUTBOUND
+             * Set the initial ProtocolStateActor state to WAITHANDSHAKE if INBOUND
+             * */
             _initialData.Match()
                 .With<OutboundUnassociated>(d =>
                 {
+                    // attempt to open underlying transport to the remote address
+                    // if using Helios, this is where the socket connection is opened.
                     d.Transport.Associate(d.RemoteAddress).PipeTo(Self);
                     StartWith(AssociationState.Closed, d);
                 })
                 .With<InboundUnassociated>(d =>
                 {
+                    // inbound transport is opened already inside the ProtocolStateManager
+                    // therefore we just have to set ourselves as listener and wait for
+                    // incoming handshake attempts from the client.
                     d.WrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(Self));
                     StartWith(AssociationState.WaitHandshake, d);
                 });
@@ -941,6 +966,22 @@ namespace Akka.Remote.Transport
 
         #region Static methods
 
+
+        /// <summary>
+        /// <see cref="Props"/> used when creating OUTBOUND associations to remote endpoints.
+        /// 
+        /// These <see cref="Props"/> create outbound <see cref="ProtocolStateActor"/> instances,
+        /// which begin a state of 
+        /// </summary>
+        /// <param name="handshakeInfo"></param>
+        /// <param name="remoteAddress"></param>
+        /// <param name="statusCompletionSource"></param>
+        /// <param name="transport"></param>
+        /// <param name="settings"></param>
+        /// <param name="codec"></param>
+        /// <param name="failureDetector"></param>
+        /// <param name="refuseUid"></param>
+        /// <returns></returns>
         public static Props OutboundProps(HandshakeInfo handshakeInfo, Address remoteAddress,
             TaskCompletionSource<AssociationHandle> statusCompletionSource,
             Transport transport, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, int? refuseUid = null)

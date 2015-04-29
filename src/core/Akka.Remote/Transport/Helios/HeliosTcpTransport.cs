@@ -200,6 +200,14 @@ namespace Akka.Remote.Transport.Helios
         }
     }
 
+    /// <summary>
+    /// TCP implementation of a <see cref="HeliosTransport"/>.
+    /// 
+    /// <remarks>
+    /// Due to the connection-oriented nature of TCP connections, this transport doesn't have to do any
+    /// additional bookkeeping when transports are disposed or opened.
+    /// </remarks>
+    /// </summary>
     class HeliosTcpTransport : HeliosTransport
     {
         public HeliosTcpTransport(ActorSystem system, Config config)
