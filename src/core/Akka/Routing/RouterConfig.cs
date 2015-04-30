@@ -267,6 +267,7 @@ namespace Akka.Routing
             _nrOfInstances = config.GetInt("nr-of-instances");
             _resizer = DefaultResizer.FromConfig(config);
             _usePoolDispatcher = config.HasPath("pool-dispatcher");
+            _supervisorStrategy = DefaultStrategy;
             // ReSharper restore DoNotCallOverridableMethodsInConstructor
         }
 
