@@ -553,6 +553,7 @@ namespace Akka.Cluster.Routing
         {
             Settings = settings;
             _supervisorStrategy = supervisorStrategy;
+            if (_supervisorStrategy == null) throw new ArgumentNullException("supervisorStrategy");
             _pool = (Pool)Cell.RouterConfig;
         }
 
