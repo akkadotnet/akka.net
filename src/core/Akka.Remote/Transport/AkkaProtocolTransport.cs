@@ -17,6 +17,12 @@ using Google.ProtocolBuffers;
 
 namespace Akka.Remote.Transport
 {
+    /// <summary>
+    /// Pairs an <see cref="AkkaProtocolTransport"/> with its <see cref="Address"/> binding.
+    /// 
+    /// This is the information that's used to allow external <see cref="ActorSystem"/> messages to address
+    /// this system over the network.
+    /// </summary>
     internal class ProtocolTransportAddressPair
     {
         public ProtocolTransportAddressPair(AkkaProtocolTransport protocolTransport, Address address)
@@ -30,8 +36,16 @@ namespace Akka.Remote.Transport
         public Address Address { get; private set; }
     }
 
+    /// <summary>
+    /// An <see cref="AkkaException"/> that can occur during the course of an Akka Protocol handshake.
+    /// </summary>
     public class AkkaProtocolException : AkkaException
     {
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="message">The error message.</param>
+        /// <param name="cause">The internal exception (null by default.)</param>
         public AkkaProtocolException(string message, Exception cause = null) : base(message, cause) { }
 
         protected AkkaProtocolException(SerializationInfo info, StreamingContext context)

@@ -135,14 +135,17 @@ namespace Akka.Remote
             if (_endpointManager == null)
             {
                 _endpointManager =
-                System.SystemActorOf(
-                    Props.Create(() => new EndpointManager(System.Settings.Config, log)).WithDeploy(Deploy.Local),
+                System.SystemActorOf(RARP.For(System).ConfigureDispatcher(
+                    Props.Create(() => new EndpointManager(System.Settings.Config, log)).WithDeploy(Deploy.Local)),
                     EndpointManagerName);
 
                 try
                 {
                     var addressPromise = new TaskCompletionSource<IList<ProtocolTransportAddressPair>>();
-                    _endpointManager.Tell(new EndpointManager.Listen(addressPromise));
+
+                    // tells the EndpointManager to start all transports and bind them to listenable addresses, and then set the results
+                    // of this promise to include them.
+                    _endpointManager.Tell(new EndpointManager.Listen(addressPromise)); 
 
                     addressPromise.Task.Wait(Provider.RemoteSettings.StartupTimeout);
                     var akkaProtocolTransports = addressPromise.Task.Result;

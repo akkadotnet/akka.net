@@ -260,6 +260,7 @@ namespace Akka.Remote.Transport.Helios
         public override void Dispose()
         {
             WrappedTransport.ConnectionGroup.TryRemove(this);
+            base.Dispose();
         }
     }
 }
