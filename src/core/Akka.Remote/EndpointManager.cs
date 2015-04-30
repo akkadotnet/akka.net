@@ -39,6 +39,9 @@ namespace Akka.Remote
             }
         }
 
+        /// <summary>
+        /// We will always accept a 
+        /// </summary>
         public class Pass : EndpointPolicy
         {
             public Pass(IActorRef endpoint, int? uid)
@@ -53,6 +56,10 @@ namespace Akka.Remote
             public int? Uid { get; private set; }
         }
 
+        /// <summary>
+        /// A Gated node can't be connected to from this process for <see cref="TimeOfRelease"/>,
+        /// but we may accept an inbound connection from it if the remote node recovers on its own.
+        /// </summary>
         public class Gated : EndpointPolicy
         {
             public Gated(Deadline deadline)
@@ -64,6 +71,9 @@ namespace Akka.Remote
             public Deadline TimeOfRelease { get; private set; }
         }
 
+        /// <summary>
+        /// We do not accept connection attempts for a quarantined node until it restarts and resets its UID.
+        /// </summary>
         public class Quarantined : EndpointPolicy
         {
             public Quarantined(long uid, Deadline deadline)
@@ -388,6 +398,13 @@ namespace Akka.Remote
         protected override void OnReceive(object message)
         {
             message.Match()
+                /*
+                 * the first command the EndpointManager receives.
+                 * instructs the EndpointManager to fire off its "Listens" command, which starts
+                 * up all inbound transports and binds them to specific addresses via configuration.
+                 * those results will then be piped back to Remoting, who waits for the results of
+                 * listen.AddressPromise.
+                 * */
                 .With<Listen>(listen => Listens.ContinueWith<INoSerializationVerificationNeeded>(listens =>
                 {
                     if (listens.IsFaulted)
@@ -427,8 +444,10 @@ namespace Akka.Remote
                     listens.AddressesPromise.SetResult(transportsAndAddresses);
                 })
                 .With<ListensFailure>(failure => failure.AddressesPromise.SetException(failure.Cause))
+                // defer the inbound association until we can enter "Accepting" behavior
                 .With<InboundAssociation>(ia => Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(10), Self, ia, Self))
                 .With<ManagementCommand>(mc => Sender.Tell(new ManagementCommandAck(status:false)))
+                // transports are all started. Ready to start accepting inbound associations.
                 .With<StartupFinished>(sf => Context.Become(Accepting))
                 .With<ShutdownAndFlush>(sf =>
                 {
@@ -437,11 +456,21 @@ namespace Akka.Remote
                 });
         }
 
+        /// <summary>
+        /// Message-processing behavior when the <see cref="EndpointManager"/> is able to accept
+        /// inbound association requests.
+        /// </summary>
+        /// <param name="message">Messages from local system and the network.</param>
         protected void Accepting(object message)
         {
             message.Match()
                 .With<ManagementCommand>(mc =>
                 {
+                    /*
+                     * applies a management command to all available transports.
+                     * 
+                     * Useful for things like global restart 
+                     */
                     var sender = Sender;
                     var allStatuses = _transportMapping.Values.Select(x => x.ManagementCommand(mc.Cmd));
                     Task.WhenAll(allStatuses)
@@ -775,20 +804,20 @@ namespace Akka.Remote
             if (writing)
             {
                 endpointActor =
-                    Context.ActorOf(
+                    Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(
                         ReliableDeliverySupervisor.ReliableDeliverySupervisorProps(handleOption, localAddress,
                             remoteAddress, refuseUid, transport, endpointSettings, new AkkaPduProtobuffCodec(),
-                            _receiveBuffers).WithDeploy(Deploy.Local),
+                            _receiveBuffers).WithDeploy(Deploy.Local)),
                         string.Format("reliableEndpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress),
                             endpointId.Next()));
             }
             else
             {
                 endpointActor =
-                    Context.ActorOf(
+                    Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(
                         EndpointWriter.EndpointWriterProps(handleOption, localAddress, remoteAddress, refuseUid,
                             transport, endpointSettings, new AkkaPduProtobuffCodec(), _receiveBuffers,
-                            reliableDeliverySupervisor: null).WithDeploy(Deploy.Local),
+                            reliableDeliverySupervisor: null).WithDeploy(Deploy.Local)),
                         string.Format("endpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress), endpointId.Next()));
             }
 

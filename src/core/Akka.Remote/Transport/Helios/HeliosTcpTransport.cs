@@ -67,6 +67,15 @@ namespace Akka.Remote.Transport.Helios
             return new TcpAssociationHandle(localAddress, remoteAddress, WrappedTransport, channel);
         }
 
+        /// <summary>
+        /// Fires whenever a Helios <see cref="IConnection"/> gets closed.
+        /// 
+        /// Two possible causes for this event handler to fire:
+        ///  * The other end of the connection has closed. We don't make any distinctions between graceful / unplanned shutdown.
+        ///  * This end of the connection experienced an error.
+        /// </summary>
+        /// <param name="cause">An exception describing why the socket was closed.</param>
+        /// <param name="closedChannel">The handle to the socket channel that closed.</param>
         protected override void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
         {
             if(cause != null)
@@ -81,6 +90,14 @@ namespace Akka.Remote.Transport.Helios
             ChannelLocalActor.Remove(closedChannel);
         }
 
+        /// <summary>
+        /// Fires whenever a Helios <see cref="IConnection"/> received data from the network.
+        /// </summary>
+        /// <param name="data">The message playload.</param>
+        /// <param name="responseChannel">
+        /// The channel responsible for sending the message.
+        /// Can be used to send replies back.
+        /// </param>
         protected override void OnMessage(NetworkData data, IConnection responseChannel)
         {
             if (data.Length > 0)
@@ -89,6 +106,13 @@ namespace Akka.Remote.Transport.Helios
             }
         }
 
+        /// <summary>
+        /// Fires whenever a Helios <see cref="IConnection"/> experienced a non-fatal error.
+        /// 
+        /// <remarks>The connection should still be open even after this event fires.</remarks>
+        /// </summary>
+        /// <param name="ex">The execption that triggered this event.</param>
+        /// <param name="erroredChannel">The handle to the Helios channel that errored.</param>
         protected override void OnException(Exception ex, IConnection erroredChannel)
         {
             ChannelLocalActor.Notify(erroredChannel, new UnderlyingTransportError(ex, "Non-fatal network error occurred inside underlying transport"));
@@ -102,6 +126,9 @@ namespace Akka.Remote.Transport.Helios
         }
     }
 
+    /// <summary>
+    /// TCP handlers for inbound connections
+    /// </summary>
     class TcpServerHandler : TcpHandlers
     {
         private Task<IAssociationEventListener> _associationListenerTask;
@@ -135,6 +162,9 @@ namespace Akka.Remote.Transport.Helios
         }
     }
 
+    /// <summary>
+    /// TCP handlers for outbound connections
+    /// </summary>
     class TcpClientHandler : TcpHandlers
     {
         protected readonly TaskCompletionSource<AssociationHandle> StatusPromise = new TaskCompletionSource<AssociationHandle>();
@@ -160,11 +190,6 @@ namespace Akka.Remote.Transport.Helios
         protected override void OnConnect(INode remoteAddress, IConnection responseChannel)
         {
             InitOutbound(responseChannel, remoteAddress, NetworkData.Create(Node.Empty(), new byte[0], 0));
-        }
-
-        protected override void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
-        {
-            base.OnDisconnect(cause, closedChannel);
         }
     }
 
