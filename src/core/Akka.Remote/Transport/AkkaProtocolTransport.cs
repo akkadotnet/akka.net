@@ -836,7 +836,7 @@ namespace Akka.Remote.Transport
                 failure.Cause.Match()
                     .With<DisassociateInfo>(() => { }) //no logging
                     .With<ForbiddenUidReason>(() => { }) //no logging
-                    .With<TimeoutReason>(timeoutReason => _log.Info(timeoutReason.ErrorMessage));
+                    .With<TimeoutReason>(timeoutReason => _log.Error(timeoutReason.ErrorMessage));
             }
             else
                 base.LogTermination(reason);

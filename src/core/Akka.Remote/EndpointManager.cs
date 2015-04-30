@@ -347,7 +347,7 @@ namespace Akka.Remote
                     .With<ShutDownAssociation>(shutdown =>
                     {
                         log.Debug("Remote system with address [{0}] has shut down. " +
-                                  "Address is not gated for {1}ms, all messages to this address will be delivered to dead letters.",
+                                  "Address is now gated for {1}ms, all messages to this address will be delivered to dead letters.",
                                   shutdown.RemoteAddress, settings.RetryGateClosedFor.TotalMilliseconds);
                         endpoints.MarkAsFailed(Sender, Deadline.Now + settings.RetryGateClosedFor);
                         AddressTerminatedTopic.Get(Context.System).Publish(new AddressTerminated(shutdown.RemoteAddress));
