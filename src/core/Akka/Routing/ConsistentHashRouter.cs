@@ -425,6 +425,17 @@ namespace Akka.Routing
         /// Simple form of ConsistentHashingPool constructor
         /// </summary>
         /// <param name="nrOfInstances">The nr of instances.</param>
+        /// <param name="resizer">A <see cref="Resizer"/> for specifying how to grow the pool of underlying routees based on pressure</param>
+        public ConsistentHashingPool(int nrOfInstances, Resizer resizer) 
+            : base(nrOfInstances, resizer, Pool.DefaultStrategy, null)
+        {
+
+        }
+
+        /// <summary>
+        /// Simple form of ConsistentHashingPool constructor
+        /// </summary>
+        /// <param name="nrOfInstances">The nr of instances.</param>
         public ConsistentHashingPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null)
         {
         }
