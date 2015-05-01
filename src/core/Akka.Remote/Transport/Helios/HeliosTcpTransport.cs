@@ -78,15 +78,10 @@ namespace Akka.Remote.Transport.Helios
         /// <param name="closedChannel">The handle to the socket channel that closed.</param>
         protected override void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
         {
-            if(cause != null)
+            if (cause != null)
                 ChannelLocalActor.Notify(closedChannel, new UnderlyingTransportError(cause, "Underlying transport closed."));
-            if (cause != null && cause.Type == ExceptionType.Closed)
-                ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Shutdown));
-            else
-            {
-                ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Unknown));
-            }
-                
+
+            ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Unknown));
             ChannelLocalActor.Remove(closedChannel);
         }
 
@@ -120,7 +115,7 @@ namespace Akka.Remote.Transport.Helios
 
         public override void Dispose()
         {
-           
+
             ChannelLocalActor.Remove(UnderlyingConnection);
             base.Dispose();
         }
@@ -220,7 +215,7 @@ namespace Akka.Remote.Transport.Helios
 
         public override void Disassociate()
         {
-            if(!_channel.WasDisposed)
+            if (!_channel.WasDisposed)
                 _channel.Close();
         }
     }
@@ -247,7 +242,7 @@ namespace Akka.Remote.Transport.Helios
             var socketAddress = client.RemoteHost;
             client.Open();
 
-            return ((TcpClientHandler) client).StatusFuture;
+            return ((TcpClientHandler)client).StatusFuture;
         }
     }
 }

@@ -762,12 +762,12 @@ namespace Akka.Remote.Transport
                                     associationFailure =
                                         new AkkaProtocolException(
                                             "The remote system has a UID that has been quarantined. Association aborted."))
-                            .With<DisassociateInfo>(info => associationFailure = DisassociateException(info))
-                            .Default(
+                            .With<DisassociateInfo>(info => associationFailure = DisassociateException(info)))
+                        .Default(
                                 msg =>
                                     associationFailure =
                                         new AkkaProtocolException(
-                                            "Transport disassociated before handshake finished")));
+                                            "Transport disassociated before handshake finished"));
 
                     oua.StatusCompletionSource.TrySetException(associationFailure);
                     oua.WrappedHandle.Disassociate();
