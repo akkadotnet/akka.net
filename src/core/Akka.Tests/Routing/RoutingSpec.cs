@@ -1,16 +1,18 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RoutingSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
-using Akka.Tests;
 using Akka.Util.Internal;
 using Xunit;
-using Akka.Util;
 
 namespace Akka.Tests.Routing
 {
@@ -62,20 +64,28 @@ namespace Akka.Tests.Routing
         public void Router_in_general_must_evict_terminated_routees()
         {
             var router = Sys.ActorOf(new RoundRobinPool(2).Props(Props.Create<Echo>()), "router");
-            router.Tell("",TestActor);
-            router.Tell("",TestActor);
-            var c1 = ExpectMsg<ActorRef>();
-            var c2 = ExpectMsg<ActorRef>();
+            router.Tell("", TestActor);
+            router.Tell("", TestActor);
+
+            var c1 = ExpectMsg<IActorRef>();
+            var c2 = ExpectMsg<IActorRef>();
+
             Watch(router);
             Watch(c2);
             Sys.Stop(c2);
+
+            AwaitCondition(() => ((RoutedActorRef) router).Children.Count() == 1);
+
             ExpectTerminated(c2).ExistenceConfirmed.ShouldBe(true);
-            // it might take a while until the Router has actually processed the Terminated message
-            Task.Delay(100).Wait();
+
             router.Tell("", TestActor);
+            var msg1 = ExpectMsg<IActorRef>();
+            msg1.ShouldBe(c1);
+
             router.Tell("", TestActor);
-            ExpectMsg<ActorRef>().ShouldBe(c1);           
-            ExpectMsg<ActorRef>().ShouldBe(c1);
+            var msg2 = ExpectMsg<IActorRef>();
+            msg2.ShouldBe(c1);
+
             Sys.Stop(c1);
             ExpectTerminated(router).ExistenceConfirmed.ShouldBe(true);
         }
@@ -102,10 +112,10 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Router_in_general_must_not_terminate_when_resizer_is_used()
         {
-            var latch = new TestLatch(Sys,1);
+            var latch = new TestLatch(1);
             var resizer = new TestResizer(latch);
             var router =
-                Sys.ActorOf(new RoundRobinPool( 0, resizer,SupervisorStrategy.DefaultStrategy,"").Props(Props.Create<BlackHoleActor>()));
+                Sys.ActorOf(new RoundRobinPool( 0, resizer,SupervisorStrategy.DefaultStrategy,null).Props(Props.Create<BlackHoleActor>()));
 
             Watch(router);
 
@@ -162,11 +172,11 @@ namespace Akka.Tests.Routing
         {
             var router = Sys.ActorOf(new BroadcastPool(5).Props(Props.Create<Echo>()));
             router.Tell("hello",TestActor);
-            ExpectMsg<ActorRef>();
-            ExpectMsg<ActorRef>();
-            ExpectMsg<ActorRef>();
-            ExpectMsg<ActorRef>();
-            ExpectMsg<ActorRef>();
+            ExpectMsg<IActorRef>();
+            ExpectMsg<IActorRef>();
+            ExpectMsg<IActorRef>();
+            ExpectMsg<IActorRef>();
+            ExpectMsg<IActorRef>();
             ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
@@ -233,12 +243,12 @@ namespace Akka.Tests.Routing
         [Fact]
         public void Router_in_general_must_use_specified_resizer_when_resizer_not_configured()
         {
-            var latch = new TestLatch(Sys,1);
+            var latch = new TestLatch(1);
             var resizer = new TestResizer(latch);
             var router =
                 Sys.ActorOf(
                     Props.Create<BlackHoleActor>()
-                        .WithRouter(new RoundRobinPool(0, resizer, SupervisorStrategy.DefaultStrategy, "")));
+                        .WithRouter(new RoundRobinPool(0, resizer, SupervisorStrategy.DefaultStrategy, null)));
             latch.Open();
             router.Tell(new GetRoutees(),TestActor);
             ExpectMsg<Routees>().Members.Count().ShouldBe(2);
@@ -283,3 +293,4 @@ namespace Akka.Tests.Routing
         }
     }
 }
+

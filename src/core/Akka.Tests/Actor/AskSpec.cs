@@ -1,4 +1,11 @@
-﻿using Akka.TestKit;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AskSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.TestKit;
 using Xunit;
 using Akka.Actor;
 using System;
@@ -26,15 +33,15 @@ namespace Akka.Tests.Actor
 
         public class WaitActor : UntypedActor
         {
-            public WaitActor(ActorRef replyActor, ActorRef testActor)
+            public WaitActor(IActorRef replyActor, IActorRef testActor)
             {
                 _replyActor = replyActor;
                 _testActor = testActor;
             }
 
-            private ActorRef _replyActor;
+            private IActorRef _replyActor;
 
-            private ActorRef _testActor;
+            private IActorRef _testActor;
 
             protected override void OnReceive(object message)
             {
@@ -93,3 +100,4 @@ namespace Akka.Tests.Actor
         }
     }
 }
+

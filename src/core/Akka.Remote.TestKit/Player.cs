@@ -1,7 +1,13 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Player.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -21,9 +27,9 @@ namespace Akka.Remote.TestKit
     /// </summary>
     partial class TestConductor //Player trait in JVM version
     {
-        ActorRef _client;
+        IActorRef _client;
 
-        public ActorRef Client
+        public IActorRef Client
         {
             get
             {
@@ -48,7 +54,7 @@ namespace Akka.Remote.TestKit
                 _system.ActorOf(new Props(typeof (ClientFSM),
                     new object[] {name, controllerAddr}), "TestConductorClient");
             
-            //TODO: RequiresMessageQueue
+            //TODO: IRequiresMessageQueue
             var a = _system.ActorOf(Props.Create<WaitForClientFSMToConnect>());
 
             return a.Ask<Done>(_client);
@@ -56,11 +62,11 @@ namespace Akka.Remote.TestKit
 
         private class WaitForClientFSMToConnect : UntypedActor
         {
-            ActorRef _waiting;
+            IActorRef _waiting;
 
             protected override void OnReceive(object message)
             {
-                var fsm = message as ActorRef;
+                var fsm = message as IActorRef;
                 if (fsm != null)
                 {
                     _waiting = Sender;
@@ -157,7 +163,7 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
-    class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, LoggingFSM
+    class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
         //TODO: RequireMessageQueue
     {
         public enum State
@@ -172,10 +178,10 @@ namespace Akka.Remote.TestKit
         {
             readonly RemoteConnection _channel;
             public RemoteConnection Channel { get { return _channel; } }
-            readonly Tuple<string, ActorRef> _runningOp;
-            public Tuple<string, ActorRef> RunningOp { get { return _runningOp; } }
+            readonly Tuple<string, IActorRef> _runningOp;
+            public Tuple<string, IActorRef> RunningOp { get { return _runningOp; } }
             
-            public Data(RemoteConnection channel, Tuple<string, ActorRef> runningOp)
+            public Data(RemoteConnection channel, Tuple<string, IActorRef> runningOp)
             {
                 _channel = channel;
                 _runningOp = runningOp;
@@ -213,13 +219,13 @@ namespace Akka.Remote.TestKit
                 return !Equals(left, right);
             }
 
-            public Data Copy(Tuple<string, ActorRef> runningOp)
+            public Data Copy(Tuple<string, IActorRef> runningOp)
             {
                 return new Data(Channel, runningOp);
             }
         }
 
-        internal class Connected : NoSerializationVerificationNeeded
+        internal class Connected : INoSerializationVerificationNeeded
         {
             readonly RemoteConnection _channel;
             public RemoteConnection Channel{get { return _channel; }}
@@ -279,7 +285,7 @@ namespace Akka.Remote.TestKit
             }            
         }
 
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
         readonly TestConductorSettings _settings;
         readonly PlayerHandler _handler;
         readonly RoleName _name;
@@ -512,14 +518,15 @@ namespace Akka.Remote.TestKit
         int _reconnects;
         readonly TimeSpan _backoff;
         readonly int _poolSize;
-        readonly ActorRef _fsm;
-        readonly LoggingAdapter _log;
-        readonly Scheduler _scheduler;
+        readonly IActorRef _fsm;
+        readonly ILoggingAdapter _log;
+        readonly IScheduler _scheduler;
+        private bool _loggedDisconnect = false;
         
         Deadline _nextAttempt;
         
-        public PlayerHandler(INode server, int reconnects, TimeSpan backoff, int poolSize, ActorRef fsm,
-            LoggingAdapter log, Scheduler scheduler)
+        public PlayerHandler(INode server, int reconnects, TimeSpan backoff, int poolSize, IActorRef fsm,
+            ILoggingAdapter log, IScheduler scheduler)
         {
             _server = server;
             _reconnects = reconnects;
@@ -538,7 +545,7 @@ namespace Akka.Remote.TestKit
             if (ex is HeliosConnectionException && _reconnects > 0)
             {
                 _reconnects -= 1;
-                _scheduler.ScheduleOnce(_nextAttempt.TimeLeft, Reconnect);
+                _scheduler.Advanced.ScheduleOnce(_nextAttempt.TimeLeft, Reconnect);
                 return;
             }
             _fsm.Tell(new ClientFSM.ConnectionFailure(ex.ToString()));
@@ -558,7 +565,12 @@ namespace Akka.Remote.TestKit
 
         public void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
         {
-            _log.Debug("disconnected from {0}", closedChannel.RemoteHost);
+            if (!_loggedDisconnect) //added this to help mute log messages
+            {
+                _loggedDisconnect = true;
+                _log.Debug("disconnected from {0}", closedChannel.RemoteHost);
+                
+            }
             _fsm.Tell(PoisonPill.Instance);
             //TODO: Some logic here in JVM version to execute this on a different pool to the Netty IO pool
             RemoteConnection.Shutdown(closedChannel);
@@ -577,3 +589,4 @@ namespace Akka.Remote.TestKit
         }
     }
 }
+

@@ -1,41 +1,41 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="HoconObject.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace Akka.Configuration.Hocon
 {
     public class HoconObject : IHoconElement
     {
-        private readonly Dictionary<string, HoconValue> _children = new Dictionary<string, HoconValue>();
-
-        public IEnumerable<HoconValue> Children
+        public HoconObject()
         {
-            get { return _children.Values; }
+            Items = new Dictionary<string, HoconValue>();
         }
 
-        public IEnumerable<KeyValuePair<string, HoconValue>> AsEnumerable()
-        {
-            foreach (var item in _children)
-            {
-                yield return item;
-            }
-        }
-
+        [JsonIgnore]
         public IDictionary<string, object> Unwrapped
         {
             get
             {
-                return _children.ToDictionary(k => k.Key, v =>
+                return Items.ToDictionary(k => k.Key, v =>
                 {
                     HoconObject obj = v.Value.GetObject();
                     if (obj != null)
                         return (object) obj.Unwrapped;
-                    return null;
+                    return v.Value;
                 });
             }
         }
+
+        public Dictionary<string, HoconValue> Items { get; private set; }
 
         public bool IsString()
         {
@@ -59,21 +59,21 @@ namespace Akka.Configuration.Hocon
 
         public HoconValue GetKey(string key)
         {
-            if (_children.ContainsKey(key))
+            if (Items.ContainsKey(key))
             {
-                return _children[key];
+                return Items[key];
             }
             return null;
         }
 
         public HoconValue GetOrCreateKey(string key)
         {
-            if (_children.ContainsKey(key))
+            if (Items.ContainsKey(key))
             {
-                return _children[key];
+                return Items[key];
             }
             var child = new HoconValue();
-            _children.Add(key, child);
+            Items.Add(key, child);
             return child;
         }
 
@@ -86,7 +86,7 @@ namespace Akka.Configuration.Hocon
         {
             var i = new string(' ', indent*2);
             var sb = new StringBuilder();
-            foreach (var kvp in _children)
+            foreach (var kvp in Items)
             {
                 string key = QuoteIfNeeded(kvp.Key);
                 sb.AppendFormat("{0}{1} : {2}\r\n", i, key, kvp.Value.ToString(indent));
@@ -104,3 +104,4 @@ namespace Akka.Configuration.Hocon
         }
     }
 }
+

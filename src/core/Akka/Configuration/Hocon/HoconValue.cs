@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="HoconValue.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -6,19 +13,49 @@ using System.Threading;
 
 namespace Akka.Configuration.Hocon
 {
+    /// <summary>
+    /// Root type of HOCON configuration object
+    /// </summary>
     public class HoconValue : IMightBeAHoconObject
     {
-        private readonly List<IHoconElement> _values = new List<IHoconElement>();
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        public HoconValue()
+        {
+            Values = new List<IHoconElement>();
+        }
 
+        /// <summary>
+        /// Returns true if this HOCON value doesn't contain any elements
+        /// </summary>
         public bool IsEmpty
         {
-            get { return _values.Count == 0; }
+            get { return Values.Count == 0; }
+        }
+
+        /// <summary>
+        /// The list of elements inside this HOCON value
+        /// </summary>
+        public List<IHoconElement> Values { get; private set; }
+
+        /// <summary>
+        /// Wraps this <see cref="HoconValue"/> into a new <see cref="Config"/> object at the specified key.
+        /// </summary>
+        public Config AtKey(string key)
+        {
+            var o = new HoconObject();
+            o.GetOrCreateKey(key);
+            o.Items[key] = this;
+            var r = new HoconValue();
+            r.Values.Add(o);
+            return new Config(new HoconRoot(r));
         }
 
         public HoconObject GetObject()
         {
             //TODO: merge objects?
-            IHoconElement raw = _values.FirstOrDefault();
+            IHoconElement raw = Values.FirstOrDefault();
             var o = raw as HoconObject;
             var sub = raw as IMightBeAHoconObject;
             if (o != null) return o;
@@ -26,6 +63,10 @@ namespace Akka.Configuration.Hocon
             return null;
         }
 
+        /// <summary>
+        /// Determines if this <see cref="HoconValue"/> is a <see cref="HoconObject"/>
+        /// </summary>
+        /// <returns><c>true</c> if this value is a HOCON object, <c>false</c> otherwise.</returns>
         public bool IsObject()
         {
             return GetObject() != null;
@@ -33,28 +74,28 @@ namespace Akka.Configuration.Hocon
 
         public void AppendValue(IHoconElement value)
         {
-            _values.Add(value);
+            Values.Add(value);
         }
 
         public void Clear()
         {
-            _values.Clear();
+            Values.Clear();
         }
 
         public void NewValue(IHoconElement value)
         {
-            _values.Clear();
-            _values.Add(value);
+            Values.Clear();
+            Values.Add(value);
         }
 
         public bool IsString()
         {
-            return _values.Any() && _values.All(v => v.IsString());
+            return Values.Any() && Values.All(v => v.IsString());
         }
 
         private string ConcatString()
         {
-            string concat = string.Join("", _values.Select(l => l.GetString())).Trim();
+            string concat = string.Join("", Values.Select(l => l.GetString())).Trim();
 
             if (concat == "null")
                 return null;
@@ -166,7 +207,7 @@ namespace Akka.Configuration.Hocon
 
         public IList<HoconValue> GetArray()
         {
-            IEnumerable<HoconValue> x = from arr in _values
+            IEnumerable<HoconValue> x = from arr in Values
                 where arr.IsArray()
                 from e in arr.GetArray()
                 select e;
@@ -278,3 +319,4 @@ namespace Akka.Configuration.Hocon
         }
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestTransportSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Remote.Transport;
@@ -18,7 +25,7 @@ namespace Akka.Remote.Tests.Transport{
         protected Address addressB = new Address("test", "testsystemB", "testhostB", 5432);
         protected Address nonExistantAddress = new Address("test", "nosystem", "nohost", 0);
 
-        public ActorRef Self { get { return TestActor; } }
+        public IActorRef Self { get { return TestActor; } }
         private TimeSpan DefaultTimeout { get { return Dilated(TestKitSettings.DefaultTimeout); } }
         #endregion
 
@@ -212,3 +219,4 @@ namespace Akka.Remote.Tests.Transport{
         #endregion
     }
 }
+

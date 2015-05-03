@@ -1,10 +1,16 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Cluster.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Configuration;
-using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
@@ -83,12 +89,12 @@ namespace Akka.Cluster
         /// <summary>
         /// Handles initialization logic for the <see cref="Cluster"/>
         /// </summary>
-        private async Task<ActorRef> GetClusterCoreRef()
+        private async Task<IActorRef> GetClusterCoreRef()
         {
             var timeout = System.Settings.CreationTimeout;
             try
             {
-                return await _clusterDaemons.Ask<ActorRef>(InternalClusterAction.GetClusterCoreRef.Instance, timeout).ConfigureAwait(false);
+                return await _clusterDaemons.Ask<IActorRef>(InternalClusterAction.GetClusterCoreRef.Instance, timeout).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -106,7 +112,7 @@ namespace Akka.Cluster
         /// <param name="subscriber">The actor who'll receive the cluster domain events</param>
         /// <param name="to"><see cref="ClusterEvent.IClusterDomainEvent"/> subclasses</param>
         /// <remarks>A snapshot of <see cref="ClusterEvent.CurrentClusterState"/> will be sent to <see cref="subscriber"/> as the first message</remarks>
-        public void Subscribe(ActorRef subscriber, Type[] to)
+        public void Subscribe(IActorRef subscriber, Type[] to)
         {
             Subscribe(subscriber, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot, to);
         }
@@ -122,7 +128,7 @@ namespace Akka.Cluster
         /// If set to <see cref="ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot"/> 
         /// a snapshot of <see cref="ClusterEvent.CurrentClusterState"/> will be sent to <see cref="subscriber"/> as the first message. </param>
         /// <param name="to"><see cref="ClusterEvent.IClusterDomainEvent"/> subclasses</param>
-        public void Subscribe(ActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initialStateMode, Type[] to)
+        public void Subscribe(IActorRef subscriber, ClusterEvent.SubscriptionInitialStateMode initialStateMode, Type[] to)
         {
             var val = _clusterCore;
             _clusterCore.Tell(new InternalClusterAction.Subscribe(subscriber, initialStateMode, ImmutableHashSet.Create<Type>(to)));
@@ -131,7 +137,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Unsubscribe to all cluster domain events.
         /// </summary>
-        public void Unsubscribe(ActorRef subscriber)
+        public void Unsubscribe(IActorRef subscriber)
         {
             Unsubscribe(subscriber,null);
         }
@@ -139,7 +145,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Unsubscribe to a specific type of cluster domain event
         /// </summary>
-        public void Unsubscribe(ActorRef subscriber, Type to)
+        public void Unsubscribe(IActorRef subscriber, Type to)
         {
             _clusterCore.Tell(new InternalClusterAction.Unsubscribe(subscriber, to));
         }
@@ -149,7 +155,7 @@ namespace Akka.Cluster
         /// If you want this to happen periodically, you can use the <see cref="Scheduler"/> to schedule
         /// a call to this method. You can also call <see cref="State"/> directly for this information.
         /// </summary>
-        public void SendCurrentClusterState(ActorRef receiver)
+        public void SendCurrentClusterState(IActorRef receiver)
         {
             _clusterCore.Tell(new InternalClusterAction.SendCurrentClusterState(receiver));
         }
@@ -199,7 +205,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Send command to DOWN the ndoe specified by <see cref="address"/>.
+        /// Send command to DOWN the node specified by <see cref="address"/>.
         /// 
         /// When a member is considered by the failure detector to be unreachable the leader is not
         /// allowed to perform its duties, such as changing status of new joining members to <see cref="MemberStatus.Up"/>.
@@ -246,7 +252,7 @@ namespace Akka.Cluster
 
         internal ActorSystemImpl System { get; private set; }
 
-        readonly LoggingAdapter _log;
+        readonly ILoggingAdapter _log;
         readonly ClusterReadView _readView;
         public ClusterReadView ReadView {get { return _readView; }}
 
@@ -257,10 +263,10 @@ namespace Akka.Cluster
         // ===================== WORK DAEMONS =====================
         // ========================================================
 
-        readonly Scheduler _scheduler;
-        internal Scheduler Scheduler { get { return _scheduler; }}
+        readonly IScheduler _scheduler;
+        internal IScheduler Scheduler { get { return _scheduler; } }
 
-        private static Scheduler CreateScheduler(ActorSystem system)
+        private static IScheduler CreateScheduler(ActorSystem system)
         {
             //TODO: Whole load of stuff missing here!
             return system.Scheduler;
@@ -278,9 +284,9 @@ namespace Akka.Cluster
             }
         }
 
-        readonly ActorRef _clusterDaemons;
-        ActorRef _clusterCore;
-        public ActorRef ClusterCore { get { return _clusterCore; } }
+        readonly IActorRef _clusterDaemons;
+        IActorRef _clusterCore;
+        public IActorRef ClusterCore { get { return _clusterCore; } }
 
         public void LogInfo(string message)
         {
@@ -298,3 +304,4 @@ namespace Akka.Cluster
         }
     }
 }
+

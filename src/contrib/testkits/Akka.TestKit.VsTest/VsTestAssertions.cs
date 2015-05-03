@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="VsTestAssertions.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Akka.TestKit.VsTest
@@ -6,7 +13,7 @@ namespace Akka.TestKit.VsTest
     /// <summary>
     /// Assertions for Visual Studio Unit Testing Framework
     /// </summary>
-    public class VsTestAssertions : TestKitAssertions
+    public class VsTestAssertions : ITestKitAssertions
     {
         public void Fail(string format = "", params object[] args)
         {
@@ -42,3 +49,4 @@ namespace Akka.TestKit.VsTest
 
     }
 }
+

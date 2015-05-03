@@ -1,17 +1,19 @@
-﻿using Akka.TestKit;
-using Xunit;
-using Akka.Tests.TestUtils;
-using Akka.Util;
-using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorLifeCycleSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.TestKit;
+using Akka.Tests.TestUtils;
 using Akka.Util.Internal;
+using Xunit;
 
 namespace Akka.Tests
 {
@@ -22,9 +24,9 @@ namespace Akka.Tests
         {
             private AtomicCounter generationProvider;
             private string id;
-            private ActorRef testActor;
+            private IActorRef testActor;
             private int CurrentGeneration;
-            public LifeCycleTestActor(ActorRef testActor,string id,AtomicCounter generationProvider)
+            public LifeCycleTestActor(IActorRef testActor,string id,AtomicCounter generationProvider)
             {
                 this.testActor = testActor;
                 this.id = id;
@@ -70,9 +72,9 @@ namespace Akka.Tests
         {
             private AtomicCounter generationProvider;
             private string id;
-            private ActorRef testActor;
+            private IActorRef testActor;
             private int CurrentGeneration;
-            public LifeCycleTest2Actor(ActorRef testActor, string id, AtomicCounter generationProvider)
+            public LifeCycleTest2Actor(IActorRef testActor, string id, AtomicCounter generationProvider)
             {
                 this.testActor = testActor;
                 this.id = id;
@@ -111,7 +113,7 @@ namespace Akka.Tests
             string id = Guid.NewGuid().ToString();
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTestActor(TestActor, id, generationProvider));
-            var restarter = supervisor.Ask<ActorRef>(restarterProps).Result;
+            var restarter = supervisor.Ask<IActorRef>(restarterProps).Result;
 
             ExpectMsg(Tuple.Create( "preStart", id, 0));
             restarter.Tell(Kill.Instance);
@@ -142,7 +144,7 @@ namespace Akka.Tests
             string id = Guid.NewGuid().ToString();            
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(TestActor, id, generationProvider));
-            var restarter = supervisor.Ask<ActorRef>(restarterProps).Result;
+            var restarter = supervisor.Ask<IActorRef>(restarterProps).Result;
 
             ExpectMsg(Tuple.Create("preStart", id, 0));
             restarter.Tell(Kill.Instance);
@@ -173,7 +175,7 @@ namespace Akka.Tests
             string id = Guid.NewGuid().ToString();            
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(TestActor, id, generationProvider));
-            var restarter = supervisor.Ask<InternalActorRef>(restarterProps).Result;
+            var restarter = supervisor.Ask<IInternalActorRef>(restarterProps).Result;
 
             ExpectMsg(Tuple.Create("preStart", id, 0));
             restarter.Tell("status");
@@ -196,8 +198,8 @@ namespace Akka.Tests
             }
         }
 
-        [Fact(DisplayName="log failues in postStop")]
-        public void LogFailutresInPostStop()
+        [Fact(DisplayName="log failures in postStop")]
+        public void LogFailuresInPostStop()
         {
             var a = Sys.ActorOf<EmptyActor>();
             EventFilter.Exception<Exception>(message: "hurrah").ExpectOne(() =>
@@ -211,8 +213,8 @@ namespace Akka.Tests
         }
         public class BecomeActor : UntypedActor
         {
-            private ActorRef testActor;
-            public BecomeActor(ActorRef testActor)
+            private IActorRef testActor;
+            public BecomeActor(IActorRef testActor)
             {
                 this.testActor = testActor;
             }
@@ -271,8 +273,8 @@ namespace Akka.Tests
 
         public class SupervisorTestActor : UntypedActor
         {
-            private ActorRef testActor;
-            public SupervisorTestActor(ActorRef testActor)
+            private IActorRef testActor;
+            public SupervisorTestActor(IActorRef testActor)
             {
                 this.testActor = testActor;
             }
@@ -293,7 +295,7 @@ namespace Akka.Tests
                     .With<Stop>(m =>
                     {
                         var child = Context.Child(m.Name);
-                        ((InternalActorRef)child).Stop();
+                        ((IInternalActorRef)child).Stop();
                     })
                     .With<Count>(m => 
                         testActor.Tell(Context.GetChildren().Count()));
@@ -319,8 +321,8 @@ namespace Akka.Tests
 
         public class KillableActor : UntypedActor
         {
-            private ActorRef testActor;
-            public KillableActor(ActorRef testActor)
+            private IActorRef testActor;
+            public KillableActor(IActorRef testActor)
             {
                 this.testActor = testActor;
             }
@@ -404,3 +406,4 @@ namespace Akka.Tests
         }
     }
 }
+

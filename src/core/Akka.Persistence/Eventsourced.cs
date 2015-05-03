@@ -1,6 +1,12 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Eventsourced.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
 using System.Linq;
 using Akka.Actor;
 using Akka.Util.Internal;
@@ -14,7 +20,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// Forces actor to stash incoming commands untill all invokations are handled.
+    /// Forces actor to stash incoming commands until all invocations are handled.
     /// </summary>
     public sealed class StashingHandlerInvocation : IPendingHandlerInvocation
     {
@@ -45,14 +51,14 @@ namespace Akka.Persistence
         public Action<object> Handler { get; private set; }
     }
 
-    public abstract partial class Eventsourced : ActorBase, IWithPersistenceId, WithUnboundedStash
+    public abstract partial class Eventsourced : ActorBase, IPersistentIdentity, IWithUnboundedStash
     {
         private static readonly AtomicCounter InstanceCounter = new AtomicCounter(1);
 
         private readonly int _instanceId;
         private readonly IStash _internalStash;
-        private ActorRef _snapshotStore;
-        private ActorRef _journal;
+        private IActorRef _snapshotStore;
+        private IActorRef _journal;
         private ICollection<IPersistentEnvelope> _journalBatch = new List<IPersistentEnvelope>();
         private readonly int _maxMessageBatchSize;
         private bool _isWriteInProgress = false;
@@ -86,14 +92,18 @@ namespace Akka.Persistence
 
         public IStash Stash { get; set; }
 
-        public ActorRef Journal
+        public string JournalPluginId { get; protected set; }
+
+        public string SnapshotPluginId { get; protected set; }
+
+        public IActorRef Journal
         {
-            get { return _journal ?? (_journal = Extension.JournalFor(SnapshotterId)); }
+            get { return _journal ?? (_journal = Extension.JournalFor(JournalPluginId)); }
         }
 
-        public ActorRef SnapshotStore
+        public IActorRef SnapshotStore
         {
-            get { return _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotterId)); }
+            get { return _snapshotStore ?? (_snapshotStore = Extension.SnapshotStoreFor(SnapshotPluginId)); }
         }
 
         /// <summary>
@@ -153,16 +163,16 @@ namespace Akka.Persistence
 
         /// <summary>
         /// Command handler. Typically validates commands against current state - possibly by communicating with other actors.
-        /// On successfull validation, one or more events are derived from command and persisted.
+        /// On successful validation, one or more events are derived from command and persisted.
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
         protected abstract bool ReceiveCommand(object message);
 
         /// <summary> 
-        /// Asynchronously persists an <paramref name="event"/>. On successfull persistence, the <paramref name="handler"/>
+        /// Asynchronously persists an <paramref name="event"/>. On successful persistence, the <paramref name="handler"/>
         /// is called with the persisted event. This method guarantees that no new commands will be received by a persistent actor
-        /// between a call to <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> and exection of it's handler. It also
+        /// between a call to <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> and execution of it's handler. It also
         /// holds multiple persist calls per received command. Internally this is done by stashing.
         /// 
         /// 
@@ -200,12 +210,12 @@ namespace Akka.Persistence
         }
 
         /// <summary> 
-        /// Asynchronously persists an <paramref name="event"/>. On successfull persistence, the <paramref name="handler"/>
+        /// Asynchronously persists an <paramref name="event"/>. On successful persistence, the <paramref name="handler"/>
         /// is called with the persisted event. Unlike <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> method,
-        /// this one will continue to receive incomming commands between calls and executing it's event <paramref name="handler"/>.
+        /// this one will continue to receive incoming commands between calls and executing it's event <paramref name="handler"/>.
         /// 
         /// 
-        /// This version should be used in favour of <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> 
+        /// This version should be used in favor of <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> 
         /// method when throughput is more important that commands execution precedence.
         /// 
         /// 
@@ -248,7 +258,7 @@ namespace Akka.Persistence
         /// 
         /// 
         /// This call will NOT result in persisted event. If it should be possible to replay use persist method instead.
-        /// If there are not awaiting persist handler calls, the <paramref name="handler"/> will be invoced immediately.
+        /// If there are not awaiting persist handler calls, the <paramref name="handler"/> will be invoiced immediately.
         /// 
         /// </summary>
         public void Defer<TEvent>(TEvent evt, Action<TEvent> handler)
@@ -330,3 +340,4 @@ namespace Akka.Persistence
         }
     }
 }
+

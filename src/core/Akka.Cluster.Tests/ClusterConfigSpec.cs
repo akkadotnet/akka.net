@@ -1,7 +1,13 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterConfigSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using Akka.Actor;
-using Akka.Dispatch;
 using Akka.Remote;
 using Akka.TestKit;
 using Xunit;
@@ -14,7 +20,7 @@ namespace Akka.Cluster.Tests
         public ClusterConfigSpec() : base(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""") { }
 
         [Fact]
-        public void ClusteringMustBeAbleToPareseGenericClusterConfigElements()
+        public void ClusteringMustBeAbleToParseGenericClusterConfigElements()
         {
             var settings = new ClusterSettings(Sys.Settings.Config, Sys.Name);
             Assert.True(settings.LogInfo);
@@ -40,7 +46,7 @@ namespace Akka.Cluster.Tests
             //TODO:
             //Assert.AreEqual(ImmutableDictionary.Create<string, int>(), settings.);
             Assert.Equal(ImmutableHashSet.Create<string>(), settings.Roles);
-            Assert.Equal(Dispatchers.DefaultDispatcherId, settings.UseDispatcher);
+            Assert.Equal("akka.cluster.default-cluster-dispatcher", settings.UseDispatcher);
             Assert.Equal(.8, settings.GossipDifferentViewProbability);
             Assert.Equal(400, settings.ReduceGossipDifferentViewProbability);
             Assert.Equal(TimeSpan.FromMilliseconds(33), settings.SchedulerTickDuration);
@@ -50,6 +56,19 @@ namespace Akka.Cluster.Tests
             //Assert.AreEqual(typeof(SigarMetricsCollector).FullName, settings.MetricsCollectorClass);
             Assert.Equal(TimeSpan.FromSeconds(3), settings.MetricsGossipInterval);
             Assert.Equal(TimeSpan.FromSeconds(12), settings.MetricsMovingAverageHalfLife);
+        }
+
+        [Fact]
+        public void ClusteringShouldHaveCorrectDefaultForkJoinDispatcher()
+        {
+            var dispatchConfig = Sys.Settings.Config.GetConfig("akka.cluster.default-cluster-dispatcher");
+            var dispatcherThreadPoolSettings = dispatchConfig.GetConfig("dedicated-thread-pool");
+
+            var dispatcherType = dispatchConfig.GetString("type");
+            var threadCount = dispatcherThreadPoolSettings.GetInt("thread-count");
+
+            Assert.Equal("ForkJoinDispatcher", dispatcherType);
+            Assert.Equal(4, threadCount);
         }
     }
 }

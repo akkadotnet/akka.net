@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestKitBase_ActorOf.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Linq.Expressions;
 using Akka.Actor;
@@ -7,13 +14,13 @@ namespace Akka.TestKit
 {
     public partial class TestKitBase
     {
-        private const ActorRef NoSupervisor = null;
+        private const IActorRef NoSupervisor = null;
 
         /// <summary>
         /// Create a new actor as child of <see cref="Sys" />.
         /// </summary>
         /// <param name="props">The props configuration object</param>
-        public ActorRef ActorOf(Props props)
+        public IActorRef ActorOf(Props props)
         {
             return Sys.ActorOf(props, null);
         }
@@ -23,7 +30,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="props">The props configuration object</param>
         /// <param name="name">The name of the actor.</param>
-        public ActorRef ActorOf(Props props, string name)
+        public IActorRef ActorOf(Props props, string name)
         {
             return Sys.ActorOf(props, name);
         }
@@ -32,7 +39,7 @@ namespace Akka.TestKit
         /// Create a new actor as child of <see cref="Sys" />.
         /// </summary>
         /// <typeparam name="TActor">The type of the actor. It must have a parameterless public constructor</typeparam>
-        public ActorRef ActorOf<TActor>() where TActor : ActorBase, new()
+        public IActorRef ActorOf<TActor>() where TActor : ActorBase, new()
         {
             return Sys.ActorOf(Props.Create<TActor>(), null);
         }
@@ -42,7 +49,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <typeparam name="TActor">The type of the actor. It must have a parameterless public constructor</typeparam>
         /// <param name="name">The name of the actor.</param>
-        public ActorRef ActorOf<TActor>(string name) where TActor : ActorBase, new()
+        public IActorRef ActorOf<TActor>(string name) where TActor : ActorBase, new()
         {
             return Sys.ActorOf(Props.Create<TActor>(), name);
         }
@@ -56,7 +63,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <typeparam name="TActor">The type of the actor.</typeparam>
         /// <param name="factory">An expression that calls the constructor of <typeparamref name="TActor"/></param>
-        public ActorRef ActorOf<TActor>(Expression<Func<TActor>> factory) where TActor : ActorBase
+        public IActorRef ActorOf<TActor>(Expression<Func<TActor>> factory) where TActor : ActorBase
         {
             return Sys.ActorOf(Props.Create(factory), null);
         }
@@ -71,7 +78,7 @@ namespace Akka.TestKit
         /// <typeparam name="TActor">The type of the actor.</typeparam>
         /// <param name="factory">An expression that calls the constructor of <typeparamref name="TActor"/></param>
         /// <param name="name">The name of the actor.</param>
-        public ActorRef ActorOf<TActor>(Expression<Func<TActor>> factory, string name) where TActor : ActorBase
+        public IActorRef ActorOf<TActor>(Expression<Func<TActor>> factory, string name) where TActor : ActorBase
         {
             return Sys.ActorOf(Props.Create(factory), name);
         }
@@ -79,17 +86,17 @@ namespace Akka.TestKit
         /// <summary>
         /// Creates a new actor by defining the behavior inside the <paramref name="configure"/> action.
         /// <example>
-        /// <pre><code>
+        /// <code>
         /// ActorOf(c =>
         /// {
         ///     c.Receive&lt;string&gt;((msg, ctx) => ctx.Sender.Tell("Hello " + msg));
         /// });
-        /// </code></pre>
+        /// </code>
         /// </example>
         /// </summary>
         /// <param name="configure">An action that configures the actor's behavior.</param>
         /// <param name="name">Optional: The name of the actor.</param>
-        public ActorRef ActorOf(Action<IActorDsl, IActorContext> configure, string name = null)
+        public IActorRef ActorOf(Action<IActorDsl, IActorContext> configure, string name = null)
         {
             return ActExtensions.ActorOf(this, configure, name);
         }
@@ -97,17 +104,17 @@ namespace Akka.TestKit
         /// <summary>
         /// Creates a new actor by defining the behavior inside the <paramref name="configure"/> action.
         /// <example>
-        /// <pre><code>
+        /// <code>
         /// ActorOf(c =>
         /// {
         ///     c.Receive&lt;string&gt;((msg, ctx) => ctx.Sender.Tell("Hello " + msg));
         /// });
-        /// </code></pre>
+        /// </code>
         /// </example>
         /// </summary>
         /// <param name="configure">An action that configures the actor's behavior.</param>
         /// <param name="name">Optional: The name of the actor.</param>
-        public ActorRef ActorOf(Action<IActorDsl> configure, string name = null)
+        public IActorRef ActorOf(Action<IActorDsl> configure, string name = null)
         {
             return ActExtensions.ActorOf(this, configure, name);
         }
@@ -132,7 +139,7 @@ namespace Akka.TestKit
         /// <param name="props">The <see cref="Props"/> object</param>
         /// <param name="supervisor">The supervisor</param>
         /// <param name="name">Optional: The name.</param>
-        public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(Props props, ActorRef supervisor, string name = null) where TActor : ActorBase
+        public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(Props props, IActorRef supervisor, string name = null) where TActor : ActorBase
         {
             return new TestActorRef<TActor>(Sys, props, supervisor, name);
         }
@@ -161,7 +168,7 @@ namespace Akka.TestKit
         /// <param name="factory">An expression that calls the constructor of <typeparamref name="TActor"/></param>
         /// <param name="supervisor">The supervisor</param>
         /// <param name="name">Optional: The name.</param>
-        public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(Expression<Func<TActor>> factory, ActorRef supervisor, string name = null) where TActor : ActorBase
+        public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(Expression<Func<TActor>> factory, IActorRef supervisor, string name = null) where TActor : ActorBase
         {
             return new TestActorRef<TActor>(Sys, Props.Create(factory), supervisor, name);
         }
@@ -189,7 +196,7 @@ namespace Akka.TestKit
         /// <typeparam name="TActor">The type of the actor. It must have a parameterless public constructor</typeparam>
         /// <param name="supervisor">The supervisor</param>
         /// <param name="name">Optional: The name.</param>
-        public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(ActorRef supervisor, string name = null) where TActor : ActorBase, new()
+        public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(IActorRef supervisor, string name = null) where TActor : ActorBase, new()
         {
             return new TestActorRef<TActor>(Sys, Props.Create<TActor>(), supervisor, name);
         }
@@ -221,7 +228,7 @@ namespace Akka.TestKit
         /// <param name="supervisor">The supervisor</param>
         /// <param name="name">Optional: The name.</param>
         /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
-        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Props props, ActorRef supervisor, string name = null, bool withLogging = false)
+        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Props props, IActorRef supervisor, string name = null, bool withLogging = false)
             where TFsmActor : FSM<TState, TData>
         {
             return new TestFSMRef<TFsmActor, TState, TData>(Sys, props, supervisor, name, withLogging);
@@ -255,7 +262,7 @@ namespace Akka.TestKit
         /// <param name="supervisor">The supervisor</param>
         /// <param name="name">Optional: The name.</param>
         /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
-        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(ActorRef supervisor, string name = null, bool withLogging = false)
+        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(IActorRef supervisor, string name = null, bool withLogging = false)
             where TFsmActor : FSM<TState, TData>, new()
         {
             return new TestFSMRef<TFsmActor, TState, TData>(Sys,Props.Create<TFsmActor>(), supervisor, name, withLogging);
@@ -289,7 +296,7 @@ namespace Akka.TestKit
         /// <param name="supervisor">The supervisor</param>
         /// <param name="name">Optional: The name.</param>
         /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
-        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Expression<Func<TFsmActor>> factory, ActorRef supervisor, string name = null, bool withLogging = false)
+        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Expression<Func<TFsmActor>> factory, IActorRef supervisor, string name = null, bool withLogging = false)
             where TFsmActor : FSM<TState, TData>
         {
             return new TestFSMRef<TFsmActor, TState, TData>(Sys, Props.Create(factory), supervisor, name, withLogging);
@@ -313,3 +320,4 @@ namespace Akka.TestKit
         }
     }
 }
+

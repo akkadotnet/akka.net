@@ -1,9 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestRunCoordinator.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Akka.Actor;
-using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
-using Akka.Util;
 
 namespace Akka.MultiNodeTestRunner.Shared.Reporting
 {
@@ -24,12 +30,12 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// </summary>
         public class SubscribeFactCompletionMessages
         {
-            public SubscribeFactCompletionMessages(ActorRef subscriber)
+            public SubscribeFactCompletionMessages(IActorRef subscriber)
             {
                 Subscriber = subscriber;
             }
 
-            public ActorRef Subscriber { get; private set; }
+            public IActorRef Subscriber { get; private set; }
         }
 
         /// <summary>
@@ -37,13 +43,13 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// </summary>
         public class UnsubscribeFactCompletionMessages
         {
-            public UnsubscribeFactCompletionMessages(ActorRef subscriber)
+            public UnsubscribeFactCompletionMessages(IActorRef subscriber)
             {
                 Subscriber = subscriber;
             }
 
 
-            public ActorRef Subscriber { get; private set; }
+            public IActorRef Subscriber { get; private set; }
         }
 
         #endregion
@@ -57,7 +63,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         {
             TestRunStarted = testRunStarted;
             TestRunData = new TestRunTree(testRunStarted.Ticks);
-            Subscribers = new List<ActorRef>();
+            Subscribers = new List<IActorRef>();
             SetReceive();
         }
 
@@ -65,7 +71,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         protected readonly DateTime TestRunStarted;
 
-        protected ActorRef _currentSpecRunActor;
+        protected IActorRef _currentSpecRunActor;
 
         /// <summary>
         /// Automatically set when <see cref="EndTestRun"/> is sent to this actor.
@@ -91,7 +97,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// <summary>
         /// All of the subscribers who wish to receive <see cref="FactData"/> notifications
         /// </summary>
-        protected List<ActorRef> Subscribers;
+        protected List<IActorRef> Subscribers;
 
         #endregion
 
@@ -106,7 +112,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             });
             Receive<BeginNewSpec>(spec => ReceiveBeginSpecRun(spec));
             Receive<EndSpec>(spec => ReceiveEndSpecRun(spec));
-            Receive<RequestTestRunState>(state => Sender.Tell(TestRunData.Copy()));
+            Receive<RequestTestRunState>(state => Sender.Tell(TestRunData.Copy(TestRunPassed(TestRunData))));
             Receive<SubscribeFactCompletionMessages>(messages => AddSubscriber(messages));
             Receive<UnsubscribeFactCompletionMessages>(messages => RemoveSubscriber(messages));
             Receive<EndTestRun>(run =>
@@ -140,7 +146,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
 
         private void ReceiveBeginSpecRun(BeginNewSpec spec)
         {
-            Guard.Assert(_currentSpecRunActor == null, "EndSpec has not been called for previous run yet. Cannot begin next run.");
+            if (_currentSpecRunActor != null) throw new InvalidOperationException("EndSpec has not been called for previous run yet. Cannot begin next run.");
 
             //Create the new spec run actor
             _currentSpecRunActor =
@@ -170,6 +176,12 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             _currentSpecRunActor = null;
         }
 
+        private static bool TestRunPassed(TestRunTree tree)
+        {
+            return tree.Specs.All(x => x.Passed.HasValue && x.Passed.Value);
+        }
+
         #endregion
     }
 }
+

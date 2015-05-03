@@ -1,10 +1,16 @@
-﻿using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RemoteDaemon.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Remote
@@ -26,7 +32,7 @@ namespace Akka.Remote
         /// <param name="deploy">The deploy.</param>
         /// <param name="path">The path.</param>
         /// <param name="supervisor">The supervisor.</param>
-        public DaemonMsgCreate(Props props, Deploy deploy, string path, ActorRef supervisor)
+        public DaemonMsgCreate(Props props, Deploy deploy, string path, IActorRef supervisor)
         {
             Props = props;
             Deploy = deploy;
@@ -56,7 +62,7 @@ namespace Akka.Remote
         ///     Gets the supervisor.
         /// </summary>
         /// <value>The supervisor.</value>
-        public ActorRef Supervisor { get; private set; }
+        public IActorRef Supervisor { get; private set; }
     }
 
     /// <summary>
@@ -64,7 +70,7 @@ namespace Akka.Remote
     /// 
     /// Internal system "daemon" actor for remote internal communication.
     /// 
-    /// It acts as the brain of the remote that respons to system remote messages and executes actions accordingly.
+    /// It acts as the brain of the remote that response to system remote messages and executes actions accordingly.
     /// </summary>
     internal class RemoteDaemon : VirtualPathContainer
     {
@@ -77,7 +83,7 @@ namespace Akka.Remote
         /// <param name="path">The path.</param>
         /// <param name="parent">The parent.</param>
         /// <param name="log"></param>
-        public RemoteDaemon(ActorSystemImpl system, ActorPath path, InternalActorRef parent, LoggingAdapter log)
+        public RemoteDaemon(ActorSystemImpl system, ActorPath path, IInternalActorRef parent, ILoggingAdapter log)
             : base(system.Provider, path, parent, log)
         {
             _system = system;
@@ -104,7 +110,7 @@ namespace Akka.Remote
             {
                 var addressTerminated = (AddressTerminated) message;
                 //stop any remote actors that belong to this address
-                ForeachActorRef(@ref =>
+                ForEachChild(@ref =>
                 {
                     if(@ref.Parent.Path.Address == addressTerminated.Address) _system.Stop(@ref);
                 });
@@ -116,7 +122,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
-        protected override void TellInternal(object message, ActorRef sender)
+        protected override void TellInternal(object message, IActorRef sender)
         {
             OnReceive(message);
         }
@@ -127,7 +133,7 @@ namespace Akka.Remote
         /// <param name="message">The message.</param>
         private void HandleDaemonMsgCreate(DaemonMsgCreate message)
         {
-            var supervisor = (InternalActorRef) message.Supervisor;
+            var supervisor = (IInternalActorRef) message.Supervisor;
             Props props = message.Props;
             ActorPath childPath;
             if(ActorPath.TryParse(message.Path, out childPath))
@@ -135,7 +141,7 @@ namespace Akka.Remote
                 IEnumerable<string> subPath = childPath.Elements.Drop(1); //drop the /remote
                 ActorPath path = Path/subPath;
                 var localProps = props; //.WithDeploy(new Deploy(Scope.Local));
-                InternalActorRef actor = _system.Provider.ActorOf(_system, localProps, supervisor, path, false,
+                IInternalActorRef actor = _system.Provider.ActorOf(_system, localProps, supervisor, path, false,
                     message.Deploy, true, false);
                 string childName = subPath.Join("/");
                 AddChild(childName, actor);
@@ -153,7 +159,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="name">The name.</param>
         /// <returns>ActorRef.</returns>
-        public override ActorRef GetChild(IEnumerable<string> name)
+        public override IActorRef GetChild(IEnumerable<string> name)
         {
             string[] parts = name.ToArray();
             //TODO: I have no clue what the scala version does
@@ -167,7 +173,7 @@ namespace Akka.Remote
             for (int i = parts.Length; i >= 0; i--)
             {
                 string joined = string.Join("/", parts, 0, i);
-                InternalActorRef child;
+                IInternalActorRef child;
                 if (TryGetChild(joined, out child))
                 {
                     //longest match found
@@ -175,7 +181,8 @@ namespace Akka.Remote
                     return child.GetChild(rest);
                 }
             }
-            return Nobody;
+            return ActorRefs.Nobody;
         }
     }
 }
+

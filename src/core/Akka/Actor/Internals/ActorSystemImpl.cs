@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorSystemImpl.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -17,18 +24,18 @@ namespace Akka.Actor.Internals
     /// </summary>
     public class ActorSystemImpl : ExtendedActorSystem
     {
-        private ActorRef _logDeadLetterListener;
+        private IActorRef _logDeadLetterListener;
         private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
 
-        private LoggingAdapter _log;
-        private ActorRefProvider _provider;
+        private ILoggingAdapter _log;
+        private IActorRefProvider _provider;
         private Settings _settings;
         private readonly string _name;
         private Serialization.Serialization _serialization;
         private EventStream _eventStream;
         private Dispatchers _dispatchers;
         private Mailboxes _mailboxes;
-        private Scheduler _scheduler;
+        private IScheduler _scheduler;
         private ActorProducerPipelineResolver _actorProducerPipelineResolver;
 
         public ActorSystemImpl(string name)
@@ -55,32 +62,32 @@ namespace Akka.Actor.Internals
             ConfigureActorProducerPipeline();
         }
 
-        public override ActorRefProvider Provider { get { return _provider; } }
+        public override IActorRefProvider Provider { get { return _provider; } }
         public override Settings Settings { get { return _settings; } }
         public override string Name { get { return _name; } }
         public override Serialization.Serialization Serialization { get { return _serialization; } }
         public override EventStream EventStream { get { return _eventStream; } }
-        public override ActorRef DeadLetters { get { return Provider.DeadLetters; } }
+        public override IActorRef DeadLetters { get { return Provider.DeadLetters; } }
         public override Dispatchers Dispatchers { get { return _dispatchers; } }
         public override Mailboxes Mailboxes { get { return _mailboxes; } }
-        public override Scheduler Scheduler { get { return _scheduler; } }
-        public override LoggingAdapter Log { get { return _log; } }
+        public override IScheduler Scheduler { get { return _scheduler; } }
+        public override ILoggingAdapter Log { get { return _log; } }
 
         public override ActorProducerPipelineResolver ActorPipelineResolver { get { return _actorProducerPipelineResolver; } }
 
 
-        public override InternalActorRef Guardian { get { return _provider.Guardian; } }
-        public override InternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
+        public override IInternalActorRef Guardian { get { return _provider.Guardian; } }
+        public override IInternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
 
 
         /// <summary>Creates a new system actor.</summary>
-        public override ActorRef SystemActorOf(Props props, string name = null)
+        public override IActorRef SystemActorOf(Props props, string name = null)
         {
             return _provider.SystemGuardian.Cell.ActorOf(props, name: name);
         }
 
         /// <summary>Creates a new system actor.</summary>
-        public override ActorRef SystemActorOf<TActor>(string name = null)
+        public override IActorRef SystemActorOf<TActor>(string name = null)
         {
             return _provider.SystemGuardian.Cell.ActorOf<TActor>(name);
         }
@@ -102,7 +109,7 @@ namespace Akka.Actor.Internals
             }
         }
 
-        public override ActorRef ActorOf(Props props, string name = null)
+        public override IActorRef ActorOf(Props props, string name = null)
         {
             return _provider.Guardian.Cell.ActorOf(props, name: name);
         }
@@ -120,7 +127,7 @@ namespace Akka.Actor.Internals
 
         private void ConfigureScheduler()
         {
-            _scheduler = new Scheduler();
+            _scheduler = new TaskBasedScheduler();
         }
 
         /// <summary>
@@ -257,7 +264,7 @@ namespace Akka.Actor.Internals
         {
             Type providerType = Type.GetType(_settings.ProviderClass);
             global::System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
-            var provider = (ActorRefProvider)Activator.CreateInstance(providerType, _name, _settings, _eventStream);
+            var provider = (IActorRefProvider)Activator.CreateInstance(providerType, _name, _settings, _eventStream);
             _provider = provider;
         }
 
@@ -274,7 +281,7 @@ namespace Akka.Actor.Internals
         /// </summary>
         private void ConfigureDispatchers()
         {
-            _dispatchers = new Dispatchers(this);
+            _dispatchers = new Dispatchers(this, new DefaultDispatcherPrerequisites(EventStream, Scheduler, Settings, Mailboxes));
         }
 
         /// <summary>
@@ -323,7 +330,7 @@ namespace Akka.Actor.Internals
             }
         }
 
-        public override void Stop(ActorRef actor)
+        public override void Stop(IActorRef actor)
         {
             var path = actor.Path;
             var parentPath = path.Parent;
@@ -332,9 +339,10 @@ namespace Akka.Actor.Internals
             else if(parentPath == _provider.SystemGuardian.Path)
                 _provider.SystemGuardian.Tell(new StopChild(actor));
             else
-                ((InternalActorRef)actor).Stop();
+                ((IInternalActorRef)actor).Stop();
         }
 
 
     }
 }
+

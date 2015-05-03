@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="BarrierSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.TestKit;
@@ -10,16 +17,16 @@ namespace Akka.Remote.TestKit.Tests
     {
         private sealed class Failed
         {
-            private readonly ActorRef _ref;
+            private readonly IActorRef _ref;
             private readonly Exception _exception;
 
-            public Failed(ActorRef @ref, Exception exception)
+            public Failed(IActorRef @ref, Exception exception)
             {
                 _ref = @ref;
                 _exception = exception;
             }
 
-            public ActorRef Ref
+            public IActorRef Ref
             {
                 get { return _ref; }
             }
@@ -274,7 +281,7 @@ namespace Akka.Remote.TestKit.Tests
                 new BarrierCoordinator.Data(
                     ImmutableHashSet.Create<Controller.NodeInfo>(),
                     "",
-                    ImmutableHashSet.Create<ActorRef>(),
+                    ImmutableHashSet.Create<IActorRef>(),
                     ((BarrierCoordinator.BarrierEmpty)msg.Exception).BarrierData.Deadline)
                 , "cannot remove RoleName(a): no client to remove"), msg.Exception);
             barrier.Tell(new Controller.NodeInfo(A, Address.Parse("akka://sys"), a.Ref));
@@ -322,28 +329,28 @@ namespace Akka.Remote.TestKit.Tests
                 new BarrierCoordinator.Data(
                     ImmutableHashSet.Create(nodeA),
                     "",
-                    ImmutableHashSet.Create<ActorRef>(),
+                    ImmutableHashSet.Create<IActorRef>(),
                     ((BarrierCoordinator.DuplicateNode)msg.Exception).BarrierData.Deadline)
                 , nodeB), msg.Exception);
         }
 
         //TODO: Controller tests.
 
-        private ActorRef GetBarrier()
+        private IActorRef GetBarrier()
         {
             var actor =
                 Sys.ActorOf(
                     new Props(typeof (BarrierCoordinatorSupervisor), new object[] {TestActor}).WithDeploy(Deploy.Local));
             actor.Tell("", TestActor);
-            return ExpectMsg<ActorRef>();
+            return ExpectMsg<IActorRef>();
         }
 
         private class BarrierCoordinatorSupervisor : UntypedActor
         {
-            readonly ActorRef _testActor;
-            readonly ActorRef _barrier;
+            readonly IActorRef _testActor;
+            readonly IActorRef _barrier;
 
-            public BarrierCoordinatorSupervisor(ActorRef testActor)
+            public BarrierCoordinatorSupervisor(IActorRef testActor)
             {
                 _testActor = testActor;
                 _barrier = Context.ActorOf(Props.Create<BarrierCoordinator>());
@@ -370,9 +377,10 @@ namespace Akka.Remote.TestKit.Tests
             foreach (var probe in probes) Assert.False(probe.HasMessages);
         }
 
-        public ActorRef Self
+        public IActorRef Self
         {
             get { return TestActor; }
         }
     }
 }
+

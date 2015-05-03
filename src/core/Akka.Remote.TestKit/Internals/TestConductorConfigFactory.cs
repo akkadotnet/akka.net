@@ -1,10 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestConductorConfigFactory.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Configuration;
 
 namespace Akka.Remote.TestKit.Internals
@@ -46,3 +48,4 @@ namespace Akka.Remote.TestKit.Internals
         }
     }
 }
+

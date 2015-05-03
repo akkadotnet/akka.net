@@ -1,4 +1,12 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MessageSinkActor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Actor;
+using Akka.MultiNodeTestRunner.Shared.Reporting;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
 {
@@ -7,6 +15,34 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// </summary>
     public abstract class MessageSinkActor : ReceiveActor
     {
+        #region Message classes
+
+        /// <summary>
+        /// Used to signal that the underlying  <see cref="MessageSinkActor"/> 
+        /// must collect and report its final test run results.
+        /// 
+        /// Shut down process is ready to begin.
+        /// </summary>
+        public class BeginSinkTerminate
+        {
+            public BeginSinkTerminate(TestRunTree testRun, IActorRef subscriber)
+            {
+                Subscriber = subscriber;
+                TestRun = testRun;
+            }
+
+            public TestRunTree TestRun { get; private set; }
+            public IActorRef Subscriber { get; private set; }
+        }
+
+        /// <summary>
+        /// Signals to <see cref="MessageSink"/> that the <see cref="MessageSinkActor"/> is ready to be
+        /// shut down.
+        /// </summary>
+        public class SinkCanBeTerminated { }
+
+        #endregion
+
         protected MessageSinkActor()
         {
             SetReceive();
@@ -26,6 +62,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             Receive<NodeCompletedSpecWithSuccess>(success => HandleNodeSpecPass(success));
             Receive<NodeCompletedSpecWithFail>(fail => HandleNodeSpecFail(fail));
             Receive<EndTestRun>(end => HandleTestRunEnd(end));
+            Receive<TestRunTree>(tree => HandleTestRunTree(tree));
+            Receive<BeginSinkTerminate>(terminate => HandleSinkTerminate(terminate));
             AdditionalReceives();
         }
 
@@ -53,8 +91,19 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         protected abstract void HandleNodeSpecFail(NodeCompletedSpecWithFail nodeFail);
 
-        protected abstract void HandleTestRunEnd(EndTestRun endTestRun);
+        protected virtual void HandleTestRunEnd(EndTestRun endTestRun)
+        {
+            Self.Tell(new BeginSinkTerminate(null, Sender));
+        }
+
+        protected virtual void HandleSinkTerminate(BeginSinkTerminate terminate)
+        {
+            terminate.Subscriber.Tell(new SinkCanBeTerminated());
+        }
+
+        protected abstract void HandleTestRunTree(TestRunTree tree);
 
         #endregion
     }
 }
+

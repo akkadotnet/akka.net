@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AutoDownSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
@@ -35,9 +42,9 @@ namespace Akka.Cluster.Tests
 
         class AutoDownTestActor : AutoDownBase
         {
-            readonly ActorRef _probe;
+            readonly IActorRef _probe;
 
-            public AutoDownTestActor(TimeSpan autoDownUnreachableAfter, ActorRef probe): base(autoDownUnreachableAfter)
+            public AutoDownTestActor(TimeSpan autoDownUnreachableAfter, IActorRef probe): base(autoDownUnreachableAfter)
             {
                 _probe = probe;
             }
@@ -47,7 +54,7 @@ namespace Akka.Cluster.Tests
                 get { return MemberA.Address; }
             }
 
-            public override Scheduler Scheduler
+            public override IScheduler Scheduler
             {
                 get { return Context.System.Scheduler; }
             }
@@ -65,7 +72,7 @@ namespace Akka.Cluster.Tests
             }
         }
 
-        private ActorRef AutoDownActor(TimeSpan autoDownUnreachableAfter)
+        private IActorRef AutoDownActor(TimeSpan autoDownUnreachableAfter)
         {
             return
                 Sys.ActorOf(new Props(typeof(AutoDownTestActor),
@@ -122,7 +129,7 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void AutoDownMustNotDownUnreachableWhenLoosingLeadershipInbetweenDetectionAndSpecfiedDuration()
+        public void AutoDownMustNotDownUnreachableWhenLoosingLeadershipInbetweenDetectionAndSpecifiedDuration()
         {
             var a = AutoDownActor(TimeSpan.FromSeconds(2));
             a.Tell(new ClusterEvent.LeaderChanged(MemberA.Address));
@@ -163,3 +170,4 @@ namespace Akka.Cluster.Tests
 
     }
 }
+

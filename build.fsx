@@ -7,6 +7,7 @@ open System.IO
 open Fake
 open Fake.FileUtils
 open Fake.MSTest
+open Fake.NUnitCommon
 open Fake.TaskRunnerHelper
 open Fake.ProcessHelper
 
@@ -19,12 +20,14 @@ cd __SOURCE_DIRECTORY__
 
 let product = "Akka.NET"
 let authors = [ "Akka.NET Team" ]
-let copyright = "Copyright © 2013-2014 Akka.NET Team"
+let copyright = "Copyright © 2013-2015 Akka.NET Team"
 let company = "Akka.NET Team"
 let description = "Akka.NET is a port of the popular Java/Scala framework Akka to .NET"
 let tags = ["akka";"actors";"actor";"model";"Akka";"concurrency"]
 let configuration = "Release"
-let nugetTitleSuffix = " - BETA"
+let toolDir = "tools"
+let CloudCopyDir = toolDir @@ "CloudCopy"
+let AzCopyDir = toolDir @@ "AzCopy"
 
 // Read release notes and version
 
@@ -37,6 +40,7 @@ let parsedRelease =
 //See https://github.com/fsharp/FAKE/issues/522
 //TODO: When this has been fixed, switch to DateTime.UtcNow.ToString("yyyyMMddHHmmss")
 let preReleaseVersion = parsedRelease.AssemblyVersion + "-" + (getBuildParamOrDefault "nugetprerelease" "pre") + DateTime.UtcNow.ToString("yyMMddHHmm")
+let isUnstableDocs = hasBuildParam "unstable"
 let isPreRelease = hasBuildParam "nugetprerelease"
 let release = if isPreRelease then ReleaseNotesHelper.ReleaseNotes.New(parsedRelease.AssemblyVersion, preReleaseVersion, parsedRelease.Notes) else parsedRelease
 
@@ -51,6 +55,7 @@ let nugetDir = binDir @@ "nuget"
 let workingDir = binDir @@ "build"
 let libDir = workingDir @@ @"lib\net45\"
 let nugetExe = FullName @"src\.nuget\NuGet.exe"
+let docDir = "bin" @@ "doc"
 
 
 //--------------------------------------------------------------------------------
@@ -90,7 +95,7 @@ Target "AssemblyInfo" <| fun _ ->
             Attribute.Copyright copyright
             Attribute.Trademark ""
             Attribute.Version version
-            Attribute.FileVersion version ]
+            Attribute.FileVersion version ] |> ignore
 
 //--------------------------------------------------------------------------------
 // Build the solution
@@ -106,6 +111,47 @@ Target "BuildMono" <| fun _ ->
     !!"src/Akka.sln"
     |> MSBuild "" "Rebuild" [("Configuration","Release Mono")]
     |> ignore
+
+//--------------------------------------------------------------------------------
+// Build the docs
+Target "Docs" <| fun _ ->
+    !! "documentation/akkadoc.shfbproj"
+    |> MSBuildRelease "" "Rebuild"
+    |> ignore
+
+//--------------------------------------------------------------------------------
+// Push DOCs content to Windows Azure blob storage
+Target "AzureDocsDeploy" (fun _ ->
+    let rec pushToAzure docDir azureUrl container azureKey trialsLeft =
+        let tracing = enableProcessTracing
+        enableProcessTracing <- false
+        let arguments = sprintf "/Source:%s /Dest:%s /DestKey:%s /S /Y /SetContentType" (Path.GetFullPath docDir) (azureUrl @@ container) azureKey
+        tracefn "Pushing docs to %s. Attempts left: %d" (azureUrl) trialsLeft
+        try 
+            
+            let result = ExecProcess(fun info ->
+                info.FileName <- AzCopyDir @@ "AzCopy.exe"
+                info.Arguments <- arguments) (TimeSpan.FromMinutes 120.0) //takes a very long time to upload
+            if result <> 0 then failwithf "Error during AzCopy.exe upload to azure."
+        with exn -> 
+            if (trialsLeft > 0) then (pushToAzure docDir azureUrl container azureKey (trialsLeft-1))
+            else raise exn
+    let canPush = hasBuildParam "azureKey" && hasBuildParam "azureUrl"
+    if (canPush) then
+         printfn "Uploading API docs to Azure..."
+         let azureUrl = getBuildParam "azureUrl"
+         let azureKey = (getBuildParam "azureKey") + "==" //hack, because it looks like FAKE arg parsing chops off the "==" that gets tacked onto the end of each Azure storage key
+         if(isUnstableDocs) then
+            pushToAzure docDir azureUrl "unstable" azureKey 3
+         if(not isUnstableDocs) then
+            pushToAzure docDir azureUrl "stable" azureKey 3
+            pushToAzure docDir azureUrl release.NugetVersion azureKey 3
+    if(not canPush) then
+        printfn "Missing required paraments to push docs to Azure. Run build HelpDocs to find out!"
+            
+)
+
+Target "PublishDocs" DoNothing
 
 //--------------------------------------------------------------------------------
 // Copy the build output to bin directory
@@ -124,10 +170,18 @@ Target "CopyOutput" <| fun _ ->
       "core/Akka.Remote.TestKit"
       "core/Akka.Cluster"
       "core/Akka.MultiNodeTestRunner"
+      "core/Akka.Persistence"
+      "core/Akka.Persistence.FSharp"
+      "core/Akka.Persistence.TestKit"
       "contrib/loggers/Akka.Logger.slf4net"
       "contrib/loggers/Akka.Logger.NLog" 
       "contrib/loggers/Akka.Logger.Serilog" 
+      "contrib/dependencyinjection/Akka.DI.Core"
+      "contrib/dependencyinjection/Akka.DI.AutoFac"
+      "contrib/dependencyinjection/Akka.DI.CastleWindsor"
+      "contrib/dependencyinjection/Akka.DI.Ninject"
       "contrib/testkits/Akka.TestKit.Xunit" 
+      "contrib/testkits/Akka.TestKit.NUnit" 
       ]
     |> List.iter copyOutput
 
@@ -150,11 +204,20 @@ Target "CleanTests" <| fun _ ->
 open XUnitHelper
 Target "RunTests" <| fun _ ->  
     let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
-    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
+    let nunitTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
+    let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
+                                    "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll" -- 
+                                    "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" --
+                                    "src/**/bin/Release/Akka.Persistence.SqlServer.Tests.dll"
 
     mkdir testOutput
 
     MSTest (fun p -> p) msTestAssemblies
+    nunitTestAssemblies
+    |> NUnit (fun p -> 
+        {p with
+            DisableShadowCopy = true; 
+            OutputFile = testOutput + @"\NUnitTestResults.xml"})
 
     let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
     printfn "Using XUnit runner: %s" xunitToolPath
@@ -185,6 +248,14 @@ Target "MultiNodeTests" <| fun _ ->
         info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
     if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
 
+Target "RunSqlServerTests" <| fun _ ->
+    let sqlServerTests = !! "src/**/bin/Release/Akka.Persistence.SqlServer.Tests.dll"
+    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
+    printfn "Using XUnit runner: %s" xunitToolPath
+    xUnit
+        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
+        sqlServerTests
+
 //--------------------------------------------------------------------------------
 // Nuget targets 
 //--------------------------------------------------------------------------------
@@ -195,6 +266,9 @@ module Nuget =
         match project with
         | "Akka" -> []
         | "Akka.Cluster" -> ["Akka.Remote", release.NugetVersion]
+        | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion]
+        | "Akka.Persistence.FSharp" -> ["Akka.Persistence", preReleaseVersion]
+        | di when (di.StartsWith("Akka.DI.") && not (di.EndsWith("Core"))) -> ["Akka.DI.Core", release.NugetVersion]
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
 
@@ -202,6 +276,7 @@ module Nuget =
     let getProjectVersion project =
       match project with
       | "Akka.Cluster" -> preReleaseVersion
+      | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | _ -> release.NugetVersion
 
 open Nuget
@@ -250,7 +325,6 @@ let createNugetPackages _ =
                         ReleaseNotes = release.Notes |> String.concat "\n"
                         Version = releaseVersion
                         Tags = tags |> String.concat " "
-                        Title = nugetTitleSuffix
                         OutputPath = outputDir
                         WorkingDir = workingDir
                         SymbolPackage = symbolPackage
@@ -289,16 +363,19 @@ let publishNugetPackages _ =
     let rec publishPackage url accessKey trialsLeft packageFile =
         let tracing = enableProcessTracing
         enableProcessTracing <- false
-        let args = sprintf "push -source %s \"%s\" %s" url packageFile accessKey
+        let args p =
+            match p with
+            | (pack, key, "") -> sprintf "push \"%s\" %s" pack key
+            | (pack, key, url) -> sprintf "push \"%s\" %s -source %s" pack key url
 
         tracefn "Pushing %s Attempts left: %d" (FullName packageFile) trialsLeft
         try 
             let result = ExecProcess (fun info -> 
                     info.FileName <- nugetExe
                     info.WorkingDirectory <- (Path.GetDirectoryName (FullName packageFile))
-                    info.Arguments <- args) (System.TimeSpan.FromMinutes 1.0)
+                    info.Arguments <- args (packageFile, accessKey,url)) (System.TimeSpan.FromMinutes 1.0)
             enableProcessTracing <- tracing
-            if result <> 0 then failwithf "Error during NuGet symbol push. %s %s" nugetExe args
+            if result <> 0 then failwithf "Error during NuGet symbol push. %s %s" nugetExe (args (packageFile, accessKey,url))
         with exn -> 
             if (trialsLeft > 0) then (publishPackage url accessKey (trialsLeft-1) packageFile)
             else raise exn
@@ -350,6 +427,7 @@ Target "Help" <| fun _ ->
       " Other Targets"
       " * Help       Display this help" 
       " * HelpNuget  Display help about creating and pushing nuget packages" 
+      " * HelpDocs   Display help about creating and pushing API docs" 
       ""]
 
 Target "HelpNuget" <| fun _ ->
@@ -392,6 +470,42 @@ Target "HelpNuget" <| fun _ ->
       "                                   and symbols packages to http://xyz"
       ""]
 
+Target "HelpDocs" <| fun _ ->
+    List.iter printfn [
+      "usage: "
+      "build Docs"
+      "Just builds the API docs for Akka.NET locally. Does not attempt to publish."
+      ""
+      "build PublishDocs azureKey=<key> "
+      "                  azureUrl=<url> "
+      "                 [unstable=true]"
+      ""
+      "Arguments for PublishDocs target:"
+      "   azureKey=<key>             Azure blob storage key."
+      "                              Used to authenticate to the storage account."
+      ""
+      "   azureUrl=<url>             Base URL for Azure storage container."
+      "                              FAKE will automatically set container"
+      "                              names based on build parameters."
+      ""
+      "   [unstable=true]            Indicates that we'll publish to an Azure"
+      "                              container named 'unstable'. If this param"
+      "                              is not present we'll publish to containers"
+      "                              'stable' and the 'release.version'"
+      ""
+      "In order to publish documentation all of these values must be provided."
+      "Examples:"
+      "  build PublishDocs azureKey=1s9HSAHA+..."
+      "                    azureUrl=http://fooaccount.blob.core.windows.net/docs"
+      "                                   Build and publish docs to http://fooaccount.blob.core.windows.net/docs/stable"
+      "                                   and http://fooaccount.blob.core.windows.net/docs/{release.version}"
+      ""
+      "  build PublishDocs azureKey=1s9HSAHA+..."
+      "                    azureUrl=http://fooaccount.blob.core.windows.net/docs"
+      "                    unstable=true"
+      "                                   Build and publish docs to http://fooaccount.blob.core.windows.net/docs/unstable"
+      ""]
+
 //--------------------------------------------------------------------------------
 //  Target dependencies
 //--------------------------------------------------------------------------------
@@ -405,6 +519,9 @@ Target "HelpNuget" <| fun _ ->
 // nuget dependencies
 "CleanNuget" ==> "CreateNuget"
 "CleanNuget" ==> "BuildRelease" ==> "Nuget"
+
+//docs dependencies
+"BuildRelease" ==> "Docs" ==> "AzureDocsDeploy" ==> "PublishDocs"
 
 Target "All" DoNothing
 "BuildRelease" ==> "All"

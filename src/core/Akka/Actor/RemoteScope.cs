@@ -1,12 +1,20 @@
-﻿using System;
-using Akka.Util.Internal;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RemoteScope.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 
 namespace Akka.Actor
 {
-    public class RemoteScope : Scope
+    /// <summary>
+    /// Used to deploy actors on remote nodes at the specified <see cref="Address"/>.
+    /// </summary>
+    public class RemoteScope : Scope, IEquatable<RemoteScope>
     {
-        [Obsolete("For Serialization only", true)]
-        public RemoteScope()
+        protected RemoteScope()
         {
         }
 
@@ -17,9 +25,35 @@ namespace Akka.Actor
 
         public Address Address { get; set; }
 
-        public override bool Equals(Scope other)
+        public bool Equals(RemoteScope other)
         {
-            return base.Equals(other) && Address.Equals(other.AsInstanceOf<RemoteScope>().Address);
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(Address, other.Address);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((RemoteScope) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Address != null ? Address.GetHashCode() : 0);
+        }
+
+        public override Scope WithFallback(Scope other)
+        {
+            return this;
+        }
+
+        public override Scope Copy()
+        {
+            return new RemoteScope(Address);
         }
     }
 }
+

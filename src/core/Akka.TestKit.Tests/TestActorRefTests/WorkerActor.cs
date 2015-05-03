@@ -1,4 +1,11 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="WorkerActor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Actor;
 
 namespace Akka.TestKit.Tests.TestActorRefTests
 {
@@ -14,12 +21,13 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
             }
             //TODO: case replyTo: Promise[_] ⇒ replyTo.asInstanceOf[Promise[Any]].success("complexReply")
-            if(message is ActorRef)
+            if(message is IActorRef)
             {
-                ((ActorRef)message).Tell("complexReply", Self);
+                ((IActorRef)message).Tell("complexReply", Self);
                 return true;
             }
             return false;
         }
     }
 }
+

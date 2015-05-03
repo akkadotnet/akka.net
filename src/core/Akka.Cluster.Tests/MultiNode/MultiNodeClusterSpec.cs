@@ -1,11 +1,21 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MultiNodeClusterSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch.SysMsg;
 using Akka.Remote.TestKit;
+using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.TestKit.Xunit;
 using Xunit;
@@ -13,6 +23,8 @@ using Xunit;
 namespace Akka.Cluster.Tests.MultiNode
 {
     //TODO: WatchedByCoroner?
+    //@Aaronontheweb: Coroner is a JVM-specific instrument used to report deadlocks and other fun stuff.
+    //can probably skip for now.
     public abstract class MultiNodeClusterSpec : MultiNodeSpec
     {
         public static Config ClusterConfigWithFailureDetectorPuppet()
@@ -50,52 +62,54 @@ namespace Akka.Cluster.Tests.MultiNode
             ");
         }
 
-        // sometimes we need to coordinate test shutdown with messages instead of barriers
-        sealed class SendEnd
-        {
-            private SendEnd() { }
-            private static readonly SendEnd _instance = new SendEnd();
-            public static SendEnd Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
-        }
-
-        sealed class End
-        {
-            private End() { }
-            private static readonly End _instance = new End();
-            public static End Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
-        }
-
-        sealed class EndAck
-        {
-            private EndAck() { }
-            private static readonly EndAck _instance = new EndAck();
-            public static EndAck Instance
-            {
-                get
-                {
-                    return _instance;
-                }
-            }
-        }
 
         public class EndActor : UntypedActor
         {
-            readonly ActorRef _testActor;
+
+            // sometimes we need to coordinate test shutdown with messages instead of barriers
+            public sealed class SendEnd
+            {
+                private SendEnd() { }
+                private static readonly SendEnd _instance = new SendEnd();
+                public static SendEnd Instance
+                {
+                    get
+                    {
+                        return _instance;
+                    }
+                }
+            }
+
+            public sealed class End
+            {
+                private End() { }
+                private static readonly End _instance = new End();
+                public static End Instance
+                {
+                    get
+                    {
+                        return _instance;
+                    }
+                }
+            }
+
+            public sealed class EndAck
+            {
+                private EndAck() { }
+                private static readonly EndAck _instance = new EndAck();
+                public static EndAck Instance
+                {
+                    get
+                    {
+                        return _instance;
+                    }
+                }
+            }
+
+            readonly IActorRef _testActor;
             readonly Address _target;
 
-            public EndActor(ActorRef testActor, Address target)
+            public EndActor(IActorRef testActor, Address target)
             {
                 _testActor = testActor;
                 _target = target;
@@ -122,7 +136,7 @@ namespace Akka.Cluster.Tests.MultiNode
             }
         }
 
-        readonly TestKitAssertions _assertions;
+        readonly ITestKitAssertions _assertions;
 
         protected MultiNodeClusterSpec(MultiNodeConfig config)
             : base(config)
@@ -131,7 +145,7 @@ namespace Akka.Cluster.Tests.MultiNode
             _roleNameComparer = new RoleNameComparer(this);
         }
 
-        public override int InitialParticipants
+        protected override int InitialParticipantsValueFactory
         {
             get { return Roles.Count; }
         }
@@ -141,21 +155,18 @@ namespace Akka.Cluster.Tests.MultiNode
 
         protected override void AtStartup()
         {
-            //TODO: StartCoroner?
-            //MuteLog();
+            MuteLog(Sys);
         }
 
-        /*TODO: ?
+
         protected override void AfterTermination()
         {
-            StopCoroner();
-        }*/
+        }
 
         //TODO: ExpectedTestDuration?
 
-        void MuteLog(ActorSystem sys)
+        void MuteLog(ActorSystem sys = null)
         {
-            /*
             if (sys == null) sys = Sys;
             if (!sys.Log.IsDebugEnabled)
             {
@@ -167,12 +178,41 @@ namespace Akka.Cluster.Tests.MultiNode
                     ".*Cluster node successfully shut down.*",
                     ".*Using a dedicated scheduler for cluster.*"
                 };
-                foreach(var pattern in patterns)
-                    sys.EventStream.Publish(new Mute(new EventFilterBase(EventFilter.MatchEverything, new RegexMatcher(pattern));
-            }*/
+
+                foreach (var pattern in patterns)
+                    EventFilter.Info(new Regex(pattern)).Mute();
+
+                MuteDeadLetters(sys, 
+                    typeof(ClusterHeartbeatSender.Heartbeat),
+                    typeof(ClusterHeartbeatSender.HeartbeatRsp),
+                    typeof(GossipEnvelope),
+                    typeof(GossipStatus), 
+                    typeof(GossipStatus),
+                    typeof(MetricsGossipEnvelope),
+                    typeof(ClusterEvent.ClusterMetricsChanged),
+                    typeof(InternalClusterAction.ITick),
+                    typeof(PoisonPill),
+                    typeof(DeathWatchNotification),
+                    typeof(Disassociated),
+                    typeof(DisassociateUnderlying),
+                    typeof(InboundPayload));
+            }
         }
 
-        //TODO: Lots of muting stuff
+        protected void MuteMarkingAsUnreachable(ActorSystem system = null)
+        {
+            var sys = system ?? Sys;
+            if (!sys.Log.IsDebugEnabled)
+                EventFilter.Error(new Regex(".*Marking.* as UNREACHABLE.*")).Mute();
+        }
+
+        protected void MuteMarkingAsReachable(ActorSystem system = null)
+        {
+            var sys = system ?? Sys;
+            if (!sys.Log.IsDebugEnabled)
+                EventFilter.Info(new Regex(".*Marking.* as REACHABLE.*")).Mute();
+        }
+
         public Address GetAddress(RoleName role)
         {
             Address address;
@@ -203,6 +243,12 @@ namespace Akka.Cluster.Tests.MultiNode
             }
         }
 
+        /// <summary>
+        /// Initialize the cluster of the specified member nodes (<see cref="roles"/>)
+        /// and wait until all joined and <see cref="MemberStatus.Up"/>.
+        /// 
+        /// First node will be started first and others will join the first.
+        /// </summary>
         public void AwaitClusterUp(params RoleName[] roles)
         {
             // make sure that the node-to-join is started before other join
@@ -309,14 +355,14 @@ namespace Akka.Cluster.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         foreach (var a in canNotBePartOfMemberRing)
-                            _assertions.AssertFalse(ClusterView.Members.Select(m => m.Address).Contains(a));
+                            ClusterView.Members.Select(m => m.Address).Contains(a).ShouldBeFalse();
                     });
-                AwaitAssert(() => _assertions.AssertEqual(numbersOfMembers, ClusterView.Members.Count));
-                AwaitAssert(() => _assertions.AssertTrue(ClusterView.Members.All(m => m.Status == MemberStatus.Up)));
+                AwaitAssert(() => ClusterView.Members.Count.ShouldBe(numbersOfMembers));
+                AwaitAssert(() => ClusterView.Members.All(m => m.Status == MemberStatus.Up).ShouldBeTrue("All members should be up"));
                 // clusterView.leader is updated by LeaderChanged, await that to be updated also
                 var firstMember = ClusterView.Members.FirstOrDefault();
                 var expectedLeader = firstMember == null ? null : firstMember.Address;
-                AwaitAssert(() => _assertions.AssertEqual(expectedLeader, ClusterView.Leader));
+                AwaitAssert(() => ClusterView.Leader.ShouldBe(expectedLeader));
             });
         }
 
@@ -387,7 +433,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             if (IsFailureDetectorPuppet())
             {
-                // before marking it as unavailble there should be at least one heartbeat
+                // before marking it as unavailable there should be at least one heartbeat
                 // to create the FailureDetectorPuppet in the FailureDetectorRegistry
                 Cluster.FailureDetector.Heartbeat(address);
                 var puppet = FailureDetectorPuppet(address);
@@ -406,3 +452,4 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 }
+

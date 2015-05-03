@@ -4,109 +4,177 @@
 
 #What is it?
 
-**Akka.DI.Core** is an **ActorSystem extension** library for the Akka.NET framework that provides a simple way to create an Actor Dependency Resolver that can be used an alternative to the basic capabilities of [Props](http://akkadotnet.github.io/wiki/Props) when you have Actors with multiple dependencies.  
+**Akka.DI.Core** is an **ActorSystem extension** library for the Akka.NET framework that provides a simple way to create an Actor Dependency Resolver that can be used as an alternative to the basic capabilities of [Props](http://akkadotnet.github.io/wiki/Props) when you have actors with multiple dependencies.  
 
 #How do you create an Extension?
 
 -  Create a new class library
--  Reference your favorite IOC Container, the Akka.DI.Core and of course Akka
--  Create a class and implement the IDependencyResolver
+-  Reference your favorite IoC Container, the Akka.DI.Core and of course Akka
+-  Create a class that implements ```IDependencyResolver```
 
-Let's walk through the process of creating one for CastleWindsor container. You need to create  a new project named Akka.DI.CastleWindsor with all the necessary references including Akka.DI.Core, Akka and CastleWindosor. Name the initial class WindsorDependencyResolver.
+Let's walk through the process of creating one for the CastleWindsor container. You need to create  a new project named Akka.DI.CastleWindsor with all the necessary references including Akka.DI.Core, Akka and CastleWindsor. Name the initial class ```WindsorDependencyResolver```.
 
-    public class WindsorDependencyResolver : IDependencyResolver
-	{
-		Type GetType(string ActorName)
-        {
-            throw new NotImplementedException();
-        }
-
-        Func<ActorBase> CreateActorFactory(string ActorName)
-        {
-            throw new NotImplementedException();
-        }
-
-        Props Create<TActor>()
-        {
-            throw new NotImplementedException();
-        }
-	}
+```csharp
+public class WindsorDependencyResolver : IDependencyResolver
+{
+    // we'll implement IDependencyResolver in the following steps
+}
+```
 
 Add a constructor and private fields.
 
-		private IWindsorContainer container;
-        private ActorSystem system;
+```csharp
+private IWindsorContainer _container;
+private ConcurrentDictionary<string, Type> _typeCache;
+private ActorSystem _system;
 
-        public WindsorDependencyResolver(IWindsorContainer container, ActorSystem system)
-        {
-            if (system == null) throw new ArgumentNullException("system");
-            if (container == null) throw new ArgumentNullException("container");
-            this.container = container;
-            this.system = system;
-            this.system.AddDependencyResolver(this);
-        }
+public WindsorDependencyResolver(IWindsorContainer container, ActorSystem system)
+{
+    if (system == null) throw new ArgumentNullException("system");
+    if (container == null) throw new ArgumentNullException("container");
+    _container = container;
+    _typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
+    _system = system;
+    _system.AddDependencyResolver(this);
+}
+```
 
 You have defined three private fields
 
-- IWindsorContainer container
-	- Reference to the container
-- ActorSystem system
-	- Reference to the ActorSystem
+- ```IWindsorContainer _container``` is a reference to the CastleWindsor container.
+- ```ConcurrentDictionary<string, Type> _typeCache``` is a thread safe map that contains actor name/type associations.
+- ```ActorSystem _system``` is a reference to the ActorSystem.
 
-First you need to implement GetType. This is a basic implementation and is just from demonstration purposes. Essentially this is used by the Extension to get the Type of the Actor from it's type name.
+First you need to implement ```GetType```. This is a basic implementation and is just for demonstration purposes. Essentially this is used by the extension to get the type of the actor from it's type name.
 
-        Type GetType(string actorName)
-        {
-            var firstTry = Type.GetType(actorName);
-            Func<Type> searchForType = () =>
-            {
-                return
-                AppDomain.
-                    CurrentDomain.
-                    GetAssemblies().
-                    SelectMany(x => x.GetTypes()).
-                    Where(t => t.Name.Equals(actorName)).
-                    FirstOrDefault();
-            };
-            return firstTry ?? searchForType();
-        }
-	
-Secondly you need to implement the CreateActorFactory method which will be used by the extension to create the Actor. This implementation will depend upon the API of the container.
+```csharp
+public Type GetType(string actorName)
+{
+    _typeCache.
+        TryAdd(actorName,
+            actorName.GetTypeValue() ??
+            _container.Kernel
+            .GetAssignableHandlers(typeof(object))
+            .Where(handler => handler.ComponentModel.Name.Equals(actorName, StringComparison.InvariantCultureIgnoreCase))
+            .Select(handler => handler.ComponentModel.Implementation)
+            .FirstOrDefault());
 
-		public Func<ActorBase> CreateActorFactory(string actorName)
-        {
-            return () => (ActorBase)container.Resolve(GetType(actorName));
-        }
+     return _typeCache[actorName];
+}
+```
 
-Lastly, you implement the Create<TActor> which is used register the Props configuration for the referenced Actor Type with the ActorSystem. This method will always be the same implementation. 
+Secondly you need to implement the ```CreateActorFactory``` method which will be used by the extension to create the actor. This implementation will depend upon the API of the container.
 
-        public Props Create<TActor>() where TActor : ActorBase
-        {
-            return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
-        }
+```csharp
+public Func<ActorBase> CreateActorFactory(Type actorType)
+{
+    return () => (ActorBase)container.Resolve(actorType);
+}
+```
 
-So with that you can do something like the following code example:
+Thirdly, you implement the ```Create<TActor>``` which is used register the ```Props``` configuration for the referenced actor type with the ```ActorSystem```. This method will always be the same implementation.
 
-	IWindsorContainer container = new WindsorContainer();
-    container.Register(Component.For<IWorkerService>().ImplementedBy<WorkerService>());
-    container.Register(Component.For<TypedWorker>().Named("TypedWorker").LifestyleTransient());
+```csharp
+public Props Create<TActor>() where TActor : ActorBase
+{
+    return system.GetExtension<DIExt>().Props(typeof(TActor).Name);
+}
+```
 
-    //Create ActorSystem
-    using (var system = ActorSystem.Create("MySystem"))
-        {
-           //Create the dependency resolver
-           IDependencyResolver propsResolver = 
-        		new WindsorDependencyResolver(container,system);
+Lastly, you implement the Release method which in this instance is very simple. This method is used to remove the actor from the underlying container.
 
-			system.ActorOf(propsResolver.Create<TypedWorker>(), "Worker1");
-			system.ActorOf(propsResolver.Create<TypedWorker>(), "Worker2");
+```csharp
+public void Release(ActorBase actor)
+{
+    this.container.Release(actor);
+}
+```
+**Note: For further details on the importance of the release method please read the following blog [post](http://blog.ploeh.dk/2014/05/19/di-friendly-framework/).**
 
-            var hashGroup = 
-                system.ActorOf(Props.Empty.WithRouter(new ConsistentHashingGroup(config)));
- 
-            TypedActorMessage msg = 
-               new TypedActorMessage { Id = 1, 
-                                       Name = Guid.NewGuid().ToString() };
-             hashGroup.Tell(msg);
+The resulting class should look similar to the following:
 
-		}
+```csharp
+public class WindsorDependencyResolver : IDependencyResolver
+{
+    private IWindsorContainer container;
+    private ConcurrentDictionary<string, Type> typeCache;
+    private ActorSystem system;
+
+    public WindsorDependencyResolver(IWindsorContainer container, ActorSystem system)
+    {
+        if (system == null) throw new ArgumentNullException("system");
+        if (container == null) throw new ArgumentNullException("container");
+        this.container = container;
+        typeCache = new ConcurrentDictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
+        this.system = system;
+        this.system.AddDependencyResolver(this);
+    }
+
+    public Type GetType(string actorName)
+    {
+        typeCache.TryAdd(actorName, actorName.GetTypeValue() ??
+            container.Kernel
+              .GetAssignableHandlers(typeof(object))
+              .Where(handler => handler.ComponentModel.Name.Equals(actorName, StringComparison.InvariantCultureIgnoreCase))
+              .Select(handler => handler.ComponentModel.Implementation)
+              .FirstOrDefault());
+
+        return typeCache[actorName];
+    }
+
+    public Func<ActorBase> CreateActorFactory(Type actorType)
+    {
+        return () => (ActorBase)container.Resolve(actorType);
+    }
+
+    public Props Create<TActor>() where TActor : ActorBase
+    {
+        return system.GetExtension<DIExt>().Props(typeof(TActor));
+    }
+
+    public void Release(ActorBase actor)
+    {
+        this.container.Release(actor);
+    }
+}
+```
+
+Now, with the preceding class, you can do something like the following example:
+
+```csharp
+// Setup CastleWindsor
+IWindsorContainer container = new WindsorContainer();
+container.Register(Component.For<IWorkerService>().ImplementedBy<WorkerService>());
+container.Register(Component.For<TypedWorker>().Named("TypedWorker").LifestyleTransient());
+
+// Create the ActorSystem
+using (var system = ActorSystem.Create("MySystem"))
+{
+    // Create the dependency resolver
+    IDependencyResolver resolver = new WindsorDependencyResolver(container, system);
+
+    // Register the actors with the system
+    system.ActorOf(resolver.Create<TypedWorker>(), "Worker1");
+    system.ActorOf(resolver.Create<TypedWorker>(), "Worker2");
+
+    // Create the router
+    IActorRef router = system.ActorOf(Props.Empty.WithRouter(new ConsistentHashingGroup(config)));
+
+    // Create the message to send
+    TypedActorMessage message = new TypedActorMessage
+    {
+       Id = 1,
+       Name = Guid.NewGuid().ToString()
+    };
+
+    // Send the message to the router
+    router.Tell(message);
+}
+```
+
+## Creating Child Actors using DI ##
+When you want to create child actors from within your existing actors using Dependency Injection you can use the Actor Content extension just like in the following example.
+
+```csharp
+Context.DI().ActorOf<TypedActor>().Tell(message);
+```

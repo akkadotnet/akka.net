@@ -1,16 +1,19 @@
-﻿using System.Collections.Generic;
-using System.Runtime.Remoting.Contexts;
-using System.Threading;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ForwardAllEventsTestEventListener.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
-using Akka.TestKit.Internal;
 
 namespace Akka.Testkit.Tests.TestEventListenerTests
 {
     public class ForwardAllEventsTestEventListener : TestEventListener
     {
-        private ActorRef _forwarder;
+        private IActorRef _forwarder;
 
         protected override void Print(LogEvent m)
         {           
@@ -31,15 +34,16 @@ namespace Akka.Testkit.Tests.TestEventListenerTests
 
         public class ForwardAllEventsTo
         {
-            private readonly ActorRef _forwarder;
+            private readonly IActorRef _forwarder;
 
-            public ForwardAllEventsTo(ActorRef forwarder)
+            public ForwardAllEventsTo(IActorRef forwarder)
             {
                 _forwarder = forwarder;
             }
 
-            public ActorRef Forwarder { get { return _forwarder; } }
+            public IActorRef Forwarder { get { return _forwarder; } }
         }
     }
 
 }
+

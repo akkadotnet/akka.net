@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="FileSystemMessageSinkActor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.IO;
 using Akka.Actor;
@@ -57,11 +64,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         protected override void AdditionalReceives()
         {
-            Receive<TestRunTree>(tree => WriteToFile(tree));
             Receive<FactData>(data => ReceiveFactData(data));
         }
 
-        private void WriteToFile(TestRunTree tree)
+        protected override void HandleTestRunTree(TestRunTree tree)
         {
             Console.WriteLine("Writing test state to: {0}", Path.GetFullPath(FileName));
             FileStore.SaveTestRun(FileName, tree);
@@ -74,3 +80,4 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         }
     }
 }
+

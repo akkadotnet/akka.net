@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="JournalProtocol.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using Akka.Actor;
 
@@ -6,7 +13,7 @@ namespace Akka.Persistence
 {
     public sealed class DeleteMessages
     {
-        public DeleteMessages(IEnumerable<IPersistentEnvelope> messageIds, bool isPermanent, ActorRef requestor)
+        public DeleteMessages(IEnumerable<IPersistentEnvelope> messageIds, bool isPermanent, IActorRef requestor)
         {
             MessageIds = messageIds;
             IsPermanent = isPermanent;
@@ -15,7 +22,7 @@ namespace Akka.Persistence
 
         public IEnumerable<IPersistentEnvelope> MessageIds { get; private set; }
         public bool IsPermanent { get; private set; }
-        public ActorRef Requestor { get; private set; }
+        public IActorRef Requestor { get; private set; }
     }
 
     public sealed class DeleteMessagesSuccess
@@ -89,7 +96,7 @@ namespace Akka.Persistence
 
     public sealed class WriteMessages
     {
-        public WriteMessages(IEnumerable<IPersistentEnvelope> messages, ActorRef persistentActor,
+        public WriteMessages(IEnumerable<IPersistentEnvelope> messages, IActorRef persistentActor,
             int actorInstanceId)
         {
             Messages = messages;
@@ -98,7 +105,7 @@ namespace Akka.Persistence
         }
 
         public IEnumerable<IPersistentEnvelope> Messages { get; private set; }
-        public ActorRef PersistentActor { get; private set; }
+        public IActorRef PersistentActor { get; private set; }
         public int ActorInstanceId { get; private set; }
     }
 
@@ -107,13 +114,13 @@ namespace Akka.Persistence
     /// to the requestor before all subsequent <see cref="WriteMessageSuccess"/> replies.
     /// </summary>
     [Serializable]
-    public class WriteMessagesSuccessull : IEquatable<WriteMessagesSuccessull>
+    public class WriteMessagesSuccessful : IEquatable<WriteMessagesSuccessful>
     {
-        public static readonly WriteMessagesSuccessull Instance = new WriteMessagesSuccessull();
+        public static readonly WriteMessagesSuccessful Instance = new WriteMessagesSuccessful();
 
-        private WriteMessagesSuccessull() { }
+        private WriteMessagesSuccessful() { }
 
-        public bool Equals(WriteMessagesSuccessull other)
+        public bool Equals(WriteMessagesSuccessful other)
         {
             return true;
         }
@@ -149,7 +156,7 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// Successfully writen message.
+        /// Successfully written message.
         /// </summary>
         public IPersistentRepresentation Persistent { get; private set; }
 
@@ -187,7 +194,7 @@ namespace Akka.Persistence
 
     public sealed class LoopMessage
     {
-        public LoopMessage(object message, ActorRef persistentActor, int actorInstanceId)
+        public LoopMessage(object message, IActorRef persistentActor, int actorInstanceId)
         {
             Message = message;
             PersistentActor = persistentActor;
@@ -195,7 +202,7 @@ namespace Akka.Persistence
         }
 
         public object Message { get; private set; }
-        public ActorRef PersistentActor { get; private set; }
+        public IActorRef PersistentActor { get; private set; }
         public int ActorInstanceId { get; private set; }
     }
 
@@ -224,7 +231,7 @@ namespace Akka.Persistence
     public sealed class ReplayMessages : IEquatable<ReplayMessages>
     {
         public ReplayMessages(long fromSequenceNr, long toSequenceNr, long max, string persistenceId,
-            ActorRef persistentActor, bool replayDeleted = false)
+            IActorRef persistentActor, bool replayDeleted = false)
         {
             FromSequenceNr = fromSequenceNr;
             ToSequenceNr = toSequenceNr;
@@ -257,7 +264,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Requesting persistent actor.
         /// </summary>
-        public ActorRef PersistentActor { get; private set; }
+        public IActorRef PersistentActor { get; private set; }
 
         /// <summary>
         /// If true, message marked as deleted shall be replayed.
@@ -320,7 +327,7 @@ namespace Akka.Persistence
 
     public sealed class ReadHighestSequenceNr : IEquatable<ReadHighestSequenceNr>
     {
-        public ReadHighestSequenceNr(long fromSequenceNr, string persistenceId, ActorRef persistentActor)
+        public ReadHighestSequenceNr(long fromSequenceNr, string persistenceId, IActorRef persistentActor)
         {
             FromSequenceNr = fromSequenceNr;
             PersistenceId = persistenceId;
@@ -331,7 +338,7 @@ namespace Akka.Persistence
 
         public string PersistenceId { get; private set; }
 
-        public ActorRef PersistentActor { get; private set; }
+        public IActorRef PersistentActor { get; private set; }
 
         public bool Equals(ReadHighestSequenceNr other)
         {
@@ -388,3 +395,4 @@ namespace Akka.Persistence
         public Exception Cause { get; private set; }
     }
 }
+

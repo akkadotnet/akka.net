@@ -1,9 +1,13 @@
-﻿using System;
-using System.Runtime.Remoting.Contexts;
-using System.Threading;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorWithStashSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Tests.TestUtils;
@@ -48,7 +52,7 @@ namespace Akka.Tests.Actor.Stash
         [Fact]
         public void An_actor_Must_throw_an_exception_if_the_same_message_is_stashed_twice()
         {
-            _state.ExpectedException = new TestLatch(Sys);
+            _state.ExpectedException = new TestLatch();
             var stasher = ActorOf<StashingTwiceActor>("stashing-actor");
             stasher.Tell("hello");
             _state.ExpectedException.Ready(TimeSpan.FromSeconds(3));
@@ -81,7 +85,7 @@ namespace Akka.Tests.Actor.Stash
             var slaveProps = Props.Create(() => new SlaveActor(restartLatch, hasMsgLatch, "stashme"));
 
             //Send the props to supervisor, which will create an actor and return the ActorRef
-            var slave = boss.AskAndWait<ActorRef>(slaveProps, TestKitSettings.DefaultTimeout);
+            var slave = boss.AskAndWait<IActorRef>(slaveProps, TestKitSettings.DefaultTimeout);
 
             //send a message that will be stashed
             slave.Tell("stashme");
@@ -104,7 +108,7 @@ namespace Akka.Tests.Actor.Stash
             var slaveProps = Props.Create(() => new ActorsThatClearsStashOnPreRestart(restartLatch));
 
             //Send the props to supervisor, which will create an actor and return the ActorRef
-            var slave = boss.AskAndWait<ActorRef>(slaveProps, TestKitSettings.DefaultTimeout);
+            var slave = boss.AskAndWait<IActorRef>(slaveProps, TestKitSettings.DefaultTimeout);
 
             //send messages that will be stashed
             slave.Tell("stashme 1");
@@ -133,17 +137,17 @@ namespace Akka.Tests.Actor.Stash
             ExpectMsg("terminated2");
         }
 
-        private class UnboundedStashActor : BlackHoleActor, WithUnboundedStash
+        private class UnboundedStashActor : BlackHoleActor, IWithUnboundedStash
         {
             public IStash Stash { get; set; }
         }
 
-        private class BoundedStashActor : BlackHoleActor, WithBoundedStash
+        private class BoundedStashActor : BlackHoleActor, IWithBoundedStash
         {
             public IStash Stash { get; set; }
         }
 
-        private class StashingActor : TestReceiveActor, WithUnboundedStash
+        private class StashingActor : TestReceiveActor, IWithUnboundedStash
         {
             public StashingActor()
             {
@@ -169,7 +173,7 @@ namespace Akka.Tests.Actor.Stash
             public IStash Stash { get; set; }
         }
 
-        private class StashEverythingActor : ReceiveActor, WithUnboundedStash
+        private class StashEverythingActor : ReceiveActor, IWithUnboundedStash
         {
             public StashEverythingActor()
             {
@@ -178,7 +182,7 @@ namespace Akka.Tests.Actor.Stash
             public IStash Stash { get; set; }
         }
 
-        private class StashingTwiceActor : TestReceiveActor, WithUnboundedStash
+        private class StashingTwiceActor : TestReceiveActor, IWithUnboundedStash
         {
             public StashingTwiceActor()
             {
@@ -189,7 +193,7 @@ namespace Akka.Tests.Actor.Stash
                     {
                         Stash.Stash();
                     }
-                    catch(IllegalActorStateException e)
+                    catch(IllegalActorStateException)
                     {
                         _state.ExpectedException.Open();
                     }
@@ -210,7 +214,7 @@ namespace Akka.Tests.Actor.Stash
             public IStash Stash { get; set; }
         }
 
-        private class SlaveActor : TestReceiveActor, WithUnboundedStash
+        private class SlaveActor : TestReceiveActor, IWithUnboundedStash
         {
             private readonly TestLatch _restartLatch;
 
@@ -235,7 +239,7 @@ namespace Akka.Tests.Actor.Stash
             public IStash Stash { get; set; }
         }
 
-        private class ActorsThatClearsStashOnPreRestart : TestReceiveActor, WithUnboundedStash
+        private class ActorsThatClearsStashOnPreRestart : TestReceiveActor, IWithUnboundedStash
         {
             private readonly TestLatch _restartLatch;
 
@@ -260,9 +264,9 @@ namespace Akka.Tests.Actor.Stash
 
         }
 
-        private class TerminatedMessageStashingActor : TestReceiveActor, WithUnboundedStash
+        private class TerminatedMessageStashingActor : TestReceiveActor, IWithUnboundedStash
         {
-            public TerminatedMessageStashingActor(ActorRef probe)
+            public TerminatedMessageStashingActor(IActorRef probe)
             {
                 var watchedActor=Context.Watch(Context.ActorOf<BlackHoleActor>("watched-actor"));
                 var stashed = false;
@@ -302,3 +306,4 @@ namespace Akka.Tests.Actor.Stash
 
 
 }
+

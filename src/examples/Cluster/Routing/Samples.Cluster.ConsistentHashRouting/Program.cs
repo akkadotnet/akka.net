@@ -1,10 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Program.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using System.Configuration;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Routing;
 using Akka.Configuration;
@@ -59,7 +62,8 @@ namespace Samples.Cluster.ConsistentHashRouting
             var frontend = system.ActorOf(Props.Create(() => new FrontendActor(backendRouter)), "frontend");
             var interval = TimeSpan.FromSeconds(12);
             var counter = new AtomicCounter();
-            system.Scheduler.Schedule(interval, interval,() => frontend.Tell(new StartCommand("hello-" + counter.GetAndIncrement())));
+            system.Scheduler.Advanced.ScheduleRepeatedly(interval, interval,() => frontend.Tell(new StartCommand("hello-" + counter.GetAndIncrement())));
         }
     }
 }
+

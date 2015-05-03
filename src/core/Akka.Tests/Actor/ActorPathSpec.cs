@@ -1,18 +1,20 @@
-﻿using System.Web;
-using Akka.Event;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorPathSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using System.Linq;
+using System.Web;
+using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Akka.Actor;
 using Xunit.Extensions;
 
 namespace Akka.Tests.Actor
 {
-    
     public class ActorPathSpec
     {
         [Fact]
@@ -87,7 +89,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void ReturnFalsUponMalformedPath()
+        public void ReturnFalseUponMalformedPath()
         {
             ActorPath ignored;
             ActorPath.TryParse("", out ignored).ShouldBe(false);
@@ -200,7 +202,7 @@ namespace Akka.Tests.Actor
         [InlineData("EscapingWithOtherNumberCharacters-%Ⅷ⅓", false)]
         public void Validate_element_parts(string element, bool matches)
         {
-            ActorPath.ElementRegex.IsMatch(element).ShouldBe(matches);
+            ActorPath.IsValidPathElement(element).ShouldBe(matches);
         }
 
         [Theory]
@@ -213,7 +215,8 @@ namespace Akka.Tests.Actor
         {
             var urlEncode = HttpUtility.UrlEncode(element);
             global::System.Diagnostics.Debug.WriteLine("Encoded \"{0}\" to \"{1}\"", element, urlEncode)  ;
-            ActorPath.ElementRegex.IsMatch(urlEncode).ShouldBeTrue();
+            ActorPath.IsValidPathElement(urlEncode).ShouldBeTrue();
         }
     }
 }
+

@@ -1,4 +1,12 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ConfigurationFactory.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -37,8 +45,8 @@ namespace Akka.Configuration
         /// <returns>Config.</returns>
         public static Config Load()
         {
-            var section = new AkkaConfigurationSection();
-            Config config = section.AkkaConfig;
+            var section = (AkkaConfigurationSection)ConfigurationManager.GetSection("akka") ?? new AkkaConfigurationSection();
+            var config = section.AkkaConfig;
 
             return config;
         }
@@ -95,3 +103,4 @@ namespace Akka.Configuration
         }
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="IMessageSink.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -38,7 +45,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /// 
         /// During instances of when a test run has been successfully started, this method
         /// will wait up to 10 seconds for any <see cref="Actor"/> instances included as part of this
-        /// <see cref="IMessageSink"/> to shutdown, via the <see cref="GracefulStopSupport.GracefulStop(ActorRef, TimeSpan)"/> method.
+        /// <see cref="IMessageSink"/> to shutdown, via the <see cref="GracefulStopSupport.GracefulStop(IActorRef, TimeSpan)"/> method.
         /// </summary>
         Task<bool> Close(ActorSystem context);
 
@@ -112,3 +119,4 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         #endregion
     }
 }
+

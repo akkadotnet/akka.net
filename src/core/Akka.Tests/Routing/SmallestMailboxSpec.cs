@@ -1,14 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Xunit;
-using Akka;
+﻿//-----------------------------------------------------------------------
+// <copyright file="SmallestMailboxSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using Akka.Actor;
-using Akka.TestKit;
 using Akka.Routing;
+using Akka.TestKit;
+using Xunit;
 
 namespace Akka.Tests.Routing
 {
@@ -50,20 +52,20 @@ namespace Akka.Tests.Routing
             var usedActors = new ConcurrentDictionary<int, string>();
             var router = Sys.ActorOf(new SmallestMailboxPool(3).Props(Props.Create(() => new SmallestMailboxActor(usedActors))));
 
-            var busy = new TestLatch(Sys, 1);
-            var received0 = new TestLatch(Sys, 1);
+            var busy = new TestLatch(1);
+            var received0 = new TestLatch(1);
             router.Tell(Tuple.Create(busy, received0));
             received0.Ready(TestLatch.DefaultTimeout);
 
-            var received1 = new TestLatch(Sys, 1);
+            var received1 = new TestLatch(1);
             router.Tell(Tuple.Create(1, received1));
             received1.Ready(TestLatch.DefaultTimeout);
 
-            var received2 = new TestLatch(Sys, 1);
+            var received2 = new TestLatch(1);
             router.Tell(Tuple.Create(2, received2));
             received2.Ready(TestLatch.DefaultTimeout);
 
-            var received3 = new TestLatch(Sys, 1);
+            var received3 = new TestLatch(1);
             router.Tell(Tuple.Create(3, received3));
             received3.Ready(TestLatch.DefaultTimeout);
 
@@ -81,5 +83,21 @@ namespace Akka.Tests.Routing
             Assert.NotEqual(path2, busyPath);
             Assert.NotEqual(path3, busyPath);
         }
+
+        [Fact]
+        public void SmallestMail_should_not_throw_IndexOutOfRangeException_when_counter_wraps_to_be_negative()
+        {
+            Assert.DoesNotThrow(
+                () =>
+                {
+                    var routees = new[] {Routee.NoRoutee, Routee.NoRoutee, Routee.NoRoutee};
+                    var routingLogic = new SmallestMailboxRoutingLogic(int.MaxValue - 5);
+                    for (var i = 0; i < 10; i++)
+                    {
+                        routingLogic.Select(i, routees);
+                    }
+                });
+        }
     }
 }
+

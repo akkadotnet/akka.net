@@ -1,6 +1,12 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="FailureDetectorRegistrySpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
-using System.Runtime;
 using Akka.TestKit;
 using Xunit;
 
@@ -35,7 +41,7 @@ namespace Akka.Remote.Tests
             fd.Heartbeat("resource1"); //1000
             fd.Heartbeat("resource1"); //1100
             Assert.True(fd.IsAvailable("resource1")); //1200
-            fd.Heartbeat("resource2"); //5200, but unrelated resouce
+            fd.Heartbeat("resource2"); //5200, but unrelated resource
             Assert.False(fd.IsAvailable("resource1"));
         }
 
@@ -122,3 +128,4 @@ namespace Akka.Remote.Tests
         }
     }
 }
+

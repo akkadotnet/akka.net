@@ -1,6 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AtomicReference.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System.Threading;
-using Akka.Actor;
 
 namespace Akka.Util
 {
@@ -53,11 +58,21 @@ namespace Akka.Util
         /// <summary>
         /// If <see cref="Value"/> equals <see cref="expected"/>, then set the Value to
         /// <see cref="newValue"/>.
-        /// 
-        /// Returns true if <see cref="newValue"/> was set, false otherise.
         /// </summary>
+        /// <returns><c>true</c> if <see cref="newValue"/> was set</returns>
         public bool CompareAndSet(T expected, T newValue)
         {
+            //special handling for null values
+            if (Value == null)
+            {
+                if (expected == null)
+                {
+                    Value = newValue;
+                    return true;
+                }
+                return false;
+            }
+
             if (Value.Equals(expected))
             {
                 Value = newValue;
@@ -89,3 +104,4 @@ namespace Akka.Util
         #endregion
     }
 }
+

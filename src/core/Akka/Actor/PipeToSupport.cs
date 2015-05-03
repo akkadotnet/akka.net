@@ -1,4 +1,11 @@
-﻿using System.Threading.Tasks;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PipeToSupport.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
@@ -12,9 +19,9 @@ namespace Akka.Actor
         /// Pipes the output of a Task directly to the <see cref="recipient"/>'s mailbox once
         /// the task completes
         /// </summary>
-        public static Task PipeTo<T>(this Task<T> taskToPipe, ICanTell recipient, ActorRef sender = null)
+        public static Task PipeTo<T>(this Task<T> taskToPipe, ICanTell recipient, IActorRef sender = null)
         {
-            sender = sender ?? ActorRef.NoSender;
+            sender = sender ?? ActorRefs.NoSender;
             return taskToPipe.ContinueWith(tresult =>
             {
                 if(tresult.IsCanceled  || tresult.IsFaulted)
@@ -25,3 +32,4 @@ namespace Akka.Actor
         }
     }
 }
+

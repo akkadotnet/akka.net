@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="GracefulStopSupport.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Dispatch.SysMsg;
@@ -16,7 +23,7 @@ namespace Akka.Actor
     /// <remarks><c>IMPORTANT:</c> the actor being terminated and its supervisor being informed of the availability of the deceased actor's name
     /// are two distinct operations, which do not obey any reliable ordering.</remarks>
     /// 
-    /// If the target actor isn't terminated within the timeout the <see cref="Task"/> is complted with failure.
+    /// If the target actor isn't terminated within the timeout the <see cref="Task"/> is completed with failure.
     /// 
     /// If you want to invoke specialized stopping logic on your target actor instead of <see cref="PoisonPill"/>, you can pass your stop command as a parameter:
     /// <code>
@@ -27,14 +34,14 @@ namespace Akka.Actor
     /// </summary>
     public static class GracefulStopSupport
     {
-        public static Task<bool> GracefulStop(this ActorRef target, TimeSpan timeout)
+        public static Task<bool> GracefulStop(this IActorRef target, TimeSpan timeout)
         {
             return GracefulStop(target, timeout, PoisonPill.Instance);
         }
 
-        public static Task<bool> GracefulStop(this ActorRef target, TimeSpan timeout, object stopMessage)
+        public static Task<bool> GracefulStop(this IActorRef target, TimeSpan timeout, object stopMessage)
         {
-            var internalTarget = target.AsInstanceOf<InternalActorRef>();
+            var internalTarget = target.AsInstanceOf<IInternalActorRef>();
             if (internalTarget.IsTerminated) return Task.Run(() => true);
 
             var provider = Futures.ResolveProvider(target);
@@ -50,9 +57,9 @@ namespace Akka.Actor
             //callback to unregister from tempcontainer
             Action unregister = () => provider.UnregisterTempActor(path);
 
-            var fref = new FutureActorRef(promise, ActorRef.NoSender, unregister, path);
+            var fref = new FutureActorRef(promise, unregister, path);
             internalTarget.Tell(new Watch(internalTarget, fref));
-            target.Tell(stopMessage, ActorRef.NoSender);
+            target.Tell(stopMessage, ActorRefs.NoSender);
             return promise.Task.ContinueWith(t =>
             {
                 var returnResult = false;
@@ -72,3 +79,4 @@ namespace Akka.Actor
         }
     }
 }
+

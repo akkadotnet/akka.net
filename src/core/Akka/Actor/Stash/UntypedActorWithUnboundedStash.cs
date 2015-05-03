@@ -1,13 +1,20 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="UntypedActorWithUnboundedStash.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using Akka.Actor.Internal;
 
 namespace Akka.Actor
 {
     /// <summary>
-    /// An UntypedActor with Unbounded Stash capabilites
+    /// An UntypedActor with Unbounded Stash capabilities
     /// </summary>
-    [Obsolete("Inherit from UntypedActor and WithBoundedStash instead. This class will be removed in a future release.")]
-    public abstract class UntypedActorWithUnboundedStash : UntypedActor, WithUnboundedStash
+    [Obsolete("Inherit from UntypedActor and IWithBoundedStash instead. This class will be removed in a future release.")]
+    public abstract class UntypedActorWithUnboundedStash : UntypedActor, IWithUnboundedStash
     {
 
         private IStash _stash = new UnboundedStashImpl(Context);
@@ -89,3 +96,4 @@ namespace Akka.Actor
         #endregion
     }
 }
+

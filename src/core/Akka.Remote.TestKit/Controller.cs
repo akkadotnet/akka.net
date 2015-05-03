@@ -1,9 +1,17 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Controller.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Event;
 using Helios.Net;
 using Helios.Topology;
+using System.Runtime.Serialization;
 
 namespace Akka.Remote.TestKit
 {
@@ -56,11 +64,20 @@ namespace Akka.Remote.TestKit
             {
                 return !Equals(left, right);
             }
+
+            public override string ToString()
+            {
+                return string.Format("{0}: {1}", GetType(), Name);
+            }
         }
 
         public class ClientDisconnectedException : AkkaException
         {
             public ClientDisconnectedException(string msg) : base(msg){}
+
+            protected ClientDisconnectedException(SerializationInfo info, StreamingContext context) : base(info, context)
+            {
+            }
         }
 
         public class GetNodes
@@ -103,9 +120,9 @@ namespace Akka.Remote.TestKit
         {
             readonly RoleName _name;
             readonly Address _addr;
-            readonly ActorRef _fsm;
+            readonly IActorRef _fsm;
 
-            public NodeInfo(RoleName name, Address addr, ActorRef fsm)
+            public NodeInfo(RoleName name, Address addr, IActorRef fsm)
             {
                 _name = name;
                 _addr = addr;
@@ -122,7 +139,7 @@ namespace Akka.Remote.TestKit
                 get { return _addr; }
             }
 
-            public ActorRef FSM
+            public IActorRef FSM
             {
                 get { return _fsm; }
             }
@@ -161,7 +178,7 @@ namespace Akka.Remote.TestKit
             }
         }
 
-        public sealed class CreateServerFSM : NoSerializationVerificationNeeded
+        public sealed class CreateServerFSM : INoSerializationVerificationNeeded
         {
             public CreateServerFSM(RemoteConnection channel)
             {
@@ -174,12 +191,12 @@ namespace Akka.Remote.TestKit
         int _initialParticipants;
         readonly TestConductorSettings _settings = TestConductor.Get(Context.System).Settings;
         readonly IConnection _connection;
-        readonly ActorRef _barrier;
+        readonly IActorRef _barrier;
         ImmutableDictionary<RoleName, NodeInfo> _nodes =
             ImmutableDictionary.Create<RoleName, NodeInfo>();
         // map keeping unanswered queries for node addresses (enqueued upon GetAddress, serviced upon NodeInfo)
-        ImmutableDictionary<RoleName, ImmutableHashSet<ActorRef>> _addrInterest =
-            ImmutableDictionary.Create<RoleName, ImmutableHashSet<ActorRef>>();
+        ImmutableDictionary<RoleName, ImmutableHashSet<IActorRef>> _addrInterest =
+            ImmutableDictionary.Create<RoleName, ImmutableHashSet<IActorRef>>();
         int _generation = 1;
 
         public Controller(int initialParticipants, INode controllerPort)
@@ -228,7 +245,7 @@ namespace Akka.Remote.TestKit
             return Directive.Restart;
         }
 
-        //TODO: Logging receieve?
+        //TODO: Logging receive?
         protected override void OnReceive(object message)
         {
             var createServerFSM = message as CreateServerFSM;
@@ -239,7 +256,7 @@ namespace Akka.Remote.TestKit
                 var name = host.ToEndPoint() + ":" + host.Port + "-server" + _generation++;
                 Sender.Tell(
                     Context.ActorOf(
-                        new Props(typeof (ServerFSM), new object[] {Self, (RemoteConnection)channel}).WithDeploy(Deploy.Local), name));
+                        new Props(typeof (ServerFSM), new object[] {Self, channel}).WithDeploy(Deploy.Local), name));
                 return;
             }
             var nodeInfo = message as NodeInfo;
@@ -299,11 +316,11 @@ namespace Akka.Remote.TestKit
                         Sender.Tell(new ToClient<AddressReply>(new AddressReply(node, _nodes[node].Addr)));
                     else
                     {
-                        ImmutableHashSet<ActorRef> existing;
+                        ImmutableHashSet<IActorRef> existing;
                         _addrInterest = _addrInterest.SetItem(node,
                             (_addrInterest.TryGetValue(node, out existing)
                                 ? existing
-                                : ImmutableHashSet.Create<ActorRef>()
+                                : ImmutableHashSet.Create<IActorRef>()
                                 ).Add(Sender));
                     }
                     return;
@@ -359,3 +376,4 @@ namespace Akka.Remote.TestKit
         }
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="HeliosTransport.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Net;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -6,7 +13,6 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
-using Helios.Buffers;
 using Helios.Exceptions;
 using Helios.Net;
 using Helios.Net.Bootstrap;
@@ -144,7 +150,7 @@ namespace Akka.Remote.Transport.Helios
     }
 
     /// <summary>
-    /// Abstract base class for HeliosTransport - has separate child implementations for TCP / UDP respsectively
+    /// Abstract base class for HeliosTransport - has separate child implementations for TCP / UDP respectively
     /// </summary>
     abstract class HeliosTransport : Transport
     {
@@ -166,7 +172,7 @@ namespace Akka.Remote.Transport.Helios
             }
         }
 
-        protected LoggingAdapter Log;
+        protected ILoggingAdapter Log;
 
         /// <summary>
         /// maintains a list of all established connections, so we can close them easily
@@ -334,64 +340,5 @@ namespace Akka.Remote.Transport.Helios
 
         #endregion
     }
-
-
-    /// <summary>
-    /// INTERNAL API
-    /// 
-    /// Used for accepting inbound connections
-    /// </summary>
-    abstract class ServerHandler : CommonHandlers
-    {
-        private Task<IAssociationEventListener> _associationListenerTask;
-
-        protected ServerHandler(HeliosTransport wrappedTransport, Task<IAssociationEventListener> associationListenerTask, IConnection underlyingConnection) : base(underlyingConnection)
-        {
-            WrappedTransport = wrappedTransport;
-            _associationListenerTask = associationListenerTask;
-        }
-
-        protected void InitInbound(IConnection connection, INode remoteSocketAddress, NetworkData msg)
-        {
-            connection.StopReceive();
-            _associationListenerTask.ContinueWith(r =>
-            {
-                var listener = r.Result;
-                var remoteAddress = HeliosTransport.NodeToAddress(remoteSocketAddress, WrappedTransport.SchemeIdentifier,
-                    WrappedTransport.System.Name);
-
-                if(remoteAddress == null) throw new HeliosNodeException("Unknown inbound remote address type {0}", remoteSocketAddress);
-                AssociationHandle handle;
-                Init(connection, remoteSocketAddress, remoteAddress, msg, out handle);
-                listener.Notify(new InboundAssociation(handle));
-
-            }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.NotOnCanceled & TaskContinuationOptions.NotOnFaulted);
-        }
-    }
-
-    /// <summary>
-    /// INTERNAL API
-    /// 
-    /// Used for creating outbound connections
-    /// </summary>
-    abstract class ClientHandler : CommonHandlers
-    {
-        protected readonly TaskCompletionSource<AssociationHandle> StatusPromise = new TaskCompletionSource<AssociationHandle>();
-        public Task<AssociationHandle> StatusFuture { get { return StatusPromise.Task; } }
-
-        protected Address RemoteAddress;
-
-        protected ClientHandler(HeliosTransport heliosWrappedTransport, Address remoteAddress, IConnection underlyingConnection) : base(underlyingConnection)
-        {
-            WrappedTransport = heliosWrappedTransport;
-            RemoteAddress = remoteAddress;
-        }
-
-        protected void InitOutbound(IConnection channel, INode remoteSocketAddress, NetworkData msg)
-        {
-            AssociationHandle handle;
-            Init(channel, remoteSocketAddress, RemoteAddress, msg, out handle);
-            StatusPromise.SetResult(handle);
-        }
-    }
 }
+

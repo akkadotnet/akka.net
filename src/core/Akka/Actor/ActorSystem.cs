@@ -1,18 +1,17 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text.RegularExpressions;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorSystem.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internals;
 using Akka.Configuration;
 using Akka.Dispatch;
-using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.Util;
-using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Actor
 {
@@ -34,7 +33,7 @@ namespace Akka.Actor
     ///     </b>
     ///     This class is not meant to be extended by user code.
     /// </summary>
-    public abstract class ActorSystem : ActorRefFactory, IDisposable
+    public abstract class ActorSystem : IActorRefFactory, IDisposable
     {
         /// <summary>Gets the settings.</summary>
         /// <value>The settings.</value>
@@ -56,7 +55,7 @@ namespace Akka.Actor
         ///     Gets the dead letters.
         /// </summary>
         /// <value>The dead letters.</value>
-        public abstract ActorRef DeadLetters { get; }
+        public abstract IActorRef DeadLetters { get; }
 
         /// <summary>Gets the dispatchers.</summary>
         /// <value>The dispatchers.</value>
@@ -69,15 +68,17 @@ namespace Akka.Actor
 
         /// <summary>Gets the scheduler.</summary>
         /// <value>The scheduler.</value>
-        public abstract Scheduler Scheduler { get; }
+        public abstract IScheduler Scheduler { get; }
 
         /// <summary>Gets the log</summary>
-        public abstract LoggingAdapter Log { get; }
+        public abstract ILoggingAdapter Log { get; }
 
         /// <summary>
         ///     Creates a new ActorSystem with the specified name, and the specified Config
         /// </summary>
-        /// <param name="name">Name of the ActorSystem</param>
+        /// <param name="name">Name of the ActorSystem
+        /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
+        /// </param>
         /// <param name="config">Configuration of the ActorSystem</param>
         /// <returns>ActorSystem.</returns>
         public static ActorSystem Create(string name, Config config)
@@ -89,7 +90,9 @@ namespace Akka.Actor
         /// <summary>
         ///     Creates the specified name.
         /// </summary>
-        /// <param name="name">The name.</param>
+        /// <param name="name">The name. The name must be uri friendly.
+        /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
+        /// </param>
         /// <returns>ActorSystem.</returns>
         public static ActorSystem Create(string name)
         {
@@ -179,7 +182,7 @@ namespace Akka.Actor
         public abstract bool AwaitTermination(TimeSpan timeout, CancellationToken cancellationToken);
 
 
-        public abstract void Stop(ActorRef actor);
+        public abstract void Stop(IActorRef actor);
         private bool _isDisposed; //Automatically initialized to false;
 
         //Destructor:
@@ -190,7 +193,7 @@ namespace Akka.Actor
         //}
 
         /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
-        void IDisposable.Dispose()
+        public void Dispose()
         {
             Dispose(true);
             //Take this object off the finalization queue and prevent finalization code for this object
@@ -233,7 +236,7 @@ namespace Akka.Actor
 
         public abstract object RegisterExtension(IExtensionId extension);
 
-        public abstract ActorRef ActorOf(Props props, string name = null);
+        public abstract IActorRef ActorOf(Props props, string name = null);
         
         public abstract ActorSelection ActorSelection(ActorPath actorPath);
         public abstract ActorSelection ActorSelection(string actorPath);
@@ -249,3 +252,4 @@ namespace Akka.Actor
         }
     }
 }
+

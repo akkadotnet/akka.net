@@ -1,11 +1,18 @@
-﻿using Akka.Dispatch.MessageQueues;
+﻿//-----------------------------------------------------------------------
+// <copyright file="BoundedDequeBasedMailbox.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Dispatch.MessageQueues;
 
 namespace Akka.Dispatch
 {
     /// <summary>
     /// Mailbox with support for EnqueueFirst
     /// </summary>
-    public class BoundedDequeBasedMailbox : Mailbox<BoundedMessageQueue, BoundedDequeMessageQueue>, DequeBasedMailbox
+    public class BoundedDequeBasedMailbox : Mailbox<BoundedMessageQueue, BoundedDequeMessageQueue>, IDequeBasedMailbox
     {
         protected override BoundedMessageQueue CreateSystemMessagesQueue()
         {
@@ -23,3 +30,4 @@ namespace Akka.Dispatch
         }
     }
 }
+

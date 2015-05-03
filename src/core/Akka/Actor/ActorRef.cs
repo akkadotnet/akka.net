@@ -1,12 +1,19 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorRef.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
-using System.Threading;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -20,18 +27,16 @@ namespace Akka.Actor
     /// method provided on the scope.
     /// INTERNAL
     /// </summary>
-    // ReSharper disable once InconsistentNaming
-    public interface ActorRefScope
+    public interface IActorRefScope
     {
         bool IsLocal { get; }
     }
 
     /// <summary>
     /// Marker interface for Actors that are deployed within local scope, 
-    /// i.e. <see cref="ActorRefScope.IsLocal"/> always returns <c>true</c>.
+    /// i.e. <see cref="IActorRefScope.IsLocal"/> always returns <c>true</c>.
     /// </summary>
-    // ReSharper disable once InconsistentNaming
-    internal interface LocalRef : ActorRefScope { }
+    internal interface ILocalRef : IActorRefScope { }
 
     /// <summary>
     /// RepointableActorRef (and potentially others) may change their locality at
@@ -41,7 +46,7 @@ namespace Akka.Actor
     /// actor refs will have the same behavior.
     /// INTERNAL
     /// </summary>
-    public interface RepointableRef : ActorRefScope
+    public interface IRepointableRef : IActorRefScope
     {
         bool IsStarted { get; }
     }
@@ -51,12 +56,14 @@ namespace Akka.Actor
         private readonly TaskCompletionSource<object> _result;
         private readonly Action _unregister;
         private readonly ActorPath _path;
-        private ActorRef _sender;
 
-        public FutureActorRef(TaskCompletionSource<object> result, ActorRef sender, Action unregister, ActorPath path)
+        public FutureActorRef(TaskCompletionSource<object> result, Action unregister, ActorPath path)
         {
+            if (ActorCell.Current != null)
+            {
+                _actorAwaitingResultSender = ActorCell.Current.Sender;
+            }
             _result = result;
-            _sender = sender ?? ActorRef.NoSender;
             _unregister = unregister;
             _path = path;
         }
@@ -66,7 +73,7 @@ namespace Akka.Actor
             get { return _path; }
         }
 
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { throw new NotImplementedException(); }
         }
@@ -75,30 +82,26 @@ namespace Akka.Actor
         private const int INITIATED = 0;
         private const int COMPLETED = 1;
         private int status = INITIATED;
-        protected override void TellInternal(object message, ActorRef sender)
+        private readonly IActorRef _actorAwaitingResultSender;
+
+        protected override void TellInternal(object message, IActorRef sender)
         {
-            if (message is SystemMessage) //we have special handling for system messages
+
+            if (message is ISystemMessage) //we have special handling for system messages
             {
-                SendSystemMessage(message.AsInstanceOf<SystemMessage>(), sender);
+                SendSystemMessage(message.AsInstanceOf<ISystemMessage>(), sender);
             }
             else
             {
                 if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
                 {
                     _unregister();
-                    if (_sender == NoSender || message is Terminated)
-                    {
-                        _result.TrySetResult(message);
-                    }
-                    else
-                    {
-                        _sender.Tell(new CompleteFuture(() => _result.TrySetResult(message)));
-                    }
+                    _result.TrySetResult(message);
                 }
             }
         }
 
-        protected void SendSystemMessage(SystemMessage message, ActorRef sender)
+        protected void SendSystemMessage(ISystemMessage message, IActorRef sender)
         {
             var d = message as DeathWatchNotification;
             if (message is Terminate)
@@ -107,91 +110,89 @@ namespace Akka.Actor
             }
             else if (d != null)
             {
-                Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated));
+                this.Tell(new Terminated(d.Actor, d.ExistenceConfirmed, d.AddressTerminated));
             }
         }
     }
 
-    public class ActorRefSurrogate : ISurrogate
-    {
-        public ActorRefSurrogate(string path)
-        {
-            Path = path;
-        }
 
-        public string Path { get; private set; }
-
-        public object Translate()
-        {
-            return (ActorRef) this;
-        }
-    }
 
     internal static class ActorRefSender
     {
-        public static ActorRef GetSelfOrNoSender()
+        public static IActorRef GetSelfOrNoSender()
         {
             var actorCell = ActorCell.Current;
-            return actorCell != null ? actorCell.Self : ActorRef.NoSender;
+            return actorCell != null ? actorCell.Self : ActorRefs.NoSender;
         }
     }
-
-    public abstract class ActorRef : ICanTell, IEquatable<ActorRef>, IComparable<ActorRef>
+    public interface IActorRef : ICanTell, IEquatable<IActorRef>, IComparable<IActorRef>, ISurrogated
     {
+        ActorPath Path { get; }
+    }
 
+    public static class ActorRefImplicitSenderExtensions
+    {
+        public static void Tell(this IActorRef receiver, object message)
+        {
+            var sender = ActorCell.GetCurrentSelfOrNoSender();
+            receiver.Tell(message, sender);
+        }
+
+
+        /// <summary>
+        /// Forwards the message using the current Sender
+        /// </summary>
+        /// <param name="receiver">The actor that receives the forward</param>
+        /// <param name="message">The message to forward</param>
+        public static void Forward(this IActorRef receiver, object message)
+        {
+            var sender = ActorCell.GetCurrentSenderOrNoSender();
+            receiver.Tell(message, sender);
+        }
+
+    }
+    public static class ActorRefs
+    {
         public static readonly Nobody Nobody = Nobody.Instance;
-        public static readonly ActorRef NoSender = Actor.NoSender.Instance; //In Akka this is just null
+        public static readonly IActorRef NoSender = Actor.NoSender.Instance; //In Akka this is just null
+    }
+
+    public abstract class ActorRefBase : IActorRef
+    {
+        public class Surrogate : ISurrogate
+        {
+            public Surrogate(string path)
+            {
+                Path = path;
+            }
+
+            public string Path { get; private set; }
+
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return ((ActorSystemImpl)system).Provider.ResolveActorRef(Path);
+            }
+        }
 
         public abstract ActorPath Path { get; }
 
-        public void Tell(object message, ActorRef sender)
+        public void Tell(object message, IActorRef sender)
         {
             if (sender == null) throw new ArgumentNullException("sender", "A sender must be specified");
 
             TellInternal(message, sender);
         }
 
-        public void Tell(object message)
-        {
-            var sender = ActorCell.GetCurrentSelfOrNoSender();
-            TellInternal(message, sender);
-        }
-
-        /// <summary>
-        /// Forwards the message using the current Sender
-        /// </summary>
-        /// <param name="message"></param>
-        public void Forward(object message)
-        {
-            var sender = ActorCell.GetCurrentSenderOrNoSender();
-            TellInternal(message, sender);
-        }
-
-        protected abstract void TellInternal(object message, ActorRef sender);
+        protected abstract void TellInternal(object message, IActorRef sender);
 
         public override string ToString()
         {
             return string.Format("[{0}]", Path);
         }
 
-        public static implicit operator ActorRefSurrogate(ActorRef @ref)
-        {
-            if (@ref != null)
-            {
-                return new ActorRefSurrogate(Serialization.Serialization.SerializedActorPath(@ref));
-            }
-
-            return null;
-        }
-
-        public static implicit operator ActorRef(ActorRefSurrogate surrogate)
-        {
-            return ((ActorSystemImpl)Serialization.Serialization.CurrentSystem).Provider.ResolveActorRef(surrogate.Path);
-        }
-
         public override bool Equals(object obj)
         {
-            var other = obj as ActorRef;
+            var other = obj as IActorRef;
             if (other == null) return false;
             return Equals(other);
         }
@@ -207,35 +208,31 @@ namespace Akka.Actor
             }
         }
 
-        public bool Equals(ActorRef other)
+        public bool Equals(IActorRef other)
         {
             return Path.Uid == other.Path.Uid && Path.Equals(other.Path);
         }
 
-        public static bool operator ==(ActorRef left, ActorRef right)
+        public int CompareTo(IActorRef other)
         {
-            return Equals(left, right);
-        }
-
-        public static bool operator !=(ActorRef left, ActorRef right)
-        {
-            return !Equals(left, right);
-        }
-
-        public int CompareTo(ActorRef other)
-        {
-            var pathComparisonResult = this.Path.CompareTo(other.Path);
+            var pathComparisonResult = Path.CompareTo(other.Path);
             if (pathComparisonResult != 0) return pathComparisonResult;
             if (Path.Uid < other.Path.Uid) return -1;
             return Path.Uid == other.Path.Uid ? 0 : 1;
         }
+
+        public ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new Surrogate(Serialization.Serialization.SerializedActorPath(this));
+        }
     }
 
 
-    public abstract class InternalActorRef : ActorRef, ActorRefScope
+    public interface IInternalActorRef : IActorRef, IActorRefScope
     {
-        public abstract InternalActorRef Parent { get; }
-        public abstract ActorRefProvider Provider { get; }
+        IInternalActorRef Parent { get; }
+        IActorRefProvider Provider { get; }
+        bool IsTerminated { get; }
 
         /// <summary>
         /// Obtain a child given the paths element to that actor, by possibly traversing the actor tree or 
@@ -244,8 +241,30 @@ namespace Akka.Actor
         /// If the requested path does not exist, returns <see cref="Nobody"/>.
         /// </summary>
         /// <param name="name">The path elements.</param>
-        /// <returns>The <see cref="ActorRef"/>, or if the requested path does not exist, returns <see cref="Nobody"/>.</returns>
-        public abstract ActorRef GetChild(IEnumerable<string> name);    //TODO: Refactor this to use an IEnumerator instead as this will be faster instead of enumerating multiple times over name, as the implementations currently do.
+        /// <returns>The <see cref="IActorRef"/>, or if the requested path does not exist, returns <see cref="Nobody"/>.</returns>
+        IActorRef GetChild(IEnumerable<string> name);
+
+        void Resume(Exception causedByFailure = null);
+        void Start();
+        void Stop();
+        void Restart(Exception cause);
+        void Suspend();
+    }
+
+    public abstract class InternalActorRefBase : ActorRefBase, IInternalActorRef
+    {
+        public abstract IInternalActorRef Parent { get; }
+        public abstract IActorRefProvider Provider { get; }
+
+        /// <summary>
+        /// Obtain a child given the paths element to that actor, by possibly traversing the actor tree or 
+        /// looking it up at some provider-specific location. 
+        /// A path element of ".." signifies the parent, a trailing "" element must be disregarded. 
+        /// If the requested path does not exist, returns <see cref="Nobody"/>.
+        /// </summary>
+        /// <param name="name">The path elements.</param>
+        /// <returns>The <see cref="IActorRef"/>, or if the requested path does not exist, returns <see cref="Nobody"/>.</returns>
+        public abstract IActorRef GetChild(IEnumerable<string> name);    //TODO: Refactor this to use an IEnumerator instead as this will be faster instead of enumerating multiple times over name, as the implementations currently do.
         public abstract void Resume(Exception causedByFailure = null);
         public abstract void Start();
         public abstract void Stop();
@@ -256,18 +275,18 @@ namespace Akka.Actor
         public abstract bool IsLocal { get; }
     }
 
-    public abstract class MinimalActorRef : InternalActorRef, LocalRef
+    public abstract class MinimalActorRef : InternalActorRefBase, ILocalRef
     {
-        public override InternalActorRef Parent
+        public override IInternalActorRef Parent
         {
-            get { return Nobody; }
+            get { return ActorRefs.Nobody; }
         }
 
-        public override ActorRef GetChild(IEnumerable<string> name)
+        public override IActorRef GetChild(IEnumerable<string> name)
         {
             if (name.All(string.IsNullOrEmpty))
                 return this;
-            return Nobody;
+            return ActorRefs.Nobody;
         }
 
         public override void Resume(Exception causedByFailure = null)
@@ -290,7 +309,7 @@ namespace Akka.Actor
         {
         }
 
-        protected override void TellInternal(object message, ActorRef sender)
+        protected override void TellInternal(object message, IActorRef sender)
         {
         }
 
@@ -312,24 +331,24 @@ namespace Akka.Actor
 
         public override ActorPath Path { get { return _path; } }
 
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { throw new NotSupportedException("Nobody does not provide"); }
         }
 
     }
 
-    public abstract class ActorRefWithCell : InternalActorRef
+    public abstract class ActorRefWithCell : InternalActorRefBase
     {
-        public abstract Cell Underlying { get; }
+        public abstract ICell Underlying { get; }
 
-        public abstract IEnumerable<ActorRef> Children { get; }
+        public abstract IEnumerable<IActorRef> Children { get; }
 
-        public abstract InternalActorRef GetSingleChild(string name);
+        public abstract IInternalActorRef GetSingleChild(string name);
 
     }
 
-    public sealed class NoSender : ActorRef
+    public sealed class NoSender : ActorRefBase
     {
         public static readonly NoSender Instance = new NoSender();
         private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/NoSender");
@@ -338,21 +357,21 @@ namespace Akka.Actor
 
         public override ActorPath Path { get { return _path; } }
 
-        protected override void TellInternal(object message, ActorRef sender)
+        protected override void TellInternal(object message, IActorRef sender)
         {
         }
     }
 
     internal class VirtualPathContainer : MinimalActorRef
     {
-        private readonly InternalActorRef _parent;
-        private readonly LoggingAdapter _log;
-        private readonly ActorRefProvider _provider;
+        private readonly IInternalActorRef _parent;
+        private readonly ILoggingAdapter _log;
+        private readonly IActorRefProvider _provider;
         private readonly ActorPath _path;
 
-        private readonly ConcurrentDictionary<string, InternalActorRef> _children = new ConcurrentDictionary<string, InternalActorRef>();
+        private readonly ConcurrentDictionary<string, IInternalActorRef> _children = new ConcurrentDictionary<string, IInternalActorRef>();
 
-        public VirtualPathContainer(ActorRefProvider provider, ActorPath path, InternalActorRef parent, LoggingAdapter log)
+        public VirtualPathContainer(IActorRefProvider provider, ActorPath path, IInternalActorRef parent, ILoggingAdapter log)
         {
             _parent = parent;
             _log = log;
@@ -360,12 +379,12 @@ namespace Akka.Actor
             _path = path;
         }
 
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { return _provider; }
         }
 
-        public override InternalActorRef Parent
+        public override IInternalActorRef Parent
         {
             get { return _parent; }
         }
@@ -375,18 +394,18 @@ namespace Akka.Actor
             get { return _path; }
         }
 
-        public LoggingAdapter Log
+        public ILoggingAdapter Log
         {
             get { return _log; }
         }
 
 
-        protected bool TryGetChild(string name, out InternalActorRef child)
+        protected bool TryGetChild(string name, out IInternalActorRef child)
         {
             return _children.TryGetValue(name, out child);
         }
 
-        public void AddChild(string name, InternalActorRef actor)
+        public void AddChild(string name, IInternalActorRef actor)
         {
             _children.AddOrUpdate(name, actor, (k, v) =>
             {
@@ -397,7 +416,7 @@ namespace Akka.Actor
 
         public void RemoveChild(string name)
         {
-            InternalActorRef tmp;
+            IInternalActorRef tmp;
             if (!_children.TryRemove(name, out tmp))
             {
                 //TODO: log.warning("{} trying to remove non-child {}", path, name)
@@ -420,7 +439,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
   }
 */
 
-        public override ActorRef GetChild(IEnumerable<string> name)
+        public override IActorRef GetChild(IEnumerable<string> name)
         {
             //Using enumerator to avoid multiple enumerations of name.
             var enumerator = name.GetEnumerator();
@@ -432,15 +451,23 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             var firstName = enumerator.Current;
             if (string.IsNullOrEmpty(firstName))
                 return this;
-            InternalActorRef child;
+            IInternalActorRef child;
             if (_children.TryGetValue(firstName, out child))
                 return child.GetChild(new Enumerable<string>(enumerator));
-            return Nobody;
+            return ActorRefs.Nobody;
         }
 
-        public void ForeachActorRef(Action<InternalActorRef> action)
+        public bool HasChildren
         {
-            foreach (InternalActorRef child in _children.Values)
+            get
+            {
+                return !_children.IsEmpty;
+            }
+        }
+
+        public void ForEachChild(Action<IInternalActorRef> action)
+        {
+            foreach (IInternalActorRef child in _children.Values)
             {
                 action(child);
             }
@@ -470,3 +497,4 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
         }
     }
 }
+

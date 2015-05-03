@@ -1,8 +1,16 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AsyncWriteProxy.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using System.Runtime.Serialization;
 
 namespace Akka.Persistence.Journal
 {
@@ -17,12 +25,17 @@ namespace Akka.Persistence.Journal
             : base(msg)
         {
         }
+
+        protected AsyncReplayTimeoutException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     [Serializable]
     public sealed class SetStore
     {
-        public SetStore(ActorRef store)
+        public SetStore(IActorRef store)
         {
             if (store == null)
                 throw new ArgumentNullException("store", "SetStore requires non-null reference to store actor");
@@ -30,7 +43,7 @@ namespace Akka.Persistence.Journal
             Store = store;
         }
 
-        public ActorRef Store { get; private set; }
+        public IActorRef Store { get; private set; }
     }
 
     public static class AsyncWriteTarget
@@ -145,10 +158,10 @@ namespace Akka.Persistence.Journal
         #endregion
     }
 
-    public abstract class AsyncWriteProxy : AsyncWriteJournal, WithUnboundedStash
+    public abstract class AsyncWriteProxy : AsyncWriteJournal, IWithUnboundedStash
     {
         private readonly Receive _initialized;
-        private ActorRef _store;
+        private IActorRef _store;
 
         public IStash Stash { get; set; }
         public TimeSpan Timeout { get; private set; }
@@ -241,3 +254,4 @@ namespace Akka.Persistence.Journal
         }
     }
 }
+

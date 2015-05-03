@@ -1,9 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PersistentActorFailureSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Persistence.Journal;
 using Akka.TestKit;
-using Akka.TestKit.TestActors;
 using Xunit;
 
 namespace Akka.Persistence.Tests
@@ -49,9 +55,9 @@ namespace Akka.Persistence.Tests
 
         internal class Supervisor : ActorBase
         {
-            private readonly ActorRef _testActor;
+            private readonly IActorRef _testActor;
 
-            public Supervisor(ActorRef testActor)
+            public Supervisor(IActorRef testActor)
             {
                 _testActor = testActor;
             }
@@ -94,8 +100,9 @@ namespace Akka.Persistence.Tests
             var supervisor = ActorOf(() => new Supervisor(TestActor));
             supervisor.Tell(Props.Create(() => new BehaviorOneActor(Name)));
 
-            ExpectMsg<ActorRef>();
+            ExpectMsg<IActorRef>();
             ExpectMsg<ActorKilledException>();
         }
     }
 }
+

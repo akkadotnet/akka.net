@@ -1,10 +1,14 @@
-﻿using Akka.Configuration;
-using Akka.Event;
-using Akka.Util;
-using Akka.Util.Internal;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DeadlineFailureDetector.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Threading;
+using Akka.Configuration;
+using Akka.Event;
 
 namespace Akka.Remote
 {
@@ -18,7 +22,7 @@ namespace Akka.Remote
         private Clock _clock;
 
         /// <summary>
-        /// Procedural contructor for <see cref="DeadlineFailureDetector"/>
+        /// Procedural constructor for <see cref="DeadlineFailureDetector"/>
         /// </summary>
         /// <param name="acceptableHeartbeatPause">Duration corresponding to number of potentially lost/delayed
         /// heartbeats that will be accepted before considering it to be an anomaly.
@@ -30,7 +34,7 @@ namespace Akka.Remote
         {
             _acceptableHeartbeatPause = acceptableHeartbeatPause;
             _acceptableHeartbeatMillis = Convert.ToInt64(acceptableHeartbeatPause.TotalMilliseconds);
-            Guard.Assert(_acceptableHeartbeatPause > TimeSpan.Zero, "acceptable-heartbeat-pause must be greater than zero");
+            if (_acceptableHeartbeatPause <= TimeSpan.Zero) throw new ArgumentException("acceptable-heartbeat-pause must be greater than zero");
         }
 
         /// <summary>
@@ -73,3 +77,4 @@ namespace Akka.Remote
         }
     }
 }
+

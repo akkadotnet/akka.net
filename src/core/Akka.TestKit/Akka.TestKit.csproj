@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -10,12 +10,6 @@
     <AssemblyName>Akka.TestKit</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
-    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
-    <ReferencePath>$(ProgramFiles)\Common Files\microsoft shared\VSTT\$(VisualStudioVersion)\UITestExtensionPackages</ReferencePath>
-    <IsCodedUITest>False</IsCodedUITest>
-    <TestProjectType>UnitTest</TestProjectType>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
   </PropertyGroup>
@@ -45,6 +39,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug Mono|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
@@ -55,6 +50,8 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <NoWarn>809</NoWarn>
+    <WarningLevel>4</WarningLevel>
+    <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -71,13 +68,14 @@
     <Compile Include="..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="ActorCellKeepingSynchronizationContext.cs" />
     <Compile Include="CallingThreadDispatcher.cs" />
     <Compile Include="EventFilter\IEventFilterApplier.cs" />
     <Compile Include="EventFilter\Internal\CustomEventFilter.cs" />
     <Compile Include="EventFilter\DeadLettersFilter.cs" />
     <Compile Include="EventFilter\Internal\DebugFilter.cs" />
     <Compile Include="EventFilter\Internal\ErrorFilter.cs" />
-    <Compile Include="EventFilter\EventFilter.cs" />
+    <Compile Include="EventFilter\IEventFilter.cs" />
     <Compile Include="EventFilter\Internal\EventFilterApplier.cs" />
     <Compile Include="EventFilter\Internal\StringMatcher\ContainsString.cs" />
     <Compile Include="EventFilter\Internal\StringMatcher\EqualsString.cs" />
@@ -98,10 +96,10 @@
     <Compile Include="EventFilter\Internal\WarningFilter.cs" />
     <Compile Include="EventFilter\TestEvent\Mute.cs" />
     <Compile Include="EventFilter\TestEvent\Unmute.cs" />
-    <Compile Include="EventFilter\UnmutableFilter.cs" />
+    <Compile Include="EventFilter\IUnmutableFilter.cs" />
     <Compile Include="FSMSpecHelpers.cs" />
     <Compile Include="AutoPilots.cs" />
-    <Compile Include="NoImplicitSender.cs" />
+    <Compile Include="INoImplicitSender.cs" />
     <Compile Include="Internal\BlockingCollectionTestActorQueue.cs" />
     <Compile Include="Internal\InternalTestActor.cs" />
     <Compile Include="Internal\InternalTestActorRef.cs" />
@@ -113,7 +111,7 @@
     <Compile Include="TestActors\EchoActor.cs" />
     <Compile Include="TestBarrier.cs" />
     <Compile Include="TestFSMRef.cs" />
-    <Compile Include="TestKitAssertions.cs" />
+    <Compile Include="ITestKitAssertions.cs" />
     <Compile Include="MessageEnvelope.cs" />
     <Compile Include="NullMessageEnvelope.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -138,7 +136,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka\Akka.csproj">
-      <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
+      <Project>{5DEDDF90-37F0-48D3-A0B0-A5CBD8A7E377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
   </ItemGroup>

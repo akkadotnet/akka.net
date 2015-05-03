@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RootGuardianActorRef.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using Akka.Actor.Internals;
 using Akka.Dispatch;
@@ -7,26 +14,26 @@ namespace Akka.Actor
 {
     public class RootGuardianActorRef : LocalActorRef
     {
-        private InternalActorRef _tempContainer;
-        private readonly InternalActorRef _deadLetters;
-        private readonly IReadOnlyDictionary<string, InternalActorRef> _extraNames;
+        private IInternalActorRef _tempContainer;
+        private readonly IInternalActorRef _deadLetters;
+        private readonly IReadOnlyDictionary<string, IInternalActorRef> _extraNames;
 
         public RootGuardianActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, Func<Mailbox> createMailbox, //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType
-            InternalActorRef supervisor, ActorPath path, InternalActorRef deadLetters, IReadOnlyDictionary<string, InternalActorRef> extraNames)
+            IInternalActorRef supervisor, ActorPath path, IInternalActorRef deadLetters, IReadOnlyDictionary<string, IInternalActorRef> extraNames)
             : base(system,props,dispatcher,createMailbox,supervisor,path)
         {
             _deadLetters = deadLetters;
             _extraNames = extraNames;
         }
 
-        public override InternalActorRef Parent { get { return this; } }
+        public override IInternalActorRef Parent { get { return this; } }
 
-        public void SetTempContainer(InternalActorRef tempContainer)
+        public void SetTempContainer(IInternalActorRef tempContainer)
         {
             _tempContainer = tempContainer;
         }
 
-        public override InternalActorRef GetSingleChild(string name)
+        public override IInternalActorRef GetSingleChild(string name)
         {
             switch(name)
             {
@@ -35,7 +42,7 @@ namespace Akka.Actor
                 case "deadLetters":
                     return _deadLetters;
                 default:
-                    InternalActorRef extraActorRef;
+                    IInternalActorRef extraActorRef;
                     if(_extraNames.TryGetValue(name, out extraActorRef))
                         return extraActorRef;
                     return base.GetSingleChild(name);
@@ -43,3 +50,4 @@ namespace Akka.Actor
         }
     }
 }
+

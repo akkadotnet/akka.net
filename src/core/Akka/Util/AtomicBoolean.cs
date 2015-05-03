@@ -1,4 +1,11 @@
-﻿using System.Threading;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AtomicBoolean.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Threading;
 
 namespace Akka.Util
 {
@@ -9,14 +16,14 @@ namespace Akka.Util
     /// without any explicit locking. .NET's strong memory on write guarantees might already enforce
     /// this ordering, but the addition of the MemoryBarrier guarantees it.
     /// </summary>
-    public class AtomicBoolean
+    internal class AtomicBoolean
     {
         private const int _falseValue = 0;
         private const int _trueValue = 1;
 
         private int _value;
         /// <summary>
-        /// Sets the initial value of this <see cref="AtomicBoolean"/> to <see cref="originalValue"/>.
+        /// Sets the initial value of this <see cref="AtomicBoolean"/> to <see cref="initialValue"/>.
         /// </summary>
         public AtomicBoolean(bool initialValue = false)
         {
@@ -42,9 +49,8 @@ namespace Akka.Util
         /// <summary>
         /// If <see cref="Value"/> equals <see cref="expected"/>, then set the Value to
         /// <see cref="newValue"/>.
-        /// 
-        /// Returns true if <see cref="newValue"/> was set, false otherise.
         /// </summary>
+        /// <returns><c>true</c> if <see cref="newValue"/> was set</returns>
         public bool CompareAndSet(bool expected, bool newValue)
         {
             var expectedInt = expected ? _trueValue : _falseValue;
@@ -75,3 +81,4 @@ namespace Akka.Util
         #endregion
     }
 }
+

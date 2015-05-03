@@ -1,7 +1,13 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestKit.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Util;
 
 namespace Akka.TestKit.Xunit
 {
@@ -61,7 +67,7 @@ namespace Akka.TestKit.Xunit
         /// the system. Otherwise you'll leak memory.
         /// </remarks>
         /// </summary>
-        protected virtual void AfterTest()
+        protected virtual void AfterAll()
         {
             Shutdown();
         }
@@ -91,7 +97,7 @@ namespace Akka.TestKit.Xunit
         /// user's code. Managed and unmanaged resources will be disposed.<br />
         /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only 
         /// unmanaged resources can be disposed.</param>
-        private void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing)
         {
             // If disposing equals false, the method has been called by the
             // runtime from inside the finalizer and you should not reference
@@ -104,7 +110,7 @@ namespace Akka.TestKit.Xunit
                 {
                     if(disposing)
                     {
-                        AfterTest();                        
+                        AfterAll();                        
                     }
                 }
                 _isDisposed = true;
@@ -116,3 +122,4 @@ namespace Akka.TestKit.Xunit
         }
     }
 }
+

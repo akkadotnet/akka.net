@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="HoconTokenizer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -30,16 +37,16 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        ///     Gets a value indicating whether [eo f].
+        ///     Gets a value indicating whether [eof].
         /// </summary>
-        /// <value><c>true</c> if [eo f]; otherwise, <c>false</c>.</value>
+        /// <value><c>true</c> if [eof]; otherwise, <c>false</c>.</value>
         public bool EoF
         {
             get { return _index >= _text.Length; }
         }
 
         /// <summary>
-        ///     Matcheses the specified pattern.
+        ///     Matches the specified pattern.
         /// </summary>
         /// <param name="pattern">The pattern.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
@@ -72,7 +79,7 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        ///     Matcheses the specified patterns.
+        ///     Matches the specified patterns.
         /// </summary>
         /// <param name="patterns">The patterns.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
@@ -386,10 +393,10 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        ///     Determines whether [is start of tripple quoted text].
+        ///     Determines whether [is start of triple quoted text].
         /// </summary>
-        /// <returns><c>true</c> if [is start of tripple quoted text]; otherwise, <c>false</c>.</returns>
-        public bool IsStartOfTrippleQuotedText()
+        /// <returns><c>true</c> if [is start of triple quoted text]; otherwise, <c>false</c>.</returns>
+        public bool IsStartOfTripleQuotedText()
         {
             return Matches("\"\"\"");
         }
@@ -447,10 +454,10 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        ///     Pulls the tripple quoted text.
+        ///     Pulls the triple quoted text.
         /// </summary>
         /// <returns>Token.</returns>
-        public Token PullTrippleQuotedText()
+        public Token PullTripleQuotedText()
         {
             var sb = new StringBuilder();
             Take(3);
@@ -569,7 +576,7 @@ namespace Akka.Configuration.Hocon
         /// <returns>Token.</returns>
         /// <exception cref="System.Exception">
         ///     Expected value: Null literal, Array, Number, Boolean, Quoted Text, Unquoted Text,
-        ///     Tripple quoted Text, Object or End of array
+        ///     Triple quoted Text, Object or End of array
         /// </exception>
         public Token PullValue()
         {
@@ -578,9 +585,9 @@ namespace Akka.Configuration.Hocon
                 return PullStartOfObject();
             }
 
-            if (IsStartOfTrippleQuotedText())
+            if (IsStartOfTripleQuotedText())
             {
-                return PullTrippleQuotedText();
+                return PullTripleQuotedText();
             }
 
             if (IsStartOfQuotedText())
@@ -606,7 +613,7 @@ namespace Akka.Configuration.Hocon
             }
 
             throw new Exception(
-                "Expected value: Null literal, Array, Number, Boolean, Quoted Text, Unquoted Text, Tripple quoted Text, Object or End of array");
+                "Expected value: Null literal, Array, Number, Boolean, Quoted Text, Unquoted Text, Triple quoted Text, Object or End of array");
         }
 
         /// <summary>
@@ -732,7 +739,7 @@ namespace Akka.Configuration.Hocon
                 return true;
             if (IsObjectStart())
                 return true;
-            if (IsStartOfTrippleQuotedText())
+            if (IsStartOfTripleQuotedText())
                 return true;
             if (IsSubstitutionStart())
                 return true;
@@ -745,3 +752,4 @@ namespace Akka.Configuration.Hocon
         }
     }
 }
+

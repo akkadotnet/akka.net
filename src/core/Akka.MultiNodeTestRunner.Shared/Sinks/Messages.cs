@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Messages.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using Akka.Event;
 
@@ -26,7 +33,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     }
 
     /// <summary>
-    /// Message type for indiciating that the current spec has ended.
+    /// Message type for indicating that the current spec has ended.
     /// </summary>
     public class EndSpec { }
 
@@ -79,6 +86,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         public DateTime When { get; private set; }
 
         public string Message { get; private set; }
+
+        public override string ToString()
+        {
+            return string.Format("[NODE{1}][{0}]: {2}", When, NodeIndex, Message);
+        }
     }
 
     /// <summary>
@@ -104,6 +116,13 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         public string LogSource { get; private set; }
 
         public LogLevel Level { get; private set; }
+
+        public override string ToString()
+        {
+            return string.Format("[NODE{1}][{0}][{2}][{3}]: {4}", When, NodeIndex,
+                Level.ToString().Replace("Level", "").ToUpperInvariant(), LogSource,
+                Message);
+        }
     }
 
     /// <summary>
@@ -126,6 +145,13 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         public string LogSource { get; private set; }
 
         public LogLevel Level { get; private set; }
+
+        public override string ToString()
+        {
+            return string.Format("[RUNNER][{0}][{1}][{2}]: {3}", When,
+                Level.ToString().Replace("Level", "").ToUpperInvariant(), LogSource,
+                Message);
+        }
     }
 
 
@@ -139,3 +165,4 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
     #endregion
 }
+

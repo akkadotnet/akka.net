@@ -1,16 +1,21 @@
-﻿using System.Collections.Immutable;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MetricsGossipSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.Remoting;
 using Akka.Actor;
 using Akka.TestKit;
-using Akka.TestKit.Xunit;
 using Xunit;
 
 namespace Akka.Cluster.Tests
 {
     public class MetricsGossipSpec : MetricsCollectorFactory
     {
-        public ActorRef Self { get { return TestActor; } }
+        public IActorRef Self { get { return TestActor; } }
 
         private IMetricsCollector _collector;
 
@@ -134,3 +139,4 @@ namespace Akka.Cluster.Tests
         }
     }
 }
+

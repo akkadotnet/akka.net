@@ -1,4 +1,11 @@
-﻿module MapReduce
+﻿//-----------------------------------------------------------------------
+// <copyright file="MapReduce.fs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+module MapReduce
 
 open System
 open System.Collections.Concurrent
@@ -33,7 +40,7 @@ let reduce (dict:ConcurrentDictionary<string, int>) (mailbox: Actor<MRMsg>) = fu
 
 /// Master actor function, used as proxy between system user and internal Map/Reduce implementation
 /// Can either forward data chunk to mappers or forward a request of returning all reduced data
-let master mapper (reducer:ActorRef) (mailbox: Actor<MRMsg>) = function
+let master mapper (reducer:IActorRef) (mailbox: Actor<MRMsg>) = function
     | Map line  -> mapper <! Map line
     | Collect   -> reducer.Forward Collect
     | m         -> mailbox.Unhandled m
@@ -56,7 +63,8 @@ let main() =
     // return processed data and display it
     async {
         let! res = master <? Collect
-        for (k, v) in res :?> (string*int) seq do
+        for (k, v) in res do
             printfn "%s\t%d" k v
         system.Shutdown()
     } |> Async.RunSynchronously
+

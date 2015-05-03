@@ -1,9 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Logging.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 
 namespace Akka.Event
@@ -75,8 +77,8 @@ namespace Akka.Event
         /// </summary>
         /// <param name="context">The cell.</param>
         /// <param name="logMessageFormatter">The log message formatter.</param>
-        /// <returns>LoggingAdapter.</returns>
-        public static LoggingAdapter GetLogger(this IActorContext context, ILogMessageFormatter logMessageFormatter = null)
+        /// <returns>ILoggingAdapter.</returns>
+        public static ILoggingAdapter GetLogger(this IActorContext context, ILogMessageFormatter logMessageFormatter = null)
         {
             var logSource = context.Self.ToString();
             var logClass = context.Props.Type;
@@ -90,13 +92,13 @@ namespace Akka.Event
         /// <param name="system">The system.</param>
         /// <param name="logSourceObj">The log source object.</param>
         /// <param name="logMessageFormatter">The log message formatter.</param>
-        /// <returns>LoggingAdapter.</returns>
-        public static LoggingAdapter GetLogger(ActorSystem system, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
+        /// <returns>ILoggingAdapter.</returns>
+        public static ILoggingAdapter GetLogger(ActorSystem system, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
         {
             return GetLogger(system.EventStream, logSourceObj, logMessageFormatter);
         }
 
-        public static LoggingAdapter GetLogger(LoggingBus loggingBus, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
+        public static ILoggingAdapter GetLogger(LoggingBus loggingBus, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
         {
             //TODO: refine this
             string logSource;
@@ -160,3 +162,4 @@ namespace Akka.Event
         }
     }
 }
+

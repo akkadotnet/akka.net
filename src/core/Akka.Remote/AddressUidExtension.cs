@@ -1,8 +1,18 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AddressUidExtension.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Actor;
 using Akka.Util;
 
 namespace Akka.Remote
 {
+    /// <summary>
+    /// <see cref="IExtension"/> provider for <see cref="AddressUid"/>
+    /// </summary>
     public class AddressUidExtension : ExtensionIdProvider<AddressUid>
     {
         public override AddressUid CreateExtension(ExtendedActorSystem system)
@@ -34,3 +44,4 @@ namespace Akka.Remote
         }
     }
 }
+

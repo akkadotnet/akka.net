@@ -1,11 +1,16 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ConvergenceSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using System.Threading;
-using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
-using TCP;
 using Xunit;
 using Address = Akka.Actor.Address;
 
@@ -109,7 +114,7 @@ namespace Akka.Cluster.Tests.MultiNode
         private ConvergenceSpec(ConvergenceSpecConfig config) : base(config)
         {
             _config = config;
-            //TODO: muteMarkingAsUnreachable()
+            MuteMarkingAsUnreachable();
         }
 
         [MultiNodeFact]
@@ -188,3 +193,4 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 }
+

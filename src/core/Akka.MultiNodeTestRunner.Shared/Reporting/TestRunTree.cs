@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestRunTree.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
@@ -73,12 +80,12 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
         /// <summary>
         /// Returns a deep copy of the current tree.
         /// </summary>
-        public TestRunTree Copy()
+        public TestRunTree Copy(bool? passed = null)
         {
             var specs = new FactData[_specs.Count];
             _specs.CopyTo(specs);
 
-            return new TestRunTree(StartTime, specs.ToList(), EndTime, Passed);
+            return new TestRunTree(StartTime, specs.ToList(), EndTime, passed ?? Passed);
         }
 
         #region Equality
@@ -401,3 +408,4 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
    
     }
 }
+

@@ -1,10 +1,12 @@
-﻿using System.Reflection;
-using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="StandardOutLogger.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Util;
 
 namespace Akka.Event
@@ -32,7 +34,7 @@ namespace Akka.Event
         /// </summary>
         /// <value>The provider.</value>
         /// <exception cref="System.Exception">StandardOutLogged does not provide</exception>
-        public override ActorRefProvider Provider
+        public override IActorRefProvider Provider
         {
             get { throw new Exception("StandardOutLogger does not provide"); }
         }
@@ -48,7 +50,7 @@ namespace Akka.Event
         /// <param name="message">The message.</param>
         /// <param name="sender">The sender.</param>
         /// <exception cref="System.ArgumentNullException">message</exception>
-        protected override void TellInternal(object message, ActorRef sender)
+        protected override void TellInternal(object message, IActorRef sender)
         {
             if(message == null)
                 throw new ArgumentNullException("message");
@@ -94,3 +96,4 @@ namespace Akka.Event
         }
     }
 }
+

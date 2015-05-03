@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Act.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 
 namespace Akka.Actor.Dsl
 {
@@ -21,21 +28,26 @@ namespace Akka.Actor.Dsl
         void DefaultPostStop();
 
         /// <summary>
-        /// Become new behavior with discard of the old one. Equivalent of: Context.Become(_, discardOld: true).
+        /// Changes the actor's behavior and replaces the current handler with the specified handler.
         /// </summary>
         void Become(Action<object, IActorContext> handler);
 
         /// <summary>
-        /// Become new behavior without discarding the old one. Equivalent of: Context.Become(_, discardOld: false).
+        /// Changes the actor's behavior and replaces the current handler with the specified handler without discarding the current.
+        /// The current handler is stored on a stack, and you can revert to it by calling <see cref="UnbecomeStacked"/>
+        /// <remarks>Please note, that in order to not leak memory, make sure every call to <see cref="BecomeStacked"/>
+        /// is matched with a call to <see cref="UnbecomeStacked"/>.</remarks>
         /// </summary>
         void BecomeStacked(Action<object, IActorContext> handler);
 
         /// <summary>
-        /// Reverts <see cref="BecomeStacked"/> behavior.
+        /// Changes the actor's behavior and replaces the current handler with the previous one on the behavior stack.
+        /// <remarks>In order to store an actor on the behavior stack, a call to <see cref="BecomeStacked"/> must have been made
+        /// prior to this call</remarks>
         /// </summary>
         void UnbecomeStacked();
 
-        ActorRef ActorOf(Action<IActorDsl> config, string name = null);
+        IActorRef ActorOf(Action<IActorDsl> config, string name = null);
     }
 
     public sealed class Act : ReceiveActor, IActorDsl
@@ -97,19 +109,20 @@ namespace Akka.Actor.Dsl
 
         public void Become(Action<object, IActorContext> handler)
         {
-            Become(msg => handler(msg, Context), true);
+            Become(msg => handler(msg, Context));
         }
 
         public void BecomeStacked(Action<object, IActorContext> handler)
         {
-            Become(msg => handler(msg, Context), false);
-        }
-        public void UnbecomeStacked()
-        {
-            base.Unbecome();
+            BecomeStacked(msg => handler(msg, Context));
         }
 
-        public ActorRef ActorOf(Action<IActorDsl> config, string name = null)
+        void IActorDsl.UnbecomeStacked()
+        {
+            base.UnbecomeStacked();
+        }
+
+        public IActorRef ActorOf(Action<IActorDsl> config, string name = null)
         {
             var props = Props.Create(() => new Act(config));
             return Context.ActorOf(props, name);
@@ -171,14 +184,15 @@ namespace Akka.Actor.Dsl
 
     public static class ActExtensions
     {
-        public static ActorRef ActorOf(this ActorRefFactory factory, Action<IActorDsl> config, string name = null)
+        public static IActorRef ActorOf(this IActorRefFactory factory, Action<IActorDsl> config, string name = null)
         {
             return factory.ActorOf(Props.Create(() => new Act(config)), name);
         }
 
-        public static ActorRef ActorOf(this ActorRefFactory factory, Action<IActorDsl, IActorContext> config, string name = null)
+        public static IActorRef ActorOf(this IActorRefFactory factory, Action<IActorDsl, IActorContext> config, string name = null)
         {
             return factory.ActorOf(Props.Create(() => new Act(config)), name);
         }
     }
 }
+

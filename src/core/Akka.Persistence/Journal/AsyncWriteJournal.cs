@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AsyncWriteJournal.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,7 +18,7 @@ namespace Akka.Persistence.Journal
         private static readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent;
         protected readonly bool CanPublish;
         private readonly PersistenceExtension _extension;
-        private readonly ActorRef _resequencer;
+        private readonly IActorRef _resequencer;
 
         private long _resequencerCounter = 1L;
 
@@ -76,6 +83,7 @@ namespace Akka.Persistence.Journal
 
         private void HandleReplayMessages(ReplayMessages message)
         {
+            var context = Context;
             // Send replayed messages and replay result to persistentActor directly. No need
             // to resequence replayed messages relative to written and looped messages.
             ReplayMessagesAsync(message.PersistenceId, message.FromSequenceNr, message.ToSequenceNr, message.Max, p =>
@@ -85,7 +93,7 @@ namespace Akka.Persistence.Journal
             .NotifyAboutReplayCompletion(message.PersistentActor)
             .ContinueWith(t =>
             {
-                if(!t.IsFaulted && CanPublish) Context.System.EventStream.Publish(message);
+                if (!t.IsFaulted && CanPublish) context.System.EventStream.Publish(message);
             }, _continuationOptions);
         }
 
@@ -112,16 +120,22 @@ namespace Akka.Persistence.Journal
                 }
             };
 
-            WriteMessagesAsync(CreatePersitentBatch(message.Messages)).ContinueWith(t =>
+            /*
+             * Self MUST BE CLOSED OVER here, or the code below will be subject to race conditions which may result
+             * in failure, as the `IActorContext` needed for resolving Context.Self will be done outside the current
+             * execution context.
+             */
+            var self = Self;
+            WriteMessagesAsync(CreatePersistentBatch(message.Messages)).ContinueWith(t =>
             {
                 if (!t.IsFaulted)
                 {
-                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessull.Instance, counter, message.PersistentActor, Self));
+                    _resequencer.Tell(new Desequenced(WriteMessagesSuccessful.Instance, counter, message.PersistentActor, self));
                     resequence(x => new WriteMessageSuccess(x, message.ActorInstanceId));
                 }
                 else
                 {
-                    _resequencer.Tell(new Desequenced(new WriteMessagesFailed(t.Exception), counter, message.PersistentActor, Self));
+                    _resequencer.Tell(new Desequenced(new WriteMessagesFailed(t.Exception), counter, message.PersistentActor, self));
                     resequence(x => new WriteMessageFailure(x, t.Exception, message.ActorInstanceId));
                 }
             }, _continuationOptions);
@@ -131,7 +145,7 @@ namespace Akka.Persistence.Journal
 
         internal sealed class Desequenced
         {
-            public Desequenced(object message, long sequenceNr, ActorRef target, ActorRef sender)
+            public Desequenced(object message, long sequenceNr, IActorRef target, IActorRef sender)
             {
                 Message = message;
                 SequenceNr = sequenceNr;
@@ -141,8 +155,8 @@ namespace Akka.Persistence.Journal
 
             public object Message { get; private set; }
             public long SequenceNr { get; private set; }
-            public ActorRef Target { get; private set; }
-            public ActorRef Sender { get; private set; }
+            public IActorRef Target { get; private set; }
+            public IActorRef Sender { get; private set; }
         }
 
         internal class Resequencer : ActorBase
@@ -189,3 +203,4 @@ namespace Akka.Persistence.Journal
         }
     }
 }
+

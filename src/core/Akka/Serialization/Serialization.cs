@@ -1,9 +1,14 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Serialization.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Util.Internal;
 
 namespace Akka.Serialization
@@ -122,7 +127,7 @@ namespace Akka.Serialization
             throw new Exception("Serializer not found for type " + objectType.Name);
         }
 
-        public static string SerializedActorPath(ActorRef @ref)
+        public static string SerializedActorPath(IActorRef @ref)
         {
             /*
 val path = actorRef.path
@@ -164,3 +169,4 @@ val path = actorRef.path
         }
     }
 }
+

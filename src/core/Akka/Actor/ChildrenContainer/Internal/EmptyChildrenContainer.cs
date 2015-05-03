@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="EmptyChildrenContainer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using Akka.Util.Internal.Collections;
 
@@ -6,61 +13,61 @@ namespace Akka.Actor.Internal
     /// <summary>
     /// This is the empty container, shared among all leaf actors.
     /// </summary>
-    public class EmptyChildrenContainer : ChildrenContainer
+    public class EmptyChildrenContainer : IChildrenContainer
     {
-        private static readonly ImmutableTreeMap<string, ChildStats> _emptyStats = ImmutableTreeMap<string, ChildStats>.Empty;
-        private static readonly ChildrenContainer _instance = new EmptyChildrenContainer();
+        private static readonly ImmutableTreeMap<string, IChildStats> _emptyStats = ImmutableTreeMap<string, IChildStats>.Empty;
+        private static readonly IChildrenContainer _instance = new EmptyChildrenContainer();
 
         protected EmptyChildrenContainer()
         {
             //Intentionally left blank
         }
 
-        public static ChildrenContainer Instance { get { return _instance; } }
+        public static IChildrenContainer Instance { get { return _instance; } }
 
-        public virtual ChildrenContainer Add(string name, ChildRestartStats stats)
+        public virtual IChildrenContainer Add(string name, ChildRestartStats stats)
         {
             var newMap = _emptyStats.Add(name, stats);
             return NormalChildrenContainer.Create(newMap);
         }
 
-        public ChildrenContainer Remove(ActorRef child)
+        public IChildrenContainer Remove(IActorRef child)
         {
             return this;
         }
 
-        public bool TryGetByName(string name, out ChildStats stats)
+        public bool TryGetByName(string name, out IChildStats stats)
         {
             stats = null;
             return false;
         }
 
-        public bool TryGetByRef(ActorRef actor, out ChildRestartStats childRestartStats)
+        public bool TryGetByRef(IActorRef actor, out ChildRestartStats childRestartStats)
         {
             childRestartStats = null;
             return false;
         }
 
-        public bool Contains(ActorRef actor)
+        public bool Contains(IActorRef actor)
         {
             return false;
         }
 
-        public IReadOnlyList<InternalActorRef> Children { get { return EmptyReadOnlyCollections<InternalActorRef>.List; } }
+        public IReadOnlyList<IInternalActorRef> Children { get { return EmptyReadOnlyCollections<IInternalActorRef>.List; } }
 
         public IReadOnlyList<ChildRestartStats> Stats { get { return EmptyReadOnlyCollections<ChildRestartStats>.List; } }
 
-        public ChildrenContainer ShallDie(ActorRef actor)
+        public IChildrenContainer ShallDie(IActorRef actor)
         {
             return this;
         }
 
-        public virtual ChildrenContainer Reserve(string name)
+        public virtual IChildrenContainer Reserve(string name)
         {
             return NormalChildrenContainer.Create(_emptyStats.Add(name, ChildNameReserved.Instance));
         }
 
-        public ChildrenContainer Unreserve(string name)
+        public IChildrenContainer Unreserve(string name)
         {
             return this;
         }
@@ -74,3 +81,4 @@ namespace Akka.Actor.Internal
         public virtual bool IsNormal { get { return true; } }
     }
 }
+

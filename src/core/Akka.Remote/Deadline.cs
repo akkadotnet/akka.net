@@ -1,9 +1,16 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="Deadline.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 
 namespace Akka.Remote
 {
     /// <summary>
-    /// Import of the scala.concurrenct.duration.Deadline class
+    /// Import of the scala.concurrent.duration.Deadline class
     /// </summary>
     public class Deadline
     {
@@ -86,3 +93,4 @@ namespace Akka.Remote
 
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="BarrierCoordinator.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -21,7 +28,7 @@ namespace Akka.Remote.TestKit
     ///
     ///INTERNAL API.
     /// </summary>
-    internal class BarrierCoordinator : FSM<BarrierCoordinator.State, BarrierCoordinator.Data>, LoggingFSM
+    internal class BarrierCoordinator : FSM<BarrierCoordinator.State, BarrierCoordinator.Data>, ILoggingFSM
     {
         #region State types and messages
 
@@ -43,15 +50,15 @@ namespace Akka.Remote.TestKit
 
         public sealed class Data
         {
-            public Data(IEnumerable<Controller.NodeInfo> clients, string barrier, IEnumerable<ActorRef> arrived, Deadline deadline) : 
+            public Data(IEnumerable<Controller.NodeInfo> clients, string barrier, IEnumerable<IActorRef> arrived, Deadline deadline) : 
                 this(clients == null ? ImmutableHashSet.Create<Controller.NodeInfo>() : ImmutableHashSet.Create(clients.ToArray()), 
                 barrier, 
-                arrived == null ? ImmutableHashSet.Create<ActorRef>() : ImmutableHashSet.Create(arrived.ToArray()), 
+                arrived == null ? ImmutableHashSet.Create<IActorRef>() : ImmutableHashSet.Create(arrived.ToArray()), 
                 deadline)
             {
             }
 
-            public Data(ImmutableHashSet<Controller.NodeInfo> clients, string barrier, ImmutableHashSet<ActorRef> arrived, Deadline deadline)
+            public Data(ImmutableHashSet<Controller.NodeInfo> clients, string barrier, ImmutableHashSet<IActorRef> arrived, Deadline deadline)
             {
                 Deadline = deadline;
                 Arrived = arrived;
@@ -63,12 +70,12 @@ namespace Akka.Remote.TestKit
 
             public string Barrier { get; private set; }
 
-            public ImmutableHashSet<ActorRef> Arrived { get; private set; }
+            public ImmutableHashSet<IActorRef> Arrived { get; private set; }
 
             public Deadline Deadline { get; private set; }
 
             public Data Copy(ImmutableHashSet<Controller.NodeInfo> clients = null, string barrier = null,
-                ImmutableHashSet<ActorRef> arrived = null, Deadline deadline = null)
+                ImmutableHashSet<IActorRef> arrived = null, Deadline deadline = null)
             {
                 return new Data(clients ?? Clients, 
                     barrier ?? Barrier,
@@ -236,7 +243,7 @@ namespace Akka.Remote.TestKit
 
         public sealed class WrongBarrier : Exception
         {
-            public WrongBarrier(string barrier, ActorRef client, Data barrierData)
+            public WrongBarrier(string barrier, IActorRef client, Data barrierData)
                 : base(string.Format("tried"))
             {
                 BarrierData = barrierData;
@@ -246,7 +253,7 @@ namespace Akka.Remote.TestKit
 
             public string Barrier { get; private set; }
 
-            public ActorRef Client { get; private set; }
+            public IActorRef Client { get; private set; }
 
             public Data BarrierData { get; private set; }
 
@@ -376,7 +383,7 @@ namespace Akka.Remote.TestKit
 
         //this shall be set to true if all subsequent barriers shall fail
         private bool _failed = false;
-        private readonly LoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         protected override void PreRestart(Exception reason, object message) { }
         protected override void PostRestart(Exception reason)
@@ -386,7 +393,7 @@ namespace Akka.Remote.TestKit
 
         protected void InitFSM()
         {
-            StartWith(State.Idle, new Data(ImmutableHashSet.Create<Controller.NodeInfo>(), "", ImmutableHashSet.Create<ActorRef>(), null));
+            StartWith(State.Idle, new Data(ImmutableHashSet.Create<Controller.NodeInfo>(), "", ImmutableHashSet.Create<IActorRef>(), null));
 
             WhenUnhandled(@event =>
             {
@@ -430,7 +437,7 @@ namespace Akka.Remote.TestKit
                         if (_failed)
                             nextState =
                                 Stay().Replying(new ToClient<BarrierResult>(new BarrierResult(barrier.Name, false)));
-                        else if (clients.Select(x => x.FSM).SequenceEqual(new List<ActorRef>() {Sender}))
+                        else if (clients.Select(x => x.FSM).SequenceEqual(new List<IActorRef>() {Sender}))
                             nextState =
                                 Stay().Replying(new ToClient<BarrierResult>(new BarrierResult(barrier.Name, true)));
                         else if (clients.All(x => x.FSM != Sender))
@@ -531,7 +538,7 @@ namespace Akka.Remote.TestKit
                 }
                 return
                     GoTo(State.Idle)
-                        .Using(data.Copy(barrier: string.Empty, arrived: ImmutableHashSet.Create<ActorRef>()));
+                        .Using(data.Copy(barrier: string.Empty, arrived: ImmutableHashSet.Create<IActorRef>()));
             }
             else
             {
@@ -545,3 +552,4 @@ namespace Akka.Remote.TestKit
         }
     }
 }
+

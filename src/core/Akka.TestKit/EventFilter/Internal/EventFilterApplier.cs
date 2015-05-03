@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="EventFilterApplier.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -10,7 +17,7 @@ namespace Akka.TestKit.Internal
     /// <summary>
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    public class InternalEventFilterApplier : EventFilterApplier
+    public class InternalEventFilterApplier : IEventFilterApplier
     {
         private readonly IReadOnlyList<EventFilterBase> _filters;
         private readonly TestKitBase _testkit;
@@ -80,7 +87,7 @@ namespace Akka.TestKit.Internal
             Intercept<object>(() => { action(); return null; }, _testkit.Sys, null, null);
         }
 
-        public UnmutableFilter Mute()
+        public IUnmutableFilter Mute()
         {
             _testkit.Sys.EventStream.Publish(new Mute(_filters));
             return new InternalUnmutableFilter(_filters, _testkit.Sys);
@@ -169,7 +176,7 @@ namespace Akka.TestKit.Internal
             }
         }
 
-        protected class InternalUnmutableFilter : UnmutableFilter
+        protected class InternalUnmutableFilter : IUnmutableFilter
         {
             private IReadOnlyCollection<EventFilterBase> _filters;
             private readonly ActorSystem _system;
@@ -241,3 +248,4 @@ namespace Akka.TestKit.Internal
         }
     }
 }
+

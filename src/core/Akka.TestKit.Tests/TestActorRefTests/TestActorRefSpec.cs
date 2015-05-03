@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestActorRefSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
@@ -24,7 +31,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
         private static Config GetConfig()
         {
-            return (@"test-dispatcher1.type=""" + typeof(TaskDispatcher).FullName);
+            return (@"test-dispatcher1.type=""" + typeof(TaskDispatcherConfigurator).FullName);
             //return (@"test-dispatcher1.type=""" + typeof(TaskDispatcher).FullName) + FullDebugConfig;
         }
 
@@ -54,7 +61,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         {
             var a = new TestActorRef<NestingActor>(Sys, Props.Create(() => new NestingActor(true)));
             Assert.NotNull(a);
-            var nested = a.Ask<ActorRef>("any", DefaultTimeout).Result;
+            var nested = a.Ask<IActorRef>("any", DefaultTimeout).Result;
             Assert.NotNull(nested);
             Assert.NotSame(a, nested);
         }
@@ -64,7 +71,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         {
             var a = new TestActorRef<NestingActor>(Sys, Props.Create(() => new NestingActor(false)));
             Assert.NotNull(a);
-            var nested = a.Ask<ActorRef>("any", DefaultTimeout).Result;
+            var nested = a.Ask<IActorRef>("any", DefaultTimeout).Result;
             Assert.NotNull(nested);
             Assert.NotSame(a, nested);
         }
@@ -190,3 +197,4 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         }
     }
 }
+

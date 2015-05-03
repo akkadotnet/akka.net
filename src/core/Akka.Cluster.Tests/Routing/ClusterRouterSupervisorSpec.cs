@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterRouterSupervisorSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Cluster.Routing;
 using Akka.Routing;
@@ -14,7 +21,19 @@ namespace Akka.Cluster.Tests.Routing
     akka{
         actor{
             provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+            deployment {
+            /router1 {
+                    router = round-robin-pool
+                    nr-of-instances = 1
+                    cluster {
+                        enabled = on
+                        max-nr-of-instances-per-node = 1
+                        allow-local-routees = true
+                    }
+                }                
+            }
         }
+        
         remote.helios.tcp.port = 0
     }") { }
 
@@ -22,9 +41,29 @@ namespace Akka.Cluster.Tests.Routing
 
         class KillableActor : ReceiveActor
         {
-            private readonly ActorRef TestActor;
+            private readonly IActorRef TestActor;
 
-            public KillableActor(ActorRef testActor)
+            public KillableActor(IActorRef testActor)
+            {
+                TestActor = testActor;
+                Receive<string>(s => s == "go away", s =>
+                {
+                    throw new ArgumentException("Goodbye then!");
+                });
+            }
+        }
+
+        class RestartableActor : ReceiveActor
+        {
+            private readonly IActorRef TestActor;
+
+            protected override void PostRestart(Exception reason)
+            {
+                base.PostRestart(reason);
+                TestActor.Tell("restarted");
+            }
+
+            public RestartableActor(IActorRef testActor)
             {
                 TestActor = testActor;
                 Receive<string>(s => s == "go away", s =>
@@ -52,6 +91,16 @@ namespace Akka.Cluster.Tests.Routing
             ExpectMsg("supervised", TimeSpan.FromSeconds(2));
         }
 
+        [Fact]
+        public void Cluster_aware_routers_must_use_default_supervisor_strategy_when_none_specified()
+        {
+            var router = Sys.ActorOf(Props.Create(() => new RestartableActor(TestActor)).WithRouter(FromConfig.Instance), "router1");
+
+            router.Tell("go away");
+            ExpectMsg("restarted", TimeSpan.FromSeconds(2));
+        }
+
         #endregion
     }
 }
+

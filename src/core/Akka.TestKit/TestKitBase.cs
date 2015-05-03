@@ -1,12 +1,17 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestKitBase.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit.Internal;
-using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.TestKit
@@ -14,7 +19,7 @@ namespace Akka.TestKit
     /// <summary>
     /// <remarks>Unless you're creating a TestKit for a specific test framework, you should probably not inherit directly from this class.</remarks>
     /// </summary>
-    public abstract partial class TestKitBase : ActorRefFactory
+    public abstract partial class TestKitBase : IActorRefFactory
     {
         private static readonly Config _defaultConfig = ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internal.Reference.conf");
         private static readonly Config _fullDebugConfig = ConfigurationFactory.ParseString(@"
@@ -30,16 +35,16 @@ namespace Akka.TestKit
                 akka.loglevel = DEBUG
                 akka.stdout-loglevel = DEBUG");
 
-        private readonly TestKitAssertions _assertions;
+        private readonly ITestKitAssertions _assertions;
         private readonly ActorSystem _system;
         private readonly TestKitSettings _testKitSettings;
         private readonly BlockingQueue<MessageEnvelope> _queue;
         private MessageEnvelope _lastMessage = NullMessageEnvelope.Instance;
         private static readonly AtomicCounter _testActorId = new AtomicCounter(0);
-        private readonly ActorRef _testActor;
+        private readonly IActorRef _testActor;
         private TimeSpan? _end;
         private bool _lastWasNoMsg; //if last assertion was expectNoMsg, disable timing failure upon within() block end.
-        private readonly LoggingAdapter _log;
+        private readonly ILoggingAdapter _log;
         private readonly EventFilterFactory _eventFilterFactory;
 
         /// <summary>
@@ -50,7 +55,7 @@ namespace Akka.TestKit
         /// <param name="assertions"></param>
         /// <param name="system">Optional: The actor system.</param>
         /// <param name="testActorName">Optional: The name of the TestActor.</param>
-        protected TestKitBase(TestKitAssertions assertions, ActorSystem system = null, string testActorName=null)
+        protected TestKitBase(ITestKitAssertions assertions, ActorSystem system = null, string testActorName=null)
             : this(assertions, system, _defaultConfig, null, testActorName)
         {
         }
@@ -63,12 +68,12 @@ namespace Akka.TestKit
         /// <param name="testActorName">Optional: The name of the TestActor.</param>
         /// <param name="assertions"></param>
         /// <param name="actorSystemName"></param>
-        protected TestKitBase(TestKitAssertions assertions, Config config, string actorSystemName = null, string testActorName = null)
+        protected TestKitBase(ITestKitAssertions assertions, Config config, string actorSystemName = null, string testActorName = null)
             : this(assertions, null, config ?? ConfigurationFactory.Empty, actorSystemName, testActorName)
         {
         }
 
-        private TestKitBase(TestKitAssertions assertions, ActorSystem system, Config config, string actorSystemName, string testActorName)
+        private TestKitBase(ITestKitAssertions assertions, ActorSystem system, Config config, string actorSystemName, string testActorName)
         {
             if(assertions == null) throw new ArgumentNullException("assertions");
             if(system == null)
@@ -85,6 +90,11 @@ namespace Akka.TestKit
             _queue = new BlockingQueue<MessageEnvelope>();
             _log = Logging.GetLogger(system, GetType());
             _eventFilterFactory = new EventFilterFactory(this);
+            
+            //register the CallingThreadDispatcherConfigurator
+            _system.Dispatchers.RegisterConfigurator(CallingThreadDispatcher.Id,
+                new CallingThreadDispatcherConfigurator(_system.Settings.Config, _system.Dispatchers.Prerequisites));
+
             if (string.IsNullOrEmpty(testActorName))
                 testActorName = "testActor" + _testActorId.IncrementAndGet();
 
@@ -92,14 +102,16 @@ namespace Akka.TestKit
             //Wait for the testactor to start
             AwaitCondition(() =>
             {
-                var repRef = testActor as RepointableRef;
+                var repRef = testActor as IRepointableRef;
                 return repRef == null || repRef.IsStarted;
             }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(10));
 
-            if(!(this is NoImplicitSender))
+            if(!(this is INoImplicitSender))
             {
                 InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)testActor).Underlying;
             }
+            SynchronizationContext.SetSynchronizationContext(
+                new ActorCellKeepingSynchronizationContext(InternalCurrentActorCellKeeper.Current));
             _testActor = testActor;
 
         }
@@ -108,11 +120,11 @@ namespace Akka.TestKit
 
         public ActorSystem Sys { get { return _system; } }
         public TestKitSettings TestKitSettings { get { return _testKitSettings; } }
-        public ActorRef LastSender { get { return _lastMessage.Sender; } }
+        public IActorRef LastSender { get { return _lastMessage.Sender; } }
         public static Config DefaultConfig { get { return _defaultConfig; } }
         public static Config FullDebugConfig { get { return _fullDebugConfig; } }
         public static TimeSpan Now { get { return TimeSpan.FromTicks(DateTime.UtcNow.Ticks); } }
-        public LoggingAdapter Log { get { return _log; } }
+        public ILoggingAdapter Log { get { return _log; } }
         public object LastMessage { get { return _lastMessage.Message; } }
 
         /// <summary>
@@ -123,13 +135,13 @@ namespace Akka.TestKit
         /// <see cref="SetAutoPilot"/>. All other messages are forwarded to the queue
         /// and can be retrieved with Receive and the ExpectMsg overloads.
         /// </summary>
-        public ActorRef TestActor { get { return _testActor; } }
+        public IActorRef TestActor { get { return _testActor; } }
 
         /// <summary>
         /// Filter <see cref="LogEvent"/> sent to the system's <see cref="EventStream"/>.
         /// In order to be able to filter the log the special logger
         /// <see cref="TestEventListener"/> must be installed using the config
-        /// <pre><code>akka.loggers = ["Akka.TestKit.TestEventListener, Akka.TestKit"]</code></pre>
+        /// <code>akka.loggers = ["Akka.TestKit.TestEventListener, Akka.TestKit"]</code>
         /// It is installed by default in testkit.
         /// </summary>
         public EventFilterFactory EventFilter { get { return _eventFilterFactory; } }
@@ -169,7 +181,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="actorToWatch">The actor to watch.</param>
         /// <returns>The actor to watch, i.e. the parameter <paramref name="actorToWatch"/></returns>
-        public ActorRef Watch(ActorRef actorToWatch)
+        public IActorRef Watch(IActorRef actorToWatch)
         {
             _testActor.Tell(new TestActor.Watch(actorToWatch));
             return actorToWatch;
@@ -180,7 +192,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="actorToUnwatch">The actor to unwatch.</param>
         /// <returns>The actor to unwatch, i.e. the parameter <paramref name="actorToUnwatch"/></returns>
-        public ActorRef Unwatch(ActorRef actorToUnwatch)
+        public IActorRef Unwatch(IActorRef actorToUnwatch)
         {
             _testActor.Tell(new TestActor.Unwatch(actorToUnwatch));
             return actorToUnwatch;
@@ -259,7 +271,7 @@ namespace Akka.TestKit
 
         /// <summary>
         /// Multiplies the duration with the <see cref="Akka.TestKit.TestKitSettings.TestTimeFactor"/>,
-        /// e.g. the config value "akka.test.timefactor"
+        /// i.e. the config value "akka.test.timefactor"
         /// </summary>
         public TimeSpan Dilated(TimeSpan duration)
         {
@@ -326,12 +338,12 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="name">The name of the new actor.</param>
         /// <returns></returns>
-        public ActorRef CreateTestActor(string name)
+        public IActorRef CreateTestActor(string name)
         {
             return CreateTestActor(_system, name);
         }
 
-        private ActorRef CreateTestActor(ActorSystem system, string name)
+        private IActorRef CreateTestActor(ActorSystem system, string name)
         {
             var testActorProps = Props.Create(() => new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_queue)))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
@@ -372,7 +384,7 @@ namespace Akka.TestKit
         /// <returns>A new <see cref="TestLatch"/></returns>
         public virtual TestLatch CreateTestLatch(int count=1)
         {
-            return new TestLatch(Sys, count);
+            return new TestLatch(Dilated,count,_testKitSettings.DefaultTimeout);
         }
 
         /// <summary>
@@ -382,9 +394,10 @@ namespace Akka.TestKit
         /// </summary>
         public TestBarrier CreateTestBarrier(int count)
         {
-            return new TestBarrier(this, count);
+            return new TestBarrier(this, count, _testKitSettings.DefaultTimeout);
         }
 
     }
 
 }
+

@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestKitBase_ExpectMsgFrom.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
-using Akka.TestKit.Internal;
 
 namespace Akka.TestKit
 {
@@ -21,7 +22,7 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        public T ExpectMsgFrom<T>(ActorRef sender, TimeSpan? duration = null, string hint = null)
+        public T ExpectMsgFrom<T>(IActorRef sender, TimeSpan? duration = null, string hint = null)
         {
             return InternalExpectMsg<T>(RemainingOrDilated(duration), null, s => _assertions.AssertEqual(sender, s, FormatWrongSenderMessage(s,sender.ToString(),hint)), null);
         }
@@ -35,7 +36,7 @@ namespace Akka.TestKit
         /// block, if inside a 'within' block; otherwise by the config value 
         /// "akka.test.single-expect-default".
         /// </summary>
-        public T ExpectMsgFrom<T>(ActorRef sender, T message, TimeSpan? timeout = null, string hint = null)
+        public T ExpectMsgFrom<T>(IActorRef sender, T message, TimeSpan? timeout = null, string hint = null)
         {
             return InternalExpectMsg<T>(RemainingOrDilated(timeout), m => _assertions.AssertEqual(message, m), s => _assertions.AssertEqual(sender, s, FormatWrongSenderMessage(s, sender.ToString(), hint)), hint);
         }
@@ -49,7 +50,7 @@ namespace Akka.TestKit
         /// "akka.test.single-expect-default".
         /// Use this variant to implement more complicated or conditional processing.
         /// </summary>
-        public T ExpectMsgFrom<T>(ActorRef sender, Predicate<T> isMessage, TimeSpan? timeout = null, string hint = null)
+        public T ExpectMsgFrom<T>(IActorRef sender, Predicate<T> isMessage, TimeSpan? timeout = null, string hint = null)
         {
             return InternalExpectMsg<T>(RemainingOrDilated(timeout), (m, s) =>
             {
@@ -69,7 +70,7 @@ namespace Akka.TestKit
         /// "akka.test.single-expect-default".
         /// Use this variant to implement more complicated or conditional processing.
         /// </summary>
-        public T ExpectMsgFrom<T>(Predicate<ActorRef> isSender, Predicate<T> isMessage, TimeSpan? timeout = null, string hint = null)
+        public T ExpectMsgFrom<T>(Predicate<IActorRef> isSender, Predicate<T> isMessage, TimeSpan? timeout = null, string hint = null)
         {
             return InternalExpectMsg<T>(RemainingOrDilated(timeout), (m, sender) =>
             {
@@ -80,12 +81,12 @@ namespace Akka.TestKit
             }, hint);
         }
 
-        private string FormatWrongSenderMessage(ActorRef actualSender, string expectedSender, string hint)
+        private string FormatWrongSenderMessage(IActorRef actualSender, string expectedSender, string hint)
         {
             return "Sender does not match. Got a message from sender " + actualSender + ". But expected " + expectedSender + (hint ?? "");
         }
 
-        private void AssertPredicateIsTrueForSender(Predicate<ActorRef> isSender, ActorRef sender, string hint, object message)
+        private void AssertPredicateIsTrueForSender(Predicate<IActorRef> isSender, IActorRef sender, string hint, object message)
         {
             _assertions.AssertTrue(isSender(sender), FormatWrongSenderMessage(sender, hint ?? "the predicate to return true", null) + " The message was {{" + message + "}}");
         }
@@ -99,7 +100,7 @@ namespace Akka.TestKit
         /// "akka.test.single-expect-default".
         /// Use this variant to implement more complicated or conditional processing.
         /// </summary>
-        public T ExpectMsgFrom<T>(ActorRef sender, Action<T> assertMessage, TimeSpan? timeout = null, string hint = null)
+        public T ExpectMsgFrom<T>(IActorRef sender, Action<T> assertMessage, TimeSpan? timeout = null, string hint = null)
         {
             return InternalExpectMsg(RemainingOrDilated(timeout), assertMessage, s => _assertions.AssertEqual(sender, s, hint), hint);
         }
@@ -114,9 +115,10 @@ namespace Akka.TestKit
         /// "akka.test.single-expect-default".
         /// Use this variant to implement more complicated or conditional processing.
         /// </summary>
-        public T ExpectMsgFrom<T>(Action<ActorRef> assertSender, Action<T> assertMessage, TimeSpan? timeout = null, string hint = null)
+        public T ExpectMsgFrom<T>(Action<IActorRef> assertSender, Action<T> assertMessage, TimeSpan? timeout = null, string hint = null)
         {
             return InternalExpectMsg(RemainingOrDilated(timeout), assertMessage, assertSender, hint);
         }
     }
 }
+

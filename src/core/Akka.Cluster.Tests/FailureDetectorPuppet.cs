@@ -1,4 +1,11 @@
-﻿using Akka.Configuration;
+﻿//-----------------------------------------------------------------------
+// <copyright file="FailureDetectorPuppet.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
@@ -25,12 +32,23 @@ namespace Akka.Cluster.Tests
 
         public void MarkNodeAsUnavailable()
         {
-            _status.Value = Status.Down;
+            var oldStatus = _status.Value;
+            bool set;
+            do
+            {
+                set = _status.CompareAndSet(oldStatus, Status.Down);
+            } while (!set);
+
         }
 
         public void MarkNodeAsAvailable()
         {
-            _status.Value = Status.Up;
+            var oldStatus = _status.Value;
+            bool set;
+            do
+            {
+                set = _status.CompareAndSet(oldStatus, Status.Up);
+            } while (!set);
         }
 
         public override bool IsAvailable
@@ -53,3 +71,4 @@ namespace Akka.Cluster.Tests
         }
     }
 }
+

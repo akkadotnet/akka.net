@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PhiAccrualFailureDetector.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
@@ -86,7 +93,7 @@ namespace Akka.Remote
 
         /// <summary>
         /// Guess statistics for first heartbeat,
-        /// important so taht connections with only one heartbeat becomes unavailable
+        /// important so that connections with only one heartbeat becomes unavailable
         /// </summary>
         private HeartbeatHistory FirstHeartBeat
         {
@@ -142,7 +149,7 @@ namespace Akka.Remote
             if (!oldState.TimeStamp.HasValue)
             {
                 //this is a heartbeat for a new resource
-                //add starter recods for this new resource
+                //add starter records for this new resource
                 newHistory = FirstHeartBeat;
             }
             else
@@ -308,3 +315,4 @@ namespace Akka.Remote
         #endregion
     }
 }
+

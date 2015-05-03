@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterSettings.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
@@ -79,7 +86,7 @@ namespace Akka.Cluster
             _metricsGossipInterval = cc.GetTimeSpan("metrics.gossip-interval");
             _metricsMovingAverageHalfLife = cc.GetTimeSpan("metrics.moving-average-half-life");
 
-            _minNrOfMembersOfRole = cc.GetConfig("role").Root.GetObject().AsEnumerable()
+            _minNrOfMembersOfRole = cc.GetConfig("role").Root.GetObject().Items
                 .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetKey("min-nr-of-members").GetInt());
         }
 
@@ -229,3 +236,4 @@ namespace Akka.Cluster
         }
     }
 }
+

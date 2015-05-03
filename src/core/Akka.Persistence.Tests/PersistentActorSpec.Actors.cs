@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PersistentActorSpec.Actors.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -60,9 +67,9 @@ namespace Akka.Persistence.Tests
 
     public partial class PersistentActorSpec
     {
-        
 
-        internal class LatchCmd
+
+        internal class LatchCmd : INoSerializationVerificationNeeded
         {
             public LatchCmd(TestLatch latch, object data)
             {
@@ -186,7 +193,7 @@ namespace Akka.Persistence.Tests
                     Persist(new Evt(cmd.Data + "-22"), evt =>
                     {
                         UpdateState(evt);
-                        Context.Unbecome();
+                        Context.UnbecomeStacked();
                     });
                     return true;
                 }
@@ -224,7 +231,7 @@ namespace Akka.Persistence.Tests
                     Persist(new Evt(cmd.Data + "-21"), evt =>
                     {
                         UpdateState(evt);
-                        Context.Unbecome();
+                        Context.UnbecomeStacked();
                     });
                     Persist(new Evt(cmd.Data + "-22"), UpdateStateHandler);
                     return true;
@@ -255,7 +262,7 @@ namespace Akka.Persistence.Tests
                 if (message is Cmd)
                 {
                     var cmd = message as Cmd;
-                    Context.Unbecome();
+                    Context.UnbecomeStacked();
                     Persist(new[] { new Evt(cmd.Data + "-31"), new Evt(cmd.Data + "-32") }, UpdateStateHandler);
                     UpdateState(new Evt(cmd.Data + "-30"));
                     return true;
@@ -289,7 +296,7 @@ namespace Akka.Persistence.Tests
                     var cmd = message as Cmd;
                     Persist(new[] { new Evt(cmd.Data + "-31"), new Evt(cmd.Data + "-32") }, UpdateStateHandler);
                     UpdateState(new Evt(cmd.Data + "-30"));
-                    Context.Unbecome();
+                    Context.UnbecomeStacked();
                     return true;
                 }
                 return false;
@@ -298,8 +305,8 @@ namespace Akka.Persistence.Tests
 
         internal class SnapshottingPersistentActor : ExamplePersistentActor
         {
-            protected readonly ActorRef Probe;
-            public SnapshottingPersistentActor(string name, ActorRef probe)
+            protected readonly IActorRef Probe;
+            public SnapshottingPersistentActor(string name, IActorRef probe)
                 : base(name)
             {
                 Probe = probe;
@@ -321,8 +328,8 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                if (CommonBehavior(message)) ;
-                else if (message is Cmd) HandleCmd(message as Cmd);
+                if (CommonBehavior(message)) return true;
+                if (message is Cmd) HandleCmd(message as Cmd);
                 else if (message is SaveSnapshotSuccess) Probe.Tell("saved");
                 else if (message.ToString() == "snap") SaveSnapshot(Events);
                 else return false;
@@ -339,7 +346,7 @@ namespace Akka.Persistence.Tests
         {
             public const string Message = "It's changing me";
             public const string Response = "I'm becoming";
-            public SnapshottingBecomingPersistentActor(string name, ActorRef probe) : base(name, probe) { }
+            public SnapshottingBecomingPersistentActor(string name, IActorRef probe) : base(name, probe) { }
 
             private bool BecomingRecover(object message)
             {
@@ -361,8 +368,8 @@ namespace Akka.Persistence.Tests
 
             private bool BecomingCommand(object message)
             {
-                if (ReceiveCommand(message)) ;
-                else if (message.ToString() == Message) Probe.Tell(Response);
+                if (ReceiveCommand(message)) return true;
+                if (message.ToString() == Message) Probe.Tell(Response);
                 else return false;
                 return true;
             }
@@ -427,7 +434,8 @@ namespace Akka.Persistence.Tests
                     var cmd = message as Cmd;
                     if (cmd != null)
                     {
-                        if (cmd.Data == "a")
+                        var data = cmd.Data.ToString();
+                        if (data == "a")
                         {
                             Persist(new Evt("a"), evt =>
                             {
@@ -435,7 +443,7 @@ namespace Akka.Persistence.Tests
                                 Context.Become(ProcessC);
                             });
                         }
-                        else if (cmd.Data == "b-1" || cmd.Data == "b-2")
+                        else if (data == "b-1" || data == "b-2")
                         {
                             Persist(new Evt(cmd.Data.ToString()), UpdateStateHandler);
                         }
@@ -450,14 +458,14 @@ namespace Akka.Persistence.Tests
             protected bool ProcessC(object message)
             {
                 var cmd = message as Cmd;
-                if (cmd != null && cmd.Data == "c")
+                if (cmd != null && cmd.Data.ToString() == "c")
                 {
                     Persist(new Evt("c"), evt =>
                     {
                         UpdateState(evt);
-                        Context.Unbecome();
+                        Context.UnbecomeStacked();
                     });
-                    Stash.UnstashAll();
+                    UnstashAll();
                 }
                 else Stash.Stash();
                 return true;
@@ -509,7 +517,7 @@ namespace Akka.Persistence.Tests
                     if (cmd != null)
                     {
                         Sender.Tell(cmd.Data);
-                        for (int i = 0; i < 3; i++)
+                        for (int i = 1; i <= 3; i++)
                         {
                             PersistAsync(new Evt(cmd.Data.ToString() + "-" + (++_counter)), evt =>
                             {
@@ -591,6 +599,7 @@ namespace Akka.Persistence.Tests
         internal class AsyncPersistAndPersistMixedSyncAsyncActor : ExamplePersistentActor
         {
             private int _counter = 0;
+            
             public AsyncPersistAndPersistMixedSyncAsyncActor(string name)
                 : base(name)
             {
@@ -684,9 +693,9 @@ namespace Akka.Persistence.Tests
                     Persist(new Evt("c"), evt =>
                     {
                         UpdateState(evt);
-                        Context.Unbecome();
+                        Context.UnbecomeStacked();
                     });
-                    Stash.UnstashAll();
+                    UnstashAll();
                 }
                 else Stash.Stash();
                 return true;
@@ -717,7 +726,7 @@ namespace Akka.Persistence.Tests
 
         internal class HandleRecoveryFinishedEventPersistentActor : SnapshottingPersistentActor
         {
-            public HandleRecoveryFinishedEventPersistentActor(string name, ActorRef probe)
+            public HandleRecoveryFinishedEventPersistentActor(string name, IActorRef probe)
                 : base(name, probe)
             {
             }
@@ -876,3 +885,4 @@ namespace Akka.Persistence.Tests
         }
     }
 }
+

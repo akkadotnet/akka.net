@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Remoting.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -28,12 +35,67 @@ namespace Akka.Remote
 
     /// <summary>
     /// INTERNAL API
+    /// 
+    /// (used for forcing all /system level remoting actors onto a dedicated dispatcher)
+    /// </summary>
+// ReSharper disable once InconsistentNaming
+    internal sealed class RARP : ExtensionIdProvider<RARP>,  IExtension
+    {
+        //this is why this extension is called "RARP"
+        private readonly RemoteActorRefProvider _provider;
+
+        /// <summary>
+        /// Used as part of the <see cref="ExtensionIdProvider{RARP}"/>
+        /// </summary>
+        public RARP() { }
+
+        private RARP(RemoteActorRefProvider provider)
+        {
+            _provider = provider;
+        }
+
+        public Props ConfigureDispatcher(Props props)
+        {
+            return _provider.RemoteSettings.ConfigureDispatcher(props);
+        }
+
+        public override RARP CreateExtension(ExtendedActorSystem system)
+        {
+            return new RARP(system.Provider.AsInstanceOf<RemoteActorRefProvider>());
+        }
+
+        public RemoteActorRefProvider Provider
+        {
+            get { return _provider; }
+        }
+
+        #region Static methods
+
+        public static RARP For(ActorSystem system)
+        {
+            return system.WithExtension<RARP, RARP>();
+        }
+
+        #endregion
+    }
+
+    //TODO: needs to be implemented in Endpoint
+    /// <summary>
+    /// INTERNAL API
+    /// Messages marked with this interface will be sent before other messages when buffering is active.
+    /// This means that these messages don't obey normal message ordering.
+    /// It is used for failure detector heartbeat messages.
+    /// </summary>
+    internal interface IPriorityMessage { }
+
+    /// <summary>
+    /// INTERNAL API
     /// </summary>
     internal class Remoting : RemoteTransport
     {
-        private readonly LoggingAdapter log;
+        private readonly ILoggingAdapter log;
         private volatile IDictionary<string, HashSet<ProtocolTransportAddressPair>> _transportMapping;
-        private volatile ActorRef _endpointManager;
+        private volatile IActorRef _endpointManager;
 
         // This is effectively a write-once variable similar to a lazy val. The reason for not using a lazy val is exception
         // handling.
@@ -43,7 +105,7 @@ namespace Akka.Remote
         // a lazy val
         private volatile Address _defaultAddress;
 
-        private ActorRef _transportSupervisor;
+        private IActorRef _transportSupervisor;
         private EventPublisher _eventPublisher;
 
         public Remoting(ExtendedActorSystem system, RemoteActorRefProvider provider)
@@ -56,6 +118,16 @@ namespace Akka.Remote
 
         #region RemoteTransport overrides
 
+        public override ISet<Address> Addresses
+        {
+            get { return _addresses; }
+        }
+
+        public override Address DefaultAddress
+        {
+            get { return _defaultAddress; }
+        }
+
         public override void Start()
         {
             log.Info("Starting remoting");
@@ -63,20 +135,23 @@ namespace Akka.Remote
             if (_endpointManager == null)
             {
                 _endpointManager =
-                System.SystemActorOf(
-                    Props.Create(() => new EndpointManager(System.Settings.Config, log)).WithDeploy(Deploy.Local),
+                System.SystemActorOf(RARP.For(System).ConfigureDispatcher(
+                    Props.Create(() => new EndpointManager(System.Settings.Config, log)).WithDeploy(Deploy.Local)),
                     EndpointManagerName);
 
                 try
                 {
                     var addressPromise = new TaskCompletionSource<IList<ProtocolTransportAddressPair>>();
-                    _endpointManager.Tell(new EndpointManager.Listen(addressPromise));
+
+                    // tells the EndpointManager to start all transports and bind them to listenable addresses, and then set the results
+                    // of this promise to include them.
+                    _endpointManager.Tell(new EndpointManager.Listen(addressPromise)); 
 
                     addressPromise.Task.Wait(Provider.RemoteSettings.StartupTimeout);
                     var akkaProtocolTransports = addressPromise.Task.Result;
                     if(akkaProtocolTransports.Count==0)
                         throw new Exception("No transports enabled");
-                    Addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address));
+                    _addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address));
                     //   this.transportMapping = akkaProtocolTransports
                     //       .ToDictionary(p => p.ProtocolTransport.Transport.SchemeIdentifier,);
                     IEnumerable<IGrouping<string, ProtocolTransportAddressPair>> tmp =
@@ -88,7 +163,7 @@ namespace Akka.Remote
                         _transportMapping.Add(g.Key, set);
                     }
 
-                    DefaultAddress = akkaProtocolTransports.Head().Address;
+                    _defaultAddress = akkaProtocolTransports.Head().Address;
                     _addresses = new HashSet<Address>(akkaProtocolTransports.Select(x => x.Address));
 
                     log.Info("Remoting started; listening on addresses : [{0}]", string.Join(",", _addresses.Select(x => x.ToString())));
@@ -156,14 +231,14 @@ namespace Akka.Remote
             }
         }
 
-        public override void Send(object message, ActorRef sender, RemoteActorRef recipient)
+        public override void Send(object message, IActorRef sender, RemoteActorRef recipient)
         {
             if (_endpointManager == null)
             {
                 throw new RemoteTransportException("Attempted to send remote message but Remoting is not running.", null);
             }
             if (sender == null)
-                sender = ActorRef.NoSender;
+                sender = ActorRefs.NoSender;
 
             _endpointManager.Tell(new EndpointManager.Send(message, recipient, sender), sender);
         }
@@ -178,8 +253,11 @@ namespace Akka.Remote
             return
                 _endpointManager.Ask<EndpointManager.ManagementCommandAck>(new EndpointManager.ManagementCommand(cmd),
                     Provider.RemoteSettings.CommandAckTimeout)
-                    .ContinueWith(result => result.Result.Status,
-                        TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+                    .ContinueWith(result =>
+                    {
+                        return result.Result.Status;
+                    },
+                        TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent);
         }
 
         public override Address LocalAddressForRemote(Address remote)
@@ -249,7 +327,10 @@ namespace Akka.Remote
         #endregion
     }
 
-    internal sealed class RegisterTransportActor : NoSerializationVerificationNeeded
+    /// <summary>
+    /// Message type used to provide both <see cref="Props"/> and a name for a new transport actor
+    /// </summary>
+    internal sealed class RegisterTransportActor : INoSerializationVerificationNeeded
     {
         public RegisterTransportActor(Props props, string name)
         {
@@ -262,6 +343,9 @@ namespace Akka.Remote
         public string Name { get; private set; }
     }
 
+    /// <summary>
+    /// Actor responsible for supervising the creation of all transport actors
+    /// </summary>
     internal class TransportSupervisor : UntypedActor
     {
         private readonly SupervisorStrategy _strategy = new OneForOneStrategy(3, TimeSpan.FromMinutes(1), exception => Directive.Restart);
@@ -272,16 +356,12 @@ namespace Akka.Remote
 
         protected override void OnReceive(object message)
         {
-            PatternMatch.Match(message)
+            message.Match()
                 .With<RegisterTransportActor>(r =>
                 {
-                    /*
-                     * TODO: need to add support for RemoteDispatcher here.
-                     * See https://github.com/akka/akka/blob/master/akka-remote/src/main/scala/akka/remote/RemoteSettings.scala#L42 
-                     * and https://github.com/akka/akka/blob/master/akka-remote/src/main/scala/akka/remote/Remoting.scala#L95
-                     */
-                    Sender.Tell(Context.ActorOf(r.Props.WithDeploy(Deploy.Local), r.Name));
+                    Sender.Tell(Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(r.Props.WithDeploy(Deploy.Local)), r.Name));
                 });
         }
     }
 }
+

@@ -1,11 +1,11 @@
-﻿using Akka;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Messages.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using Akka.Actor;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ChatMessages
 {
@@ -49,10 +49,11 @@ namespace ChatMessages
 
     public class ChannelsResponse 
     {
-        public ActorRef[] channels { get; set; }
+        public IActorRef[] channels { get; set; }
     }
 
     public class Disconnect 
     {
     }
 }
+

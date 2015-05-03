@@ -1,6 +1,12 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestKit_Config_Tests.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.TestKit;
-using Akka.Util;
 using Xunit;
 
 namespace Akka.Testkit.Tests
@@ -15,7 +21,7 @@ namespace Akka.Testkit.Tests
             TestKitSettings.SingleExpectDefault.ShouldBe(TimeSpan.FromSeconds(3));
             TestKitSettings.TestEventFilterLeeway.ShouldBe(TimeSpan.FromSeconds(3));
             TestKitSettings.TestTimeFactor.ShouldBe(1);
-            var callingThreadDispatcherTypeName = typeof(CallingThreadDispatcher).FullName + ", " + typeof(CallingThreadDispatcher).Assembly.GetName().Name;
+            var callingThreadDispatcherTypeName = typeof(CallingThreadDispatcherConfigurator).FullName + ", " + typeof(CallingThreadDispatcher).Assembly.GetName().Name;
             Sys.Settings.Config.GetString("akka.test.calling-thread-dispatcher.type").ShouldBe(callingThreadDispatcherTypeName);
             Sys.Settings.Config.GetString("akka.test.test-actor.dispatcher.type").ShouldBe(callingThreadDispatcherTypeName);
             CallingThreadDispatcher.Id.ShouldBe("akka.test.calling-thread-dispatcher");
@@ -24,3 +30,4 @@ namespace Akka.Testkit.Tests
         }
     }
 }
+

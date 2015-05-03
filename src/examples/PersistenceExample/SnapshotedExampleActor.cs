@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="SnapshotedExampleActor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Persistence;
 
 namespace PersistenceExample
@@ -30,9 +37,9 @@ namespace PersistenceExample
 
         protected override bool ReceiveCommand(object message)
         {
-            if (message == "print")
+            if (message as string == "print")
                 Console.WriteLine("Current actor's state: " + State);
-            else if (message == "snap")
+            else if (message as string == "snap")
                 SaveSnapshot(State);
             else if (message is SaveSnapshotFailure || message is SaveSnapshotSuccess) { }
             else if (message is string)
@@ -42,3 +49,4 @@ namespace PersistenceExample
         }
     }
 }
+

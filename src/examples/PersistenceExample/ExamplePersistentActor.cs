@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ExamplePersistentActor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Persistence;
@@ -92,12 +99,13 @@ namespace PersistenceExample
                 var cmd = message as Command;
                 Persist(new Event(cmd.Data + "-" + EventsCount), UpdateState);
             }
-            else if (message == "snap")
+            else if (message as string == "snap")
                 SaveSnapshot(State);
-            else if (message == "print")
+            else if (message as string == "print")
                 Console.WriteLine(State);
             else return false;
             return true;
         }
     }
 }
+

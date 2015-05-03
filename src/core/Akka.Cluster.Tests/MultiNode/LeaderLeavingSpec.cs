@@ -1,7 +1,13 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="LeaderLeavingSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 
@@ -93,7 +99,7 @@ akka.cluster.publish-stats-interval = 25 s")
                     }
                     else
                     {
-                        var exitingLatch = new TestLatch(Sys);
+                        var exitingLatch = new TestLatch();
 
                         var listener = Sys.ActorOf(Props.Create(() => new Listener(oldLeaderAddress, exitingLatch)).WithDeploy(Deploy.Local));
 
@@ -151,3 +157,4 @@ akka.cluster.publish-stats-interval = 25 s")
     }
 
 }
+

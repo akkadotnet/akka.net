@@ -1,14 +1,17 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DIExt.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.Actor;
 
 namespace Akka.DI.Core
 {
     /// <summary>
-    /// Dependency Injection Extension used by the Actor System to Create the Prop conginfuration of DIActorProducer
+    /// Dependency Injection Extension used by the Actor System to Create the Prop configuration of DIActorProducer
     /// </summary>
     public class DIExt : IExtension
     {
@@ -23,10 +26,11 @@ namespace Akka.DI.Core
             if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
             this.dependencyResolver = dependencyResolver;
         }
-        public Props Props(String actorName)
+        public Props Props(Type actorType)
         {
-            return new Props(typeof(DIActorProducer), new object[] { dependencyResolver, actorName });
+            return new Props(typeof(DIActorProducer), new object[] { dependencyResolver, actorType });
         }
 
     }
 }
+

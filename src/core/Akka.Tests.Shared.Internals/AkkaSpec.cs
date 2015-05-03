@@ -1,12 +1,16 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AkkaSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Akka.Actor;
 using Akka.Configuration;
-using Akka.Event;
-using Akka.Util;
 using Xunit;
 using Xunit.Sdk;
 
@@ -43,7 +47,27 @@ namespace Akka.TestKit
         public AkkaSpec(Config config = null)
             : base(config.SafeWithFallback(_akkaSpecConfig), GetCallerName())
         {
+            BeforeAll();
         }
+
+        private void BeforeAll()
+        {
+            GC.Collect();
+            AtStartup();
+        }
+
+        protected override void AfterAll()
+        {
+            BeforeTermination();
+            base.AfterAll();
+            AfterTermination();
+        }
+
+        protected virtual void AtStartup() { }
+
+        protected virtual void BeforeTermination() { }
+
+        protected virtual void AfterTermination() { }
 
         private static string GetCallerName()
         {
@@ -96,7 +120,7 @@ namespace Akka.TestKit
         {
             try
             {
-                actionThatThrows();                
+                actionThatThrows();
             }
             catch(Exception)
             {
@@ -127,3 +151,4 @@ namespace Akka.TestKit
 
     // ReSharper disable once InconsistentNaming
 }
+

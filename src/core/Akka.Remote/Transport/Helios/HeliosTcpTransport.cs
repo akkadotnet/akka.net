@@ -1,9 +1,15 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="HeliosTcpTransport.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Event;
 using Google.ProtocolBuffers;
 using Helios.Exceptions;
 using Helios.Net;
@@ -61,20 +67,32 @@ namespace Akka.Remote.Transport.Helios
             return new TcpAssociationHandle(localAddress, remoteAddress, WrappedTransport, channel);
         }
 
+        /// <summary>
+        /// Fires whenever a Helios <see cref="IConnection"/> gets closed.
+        /// 
+        /// Two possible causes for this event handler to fire:
+        ///  * The other end of the connection has closed. We don't make any distinctions between graceful / unplanned shutdown.
+        ///  * This end of the connection experienced an error.
+        /// </summary>
+        /// <param name="cause">An exception describing why the socket was closed.</param>
+        /// <param name="closedChannel">The handle to the socket channel that closed.</param>
         protected override void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
         {
-            if(cause != null)
+            if (cause != null)
                 ChannelLocalActor.Notify(closedChannel, new UnderlyingTransportError(cause, "Underlying transport closed."));
-            if (cause != null && cause.Type == ExceptionType.Closed)
-                ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Shutdown));
-            else
-            {
-                ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Unknown));
-            }
-                
+
+            ChannelLocalActor.Notify(closedChannel, new Disassociated(DisassociateInfo.Unknown));
             ChannelLocalActor.Remove(closedChannel);
         }
 
+        /// <summary>
+        /// Fires whenever a Helios <see cref="IConnection"/> received data from the network.
+        /// </summary>
+        /// <param name="data">The message playload.</param>
+        /// <param name="responseChannel">
+        /// The channel responsible for sending the message.
+        /// Can be used to send replies back.
+        /// </param>
         protected override void OnMessage(NetworkData data, IConnection responseChannel)
         {
             if (data.Length > 0)
@@ -83,6 +101,13 @@ namespace Akka.Remote.Transport.Helios
             }
         }
 
+        /// <summary>
+        /// Fires whenever a Helios <see cref="IConnection"/> experienced a non-fatal error.
+        /// 
+        /// <remarks>The connection should still be open even after this event fires.</remarks>
+        /// </summary>
+        /// <param name="ex">The execption that triggered this event.</param>
+        /// <param name="erroredChannel">The handle to the Helios channel that errored.</param>
         protected override void OnException(Exception ex, IConnection erroredChannel)
         {
             ChannelLocalActor.Notify(erroredChannel, new UnderlyingTransportError(ex, "Non-fatal network error occurred inside underlying transport"));
@@ -90,12 +115,15 @@ namespace Akka.Remote.Transport.Helios
 
         public override void Dispose()
         {
-           
+
             ChannelLocalActor.Remove(UnderlyingConnection);
             base.Dispose();
         }
     }
 
+    /// <summary>
+    /// TCP handlers for inbound connections
+    /// </summary>
     class TcpServerHandler : TcpHandlers
     {
         private Task<IAssociationEventListener> _associationListenerTask;
@@ -129,6 +157,9 @@ namespace Akka.Remote.Transport.Helios
         }
     }
 
+    /// <summary>
+    /// TCP handlers for outbound connections
+    /// </summary>
     class TcpClientHandler : TcpHandlers
     {
         protected readonly TaskCompletionSource<AssociationHandle> StatusPromise = new TaskCompletionSource<AssociationHandle>();
@@ -154,11 +185,6 @@ namespace Akka.Remote.Transport.Helios
         protected override void OnConnect(INode remoteAddress, IConnection responseChannel)
         {
             InitOutbound(responseChannel, remoteAddress, NetworkData.Create(Node.Empty(), new byte[0], 0));
-        }
-
-        protected override void OnDisconnect(HeliosConnectionException cause, IConnection closedChannel)
-        {
-            base.OnDisconnect(cause, closedChannel);
         }
     }
 
@@ -189,11 +215,19 @@ namespace Akka.Remote.Transport.Helios
 
         public override void Disassociate()
         {
-            if(!_channel.WasDisposed)
+            if (!_channel.WasDisposed)
                 _channel.Close();
         }
     }
 
+    /// <summary>
+    /// TCP implementation of a <see cref="HeliosTransport"/>.
+    /// 
+    /// <remarks>
+    /// Due to the connection-oriented nature of TCP connections, this transport doesn't have to do any
+    /// additional bookkeeping when transports are disposed or opened.
+    /// </remarks>
+    /// </summary>
     class HeliosTcpTransport : HeliosTransport
     {
         public HeliosTcpTransport(ActorSystem system, Config config)
@@ -208,7 +242,8 @@ namespace Akka.Remote.Transport.Helios
             var socketAddress = client.RemoteHost;
             client.Open();
 
-            return ((TcpClientHandler) client).StatusFuture;
+            return ((TcpClientHandler)client).StatusFuture;
         }
     }
 }
+

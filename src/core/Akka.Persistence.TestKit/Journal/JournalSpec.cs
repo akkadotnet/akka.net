@@ -1,8 +1,15 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="JournalSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+﻿using System;
 ﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Persistence.Journal;
 using Akka.TestKit;
 using Xunit;
 
@@ -13,18 +20,49 @@ namespace Akka.Persistence.TestKit.Journal
         protected static readonly Config Config =
             ConfigurationFactory.ParseString("akka.persistence.publish-plugin-commands = on");
 
-        private readonly TestProbe _senderProbe;
-        private readonly TestProbe _receiverProbe;
+        private static readonly string _specConfigTemplate = @"
+            akka.persistence {{
+                publish-plugin-commands = on
+                journal {{
+                    plugin = ""akka.persistence.journal.testspec""
+                    testspec {{
+                        class = ""{0}""
+                        plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    }}
+                }}
+            }}
+        ";
+
+        private TestProbe _senderProbe;
+        private TestProbe _receiverProbe;
 
         protected JournalSpec(Config config = null, string actorSystemName = null, string testActorName = null)
-            : base(config ?? Config, actorSystemName ?? "JournalSpec", testActorName)
+            : base(FromConfig(config).WithFallback(Config), actorSystemName ?? "JournalSpec", testActorName)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a journal with set o predefined messages.
+        /// </summary>
+        protected IEnumerable<Persistent> Initialize()
         {
             _senderProbe = CreateTestProbe();
             _receiverProbe = CreateTestProbe();
-            WriteMessages(1, 5, Pid, _senderProbe.Ref);
+            return WriteMessages(1, 5, Pid, _senderProbe.Ref);
         }
 
-        protected ActorRef Journal { get { return Extension.JournalFor(null); } }
+        protected JournalSpec(Type journalType, string actorSystemName = null)
+            : base(ConfigFromTemplate(journalType), actorSystemName)
+        {
+        }
+
+        protected IActorRef Journal { get { return Extension.JournalFor(null); } }
+
+        private static Config ConfigFromTemplate(Type journalType)
+        {
+            var config = string.Format(_specConfigTemplate, journalType.AssemblyQualifiedName);
+            return ConfigurationFactory.ParseString(config);
+        }
 
         protected bool IsReplayedMessage(ReplayedMessage message, long seqNr, bool isDeleted = false)
         {
@@ -35,14 +73,14 @@ namespace Akka.Persistence.TestKit.Journal
                    && p.SequenceNr == seqNr;
         }
 
-        protected void WriteMessages(int from, int to, string pid, ActorRef sender)
+        private Persistent[] WriteMessages(int from, int to, string pid, IActorRef sender)
         {
             var messages = Enumerable.Range(from, to).Select(i => new Persistent("a-" + i, i, pid, false, sender)).ToArray();
             var probe = CreateTestProbe();
 
             Journal.Tell(new WriteMessages(messages, probe.Ref, ActorInstanceId));
 
-            probe.ExpectMsg<WriteMessagesSuccessull>();
+            probe.ExpectMsg<WriteMessagesSuccessful>();
             for (int i = from; i <= to; i++)
             {
                 var n = i;
@@ -50,6 +88,8 @@ namespace Akka.Persistence.TestKit.Journal
                         m.Persistent.Payload.ToString() == ("a-" + n) && m.Persistent.SequenceNr == (long)n &&
                         m.Persistent.PersistenceId == Pid);
             }
+
+            return messages;
         }
 
         [Fact]
@@ -182,3 +222,4 @@ namespace Akka.Persistence.TestKit.Journal
         }
     }
 }
+

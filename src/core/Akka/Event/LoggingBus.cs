@@ -1,11 +1,17 @@
-﻿using System.Threading;
-using Akka.Actor;
-using Akka.Actor.Internals;
+﻿//-----------------------------------------------------------------------
+// <copyright file="LoggingBus.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Threading;
+using Akka.Actor;
+using Akka.Actor.Internals;
 using Akka.Configuration;
 
 namespace Akka.Event
@@ -17,7 +23,7 @@ namespace Akka.Event
     {
         private static int _loggerId = 0;
         private static readonly LogLevel[] _allLogLevels = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToArray();
-        private readonly List<ActorRef> _loggers = new List<ActorRef>();
+        private readonly List<IActorRef> _loggers = new List<IActorRef>();
 
         private LogLevel _logLevel;
 
@@ -43,7 +49,7 @@ namespace Akka.Event
         /// </summary>
         /// <param name="event">The event.</param>
         /// <param name="subscriber">The subscriber.</param>
-        protected override void Publish(object @event, ActorRef subscriber)
+        protected override void Publish(object @event, IActorRef subscriber)
         {
             subscriber.Tell(@event);
         }
@@ -183,7 +189,7 @@ namespace Akka.Event
         public void SetLogLevel(LogLevel logLevel)
         {
             _logLevel = logLevel;
-            foreach (ActorRef logger in _loggers)
+            foreach (IActorRef logger in _loggers)
             {
                 //subscribe to given log level and above
                 SubscribeLogLevelAndAbove(logLevel, logger);
@@ -196,7 +202,7 @@ namespace Akka.Event
             }
         }
 
-        private void SubscribeLogLevelAndAbove(LogLevel logLevel, ActorRef logger)
+        private void SubscribeLogLevelAndAbove(LogLevel logLevel, IActorRef logger)
         {
             //subscribe to given log level and above
             foreach (LogLevel level in _allLogLevels.Where(l => l >= logLevel))
@@ -230,3 +236,4 @@ namespace Akka.Event
         }
     }
 }
+

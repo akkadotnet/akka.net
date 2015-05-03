@@ -1,8 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterDeployerSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Cluster.Routing;
@@ -83,6 +85,7 @@ namespace Akka.Cluster.Tests
             deployment.Dispatcher.ShouldBe("mydispatcher");
         }
 
-        //todo: implement "have correct router mappings" test for adapative load-balancing routers (not yet implemented)
+        //todo: implement "have correct router mappings" test for adaptive load-balancing routers (not yet implemented)
     }
 }
+

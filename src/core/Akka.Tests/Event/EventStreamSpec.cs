@@ -1,4 +1,11 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="EventStreamSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Event;
 using Akka.TestKit;
@@ -221,9 +228,9 @@ namespace Akka.Tests.Event
 
         public class SetTarget
         {
-            public ActorRef Ref { get; private set; }
+            public IActorRef Ref { get; private set; }
 
-            public SetTarget(ActorRef @ref)
+            public SetTarget(IActorRef @ref)
             {
                 this.Ref = @ref;
             }
@@ -273,7 +280,7 @@ namespace Akka.Tests.Event
 
         public class MyLog : UntypedActor
         {
-            private ActorRef dst = Context.System.DeadLetters;
+            private IActorRef dst = Context.System.DeadLetters;
 
             protected override void OnReceive(object message)
             {
@@ -310,3 +317,4 @@ namespace Akka.Tests.Event
         }
     }
 }
+

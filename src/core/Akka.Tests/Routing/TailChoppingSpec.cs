@@ -1,74 +1,72 @@
-﻿using Akka.Actor;
-using Akka.Routing;
-using Akka.TestKit;
-using Akka.Util;
-using Akka.Util.Internal;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TailChoppingSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Routing;
+using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Tests.Routing
 {
     public class TailChoppingSpec : AkkaSpec
     {
-        private TestActor testActor;
-
-        private ActorSystem actorSystem;
-
-        class TailChopTestActor : UntypedActor
+        class TailChopTestActor : ReceiveActor
         {
-            private int timesResponded;
-
-            private int sleepTime;
+            private int _timesResponded;
 
             public TailChopTestActor(int sleepTime)
             {
-                this.sleepTime = sleepTime;
-            }
-
-            protected override void OnReceive(object message)
-            {
-                var command = message as string;
-                switch (command)
+                Receive<string>(async command =>
                 {
-                    case "stop":
-                        Context.Stop(Self);
-                        break;
-                    case "times":
-                        Sender.Tell(timesResponded);
-                        break;
-                    default:
-                        Thread.Sleep(sleepTime);
-                        Sender.Tell("ack");
-                        timesResponded++;
-                        break;
-                }
+                    switch (command)
+                    {
+                        case "stop":
+                            Context.Stop(Self);
+                            break;
+                        case "times":
+                            Sender.Tell(_timesResponded);
+                            break;
+                        default:
+                            await Task.Delay(sleepTime);
+                            Sender.Tell("ack");
+                            _timesResponded++;
+                            break;
+                    }
+                });
             }
         }
 
         public class BroadcastTarget : UntypedActor
         {
-            private AtomicCounter _counter;
-            private TestLatch _latch;
+            private readonly AtomicCounter _counter;
+            private readonly TestLatch _latch;
+
             public BroadcastTarget(TestLatch latch, AtomicCounter counter)
             {
                 _latch = latch;
                 _counter = counter;
             }
+
             protected override void OnReceive(object message)
             {
-                if (message is string)
+                var messageString = message as string;
+                if (messageString != null)
                 {
-                    var s = (string)message;
-                    if (s == "end")
+                    if (messageString == "end")
                     {
                         _latch.CountDown();
                     }
                 }
+
                 if (message is int)
                 {
                     var i = (int)message;
@@ -85,28 +83,28 @@ namespace Akka.Tests.Routing
             }
         }
 
-        public Func<Func<ActorRef, int>, bool> OneOfShouldEqual(int what, IEnumerable<ActorRef> actors)
+        public Func<Func<IActorRef, int>, bool> OneOfShouldEqual(int what, IEnumerable<IActorRef> actors)
         {
             return func =>
             {
-                var results = actors.Select(x => func(x));
-                return (results.Any(x => x == what));
+                var results = actors.Select(func);
+                return results.Any(x => x == what);
             };
         }
 
-        public Func<Func<ActorRef, int>, bool> AllShouldEqual(int what, IEnumerable<ActorRef> actors)
+        public Func<Func<IActorRef, int>, bool> AllShouldEqual(int what, IEnumerable<IActorRef> actors)
         {
             return func =>
             {
-                var results = actors.Select(x => func(x));
-                return (results.All(x => x == what));
+                var results = actors.Select(func);
+                return results.All(x => x == what);
             };
         }
 
         [Fact]
         public void Tail_chopping_router_must_deliver_a_broadcast_message_using_tell()
         {
-            var doneLatch = new TestLatch(Sys, 2);
+            var doneLatch = new TestLatch(2);
             var counter1 = new AtomicCounter(0);
             var counter2 = new AtomicCounter(0);
 
@@ -114,7 +112,7 @@ namespace Akka.Tests.Routing
             var actor2 = Sys.ActorOf(Props.Create(() => new BroadcastTarget(doneLatch, counter2)), "Actor2");
 
             var routedActor = Sys.ActorOf(Props.Create<TestActor>()
-                .WithRouter(new TailChoppingGroup(new string[] { actor1.Path.ToString(), actor2.Path.ToString() }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100))
+                .WithRouter(new TailChoppingGroup(new[] { actor1.Path.ToString(), actor2.Path.ToString() }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(100))
             ));
 
             routedActor.Tell(new Broadcast(1));
@@ -134,13 +132,13 @@ namespace Akka.Tests.Routing
 
             var probe = CreateTestProbe();
             var routedActor = Sys.ActorOf(Props.Create<TestActor>()
-                .WithRouter(new TailChoppingGroup(new string[] { actor1.Path.ToString(), actor2.Path.ToString() }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(50))
+                .WithRouter(new TailChoppingGroup(new[] { actor1.Path.ToString(), actor2.Path.ToString() }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(50))
             ));
 
             probe.Send(routedActor, "");
             probe.ExpectMsg("ack");
 
-            var actorList = new List<ActorRef> { actor1, actor2 };
+            var actorList = new List<IActorRef> { actor1, actor2 };
             Assert.True(OneOfShouldEqual(1, actorList)((x => (int)x.Ask("times").Result)));
 
             routedActor.Tell(new Broadcast("stop"));
@@ -153,17 +151,26 @@ namespace Akka.Tests.Routing
             var actor2 = Sys.ActorOf(Props.Create(() => new TailChopTestActor(500)), "Actor6");
 
             var probe = CreateTestProbe();
+
             var routedActor = Sys.ActorOf(Props.Create<TestActor>()
-                .WithRouter(new TailChoppingGroup(new string[] { actor1.Path.ToString(), actor2.Path.ToString() }, TimeSpan.FromMilliseconds(300), TimeSpan.FromMilliseconds(50))
-            ));
+                .WithRouter(new TailChoppingGroup(
+                    new[]
+                    {
+                        actor1.Path.ToString(),
+                        actor2.Path.ToString()
+                    },
+                    TimeSpan.FromMilliseconds(300),
+                    TimeSpan.FromMilliseconds(50))
+                ));
 
             probe.Send(routedActor, "");
-            probe.ExpectMsg<Status.Failure>();
+            probe.ExpectMsg<Status.Failure>(TimeSpan.FromMilliseconds(700));
 
-            var actorList = new List<ActorRef> { actor1, actor2 };
-            Assert.True(AllShouldEqual(1, actorList)((x => (int)x.Ask("times").Result)));
+            var actorList = new List<IActorRef> { actor1, actor2 };
+            Assert.True(AllShouldEqual(1, actorList)(x => (int) x.Ask("times").Result));
 
             routedActor.Tell(new Broadcast("stop"));
         }
     }
 }
+

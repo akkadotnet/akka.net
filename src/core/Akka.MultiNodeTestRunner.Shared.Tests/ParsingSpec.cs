@@ -1,7 +1,13 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ParsingSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.MultiNodeTestRunner.Shared.Reporting;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.NodeTestRunner;
 using Akka.TestKit;
@@ -52,8 +58,22 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             LogMessageForNode nodeMessage;
             MessageSink.TryParseLogMessage(foundMessageStr, out nodeMessage).ShouldBeTrue("should have been able to parse log message");
 
+            Assert.NotNull(nodeMessage);
             Assert.Equal(foundMessage.LogLevel(), nodeMessage.Level);
             Assert.Equal(foundMessage.LogSource, nodeMessage.LogSource);
+        }
+
+        [Fact]
+        public void MessageSink_should_parse_NonUS_culture_Node_log_message_correctly()
+        {
+            //format the string as it would appear when reported by multinode test runner
+            var foundMessageStr = "[NODE1][DEBUG][2015-02-09 23:05:08][Thread 0008][[akka://ParsingSpec-1/user/$b]] Received message LOG ME!";
+            LogMessageForNode nodeMessage;
+            MessageSink.TryParseLogMessage(foundMessageStr, out nodeMessage).ShouldBeTrue("should have been able to parse log message");
+
+            Assert.NotNull(nodeMessage);
+            Assert.Equal(LogLevel.DebugLevel, nodeMessage.Level);
+            Assert.Equal("[akka://ParsingSpec-1/user/$b]", nodeMessage.LogSource);
         }
 
         [Fact]
@@ -138,3 +158,4 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
         }
     }
 }
+

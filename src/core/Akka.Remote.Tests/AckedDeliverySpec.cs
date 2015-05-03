@@ -1,8 +1,13 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AckedDeliverySpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
-using Akka.Event;
 using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -376,7 +381,7 @@ namespace Akka.Remote.Tests
             global::System.Diagnostics.Debug.WriteLine("Successfully delivered {0} messages from {1}", received.Count, msgCount);
             global::System.Diagnostics.Debug.WriteLine("Entering reliable phase");
 
-            //Finalizing pahase
+            //Finalizing phase
             for (var i = 1; i <= msgCount; i++)
             {
                 senderSteps(1, 1.0);
@@ -398,3 +403,4 @@ namespace Akka.Remote.Tests
 
     }
 }
+

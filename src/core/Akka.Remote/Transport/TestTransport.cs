@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestTransport.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -283,13 +290,13 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
-    /// Test utility to make bhavior of functions that return some Task controllable form tests.
+    /// Test utility to make behavior of functions that return some Task controllable form tests.
     /// 
     /// This tool is able to override default behavior with any generic behavior, including failure, and exposes
     /// control to the timing of completion of the associated Task.
     /// 
     /// The utility is implemented as a stack of behaviors, where the behavior on the top of the stack represents the
-    /// currently active behavior. The bottom of the stack alway contains the <see cref="DefaultBehavior"/> which
+    /// currently active behavior. The bottom of the stack always contains the <see cref="DefaultBehavior"/> which
     /// can not be popped out.
     /// </summary>
     public class SwitchableLoggedBehavior<TIn, TOut>
@@ -458,7 +465,7 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// Indicates if all given transports were successfully registered. No assications can be established between
+        /// Indicates if all given transports were successfully registered. No associations can be established between
         /// transports that are not yet registered.
         /// </summary>
         /// <param name="addresses">The listen addresses of transports that participate in the test case.</param>
@@ -504,7 +511,7 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
-        /// Returns the event handler corresponding to the remote endpoint of the givne local handle. In other words
+        /// Returns the event handler corresponding to the remote endpoint of the given local handle. In other words
         /// it returns the listener that will receive <see cref="InboundPayload"/> events when <seealso cref="AssociationHandle.Write"/> is called.
         /// </summary>
         /// <param name="localHandle">The handle</param>
@@ -592,3 +599,4 @@ namespace Akka.Remote.Transport
         }
     }
 }
+

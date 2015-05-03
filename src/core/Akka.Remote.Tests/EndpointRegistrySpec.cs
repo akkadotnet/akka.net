@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="EndpointRegistrySpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -9,8 +16,8 @@ namespace Akka.Remote.Tests
     
     public class EndpointRegistrySpec : AkkaSpec
     {
-        private ActorRef actorA;
-        private ActorRef actorB;
+        private IActorRef actorA;
+        private IActorRef actorB;
         
         Address address1 = new Address("test", "testsys1", "testhost1", 1234);
         Address address2 = new Address("test", "testsy2", "testhost2", 1234);
@@ -143,3 +150,4 @@ namespace Akka.Remote.Tests
         }
     }
 }
+

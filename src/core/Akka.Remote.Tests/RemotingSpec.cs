@@ -1,9 +1,17 @@
-﻿using System;
-using System.Threading;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RemotingSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
+using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -129,31 +137,31 @@ namespace Akka.Remote.Tests
         private ICanTell here;
 
 
-        protected override void AfterTest()
+        protected override void AfterAll()
         {
             remoteSystem.Shutdown();
             AssociationRegistry.Clear();
-            base.AfterTest();
+            base.AfterAll();
         }
 
 
         #region Tests
 
 
-        [Fact(Skip = "Fails on buildserver")]
+        [Fact()]
         public void Remoting_must_support_remote_lookups()
         {
             here.Tell("ping", TestActor);
             ExpectMsg(Tuple.Create("pong", TestActor), TimeSpan.FromSeconds(1.5));
         }
 
-        [Fact(Skip = "Fails on buildserver")]
+        [Fact()]
         public async Task Remoting_must_support_Ask()
         {
             //TODO: using smaller numbers for the cancellation here causes a bug.
             //the remoting layer uses some "initialdelay task.delay" for 4 seconds.
             //so the token is cancelled before the delay completed.. 
-            var msg = await here.Ask<Tuple<string,ActorRef>>("ping", TimeSpan.FromSeconds(1.5));
+            var msg = await here.Ask<Tuple<string,IActorRef>>("ping", TimeSpan.FromSeconds(1.5));
             Assert.Equal("pong", msg.Item1);
             Assert.IsType<FutureActorRef>(msg.Item2);
         }
@@ -178,7 +186,7 @@ namespace Akka.Remote.Tests
             }
         }
 
-        [Fact(Skip = "Fails on buildserver")]
+        [Fact()]
         public void Remoting_must_create_by_IndirectActorProducer_and_ping()
         {
             try {
@@ -190,6 +198,36 @@ namespace Akka.Remote.Tests
             } finally {
                 Resolve.SetResolver(null);
             }
+        }
+
+        [Fact]
+        public async Task Bug_884_Remoting_must_support_reply_to_Routee()
+        {
+            var router = Sys.ActorOf(new RoundRobinPool(3).Props(Props.Create(() => new Reporter(TestActor))));
+            var routees = await router.Ask<Routees>(new GetRoutees());
+
+            //have one of the routees send the message
+            var targetRoutee = routees.Members.Cast<ActorRefRoutee>().Select(x => x.Actor).First();
+            here.Tell("ping", targetRoutee);
+            var msg = ExpectMsg<Tuple<string, IActorRef>>(TimeSpan.FromSeconds(1.5));
+            Assert.Equal("pong", msg.Item1);
+            Assert.Equal(targetRoutee, msg.Item2);
+        }
+
+        [Fact]
+        public async Task Bug_884_Remoting_must_support_reply_to_child_of_Routee()
+        {
+            var props = Props.Create(() => new Reporter(TestActor));
+            var router = Sys.ActorOf(new RoundRobinPool(3).Props(Props.Create(() => new NestedDeployer(props))));
+            var routees = await router.Ask<Routees>(new GetRoutees());
+
+            //have one of the routees send the message
+            var targetRoutee = routees.Members.Cast<ActorRefRoutee>().Select(x => x.Actor).First();
+            var reporter = await targetRoutee.Ask<IActorRef>(new NestedDeployer.GetNestedReporter());
+            here.Tell("ping", reporter);
+            var msg = ExpectMsg<Tuple<string, IActorRef>>(TimeSpan.FromSeconds(1.5));
+            Assert.Equal("pong", msg.Item1);
+            Assert.Equal(reporter, msg.Item2);
         }
 
         #endregion
@@ -219,9 +257,9 @@ namespace Akka.Remote.Tests
 
         private class Forwarder : UntypedActor
         {
-            private readonly ActorRef _testActor;
+            private readonly IActorRef _testActor;
 
-            public Forwarder(ActorRef testActor)
+            public Forwarder(IActorRef testActor)
             {
                 _testActor = testActor;
             }
@@ -299,9 +337,55 @@ namespace Akka.Remote.Tests
             public string S { get; private set; }
         }
 
+        class Reporter : UntypedActor
+        {
+            private IActorRef _reportTarget;
+
+            public Reporter(IActorRef reportTarget)
+            {
+                _reportTarget = reportTarget;
+            }
+
+
+            protected override void OnReceive(object message)
+            {
+                _reportTarget.Forward(message);
+            }
+        }
+
+        class NestedDeployer : UntypedActor
+        {
+            private Props _reporterProps;
+            private IActorRef _repoterActorRef;
+
+            public class GetNestedReporter { }
+
+            public NestedDeployer(Props reporterProps)
+            {
+                _reporterProps = reporterProps;
+            }
+
+            protected override void PreStart()
+            {
+                _repoterActorRef = Context.ActorOf(_reporterProps);
+            }
+
+            protected override void OnReceive(object message)
+            {
+                if (message is GetNestedReporter)
+                {
+                    Sender.Tell(_repoterActorRef);
+                }
+                else
+                {
+                    Unhandled(message);
+                }
+            }
+        }
+
         class Echo1 : UntypedActor
         {
-            private ActorRef target = Context.System.DeadLetters;
+            private IActorRef target = Context.System.DeadLetters;
             protected override void OnReceive(object message)
             {
                 message.Match()
@@ -338,7 +422,7 @@ namespace Akka.Remote.Tests
                     {
                         if (str.Equals("ping")) Sender.Tell(Tuple.Create("pong", Sender));
                     })
-                    .With<Tuple<string, ActorRef>>(actorTuple =>
+                    .With<Tuple<string, IActorRef>>(actorTuple =>
                     {
                         if (actorTuple.Item1.Equals("ping"))
                         {
@@ -354,10 +438,10 @@ namespace Akka.Remote.Tests
 
         class Proxy : UntypedActor
         {
-            private ActorRef _one;
-            private ActorRef _another;
+            private IActorRef _one;
+            private IActorRef _another;
 
-            public Proxy(ActorRef one, ActorRef another)
+            public Proxy(IActorRef one, IActorRef another)
             {
                 _one = one;
                 _another = another;
@@ -382,3 +466,4 @@ namespace Akka.Remote.Tests
         #endregion
     }
 }
+

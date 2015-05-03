@@ -1,17 +1,22 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorRefSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading;
 using Akka.Actor;
+using Akka.Serialization;
 using Akka.TestKit;
-using Akka.TestKit.Internal;
 using Akka.TestKit.TestActors;
 using Xunit;
 
 namespace Akka.Tests.Actor
 {
-    public class ActorRefSpec : AkkaSpec
+    public class ActorRefSpec : AkkaSpec, INoImplicitSender
     {
-        //TODO: A lot is missing in ActorRefSpec
-
         [Fact]
         public void An_ActorRef_should_equal_itself()
         {
@@ -34,8 +39,8 @@ namespace Akka.Tests.Actor
 
             equalTestActorRef1.Equals(equalTestActorRef2).ShouldBeTrue();
             // ReSharper disable EqualExpressionComparison
-            (equalTestActorRef1 == equalTestActorRef2).ShouldBeTrue();
-            (equalTestActorRef1 != equalTestActorRef2).ShouldBeFalse();
+            (Equals(equalTestActorRef1, equalTestActorRef2)).ShouldBeTrue();
+            (!Equals(equalTestActorRef1, equalTestActorRef2)).ShouldBeFalse();
             // ReSharper restore EqualExpressionComparison
         }
 
@@ -67,25 +72,53 @@ namespace Akka.Tests.Actor
         [Fact]
         public void An_ActorRef_should_not_allow_actors_to_be_created_outside_an_ActorOf()
         {
-            //TODO: requires EventFilters implemented
+            Shutdown();
+            Intercept<ActorInitializationException>(() =>
+            {
+                new BlackHoleActor();
+            });
         }
 
+
         [Fact]
-        public void An_ActorRef_should_be_serializable_using_default_binary_serialization_on_local_mode()
+        public void An_ActorRef_should_be_serializable_using_default_serialization_on_local_node()
         {
-            //TODO: Default serializer need to be specified
+            var aref = ActorOf<BlackHoleActor>();
+            var serializer = Sys.Serialization.FindSerializerFor(aref);
+            var binary = serializer.ToBinary(aref);
+            var bref = serializer.FromBinary(binary, typeof(IActorRef));
+
+            bref.ShouldBe(aref);
         }
 
         [Fact]
         public void An_ActorRef_should_throw_an_exception_on_deserialize_if_no_system_in_scope()
         {
-            //TODO: Default serializer need to be specified
+            var aref = ActorOf<BlackHoleActor>();
+
+            var serializer = new NewtonSoftJsonSerializer(null);
+            Intercept(() =>
+            {
+                var binary = serializer.ToBinary(aref);
+                var bref = serializer.FromBinary(binary, typeof(IActorRef));
+            });
         }
 
         [Fact]
         public void An_ActoRef_should_return_EmptyLocalActorRef_on_deserialize_if_not_present_in_actor_hierarchy_and_remoting_is_not_enabled()
         {
-            //TODO: Default serializer need to be specified
+            var aref = ActorOf<BlackHoleActor>("non-existing");
+            var aserializer = Sys.Serialization.FindSerializerForType(typeof(IActorRef));
+            var binary = aserializer.ToBinary(aref);
+
+            aref.Tell(PoisonPill.Instance);
+            VerifyActorTermination(aref);
+
+            var bserializer = Sys.Serialization.FindSerializerForType(typeof (IActorRef));
+            var bref = (IActorRef)bserializer.FromBinary(binary, typeof(IActorRef));
+
+            bref.GetType().ShouldBe(typeof(EmptyLocalActorRef));
+            bref.Path.ShouldBe(aref.Path);
         }
 
         [Fact]
@@ -125,7 +158,7 @@ namespace Akka.Tests.Actor
             var a = Sys.ActorOf(Props.Create(() => new NestingActor(Sys)));
             var t1 = a.Ask("any");
             t1.Wait(TimeSpan.FromSeconds(3));
-            var nested = t1.Result as ActorRef;
+            var nested = t1.Result as IActorRef;
 
             Assert.NotNull(a);
             Assert.NotNull(nested);
@@ -140,17 +173,17 @@ namespace Akka.Tests.Actor
 
             var t1 = a.Ask("innerself");
             t1.Wait(TimeSpan.FromSeconds(3));
-            var inner = t1.Result as ActorRef;
+            var inner = t1.Result as IActorRef;
             Assert.True(inner != a);
 
             var t2 = a.Ask(a);
             t2.Wait(TimeSpan.FromSeconds(3));
-            var self = t2.Result as ActorRef;
+            var self = t2.Result as IActorRef;
             self.ShouldBe(a);
 
             var t3 = a.Ask("self");
             t3.Wait(TimeSpan.FromSeconds(3));
-            var self2 = t3.Result as ActorRef;
+            var self2 = t3.Result as IActorRef;
             self2.ShouldBe(a);
 
             var t4 = a.Ask("msg");
@@ -160,9 +193,9 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_ActorRef_should_suppport_reply_via_Sender()
+        public void An_ActorRef_should_support_reply_via_Sender()
         {
-            var latch = new TestLatch(Sys, 4);
+            var latch = new TestLatch(4);
             var serverRef = Sys.ActorOf(Props.Create<ReplyActor>());
             var clientRef = Sys.ActorOf(Props.Create(() => new SenderActor(serverRef, latch)));
 
@@ -227,7 +260,7 @@ namespace Akka.Tests.Actor
             Assert.True(!(bool)t2.Result);
         }
 
-        private void VerifyActorTermination(ActorRef actorRef)
+        private void VerifyActorTermination(IActorRef actorRef)
         {
             var watcher = CreateTestProbe();
             watcher.Watch(actorRef);
@@ -236,7 +269,7 @@ namespace Akka.Tests.Actor
 
         private class NestingActor : ActorBase
         {
-            internal readonly ActorRef Nested;
+            internal readonly IActorRef Nested;
 
             public NestingActor(ActorSystem system)
             {
@@ -252,18 +285,18 @@ namespace Akka.Tests.Actor
 
         private struct ReplyTo
         {
-            public ReplyTo(ActorRef sender)
+            public ReplyTo(IActorRef sender)
                 : this()
             {
                 Sender = sender;
             }
 
-            public ActorRef Sender { get; set; }
+            public IActorRef Sender { get; set; }
         }
 
         private class ReplyActor : ActorBase
         {
-            private ActorRef _replyTo;
+            private IActorRef _replyTo;
 
             protected override bool Receive(object message)
             {
@@ -336,10 +369,10 @@ namespace Akka.Tests.Actor
 
         private class SenderActor : ActorBase
         {
-            private ActorRef _replyTo;
+            private IActorRef _replyTo;
             private TestLatch _latch;
 
-            public SenderActor(ActorRef replyTo, TestLatch latch)
+            public SenderActor(IActorRef replyTo, TestLatch latch)
             {
                 _latch = latch;
                 _replyTo = replyTo;
@@ -410,9 +443,9 @@ namespace Akka.Tests.Actor
 
         private class OuterActor : ActorBase
         {
-            private readonly ActorRef _inner;
+            private readonly IActorRef _inner;
 
-            public OuterActor(ActorRef inner)
+            public OuterActor(IActorRef inner)
             {
                 _inner = inner;
             }
@@ -433,10 +466,10 @@ namespace Akka.Tests.Actor
 
         private class FailingOuterActor : ActorBase
         {
-            private readonly ActorRef _inner;
+            private readonly IActorRef _inner;
             protected ActorBase Fail;
 
-            public FailingOuterActor(ActorRef inner)
+            public FailingOuterActor(IActorRef inner)
             {
                 _inner = inner;
                 Fail = new InnerActor();
@@ -457,7 +490,7 @@ namespace Akka.Tests.Actor
 
         private class FailingChildOuterActor : FailingOuterActor
         {
-            public FailingChildOuterActor(ActorRef inner)
+            public FailingChildOuterActor(IActorRef inner)
                 : base(inner)
             {
                 Fail = new InnerActor();
@@ -485,7 +518,7 @@ namespace Akka.Tests.Actor
 
         private class ChildAwareActor : ActorBase
         {
-            private readonly ActorRef _child;
+            private readonly IActorRef _child;
 
             public ChildAwareActor(string name)
             {
@@ -506,7 +539,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        private class EqualTestActorRef : ActorRef
+        private class EqualTestActorRef : ActorRefBase
         {
             private ActorPath _path;
 
@@ -517,10 +550,11 @@ namespace Akka.Tests.Actor
 
             public override ActorPath Path { get { return _path; } }
 
-            protected override void TellInternal(object message, ActorRef sender)
+            protected override void TellInternal(object message, IActorRef sender)
             {
                 throw new NotImplementedException();
             }
         }
     }
 }
+

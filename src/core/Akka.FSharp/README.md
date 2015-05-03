@@ -55,8 +55,28 @@ Paragraph above already has shown, how actors may be created with help of the sp
 -   `spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : ActorRef` - spawns an actor using specified actor computation expression. The actor can only be used locally. 
 -   `spawnOpt (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, with custom spawn option settings. The actor can only be used locally. 
 -   `spawne (actorFactory : ActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, using an Expression AST. The actor code can be deployed remotely.
+-   `spawnObj (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : ActorRef` - spawns an actor using specified actor quotation. The actor can only be used locally.
+-   `spawnObjOpt (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor quotation, with custom spawn option settings. The actor can only be used locally.
 
 All of these functions may be used with either actor system or actor itself. In the first case spawned actor will be placed under */user* root guardian of the current actor system hierarchy. In second option spawned actor will become child of the actor used as [actorFactory] parameter of the spawning function.
+
+#### Dealing with disposable resources
+
+When executing application logic inside receive function, be aware of a constant threat of stopping a current actor at any time for various reasons. This is an especially problematic situation when you're using a resource allocation - when actor will be stopped suddenly, you may be left with potentially heavy resources still waiting for being released.
+
+Use `mailbox.Defer (deferredFunc)` in situations when you must ensure operation to be executed at the end of the actor lifecycle.
+
+Example:
+
+    let disposableActor (mailbox:Actor<_>) =
+        let resource = new DisposableResource()
+        mailbox.Defer ((resource :> IDisposable).Dispose)
+        let rec loop () = 
+            actor {
+                let! msg = mailbox.Receive()
+                return! loop ()   
+            }
+        loop()
 
 ### Actor spawning options
 
@@ -129,27 +149,37 @@ Monitored actors will automatically send a `Terminated` message to their watcher
 
 Actors have a place in their system's hierarchy trees. To manage failures done by the child actors, their parents/supervisors may decide to use specific supervisor strategies (see: [Supervision](http://akkadotnet.github.io/wiki/Supervision)) in order to react to the specific types of errors. In F# this may be configured using functions of the `Strategy` module:
 
--   `Strategy.oneForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution.
--   `Strategy.oneForOne2 (retries : int) (timeout : TimeSpan) (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
--   `Strategy.allForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution.
--   `Strategy.allForOne2 (retries : int) (timeout : TimeSpan) (decider : exn -> Directive) : SupervisorStrategy` -  returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
+-   `Strategy.OneForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution.
+-   `Strategy.OneForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
+-   `OneForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan)  : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur. **Strategies created this way may be serialized and deserialized on remote nodes** .
+-   `Strategy.AllForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution.
+-   `Strategy.AllForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` -  returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
+-   `AllForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur. **Strategies created this way may be serialized and deserialized on remote nodes** .
 
 Example:
 
     let aref = 
         spawnOpt system "my-actor" (actorOf myFunc) 
-            [ SpawnOption.SupervisorStrategy (Strategy.oneForOne (fun error -> 
+            [ SpawnOption.SupervisorStrategy (Strategy.OneForOne (fun error -> 
                 match error with
                 | :? ArithmeticException -> Directive.Escalate
                 | _ -> SupervisorStrategy.DefaultDecider error )) ]
+    
+    let remoteRef = 
+        spawne system "remote-actor" <@ actorOf myFunc @>
+            [ SpawnOption.SupervisorStrategy (Strategy.OneForOne <@ fun error -> 
+                match error with
+                | :? ArithmeticException -> Directive.Escalate
+                | _ -> SupervisorStrategy.DefaultDecider error ) @>
+              SpawnOption.Deploy (Deploy (RemoteScope remoteNodeAddr)) ]
 
 ### Publish/Subscribe support
 
 While you may use built-in set of the event stream methods (see: Event Streams), there is an option of using dedicated F# API functions:
 
--   `sub (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - subscribes an actor reference to target channel of the provided event stream. Channels are associated with specific types of a message emitted by the publishers.
--   `unsub (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - unsubscribes an actor reference from target channel of the provided event stream.
--   `pub (event: 'Event) (eventStream: Akka.Event.EventStream) : unit` - publishes an event on the provided event stream. Event channel is resolved from event's type.
+-   `subscribe (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - subscribes an actor reference to target channel of the provided event stream. Channels are associated with specific types of a message emitted by the publishers.
+-   `unsubscribe (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - unsubscribes an actor reference from target channel of the provided event stream.
+-   `publish (event: 'Event) (eventStream: Akka.Event.EventStream) : unit` - publishes an event on the provided event stream. Event channel is resolved from event's type.
 
 Example: 
 
@@ -164,32 +194,18 @@ Example:
                 let eventStream = mailbox.Context.System.EventStream
                 match msg with
                 | Msg (sender, content) -> printfn "%A says %s" (sender.Path) content
-                | Subscribe -> sub typeof<Message> mailbox.Self eventStream |> ignore
-                | Unsubscribe -> unsub typeof<Message> mailbox.Self eventStream |> ignore ))
+                | Subscribe -> subscribe typeof<Message> mailbox.Self eventStream |> ignore
+                | Unsubscribe -> unsubscribe typeof<Message> mailbox.Self eventStream |> ignore ))
             
     let publisher = 
         spawn system "publisher" 
             (actorOf2 (fun mailbox msg -> 
-                pub msg mailbox.Context.System.EventStream))
+                publish msg mailbox.Context.System.EventStream))
 
     subscriber <! Subscribe
     publisher  <! Msg (publisher, "hello")
     subscriber <! Unsubscribe
     publisher  <! Msg (publisher, "hello again")
-
-### Scheduling
-
-Akka gives you an offhand support for scheduling (see: [Scheduler](http://akkadotnet.github.io/wiki/Scheduler)). Scheduling function can be grouped by two dimensions: 
-
-1. Cyclic (interval) vs single time scheduling - you may decide if scheduled job should be performed repeatedly or only once.
-2. Function vs message->actor scheduling - you may decide to schedule job in form of a function or a message automatically sent to target actor reference.
-
-F# API provides following scheduling functions:
-
--   `schedule (after: TimeSpan) (every: TimeSpan) (fn: unit -> unit) (scheduler: Scheduler): Async<unit>` - [cyclic, function] schedules a function to be called by the scheduler repeatedly.
--   `scheduleOnce (after: TimeSpan) (fn: unit -> unit) (scheduler: Scheduler): Async<unit>` - [single, function] schedules a function to be called only once by the scheduler.
--   `scheduleTell (after: TimeSpan) (every: TimeSpan) (message: 'Message) (receiver: ActorRef) (scheduler: Scheduler): Async<unit>` - [cyclic, message] schedules a message to be sent to the target actor reference by the scheduler repeatedly.
--   `scheduleTellOnce (after: TimeSpan) (message: 'Message) (receiver: ActorRef) (scheduler: Scheduler): Async<unit>` - [single, message] schedules a message to be sent only once to the target actor reference, by the scheduler.
 
 ### Logging
 

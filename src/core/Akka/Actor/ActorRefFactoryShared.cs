@@ -1,5 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorRefFactoryShared.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using Akka.Actor.Internals;
 
@@ -8,7 +14,7 @@ namespace Akka.Actor
     /// <summary>
     /// This class contains implementations originally found in Akka´s trait ActorRefFactory in ActorRefProvider.scala
     /// https://github.com/akka/akka/blob/master/akka-actor/src/main/scala/akka/actor/ActorRefProvider.scala#L180
-    /// <see cref="ActorRefFactory"/> corresponds to that trait, but since it is an interface it
+    /// <see cref="IActorRefFactory"/> corresponds to that trait, but since it is an interface it
     /// cannot contain any code, hence this class.
     /// </summary>
     public static class ActorRefFactoryShared
@@ -32,9 +38,23 @@ namespace Akka.Actor
         ///     the supplied path, it is recommended to send a message and gather the
         ///     replies in order to resolve the matching set of actors.
         /// </summary>
-        public static ActorSelection ActorSelection(string path, ActorSystem system, ActorRef lookupRoot)
+        public static ActorSelection ActorSelection(string path, ActorSystem system, IActorRef lookupRoot)
         {
             var provider = ((ActorSystemImpl)system).Provider;
+
+            //no path given
+            if (string.IsNullOrEmpty(path))
+            {
+                return new ActorSelection(system.DeadLetters, "");
+            }
+
+            //absolute path
+            var elements = path.Split('/');
+            if (elements[0] == "")
+            {
+                return new ActorSelection(provider.RootGuardian, elements.Skip(1));
+            }
+
             if(Uri.IsWellFormedUriString(path, UriKind.Absolute))
             {
                 ActorPath actorPath;
@@ -44,20 +64,9 @@ namespace Akka.Actor
                 var actorRef = provider.RootGuardianAt(actorPath.Address);
                 return new ActorSelection(actorRef, actorPath.Elements);
             }
-            //no path given
-            if(string.IsNullOrEmpty(path))
-            {
-                return new ActorSelection(system.DeadLetters, "");
-            }
-
-            //absolute path
-            var elements = path.Split('/');
-            if(elements[0] == "")
-            {
-                return new ActorSelection(provider.RootGuardian, elements.Skip(1));
-            }
-
+            
             return new ActorSelection(lookupRoot, path);
         }
     }
 }
+

@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="ReceiveTimeoutActor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,10 +14,10 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 {
     public class ReceiveTimeoutActor : ActorBase
     {
-        private readonly ActorRef _target;
+        private readonly IActorRef _target;
         private CancellationTokenSource _cancellationTokenSource;
 
-        public ReceiveTimeoutActor(ActorRef target)
+        public ReceiveTimeoutActor(IActorRef target)
         {
             _target = target;
 
@@ -35,3 +42,4 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         }
     }
 }
+

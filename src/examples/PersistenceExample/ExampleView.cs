@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ExampleView.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Persistence;
 
 namespace PersistenceExample
@@ -12,7 +19,7 @@ namespace PersistenceExample
         
         protected override bool Receive(object message)
         {
-            if (message == "snap")
+            if (message as string == "snap")
             {
                 Console.WriteLine("View saving snapshot");
                 SaveSnapshot(_numReplicated);
@@ -47,3 +54,4 @@ namespace PersistenceExample
         }
     }
 }
+

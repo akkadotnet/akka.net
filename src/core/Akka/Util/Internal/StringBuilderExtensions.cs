@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="StringBuilderExtensions.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -11,7 +18,7 @@ namespace Akka.Util.Internal
     {
         public static StringBuilder AppendJoin<T>(this StringBuilder sb, string separator, IEnumerable<T> values)
         {
-            return AppendJoin<T>(sb, separator, values, (Action<StringBuilder, T, int>)null);
+            return AppendJoin(sb, separator, values, null);
         }
 
         public static StringBuilder AppendJoin<T>(this StringBuilder sb, string separator, IEnumerable<T> values, Action<StringBuilder, T, int> valueAppender)
@@ -56,3 +63,4 @@ namespace Akka.Util.Internal
         }
     }
 }
+

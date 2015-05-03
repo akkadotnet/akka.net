@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PersistentActorSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -171,16 +178,48 @@ namespace Akka.Persistence.Tests
             ExpectMsg("a");
         }
 
-        [Fact(Skip = "not implemented yet")]
-        public void PersistentActor_should_support_user_stash_operations_with_serveral_stashed_messages()
+        [Fact]
+        public void PersistentActor_should_support_user_stash_operations_with_several_stashed_messages()
         {
             var pref = ActorOf(Props.Create(() => new UserStashManyActor(Name)));
             var n = 10;
+            var commands = Enumerable.Range(1, n).SelectMany(_ => new[] { new Cmd("a"), new Cmd("b-1"), new Cmd("b-2"), new Cmd("c"), });
 
-            throw new NotImplementedException();
+            foreach (var command in commands)
+            {
+                pref.Tell(command);
+            }
+
+            pref.Tell(GetState.Instance);
+
+            var events = new List<object> { "a-1", "a-2" };
+            for (int i = 0; i < n; i++)
+            {
+                events.AddRange(new[] { "a", "c", "b-1", "b-2" });
+            }
+
+            ExpectMsgInOrder(events.ToArray());
         }
 
-        [Fact(Skip = "FIXME")]
+        [Fact]
+        public void PersistentActor_should_preserve_order_of_incoming_messages()
+        {
+            var pref = ActorOf(Props.Create(() => new StressOrdering(Name)));
+            var latch = CreateTestLatch(1);
+
+            pref.Tell(new Cmd("a"));
+            pref.Tell(new LatchCmd(latch, "b"));    // for some reason after this line of code test hangs
+            pref.Tell("c");
+
+            ExpectMsg("a");
+            ExpectMsg("b");
+            pref.Tell("d");
+            latch.CountDown();
+            ExpectMsg("c");
+            ExpectMsg("d");
+        } 
+
+        [Fact]
         public void PersistentActor_should_support_user_stash_operations_under_failures()
         {
             var pref = ActorOf(Props.Create(() => new UserStashFailureActor(Name)));
@@ -215,7 +254,7 @@ namespace Akka.Persistence.Tests
             ExpectMsg("y-2");
         }
 
-        [Fact(Skip = "FIXME")]
+        [Fact]
         public void PersistentActor_should_support_mutli_PersistAsync_calls_for_one_command_and_executed_them_when_possible()
         {
             var pref = ActorOf(Props.Create(() => new AsyncPersistThreeTimesActor(Name)));
@@ -232,7 +271,8 @@ namespace Akka.Persistence.Tests
             var replies = all.Where(r => r.Count(c => c == '-') == 1);
             replies.ShouldOnlyContainInOrder(commands.Select(cmd => cmd.Data).ToArray());
 
-            var expectedAcks = Enumerable.Range(3, 32).Select(i => "a-" + (i / 3) + "-" + (i / 2)).ToArray();
+            // range(3, 30) is equivalent of Scala (3 to 32)
+            var expectedAcks = Enumerable.Range(3, 30).Select(i => "a-" + (i / 3) + "-" + (i - 2)).ToArray();
             var acks = all.Where(r => r.Count(c => c == '-') == 2);
             acks.ShouldOnlyContainInOrder(expectedAcks);
         }
@@ -261,7 +301,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void PersistentActor_should_support_the_same_event_being_PersistAsynced_mutliple_times()
+        public void PersistentActor_should_support_the_same_event_being_PersistAsynced_multiple_times()
         {
             var pref = ActorOf(Props.Create(() => new AsyncPersistSameEventTwiceActor(Name)));
             pref.Tell(new Cmd("x"));
@@ -298,8 +338,8 @@ namespace Akka.Persistence.Tests
             ExpectNoMsg(TimeSpan.FromMilliseconds(100));
         }
 
-        [Fact(Skip = "not implemented yet")]
-        public void PersistentActor_should_support_a_mix_of_persist_calls_and_persist_calls()
+        [Fact]
+        public void PersistentActor_should_support_a_mix_of_persist_calls_and_persist_async_calls()
         {
             var pref = ActorOf(Props.Create(() => new AsyncPersistAndPersistMixedSyncAsyncActor(Name)));
             pref.Tell(new Cmd("a"));
@@ -309,9 +349,22 @@ namespace Akka.Persistence.Tests
             ExpectMsg("a");
             ExpectMsg("a-e1-1");    // persist, must be before next command
 
-            var expected = new SortedSet<string> { "b", "a-ea2-2" };
+            var expected = new HashSet<string> { "b", "a-ea2-2" };
+            var found = ExpectMsgAnyOf(expected.Cast<object>().ToArray());  // ea2 is PersistAsyn, b can be processed before it
+            expected.Remove(found.ToString());
+            ExpectMsgAnyOf(expected.Cast<object>().ToArray());
 
-            throw new NotImplementedException();
+            ExpectMsg("b-e1-3");        // persist, must be before next command
+
+            var expected2 = new HashSet<string> { "c", "b-ea2-4" };
+            var found2 = ExpectMsgAnyOf(expected2.Cast<object>().ToArray());
+            expected.Remove(found2.ToString());
+            ExpectMsgAnyOf(expected2.Cast<object>().ToArray());
+
+            ExpectMsg("c-e1-5");
+            ExpectMsg("c-ea2-6");
+
+            ExpectNoMsg(TimeSpan.FromMilliseconds(100));
         }
 
         [Fact]
@@ -360,7 +413,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void PersistentActor_should_invoke_deffered_handlers_in_presence_of_mixed_a_long_series_Persist_and_PersistAsync_calls()
+        public void PersistentActor_should_invoke_deferred_handlers_in_presence_of_mixed_a_long_series_Persist_and_PersistAsync_calls()
         {
             var pref = ActorOf(Props.Create(() => new DeferringMixedCallsPPADDPADPersistActor(Name)));
             var p1 = CreateTestProbe();
@@ -386,7 +439,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void PersistentActor_should_invoke_deffered_handlers_right_away_if_there_are_no_persist_handlers_registered()
+        public void PersistentActor_should_invoke_deferred_handlers_right_away_if_there_are_no_persist_handlers_registered()
         {
             var pref = ActorOf(Props.Create(() => new DeferringWithNoPersistCallsPersistActor(Name)));
             pref.Tell(new Cmd("a"));
@@ -399,7 +452,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void PersistentActor_should_invoke_deffered_handlers_preserving_the_original_sender_reference()
+        public void PersistentActor_should_invoke_deferred_handlers_preserving_the_original_sender_reference()
         {
             var pref = ActorOf(Props.Create(() => new DeferringWithAsyncPersistActor(Name)));
             var p1 = CreateTestProbe();
@@ -440,25 +493,6 @@ namespace Akka.Persistence.Tests
             pref2.Tell(GetState.Instance);
             ExpectMsgInOrder("a-1", "a-2", "b-41", "b-42", "c-41", "c-42", RecoveryCompleted.Instance);
         }
-
-        [Fact(Skip = "not implemented yet")]
-        public void PersistentActor_should_preserve_order_of_incoming_messages()
-        {
-            throw new NotImplementedException();
-        }
-
-        [Fact(Skip = "not implemented yet")]
-        public void PersistentActor_should_be_used_as_a_stackable_modification()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void ExpectMsgInOrder(params object[] ordered)
-        {
-            var msg = ExpectMsg<object[]>();
-            msg
-                //.Select(x => x.ToString())
-                .ShouldOnlyContainInOrder(ordered);
-        }
     }
 }
+

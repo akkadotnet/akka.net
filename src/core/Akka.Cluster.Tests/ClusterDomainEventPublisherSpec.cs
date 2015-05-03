@@ -1,16 +1,21 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterDomainEventPublisherSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.TestKit;
-using Akka.TestKit.Xunit;
 using Xunit;
-using Assert = Xunit.Assert;
 
 namespace Akka.Cluster.Tests
 {
     public class ClusterDomainEventPublisherSpec : AkkaSpec
     {
-        ActorRef _publisher;
+        IActorRef _publisher;
         static readonly Member aUp = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552), MemberStatus.Up);
         static readonly Member aLeaving = aUp.Copy(status: MemberStatus.Leaving);
         static readonly Member aExiting = aLeaving.Copy(status: MemberStatus.Exiting);
@@ -162,3 +167,4 @@ namespace Akka.Cluster.Tests
 
     }
 }
+

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PersistentActor.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Actor.Internals;
@@ -46,9 +53,19 @@ namespace Akka.Persistence
         public RecoveryFailure(Exception cause)
         {
             Cause = cause;
+            SequenceNr = -1;
+        }
+
+        public RecoveryFailure(Exception cause, long sequenceNr, object payload)
+        {
+            Cause = cause;
+            SequenceNr = sequenceNr;
+            Payload = payload;
         }
 
         public Exception Cause { get; private set; }
+        public long SequenceNr { get; set; }
+        public object Payload { get; set; }
     }
 
     [Serializable]
@@ -64,7 +81,7 @@ namespace Akka.Persistence
     }
 
     /// <summary>
-    /// Insealed classs a <see cref="PersistentActor"/> to recover itself. Recovery will start from the first previously saved snapshot
+    /// Instructs a <see cref="PersistentActor"/> to recover itself. Recovery will start from the first previously saved snapshot
     /// matching provided <see cref="FromSnapshot"/> selection criteria, if any. Otherwise it will replay all journaled messages.
     /// 
     /// If recovery starts from a snapshot, the <see cref="PersistentActor"/> is offered with that snapshot wrapped in 
@@ -133,15 +150,43 @@ namespace Akka.Persistence
 
         protected abstract void OnCommand(object message);
         protected abstract void OnRecover(object message);
+
+        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
         protected void Become(UntypedReceive receive, bool discardOld = true)
         {
-            Context.Become(receive, discardOld);
+            if (discardOld)
+                Context.Become(receive);
+            else
+                Context.BecomeStacked(receive);
         }
+
+
+        /// <summary>
+        /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
+        /// </summary>
+        /// <param name="receive">The new message handler.</param>
+        protected void Become(UntypedReceive receive)
+        {
+            Context.Become(receive);
+        }
+
+        /// <summary>
+        /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
+        /// The current handler is stored on a stack, and you can revert to it by calling <see cref="IUntypedActorContext.UnbecomeStacked"/>
+        /// <remarks>Please note, that in order to not leak memory, make sure every call to <see cref="BecomeStacked"/>
+        /// is matched with a call to <see cref="IUntypedActorContext.UnbecomeStacked"/>.</remarks>
+        /// </summary>
+        /// <param name="receive">The new message handler.</param>
+        protected void BecomeStacked(UntypedReceive receive)
+        {
+            Context.BecomeStacked(receive);
+        }
+
 
         protected static new IUntypedActorContext Context { get { return (IUntypedActorContext)ActorBase.Context; } }
     }
 
-    public abstract class ReceivePersistentActor : UntypedPersistentActor, InitializableActor
+    public abstract class ReceivePersistentActor : UntypedPersistentActor, IInitializableActor
     {
         
         private bool _shouldUnhandle = true;
@@ -156,7 +201,7 @@ namespace Akka.Persistence
             PrepareConfigureMessageHandlers();
         }
 
-        void InitializableActor.Init()
+        void IInitializableActor.Init()
         {
             //This might be called directly after the constructor, or when the same actor instance has been returned
             //during recreate. Make sure what happens here is idempotent
@@ -300,3 +345,4 @@ namespace Akka.Persistence
         #endregion
     }
 }
+

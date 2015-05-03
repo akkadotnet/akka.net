@@ -1,6 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Random.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System.Collections.Generic;
-using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Util;
@@ -8,12 +13,12 @@ using Akka.Util;
 namespace Akka.Routing
 {
     /// <summary>
-    /// Class RandomLogic.
+    ///     Class RandomLogic.
     /// </summary>
     public class RandomLogic : RoutingLogic
     {
         /// <summary>
-        /// Selects the routee for the given message.
+        ///     Selects the routee for the given message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="routees">The routees.</param>
@@ -29,12 +34,12 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    /// Class RandomGroup.
+    ///     Class RandomGroup.
     /// </summary>
-    public class RandomGroup : Group
+    public class RandomGroup : Group 
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RandomGroup"/> class.
+        ///     Initializes a new instance of the <see cref="RandomGroup" /> class.
         /// </summary>
         /// <param name="config">The configuration.</param>
         public RandomGroup(Config config)
@@ -43,7 +48,7 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RandomGroup"/> class.
+        ///     Initializes a new instance of the <see cref="RandomGroup" /> class.
         /// </summary>
         /// <param name="paths">The paths.</param>
         public RandomGroup(params string[] paths)
@@ -52,7 +57,7 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RandomGroup"/> class.
+        ///     Initializes a new instance of the <see cref="RandomGroup" /> class.
         /// </summary>
         /// <param name="paths">The paths.</param>
         public RandomGroup(IEnumerable<string> paths)
@@ -60,20 +65,42 @@ namespace Akka.Routing
         {
         }
 
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new RandomGroupSurrogate
+            {
+                Paths = Paths
+            };
+        }
+
         /// <summary>
-        /// Creates the router.
+        ///     Creates the router.
         /// </summary>
         /// <returns>Router.</returns>
         public override Router CreateRouter(ActorSystem system)
         {
             return new Router(new RandomLogic());
         }
+
+        public override Group WithDispatcher(string dispatcher)
+        {
+            return new RandomGroup(Paths){ RouterDispatcher = dispatcher};
+        }
+
+        public class RandomGroupSurrogate : ISurrogate
+        {
+            public string[] Paths { get; set; }
+
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new RandomGroup(Paths);
+            }
+        }
     }
 
     public class RandomPool : Pool
     {
         /// <summary>
-
         /// </summary>
         /// <param name="nrOfInstances">The nr of instances.</param>
         /// <param name="resizer">The resizer.</param>
@@ -89,27 +116,39 @@ namespace Akka.Routing
         public RandomPool(Config config)
             : base(config)
         {
-
         }
 
-        [Obsolete("for serialization only", true)]
-        public RandomPool()
+        /// <summary>
+        ///     Simple form of RandomPool constructor
+        /// </summary>
+        /// <param name="nrOfInstances">The nr of instances.</param>
+        public RandomPool(int nrOfInstances) : base(nrOfInstances, null, DefaultStrategy, null)
         {
-
         }
 
         /// <summary>
-        /// Simple form of RandomPool constructor
+        ///     Simple form of RandomPool constructor
         /// </summary>
         /// <param name="nrOfInstances">The nr of instances.</param>
-        public RandomPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null) { }
+        /// <param name="resizer">
+        ///     A <see cref="Resizer" /> for specifying how to grow the pool of underlying routees based on
+        ///     pressure
+        /// </param>
+        public RandomPool(int nrOfInstances, Resizer resizer) : base(nrOfInstances, resizer, DefaultStrategy, null)
+        {
+        }
 
-        /// <summary>
-        /// Simple form of RandomPool constructor
-        /// </summary>
-        /// <param name="nrOfInstances">The nr of instances.</param>
-        /// <param name="resizer">A <see cref="Resizer"/> for specifying how to grow the pool of underlying routees based on pressure</param>
-        public RandomPool(int nrOfInstances, Resizer resizer) : base(nrOfInstances, resizer, Pool.DefaultStrategy, null) { }
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new RandomPoolSurrogate
+            {
+                NrOfInstances = NrOfInstances,
+                UsePoolDispatcher = UsePoolDispatcher,
+                Resizer = Resizer,
+                SupervisorStrategy = SupervisorStrategy,
+                RouterDispatcher = RouterDispatcher
+            };
+        }
 
         /// <summary>
         ///     Creates the router.
@@ -119,5 +158,40 @@ namespace Akka.Routing
         {
             return new Router(new RoundRobinRoutingLogic());
         }
+
+        public class RandomPoolSurrogate : ISurrogate
+        {
+            public int NrOfInstances { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Resizer Resizer { get; set; }
+            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public string RouterDispatcher { get; set; }
+
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+            }
+        }
+
+        public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
+        {
+            return new RandomPool(NrOfInstances, Resizer, strategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        public override Pool WithResizer(Resizer resizer)
+        {
+            return new RandomPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        public override Pool WithDispatcher(string dispatcher)
+        {
+            return new RandomPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher, UsePoolDispatcher);
+        }
+
+        public override RouterConfig WithFallback(RouterConfig routerConfig)
+        {
+            return OverrideUnsetConfig(routerConfig);
+        }
     }
 }
+

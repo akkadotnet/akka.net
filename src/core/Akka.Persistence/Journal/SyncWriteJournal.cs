@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="SyncWriteJournal.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -29,14 +36,14 @@ namespace Akka.Persistence.Journal
         /// Synchronously writes a batch of a persistent messages to the journal. The batch must be atomic,
         /// i.e. all persistent messages in batch are written at once or none of them.
         /// </summary>
-        protected abstract void WriteMessages(IEnumerable<IPersistentRepresentation> messages);
+        public abstract void WriteMessages(IEnumerable<IPersistentRepresentation> messages);
 
         /// <summary>
         /// Synchronously deletes all persistent messages up to inclusive <paramref name="toSequenceNr"/>
         /// bound. If <paramref name="isPermanent"/> flag is clear, the persistent messages are marked as
         /// deleted, otherwise they're permanently deleted.
         /// </summary>
-        protected abstract void DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent);
+        public abstract void DeleteMessagesTo(string persistenceId, long toSequenceNr, bool isPermanent);
 
         protected override bool Receive(object message)
         {
@@ -56,7 +63,7 @@ namespace Akka.Persistence.Journal
 
                 if (CanPublish) Context.System.EventStream.Publish(msg);
             }
-            catch (Exception e) { /* do nothing */ }
+            catch (Exception) { /* do nothing */ }
         }
 
         private void HandleReadHighestSequenceNr(ReadHighestSequenceNr msg)
@@ -70,9 +77,10 @@ namespace Akka.Persistence.Journal
 
         private void HandleReplayMessages(ReplayMessages msg)
         {
+            var sender = Sender;
             ReplayMessagesAsync(msg.PersistenceId, msg.FromSequenceNr, msg.ToSequenceNr, msg.Max, persistent =>
             {
-                if (!persistent.IsDeleted || msg.ReplayDeleted) msg.PersistentActor.Tell(new ReplayedMessage(persistent), persistent.Sender);
+                if (!persistent.IsDeleted || msg.ReplayDeleted) msg.PersistentActor.Tell(new ReplayedMessage(persistent), sender);
             })
             .NotifyAboutReplayCompletion(msg.PersistentActor)
             .ContinueWith(t =>
@@ -85,10 +93,10 @@ namespace Akka.Persistence.Journal
         {
             try
             {
-                var batch = CreatePersitentBatch(msg.Messages);
+                var batch = CreatePersistentBatch(msg.Messages);
                 WriteMessages(batch);
 
-                msg.PersistentActor.Tell(WriteMessagesSuccessull.Instance);
+                msg.PersistentActor.Tell(WriteMessagesSuccessful.Instance);
                 foreach (var message in msg.Messages)
                 {
                     if (message is IPersistentRepresentation)
@@ -123,3 +131,4 @@ namespace Akka.Persistence.Journal
         }
     }
 }
+

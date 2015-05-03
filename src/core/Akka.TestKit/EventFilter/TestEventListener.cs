@@ -1,21 +1,28 @@
-﻿using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestEventListener.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Generic;
+using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.TestKit.Internal;
 using Akka.TestKit.TestEvent;
 
 namespace Akka.TestKit
 {
 
-/// <summary>
+    /// <summary>
     /// EventListener for running tests, which allows selectively filtering out
     /// expected messages. To use it, include something like this in
     /// the configuration:
-    /// <pre><code>akka.loggers = ["Akka.TestKit.TestEventListener, Akka.TestKit"]</code></pre>
+    /// <code>akka.loggers = ["Akka.TestKit.TestEventListener, Akka.TestKit"]</code>
     /// </summary>
     public class TestEventListener : DefaultLogger
     {
-        private readonly List<EventFilter> _filters = new List<EventFilter>();
+        private readonly List<IEventFilter> _filters = new List<IEventFilter>();
 
         protected override bool Receive(object message)
         {
@@ -85,7 +92,7 @@ namespace Akka.TestKit
                 var warning = new Warning(recipientPath, recipientType, message);
                 if(!ShouldFilter(warning))
                 {
-                    var msgStr = (msg is SystemMessage)
+                    var msgStr = (msg is ISystemMessage)
                         ? "Received dead system message: " + msg
                         : "Received dead letter from " + snd + ": " + msg;
                     var warning2 = new Warning(recipientPath, recipientType, new DeadLetter(msgStr,snd,rcp));
@@ -98,12 +105,12 @@ namespace Akka.TestKit
             }
         }
 
-        private void AddFilter(EventFilter filter)
+        private void AddFilter(IEventFilter filter)
         {
             _filters.Add(filter);
         }
 
-        private void RemoveFilter(EventFilter filter)
+        private void RemoveFilter(IEventFilter filter)
         {
             _filters.Remove(filter);
         }
@@ -127,3 +134,4 @@ namespace Akka.TestKit
         }
     }
 }
+

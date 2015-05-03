@@ -1,5 +1,0 @@
----
-layout: wiki
-title: Self
----
-.

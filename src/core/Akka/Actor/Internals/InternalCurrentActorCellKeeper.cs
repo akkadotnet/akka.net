@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="InternalCurrentActorCellKeeper.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 
 namespace Akka.Actor.Internal
 {
@@ -17,3 +24,4 @@ namespace Akka.Actor.Internal
         public static ActorCell Current { get { return _current; } set { _current = value; } }
     }
 }
+

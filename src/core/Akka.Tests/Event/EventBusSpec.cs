@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="EventBusSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
@@ -19,7 +26,7 @@ namespace Akka.Tests.Event
             return child.IsAssignableFrom(parent);
         }
 
-        protected override void Publish(object evt, ActorRef subscriber)
+        protected override void Publish(object evt, IActorRef subscriber)
         {
             subscriber.Tell(evt);
         }
@@ -37,9 +44,9 @@ namespace Akka.Tests.Event
 
     internal class TestActorWrapperActor : ActorBase
     {
-        private readonly ActorRef _ref;
+        private readonly IActorRef _ref;
 
-        public TestActorWrapperActor(ActorRef actorRef)
+        public TestActorWrapperActor(IActorRef actorRef)
         {
             _ref = actorRef;
         }
@@ -53,13 +60,13 @@ namespace Akka.Tests.Event
 
     internal struct Notification
     {
-        public Notification(ActorRef @ref, int payload) : this()
+        public Notification(IActorRef @ref, int payload) : this()
         {
             Ref = @ref;
             Payload = payload;
         }
 
-        public ActorRef Ref { get; set; }
+        public IActorRef Ref { get; set; }
         public int Payload { get; set; }
     }
 
@@ -69,7 +76,7 @@ namespace Akka.Tests.Event
 
         protected object _evt;
         protected Type _classifier;
-        protected ActorRef _subscriber;
+        protected IActorRef _subscriber;
 
         public EventBusSpec()
         {
@@ -118,7 +125,7 @@ namespace Akka.Tests.Event
         public void EventBus_allow_to_add_multiple_subscribers()
         {
             const int max = 10;
-            IEnumerable<ActorRef> subscribers = Enumerable.Range(0, max).Select(_ => CreateSubscriber(TestActor)).ToList();
+            IEnumerable<IActorRef> subscribers = Enumerable.Range(0, max).Select(_ => CreateSubscriber(TestActor)).ToList();
             foreach (var subscriber in subscribers)
             {
                 _bus.Subscribe(subscriber, _classifier).ShouldBe(true);
@@ -195,14 +202,15 @@ namespace Akka.Tests.Event
             DisposeSubscriber(_subscriber);
         }
 
-        protected ActorRef CreateSubscriber(ActorRef actor)
+        protected IActorRef CreateSubscriber(IActorRef actor)
         {
             return Sys.ActorOf(Props.Create(() => new TestActorWrapperActor(actor)));
         }
 
-        protected void DisposeSubscriber(ActorRef subscriber)
+        protected void DisposeSubscriber(IActorRef subscriber)
         {
             Sys.Stop(subscriber);
         }
     }
 }
+

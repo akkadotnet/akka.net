@@ -1,13 +1,19 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ChildStats.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 
 namespace Akka.Actor.Internal
 {
-    // ReSharper disable once InconsistentNaming
-    public interface ChildStats
+    public interface IChildStats
     {
     }
 
-    public class ChildNameReserved : ChildStats
+    public class ChildNameReserved : IChildStats
     {
         private static readonly ChildNameReserved _instance = new ChildNameReserved();
         private ChildNameReserved() {/* Intentionally left blank */}
@@ -23,13 +29,13 @@ namespace Akka.Actor.Internal
     /// ChildRestartStats is the statistics kept by every parent Actor for every child Actor
     /// and is used for SupervisorStrategies to know how to deal with problems that occur for the children.
     /// </summary>
-    public class ChildRestartStats : ChildStats
+    public class ChildRestartStats : IChildStats
     {
-        private readonly InternalActorRef _child;
+        private readonly IInternalActorRef _child;
         private uint _maxNrOfRetriesCount;
         private long _restartTimeWindowStartTicks;
 
-        public ChildRestartStats(InternalActorRef child, uint maxNrOfRetriesCount = 0, long restartTimeWindowStartTicks = 0)
+        public ChildRestartStats(IInternalActorRef child, uint maxNrOfRetriesCount = 0, long restartTimeWindowStartTicks = 0)
         {
             _child = child;
             _maxNrOfRetriesCount = maxNrOfRetriesCount;
@@ -38,7 +44,7 @@ namespace Akka.Actor.Internal
 
         public long Uid { get { return Child.Path.Uid; } }
 
-        public InternalActorRef Child { get { return _child; } }
+        public IInternalActorRef Child { get { return _child; } }
 
         public uint MaxNrOfRetriesCount { get { return _maxNrOfRetriesCount; } }
 
@@ -100,3 +106,4 @@ namespace Akka.Actor.Internal
 
     }
 }
+

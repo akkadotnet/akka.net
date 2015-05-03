@@ -1,27 +1,30 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorCell.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Actor.Internals;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Serialization;
-using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
-    public partial class ActorCell : IActorContext, IUntypedActorContext, Cell 
+    public partial class ActorCell : IUntypedActorContext, ICell 
     {
         /// <summary>NOTE! Only constructor and ClearActorFields is allowed to update this</summary>
-        private InternalActorRef _self;
+        private IInternalActorRef _self;
         public const int UndefinedUid = 0;
         private Props _props;
         private static readonly Props terminatedProps=new TerminatedProps();
 
-        protected Stack<Receive> behaviorStack = new Stack<Receive>();
+
         private long _uid;
         private ActorBase _actor;
         private bool _actorHasBeenCleared;
@@ -29,13 +32,14 @@ namespace Akka.Actor
         private readonly ActorSystemImpl _systemImpl;
 
 
-        public ActorCell(ActorSystemImpl system, InternalActorRef self, Props props, MessageDispatcher dispatcher, InternalActorRef parent)
+        public ActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher, IInternalActorRef parent)
         {
             _self = self;
             _props = props;
             _systemImpl = system;
             Parent = parent;
-            Dispatcher = dispatcher;            
+            Dispatcher = dispatcher;
+            
         }
 
         public object CurrentMessage { get; private set; }
@@ -53,10 +57,10 @@ namespace Akka.Actor
         public ActorSystem System { get { return _systemImpl; } }
         public ActorSystemImpl SystemImpl { get { return _systemImpl; } }
         public Props Props { get { return _props; } }
-        public ActorRef Self { get { return _self; } }
-        ActorRef IActorContext.Parent { get { return Parent; } }
-        public InternalActorRef Parent { get; private set; }
-        public ActorRef Sender { get; private set; }
+        public IActorRef Self { get { return _self; } }
+        IActorRef IActorContext.Parent { get { return Parent; } }
+        public IInternalActorRef Parent { get; private set; }
+        public IActorRef Sender { get; private set; }
         public bool HasMessages { get { return Mailbox.HasUnscheduledMessages; } }
         public int NumberOfMessages { get { return Mailbox.NumberOfMessages; } }
         internal bool ActorHasBeenCleared { get { return _actorHasBeenCleared; } }
@@ -65,6 +69,7 @@ namespace Akka.Actor
         public void Init(bool sendSupervise, Func<Mailbox> createMailbox /*, MailboxType mailboxType*/) //TODO: switch from  Func<Mailbox> createMailbox to MailboxType mailboxType
         {
             var mailbox = createMailbox(); //Akka: dispatcher.createMailbox(this, mailboxType)
+            Dispatcher.Attach(this);
             mailbox.Setup(Dispatcher);
             mailbox.SetActor(this);
             _mailbox = mailbox;
@@ -106,16 +111,16 @@ namespace Akka.Actor
         }
 
         [Obsolete("Use TryGetChildStatsByName", true)]
-        public InternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
+        public IInternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
         {
-            InternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRef.Nobody;
+            IInternalActorRef child;
+            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
         }
 
-        ActorRef IActorContext.Child(string name)
+        IActorRef IActorContext.Child(string name)
         {
-            InternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRef.Nobody;
+            IInternalActorRef child;
+            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
         }
 
         public ActorSelection ActorSelection(string path)
@@ -129,33 +134,64 @@ namespace Akka.Actor
         }
 
 
-        IEnumerable<ActorRef> IActorContext.GetChildren()
+        IEnumerable<IActorRef> IActorContext.GetChildren()
         {
             return GetChildren();
         }
 
-        public IEnumerable<InternalActorRef> GetChildren()
+        public IEnumerable<IInternalActorRef> GetChildren()
         {
             return ChildrenContainer.Children;
         }
 
-
-        public void Become(Receive receive, bool discardOld = true)
+        public void Become(Receive receive)
         {
-            if(discardOld && behaviorStack.Count > 1) //We should never pop off the initial receiver
-                behaviorStack.Pop();
-            behaviorStack.Push(receive);
+            _state = _state.Become(receive);
         }
 
-        public void Unbecome()
+        public void BecomeStacked(Receive receive)
         {
-            if (behaviorStack.Count > 1) //We should never pop off the initial receiver
-                behaviorStack.Pop();                
+            _state = _state.BecomeStacked(receive);
         }
-  
+
+
+        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
+        void IActorContext.Become(Receive receive, bool discardOld = true)
+        {
+            if(discardOld)
+                Become(receive);
+            else
+                BecomeStacked(receive);
+        }
+
+        [Obsolete("Use UnbecomeStacked instead. This method will be removed in future versions")]
+        void IActorContext.Unbecome()
+        {
+            UnbecomeStacked();
+        }
+
+        public void UnbecomeStacked()
+        {
+            _state = _state.UnbecomeStacked();
+        }
+
+        void IUntypedActorContext.Become(UntypedReceive receive)
+        {
+            Become(m => { receive(m); return true; });
+        }
+
+        void IUntypedActorContext.BecomeStacked(UntypedReceive receive)
+        {
+            BecomeStacked(m => { receive(m); return true; });
+        }
+
+        [Obsolete("Use Become or BecomeStacked instead. This method will be removed in future versions")]
         void IUntypedActorContext.Become(UntypedReceive receive, bool discardOld)
         {
-            Become(m => { receive(m); return true; }, discardOld);
+            if (discardOld)
+                Become(m => { receive(m); return true; });
+            else
+                BecomeStacked(m => { receive(m); return true; });
         }
 
         private long NewUid()
@@ -171,7 +207,7 @@ namespace Akka.Actor
             //set the thread static context or things will break
             UseThreadContext(() =>
             {
-                behaviorStack = new Stack<Receive>();
+                _state = _state.ClearBehaviorStack();
                 instance = CreateNewActorInstance();
                 instance.SupervisorStrategyInternal = _props.SupervisorStrategy;
                 //defaults to null - won't affect lazy instantiation unless explicitly set in props
@@ -187,7 +223,7 @@ namespace Akka.Actor
             var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
             pipeline.AfterActorIncarnated(actor, this);
             
-            var initializableActor = actor as InitializableActor;
+            var initializableActor = actor as IInitializableActor;
             if(initializableActor != null)
             {
                 initializableActor.Init();
@@ -211,7 +247,7 @@ namespace Akka.Actor
         }
 
 
-        public virtual void Post(ActorRef sender, object message)
+        public virtual void Post(IActorRef sender, object message)
         {
             if (Mailbox == null)
             {
@@ -220,23 +256,14 @@ namespace Akka.Actor
                 //this._systemImpl.DeadLetters.Tell(new DeadLetter(message, sender, this.Self));
             }
 
-            if (_systemImpl.Settings.SerializeAllMessages && !(message is NoSerializationVerificationNeeded))
+            if (_systemImpl.Settings.SerializeAllMessages && !(message is INoSerializationVerificationNeeded))
             {
                 Serializer serializer = _systemImpl.Serialization.FindSerializerFor(message);
                 byte[] serialized = serializer.ToBinary(message);
                 object deserialized = _systemImpl.Serialization.Deserialize(serialized, serializer.Identifier,
                     message.GetType());
                 message = deserialized;
-            }
-            
-            //Execute CompleteFuture objects inline - if the Actor is waiting on the result of an Ask operation inside
-            //its receive method, then the mailbox will never schedule the CompleteFuture.
-            //Thus - we execute it inline, outside of the mailbox.
-            if (message is CompleteFuture)
-            {
-                HandleCompleteFuture(message.AsInstanceOf<CompleteFuture>());
-                return;
-            }
+            }           
 
             var m = new Envelope
             {
@@ -278,12 +305,14 @@ namespace Akka.Actor
             }
             _actorHasBeenCleared = true;
             CurrentMessage = null;
-            behaviorStack = null;
+
+            //TODO: semantics here? should all "_state" be cleared? or just behavior?
+            _state = _state.ClearBehaviorStack();
         }
 
         protected void PrepareForNewActor()
         {
-            behaviorStack = new Stack<Receive>();
+            _state = _state.ClearBehaviorStack();
             _actorHasBeenCleared = false;
         }
         protected void SetActorFields(ActorBase actor)
@@ -301,16 +330,17 @@ namespace Akka.Actor
                 : new NameAndUid(name.Substring(0, i), Int32.Parse(name.Substring(i + 1)));
         }
 
-        public static ActorRef GetCurrentSelfOrNoSender()
+        public static IActorRef GetCurrentSelfOrNoSender()
         {
             var current = Current;
             return current != null ? current.Self : NoSender.Instance;
         }
 
-        public static ActorRef GetCurrentSenderOrNoSender()
+        public static IActorRef GetCurrentSenderOrNoSender()
         {
             var current = Current;
             return current != null ? current.Sender : NoSender.Instance;
         }
     }
 }
+

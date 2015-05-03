@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ReceiveActorTests.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
@@ -43,7 +50,7 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Given_an_EchoActor_When_receiveing_messages_Then_messages_should_be_sent_back()
+        public void Given_an_EchoActor_When_receiving_messages_Then_messages_should_be_sent_back()
         {
             //Given
             var system = ActorSystem.Create("test");
@@ -229,3 +236,4 @@ namespace Akka.Tests.Actor
 
     }
 }
+

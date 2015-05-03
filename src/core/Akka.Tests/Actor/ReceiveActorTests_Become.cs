@@ -1,4 +1,10 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ReceiveActorTests_Become.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using Akka.Actor;
 using Akka.Event;
 using Xunit;
@@ -84,22 +90,22 @@ namespace Akka.Tests.Actor
         {
             public BecomeActor()
             {
-                Receive<string>(s => s == "UNBECOME", __ => Unbecome());
-                Receive<string>(s => s == "BECOME", _ => Become(State2, discardOld: false));
+                Receive<string>(s => s == "UNBECOME", __ => UnbecomeStacked());
+                Receive<string>(s => s == "BECOME", _ => BecomeStacked(State2));
                 Receive<string>(s => Sender.Tell("string1:" + s, Self));
                 Receive<int>(i => Sender.Tell("int1:" + i, Self));
             }
 
             private void State2()
             {
-                Receive<string>(s => s == "UNBECOME", __ => Unbecome());
-                Receive<string>(s => s == "BECOME", _ => Become(State3, discardOld: false));
+                Receive<string>(s => s == "UNBECOME", __ => UnbecomeStacked());
+                Receive<string>(s => s == "BECOME", _ => BecomeStacked(State3));
                 Receive<string>(s => Sender.Tell("string2:" + s, Self));
             }
 
             private void State3()
             {
-                Receive<string>(s => s == "UNBECOME", __ => Unbecome());
+                Receive<string>(s => s == "UNBECOME", __ => UnbecomeStacked());
                 Receive<string>(s => Sender.Tell("string3:" + s, Self));
             }
         }
@@ -108,27 +114,28 @@ namespace Akka.Tests.Actor
         {
             public BecomeDirectlyInConstructorActor()
             {
-                Receive<string>(s => s == "UNBECOME", __ => Unbecome());
-                Receive<string>(s => s == "BECOME", _ => Become(State2, discardOld: false));
+                Receive<string>(s => s == "UNBECOME", __ => UnbecomeStacked());
+                Receive<string>(s => s == "BECOME", _ => BecomeStacked(State2));
                 Receive<string>(s => Sender.Tell("string1:" + s, Self));
                 Receive<int>(i => Sender.Tell("int1:" + i, Self));
-                Become(State2, discardOld: false);
-                Become(State3, discardOld: false);
+                BecomeStacked(State2);
+                BecomeStacked(State3);
             }
 
             private void State2()
             {
-                Receive<string>(s => s == "UNBECOME", __ => Unbecome());
-                Receive<string>(s => s == "BECOME", _ => Become(State3, discardOld: false));
+                Receive<string>(s => s == "UNBECOME", __ => UnbecomeStacked());
+                Receive<string>(s => s == "BECOME", _ => BecomeStacked(State3));
                 Receive<string>(s => Sender.Tell("string2:" + s, Self));
             }
 
             private void State3()
             {
-                Receive<string>(s => s == "UNBECOME", __ => Unbecome());
+                Receive<string>(s => s == "UNBECOME", __ => UnbecomeStacked());
                 Receive<string>(s => Sender.Tell("string3:" + s, Self));
             }
         }
 
     }
 }
+

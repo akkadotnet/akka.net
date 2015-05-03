@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="RemoteConnection.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Net;
 using Akka.Remote.TestKit.Proto;
@@ -7,7 +14,6 @@ using Helios.Buffers;
 using Helios.Exceptions;
 using Helios.Net;
 using Helios.Net.Bootstrap;
-using Helios.Ops.Executors;
 using Helios.Reactor.Bootstrap;
 using Helios.Serialization;
 using Helios.Topology;
@@ -124,3 +130,4 @@ namespace Akka.Remote.TestKit
         #endregion
     }
 }
+

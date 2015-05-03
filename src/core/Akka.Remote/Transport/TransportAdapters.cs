@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TransportAdapters.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +19,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// Create a transport adapter that wraps the underlying transport
         /// </summary>
-        Transport Create(Transport wrappedTransport, ActorSystem system);
+        Transport Create(Transport wrappedTransport, ExtendedActorSystem system);
     }
 
     internal class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
@@ -75,7 +82,7 @@ namespace Akka.Remote.Transport
 
         public ITransportAdapterProvider GetAdapterProvider(string name)
         {
-            if (_adaptersTable.ContainsKey(name))
+            if (AdaptersTable().ContainsKey(name))
             {
                 return _adaptersTable[name];
             }
@@ -84,7 +91,7 @@ namespace Akka.Remote.Transport
         }
     }
 
-    internal class SchemeAugmenter
+    public class SchemeAugmenter
     {
         public SchemeAugmenter(string addedSchemeIdentifier)
         {
@@ -100,7 +107,8 @@ namespace Akka.Remote.Transport
 
         public Address AugmentScheme(Address address)
         {
-            return address.Copy(protocol: AugmentScheme(address.Protocol));
+            var protocol = AugmentScheme(address.Protocol);
+            return address.WithProtocol(protocol);
         }
 
         public string RemoveScheme(string scheme)
@@ -112,14 +120,15 @@ namespace Akka.Remote.Transport
 
         public Address RemoveScheme(Address address)
         {
-            return address.Copy(protocol: RemoveScheme(address.Protocol));
+            var protocol = RemoveScheme(address.Protocol);
+            return address.WithProtocol(protocol);
         }
     }
 
     /// <summary>
     /// An adapter that wraps a transport and provides interception capabilities
     /// </summary>
-    internal abstract class AbstractTransportAdapter : Transport
+    public abstract class AbstractTransportAdapter : Transport
     {
         protected AbstractTransportAdapter(Transport wrappedTransport)
         {
@@ -178,6 +187,9 @@ namespace Akka.Remote.Transport
 
     internal abstract class AbstractTransportAdapterHandle : AssociationHandle
     {
+        protected AbstractTransportAdapterHandle(AssociationHandle wrappedHandle, string addedSchemeIdentifier)
+            : this(wrappedHandle.LocalAddress, wrappedHandle.RemoteAddress, wrappedHandle, addedSchemeIdentifier) { }
+
         protected AbstractTransportAdapterHandle(Address originalLocalAddress, Address originalRemoteAddress, AssociationHandle wrappedHandle, string addedSchemeIdentifier) : base(originalLocalAddress, originalRemoteAddress)
         {
             WrappedHandle = wrappedHandle;
@@ -275,23 +287,24 @@ namespace Akka.Remote.Transport
         public DisassociateInfo Info { get; private set; }
     }
 
-    internal abstract class ActorTransportAdapter : AbstractTransportAdapter
+    public abstract class ActorTransportAdapter : AbstractTransportAdapter
     {
         protected ActorTransportAdapter(Transport wrappedTransport, ActorSystem system) : base(wrappedTransport)
         {
             System = system;
         }
 
-        protected new ActorSystem System;       //TODO: Is it supposed to hide base? Explain why, or remove
-
         protected abstract string ManagerName { get; }
         protected abstract Props ManagerProps { get; }
 
-        protected volatile ActorRef manager;
 
-        private Task<ActorRef> RegisterManager()
+        public static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(5);
+
+        protected volatile IActorRef manager;
+
+        private Task<IActorRef> RegisterManager()
         {
-            return System.ActorSelection("/system/transports").Ask<ActorRef>(new RegisterTransportActor(ManagerProps, ManagerName));
+            return System.ActorSelection("/system/transports").Ask<IActorRef>(new RegisterTransportActor(ManagerProps, ManagerName));
         }
 
         protected override Task<IAssociationEventListener> InterceptListen(Address listenAddress, Task<IAssociationEventListener> listenerTask)
@@ -349,7 +362,7 @@ namespace Akka.Remote.Transport
                     associationListener = listener.Listener;
                     foreach (var dEvent in DelayedEvents)
                     {
-                        Self.Tell(dEvent, ActorRef.NoSender);
+                        Self.Tell(dEvent, ActorRefs.NoSender);
                     }
                     DelayedEvents = new Queue<object>();
                     Context.Become(Ready);
@@ -364,3 +377,4 @@ namespace Akka.Remote.Transport
         protected abstract void Ready(object message);
     }
 }
+

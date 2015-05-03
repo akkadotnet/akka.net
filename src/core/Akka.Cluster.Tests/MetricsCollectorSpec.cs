@@ -1,8 +1,14 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MetricsCollectorSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
@@ -20,7 +26,7 @@ namespace Akka.Cluster.Tests
 
     public class MetricsCollectorSpec : MetricsCollectorFactory, IDisposable
     {
-        public ActorRef Self { get { return TestActor; } }
+        public IActorRef Self { get { return TestActor; } }
 
         private readonly IMetricsCollector _collector;
 
@@ -113,6 +119,9 @@ namespace Akka.Cluster.Tests
 
         #region IDisposable members
 
+        /// <summary>
+        /// Needs to hide previous Dispose implementation in order to avoid recursive disposal.
+        /// </summary>
         public new void Dispose()
         {
             _collector.Dispose();
@@ -144,3 +153,4 @@ namespace Akka.Cluster.Tests
         }
     }
 }
+

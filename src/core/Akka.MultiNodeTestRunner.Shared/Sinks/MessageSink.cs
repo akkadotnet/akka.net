@@ -1,10 +1,16 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MessageSink.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Akka.Util;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
 {
@@ -17,7 +23,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /// <summary>
         /// ActorRef for the actor who coordinates all of reporting for each test run
         /// </summary>
-        protected ActorRef MessageSinkActorRef;
+        protected IActorRef MessageSinkActorRef;
 
         protected readonly Props MessageSinkActorProps;
 
@@ -42,7 +48,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         public bool IsOpen { get; private set; }
         public bool IsClosed { get; private set; }
 
-        internal void RequestExitCode(ActorRef sender)
+        internal void RequestExitCode(IActorRef sender)
         {
             MessageSinkActorRef.Tell(new SinkCoordinator.RequestExitCode(), sender);
         }
@@ -56,10 +62,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             IsClosed = true;
 
             //Signal that the test run has ended
-            MessageSinkActorRef.Tell(new EndTestRun());
-
-            //Give the TestCoordinatorRef 10 seconds to shut down
-            return await MessageSinkActorRef.GracefulStop(TimeSpan.FromSeconds(10));
+            return await MessageSinkActorRef.Ask<MessageSinkActor.SinkCanBeTerminated>(new EndTestRun())
+                .ContinueWith(tr => MessageSinkActorRef.GracefulStop(TimeSpan.FromSeconds(2)), 
+                TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously).Unwrap();
         }
 
         #endregion
@@ -67,7 +72,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         #region Static methods and constants
 
         /// <summary>
-        /// Constant used on calls where no message is procided by the caller.
+        /// Constant used on calls where no message is proceeded by the caller.
         /// </summary>
         public const string NoMessage = "[no message given.]";
 
@@ -97,10 +102,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /*
          * Regular expressions - go big or go home. [Aaronontheweb]
          */
-        private const string NodeLogMessageRegexString = @"\[(\w){4}(?<node>[0-9]{1,2})\]\[(?<level>(\w)*)\]\[(?<time>\d{1,2}[- /.]\d{1,2}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}\s(AM|PM))\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|\^)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^)*)";
+        private const string NodeLogMessageRegexString = @"\[(\w){4}(?<node>[0-9]{1,2})\]\[(?<level>(\w)*)\]\[(?<time>\d{1,4}[- /.]\d{1,4}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}(\s(AM|PM)){0,1})\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|\^|@)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^|@|\(|\))*)";
         protected static readonly Regex NodeLogMessageRegex = new Regex(NodeLogMessageRegexString);
 
-        private const string RunnerLogMessageRegexString = @"\[(?<level>(\w)*)\]\[(?<time>\d{1,2}[- /.]\d{1,2}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}\s(AM|PM))\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|\^)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^)*)";
+        private const string RunnerLogMessageRegexString = @"\[(?<level>(\w)*)\]\[(?<time>\d{1,4}[- /.]\d{1,4}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}(\s(AM|PM)){0,1})\](?<thread>\[(\w|\s)*\])\[(?<logsource>(\[|\w|:|/|\(|\)|\]|\.|-|\$|%|\+|\^|@)*)\]\s(?<message>(\w|\s|:|<|\.|\+|>|,|\[|/|-|]|%|\$|\+|\^|@)*)";
         protected static readonly Regex RunnerLogMessageRegex = new Regex(RunnerLogMessageRegexString);
 
         private const string NodeLogFragmentRegexString = @"\[(\w){4}(?<node>[0-9]{1,2})\](?<message>(.)*)";
@@ -283,31 +288,31 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             if (messageType == MultiNodeTestRunnerMessageType.NodeLogMessage)
             {
                 LogMessageForNode log;
-                Guard.Assert(TryParseLogMessage(messageStr, out log), "could not parse log message: " + messageStr);
+                if (!TryParseLogMessage(messageStr, out log)) throw new InvalidOperationException("could not parse log message: " + messageStr);
                 MessageSinkActorRef.Tell(log);
             }
             else if (messageType == MultiNodeTestRunnerMessageType.RunnerLogMessage)
             {
                 LogMessageForTestRunner runnerLog;
-                Guard.Assert(TryParseLogMessage(messageStr, out runnerLog), "could not parse test runner log message: " + messageStr);
+                if (!TryParseLogMessage(messageStr, out runnerLog)) throw new InvalidOperationException("could not parse test runner log message: " + messageStr);
                 MessageSinkActorRef.Tell(runnerLog);
             }
             else if (messageType == MultiNodeTestRunnerMessageType.NodePassMessage)
             {
                 NodeCompletedSpecWithSuccess nodePass;
-                Guard.Assert(TryParseSuccessMessage(messageStr, out nodePass), "could not parse node spec pass message: " + messageStr);
+                if (!TryParseSuccessMessage(messageStr, out nodePass)) throw new InvalidOperationException("could not parse node spec pass message: " + messageStr);
                 MessageSinkActorRef.Tell(nodePass);
             }
             else if (messageType == MultiNodeTestRunnerMessageType.NodeFailMessage)
             {
                 NodeCompletedSpecWithFail nodeFail;
-                Guard.Assert(TryParseFailureMessage(messageStr, out nodeFail), "could not parse node spec fail message: " + messageStr);
+                if (!TryParseFailureMessage(messageStr, out nodeFail)) throw new InvalidOperationException("could not parse node spec fail message: " + messageStr);
                 MessageSinkActorRef.Tell(nodeFail);
             }
             else if (messageType == MultiNodeTestRunnerMessageType.NodeFailureException)
             {
                 NodeCompletedSpecWithFail nodeFail;
-                Guard.Assert(TryParseFailureExceptionMessage(messageStr, out nodeFail), "could not parse node spec failure + EXCEPTION message: " + messageStr);
+                if (!TryParseFailureExceptionMessage(messageStr, out nodeFail)) throw new InvalidOperationException("could not parse node spec failure + EXCEPTION message: " + messageStr);
                 MessageSinkActorRef.Tell(nodeFail);
             }
         }
@@ -317,3 +322,4 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         #endregion
     }
 }
+

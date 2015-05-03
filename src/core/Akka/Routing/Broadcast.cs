@@ -1,10 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Broadcast.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util;
 
 namespace Akka.Routing
 {
@@ -23,6 +28,32 @@ namespace Akka.Routing
     /// </summary>
     public class BroadcastPool : Pool
     {
+        public class BroadcastPoolSurrogate : ISurrogate
+        {
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new BroadcastPool(NrOfInstances, Resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+            }
+
+            public int NrOfInstances { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Resizer Resizer { get; set; }
+            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public string RouterDispatcher { get; set; }
+        }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new BroadcastPoolSurrogate
+            {
+                NrOfInstances = NrOfInstances,
+                UsePoolDispatcher = UsePoolDispatcher,
+                Resizer = Resizer,
+                SupervisorStrategy = SupervisorStrategy,
+                RouterDispatcher = RouterDispatcher,
+            };
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="BroadcastPool"/> class.
         /// </summary>
@@ -49,7 +80,7 @@ namespace Akka.Routing
         /// Simple form of BroadcastPool constructor
         /// </summary>
         /// <param name="nrOfInstances">The nr of instances.</param>
-        public BroadcastPool(int nrOfInstances) : base(nrOfInstances, null, Pool.DefaultStrategy, null) { }
+        public BroadcastPool(int nrOfInstances) : base(nrOfInstances, null, DefaultStrategy, null) { }
 
         /// <summary>
         /// Creates the router.
@@ -60,15 +91,48 @@ namespace Akka.Routing
         {
             return new Router(new BroadcastRoutingLogic());
         }
+
+        public override Pool WithSupervisorStrategy(SupervisorStrategy strategy)
+        {
+            return new BroadcastPool(NrOfInstances, Resizer, strategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        public override Pool WithResizer(Resizer resizer)
+        {
+            return new BroadcastPool(NrOfInstances, resizer, SupervisorStrategy, RouterDispatcher, UsePoolDispatcher);
+        }
+
+        public override Pool WithDispatcher(string dispatcher)
+        {
+            return new BroadcastPool(NrOfInstances, Resizer, SupervisorStrategy, dispatcher, UsePoolDispatcher);
+        }
+
+        public override RouterConfig WithFallback(RouterConfig routerConfig)
+        {
+            return OverrideUnsetConfig(routerConfig);
+        }
     }
 
     public class BroadcastGroup : Group
     {
-        [Obsolete("For serialization only",true)]
-        public BroadcastGroup()
+        public class BroadcastGroupSurrogate : ISurrogate
         {
-            
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new BroadcastGroup(Paths);
+            }
+
+            public string[] Paths { get; set; }
         }
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return new BroadcastGroupSurrogate
+            {
+                Paths = Paths,
+            };
+        }
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="BroadcastGroup" /> class.
         /// </summary>
@@ -99,7 +163,7 @@ namespace Akka.Routing
         ///     Initializes a new instance of the <see cref="BroadcastGroup" /> class.
         /// </summary>
         /// <param name="routees">The routees.</param>
-        public BroadcastGroup(IEnumerable<ActorRef> routees)
+        public BroadcastGroup(IEnumerable<IActorRef> routees)
             : base(routees)
         {
         }
@@ -112,5 +176,11 @@ namespace Akka.Routing
         {
             return new Router(new BroadcastRoutingLogic());
         }
+
+        public override Group WithDispatcher(string dispatcher)
+        {
+            return new BroadcastGroup(Paths){ RouterDispatcher = dispatcher };
+        }
     }
 }
+

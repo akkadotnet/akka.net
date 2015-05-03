@@ -1,8 +1,15 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="GuaranteedDelivery.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Persistence.Serialization;
@@ -107,6 +114,11 @@ namespace Akka.Persistence
             : base(message, cause)
         {
         }
+
+        protected MaxUnconfirmedMessagesExceededException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /// <summary>
@@ -122,16 +134,16 @@ namespace Akka.Persistence
     /// 
     /// This actor type has state consisting of unconfirmed messages and a sequence number. It doesn't store it by
     /// itself, so you must persist corresponding events so that state can be restored by calling the same 
-    /// delivery-related methods during recovery phase of the persisten actor. During recovery calls to 
+    /// delivery-related methods during recovery phase of the persistent actor. During recovery calls to 
     /// <see cref="Deliver"/> won't send out a message, but it will be sent later if no <see cref="ConfirmDelivery"/>
     /// call was performed.
     /// 
     /// Support for snapshot is provided by get and set delivery snapshot methods. These snapshots contains full
     /// delivery state including unconfirmed messages. For custom snapshots remember to include those delivery ones.
     /// </summary>
-    public abstract class GuaranteedDeliveryActor : PersistentActor, InitializableActor
+    public abstract class GuaranteedDeliveryActor : PersistentActor, IInitializableActor
     {
-        private CancellationTokenSource _redeliverScheduleCancellation;
+        private ICancelable _redeliverScheduleCancelable;
         private long _deliverySequenceNr = 0L;
         private ConcurrentDictionary<long, Delivery> _unconfirmed = new ConcurrentDictionary<long, Delivery>();
         
@@ -140,7 +152,7 @@ namespace Akka.Persistence
         /// </summary>
         public void Init()
         {
-            _redeliverScheduleCancellation = ScheduleRedelivery();
+            _redeliverScheduleCancelable = ScheduleRedelivery();
         }
 
 
@@ -175,7 +187,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Number of messages, that have not been confirmed yet.
         /// </summary>
-        protected int UnconfirmedCount { get { return _unconfirmed.Count; } }
+        public int UnconfirmedCount { get { return _unconfirmed.Count; } }
 
         /// <summary>
         /// Send the message created with <paramref name="deliveryMessageMapper"/> function to the <see cref="destination"/>
@@ -189,7 +201,7 @@ namespace Akka.Persistence
         /// <exception cref="MaxUnconfirmedMessagesExceededException">
         /// Thrown when <see cref="UnconfirmedCount"/> is greater than or equal to <see cref="MaxUnconfirmedMessages"/>.
         /// </exception>
-        protected void Deliver(ActorPath destination, Func<long, object> deliveryMessageMapper)
+        public void Deliver(ActorPath destination, Func<long, object> deliveryMessageMapper)
         {
             if (UnconfirmedCount >= MaxUnconfirmedMessages)
             {
@@ -215,7 +227,7 @@ namespace Akka.Persistence
         /// or to cancel redelivery attempts.
         /// </summary>
         /// <returns>True if delivery was confirmed first time, false for duplicate confirmations.</returns>
-        protected bool ConfirmDelivery(long deliveryId)
+        public bool ConfirmDelivery(long deliveryId)
         {
             Delivery delivery;
             return _unconfirmed.TryRemove(deliveryId, out delivery);
@@ -225,7 +237,7 @@ namespace Akka.Persistence
         /// Returns full state of the current delivery actor. Could be saved using <see cref="Eventsourced.SaveSnapshot"/> method.
         /// During recovery a snapshot received in <see cref="SnapshotOffer"/> should be set with <see cref="SetDeliverySnapshot"/>.
         /// </summary>
-        protected GuaranteedDeliverySnapshot GetDeliverySnapshot()
+        public GuaranteedDeliverySnapshot GetDeliverySnapshot()
         {
             var unconfirmedDeliveries = _unconfirmed
                 .Select(e => new UnconfirmedDelivery(e.Key, e.Value.Destination, e.Value.Message))
@@ -236,10 +248,10 @@ namespace Akka.Persistence
 
         /// <summary>
         /// If snapshot from <see cref="GetDeliverySnapshot"/> was saved, it will be received during recovery phase in a
-        /// <see cref="SnapshotOffer"/> meesage and should be set with this method.
+        /// <see cref="SnapshotOffer"/> message and should be set with this method.
         /// </summary>
         /// <param name="snapshot"></param>
-        protected void SetDeliverySnapshot(GuaranteedDeliverySnapshot snapshot)
+        public void SetDeliverySnapshot(GuaranteedDeliverySnapshot snapshot)
         {
             _deliverySequenceNr = snapshot.DeliveryId;
             var now = DateTime.Now;
@@ -249,17 +261,18 @@ namespace Akka.Persistence
             _unconfirmed = new ConcurrentDictionary<long, Delivery>(unconfirmedDeliveries);
         }
 
-        protected override void PreRestart(Exception reason, object message)
+        public override void AroundPostRestart(Exception cause, object message)
         {
-            _redeliverScheduleCancellation.Cancel();
-            base.PreRestart(reason, message);
+            _redeliverScheduleCancelable.Cancel();
+            base.AroundPostRestart(cause, message);
         }
 
-        protected override void PostStop()
+        public override void AroundPostStop()
         {
-            _redeliverScheduleCancellation.Cancel();
-            base.PostStop();
+            _redeliverScheduleCancelable.Cancel();
+            base.AroundPostStop();
         }
+
 
         protected override void OnReplaySuccess()
         {
@@ -317,14 +330,11 @@ namespace Akka.Persistence
             return (++_deliverySequenceNr);
         }
 
-        private CancellationTokenSource ScheduleRedelivery()
+        private ICancelable ScheduleRedelivery()
         {
             var interval = new TimeSpan(RedeliverInterval.Ticks / 2);
-            var cancellation = new CancellationTokenSource();
-
-            Context.System.Scheduler.Schedule(interval, interval, Self, RedeliveryTick.Instance, cancellation.Token);
-
-            return cancellation;
+            return Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(interval, interval, Self, RedeliveryTick.Instance, Self);
         }
     }
 }
+

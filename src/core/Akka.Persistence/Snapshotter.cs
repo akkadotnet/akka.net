@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Snapshotter.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 
 namespace Akka.Persistence
 {
@@ -18,7 +25,7 @@ namespace Akka.Persistence
         long SnapshotSequenceNr { get; }
 
         /// <summary>
-        /// Orders to load a snapshots related to persitent actor identified by <paramref name="persistenceId"/>
+        /// Orders to load a snapshots related to persistent actor identified by <paramref name="persistenceId"/>
         /// that match specified <paramref name="criteria"/> up to provided <paramref name="toSequenceNr"/> upper, inclusive bound.
         /// </summary>
         void LoadSnapshot(string persistenceId, SnapshotSelectionCriteria criteria, long toSequenceNr);
@@ -42,3 +49,4 @@ namespace Akka.Persistence
         void DeleteSnapshots(SnapshotSelectionCriteria criteria);
     }
 }
+

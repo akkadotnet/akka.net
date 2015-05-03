@@ -1,4 +1,11 @@
-﻿open Akka.FSharp
+﻿//-----------------------------------------------------------------------
+// <copyright file="Program.fs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+open Akka.FSharp
 
 // the most basic configuration of remote actor system
 let config = """
@@ -22,3 +29,4 @@ let main _ =
     use system = System.create "remote-system" (Configuration.parse config)
     System.Console.ReadLine() |> ignore
     0
+

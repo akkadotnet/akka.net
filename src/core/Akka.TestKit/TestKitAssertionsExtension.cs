@@ -1,12 +1,19 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestKitAssertionsExtension.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using Akka.Actor;
 
 namespace Akka.TestKit
 {
     public class TestKitAssertionsExtension : ExtensionIdProvider<TestKitAssertionsProvider>
     {
-        private readonly TestKitAssertions _assertions;
+        private readonly ITestKitAssertions _assertions;
 
-        public TestKitAssertionsExtension(TestKitAssertions assertions)
+        public TestKitAssertionsExtension(ITestKitAssertions assertions)
         {
             _assertions = assertions;
         }
@@ -22,3 +29,4 @@ namespace Akka.TestKit
         }
     }
 }
+
