@@ -58,7 +58,7 @@ let libDir = workingDir @@ @"lib\net45\"
 let nugetExe = FullName @"src\.nuget\NuGet.exe"
 let docDir = "bin" @@ "doc"
 
-
+open Fake.RestorePackageHelper
 Target "RestorePackages" (fun _ -> 
      "./src/Akka.sln"
      |> RestoreMSSolutionPackages (fun p ->

@@ -1,36 +1,11 @@
 ﻿using System.Data;
+using System.Data.Common;
 using System.Data.SqlClient;
 using System.Text;
+using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.SqlServer.Journal
 {
-    /// <summary>
-    /// SQL query builder used for generating queries required to perform journal's tasks.
-    /// </summary>
-    public interface IJournalQueryBuilder
-    {
-        /// <summary>
-        /// Returns query which should return a frame of messages filtered accordingly to provided parameters.
-        /// </summary>
-        SqlCommand SelectMessages(string persistenceId, long fromSequenceNr, long toSequenceNr, long max);
-
-        /// <summary>
-        /// Returns query returning single number considered as the highest sequence number in current journal.
-        /// </summary>
-        SqlCommand SelectHighestSequenceNr(string persistenceId);
-
-        /// <summary>
-        /// Returns a non-query command used to insert collection of <paramref name="messages"/> in journal table.
-        /// </summary>
-        SqlCommand InsertBatchMessages(IPersistentRepresentation[] messages);
-
-        /// <summary>
-        /// Depending on <paramref name="permanent"/> flag this method may return either UPDATE or DELETE statement
-        /// used to alter IsDeleted field or delete rows permanently.
-        /// </summary>
-        SqlCommand DeleteBatchMessages(string persistenceId, long toSequenceNr, bool permanent);
-    }
-
     internal class DefaultJournalQueryBuilder : IJournalQueryBuilder
     {
         private readonly string _schemaName;
@@ -49,7 +24,7 @@ namespace Akka.Persistence.SqlServer.Journal
             _selectHighestSequenceNrSql = @"SELECT MAX(SequenceNr) FROM {0}.{1} WHERE CS_PID = CHECKSUM(@pid)".QuoteSchemaAndTable(_schemaName, _tableName);
         }
 
-        public SqlCommand SelectMessages(string persistenceId, long fromSequenceNr, long toSequenceNr, long max)
+        public DbCommand SelectMessages(string persistenceId, long fromSequenceNr, long toSequenceNr, long max)
         {
             var sql = BuildSelectMessagesSql(fromSequenceNr, toSequenceNr, max);
             var command = new SqlCommand(sql)
@@ -60,7 +35,7 @@ namespace Akka.Persistence.SqlServer.Journal
             return command;
         }
 
-        public SqlCommand SelectHighestSequenceNr(string persistenceId)
+        public DbCommand SelectHighestSequenceNr(string persistenceId)
         {
             var command = new SqlCommand(_selectHighestSequenceNrSql)
             {
@@ -70,7 +45,7 @@ namespace Akka.Persistence.SqlServer.Journal
             return command;
         }
 
-        public SqlCommand InsertBatchMessages(IPersistentRepresentation[] messages)
+        public DbCommand InsertBatchMessages(IPersistentRepresentation[] messages)
         {
             var command = new SqlCommand(_insertMessagesSql);
             command.Parameters.Add("@PersistenceId", SqlDbType.NVarChar);
@@ -82,7 +57,7 @@ namespace Akka.Persistence.SqlServer.Journal
             return command;
         }
 
-        public SqlCommand DeleteBatchMessages(string persistenceId, long toSequenceNr, bool permanent)
+        public DbCommand DeleteBatchMessages(string persistenceId, long toSequenceNr, bool permanent)
         {
             var sql = BuildDeleteSql(toSequenceNr, permanent);
             var command = new SqlCommand(sql)
