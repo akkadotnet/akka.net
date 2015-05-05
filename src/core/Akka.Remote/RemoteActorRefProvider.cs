@@ -406,6 +406,10 @@ namespace Akka.Remote
 
         #region Internals
 
+        /// <summary>
+        /// All of the private internals used by <see cref="RemoteActorRefProvider"/>, namely its transport
+        /// registry, remote serializers, and the <see cref="RemoteDaemon"/> instance.
+        /// </summary>
         class Internals : INoSerializationVerificationNeeded
         {
             public Internals(RemoteTransport transport, Akka.Serialization.Serialization serialization, IInternalActorRef remoteDaemon)

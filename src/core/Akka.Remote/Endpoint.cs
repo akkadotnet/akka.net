@@ -991,7 +991,7 @@ namespace Akka.Remote
                 }
                 else
                 {
-                    // initalizing, buffer and take care of it later when buffer is sent
+                    // initializing, buffer and take care of it later when buffer is sent
                     EnqueueInBuffer(message);
                 }
             }
@@ -1353,6 +1353,7 @@ namespace Akka.Remote
             /// Create a new TakeOver command
             /// </summary>
             /// <param name="protocolHandle">The handle of the new association</param>
+            /// <param name="replyTo"></param>
             public TakeOver(AkkaProtocolHandle protocolHandle, IActorRef replyTo)
             {
                 ProtocolHandle = protocolHandle;

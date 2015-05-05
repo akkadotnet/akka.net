@@ -116,17 +116,7 @@ namespace Akka.Actor
             _matchHandlerBuilders.Peek().Match<T>( m =>
             {
                 Func<Task> wrap = () => handler(m);
-                ActorTaskScheduler.RunTask(AsyncBehavior.Suspend, wrap);
-            });
-        }
-
-        protected void Receive<T>(AsyncBehavior behavior, Func<T, Task> handler)
-        {
-            EnsureMayConfigureMessageHandlers();
-            _matchHandlerBuilders.Peek().Match<T>(m =>
-            {
-                Func<Task> wrap = () => handler(m);
-                ActorTaskScheduler.RunTask(behavior, wrap);
+                ActorTaskScheduler.RunTask(wrap);
             });
         }
 

@@ -69,7 +69,7 @@ namespace Akka.Persistence.SqlServer.Snapshot
         SqlCommand InsertSnapshot(SnapshotEntry entry);
 
         /// <summary>
-        /// Selects a single snapshot identified by persintent actor's <paramref name="persistenceId"/>,
+        /// Selects a single snapshot identified by persistent actor's <paramref name="persistenceId"/>,
         /// matching upper (inclusive) bounds of both <paramref name="maxSequenceNr"/> and <paramref name="maxTimestamp"/>.
         /// In case, when more than one snapshot matches specified criteria, one with the highest sequence number will be selected.
         /// </summary>

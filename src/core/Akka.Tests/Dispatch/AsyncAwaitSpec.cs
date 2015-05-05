@@ -8,8 +8,6 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Dispatch;
-using Akka.Event;
 using Akka.TestKit;
 using Xunit;
 
@@ -29,8 +27,6 @@ namespace Akka.Tests.Dispatch
                 }
             });
         }
-
-        ILoggingAdapter Log = Context.GetLogger();
     }
 
     public class SuspendActor : ReceiveActor
@@ -42,7 +38,7 @@ namespace Akka.Tests.Dispatch
             {
                 state = 1;
             });
-            Receive<string>(AsyncBehavior.Suspend, async _ =>
+            Receive<string>(async _ =>
             {
                 Self.Tell("change");
                 await Task.Delay(TimeSpan.FromSeconds(1));
@@ -51,21 +47,7 @@ namespace Akka.Tests.Dispatch
             });
         }
     }
-    public class ReentrantActor : ReceiveActor
-    {
-        public ReentrantActor()
-        {
-            var state = 0;
-            Receive<string>(s => s == "change", _ => state = 1);
-            Receive<string>(AsyncBehavior.Reentrant, async _ =>
-            {
-                Self.Tell("change");
-                await Task.Delay(TimeSpan.FromSeconds(1));
-                //we expect that state should have changed due to an incoming message
-                Sender.Tell(state);
-            });
-        }
-    }
+
     public class AsyncAwaitActor : ReceiveActor
     {
         public AsyncAwaitActor()
@@ -89,7 +71,7 @@ namespace Akka.Tests.Dispatch
         {
             if (message is string)
             {
-                RunTask(AsyncBehavior.Suspend,  async () =>
+                RunTask(async () =>
                 {
                     var sender = Sender;
                     var self = Self;
@@ -132,7 +114,7 @@ namespace Akka.Tests.Dispatch
         {
             if (message is string)
             {
-                RunTask(AsyncBehavior.Suspend, async () =>
+                RunTask(async () =>
                 {
                     var sender = Sender;
                     var self = Self;
@@ -210,7 +192,7 @@ namespace Akka.Tests.Dispatch
             Receive<string>(m =>
             {
                 //this is also safe, all tasks complete in the actor context
-                RunTask(AsyncBehavior.Suspend, () =>
+                RunTask(() =>
                 {
                     Task.Delay(TimeSpan.FromSeconds(1))
                         .ContinueWith(t => { Sender.Tell("done"); });
@@ -228,7 +210,7 @@ namespace Akka.Tests.Dispatch
             _callback = callback;
             Receive<string>(m =>
             {
-                RunTask(AsyncBehavior.Suspend, () =>
+                RunTask(() =>
                 {
                     Task.Delay(TimeSpan.FromSeconds(1))
                    .ContinueWith(t => { throw new Exception("foo"); });
@@ -320,13 +302,7 @@ namespace Akka.Tests.Dispatch
             asker.Tell("start");
             ExpectMsg("done", TimeSpan.FromSeconds(5));
         }
-        [Fact]
-        public async Task Actors_should_be_able_to_reenter()
-        {
-            var asker = Sys.ActorOf(Props.Create(() => new ReentrantActor()));
-            var res = await asker.Ask<int>("start",TimeSpan.FromSeconds(5));
-            res.ShouldBe(1);
-        }
+
 
         [Fact]
         public async Task Actors_should_be_able_to_suspend_reentrancy()

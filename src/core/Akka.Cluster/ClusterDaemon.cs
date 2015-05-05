@@ -1023,8 +1023,8 @@ namespace Akka.Cluster
             }
         }
 
-        //State transition to JOINING - new node joining.
-        //Received `Join` message and replies with `Welcome` message, containing
+        // State transition to JOINING - new node joining.
+        // Received `Join` message and replies with `Welcome` message, containing
         // current gossip state, including the new joining member.
         public void Joining(UniqueAddress node, ImmutableHashSet<string> roles)
         {

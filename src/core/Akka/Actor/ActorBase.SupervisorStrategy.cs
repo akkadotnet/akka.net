@@ -14,7 +14,7 @@ namespace Akka.Actor
         /// <summary>
         /// Gets or sets a <see cref="SupervisorStrategy"/>.
         /// When getting, if a previously <see cref="SupervisorStrategy"/> has been set it's returned; otherwise calls
-        /// <see cref="SupervisorStrategy">SupervisorStratregy()</see>, stores and returns it.
+        /// <see cref="SupervisorStrategy">SupervisorStrategy()</see>, stores and returns it.
         /// </summary>
         internal SupervisorStrategy SupervisorStrategyInternal
         {

@@ -1,3 +1,34 @@
+#### 1.0.2 May 1 2015
+
+#### 1.0.1 Apr 28 2015
+
+**Bugfix release for Akka.NET v1.0.**
+
+Fixes:
+* [v1.0 F# scheduling API not sending any scheduled messages](https://github.com/akkadotnet/akka.net/issues/831)
+* [PinnedDispatcher - uses single thread for all actors instead of creating persanal thread for every actor](https://github.com/akkadotnet/akka.net/issues/850)
+* [Hotfix async await when awaiting IO completion port based tasks](https://github.com/akkadotnet/akka.net/pull/843)
+* [Fix for async await suspend-resume mechanics](https://github.com/akkadotnet/akka.net/pull/836)
+* [Nested Ask async await causes null-pointer exception in ActorTaskScheduler](https://github.com/akkadotnet/akka.net/issues/855)
+* [Akka.Remote: can't reply back remotely to child of Pool router](https://github.com/akkadotnet/akka.net/issues/884)
+* [Context.DI().ActorOf shouldn't require a parameterless constructor](https://github.com/akkadotnet/akka.net/issues/832)
+* [DIActorContextAdapter uses typeof().Name instead of AssemblyQualifiedName](https://github.com/akkadotnet/akka.net/issues/833)
+* [IndexOutOfRangeException with RoundRobinRoutingLogic & SmallestMailboxRoutingLogic](https://github.com/akkadotnet/akka.net/issues/908)
+
+New Features:
+
+**Akka.TestKit.NUnit**
+Akka.NET now has support for [NUnit ](http://nunit.org/) inside its TestKit. You can install Akka.TestKit.NUnit via the NuGet commandline:
+
+```
+PM> Install-Package Akka.TestKit.NUnit
+```
+
+**Akka.Persistence.SqlServer**
+The first full implementation of Akka.Persistence is now available for SQL Server.
+
+[Read the full instructions for working with Akka.Persistence.SQLServer here](https://github.com/akkadotnet/akka.net/tree/dev/src/contrib/persistence/Akka.Persistence.SqlServer).
+
 #### 1.0.0 Apr 09 2015
 
 **Akka.NET is officially no longer in beta status**. The APIs introduced in Akka.NET v1.0 will enjoy long-term support from the Akka.NET development team and all of its professional support partners.

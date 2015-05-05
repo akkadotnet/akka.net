@@ -69,7 +69,10 @@ namespace Akka.Actor
 
         DateTimeOffset ITimeProvider.Now { get { return TimeNow; } }
 
+
         protected abstract DateTimeOffset TimeNow { get; }
+        public abstract TimeSpan MonotonicClock { get; }
+        public abstract TimeSpan HighResMonotonicClock { get; }
 
         protected abstract void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable);
 

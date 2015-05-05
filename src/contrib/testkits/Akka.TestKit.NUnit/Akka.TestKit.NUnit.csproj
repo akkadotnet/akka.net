@@ -45,7 +45,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Properties\SharedAssemblyInfo.cs" />
+    <Compile Include="..\..\..\SharedAssemblyInfo.cs">
+      <Link>Properties\SharedAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="TestKit.cs" />
     <Compile Include="NUnitAssertions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -83,6 +83,21 @@ namespace Akka.Tests.Routing
             Assert.NotEqual(path2, busyPath);
             Assert.NotEqual(path3, busyPath);
         }
+
+        [Fact]
+        public void SmallestMail_should_not_throw_IndexOutOfRangeException_when_counter_wraps_to_be_negative()
+        {
+            Assert.DoesNotThrow(
+                () =>
+                {
+                    var routees = new[] {Routee.NoRoutee, Routee.NoRoutee, Routee.NoRoutee};
+                    var routingLogic = new SmallestMailboxRoutingLogic(int.MaxValue - 5);
+                    for (var i = 0; i < 10; i++)
+                    {
+                        routingLogic.Select(i, routees);
+                    }
+                });
+        }
     }
 }
 

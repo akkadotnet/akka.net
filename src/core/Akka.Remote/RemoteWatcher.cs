@@ -25,7 +25,7 @@ namespace Akka.Remote
     /// For a new node to be watched this actor periodically sends <see cref="RemoteWatcher.Heartbeat"/>
     /// to the peer actor on the other node, which replies with <see cref="RemoteWatcher.HeartbeatRsp"/>
     /// message back. The failure detector on the watching side monitors these heartbeat messages.
-    /// If arrival of hearbeat messages stops it will be detected and this actor will publish
+    /// If arrival of heartbeat messages stops it will be detected and this actor will publish
     /// <see cref="AddressTerminated"/> to the <see cref="AddressTerminatedTopic"/>.
     ///
     /// When all actors on a node have been unwatched it will stop sending heartbeat messages.

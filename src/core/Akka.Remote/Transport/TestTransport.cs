@@ -296,7 +296,7 @@ namespace Akka.Remote.Transport
     /// control to the timing of completion of the associated Task.
     /// 
     /// The utility is implemented as a stack of behaviors, where the behavior on the top of the stack represents the
-    /// currently active behavior. The bottom of the stack alway contains the <see cref="DefaultBehavior"/> which
+    /// currently active behavior. The bottom of the stack always contains the <see cref="DefaultBehavior"/> which
     /// can not be popped out.
     /// </summary>
     public class SwitchableLoggedBehavior<TIn, TOut>
