@@ -10,10 +10,10 @@ using System.Collections.Generic;
 namespace Akka.Event
 {
     /// <summary>
-    /// Class Subscription.
+    /// Represents a Subscription to the EventBus.
     /// </summary>
-    /// <typeparam name="TSubscriber">The type of the t subscriber.</typeparam>
-    /// <typeparam name="TClassifier">The type of the t classifier.</typeparam>
+    /// <typeparam name="TSubscriber">The type of the subscriber.</typeparam>
+    /// <typeparam name="TClassifier">The type of the classifier.</typeparam>
     public class Subscription<TSubscriber, TClassifier>
     {
         /// <summary>
@@ -38,12 +38,13 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Gets the subscriber.
+        /// Gets the subscriber attached to this subscription.
         /// </summary>
         /// <value>The subscriber.</value>
         public TSubscriber Subscriber { get; private set; }
+
         /// <summary>
-        /// Gets the unsubscriptions.
+        /// Gets the unsubscriptions of this particular subscription.
         /// </summary>
         /// <value>The unsubscriptions.</value>
         public ISet<TClassifier> Unsubscriptions { get; private set; }
