@@ -15,7 +15,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class EventStreamActor.
     /// </summary>
-    public class EventStreamActor : ActorBase
+    public class EventStreamActor : ActorBase, ISyncActor
     {
         /// <summary>
         ///     Processor for user defined messages.
@@ -30,7 +30,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class GuardianActor.
     /// </summary>
-    public class GuardianActor : ActorBase
+    public class GuardianActor : ActorBase, ISyncActor
     {
         protected override bool Receive(object message)
         {
@@ -44,7 +44,7 @@ namespace Akka.Actor
         }
     }
 
-    public class SystemGuardianActor : ActorBase
+    public class SystemGuardianActor : ActorBase, ISyncActor
     {
         private readonly IActorRef _userGuardian;
         private readonly HashSet<IActorRef> _terminationHooks;
@@ -151,7 +151,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class DeadLetterActorRef.
     /// </summary>
-    public class DeadLetterActorRef : EmptyLocalActorRef
+    public class DeadLetterActorRef : EmptyLocalActorRef, ISyncActor
     {
         private readonly EventStream _eventStream;
 

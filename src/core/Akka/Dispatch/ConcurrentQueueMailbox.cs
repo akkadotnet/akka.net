@@ -14,6 +14,7 @@ using Akka.Dispatch.SysMsg;
 using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
 #else
 using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope>;
+using Akka.Actor.Internal;
 //using TQueue = Akka.Util.MonoConcurrentQueue<Akka.Actor.Envelope>;
 #endif
 
@@ -37,7 +38,11 @@ namespace Akka.Dispatch
                 return;
             }
 
+            // uses thread locals for ActorCell.Current for actors that don't require async/await behavior
+            InternalCurrentActorCellKeeper.UseThreadStatic = ActorCell.IsSyncOnly;
+
             var throughputDeadlineTime = dispatcher.ThroughputDeadlineTime;
+
             ActorCell.UseThreadContext(() =>
             {
                 //if ThroughputDeadlineTime is enabled, start a stopwatch

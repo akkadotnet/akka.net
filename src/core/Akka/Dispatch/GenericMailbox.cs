@@ -10,6 +10,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
+using Akka.Actor.Internal;
 
 namespace Akka.Dispatch
 {
@@ -57,6 +58,9 @@ namespace Akka.Dispatch
             {
                 return;
             }
+
+            // uses thread locals for ActorCell.Current for actors that don't require async/await behavior
+            InternalCurrentActorCellKeeper.UseThreadStatic = ActorCell.IsSyncOnly;
 
             var throughputDeadlineTime = dispatcher.ThroughputDeadlineTime;
             ActorCell.UseThreadContext(() =>

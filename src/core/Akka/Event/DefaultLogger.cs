@@ -12,7 +12,7 @@ namespace Akka.Event
     /// <summary>
     ///     Class DefaultLogger.
     /// </summary>
-    public class DefaultLogger : ActorBase
+    public class DefaultLogger : ActorBase, ISyncActor
     {
         /// <summary>
         ///     Processor for user defined messages.

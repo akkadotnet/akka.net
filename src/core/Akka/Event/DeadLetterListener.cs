@@ -13,7 +13,7 @@ namespace Akka.Event
     /// <summary>
     ///     Class DeadLetterListener.
     /// </summary>
-    public class DeadLetterListener : ActorBase
+    public class DeadLetterListener : ActorBase, ISyncActor
     {
         /// <summary>
         ///     The event stream

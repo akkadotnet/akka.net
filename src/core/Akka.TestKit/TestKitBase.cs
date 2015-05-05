@@ -106,10 +106,16 @@ namespace Akka.TestKit
                 return repRef == null || repRef.IsStarted;
             }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(10));
 
+            // use threadlocal to store the current actor cell during tests, this
+            // requires a custom SyncCtx to pass the context in xunit, but prevents
+            // it from crashing due to serialization issues with CallContext crossing AppDomains
+            InternalCurrentActorCellKeeper.UseThreadStatic = true;
+
             if(!(this is INoImplicitSender))
             {
                 InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)testActor).Underlying;
             }
+
             SynchronizationContext.SetSynchronizationContext(
                 new ActorCellKeepingSynchronizationContext(InternalCurrentActorCellKeeper.Current));
             _testActor = testActor;
