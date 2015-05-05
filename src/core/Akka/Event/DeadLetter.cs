@@ -10,7 +10,8 @@ using Akka.Actor;
 namespace Akka.Event
 {
     /// <summary>
-    /// Class DeadLetter.
+    /// Represents a message that could not be delivered to it's recipient. 
+    /// This message wraps the original message, the sender and the intended recipient of the message.
     /// </summary>
     public class DeadLetter
     {
@@ -28,21 +29,21 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Gets the message.
+        /// Gets the original message that could not be delivered.
         /// </summary>
         /// <value>The message.</value>
         public object Message { get; private set; }
 
         /// <summary>
-        /// Gets the recipient.
+        /// Gets the recipient of the message.
         /// </summary>
-        /// <value>The recipient.</value>
+        /// <value>The recipient of the message.</value>
         public IActorRef Recipient { get; private set; }
 
         /// <summary>
-        /// Gets the sender.
+        /// Gets the sender of the message.
         /// </summary>
-        /// <value>The sender.</value>
+        /// <value>The sender of the message.</value>
         public IActorRef Sender { get; private set; }
 
         public override string ToString()

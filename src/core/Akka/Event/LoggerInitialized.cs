@@ -10,7 +10,7 @@ using Akka.Actor;
 namespace Akka.Event
 {
     /// <summary>
-    ///     Class LoggerInitialized.
+    /// Message used to notify that a logger has been initialized.
     /// </summary>
     public class LoggerInitialized : INoSerializationVerificationNeeded
     {

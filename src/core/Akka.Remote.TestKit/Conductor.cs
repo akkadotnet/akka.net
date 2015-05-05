@@ -295,7 +295,7 @@ namespace Akka.Remote.TestKit
 
         public void OnException(Exception ex, IConnection erroredChannel)
         {
-            _log.Warn(string.Format("handled network error from {0}: {1}", erroredChannel.RemoteHost, ex.Message));
+            _log.Warning(string.Format("handled network error from {0}: {1}", erroredChannel.RemoteHost, ex.Message));
         }
     }
 

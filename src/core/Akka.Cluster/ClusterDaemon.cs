@@ -1622,11 +1622,11 @@ namespace Akka.Cluster
                         var nonExiting = partitioned.Item2;
 
                         if (nonExiting.Any())
-                            _log.Warn("Cluster Node [{0}] - Marking node(s) as UNREACHABLE [{1}]",
+                            _log.Warning("Cluster Node [{0}] - Marking node(s) as UNREACHABLE [{1}]",
                                 _cluster.SelfAddress, nonExiting.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b));
 
                         if (exiting.Any())
-                            _log.Warn("Marking exiting node(s) as UNREACHABLE [{0}]. This is expected and they will be removed.",
+                            _log.Warning("Marking exiting node(s) as UNREACHABLE [{0}]. This is expected and they will be removed.",
                                 _cluster.SelfAddress, exiting.Select(m => m.ToString()).Aggregate((a, b) => a + ", " + b));
 
                         if (newlyDetectedReachableMembers.Any())
