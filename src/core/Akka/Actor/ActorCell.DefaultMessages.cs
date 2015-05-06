@@ -98,6 +98,7 @@ namespace Akka.Actor
             else if (m is PoisonPill) HandlePoisonPill();
             else if (m is ActorSelectionMessage) ReceiveSelection(m as ActorSelectionMessage);
             else if (m is Identify) HandleIdentity(m as Identify);
+            else if (m is CompleteTaskReentrant) HandleCompleteTask(m as CompleteTaskReentrant);
         }
 
         /// <summary>
@@ -197,6 +198,14 @@ namespace Akka.Actor
             Sender = task.State.Sender;
             task.SetResult();
         }
+
+        private void HandleCompleteTask(CompleteTaskReentrant task)
+        {
+            CurrentMessage = task.State.Message;
+            Sender = task.State.Sender;
+            task.SetResult();
+        }
+
         public void SwapMailbox(DeadLetterMailbox mailbox)
         {
             Mailbox.DebugPrint("{0} Swapping mailbox to DeadLetterMailbox", Self);
