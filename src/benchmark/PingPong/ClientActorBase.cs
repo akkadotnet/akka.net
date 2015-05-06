@@ -11,7 +11,7 @@ using Akka.Actor;
 
 namespace PingPong
 {
-    public class ClientActorBase : ActorBase
+    public class ClientActorBase : ActorBase, ISyncActor
     {
         private readonly IActorRef _actor;
         private readonly TaskCompletionSource<bool> _latch;

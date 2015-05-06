@@ -12,7 +12,7 @@ namespace Akka.Event
     /// <summary>
     /// Default logger implementation that outputs logs to the Console.
     /// </summary>
-    public class DefaultLogger : ActorBase
+    public class DefaultLogger : ActorBase, ISyncActor
     {
         protected override bool Receive(object message)
         {

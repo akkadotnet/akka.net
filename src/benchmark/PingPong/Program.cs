@@ -199,7 +199,7 @@ namespace PingPong
             return numberOfRepeats * 2;
         }
 
-        public class Destination : UntypedActor
+        public class Destination : UntypedActor, ISyncActor
         {
             protected override void OnReceive(object message)
             {
@@ -210,7 +210,7 @@ namespace PingPong
             }
         }
 
-        public class WaitForStarts : UntypedActor
+        public class WaitForStarts : UntypedActor, ISyncActor
         {
             private readonly CountdownEvent _countdown;
 

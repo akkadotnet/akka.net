@@ -210,10 +210,10 @@ namespace Akka.Tests.Dispatch
             _callback = callback;
             Receive<string>(m =>
             {
-                RunTask(() =>
+                RunTask(async () =>
                 {
-                    Task.Delay(TimeSpan.FromSeconds(1))
-                   .ContinueWith(t => { throw new Exception("foo"); });
+                    await Task.Delay(TimeSpan.FromSeconds(1))
+                        .ContinueWith(t => { throw new Exception("foo"); });
                 });               
             });
         }

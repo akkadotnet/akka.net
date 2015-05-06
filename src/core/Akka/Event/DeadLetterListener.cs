@@ -13,7 +13,7 @@ namespace Akka.Event
     /// <summary>
     /// Actor responsible for listening to DeadLetter messages and logging them using the EventStream.
     /// </summary>
-    public class DeadLetterListener : ActorBase
+    public class DeadLetterListener : ActorBase, ISyncActor
     {
         private readonly EventStream _eventStream = Context.System.EventStream;
         private readonly int _maxCount = Context.System.Settings.LogDeadLetters;

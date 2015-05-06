@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.Remoting.Messaging;
 
 namespace Akka.Actor.Internal
 {
@@ -17,11 +18,37 @@ namespace Akka.Actor.Internal
         [ThreadStatic]
         private static ActorCell _current;
 
+        [ThreadStatic]
+        private static bool _useThreadStatic;
+
+        private readonly static string CallContextKey = "akka.actorcell.current";
+
+        public static bool UseThreadStatic
+        {
+            get { return _useThreadStatic; }
+            set { _useThreadStatic = value; }
+        }
 
         /// <summary>INTERNAL!
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
-        public static ActorCell Current { get { return _current; } set { _current = value; } }
+        public static ActorCell Current
+        {
+            get
+            {
+                if (_useThreadStatic)
+                    return _current;
+                else
+                    return CallContext.LogicalGetData(CallContextKey) as ActorCell;
+            }
+            set
+            {
+                if (_useThreadStatic)
+                    _current = value;
+                else
+                    CallContext.LogicalSetData(CallContextKey, value);
+            }
+        }
     }
 }
 
