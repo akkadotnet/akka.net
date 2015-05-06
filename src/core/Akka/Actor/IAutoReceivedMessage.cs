@@ -5,6 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using Akka.Dispatch;
+using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
 namespace Akka.Actor
@@ -96,6 +99,32 @@ namespace Akka.Actor
         }
     }
 
+    public sealed class CompleteReentrantAwaitedTask : IAutoReceivedMessage
+    {
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="CompleteTask" /> class.
+        /// </summary>
+        /// <param name="state"></param>
+        /// <param name="action">The action.</param>
+        public CompleteReentrantAwaitedTask(AmbientState state, Action action)
+        {
+            State = state;
+            SetResult = action;
+        }
+
+        public AmbientState State { get; private set; }
+
+        /// <summary>
+        ///     Gets the set result.
+        /// </summary>
+        /// <value>The set result.</value>
+        public Action SetResult { get; private set; }
+
+        public override string ToString()
+        {
+            return "CompleteReentrantAwaitedTask - AmbientState: " + State;
+        }
+    }
 
     /// <summary>
     /// Sending an <see cref="Kill"/> message to an actor causes the actor to throw an 
