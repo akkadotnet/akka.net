@@ -211,19 +211,14 @@ namespace Akka.Remote.Tests.Transport
                 var received = ReceiveOne(TimeSpan.Zero);
                 if (received != null && received.Equals(new ThrottlingTester.Lost("BlackHole 3")))
                     return true;
-                else
-                {
-                    here.Tell(new ThrottlingTester.Lost("BlackHole 3"));
-                    return false;
-                }
+
+                here.Tell(new ThrottlingTester.Lost("BlackHole 3"));
+
+                return false;
             }, TimeSpan.FromSeconds(15));
 
             here.Tell("Cleanup");
-            FishForMessage(o =>
-            {
-                if (o.Equals("Cleanup")) return true;
-                return false;
-            }, TimeSpan.FromSeconds(5));
+            FishForMessage(o => o.Equals("Cleanup"), TimeSpan.FromSeconds(5));
         }
 
         #endregion

@@ -8,7 +8,7 @@
 using System;
 using Xunit;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.MultiNodeTests
 {
     public class MultiNodeFactAttribute : FactAttribute
     {

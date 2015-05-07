@@ -96,6 +96,7 @@ namespace Akka.Remote.Tests
       }
     }
 ".Replace("${masterSysName}", "Master" + sysName).Replace("${sysName}", sysName).Replace("${port}", port.ToString())).WithFallback(Sys.Settings.Config);
+
             masterActorSystem = ActorSystem.Create("Master" + sysName, conf);
 
             intendedRemoteAddress = Address.Parse("akka.tcp://${sysName}@localhost:${port}"

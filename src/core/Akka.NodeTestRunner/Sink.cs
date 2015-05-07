@@ -14,7 +14,7 @@ using Xunit.Abstractions;
 
 namespace Akka.NodeTestRunner
 {
-    class Sink : IMessageSink, IDisposable
+    class Sink : MarshalByRefObject, IMessageSink, IDisposable
     {
         public bool Passed { get; private set; }
         public ManualResetEvent Finished { get; private set; }
