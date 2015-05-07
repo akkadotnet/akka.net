@@ -5,14 +5,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Remote
@@ -77,8 +75,6 @@ namespace Akka.Remote
     internal class RemoteDaemon : VirtualPathContainer
     {
         private readonly ActorSystemImpl _system;
-        private readonly Switch _terminating;
-        private readonly IActorRef _terminator;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="RemoteDaemon" /> class.
@@ -86,14 +82,11 @@ namespace Akka.Remote
         /// <param name="system">The system.</param>
         /// <param name="path">The path.</param>
         /// <param name="parent">The parent.</param>
-	    /// <param name="terminator">The remoting terminator.</param>
         /// <param name="log"></param>
-        public RemoteDaemon(ActorSystemImpl system, ActorPath path, IInternalActorRef parent, IActorRef terminator, ILoggingAdapter log)
+        public RemoteDaemon(ActorSystemImpl system, ActorPath path, IInternalActorRef parent, ILoggingAdapter log)
             : base(system.Provider, path, parent, log)
         {
             _system = system;
-            _terminating = new Switch(false);
-            _terminator = terminator;
             AddressTerminatedTopic.Get(system).Subscribe(this);
         }
 
@@ -109,25 +102,11 @@ namespace Akka.Remote
             {
                 Log.Debug("Received command [{0}] to RemoteSystemDaemon on [{1}]", message, Path.Address);
                 if (message is DaemonMsgCreate) HandleDaemonMsgCreate((DaemonMsgCreate)message);
-                return;
-            }
-
-            if (message is TerminationHook)
-            {
-                _terminating.SwitchOn(() =>
-                {
-                    TerminationHookDoneWhenNoChildren();
-                    ForEachChild(c =>
-                    {
-                        _system.Stop(c);
-                    });                    
-                });
-                return;
             }
 
             //Remote ActorSystem on another process / machine has died. 
             //Need to clean up any references to remote deployments here.
-            if (message is AddressTerminated)
+            else if (message is AddressTerminated)
             {
                 var addressTerminated = (AddressTerminated) message;
                 //stop any remote actors that belong to this address
@@ -135,7 +114,6 @@ namespace Akka.Remote
                 {
                     if(@ref.Parent.Path.Address == addressTerminated.Address) _system.Stop(@ref);
                 });
-                return;
             }
         }
 
@@ -205,13 +183,6 @@ namespace Akka.Remote
             }
             return ActorRefs.Nobody;
         }
-
-        public void TerminationHookDoneWhenNoChildren()
-        {
-            _terminating.WhileOn(() =>
-            {
-                if (!HasChildren) _terminator.Tell(TerminationHookDone.Instance, this);
-            });
-        }
     }
 }
+
