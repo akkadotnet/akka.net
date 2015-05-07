@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Threading;
 using Xunit;
@@ -14,15 +15,18 @@ using Xunit.Abstractions;
 
 namespace Akka.NodeTestRunner
 {
-    class Sink : MarshalByRefObject, IMessageSink, IDisposable
+    [Serializable]
+    class Sink : IMessageSink, IDisposable
     {
         public bool Passed { get; private set; }
         public ManualResetEvent Finished { get; private set; }
         readonly int _nodeIndex;
+        private readonly TextWriter _writer;
 
-        public Sink(int nodeIndex)
+        public Sink(int nodeIndex, TextWriter writer)
         {
             _nodeIndex = nodeIndex;
+            _writer = writer;
             Finished = new ManualResetEvent(false);
         }
 
@@ -31,14 +35,14 @@ namespace Akka.NodeTestRunner
             var resultMessage = message as ITestResultMessage;
             if (resultMessage != null)
             {
-                Console.WriteLine(resultMessage.Output);
+                _writer.WriteLine(resultMessage.Output);
             }
             var testPassed = message as ITestPassed;
             if (testPassed != null)
             {
                 //the MultiNodeTestRunner uses 1-based indexing, which is why we have to add 1 to the index.
                 var specPass = new SpecPass(_nodeIndex + 1, testPassed.TestCase.DisplayName);
-                Console.WriteLine(specPass);
+                _writer.WriteLine(specPass);
                 Passed = true;
                 return true;
             }
@@ -49,8 +53,8 @@ namespace Akka.NodeTestRunner
                 var specFail = new SpecFail(_nodeIndex + 1, testFailed.TestCase.DisplayName);
                 foreach (var failedMessage in testFailed.Messages) specFail.FailureMessages.Add(failedMessage);
                 foreach (var stackTrace in testFailed.StackTraces) specFail.FailureStackTraces.Add(stackTrace);
-                foreach(var exceptionType in testFailed.ExceptionTypes) specFail.FailureExceptionTypes.Add(exceptionType);
-                Console.Write(specFail);
+                foreach (var exceptionType in testFailed.ExceptionTypes) specFail.FailureExceptionTypes.Add(exceptionType);
+                _writer.Write(specFail);
                 return true;
             }
             var errorMessage = message as ErrorMessage;
@@ -60,7 +64,7 @@ namespace Akka.NodeTestRunner
                 foreach (var failedMessage in errorMessage.Messages) specFail.FailureMessages.Add(failedMessage);
                 foreach (var stackTrace in errorMessage.StackTraces) specFail.FailureStackTraces.Add(stackTrace);
                 foreach (var exceptionType in errorMessage.ExceptionTypes) specFail.FailureExceptionTypes.Add(exceptionType);
-                Console.Write(specFail);
+                _writer.Write(specFail);
             }
             if (message is ITestAssemblyFinished)
             {
@@ -84,7 +88,7 @@ namespace Akka.NodeTestRunner
     /// that this class produces, so do not remove or refactor it.
     /// </remarks>
     /// </summary>
-    public class SpecPass
+    public class SpecPass : MarshalByRefObject
     {
         public SpecPass(int nodeIndex, string testDisplayName)
         {
@@ -112,7 +116,8 @@ namespace Akka.NodeTestRunner
     /// </summary>
     public class SpecFail : SpecPass
     {
-        public SpecFail(int nodeIndex, string testDisplayName) : base(nodeIndex, testDisplayName)
+        public SpecFail(int nodeIndex, string testDisplayName)
+            : base(nodeIndex, testDisplayName)
         {
             FailureMessages = new List<string>();
             FailureStackTraces = new List<string>();

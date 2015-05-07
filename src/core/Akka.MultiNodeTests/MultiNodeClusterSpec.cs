@@ -237,11 +237,11 @@ namespace Akka.MultiNodeTests
         /// </summary>
         public void StartClusterNode()
         {
-            if (ClusterView.Members.IsEmpty)
-            {
-                Cluster.Join(GetAddress(Myself));
-                AwaitAssert(() => Assert.True(ClusterView.Members.Select(m => m.Address).Contains(GetAddress(Myself))));
-            }
+            if (!ClusterView.Members.IsEmpty) 
+                return;
+
+            Cluster.Join(GetAddress(Myself));
+            AwaitCondition(() => ClusterView.Members.Select(m => m.Address).Contains(GetAddress(Myself)));
         }
 
         /// <summary>

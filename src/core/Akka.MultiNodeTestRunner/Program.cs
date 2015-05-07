@@ -7,13 +7,15 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.MultiNodeTestRunner.Shared;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
+using Akka.NodeTestRunner;
 using Akka.Remote.TestKit;
 using Xunit;
 
@@ -27,8 +29,6 @@ namespace Akka.MultiNodeTestRunner
         protected static ActorSystem TestRunSystem;
 
         protected static IActorRef SinkCoordinator;
-
-        
 
         /// <summary>
         /// MultiNodeTestRunner takes the following <see cref="args"/>:
@@ -45,8 +45,8 @@ namespace Akka.MultiNodeTestRunner
         ///     <description>
         ///         The full path or name of an assembly containing as least one MultiNodeSpec in the current working directory.
         /// 
-        ///         i.e. "Akka.Cluster.Tests.dll"
-        ///              "C:\akka.net\src\Akka.Cluster.Tests\bin\Debug\Akka.Cluster.Tests.dll"
+        ///         i.e. "Akka.MultiNodeTests.dll"
+        ///              "C:\akka.net\src\core\Akka.MultiNodeTestsTests\bin\Debug\Akka.MultiNodeTests.dll"
         ///     </description>
         /// </item>
         /// <item>
@@ -57,91 +57,113 @@ namespace Akka.MultiNodeTestRunner
         /// </item>
         /// </list>
         /// </summary>
-        static void Main(string[] args)
+        private static void Main(string[] args)
+        {
+            RunTests(args);
+        }
+
+        private static void RunTests(string[] args)
         {
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
-            SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>(), "sinkCoordinator");
+            SinkCoordinator = TestRunSystem.ActorOf(Props.Create(() => new SinkCoordinator(true)), "sinkCoordinator");
 
             var assemblyName = args[0];
-
+            var specName = CommandLine.GetProperty("multinode.test-spec");
+            //var specName = "ConvergenceWithAccrualFailureDetectorMultiNode";
             EnableAllSinks(assemblyName);
 
-            using (var controller = new XunitFrontController(assemblyName))
+            using (var controller = new Xunit2(new NullSourceInformationProvider(), assemblyName))
             {
                 using (var discovery = new Discovery())
                 {
                     controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
                     discovery.Finished.WaitOne();
 
-                    foreach (var test in discovery.Tests.Reverse())
+                    var cases = discovery.TestCases.Reverse();
+
+                    if (!string.IsNullOrWhiteSpace(specName))
+                    {
+                        cases = cases.Where(@case => @case.Key.Contains(specName));
+                    }
+
+                    foreach (var test in cases.ToList())
                     {
                         PublishRunnerMessage(string.Format("Starting test {0}", test.Value.First().MethodName));
 
-                        var processes = new List<Process>();
+                        var processes = new List<Task>();
 
                         StartNewSpec(test.Value);
 
+                        var nodes = test.Value.Count;
+
                         foreach (var nodeTest in test.Value)
                         {
-                            //Loop through each test, work out number of nodes to run on and kick off process
-                            var process = new Process();
-                            processes.Add(process);
-                            process.StartInfo.UseShellExecute = false;
-                            process.StartInfo.RedirectStandardOutput = true;
-                            process.StartInfo.FileName = "Akka.NodeTestRunner.exe";
-                            process.StartInfo.Arguments = String.Format(@"-Dmultinode.test-assembly=""{0}"" -Dmultinode.test-class=""{1}"" -Dmultinode.test-method=""{2}"" -Dmultinode.max-nodes={3} -Dmultinode.server-host=""{4}"" -Dmultinode.host=""{5}"" -Dmultinode.index={6}",
-                                assemblyName, nodeTest.TypeName, nodeTest.MethodName, test.Value.Count, "localhost", "localhost", nodeTest.Node - 1);
-                            var nodeIndex = nodeTest.Node;
-                            process.OutputDataReceived +=
-                                (sender, line) =>
-                                {
-                                    //ignore any trailing whitespace
-                                    if (string.IsNullOrEmpty(line.Data) || string.IsNullOrWhiteSpace(line.Data)) return;
-                                    string message = line.Data;
-                                    if (!message.StartsWith("[NODE", true, CultureInfo.InvariantCulture))
-                                    {
-                                        message = "[NODE" + nodeIndex + "]" + message;
-                                    }
-                                    PublishToAllSinks(message);
-                                };
-
                             var closureTest = nodeTest;
-                            process.Exited += (sender, eventArgs) =>
-                            {
-                                if (process.ExitCode == 0)
-                                {
-                                    ReportSpecPassFromExitCode(nodeIndex, closureTest.TestName);
-                                }
-                            };
-                            process.Start();
 
-                            process.BeginOutputReadLine();
-                            PublishRunnerMessage(string.Format("Started node {0} on pid {1}", nodeTest.Node, process.Id));
+                            var task = Task.Run(() =>
+                            {
+                                var writer = new StringWriter();
+
+                                PublishRunnerMessage(string.Format("Started node {0}", nodeTest.Node));
+
+                                var settings = new NodeRunnerSettings
+                                {
+                                    AssemblyName = assemblyName,
+                                    Host = "localhost",
+                                    ServerHost = "localhost",
+                                    TestClass = closureTest.TypeName,
+                                    TestMethod = closureTest.MethodName,
+                                    MaxNodes = nodes,
+                                    NodeIndex = closureTest.Node - 1
+                                };
+                                var exitCode = new NodeRunner().Run(settings, writer);
+
+                                if (exitCode == 0)
+                                {
+                                    ReportSpecPassFromExitCode(closureTest.Node, closureTest.TestName);
+                                }
+
+                                writer
+                                    .GetStringBuilder()
+                                    .ToString()
+                                    .Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries)
+                                    .ToList()
+                                    .ForEach(line =>
+                                    {
+                                        if (!line.StartsWith("[NODE", true, CultureInfo.InvariantCulture))
+                                        {
+                                            line = "[NODE" + (nodeTest.Node) + "]" + line;
+                                        }
+                                        PublishToAllSinks(line);
+                                    });
+                            });
+                            processes.Add(task);
                         }
 
-                        foreach (var process in processes)
+                        var ranSuccessfully = Task.WaitAll(processes.ToArray(), TimeSpan.FromMinutes(2));
+                        if (!ranSuccessfully)
                         {
-                            process.WaitForExit();
-                            var exitCode = process.ExitCode;
-                            process.Close();
+                            ReportSpecFail(test.Value.First().TestName, "Timed out");
                         }
 
                         PublishRunnerMessage("Waiting 3 seconds for all messages from all processes to be collected.");
                         Thread.Sleep(TimeSpan.FromSeconds(3));
                         FinishSpec();
                     }
+
+
+                    Console.WriteLine("Complete");
+                    PublishRunnerMessage("Waiting 5 seconds for all messages from all processes to be collected.");
+                    Thread.Sleep(TimeSpan.FromSeconds(5));
+                    CloseAllSinks();
+
+                    //Block until all Sinks have been terminated.
+                    TestRunSystem.AwaitTermination(TimeSpan.FromMinutes(1));
+
+                    // Force exit
+                    Environment.Exit(0);
                 }
             }
-            Console.WriteLine("Complete");
-            PublishRunnerMessage("Waiting 5 seconds for all messages from all processes to be collected.");
-            Thread.Sleep(TimeSpan.FromSeconds(5));
-            CloseAllSinks();
-            
-            //Block until all Sinks have been terminated.
-            TestRunSystem.AwaitTermination(TimeSpan.FromMinutes(1));
-
-            //Return the proper exit code
-            Environment.Exit(ExitCodeContainer.ExitCode);
         }
 
         static void EnableAllSinks(string assemblyName)
@@ -168,7 +190,7 @@ namespace Akka.MultiNodeTestRunner
 
         static void FinishSpec()
         {
-           SinkCoordinator.Tell(new EndSpec());
+            SinkCoordinator.Tell(new EndSpec());
         }
 
         static void PublishRunnerMessage(string message)
@@ -180,6 +202,10 @@ namespace Akka.MultiNodeTestRunner
         {
             SinkCoordinator.Tell(message, ActorRefs.NoSender);
         }
+
+        static void ReportSpecFail(string testName, string reason)
+        {
+            SinkCoordinator.Tell(new NodeCompletedSpecWithFail(0, testName + " failed: " + reason));
+        }
     }
 }
-

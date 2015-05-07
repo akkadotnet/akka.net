@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Text;
 using Akka.Actor;
 using Akka.Event;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
@@ -20,8 +21,12 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// </summary>
     public class ConsoleMessageSinkActor : TestCoordinatorEnabledMessageSink
     {
-        public ConsoleMessageSinkActor(bool useTestCoordinator) : base(useTestCoordinator)
+        private readonly bool _teamcityOutput;
+
+        public ConsoleMessageSinkActor(bool useTestCoordinator, bool teamcityOutput = false)
+            : base(useTestCoordinator)
         {
+            _teamcityOutput = teamcityOutput;
         }
 
         #region Message handling
@@ -38,37 +43,83 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         private void PrintSpecRunResults(FactData data)
         {
-            WriteSpecMessage(string.Format("Results for {0}", data.FactName));
-            WriteSpecMessage(string.Format("Start time: {0}", new DateTime(data.StartTime, DateTimeKind.Utc)));
+            var formattedName = TeamCityEscape(data.FactName);
+
+            if (_teamcityOutput)
+                Console.WriteLine("##teamcity[testStarted name='{0}']", formattedName);
+
+            var builder = new StringBuilder();
+
+            builder.AppendLine(string.Format("Results for {0}", data.FactName));
+
+            builder.AppendLine(string.Format("Start time: {0}", new DateTime(data.StartTime, DateTimeKind.Utc)));
             foreach (var node in data.NodeFacts)
             {
-                WriteSpecMessage(string.Format(" --> Node {0}: {1} [{2} elapsed]", node.Value.NodeIndex,
+                builder.AppendLine(string.Format(" --> Node {0}: {1} [{2} elapsed]", node.Value.NodeIndex,
                     node.Value.Passed.GetValueOrDefault(false) ? "PASS" : "FAIL", node.Value.Elapsed));
             }
-            WriteSpecMessage(string.Format("End time: {0}",
+
+            builder.AppendLine(string.Format("End time: {0}",
                 new DateTime(data.EndTime.GetValueOrDefault(DateTime.UtcNow.Ticks), DateTimeKind.Utc)));
-            WriteSpecMessage(string.Format("FINAL RESULT: {0} after {1}.",
+
+            builder.AppendLine(string.Format("FINAL RESULT: {0} after {1}.",
                 data.Passed.GetValueOrDefault(false) ? "PASS" : "FAIL", data.Elapsed));
 
-            //If we had a failure
-            if (data.Passed.GetValueOrDefault(false) == false)
+            var output = builder.ToString();
+            SplitLinesAndWriteSpecMessage(output);
+
+            if (_teamcityOutput)
+                WriteTeamcityTestOutput(formattedName, output);
+
+            if (data.Passed.GetValueOrDefault(false))
             {
-                WriteSpecMessage("Failure messages by Node");
-                foreach (var node in data.NodeFacts)
-                {
-                    if (node.Value.Passed.GetValueOrDefault(false) == false)
-                    {
-                        WriteSpecMessage(string.Format("<----------- BEGIN NODE {0} ----------->", node.Key));
-                        foreach (var resultMessage in node.Value.ResultMessages)
-                        {
-                            WriteSpecMessage(String.Format(" --> {0}", resultMessage.Message));
-                        }
-                        if(node.Value.ResultMessages == null || node.Value.ResultMessages.Count == 0)
-                            WriteSpecMessage("[received no messages - SILENT FAILURE].");
-                        WriteSpecMessage(string.Format("<----------- END NODE {0} ----------->", node.Key));
-                    }
-                }
+                if (_teamcityOutput)
+                    Console.WriteLine("##teamcity[testFinished name='{0}' duration='{1}']",
+                        formattedName,
+                        (int)(data.Elapsed.TotalMilliseconds));
+                return;
             }
+
+            WriteSpecMessage("Failure messages by Node");
+            builder = new StringBuilder();
+
+            foreach (var node in data.NodeFacts)
+            {
+                if (node.Value.Passed.GetValueOrDefault(false)) continue;
+
+                builder.AppendLine(string.Format("<----------- BEGIN NODE {0} ----------->", node.Key));
+                foreach (var resultMessage in node.Value.ResultMessages)
+                {
+                    builder.AppendLine(String.Format(" --> {0}", resultMessage.Message));
+                }
+                if (node.Value.ResultMessages == null || node.Value.ResultMessages.Count == 0)
+                {
+                    builder.AppendLine("[received no messages - SILENT FAILURE].");
+                }
+                builder.AppendLine(string.Format("<----------- END NODE {0} ----------->", node.Key));
+            }
+
+            output = builder.ToString();
+            SplitLinesAndWriteSpecMessage(output);
+
+            if (_teamcityOutput)
+            {
+                Console.WriteLine("##teamcity[testFailed name='{0}' details='{1}']",
+                    formattedName,
+                    TeamCityEscape(output));
+
+                Console.WriteLine("##teamcity[testFinished name='{0}' duration='{1}']",
+                    formattedName,
+                    (int)(data.Elapsed.TotalMilliseconds));
+            }
+        }
+
+        private void SplitLinesAndWriteSpecMessage(string output)
+        {
+            output
+                .Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries)
+                .ToList()
+                .ForEach(WriteSpecMessage);
         }
 
         protected override void HandleNodeSpecFail(NodeCompletedSpecWithFail nodeFail)
@@ -81,7 +132,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         protected override void HandleTestRunEnd(EndTestRun endTestRun)
         {
             WriteSpecMessage("Test run complete.");
-            
+
             base.HandleTestRunEnd(endTestRun);
         }
 
@@ -126,7 +177,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         protected override void HandleRunnerMessage(LogMessageForTestRunner node)
         {
             WriteRunnerMessage(node);
-            
+
             base.HandleRunnerMessage(node);
         }
 
@@ -184,6 +235,13 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             Console.WriteLine(nodeMessage.ToString());
         }
 
+        private void WriteTeamcityTestOutput(string testName, string details)
+        {
+            Console.WriteLine("##teamcity[testStdOut name='{0}' out='{1}']",
+                testName,
+                TeamCityEscape(details));
+        }
+
         private static ConsoleColor ColorForLogLevel(LogLevel level)
         {
             var color = ConsoleColor.DarkGray;
@@ -207,6 +265,22 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         }
 
         #endregion
+
+        static string TeamCityEscape(string value)
+        {
+            if (value == null)
+                return String.Empty;
+
+            return value.Replace("|", "||")
+                        .Replace("'", "|'")
+                        .Replace("\r", "|r")
+                        .Replace("\n", "|n")
+                        .Replace("]", "|]")
+                        .Replace("[", "|[")
+                        .Replace("\u0085", "|x")
+                        .Replace("\u2028", "|l")
+                        .Replace("\u2029", "|p");
+        }
     }
 
     /// <summary>
@@ -214,8 +288,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     /// </summary>
     public class ConsoleMessageSink : MessageSink
     {
-        public ConsoleMessageSink()
-            : base(Props.Create(() => new ConsoleMessageSinkActor(true)))
+        public ConsoleMessageSink(bool teamcityOutput = false)
+            : base(Props.Create(() => new ConsoleMessageSinkActor(true, teamcityOutput)))
         {
         }
 

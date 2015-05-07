@@ -8,51 +8,38 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using System.Threading;
 using Akka.MultiNodeTestRunner.Shared;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.MultiNodeTestRunner
 {
-    internal class Discovery : MarshalByRefObject, IMessageSink, IDisposable
+    [Serializable]
+    public class Discovery : TestMessageVisitor<IDiscoveryCompleteMessage>
     {
-        public Dictionary<string, List<NodeTest>> Tests { get; set; }
+        public Dictionary<string, List<NodeTest>> TestCases { get; private set; }
 
         public Discovery()
         {
-            Tests = new Dictionary<string, List<NodeTest>>();
-            Finished = new ManualResetEvent(false);
+            TestCases = new Dictionary<string, List<NodeTest>>();
         }
 
-        public ManualResetEvent Finished { get; private set; }
-
-        public IMessageSink NextSink { get; private set; }
-
-        public bool OnMessage(IMessageSinkMessage message)
+        protected override bool Visit(ITestCaseDiscoveryMessage discovery)
         {
-            var testCaseDiscoveryMessage = message as ITestCaseDiscoveryMessage;
-            if (testCaseDiscoveryMessage != null)
+            if (!Regex.IsMatch(discovery.TestClass.Class.Name, @"\d+$"))
+                return true;
+
+            var details = GetTestDetails(discovery);
+            List<NodeTest> tests;
+            if (TestCases.TryGetValue(details.TestName, out tests))
             {
-                //TODO: Improve this
-                if (Regex.IsMatch(testCaseDiscoveryMessage.TestClass.Class.Name, @"\d+$"))
-                {
-                    var details = GetTestDetails(testCaseDiscoveryMessage);
-                    List<NodeTest> tests;
-                    if (Tests.TryGetValue(details.TestName, out tests))
-                    {
-                        tests.Add(details);
-                    }
-                    else
-                    {
-                        tests = new List<NodeTest>(new[] {details});
-                    }
-                    Tests[details.TestName] = tests;
-                }
+                tests.Add(details);
             }
-
-            if (message is IDiscoveryCompleteMessage)
-                Finished.Set();
-
+            else
+            {
+                tests = new List<NodeTest>(new[] { details });
+            }
+            TestCases[details.TestName] = tests;
             return true;
         }
 
@@ -68,10 +55,6 @@ namespace Akka.MultiNodeTestRunner
                 MethodName = nodeTest.TestCase.TestMethod.Method.Name
             };
         }
-
-        public void Dispose()
-        {
-            Finished.Dispose();
-        }
     }
 }
+
