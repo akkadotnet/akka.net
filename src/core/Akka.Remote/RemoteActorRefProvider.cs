@@ -50,7 +50,7 @@ namespace Akka.Remote
                 return _internals ??
                        (_internals =
                            new Internals(new Remoting(_system, this), _system.Serialization,
-                               new RemoteDaemon(_system, RootPath / "remote", SystemGuardian, _remotingTerminator, _log)));
+                               new RemoteDaemon(_system, RootPath / "remote", SystemGuardian, _log)));
             }
         }
 
@@ -93,8 +93,8 @@ namespace Akka.Remote
             _local.UnregisterTempActor(path);
         }
 
-        private volatile IActorRef _remoteWatcher;
-        private volatile IActorRef _remotingTerminator;
+        //TODO: Why volatile?
+        private IActorRef _remoteWatcher;
 
         public virtual void Init(ActorSystemImpl system)
         {
@@ -102,12 +102,7 @@ namespace Akka.Remote
 
             _local.Init(system);
 
-            _remotingTerminator =
-                system.SystemActorOf(
-                    RemoteSettings.ConfigureDispatcher(Props.Create(() => new RemotingTerminator(_local.SystemGuardian))),
-                    "remoting-terminator");
-
-            _remotingTerminator.Tell(RemoteInternals);
+            //TODO: RemotingTerminator
 
             Transport.Start();
             _remoteWatcher = CreateRemoteWatcher(system);
@@ -447,85 +442,28 @@ namespace Akka.Remote
         private class RemotingTerminator : FSM<TerminatorState, Internals>
         {
             private readonly IActorRef _systemGuardian;
-            private readonly ILoggingAdapter _log;
 
             public RemotingTerminator(IActorRef systemGuardian)
             {
                 _systemGuardian = systemGuardian;
-                _log = Context.GetLogger();
                 InitFSM();
             }
 
             private void InitFSM()
             {
+
                 When(TerminatorState.Uninitialized, @event =>
                 {
-                    var internals = @event.FsmEvent as Internals;
+                    var internals = @event.StateData;
                     if (internals != null)
                     {
-                        _systemGuardian.Tell(RegisterTerminationHook.Instance);
+                        //TODO: add a termination hook to the system guardian
                         return GoTo(TerminatorState.Idle).Using(internals);
                     }
                     return null;
                 });
 
-                When(TerminatorState.Idle, @event =>
-                {
-                    if (@event.StateData != null && @event.FsmEvent is TerminationHook)
-                    {
-                        _log.Info("Shutting down remote daemon.");
-                        @event.StateData.RemoteDaemon.Tell(TerminationHook.Instance);
-                        return GoTo(TerminatorState.WaitDaemonShutdown);
-                    }
-                    return null;
-                });
-
-                When(TerminatorState.WaitDaemonShutdown, @event =>
-                {
-                    if (@event.StateData != null && @event.FsmEvent is TerminationHookDone)
-                    {
-                        _log.Info("Remote daemon shut down; proceeding with flushing remote transports.");
-                        @event.StateData.Transport.Shutdown()
-                            .ContinueWith(t => TransportShutdown.Instance,
-                                TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
-                            .PipeTo(Self);
-                        return GoTo(TerminatorState.WaitTransportShutdown);
-                    }
-
-                    return null;
-                });
-
-                When(TerminatorState.WaitTransportShutdown, @event =>
-                {
-                    if (@event.FsmEvent is TransportShutdown)
-                    {
-                        _log.Info("Remoting shut down.");
-                        _systemGuardian.Tell(TerminationHookDone.Instance);
-                        Stop();
-                        return GoTo(TerminatorState.Finished);
-                    }
-                    return null;
-                });
-
                 StartWith(TerminatorState.Uninitialized, null);
-            }
-
-            public sealed class TransportShutdown
-            {
-                private TransportShutdown() { }
-                private static readonly TransportShutdown _instance = new TransportShutdown();
-                public static TransportShutdown Instance
-                {
-                    get
-                    {
-                        return _instance;
-                    }
-                }
-
-                public override string ToString()
-                {
-                    return "<TransportShutdown>";
-                }
             }
         }
 

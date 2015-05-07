@@ -77,7 +77,6 @@ namespace Akka.Remote.TestKit
                             w.SetFailure(
                                 InjectFailure.CreateBuilder()
                                     .SetAddress(Address2Proto(throttle.Target))
-                                    .SetFailure(FailType.Throttle)
                                     .SetDirection(Direction2Proto(throttle.Direction))
                                     .SetRateMBit(throttle.RateMBit)))
                     .With<DisconnectMsg>(

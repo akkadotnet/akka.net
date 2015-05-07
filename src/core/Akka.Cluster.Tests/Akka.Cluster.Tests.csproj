@@ -77,6 +77,7 @@
     <Compile Include="MultiNode\JoinSeedNodeSpec.cs" />
     <Compile Include="MultiNode\LeaderLeavingSpec.cs" />
     <Compile Include="MultiNode\MultiNodeClusterSpec.cs" />
+    <Compile Include="MultiNode\MultiNodeFact.cs" />
     <Compile Include="MultiNode\MultiNodeLoggingConfig.cs" />
     <Compile Include="MultiNode\Routing\ClusterConsistentHashingGroupSpec.cs" />
     <Compile Include="MultiNode\Routing\ClusterConsistentHashingRouterSpec.cs" />

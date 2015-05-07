@@ -680,7 +680,7 @@ namespace Akka.Remote
                 if (_listens == null)
                 {
                     /*
-                 * Constructs chains of adapters on top of each driver given in configuration. The resulting structure looks like the following:
+                 * Constructs chains of adapters on top of each driven given in configuration. The result structure looks like the following:
                  * 
                  *      AkkaProtocolTransport <-- Adapter <-- ... <-- Adapter <-- Driver
                  * 
