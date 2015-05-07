@@ -27,6 +27,16 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
+        /// Determines if an array is not null or empty.
+        /// </summary>
+        /// <param name="obj">The array to check.</param>
+        /// <returns>True if not null or empty, false otherwise.</returns>
+        public static bool NonEmpty(this Array obj)
+        {
+            return obj != null && obj.Length > 0;
+        }
+
+        /// <summary>
         /// Shuffles an array of objects.
         /// </summary>
         /// <typeparam name="T">The type of the array to sort.</typeparam>
