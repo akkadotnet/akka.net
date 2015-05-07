@@ -234,6 +234,8 @@
     <Compile Include="Routing\TailChoppingPool.cs" />
     <Compile Include="Serialization\JavaSerializer.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
+    <Compile Include="Util\Internal\Collections\EnumeratorExtensions.cs" />
+    <Compile Include="Util\Internal\Collections\Iterator.cs" />
     <Compile Include="Util\Internal\ImmutabilityUtils.cs" />
     <Compile Include="Util\Internal\InterlockedSpin.cs" />
     <Compile Include="Util\Internal\Collections\EmptyReadOnlyCollections.cs" />
@@ -297,6 +299,7 @@
     <Compile Include="PatternMatch.cs" />
     <Compile Include="Util\Resolver.cs" />
     <Compile Include="Util\ThreadLocalRandom.cs" />
+    <Compile Include="Util\Vector.cs" />
     <Compile Include="Util\WildcardTree.cs" />
     <Compile Include="Util\MatchHandler\Argument.cs" />
     <Compile Include="Util\MatchHandler\CachedMatchCompiler.cs" />
