@@ -441,18 +441,18 @@ namespace Akka.Remote.TestKit
                         else if (throttleMsg.RateMBit < 0.0f) mode = Blackhole.Instance;
                         else mode = new TokenBucket(1000, throttleMsg.RateMBit*125000, 0, 0);
 
-                        TestConductor.Get(Context.System)
-                            .Transport.ManagementCommand(new SetThrottle(throttleMsg.Target, throttleMsg.Direction,
-                                mode))
-                            .ContinueWith(t =>
-                            {
-                                if (t.IsFaulted)
-                                    throw new Exception("Throttle was requested from the TestConductor, but no transport " +
-                                                        "adapters available that support throttling. Specify 'testTransport(on=true)' in your MultiNodeConfig");
-                                return new ToServer<Done>(Done.Instance);
-                            }, TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
-                            .PipeTo(Self);
+                        var cmdTask =
+                            TestConductor.Get(Context.System)
+                                .Transport.ManagementCommand(new SetThrottle(throttleMsg.Target, throttleMsg.Direction,
+                                    mode));
 
+                        cmdTask.ContinueWith(t =>
+                        {
+                            if (t.IsFaulted)
+                                throw new Exception("Throttle was requested from the TestConductor, but no transport " +
+                                                    "adapters available that support throttling. Specify 'testTransport(on=true)' in your MultiNodeConfig");
+                            Self.Tell(new ToServer<Done>(Done.Instance));
+                        });
                         return Stay();
                     }
                     if (@event.FsmEvent is DisconnectMsg)
@@ -573,10 +573,7 @@ namespace Akka.Remote.TestKit
             }
             _fsm.Tell(PoisonPill.Instance);
             //TODO: Some logic here in JVM version to execute this on a different pool to the Netty IO pool
-            Task.Run(() =>
-            {
-                RemoteConnection.Shutdown(closedChannel);
-            });
+            RemoteConnection.Shutdown(closedChannel);
         }
 
         public void OnMessage(object message, IConnection responseChannel)
