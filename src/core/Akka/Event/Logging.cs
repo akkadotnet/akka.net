@@ -25,6 +25,8 @@ namespace Akka.Event
         private const string Info = "INFO";
         private const string Warning = "WARNING";
         private const string Error = "ERROR";
+        private const string Off = "OFF";
+        private const LogLevel OffLogLevel = (LogLevel) int.MaxValue;
 
         /// <summary>
         /// Returns an instance of the standard out logger.
@@ -72,6 +74,8 @@ namespace Akka.Event
                     return Warning;
                 case LogLevel.ErrorLevel:
                     return Error;
+                case OffLogLevel:
+                    return Off;
                 default:
                     throw new ArgumentException("Unknown LogLevel", "logLevel");
             }
@@ -149,6 +153,8 @@ namespace Akka.Event
                     return LogLevel.WarningLevel;
                 case Error:
                     return LogLevel.ErrorLevel;
+                case Off:
+                    return OffLogLevel;
                 default:
                     throw new ArgumentException(string.Format("Unknown LogLevel: \"{0}\". Valid values are: \"{1}\", \"{2}\", \"{3}\", \"{4}\"", logLevel, Debug, Info, Warning, Error), logLevel);
             }
