@@ -538,10 +538,12 @@ Target "HelpDocs" <| fun _ ->
 //docs dependencies
 "BuildRelease" ==> "Docs" ==> "AzureDocsDeploy" ==> "PublishDocs"
 
+"BuildRelease" ==> "MultiNodeTests"
+
 Target "All" DoNothing
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
-"BuildRelease" ==> "MultiNodeTests" //Invovles a lot of BIN copying.
+"MultiNodeTests" ==> "All" //Invovles a lot of BIN copying.
 "Nuget" ==> "All"
 
 RunTargetOrDefault "Help"
