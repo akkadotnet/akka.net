@@ -69,7 +69,11 @@ namespace Akka.Routing
                 else if (poolSize.Change < 0)
                 {
                     var currentRoutees = Cell.Router.Routees.ToArray();
-                    var abandon = currentRoutees.Drop(currentRoutees.Length + poolSize.Change);
+
+                    var abandon = currentRoutees
+                        .Drop(currentRoutees.Length + poolSize.Change)
+                        .ToList();
+
                     Cell.RemoveRoutees(abandon, true);
                 }
             }

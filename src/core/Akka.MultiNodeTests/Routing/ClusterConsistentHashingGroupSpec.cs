@@ -120,11 +120,11 @@ namespace Akka.MultiNodeTests.Routing
                 return null;
             };
 
-            var paths = new List<string>() { "/user/dest" };
+            var paths = new List<string> { "/user/dest" };
             var router =
                 Sys.ActorOf(
                     new ClusterRouterGroup(new ConsistentHashingGroup(paths).WithHashMapping(hashMapping),
-                        new ClusterRouterGroupSettings(10, true, null, ImmutableHashSet.Create<string>(paths.ToArray())))
+                        new ClusterRouterGroupSettings(10, true, null, ImmutableHashSet.Create(paths.ToArray())))
                         .Props(), "router");
 
             // it may take some time until router receives cluster member events
@@ -139,7 +139,7 @@ namespace Akka.MultiNodeTests.Routing
                 router.Tell(key, TestActor);
             }
             EnterBarrier("messages-sent");
-            router.Tell(new Broadcast(new Get()));
+            router.Tell(new Broadcast(new ClusterConsistentHashingGroupSpecConfig.Get()));
             var a = ExpectMsg<ClusterConsistentHashingGroupSpecConfig.Collected>().Messages;
             var b = ExpectMsg<ClusterConsistentHashingGroupSpecConfig.Collected>().Messages;
             var c = ExpectMsg<ClusterConsistentHashingGroupSpecConfig.Collected>().Messages;

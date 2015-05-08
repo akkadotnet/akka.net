@@ -87,7 +87,7 @@ namespace Akka.Tests.Actor
         public async Task CanResolveOne()
         {
             var selection = Sys.ActorSelection("user/test");
-            var one = await selection.ResolveOne(TimeSpan.FromSeconds(1));            
+            var one = await selection.ResolveOne(TimeSpan.FromSeconds(1));
             Assert.NotNull(one);
         }
 
