@@ -60,7 +60,7 @@ namespace Akka.MultiNodeTestRunner
         static void Main(string[] args)
         {
             TestRunSystem = ActorSystem.Create("TestRunnerLogging");
-            SinkCoordinator = TestRunSystem.ActorOf(Props.Create<SinkCoordinator>(), "sinkCoordinator");
+            SinkCoordinator = TestRunSystem.ActorOf(Props.Create(() => new SinkCoordinator(true)), "sinkCoordinator");
 
             var assemblyName = args[0];
 
