@@ -85,6 +85,10 @@
       <Project>{11f4d4b8-7e07-4457-abf2-609b3e7b2649}</Project>
       <Name>Akka.TestKit.Xunit</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj">
+      <Project>{3b9e6211-9488-4db5-b714-24248693b38f}</Project>
+      <Name>Akka.Persistence.Sql.Common</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Akka.Persistence.SqlServer\Akka.Persistence.SqlServer.csproj">
       <Project>{bac85686-afc4-413e-98dc-5ed8f468bc63}</Project>
       <Name>Akka.Persistence.SqlServer</Name>

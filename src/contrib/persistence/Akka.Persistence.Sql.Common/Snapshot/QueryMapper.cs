@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Data.SqlClient;
+using System.Data.Common;
 
-namespace Akka.Persistence.SqlServer.Snapshot
+namespace Akka.Persistence.Sql.Common.Snapshot
 {
     /// <summary>
     /// Mapper used to map results of snapshot SELECT queries into valid snapshot objects.
@@ -11,7 +11,7 @@ namespace Akka.Persistence.SqlServer.Snapshot
         /// <summary>
         /// Map data found under current cursor pointed by SQL data reader into <see cref="SelectedSnapshot"/> instance.
         /// </summary>
-        SelectedSnapshot Map(SqlDataReader reader);
+        SelectedSnapshot Map(DbDataReader reader);
     }
 
     internal class DefaultSnapshotQueryMapper : ISnapshotQueryMapper
@@ -23,7 +23,7 @@ namespace Akka.Persistence.SqlServer.Snapshot
             _serialization = serialization;
         }
 
-        public SelectedSnapshot Map(SqlDataReader reader)
+        public SelectedSnapshot Map(DbDataReader reader)
         {
             var persistenceId = reader.GetString(0);
             var sequenceNr = reader.GetInt64(1);
@@ -35,7 +35,7 @@ namespace Akka.Persistence.SqlServer.Snapshot
             return new SelectedSnapshot(metadata, snapshot);
         }
 
-        private object GetSnapshot(SqlDataReader reader)
+        private object GetSnapshot(DbDataReader reader)
         {
             var type = Type.GetType(reader.GetString(3), true);
             var serializer = _serialization.FindSerializerForType(type);
