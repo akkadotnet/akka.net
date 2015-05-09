@@ -655,6 +655,7 @@ namespace Akka.Cluster
         private bool _logInfo;
 
         readonly IActorRef _publisher;
+        private int _leaderActionCounter = 0;
 
         public ClusterCoreDaemon(IActorRef publisher)
         {
@@ -1042,14 +1043,23 @@ namespace Akka.Cluster
             else
             {
                 var localMembers = _latestGossip.Members;
+                var localMember = localMembers.FirstOrDefault(m => m.Address == node.Address);
 
-                // check by address without uid to make sure that node with same host:port is not allowed
-                // to join until previous node with that host:port has been removed from the cluster
-                var alreadyMember = localMembers.Any(m => m.Address == node.Address);
-                var isUnreachable = !_latestGossip.Overview.Reachability.IsReachable(node);
-
-                if (alreadyMember) _log.Info("Existing member [{0}] is trying to join, ignoring", node);
-                else if (isUnreachable) _log.Info("Unreachable member [{0}] is trying to join, ignoring", node);
+                if (localMember != null && localMember.UniqueAddress == node)
+                {
+                    _log.Info("Existing member [{0}] is joining again.", node);
+                    if (!node.Equals(SelfUniqueAddress))
+                    {
+                        Sender.Tell(new InternalClusterAction.Welcome(SelfUniqueAddress, _latestGossip));
+                    }
+                }
+                else if (localMember != null)
+                {
+                    _log.Info("New incarnation of existing member [{0}] is trying to join. " +
+                        "Existing will be removed from the cluster and then new member will be allowed to join.", node);
+                    if (localMember.Status != MemberStatus.Down && localMember.Status != MemberStatus.Leaving && localMember.Status != MemberStatus.Exiting)
+                        Downing(localMember.Address);
+                }
                 else
                 {
                     // remove the node from the failure detector
@@ -1243,11 +1253,6 @@ namespace Akka.Cluster
                     from.Address, envelope.To);
                 return ReceiveGossipType.Ignored;
             }
-            if (!remoteGossip.Overview.Reachability.IsReachable(SelfUniqueAddress))
-            {
-                _log.Info("Ignoring received gossip with myself as unreachable, from [{0}]", from.Address);
-                return ReceiveGossipType.Ignored;
-            }
             if (!localGossip.Overview.Reachability.IsReachable(SelfUniqueAddress, from))
             {
                 _log.Info("Ignoring received gossip from unreachable [{0}]", from);
@@ -1266,8 +1271,8 @@ namespace Akka.Cluster
 
             var comparison = remoteGossip.Version.CompareTo(localGossip.Version);
 
-            Gossip winningGossip = null;
-            bool talkback = false;
+            Gossip winningGossip;
+            bool talkback;
             ReceiveGossipType gossipType;
 
             switch (comparison)
@@ -1449,11 +1454,33 @@ namespace Akka.Cluster
         /// </summary>
         public void LeaderActions()
         {
-            if (_latestGossip.IsLeader(SelfUniqueAddress))
+            if (_latestGossip.IsLeader(SelfUniqueAddress, SelfUniqueAddress))
             {
                 // only run the leader actions if we are the LEADER
-                if (_latestGossip.Convergence)
+                const int firstNotice = 20;
+                const int periodicNotice = 60;
+                if (_latestGossip.Convergence(SelfUniqueAddress))
+                {
+                    if (_leaderActionCounter >= firstNotice)
+                        _log.Info("Leader can perform its duties again");
+                    _leaderActionCounter = 0;
                     LeaderActionsOnConvergence();
+                }
+                else
+                {
+                    _leaderActionCounter += 1;
+                    if (_leaderActionCounter == firstNotice || _leaderActionCounter%periodicNotice == 0)
+                    {
+                        _log.Info(
+                            "Leader can currently not perform its duties, reachability status: [{0}], member status: [{1}]",
+                            _latestGossip.ReachabilityExcludingDownedObservers,
+                            string.Join(", ", _latestGossip.Members
+                                .Select(m => string.Format("${0} ${1} seen=${2}",
+                                    m.Address,
+                                    m.Status,
+                                    _latestGossip.SeenByNode(m.UniqueAddress)))));
+                    }
+                }
             }
         }
 
@@ -1687,7 +1714,7 @@ namespace Akka.Cluster
         public bool ValidNodeForGossip(UniqueAddress node)
         {
             return !node.Equals(SelfUniqueAddress) && _latestGossip.HasMember(node) &&
-                    _latestGossip.Overview.Reachability.IsReachable(node);
+                    _latestGossip.ReachabilityExcludingDownedObservers.IsReachable(node);
         }
 
         public void UpdateLatestGossip(Gossip newGossip)

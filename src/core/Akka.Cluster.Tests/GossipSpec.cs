@@ -31,7 +31,7 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void AGossipMustReachConvergenceWhenItsEmpty()
         {
-            Assert.True(Gossip.Empty.Convergence);
+            Assert.True(Gossip.Empty.Convergence(a1.UniqueAddress));
         }
 
         [Fact]
@@ -91,9 +91,9 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void AGossipMustHaveLeaderAsFirstMemberBasedOnOrderingExceptExitingStatus()
         {
-            Assert.Equal(c2.UniqueAddress, new Gossip(ImmutableSortedSet.Create(c2, e2)).Leader);
-            Assert.Equal(e2.UniqueAddress, new Gossip(ImmutableSortedSet.Create(c3, e2)).Leader);
-            Assert.Equal(c3.UniqueAddress, new Gossip(ImmutableSortedSet.Create(c3)).Leader);
+            Assert.Equal(c2.UniqueAddress, new Gossip(ImmutableSortedSet.Create(c2, e2)).Leader(c2.UniqueAddress));
+            Assert.Equal(e2.UniqueAddress, new Gossip(ImmutableSortedSet.Create(c3, e2)).Leader(e2.UniqueAddress));
+            Assert.Equal(c3.UniqueAddress, new Gossip(ImmutableSortedSet.Create(c3)).Leader(c3.UniqueAddress));
         }
 
         [Fact]
