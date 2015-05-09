@@ -824,7 +824,17 @@ namespace Akka.Remote
         {
             if (_handle == null)
             {
-                Transport.Associate(RemoteAddress, _refuseUid).ContinueWith(x => new Handle(x.Result),
+                Transport
+                    .Associate(RemoteAddress, _refuseUid)
+                    .ContinueWith(handle =>
+                    {
+                        if (handle.IsFaulted)
+                        {
+                            var inner = handle.Exception.Flatten().InnerException;
+                            return (object)new Status.Failure(new InvalidAssociationException("Association failure", inner));
+                        }
+                        return new Handle(handle.Result);
+                    },
                     TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
                     .PipeTo(Self);
             }
