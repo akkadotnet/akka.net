@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="DIActorContextAdapter.cs" company="Akka.NET Project">
+// <copyright file="DIActorSystemAdapter.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
 //     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -10,26 +10,25 @@ using Akka.Actor;
 
 namespace Akka.DI.Core
 {
-    public class DIActorContextAdapter
+    public class DIActorSystemAdapter
     {
         readonly DIExt producer;
-        readonly IActorContext context;
-        public DIActorContextAdapter(IActorContext context)
+        readonly ActorSystem system;
+        public DIActorSystemAdapter(ActorSystem system)
         {
-            if (context == null) throw new ArgumentNullException("context");
-            this.context = context;
-            this.producer = context.System.GetExtension<DIExt>();
+            if (system == null) throw new ArgumentNullException("system");
+            this.system = system;
+            this.producer = system.GetExtension<DIExt>();
         }
         public IActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
         {
-            return context.ActorOf(producer.Props(typeof(TActor)), name);
+            return system.ActorOf(producer.Props(typeof(TActor)), name);
         }
 
         public Props Props<TActor>() where TActor : ActorBase
         {
             return producer.Props(typeof(TActor));
         }
-
     }
 }
 
