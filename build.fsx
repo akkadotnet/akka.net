@@ -36,14 +36,14 @@ let parsedRelease =
     File.ReadLines "RELEASE_NOTES.md"
     |> ReleaseNotesHelper.parseReleaseNotes
 
-//Fake.ReleaseNotesHelper.Parse assumes letters+int in PreRelease.TryParse. 
-//This means we cannot append the full date yyyMMddHHmmss to prerelease. 
-//See https://github.com/fsharp/FAKE/issues/522
-//TODO: When this has been fixed, switch to DateTime.UtcNow.ToString("yyyyMMddHHmmss")
-let preReleaseVersion = parsedRelease.AssemblyVersion + "-" + (getBuildParamOrDefault "nugetprerelease" "pre") + DateTime.UtcNow.ToString("yyMMddHHmm")
+let envBuildNumber = System.Environment.GetEnvironmentVariable("BUILD_NUMBER")
+let buildNumber = if String.IsNullOrWhiteSpace(envBuildNumber) then "0" else envBuildNumber
+
+let version = parsedRelease.AssemblyVersion + "." + buildNumber
+
 let isUnstableDocs = hasBuildParam "unstable"
 let isPreRelease = hasBuildParam "nugetprerelease"
-let release = if isPreRelease then ReleaseNotesHelper.ReleaseNotes.New(parsedRelease.AssemblyVersion, preReleaseVersion, parsedRelease.Notes) else parsedRelease
+let release = if isPreRelease then ReleaseNotesHelper.ReleaseNotes.New(version, version + " -beta", parsedRelease.Notes) else parsedRelease
 
 printfn "Assembly version: %s\nNuget version; %s\n" release.AssemblyVersion release.NugetVersion
 //--------------------------------------------------------------------------------
@@ -77,15 +77,21 @@ Target "Clean" <| fun _ ->
 // Generate AssemblyInfo files with the version for release notes 
 
 open AssemblyInfoFile
+
 Target "AssemblyInfo" <| fun _ ->
+    CreateCSharpAssemblyInfoWithConfig "src/SharedAssemblyInfo.cs" [
+        Attribute.Company company
+        Attribute.Copyright copyright
+        Attribute.Trademark ""
+        Attribute.Version version
+        Attribute.FileVersion version ] <| AssemblyInfoFileConfig(false)
+
     for file in !! "src/**/AssemblyInfo.fs" do
         let title =
             file
             |> Path.GetDirectoryName
             |> Path.GetDirectoryName
             |> Path.GetFileName
-        
-        let version = release.AssemblyVersion + ".0"
 
         CreateFSharpAssemblyInfo file [ 
             Attribute.Title title
@@ -98,12 +104,6 @@ Target "AssemblyInfo" <| fun _ ->
             Attribute.Version version
             Attribute.FileVersion version ]
 
-        CreateCSharpAssemblyInfoWithConfig "src/SharedAssemblyInfo.cs" [
-            Attribute.Company company
-            Attribute.Copyright copyright
-            Attribute.Trademark ""
-            Attribute.Version version
-            Attribute.FileVersion version ] |> ignore
 
 //--------------------------------------------------------------------------------
 // Build the solution
@@ -281,8 +281,8 @@ module Nuget =
         match project with
         | "Akka" -> []
         | "Akka.Cluster" -> ["Akka.Remote", release.NugetVersion]
-        | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion]
-        | "Akka.Persistence.FSharp" -> ["Akka.Persistence", preReleaseVersion]
+        | "Akka.Persistence.TestKit" -> ["Akka.Persistence", release.NugetVersion]
+        | "Akka.Persistence.FSharp" -> ["Akka.Persistence", release.NugetVersion]
         | di when (di.StartsWith("Akka.DI.") && not (di.EndsWith("Core"))) -> ["Akka.DI.Core", release.NugetVersion]
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
@@ -290,8 +290,8 @@ module Nuget =
     // used to add -pre suffix to pre-release packages
     let getProjectVersion project =
       match project with
-      | "Akka.Cluster" -> preReleaseVersion
-      | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
+      | "Akka.Cluster" -> release.NugetVersion
+      | persistence when persistence.StartsWith("Akka.Persistence") -> release.NugetVersion
       | _ -> release.NugetVersion
 
 open Nuget
