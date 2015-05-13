@@ -69,6 +69,10 @@
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\clustersingleton\Akka.ClusterSingleton\Akka.ClusterSingleton.csproj">
+      <Project>{3644b55e-7a7b-4402-89fb-1ef1f5ee6a8e}</Project>
+      <Name>Akka.ClusterSingleton</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

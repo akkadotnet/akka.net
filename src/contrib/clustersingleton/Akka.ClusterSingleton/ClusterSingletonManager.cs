@@ -8,7 +8,7 @@ using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
 
-namespace Akka.Contrib.Pattern
+namespace Akka.ClusterSingleton
 {
     internal sealed class HandOverToMe { }
 
@@ -903,5 +903,23 @@ namespace Akka.Contrib.Pattern
                     maxTakeOverRetries,
                     retryInterval).WithDeploy(Deploy.Local);
         }
+
+        public static Props Props(
+            Props singletonProps,
+            string singletonName,
+            object terminationMessage,
+            string role)
+        {
+            return
+                ClusterSingletonManager.Props(
+                    singletonProps,
+                    singletonName,
+                    terminationMessage,
+                    role,
+                    maxHandOverRetries: 10,
+                    maxTakeOverRetries: 5,
+                    retryInterval: TimeSpan.FromSeconds(1.0));
+        }
+
     }
 }
