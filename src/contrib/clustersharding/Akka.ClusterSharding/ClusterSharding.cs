@@ -5,6 +5,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence;
+using Akka.ClusterSingleton;
 
 namespace Akka.ClusterSharding
 {

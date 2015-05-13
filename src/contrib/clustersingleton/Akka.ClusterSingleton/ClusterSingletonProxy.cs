@@ -6,7 +6,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Cluster;
 
-namespace Akka.Contrib.Pattern
+namespace Akka.ClusterSingleton
 {
         
     internal sealed class ClusterSingletonProxyActor : UntypedActor, IWithUnboundedStash
