@@ -198,6 +198,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ClusterSharding", "ClusterS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.ClusterSharding", "contrib\clustersharding\Akka.ClusterSharding\Akka.ClusterSharding.csproj", "{2FF1A911-5E34-46DB-B2A8-6AFB65259FB4}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ClusterSingleton", "ClusterSingleton", "{701D29CE-E37B-4C23-944B-55E873093B49}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.ClusterSingleton", "contrib\clustersingleton\Akka.ClusterSingleton\Akka.ClusterSingleton.csproj", "{3644B55E-7A7B-4402-89FB-1EF1F5EE6A8E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug Mono|Any CPU = Debug Mono|Any CPU
@@ -715,6 +719,14 @@ Global
 		{2FF1A911-5E34-46DB-B2A8-6AFB65259FB4}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{2FF1A911-5E34-46DB-B2A8-6AFB65259FB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2FF1A911-5E34-46DB-B2A8-6AFB65259FB4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3644B55E-7A7B-4402-89FB-1EF1F5EE6A8E}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{3644B55E-7A7B-4402-89FB-1EF1F5EE6A8E}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{3644B55E-7A7B-4402-89FB-1EF1F5EE6A8E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3644B55E-7A7B-4402-89FB-1EF1F5EE6A8E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3644B55E-7A7B-4402-89FB-1EF1F5EE6A8E}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{3644B55E-7A7B-4402-89FB-1EF1F5EE6A8E}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{3644B55E-7A7B-4402-89FB-1EF1F5EE6A8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3644B55E-7A7B-4402-89FB-1EF1F5EE6A8E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -803,5 +815,7 @@ Global
 		{5A3C24D7-0D1C-4974-BBB4-22AC792666DE} = {264C22A4-CAFC-41F6-B82C-4DDC5C196767}
 		{D8F27F25-4EC3-4746-B3A8-BC94413A6830} = {588C1513-FAB6-42C3-B6FC-3485F13620CF}
 		{2FF1A911-5E34-46DB-B2A8-6AFB65259FB4} = {D8F27F25-4EC3-4746-B3A8-BC94413A6830}
+		{701D29CE-E37B-4C23-944B-55E873093B49} = {588C1513-FAB6-42C3-B6FC-3485F13620CF}
+		{3644B55E-7A7B-4402-89FB-1EF1F5EE6A8E} = {701D29CE-E37B-4C23-944B-55E873093B49}
 	EndGlobalSection
 EndGlobal
