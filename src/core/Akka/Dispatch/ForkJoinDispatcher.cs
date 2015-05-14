@@ -26,7 +26,8 @@ namespace Akka.Dispatch
             if (dtp == null || dtp.IsEmpty) throw new ConfigurationException(string.Format("must define section dedicated-thread-pool for ForkJoinDispatcher {0}", config.GetString("id", "unknown")));
 
             var settings = new DedicatedThreadPoolSettings(dtp.GetInt("thread-count"), 
-                DedicatedThreadPoolConfigHelpers.ConfigureThreadType(dtp.GetString("threadtype", ThreadType.Background.ToString())), 
+                DedicatedThreadPoolConfigHelpers.ConfigureThreadType(dtp.GetString("threadtype", ThreadType.Background.ToString())),
+                config.GetString("id"),
                 DedicatedThreadPoolConfigHelpers.GetSafeDeadlockTimeout(dtp));
             _instance = new ForkJoinDispatcher(this, settings);
         }
@@ -48,12 +49,12 @@ namespace Akka.Dispatch
     /// <code>
     ///     my-forkjoin-dispatcher{
     ///             type = ForkJoinDispatcher
-	///	            throughput = 100
-	///	            dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
-	///		            thread-count = 3 #number of threads
-	///		            #deadlock-timeout = 3s #optional timeout for deadlock detection
-	///		            threadtype = background #values can be "background" or "foreground"
-	///	            }
+    ///	            throughput = 100
+    ///	            dedicated-thread-pool{ #settings for Helios.DedicatedThreadPool
+    ///		            thread-count = 3 #number of threads
+    ///		            #deadlock-timeout = 3s #optional timeout for deadlock detection
+    ///		            threadtype = background #values can be "background" or "foreground"
+    ///	            }
     ///     }
     /// </code>
     /// </summary>
