@@ -793,8 +793,14 @@ namespace Akka.Remote
             }
         }
 
-        private IActorRef CreateEndpoint(Address remoteAddress, Address localAddress, AkkaProtocolTransport transport,
-            RemoteSettings endpointSettings, bool writing, AkkaProtocolHandle handleOption = null, int? refuseUid = null)
+        private IActorRef CreateEndpoint(
+            Address remoteAddress, 
+            Address localAddress, 
+            AkkaProtocolTransport transport,
+            RemoteSettings endpointSettings, 
+            bool writing, 
+            AkkaProtocolHandle handleOption = null, 
+            int? refuseUid = null)
         {
             System.Diagnostics.Debug.Assert(_transportMapping.ContainsKey(localAddress));
             System.Diagnostics.Debug.Assert(writing || refuseUid == null);
@@ -804,20 +810,24 @@ namespace Akka.Remote
             if (writing)
             {
                 endpointActor =
-                    Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(
+                    Context.ActorOf(RARP.For(Context.System)
+                    .ConfigureDispatcher(
                         ReliableDeliverySupervisor.ReliableDeliverySupervisorProps(handleOption, localAddress,
                             remoteAddress, refuseUid, transport, endpointSettings, new AkkaPduProtobuffCodec(),
-                            _receiveBuffers).WithDeploy(Deploy.Local)),
+                            _receiveBuffers, endpointSettings.Dispatcher)
+                            .WithDeploy(Deploy.Local)),
                         string.Format("reliableEndpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress),
                             endpointId.Next()));
             }
             else
             {
                 endpointActor =
-                    Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(
+                    Context.ActorOf(RARP.For(Context.System)
+                    .ConfigureDispatcher(
                         EndpointWriter.EndpointWriterProps(handleOption, localAddress, remoteAddress, refuseUid,
                             transport, endpointSettings, new AkkaPduProtobuffCodec(), _receiveBuffers,
-                            reliableDeliverySupervisor: null).WithDeploy(Deploy.Local)),
+                            reliableDeliverySupervisor: null)
+                            .WithDeploy(Deploy.Local)),
                         string.Format("endpointWriter-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress), endpointId.Next()));
             }
 

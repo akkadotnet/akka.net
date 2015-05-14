@@ -31,10 +31,12 @@ namespace Helios.Concurrency
         /// </summary>
         public const ThreadType DefaultThreadType = ThreadType.Background;
 
-        public DedicatedThreadPoolSettings(int numThreads, TimeSpan? deadlockTimeout = null) : this(numThreads, DefaultThreadType, deadlockTimeout) { }
+        public DedicatedThreadPoolSettings(int numThreads, string name, TimeSpan? deadlockTimeout = null) 
+            : this(numThreads, DefaultThreadType, name, deadlockTimeout) { }
 
-        public DedicatedThreadPoolSettings(int numThreads, ThreadType threadType, TimeSpan? deadlockTimeout = null)
+        public DedicatedThreadPoolSettings(int numThreads, ThreadType threadType, string name, TimeSpan? deadlockTimeout = null)
         {
+            Name = name;
             ThreadType = threadType;
             NumThreads = numThreads;
             DeadlockTimeout = deadlockTimeout;
@@ -61,6 +63,8 @@ namespace Helios.Concurrency
         /// and replaced.
         /// </summary>
         public TimeSpan? DeadlockTimeout { get; private set; }
+
+        public string Name { get; private set; }
     }
 
     /// <summary>
@@ -229,24 +233,20 @@ namespace Helios.Concurrency
                     //bail in the event of a shutdown
                     if (pool.ShutdownRequested) return;
 
-                    foreach (var worker in pool.Workers)
+                    for (var i = 0; i < pool.Workers.Length; i++)
                     {
-                        var w = worker;
+                        var w = pool.Workers[i];
                         if (Interlocked.Exchange(ref w.Status, 0) == 0)
                         {
                             //this requests a new new worker and calls ForceTermination on the old worker
                             //Potential problem here: if the thread is not dead for real, we might abort real work.. there is no way to tell the difference between 
                             //deadlocked or just very long running tasks
-                            var newWorker = pool.RequestThread(w);
+                            var newWorker = pool.RequestThread(w, i);
                             continue;
                         }
 
                         //schedule heartbeat action to worker
-                        worker.AddWork(() =>
-                        {
-                            Interlocked.Increment(ref w.Status);
-                        });
-
+                        pool.Workers[i].AddWork(() => Interlocked.Increment(ref w.Status));
                     }
                 }, null, pool.Settings.DeadlockTimeout.Value, pool.Settings.DeadlockTimeout.Value);
             }
@@ -269,9 +269,9 @@ namespace Helios.Concurrency
             Settings = settings;
 
             Workers = Enumerable.Repeat(0, settings.NumThreads).Select(_ => new WorkerQueue()).ToArray();
-            foreach (var worker in Workers)
+            for (var i = 0; i < Workers.Length; i++)
             {
-                new PoolWorker(worker, this, false);
+                new PoolWorker(Workers[i], this, false, i);
             }
             _supervisor = new DedicatedThreadPoolSupervisor(this);
         }
@@ -288,7 +288,7 @@ namespace Helios.Concurrency
         /// <summary>
         /// index for round-robin load-balancing across worker threads
         /// </summary>
-        private volatile int _index = 0;
+        private volatile int _index;
 
         private readonly DedicatedThreadPoolSupervisor _supervisor;
 
@@ -299,9 +299,9 @@ namespace Helios.Concurrency
             ShutdownRequested = true;
         }
 
-        private PoolWorker RequestThread(WorkerQueue unclaimedQueue, bool errorRecovery = false)
+        private PoolWorker RequestThread(WorkerQueue unclaimedQueue, int workerNumber, bool errorRecovery = false)
         {
-            var worker = new PoolWorker(unclaimedQueue, this, errorRecovery);
+            var worker = new PoolWorker(unclaimedQueue, this, errorRecovery, workerNumber);
             return worker;
         }
 
@@ -390,19 +390,22 @@ namespace Helios.Concurrency
         {
             private WorkerQueue _work;
             private DedicatedThreadPool _pool;
+            private readonly int _workerNumber;
 
             private BlockingCollection<Action> _workQueue;
             private readonly Thread _thread;
 
-            public PoolWorker(WorkerQueue work, DedicatedThreadPool pool, bool errorRecovery)
+            public PoolWorker(WorkerQueue work, DedicatedThreadPool pool, bool errorRecovery, int workerNumber)
             {
                 _work = work;
                 _pool = pool;
+                _workerNumber = workerNumber;
                 _workQueue = _work.WorkQueue;
                 _work.ReplacePoolWorker(this, errorRecovery);
-
+                
                 _thread = new Thread(() =>
                 {
+                    Thread.CurrentThread.Name = string.Format("{0}_{1}", pool.Settings.Name, _workerNumber);
                     CurrentWorker = this;
 
                     foreach (var action in _workQueue.GetConsumingEnumerable())
@@ -430,7 +433,7 @@ namespace Helios.Concurrency
             private void Failover(bool errorRecovery = false)
             {
                 /* request a new thread then shut down */
-                _pool.RequestThread(_work, errorRecovery);
+                _pool.RequestThread(_work, _workerNumber, errorRecovery);
                 CurrentWorker = null;
                 _work = null;
                 _workQueue = null;
