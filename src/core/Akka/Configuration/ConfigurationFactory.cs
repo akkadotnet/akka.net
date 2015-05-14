@@ -15,24 +15,26 @@ using Akka.Configuration.Hocon;
 namespace Akka.Configuration
 {
     /// <summary>
-    ///     Class ConfigurationFactory.
+    /// This class contains methods used to retrieve configuration information
+    /// from a variety of sources including user-supplied strings, configuration
+    /// files and assembly resources.
     /// </summary>
     public class ConfigurationFactory
     {
         /// <summary>
-        ///     Gets the empty.
+        /// Generates an empty configuration.
         /// </summary>
-        /// <value>The empty.</value>
         public static Config Empty
         {
             get { return ParseString(""); }
         }
 
         /// <summary>
-        ///     Parses the string.
+        /// Generates a configuration defined in the supplied
+        /// HOCON (Human-Optimized Config Object Notation) string.
         /// </summary>
-        /// <param name="hocon">The json.</param>
-        /// <returns>Config.</returns>
+        /// <param name="hocon">A string that contains configuration options to use.</param>
+        /// <returns>The configuration defined in the supplied HOCON string.</returns>
         public static Config ParseString(string hocon)
         {
             HoconRoot res = Parser.Parse(hocon);
@@ -40,9 +42,10 @@ namespace Akka.Configuration
         }
 
         /// <summary>
-        ///     Loads this instance.
+        /// Loads a configuration defined in the current application's
+        /// configuration file, e.g. app.config or web.config
         /// </summary>
-        /// <returns>Config.</returns>
+        /// <returns>The configuration defined in the configuration file.</returns>
         public static Config Load()
         {
             var section = (AkkaConfigurationSection)ConfigurationManager.GetSection("akka") ?? new AkkaConfigurationSection();
@@ -52,19 +55,21 @@ namespace Akka.Configuration
         }
 
         /// <summary>
-        ///     Defaults this instance.
+        /// Retrieves the default configuration that Akka.NET uses
+        /// when no configuration has been defined.
         /// </summary>
-        /// <returns>Config.</returns>
+        /// <returns>The configuration that contains default values for all options.</returns>
         public static Config Default()
         {
             return FromResource("Akka.Configuration.Pigeon.conf");
         }
 
         /// <summary>
-        ///     Froms the resource.
+        /// Retrieves a configuration defined in a resource of the
+        /// current executing assembly.
         /// </summary>
-        /// <param name="resourceName">Name of the resource.</param>
-        /// <returns>Config.</returns>
+        /// <param name="resourceName">The name of the resource that contains the configuration.</param>
+        /// <returns>The configuration defined in the current executing assembly.</returns>
         internal static Config FromResource(string resourceName)
         {
             Assembly assembly = Assembly.GetExecutingAssembly();
@@ -72,6 +77,13 @@ namespace Akka.Configuration
             return FromResource(resourceName, assembly);
         }
 
+        /// <summary>
+        /// Retrieves a configuration defined in a resource of the
+        /// assembly containing the supplied instance object.
+        /// </summary>
+        /// <param name="resourceName">The name of the resource that contains the configuration.</param>
+        /// <param name="instanceInAssembly">An instance object located in the assembly to search.</param>
+        /// <returns>The configuration defined in the assembly that contains the instanced object.</returns>
         public static Config FromResource(string resourceName, object instanceInAssembly)
         {
             var type = instanceInAssembly as Type;
@@ -83,11 +95,24 @@ namespace Akka.Configuration
             return FromResource(resourceName, instanceInAssembly.GetType().Assembly);
         }
 
-        public static Config FromResource<TypeInAssembly>(string resourceName)
+        /// <summary>
+        /// Retrieves a configuration defined in a resource of the assembly
+        /// containing the supplied type <typeparamref name="TAssembly"/>.
+        /// </summary>
+        /// <typeparam name="TAssembly">A type located in the assembly to search.</typeparam>
+        /// <param name="resourceName">The name of the resource that contains the configuration.</param>
+        /// <returns>The configuration defined in the assembly that contains the type <typeparamref name="TAssembly"/>.</returns>
+        public static Config FromResource<TAssembly>(string resourceName)
         {
-            return FromResource(resourceName, typeof(TypeInAssembly).Assembly);
+            return FromResource(resourceName, typeof(TAssembly).Assembly);
         }
 
+        /// <summary>
+        /// Retrieves a configuration defined in a resource of the supplied assembly.
+        /// </summary>
+        /// <param name="resourceName">The name of the resource that contains the configuration.</param>
+        /// <param name="assembly">The assembly that contains the given resource.</param>
+        /// <returns>The configuration defined in the assembly that contains the given resource.</returns>
         public static Config FromResource(string resourceName, Assembly assembly)
         {
             using(Stream stream = assembly.GetManifestResourceStream(resourceName))
