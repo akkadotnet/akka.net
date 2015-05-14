@@ -104,6 +104,7 @@ int-prio-mailbox {
             //pause mailbox until all messages have been told
             actor.Tell(Suspend.Instance);
 
+            AwaitCondition(()=> ((LocalActorRef)actor).Cell.Mailbox.IsSuspended);
             // creates 50 messages with values spanning from Int32.MinValue to Int32.MaxValue
             var values = new int[50];
             var increment = (int)(UInt32.MaxValue / values.Length);

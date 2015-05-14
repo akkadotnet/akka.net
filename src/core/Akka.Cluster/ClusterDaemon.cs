@@ -565,9 +565,9 @@ namespace Akka.Cluster
             // cause deadlock. The Cluster extension is currently being created and is waiting
             // for response from GetClusterCoreRef in its constructor.
             _coreSupervisor =
-                Context.ActorOf(Props.Create<ClusterCoreSupervisor>().WithDispatcher(Context.Props.Dispatcher), "core");
+                Context.ActorOf(Props.Create<ClusterCoreSupervisor>().WithDispatcher(settings.UseDispatcher), "core");
 
-            Context.ActorOf(Props.Create<ClusterHeartbeatReceiver>().WithDispatcher(Context.Props.Dispatcher), "heartbeatReceiver");
+            Context.ActorOf(Props.Create<ClusterHeartbeatReceiver>().WithDispatcher(settings.UseDispatcher), "heartbeatReceiver");
 
             _settings = settings;
         }
@@ -578,13 +578,13 @@ namespace Akka.Cluster
                 .With<InternalClusterAction.GetClusterCoreRef>(msg => _coreSupervisor.Forward(msg))
                 .With<InternalClusterAction.AddOnMemberUpListener>(
                     msg =>
-                        Context.ActorOf(Props.Create(() => new OnMemberUpListener(msg.Callback)).WithDeploy(Deploy.Local)))
+                        Context.ActorOf(Props.Create(() => new OnMemberUpListener(msg.Callback)).WithDispatcher(_settings.UseDispatcher).WithDeploy(Deploy.Local)))
                 .With<InternalClusterAction.PublisherCreated>(
                     msg =>
                     {
                         if (_settings.MetricsEnabled)
                             Context.ActorOf(
-                                Props.Create<ClusterHeartbeatReceiver>().WithDispatcher(Context.Props.Dispatcher),
+                                Props.Create<ClusterHeartbeatReceiver>().WithDispatcher(_settings.UseDispatcher),
                                 "metrics");
                     });
         }
@@ -724,7 +724,7 @@ namespace Akka.Cluster
 
             if (_cluster.Settings.AutoDownUnreachableAfter != null)
                 Context.ActorOf(
-                    AutoDown.Props(_cluster.Settings.AutoDownUnreachableAfter.Value).WithDispatcher(Context.Props.Dispatcher),
+                    AutoDown.Props(_cluster.Settings.AutoDownUnreachableAfter.Value).WithDispatcher(_cluster.Settings.UseDispatcher),
                     "autoDown");
 
             if (_cluster.Settings.SeedNodes.IsEmpty)
