@@ -24,10 +24,24 @@ namespace Akka.Actor
             sender = sender ?? ActorRefs.NoSender;
             return taskToPipe.ContinueWith(tresult =>
             {
-                if(tresult.IsCanceled  || tresult.IsFaulted)
+                if (tresult.IsCanceled || tresult.IsFaulted)
                     recipient.Tell(new Status.Failure(tresult.Exception), sender);
                 else if (tresult.IsCompleted)
                     recipient.Tell(tresult.Result, sender);
+            }, TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent);
+        }
+
+        /// <summary>
+        /// Pipes the output of a Task directly to the <see cref="recipient"/>'s mailbox once
+        /// the task completes.  As this task has no result, only exceptions will be piped to the <see cref="recipient"/>
+        /// </summary>
+        public static Task PipeTo(this Task taskToPipe, ICanTell recipient, IActorRef sender = null)
+        {
+            sender = sender ?? ActorRefs.NoSender;
+            return taskToPipe.ContinueWith(tresult =>
+            {
+                if (tresult.IsCanceled || tresult.IsFaulted)
+                    recipient.Tell(new Status.Failure(tresult.Exception), sender);
             }, TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent);
         }
     }
