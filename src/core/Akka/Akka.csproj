@@ -89,6 +89,7 @@
     <Compile Include="Actor\Internals\InternalSupportsTestFSMRef.cs" />
     <Compile Include="Actor\Internals\InitializableActor.cs" />
     <Compile Include="Actor\Scheduler\DateTimeNowTimeProvider.cs" />
+    <Compile Include="Actor\Scheduler\DedicatedThreadScheduler.cs" />
     <Compile Include="Actor\Scheduler\IDateTimeNowTimeProvider.cs" />
     <Compile Include="Actor\Scheduler\ITimeProvider.cs" />
     <Compile Include="Actor\Scheduler\DeprecatedSchedulerExtensions.cs" />
