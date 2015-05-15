@@ -32,7 +32,7 @@ namespace Akka.Actor
                     while(_workQueue.TryDequeue(out work))
                     {
                         //has work already expired?
-                        if (work.UtcTickExpires < now)
+                        if (work.TickExpires < now)
                         {
                             work.Action();
                         }
@@ -49,7 +49,7 @@ namespace Akka.Actor
                         allWork = new List<ScheduledWork>();
                         foreach (var bufferedWork in tmp)
                         {
-                            if (bufferedWork.UtcTickExpires < now)
+                            if (bufferedWork.TickExpires < now)
                             {
                                 bufferedWork.Action();
                             }
@@ -147,15 +147,15 @@ namespace Akka.Actor
 
     public class ScheduledWork
     {
-        public ScheduledWork(long utcTickExpires, Action action,CancellationToken token)
+        public ScheduledWork(long tickExpires, Action action,CancellationToken token)
         {
-            UtcTickExpires = utcTickExpires;
+            TickExpires = tickExpires;
             Action = action;
             Token = token;
         }
 
         public CancellationToken Token { get; set; }
-        public long UtcTickExpires { get; set; }
+        public long TickExpires { get; set; }
         public Action Action { get; set; }
     }
 }
