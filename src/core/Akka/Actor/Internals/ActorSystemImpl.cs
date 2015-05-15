@@ -51,11 +51,11 @@ namespace Akka.Actor.Internals
             if(config == null)
                 throw new ArgumentNullException("config");
 
-            _name = name;
-            ConfigureScheduler();
+            _name = name;            
             ConfigureSettings(config);
             ConfigureEventStream();
             ConfigureProvider();
+            ConfigureScheduler();
             ConfigureSerialization();
             ConfigureMailboxes();
             ConfigureDispatchers();
@@ -127,7 +127,7 @@ namespace Akka.Actor.Internals
 
         private void ConfigureScheduler()
         {
-            _scheduler = new TaskBasedScheduler();
+            _scheduler = new DedicatedThreadScheduler(this);;// new TaskBasedScheduler();
         }
 
         /// <summary>
