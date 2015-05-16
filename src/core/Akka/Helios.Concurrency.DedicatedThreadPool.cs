@@ -31,10 +31,12 @@ namespace Helios.Concurrency
         /// </summary>
         public const ThreadType DefaultThreadType = ThreadType.Background;
 
-        public DedicatedThreadPoolSettings(int numThreads, TimeSpan? deadlockTimeout = null) : this(numThreads, DefaultThreadType, deadlockTimeout) { }
+        public DedicatedThreadPoolSettings(int numThreads, string name, TimeSpan? deadlockTimeout = null) 
+            : this(numThreads, DefaultThreadType, name, deadlockTimeout) { }
 
-        public DedicatedThreadPoolSettings(int numThreads, ThreadType threadType, TimeSpan? deadlockTimeout = null)
+        public DedicatedThreadPoolSettings(int numThreads, ThreadType threadType, string name, TimeSpan? deadlockTimeout = null)
         {
+            Name = name;
             ThreadType = threadType;
             NumThreads = numThreads;
             DeadlockTimeout = deadlockTimeout;
@@ -61,6 +63,8 @@ namespace Helios.Concurrency
         /// and replaced.
         /// </summary>
         public TimeSpan? DeadlockTimeout { get; private set; }
+
+        public string Name { get; private set; }
     }
 
     /// <summary>
@@ -400,9 +404,10 @@ namespace Helios.Concurrency
                 _pool = pool;
                 _workQueue = _work.WorkQueue;
                 _work.ReplacePoolWorker(this, errorRecovery);
-
+                
                 _thread = new Thread(() =>
                 {
+                    Thread.CurrentThread.Name = pool.Settings.Name + "_1";
                     CurrentWorker = this;
 
                     foreach (var action in _workQueue.GetConsumingEnumerable())
