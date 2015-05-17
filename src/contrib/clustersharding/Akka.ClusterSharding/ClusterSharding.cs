@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Policy;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence;
@@ -471,33 +472,23 @@ handOffTimeout = HandOffTimeout,
         */
         public class Passivate : ShardRegionCommand
         {
-            
+            public Passivate(object stopMessage)
+            {
+                StopMessage = stopMessage;
+            }
+
+            public object StopMessage { get;private set; }
         }
 
         public class Retry : ShardRegionCommand
         {
-            
+            private static readonly Retry _instance = new Retry();
+
+            public static Retry Instance
+            {
+                get { return _instance; }
+            }
         }
-  //        sealed trait ShardRegionCommand
-
-  ///**
-  // * If the state of the entries are persistent you may stop entries that are not used to
-  // * reduce memory consumption. This is done by the application specific implementation of
-  // * the entry actors for example by defining receive timeout (`context.setReceiveTimeout`).
-  // * If a message is already enqueued to the entry when it stops itself the enqueued message
-  // * in the mailbox will be dropped. To support graceful passivation without loosing such
-  // * messages the entry actor can send this `Passivate` message to its parent `ShardRegion`.
-  // * The specified wrapped `stopMessage` will be sent back to the entry, which is
-  // * then supposed to stop itself. Incoming messages will be buffered by the `ShardRegion`
-  // * between reception of `Passivate` and termination of the entry. Such buffered messages
-  // * are thereafter delivered to a new incarnation of the entry.
-  // *
-  // * [[akka.actor.PoisonPill]] is a perfectly fine `stopMessage`.
-  // */
-  //@SerialVersionUID(1L) final case class Passivate(stopMessage: Any) extends ShardRegionCommand
-
-  //private case object Retry extends ShardRegionCommand
-
 
         private string _typeName;
         private Props _entryProps;
