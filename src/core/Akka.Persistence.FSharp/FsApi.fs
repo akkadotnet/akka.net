@@ -279,8 +279,8 @@ type Delivery<'Command, 'Event, 'State> =
     
     abstract Deliver: (int64 -> obj) -> ActorPath -> unit
     abstract ConfirmDelivery: int64 -> bool
-    abstract GetDeliverySnapshot: unit -> GuaranteedDeliverySnapshot
-    abstract SetDeliverySnapshot: GuaranteedDeliverySnapshot -> unit
+    abstract GetDeliverySnapshot: unit -> AtLeastOnceDeliverySnapshot
+    abstract SetDeliverySnapshot: AtLeastOnceDeliverySnapshot -> unit
     abstract UnconfirmedCount: unit -> int
 
 type DeliveryAggregate<'Command, 'Event, 'State> = {
@@ -290,13 +290,13 @@ type DeliveryAggregate<'Command, 'Event, 'State> = {
 }
 
 type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 'Event, 'State>, name: PersistenceId) as this =
-    inherit GuaranteedDeliveryActor()
+    inherit AtLeastOnceDeliveryActor()
     
     let mutable deferables = []
     let mutable state: 'State = aggregate.state
     let mailbox = 
         let self' = this.Self
-        let context = GuaranteedDeliveryActor.Context :> IActorContext
+        let context = AtLeastOnceDeliveryActor.Context :> IActorContext
         let updateState (updater: 'Event -> 'State) e : unit = 
             state <- updater e
             ()

@@ -39,12 +39,12 @@ namespace PersistenceExample
     [Serializable]
     public class Snap
     {
-        public Snap(GuaranteedDeliverySnapshot snapshot)
+        public Snap(Akka.Persistence.AtLeastOnceDeliverySnapshot snapshot)
         {
             this.Snapshot = snapshot;
         }
 
-        public GuaranteedDeliverySnapshot Snapshot { get; private set; }
+        public Akka.Persistence.AtLeastOnceDeliverySnapshot Snapshot { get; private set; }
     }
 
     public class DeliveryActor : UntypedActor
@@ -77,22 +77,22 @@ namespace PersistenceExample
         }
     }
     /// <summary>
-    /// GuaranteedDelivery will repeat sending messages, unless confirmed by deliveryId
+    /// AtLeastOnceDelivery will repeat sending messages, unless confirmed by deliveryId
     /// 
     /// By default, in-memory Journal is used, so this won't survive system restarts. 
     /// </summary>
-    public class GuaranteedDeliveryExampleActor : GuaranteedDeliveryActor
+    public class AtLeastOnceDeliveryExampleActor : AtLeastOnceDeliveryActor
     {
         public ActorPath DeliveryPath { get; private set; }
 
-        public GuaranteedDeliveryExampleActor(ActorPath deliveryPath)
+        public AtLeastOnceDeliveryExampleActor(ActorPath deliveryPath)
         {
             this.DeliveryPath = deliveryPath;
         }
 
         public override string PersistenceId
         {
-            get { return "guaranteed-1"; }
+            get { return "at-least-once-1"; }
         }
 
         protected override bool ReceiveRecover(object message)

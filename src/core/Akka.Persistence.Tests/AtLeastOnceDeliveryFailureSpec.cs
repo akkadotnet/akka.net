@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="GuaranteedDeliveryFailureSpec.cs" company="Akka.NET Project">
+// <copyright file="AtLeastOnceDeliveryFailureSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
 //     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -20,12 +20,12 @@ namespace Akka.Persistence.Tests
     {
         private static readonly Random random = new Random();
 
-        internal static void Add(this GuaranteedDeliveryFailureSpec.IChaosSupport chaos, int i)
+        internal static void Add(this AtLeastOnceDeliveryFailureSpec.IChaosSupport chaos, int i)
         {
             chaos.State.Add(i);
-            if (chaos.State.Count >= GuaranteedDeliveryFailureSpec.NumberOfMessages)
+            if (chaos.State.Count >= AtLeastOnceDeliveryFailureSpec.NumberOfMessages)
             {
-                chaos.Probe.Tell(new GuaranteedDeliveryFailureSpec.Done(chaos.State.ToArray()));
+                chaos.Probe.Tell(new AtLeastOnceDeliveryFailureSpec.Done(chaos.State.ToArray()));
             }
         }
 
@@ -35,7 +35,7 @@ namespace Akka.Persistence.Tests
         }
     }
 
-    public class GuaranteedDeliveryFailureSpec : AkkaSpec
+    public class AtLeastOnceDeliveryFailureSpec : AkkaSpec
     {
         #region internal test classes
 
@@ -135,7 +135,7 @@ namespace Akka.Persistence.Tests
             List<int> State { get; set; }
         }
 
-        internal class ChaosSender : GuaranteedDeliveryActor
+        internal class ChaosSender : AtLeastOnceDeliveryActor
         {
             private readonly string _persistenceId;
             private readonly IActorRef _destination;
@@ -293,7 +293,7 @@ namespace Akka.Persistence.Tests
 
                 Receive<Start>(_ =>
                 {
-                    for (int i = 1; i < GuaranteedDeliveryFailureSpec.NumberOfMessages; i++)
+                    for (int i = 1; i < AtLeastOnceDeliveryFailureSpec.NumberOfMessages; i++)
                     {
                         _sender.Tell(i);
                     }
@@ -320,13 +320,13 @@ namespace Akka.Persistence.Tests
 
         internal const int NumberOfMessages = 10;
 
-        public GuaranteedDeliveryFailureSpec()
+        public AtLeastOnceDeliveryFailureSpec()
             : base(FailureSpecConfig.WithFallback(Persistence.DefaultConfig()))
         {
         }
 
         [Fact(Skip = "FIXME")]
-        public void GuaranteedDelivery_must_tolerate_and_recover_from_random_failures()
+        public void AtLeastOnceDelivery_must_tolerate_and_recover_from_random_failures()
         {
             var chaos = Sys.ActorOf(Props.Create(() => new ChaosApp(TestActor)), "chaosApp");
             chaos.Tell(Start.Instance);
