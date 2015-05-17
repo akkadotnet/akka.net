@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="GuaranteedDeliveryCrashSpec.cs" company="Akka.NET Project">
+// <copyright file="AtLeastOnceDeliveryCrashSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
 //     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Akka.Persistence.Tests
 {
-    public class GuaranteedDeliveryCrashSpec : AkkaSpec
+    public class AtLeastOnceDeliveryCrashSpec : AkkaSpec
     {
 
         #region internal test classes
@@ -67,7 +67,7 @@ namespace Akka.Persistence.Tests
             public bool IsRecovering { get; private set; }
         }
 
-        internal class CrashingActor : GuaranteedDeliveryActor
+        internal class CrashingActor : AtLeastOnceDeliveryActor
         {
             private readonly IActorRef _testProbe;
             private ILoggingAdapter _adapter;
@@ -116,13 +116,13 @@ namespace Akka.Persistence.Tests
 
         #endregion
 
-        public GuaranteedDeliveryCrashSpec()
-            : base(PersistenceSpec.Configuration("inmem", "GuaranteedDeliveryCrashSpec", serialization: "off"))
+        public AtLeastOnceDeliveryCrashSpec()
+            : base(PersistenceSpec.Configuration("inmem", "AtLeastOnceDeliveryCrashSpec", serialization: "off"))
         {
         }
 
         [Fact(Skip = "FIXME")]
-        public void GuaranteedDelivery_should_not_send_when_actor_crashes()
+        public void AtLeastOnceDelivery_should_not_send_when_actor_crashes()
         {
             var testProbe = CreateTestProbe();
             var supervisor = Sys.ActorOf(Props.Create(() => new StoppingStrategySupervisor(testProbe.Ref)), "supervisor");
