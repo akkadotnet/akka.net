@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="GuaranteedDelivery.cs" company="Akka.NET Project">
+// <copyright file="AtLeastOnceDelivery.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
 //     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -19,15 +19,15 @@ namespace Akka.Persistence
     #region Messages
 
     /// <summary>
-    /// Snapshot of a current <see cref="GuaranteedDeliveryActor"/> state. Can be retrieved with
-    /// <see cref="GuaranteedDeliveryActor.GetDeliverySnapshot"/> and saved with <see cref="Eventsourced.SaveSnapshot"/>.
+    /// Snapshot of a current <see cref="AtLeastOnceDeliveryActor"/> state. Can be retrieved with
+    /// <see cref="AtLeastOnceDeliveryActor.GetDeliverySnapshot"/> and saved with <see cref="Eventsourced.SaveSnapshot"/>.
     /// During recovery the snapshot received in <see cref="SnapshotOffer"/> should be sent with 
-    /// <see cref="GuaranteedDeliveryActor.SetDeliverySnapshot"/>.
+    /// <see cref="AtLeastOnceDeliveryActor.SetDeliverySnapshot"/>.
     /// </summary>
     [Serializable]
-    public sealed class GuaranteedDeliverySnapshot : IMessage
+    public sealed class AtLeastOnceDeliverySnapshot : IMessage
     {
-        public GuaranteedDeliverySnapshot(long deliveryId, UnconfirmedDelivery[] unconfirmedDeliveries)
+        public AtLeastOnceDeliverySnapshot(long deliveryId, UnconfirmedDelivery[] unconfirmedDeliveries)
         {
             DeliveryId = deliveryId;
             UnconfirmedDeliveries = unconfirmedDeliveries;
@@ -39,7 +39,7 @@ namespace Akka.Persistence
 
     /// <summary>
     /// <see cref="UnconfirmedWarning"/> message should be sent after 
-    /// <see cref="GuaranteedDeliveryActor.UnconfirmedDeliveryAttemptsToWarn"/> limit will be reached.
+    /// <see cref="AtLeastOnceDeliveryActor.UnconfirmedDeliveryAttemptsToWarn"/> limit will be reached.
     /// </summary>
     public sealed class UnconfirmedWarning
     {
@@ -53,7 +53,7 @@ namespace Akka.Persistence
 
     /// <summary>
     /// <see cref="UnconfirmedDelivery"/> contains details about unconfirmed messages.
-    /// It's included inside <see cref="UnconfirmedWarning"/> and <see cref="GuaranteedDeliverySnapshot"/>.
+    /// It's included inside <see cref="UnconfirmedWarning"/> and <see cref="AtLeastOnceDeliverySnapshot"/>.
     /// </summary>
     public sealed class UnconfirmedDelivery
     {
@@ -106,7 +106,7 @@ namespace Akka.Persistence
     #endregion
 
     /// <summary>
-    /// An exception thrown, when <see cref="GuaranteedDeliveryActor.MaxUnconfirmedMessages"/> threshold has been exceeded.
+    /// An exception thrown, when <see cref="AtLeastOnceDeliveryActor.MaxUnconfirmedMessages"/> threshold has been exceeded.
     /// </summary>
     public class MaxUnconfirmedMessagesExceededException : AkkaException
     {
@@ -141,7 +141,7 @@ namespace Akka.Persistence
     /// Support for snapshot is provided by get and set delivery snapshot methods. These snapshots contains full
     /// delivery state including unconfirmed messages. For custom snapshots remember to include those delivery ones.
     /// </summary>
-    public abstract class GuaranteedDeliveryActor : PersistentActor, IInitializableActor
+    public abstract class AtLeastOnceDeliveryActor : PersistentActor, IInitializableActor
     {
         private ICancelable _redeliverScheduleCancelable;
         private long _deliverySequenceNr = 0L;
@@ -160,21 +160,21 @@ namespace Akka.Persistence
         /// Interval between redelivery attempts.
         /// </summary>
         public virtual TimeSpan RedeliverInterval { get { return DefaultRedeliverInterval; } }
-        protected TimeSpan DefaultRedeliverInterval { get { return Extension.Settings.GuaranteedDelivery.RedeliverInterval; } }
+        protected TimeSpan DefaultRedeliverInterval { get { return Extension.Settings.AtLeastOnceDelivery.RedeliverInterval; } }
 
         /// <summary>
         /// Maximum number of unconfirmed messages that will be sent at each redelivery burst. This is to help to 
         /// prevent overflowing amount of messages to be sent at once, for eg. when destination cannot be reached for a long time.
         /// </summary>
         public virtual int RedeliveryBurstLimit { get { return DefaultRedeliveryBurstLimit; } }
-        protected int DefaultRedeliveryBurstLimit { get { return Extension.Settings.GuaranteedDelivery.RedeliveryBurstLimit; } }
+        protected int DefaultRedeliveryBurstLimit { get { return Extension.Settings.AtLeastOnceDelivery.RedeliveryBurstLimit; } }
 
         /// <summary>
         /// After this number of delivery attempts a <see cref="UnconfirmedWarning"/> message will be sent to <see cref="Self"/>.
         /// The count is reset after restart.
         /// </summary>
         public virtual int UnconfirmedDeliveryAttemptsToWarn { get { return DefaultUnconfirmedDeliveryAttemptsToWarn; } }
-        protected int DefaultUnconfirmedDeliveryAttemptsToWarn { get { return Extension.Settings.GuaranteedDelivery.UnconfirmedAttemptsToWarn; } }
+        protected int DefaultUnconfirmedDeliveryAttemptsToWarn { get { return Extension.Settings.AtLeastOnceDelivery.UnconfirmedAttemptsToWarn; } }
 
         /// <summary>
         /// Maximum number of unconfirmed messages, that this actor is allowed to hold in the memory. When this 
@@ -182,7 +182,7 @@ namespace Akka.Persistence
         /// instead of accepting messages.
         /// </summary>
         public virtual int MaxUnconfirmedMessages { get { return DefaultMaxUnconfirmedMessages; } }
-        protected int DefaultMaxUnconfirmedMessages { get { return Extension.Settings.GuaranteedDelivery.MaxUnconfirmedMessages; } }
+        protected int DefaultMaxUnconfirmedMessages { get { return Extension.Settings.AtLeastOnceDelivery.MaxUnconfirmedMessages; } }
 
         /// <summary>
         /// Number of messages, that have not been confirmed yet.
@@ -237,13 +237,13 @@ namespace Akka.Persistence
         /// Returns full state of the current delivery actor. Could be saved using <see cref="Eventsourced.SaveSnapshot"/> method.
         /// During recovery a snapshot received in <see cref="SnapshotOffer"/> should be set with <see cref="SetDeliverySnapshot"/>.
         /// </summary>
-        public GuaranteedDeliverySnapshot GetDeliverySnapshot()
+        public AtLeastOnceDeliverySnapshot GetDeliverySnapshot()
         {
             var unconfirmedDeliveries = _unconfirmed
                 .Select(e => new UnconfirmedDelivery(e.Key, e.Value.Destination, e.Value.Message))
                 .ToArray();
 
-            return new GuaranteedDeliverySnapshot(_deliverySequenceNr, unconfirmedDeliveries);
+            return new AtLeastOnceDeliverySnapshot(_deliverySequenceNr, unconfirmedDeliveries);
         }
 
         /// <summary>
@@ -251,7 +251,7 @@ namespace Akka.Persistence
         /// <see cref="SnapshotOffer"/> message and should be set with this method.
         /// </summary>
         /// <param name="snapshot"></param>
-        public void SetDeliverySnapshot(GuaranteedDeliverySnapshot snapshot)
+        public void SetDeliverySnapshot(AtLeastOnceDeliverySnapshot snapshot)
         {
             _deliverySequenceNr = snapshot.DeliveryId;
             var now = DateTime.Now;

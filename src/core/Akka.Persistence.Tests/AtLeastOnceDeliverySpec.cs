@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="GuaranteedDeliverySpec.cs" company="Akka.NET Project">
+// <copyright file="AtLeastOnceDeliverySpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
 //     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -15,12 +15,12 @@ using Xunit;
 
 namespace Akka.Persistence.Tests
 {
-    public class GuaranteedDeliverySpec : PersistenceSpec
+    public class AtLeastOnceDeliverySpec : PersistenceSpec
     {
 
         #region internal test classes
 
-        class Sender : GuaranteedDeliveryActor
+        class Sender : AtLeastOnceDeliveryActor
         {
             private readonly IActorRef _testActor;
             private readonly string _name;
@@ -291,23 +291,23 @@ namespace Akka.Persistence.Tests
         [Serializable]
         sealed class Snap
         {
-            public Snap(GuaranteedDeliverySnapshot deliverySnapshot)
+            public Snap(AtLeastOnceDeliverySnapshot deliverySnapshot)
             {
                 DeliverySnapshot = deliverySnapshot;
             }
 
-            public GuaranteedDeliverySnapshot DeliverySnapshot { get; private set; }
+            public AtLeastOnceDeliverySnapshot DeliverySnapshot { get; private set; }
         }
 
         #endregion
 
-        public GuaranteedDeliverySpec()
-            : base(PersistenceSpec.Configuration("inmem", "GuaranteedDeliverySpec"))
+        public AtLeastOnceDeliverySpec()
+            : base(PersistenceSpec.Configuration("inmem", "AtLeastOnceDeliverySpec"))
         {
         }
 
         [Fact]
-        public void GuaranteedDelivery_must_deliver_messages_in_order_when_nothing_is_lost()
+        public void AtLeastOnceDelivery_must_deliver_messages_in_order_when_nothing_is_lost()
         {
             var probe = CreateTestProbe();
             var destinations = new Dictionary<string, ActorPath> { { "A", Sys.ActorOf(Props.Create(() => new Destination(probe.Ref))).Path } };
@@ -320,7 +320,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void GuaranteedDelivery_must_redeliver_lost_messages()
+        public void AtLeastOnceDelivery_must_redeliver_lost_messages()
         {
             var probe = CreateTestProbe();
             var dest = Sys.ActorOf(Props.Create(() => new Destination(probe.Ref)));
@@ -347,7 +347,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void GuaranteedDelivery_must_redeliver_lost_messages_after_restart()
+        public void AtLeastOnceDelivery_must_redeliver_lost_messages_after_restart()
         {
             var probe = CreateTestProbe();
             var dest = Sys.ActorOf(Props.Create(() => new Destination(probe.Ref)));
@@ -381,7 +381,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void GuaranteedDelivery_must_resend_replayed_deliveries_with_an_initially_in_order_strategy_before_delivering_fresh_messages()
+        public void AtLeastOnceDelivery_must_resend_replayed_deliveries_with_an_initially_in_order_strategy_before_delivering_fresh_messages()
         {
             var probe = CreateTestProbe();
             var dest = Sys.ActorOf(Props.Create(() => new Destination(probe.Ref)));
@@ -420,7 +420,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void GuaranteedDelivery_must_restore_state_from_snapshot()
+        public void AtLeastOnceDelivery_must_restore_state_from_snapshot()
         {
             var probe = CreateTestProbe();
             var dest = Sys.ActorOf(Props.Create(() => new Destination(probe.Ref)));
@@ -459,7 +459,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void GuaranteedDelivery_must_warn_about_unconfirmed_messages()
+        public void AtLeastOnceDelivery_must_warn_about_unconfirmed_messages()
         {
             var probeA = CreateTestProbe();
             var probeB = CreateTestProbe();
@@ -487,7 +487,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact(Skip = "FIXME")]
-        public void GuaranteedDelivery_must_redeliver_many_lost_messages()
+        public void AtLeastOnceDelivery_must_redeliver_many_lost_messages()
         {
             var probeA = CreateTestProbe();
             var probeB = CreateTestProbe();
