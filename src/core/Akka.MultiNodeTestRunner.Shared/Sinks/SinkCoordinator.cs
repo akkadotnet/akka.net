@@ -88,8 +88,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         /// <summary>
         /// Leave the console message sink enabled by default
         /// </summary>
-        public SinkCoordinator()
-            : this(new[] { new ConsoleMessageSink() })
+        public SinkCoordinator(bool teamCityOutput = false)
+            : this(new[] { new ConsoleMessageSink(teamCityOutput) })
         {
 
         }
@@ -104,7 +104,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         protected override void PreStart()
         {
-            foreach(var sink in DefaultSinks)
+            foreach (var sink in DefaultSinks)
                 Self.Tell(new EnableSink(sink));
         }
 
@@ -163,7 +163,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         private void PublishToChildren(NodeCompletedSpecWithSuccess message)
         {
-            foreach(var sink in Sinks)
+            foreach (var sink in Sinks)
                 sink.Success(message.NodeIndex, message.Message);
         }
 
