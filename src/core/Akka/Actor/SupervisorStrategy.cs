@@ -231,7 +231,7 @@ namespace Akka.Actor
         /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, Duration.Inf means no window.</param>
         /// <param name="localOnlyDecider">mapping from Exception to <see cref="Directive" /></param>
         public OneForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> localOnlyDecider)
-            : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, localOnlyDecider)
+            : this(maxNrOfRetries.GetValueOrDefault(-1), (int) withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).TotalMilliseconds, localOnlyDecider)
         {
             //Intentionally left blank
         }
@@ -248,7 +248,7 @@ namespace Akka.Actor
         /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, Duration.Inf means no window.</param>
         /// <param name="decider">mapping from Exception to <see cref="Directive" /></param>
         public OneForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, IDecider decider)
-            : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, decider)
+            : this(maxNrOfRetries.GetValueOrDefault(-1), (int) withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).TotalMilliseconds, decider)
         {
             //Intentionally left blank
         }
@@ -265,7 +265,8 @@ namespace Akka.Actor
         /// <param name="withinTimeMilliseconds">duration in milliseconds of the time window for <paramref name="maxNrOfRetries"/>, negative values means no window.</param>
         /// <param name="localOnlyDecider">Mapping from an <see cref="Exception"/> to <see cref="Directive"/></param>
         /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
-        public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> localOnlyDecider, bool loggingEnabled = true) : this(maxNrOfRetries,withinTimeMilliseconds,new LocalOnlyDecider(localOnlyDecider),loggingEnabled)
+        public OneForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> localOnlyDecider, bool loggingEnabled = true)
+            : this(maxNrOfRetries, withinTimeMilliseconds, new LocalOnlyDecider(localOnlyDecider), loggingEnabled)
         {
             //Intentionally left blank
         }
@@ -403,7 +404,7 @@ namespace Akka.Actor
         /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, <see cref="Timeout.InfiniteTimeSpan"/> means no window.</param>
         /// <param name="localOnlyDecider">mapping from Exception to <see cref="Directive"/></param>
         public AllForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> localOnlyDecider)
-            : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, localOnlyDecider)
+            : this(maxNrOfRetries.GetValueOrDefault(-1), (int) withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).TotalMilliseconds, localOnlyDecider)
         {
             //Intentionally left blank
         }
@@ -420,7 +421,7 @@ namespace Akka.Actor
         /// <param name="withinTimeRange">duration of the time window for maxNrOfRetries, <see cref="Timeout.InfiniteTimeSpan"/> means no window.</param>
         /// <param name="decider">mapping from Exception to <see cref="Directive"/></param>
         public AllForOneStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, IDecider decider)
-            : this(maxNrOfRetries.GetValueOrDefault(-1), withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).Milliseconds, decider)
+            : this(maxNrOfRetries.GetValueOrDefault(-1), (int) withinTimeRange.GetValueOrDefault(Timeout.InfiniteTimeSpan).TotalMilliseconds, decider)
         {
             //Intentionally left blank
         }
@@ -437,7 +438,8 @@ namespace Akka.Actor
         /// <param name="withinTimeMilliseconds">duration in milliseconds of the time window for <paramref name="maxNrOfRetries"/>, negative values means no window.</param>
         /// <param name="localOnlyDecider">Mapping from an <see cref="Exception"/> to <see cref="Directive"/></param>
         /// <param name="loggingEnabled">If <c>true</c> failures will be logged</param>
-        public AllForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> localOnlyDecider, bool loggingEnabled=true) : this(maxNrOfRetries,withinTimeMilliseconds,new LocalOnlyDecider(localOnlyDecider),loggingEnabled)
+        public AllForOneStrategy(int maxNrOfRetries, int withinTimeMilliseconds, Func<Exception, Directive> localOnlyDecider, bool loggingEnabled=true)
+            : this(maxNrOfRetries, withinTimeMilliseconds, new LocalOnlyDecider(localOnlyDecider), loggingEnabled)
         {
             //Intentionally left blank
         }
