@@ -11,6 +11,7 @@ using System;
 using System.Threading.Tasks;
 using Autofac;
 using Akka.DI.AutoFac;
+using Akka.DI.Core;
 
 namespace BasicAutoFacUses
 {
@@ -34,7 +35,7 @@ namespace BasicAutoFacUses
                 var propsResolver =
                     new AutoFacDependencyResolver(container, system);
 
-                var router = system.ActorOf(propsResolver.Create<TypedWorker>().WithRouter(FromConfig.Instance), "router1");
+                var router = system.ActorOf(system.DI().Props<TypedWorker>().WithRouter(FromConfig.Instance), "router1");
 
                 Task.Delay(500).Wait();
                 Console.WriteLine("Sending Messages");

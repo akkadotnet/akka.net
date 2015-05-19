@@ -8,6 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.DI.Core;
 using Akka.DI.Unity;
 using Akka.Routing;
 using Microsoft.Practices.Unity;
@@ -32,7 +33,7 @@ namespace BasicUnityUses
                 var propsResolver =
                     new UnityDependencyResolver(container, system);
 
-                var router = system.ActorOf(propsResolver.Create<TypedWorker>().WithRouter(FromConfig.Instance), "router1");
+                var router = system.ActorOf(system.DI().Props<TypedWorker>().WithRouter(FromConfig.Instance), "router1");
 
                 Task.Delay(500).Wait();
                 Console.WriteLine("Sending Messages");

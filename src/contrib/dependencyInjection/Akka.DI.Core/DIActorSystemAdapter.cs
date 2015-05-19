@@ -20,14 +20,15 @@ namespace Akka.DI.Core
             this.system = system;
             this.producer = system.GetExtension<DIExt>();
         }
-        public IActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
+
+        public Props Props(Type actorType) 
         {
-            return system.ActorOf(producer.Props(typeof(TActor)), name);
+            return producer.Props(actorType);
         }
 
         public Props Props<TActor>() where TActor : ActorBase
         {
-            return producer.Props(typeof(TActor));
+            return Props(typeof(TActor));
         }
     }
 }

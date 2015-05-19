@@ -154,8 +154,8 @@ using (var system = ActorSystem.Create("MySystem"))
     IDependencyResolver resolver = new WindsorDependencyResolver(container, system);
 
     // Register the actors with the system
-    system.ActorOf(resolver.Create<TypedWorker>(), "Worker1");
-    system.ActorOf(resolver.Create<TypedWorker>(), "Worker2");
+    system.ActorOf(system.DI().Props<TypedWorker>(), "Worker1");
+    system.ActorOf(system.DI().Props<TypedWorker>(), "Worker2");
 
     // Create the router
     IActorRef router = system.ActorOf(Props.Empty.WithRouter(new ConsistentHashingGroup(config)));
@@ -176,5 +176,5 @@ using (var system = ActorSystem.Create("MySystem"))
 When you want to create child actors from within your existing actors using Dependency Injection you can use the Actor Content extension just like in the following example.
 
 ```csharp
-Context.DI().ActorOf<TypedActor>().Tell(message);
+Context.ActorOf(Context.DI().Props<TypedActor>()).Tell(message);
 ```
