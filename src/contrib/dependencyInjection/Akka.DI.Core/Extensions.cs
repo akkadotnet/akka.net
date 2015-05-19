@@ -28,7 +28,11 @@ namespace Akka.DI.Core
             system.RegisterExtension(DIExtension.DIExtensionProvider);
             DIExtension.DIExtensionProvider.Get(system).Initialize(dependencyResolver);
         }
-        
+
+        public static DIActorSystemAdapter DI(this ActorSystem system)
+        {
+            return new DIActorSystemAdapter(system);
+        }
 
         public static DIActorContextAdapter DI(this IActorContext context)
         {

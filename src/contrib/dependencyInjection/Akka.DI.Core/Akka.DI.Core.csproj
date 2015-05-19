@@ -44,6 +44,7 @@
     </Compile>
     <Compile Include="DIActorContextAdapter.cs" />
     <Compile Include="DIActorProducer.cs" />
+    <Compile Include="DIActorSystemAdapter.cs" />
     <Compile Include="DIExt.cs" />
     <Compile Include="DIExtension.cs" />
     <Compile Include="Extensions.cs" />
