@@ -217,6 +217,7 @@
     <Compile Include="Event\Error.cs" />
     <Compile Include="Event\EventBus.cs" />
     <Compile Include="Event\EventStream.cs" />
+    <Compile Include="Event\EventStreamExtensions.cs" />
     <Compile Include="Event\ILogMessageFormatter.cs" />
     <Compile Include="Event\Info.cs" />
     <Compile Include="Event\InitializeLogger.cs" />
