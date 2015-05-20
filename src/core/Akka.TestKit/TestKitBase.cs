@@ -110,6 +110,12 @@ namespace Akka.TestKit
             {
                 InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)testActor).Underlying;
             }
+            else if(!(this is TestProbe)) 
+                //HACK: we need to clear the current context when running a No Implicit Sender test as sender from an async test may leak
+                //but we should not clear the current context when creating a testprobe from a test
+            {
+                InternalCurrentActorCellKeeper.Current = null;
+            }
             SynchronizationContext.SetSynchronizationContext(
                 new ActorCellKeepingSynchronizationContext(InternalCurrentActorCellKeeper.Current));
             _testActor = testActor;
