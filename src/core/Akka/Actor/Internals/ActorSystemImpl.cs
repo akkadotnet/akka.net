@@ -52,8 +52,9 @@ namespace Akka.Actor.Internals
                 throw new ArgumentNullException("config");
 
             _name = name;
-            ConfigureScheduler();
+
             ConfigureSettings(config);
+            ConfigureScheduler();
             ConfigureEventStream();
             ConfigureProvider();
             ConfigureSerialization();
@@ -127,7 +128,8 @@ namespace Akka.Actor.Internals
 
         private void ConfigureScheduler()
         {
-            _scheduler = new TaskBasedScheduler();
+            var schedulerType = Type.GetType(_settings.SchedulerClass, true);
+            _scheduler = (IScheduler)Activator.CreateInstance(schedulerType);
         }
 
         /// <summary>

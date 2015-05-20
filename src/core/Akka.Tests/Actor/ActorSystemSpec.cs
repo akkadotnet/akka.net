@@ -89,6 +89,19 @@ namespace Akka.Tests.Actor
             Assert.Equal(Sys, otherTestExtension.System);
         }
 
+        [Fact]
+        public void AnActorSystem_Must_Setup_The_Default_Scheduler()
+        {
+            Assert.True(Sys.Scheduler.GetType() == typeof(TaskBasedScheduler));
+        }
+
+        [Fact]
+        public void AnActorSystem_Must_Support_Using_A_Customer_Scheduler()
+        {
+            var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString(), DefaultConfig.WithFallback("akka.scheduler.implementation = \"Akka.Tests.Actor.TestScheduler, Akka.Tests\""));
+            Assert.True(actorSystem.Scheduler.GetType() == typeof(TestScheduler));
+        }
+
         #endregion
     }
 
@@ -126,6 +139,36 @@ namespace Akka.Tests.Actor
         }
 
         public ActorSystem System { get; private set; }
+    }
+
+    public class TestScheduler : IScheduler
+    {
+        public void ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message,
+            IActorRef sender)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message,
+            IActorRef sender, ICancelable cancelable)
+        {
+            throw new NotImplementedException();
+        }
+
+        public DateTimeOffset Now { get; }
+        public TimeSpan MonotonicClock { get; }
+        public TimeSpan HighResMonotonicClock { get; }
+        public IAdvancedScheduler Advanced { get; }
     }
 }
 
