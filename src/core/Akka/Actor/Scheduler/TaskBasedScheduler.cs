@@ -17,6 +17,14 @@ namespace Akka.Actor
         public override TimeSpan MonotonicClock { get { return Util.MonotonicClock.Elapsed; } }
         public override TimeSpan HighResMonotonicClock { get { return Util.MonotonicClock.ElapsedHighRes; } }
 
+        public TaskBasedScheduler()
+        {
+        }
+
+        public TaskBasedScheduler(ActorSystem system)
+        {
+        }
+
         protected override void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable)
         {
             var cancellationToken = cancelable == null ? CancellationToken.None : cancelable.Token;
