@@ -11,12 +11,8 @@ using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
-    /// <summary>
-    /// Class Scheduler.
-    /// </summary>
     public class TaskBasedScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider
     {
-
         protected override DateTimeOffset TimeNow { get { return DateTimeOffset.Now; } }
         public override TimeSpan MonotonicClock { get { return Util.MonotonicClock.Elapsed; } }
         public override TimeSpan HighResMonotonicClock { get { return Util.MonotonicClock.ElapsedHighRes; } }
@@ -45,7 +41,6 @@ namespace Akka.Actor
             InternalScheduleRepeatedly(initialDelay, interval, action, cancellationToken);
         }
 
-
         private void InternalScheduleOnce(TimeSpan initialDelay, Action action, CancellationToken token)
         {
             Task.Delay(initialDelay, token).ContinueWith(t =>
@@ -62,7 +57,6 @@ namespace Akka.Actor
 
             }, token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Current);
         }
-
 
         private void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, CancellationToken token)
         {
@@ -84,9 +78,7 @@ namespace Akka.Actor
             };
             Task.Delay(initialDelay, token)
                 .ContinueWith(executeAction, token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Current);
-
         }
-
     }
 }
 
