@@ -5,13 +5,19 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
 using Akka.Event;
 using Serilog;
-using System;
 
 namespace Akka.Logger.Serilog
 {
+    /// <summary>
+    /// This class is used to receive log events and sends them to
+    /// the configured Serilog logger. The following log events are
+    /// recognized: <see cref="Debug"/>, <see cref="Info"/>,
+    /// <see cref="Warning"/> and <see cref="Error"/>.
+    /// </summary>
     public class SerilogLogger : ReceiveActor
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -30,19 +36,6 @@ namespace Akka.Logger.Serilog
             return logger;
         }
 
-        public SerilogLogger()
-        {
-            Receive<Error>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Error(m.Cause, GetFormat(m.Message), GetArgs(m.Message))));
-            Receive<Warning>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Warning(GetFormat(m.Message), GetArgs(m.Message))));
-            Receive<Info>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Information(GetFormat(m.Message), GetArgs(m.Message))));
-            Receive<Debug>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Debug(GetFormat(m.Message), GetArgs(m.Message))));
-            Receive<InitializeLogger>(m =>
-            {
-                _log.Info("SerilogLogger started");
-                Sender.Tell(new LoggerInitialized());
-            });
-        }
-
         private static string GetFormat(object message)
         {
             var logMessage = message as LogMessage;
@@ -59,6 +52,22 @@ namespace Akka.Logger.Serilog
             return logMessage != null
                 ? logMessage.Args
                 : new[] { message };
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SerilogLogger"/> class.
+        /// </summary>
+        public SerilogLogger()
+        {
+            Receive<Error>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Error(m.Cause, GetFormat(m.Message), GetArgs(m.Message))));
+            Receive<Warning>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Warning(GetFormat(m.Message), GetArgs(m.Message))));
+            Receive<Info>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Information(GetFormat(m.Message), GetArgs(m.Message))));
+            Receive<Debug>(m => WithSerilog(logger => SetContextFromLogEvent(logger, m).Debug(GetFormat(m.Message), GetArgs(m.Message))));
+            Receive<InitializeLogger>(m =>
+            {
+                _log.Info("SerilogLogger started");
+                Sender.Tell(new LoggerInitialized());
+            });
         }
     }
 }

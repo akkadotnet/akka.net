@@ -45,14 +45,14 @@ namespace Akka.Actor
         {
             Task.Delay(initialDelay, token).ContinueWith(t =>
             {
-                if(token.IsCancellationRequested) return;
+                if (token.IsCancellationRequested) return;
 
                 token.ThrowIfCancellationRequested();
                 try
                 {
                     action();
                 }
-                catch(OperationCanceledException) { }
+                catch (OperationCanceledException) { }
                 //TODO: Should we log other exceptions? /@hcanber
 
             }, token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Current);
@@ -63,15 +63,15 @@ namespace Akka.Actor
             Action<Task> executeAction = null;
             executeAction = t =>
             {
-                if(token.IsCancellationRequested) return;
+                if (token.IsCancellationRequested) return;
                 try
                 {
                     action();
                 }
-                catch(OperationCanceledException) { }
+                catch (OperationCanceledException) { }
                 //TODO: Should we log other exceptions? /@hcanber
 
-                if(token.IsCancellationRequested) return;
+                if (token.IsCancellationRequested) return;
 
                 Task.Delay(interval, token)
                     .ContinueWith(executeAction, token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Current);

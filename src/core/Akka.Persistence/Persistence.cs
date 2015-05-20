@@ -170,10 +170,10 @@ namespace Akka.Persistence
             public long AutoUpdateReplayMax { get; private set; }
         }
 
-        public GuaranteedDeliverySettings GuaranteedDelivery { get; set; }
-        public class GuaranteedDeliverySettings
+        public AtLeastOnceDeliverySettings AtLeastOnceDelivery { get; set; }
+        public class AtLeastOnceDeliverySettings
         {
-            public GuaranteedDeliverySettings(Config config)
+            public AtLeastOnceDeliverySettings(Config config)
             {
                 RedeliverInterval = config.GetTimeSpan("at-least-once-delivery.redeliver-interval");
                 MaxUnconfirmedMessages = config.GetInt("at-least-once-delivery.max-unconfirmed-messages");
@@ -205,7 +205,7 @@ namespace Akka.Persistence
         {
             Journal = new JournalSettings(config);
             View = new ViewSettings(config);
-            GuaranteedDelivery = new GuaranteedDeliverySettings(config);
+            AtLeastOnceDelivery = new AtLeastOnceDeliverySettings(config);
             Internal = new InternalSettings(config);
         }
     }

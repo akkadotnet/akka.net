@@ -51,12 +51,13 @@ namespace Akka.Actor.Internals
             if(config == null)
                 throw new ArgumentNullException("config");
 
-            _name = name;
-
+            _name = name;            
+            ConfigureScheduler();
             ConfigureSettings(config);
             ConfigureScheduler();
             ConfigureEventStream();
             ConfigureProvider();
+            ConfigureScheduler();
             ConfigureSerialization();
             ConfigureMailboxes();
             ConfigureDispatchers();

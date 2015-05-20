@@ -117,7 +117,9 @@ namespace Akka.Remote
 
         public Props ConfigureDispatcher(Props props)
         {
-            return String.IsNullOrEmpty(Dispatcher) ? props : props.WithDispatcher(Dispatcher);
+            return String.IsNullOrEmpty(Dispatcher) 
+                ? props 
+                : props.WithDispatcher(Dispatcher);
         }
 
         public class TransportSettings

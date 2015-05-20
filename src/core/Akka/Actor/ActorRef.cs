@@ -178,7 +178,10 @@ namespace Akka.Actor
 
         public void Tell(object message, IActorRef sender)
         {
-            if (sender == null) throw new ArgumentNullException("sender", "A sender must be specified");
+            if (sender == null)
+            {
+                sender = ActorRefs.NoSender;
+            }
 
             TellInternal(message, sender);
         }

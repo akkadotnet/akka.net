@@ -44,7 +44,7 @@ namespace Akka.Persistence.Serialization
         public override byte[] ToBinary(object obj)
         {
             if (obj is IPersistentRepresentation) return PersistentToProto(obj as IPersistentRepresentation).Build().ToByteArray();
-            if (obj is GuaranteedDeliverySnapshot) return SnapshotToProto(obj as GuaranteedDeliverySnapshot).Build().ToByteArray();
+            if (obj is AtLeastOnceDeliverySnapshot) return SnapshotToProto(obj as AtLeastOnceDeliverySnapshot).Build().ToByteArray();
 
             throw new ArgumentException(typeof(MessageSerializer) + " cannot serialize object of type " + obj.GetType());
         }
@@ -52,14 +52,14 @@ namespace Akka.Persistence.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             if (type == null || type == typeof(Persistent) || type == typeof(IPersistentRepresentation)) return PersistentMessageFrom(bytes);
-            if (type == typeof(GuaranteedDeliverySnapshot)) return SnapshotFrom(bytes);
+            if (type == typeof(AtLeastOnceDeliverySnapshot)) return SnapshotFrom(bytes);
 
             throw new ArgumentException(typeof(MessageSerializer) + " cannot deserialize object of type " + type);
         }
 
-        private GuaranteedDeliverySnapshot SnapshotFrom(byte[] bytes)
+        private AtLeastOnceDeliverySnapshot SnapshotFrom(byte[] bytes)
         {
-            var snap = AtLeastOnceDeliverySnapshot.ParseFrom(bytes);
+            var snap = global::AtLeastOnceDeliverySnapshot.ParseFrom(bytes);
             var unconfirmedDeliveries = new UnconfirmedDelivery[snap.UnconfirmedDeliveriesCount];
 
             for (int i = 0; i < snap.UnconfirmedDeliveriesCount; i++)
@@ -72,7 +72,7 @@ namespace Akka.Persistence.Serialization
                 unconfirmedDeliveries[i] = unconfirmedDelivery;
             }
 
-            return new GuaranteedDeliverySnapshot(snap.CurrentDeliveryId, unconfirmedDeliveries);
+            return new AtLeastOnceDeliverySnapshot(snap.CurrentDeliveryId, unconfirmedDeliveries);
         }
 
         private IPersistentRepresentation PersistentMessageFrom(byte[] bytes)
@@ -96,14 +96,14 @@ namespace Akka.Persistence.Serialization
             return system.Serialization.Deserialize(persistentPayload.Payload.ToByteArray(), persistentPayload.SerializerId, payloadType);
         }
 
-        private AtLeastOnceDeliverySnapshot.Builder SnapshotToProto(GuaranteedDeliverySnapshot snap)
+        private global::AtLeastOnceDeliverySnapshot.Builder SnapshotToProto(AtLeastOnceDeliverySnapshot snap)
         {
-            var builder = AtLeastOnceDeliverySnapshot.CreateBuilder();
+            var builder = global::AtLeastOnceDeliverySnapshot.CreateBuilder();
             builder.SetCurrentDeliveryId(snap.DeliveryId);
 
             foreach (var unconfirmed in snap.UnconfirmedDeliveries)
             {
-                var unconfirmedBuilder = AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.CreateBuilder()
+                var unconfirmedBuilder = global::AtLeastOnceDeliverySnapshot.Types.UnconfirmedDelivery.CreateBuilder()
                     .SetDeliveryId(unconfirmed.DeliveryId)
                     .SetDestination(unconfirmed.Destination.ToString())
                     .SetPayload(PersistentPayloadToProto(unconfirmed.Message));

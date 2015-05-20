@@ -5,19 +5,21 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
 using Akka.Event;
 using slf4net;
-using System;
 
 namespace Akka.Logger.slf4net
 {
+    /// <summary>
+    /// This class is used to receive log events and sends them to
+    /// the configured slf4net logger. The following log events are
+    /// recognized: <see cref="Debug"/>, <see cref="Info"/>,
+    /// <see cref="Warning"/> and <see cref="Error"/>.
+    /// </summary>
     public class Slf4NetLogger : UntypedActor
     {
-        //private string mdcThreadAttributeName = "sourceThread";
-        //private string mdcAkkaSourceAttributeName = "akkaSource";
-        //private string mdcAkkaTimestamp = "akkaTimestamp";
-
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
         private void WithMDC(Action<ILogger> logStatement)
@@ -26,6 +28,10 @@ namespace Akka.Logger.slf4net
             logStatement(logger);
         }
 
+        /// <summary>
+        /// Receives an event and logs it to the slf4net logger.
+        /// </summary>
+        /// <param name="message">The event sent to the logger.</param>
         protected override void OnReceive(object message)
         {
             message
