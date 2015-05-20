@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Policy;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence;
@@ -453,36 +454,72 @@ handOffTimeout = HandOffTimeout,
 
     public class ShardRegion : ReceiveActor
     {
-        private string typeName;
-        private Props entryProps;
-        private string role;
-        private string coordinatorPath;
-        private TimeSpan retryInterval;
-        private TimeSpan shardFailureBackoff;
-        private TimeSpan entryRestartBackoff;
-        private TimeSpan snapshotInterval;
-        private int bufferSize;
-        private bool rememberEntries;
-        private IdExtractor idExtractor;
-        private ShardResolver shardResolver;
+        public abstract class ShardRegionCommand {}
+
+        /**
+        * If the state of the entries are persistent you may stop entries that are not used to
+        * reduce memory consumption. This is done by the application specific implementation of
+        * the entry actors for example by defining receive timeout (`context.setReceiveTimeout`).
+        * If a message is already enqueued to the entry when it stops itself the enqueued message
+        * in the mailbox will be dropped. To support graceful passivation without loosing such
+        * messages the entry actor can send this `Passivate` message to its parent `ShardRegion`.
+        * The specified wrapped `stopMessage` will be sent back to the entry, which is
+        * then supposed to stop itself. Incoming messages will be buffered by the `ShardRegion`
+        * between reception of `Passivate` and termination of the entry. Such buffered messages
+        * are thereafter delivered to a new incarnation of the entry.
+        *
+        * [[akka.actor.PoisonPill]] is a perfectly fine `stopMessage`.
+        */
+        public class Passivate : ShardRegionCommand
+        {
+            public Passivate(object stopMessage)
+            {
+                StopMessage = stopMessage;
+            }
+
+            public object StopMessage { get;private set; }
+        }
+
+        public class Retry : ShardRegionCommand
+        {
+            private static readonly Retry _instance = new Retry();
+
+            public static Retry Instance
+            {
+                get { return _instance; }
+            }
+        }
+
+        private string _typeName;
+        private Props _entryProps;
+        private string _role;
+        private string _coordinatorPath;
+        private TimeSpan _retryInterval;
+        private TimeSpan _shardFailureBackoff;
+        private TimeSpan _entryRestartBackoff;
+        private TimeSpan _snapshotInterval;
+        private int _bufferSize;
+        private bool _rememberEntries;
+        private IdExtractor _idExtractor;
+        private ShardResolver _shardResolver;
 
         public ShardRegion(string typeName, Props entryProps, string role, string coordinatorPath,
             TimeSpan retryInterval, TimeSpan shardFailureBackoff, TimeSpan entryRestartBackoff,
             TimeSpan snapshotInterval, int bufferSize, bool rememberEntries, IdExtractor idExtractor,
             ShardResolver shardResolver)
         {
-            this.typeName = typeName;
-            this.entryProps = entryProps;
-            this.role = role;
-            this.coordinatorPath = coordinatorPath;
-            this.retryInterval = retryInterval;
-            this.shardFailureBackoff = shardFailureBackoff;
-            this.entryRestartBackoff = entryRestartBackoff;
-            this.snapshotInterval = snapshotInterval;
-            this.bufferSize = bufferSize;
-            this.rememberEntries = rememberEntries;
-            this.idExtractor = idExtractor;
-            this.shardResolver = shardResolver;
+            _typeName = typeName;
+            _entryProps = entryProps;
+            _role = role;
+            _coordinatorPath = coordinatorPath;
+            _retryInterval = retryInterval;
+            _shardFailureBackoff = shardFailureBackoff;
+            _entryRestartBackoff = entryRestartBackoff;
+            _snapshotInterval = snapshotInterval;
+            _bufferSize = bufferSize;
+            _rememberEntries = rememberEntries;
+            _idExtractor = idExtractor;
+            _shardResolver = shardResolver;
         }
 
         /**
@@ -705,6 +742,60 @@ handOffTimeout = HandOffTimeout,
 
     public class Shard : PersistentActor
     {
+         /* A Shard command
+         */
+        public abstract class ShardCommand {}
+
+        /**
+         * When a `StateChange` fails to write to the journal, we will retry it after a back
+         * off.
+         */
+        public class RetryPersistence : ShardCommand
+        {
+            public RetryPersistence(StateChange payload)
+            {
+                Payload = payload;
+            }
+
+            public StateChange Payload { get; set; }
+        }
+
+        /**
+         * The Snapshot tick for the shards
+         */
+        public class SnapshotTick : ShardCommand
+        { }
+
+        public abstract class StateChange
+        {
+            protected StateChange(string entryId)
+            {
+                EntryId = entryId;
+            }
+
+            public EntryId EntryId { get;private set; }
+        }
+
+        /**
+         * `State` change for starting an entry in this `Shard`
+         */
+        public class EntryStarted : StateChange
+        {
+            public EntryStarted(string entryId) : base(entryId)
+            {
+            }
+        }
+
+        /**
+         * `State` change for an entry which has terminated.
+         */
+        public class EntryStopped : StateChange
+        {
+            public EntryStopped(string entryId) : base(entryId)
+            {
+            }
+        }
+
 
         public override ShardId PersistenceId
         {
@@ -722,12 +813,61 @@ handOffTimeout = HandOffTimeout,
 
         protected override bool ReceiveCommand(Msg message)
         {
-//case Terminated(ref)                                ⇒ receiveTerminated(ref)
-//case msg: CoordinatorMessage                        ⇒ receiveCoordinatorMessage(msg)
-//case msg: ShardCommand                              ⇒ receiveShardCommand(msg)
-//case msg: ShardRegionCommand                        ⇒ receiveShardRegionCommand(msg)
-//case PersistenceFailure(payload: StateChange, _, _) ⇒ persistenceFailure(payload)
-//case msg if idExtractor.isDefinedAt(msg)            ⇒ deliverMessage(msg, sender())
+            if (message is Terminated)
+            {
+                ReceiveTerminated(message as Terminated);
+                return true;
+            }
+            if (message is CoordinatorMessage)
+            {
+                ReceiveCoordinatorMessage(message as CoordinatorMessage);
+                return true;
+            }
+            if (message is ShardCommand)
+            {
+                ReceiveShardCommand(message as ShardCommand);
+                return true;
+            }
+            if (message is ShardRegion.ShardRegionCommand)
+            {
+                ReceiveShardRegionCommand(message as ShardRegion.ShardRegionCommand);
+                return true;
+            }
+            if (message is PersistenceFailure)
+            {
+                ReceivePersistenceFailure(message as PersistenceFailure);
+                return true;
+            }
+            if (false)
+            {
+                //case msg if idExtractor.isDefinedAt(msg)            ⇒ deliverMessage(msg, sender())
+                return true;
+            }
+            return false;
+        }
+
+        private void ReceivePersistenceFailure(PersistenceFailure persistenceFailure)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void ReceiveShardRegionCommand(ShardRegion.ShardRegionCommand shardRegionCommand)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void ReceiveShardCommand(ShardCommand shardCommand)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void ReceiveCoordinatorMessage(CoordinatorMessage coordinatorMessage)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void ReceiveTerminated(Terminated terminated)
+        {
             throw new NotImplementedException();
         }
     }
@@ -1099,6 +1239,83 @@ private[akka] class Shard(
     {
         public static readonly object Empty = new object();
     }
+
+    public abstract class CoordinatorCommand
+    {
+        
+    }
+
+    public class CoordinatorMessage
+    {
+        
+    }
+
+    //private[akka] object Internal {
+    ///**
+    // * Messages sent to the coordinator
+    // */
+    //sealed trait CoordinatorCommand
+    ///**
+    // * Messages sent from the coordinator
+    // */
+    //sealed trait CoordinatorMessage
+    ///**
+    // * `ShardRegion` registers to `ShardCoordinator`, until it receives [[RegisterAck]].
+    // */
+    //@SerialVersionUID(1L) final case class Register(shardRegion: ActorRef) extends CoordinatorCommand
+    ///**
+    // * `ShardRegion` in proxy only mode registers to `ShardCoordinator`, until it receives [[RegisterAck]].
+    // */
+    //@SerialVersionUID(1L) final case class RegisterProxy(shardRegionProxy: ActorRef) extends CoordinatorCommand
+    ///**
+    // * Acknowledgement from `ShardCoordinator` that [[Register]] or [[RegisterProxy]] was sucessful.
+    // */
+    //@SerialVersionUID(1L) final case class RegisterAck(coordinator: ActorRef) extends CoordinatorMessage
+    ///**
+    // * Periodic message to trigger persistent snapshot
+    // */
+    //@SerialVersionUID(1L) final case object SnapshotTick extends CoordinatorMessage
+    ///**
+    // * `ShardRegion` requests the location of a shard by sending this message
+    // * to the `ShardCoordinator`.
+    // */
+    //@SerialVersionUID(1L) final case class GetShardHome(shard: ShardId) extends CoordinatorCommand
+    ///**
+    // * `ShardCoordinator` replies with this message for [[GetShardHome]] requests.
+    // */
+    //@SerialVersionUID(1L) final case class ShardHome(shard: ShardId, ref: ActorRef) extends CoordinatorMessage
+    ///**
+    // * `ShardCoodinator` informs a `ShardRegion` that it is hosting this shard
+    // */
+    //@SerialVersionUID(1L) final case class HostShard(shard: ShardId) extends CoordinatorMessage
+    ///**
+    // * `ShardRegion` replies with this message for [[HostShard]] requests which lead to it hosting the shard
+    // */
+    //@SerialVersionUID(1l) final case class ShardStarted(shard: ShardId) extends CoordinatorMessage
+    ///**
+    // * `ShardCoordinator` initiates rebalancing process by sending this message
+    // * to all registered `ShardRegion` actors (including proxy only). They are
+    // * supposed to discard their known location of the shard, i.e. start buffering
+    // * incoming messages for the shard. They reply with [[BeginHandOffAck]].
+    // * When all have replied the `ShardCoordinator` continues by sending
+    // * [[HandOff]] to the `ShardRegion` responsible for the shard.
+    // */
+    //@SerialVersionUID(1L) final case class BeginHandOff(shard: ShardId) extends CoordinatorMessage
+    ///**
+    // * Acknowledgement of [[BeginHandOff]]
+    // */
+    //@SerialVersionUID(1L) final case class BeginHandOffAck(shard: ShardId) extends CoordinatorCommand
+    ///**
+    // * When all `ShardRegion` actors have acknoledged the [[BeginHandOff]] the
+    // * ShardCoordinator` sends this message to the `ShardRegion` responsible for the
+    // * shard. The `ShardRegion` is supposed to stop all entries in that shard and when
+    // * all entries have terminated reply with `ShardStopped` to the `ShardCoordinator`.
+    // */
+    //@SerialVersionUID(1L) final case class HandOff(shard: ShardId) extends CoordinatorMessage
+    ///**
+    // * Reply to [[HandOff]] when all entries in the shard have been terminated.
+    // */
+    //@SerialVersionUID(1L) final case class ShardStopped(shard: ShardId) extends CoordinatorCommand
 
 
     public abstract class DomainEvent { }
