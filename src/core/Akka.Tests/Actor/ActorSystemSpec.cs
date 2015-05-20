@@ -92,7 +92,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public void AnActorSystem_Must_Setup_The_Default_Scheduler()
         {
-            Assert.True(Sys.Scheduler.GetType() == typeof(TaskBasedScheduler));
+            Assert.True(Sys.Scheduler.GetType() == typeof(DedicatedThreadScheduler));
         }
 
         [Fact]
@@ -143,6 +143,11 @@ namespace Akka.Tests.Actor
 
     public class TestScheduler : IScheduler
     {
+        public TestScheduler(ActorSystem system)
+        {
+            
+        }
+
         public void ScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender)
         {
             throw new NotImplementedException();

@@ -52,12 +52,10 @@ namespace Akka.Actor.Internals
                 throw new ArgumentNullException("config");
 
             _name = name;            
-            ConfigureScheduler();
             ConfigureSettings(config);
             ConfigureScheduler();
             ConfigureEventStream();
             ConfigureProvider();
-            ConfigureScheduler();
             ConfigureSerialization();
             ConfigureMailboxes();
             ConfigureDispatchers();
@@ -130,7 +128,7 @@ namespace Akka.Actor.Internals
         private void ConfigureScheduler()
         {
             var schedulerType = Type.GetType(_settings.SchedulerClass, true);
-            _scheduler = (IScheduler)Activator.CreateInstance(schedulerType);
+            _scheduler = (IScheduler) Activator.CreateInstance(schedulerType, this);
         }
 
         /// <summary>
