@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Immutable;
 using System.Linq;
-
 using Akka.Actor;
-using Akka.Cluster;
 using Akka.Event;
 using Akka.Remote;
-using Akka.Util;
 
-namespace Akka.ClusterSingleton
+namespace Akka.Cluster.Tools.Singleton
 {
     internal sealed class HandOverToMe { }
 

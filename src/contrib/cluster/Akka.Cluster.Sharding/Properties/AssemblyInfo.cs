@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Akka.ClusterSharding")]
+[assembly: AssemblyTitle("Akka.Cluster.Sharding")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Akka.ClusterSharding")]
+[assembly: AssemblyProduct("Akka.Cluster.Sharding")]
 [assembly: AssemblyCopyright("Copyright ©  2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("056210d0-03eb-4ef4-99ac-c11f0e53eb2f")]
+[assembly: Guid("2cb7bc70-deeb-4da2-9f61-3f9ed6373421")]
 
 // Version information for an assembly consists of the following four values:
 //

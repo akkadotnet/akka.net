@@ -2,13 +2,12 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Policy;
 using Akka.Actor;
+using Akka.Cluster.Tools.Singleton;
 using Akka.Event;
 using Akka.Persistence;
-using Akka.ClusterSingleton;
 
-namespace Akka.ClusterSharding
+namespace Akka.Cluster.Sharding
 {
     /**
     * This extension provides sharding functionality of actors in a cluster.
@@ -149,7 +148,7 @@ namespace Akka.ClusterSharding
             new ConcurrentDictionary<string, IActorRef>();
 
         private readonly ExtendedActorSystem _system;
-        private Cluster.Cluster _cluster;
+        private Akka.Cluster.Cluster _cluster;
 
         public ClusterSharding(ExtendedActorSystem system)
         {
@@ -384,7 +383,7 @@ namespace Akka.ClusterSharding
     {
         public ClusterShardingGuardian()
         {
-            var cluster = Context.System.GetExtension<Cluster.Cluster>();
+            var cluster = Context.System.GetExtension<Akka.Cluster.Cluster>();
             var clusterSharding = Context.System.GetExtension<ClusterSharding>();
             var settings = clusterSharding.Settings;
 
@@ -623,7 +622,7 @@ handOffTimeout = HandOffTimeout,
 
     public class ClusterShardingSettings
     {
-        private Cluster.Cluster _cluster;
+        private Akka.Cluster.Cluster _cluster;
 
         public ClusterShardingSettings(ActorSystem system)
         {
