@@ -2,11 +2,9 @@
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
-
 using Akka.Actor;
-using Akka.Cluster;
 
-namespace Akka.ClusterSingleton
+namespace Akka.Cluster.Tools.Singleton
 {
         
     internal sealed class ClusterSingletonProxyActor : UntypedActor, IWithUnboundedStash
