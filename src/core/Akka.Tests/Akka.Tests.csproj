@@ -149,6 +149,7 @@
     <Compile Include="Routing\RandomSpec.cs" />
     <Compile Include="Routing\ResizerSpec.cs" />
     <Compile Include="Routing\RoundRobinSpec.cs" />
+    <Compile Include="Routing\RouterSupervisorSpec.cs" />
     <Compile Include="Routing\RoutingSpec.cs" />
     <Compile Include="Routing\ScatterGatherFirstCompletedSpec.cs" />
     <Compile Include="Routing\SmallestMailboxSpec.cs" />
