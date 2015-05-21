@@ -170,10 +170,10 @@ namespace Akka.Tests.Actor
             throw new NotImplementedException();
         }
 
-        public DateTimeOffset Now { get; }
-        public TimeSpan MonotonicClock { get; }
-        public TimeSpan HighResMonotonicClock { get; }
-        public IAdvancedScheduler Advanced { get; }
+        public DateTimeOffset Now { get; private set; }
+        public TimeSpan MonotonicClock { get; private set; }
+        public TimeSpan HighResMonotonicClock { get; private set; }
+        public IAdvancedScheduler Advanced { get; private set; }
     }
 }
 
