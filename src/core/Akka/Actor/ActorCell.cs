@@ -209,6 +209,8 @@ namespace Akka.Actor
             {
                 _state = _state.ClearBehaviorStack();
                 instance = CreateNewActorInstance();
+                //TODO: this overwrites any already initiaized supervisor strategy
+                //We should investigate what we can do to handle this better
                 instance.SupervisorStrategyInternal = _props.SupervisorStrategy;
                 //defaults to null - won't affect lazy instantiation unless explicitly set in props
             });

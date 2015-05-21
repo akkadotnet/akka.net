@@ -289,6 +289,47 @@ namespace Akka.Tests.Routing
             updatedRouter.Routees.Cast<ActorRefRoutee>().Any(r => ReferenceEquals(r.Actor, blackHole1)).ShouldBe(true);
             updatedRouter.Routees.Cast<ActorRefRoutee>().Any(r => ReferenceEquals(r.Actor, blackHole2)).ShouldBe(true);
         }
+
+        public class RouterSupervisorSpec : AkkaSpec
+        {
+            #region Killable actor
+
+            private class KillableActor : ReceiveActor
+            {
+                private readonly IActorRef TestActor;
+
+                public KillableActor(IActorRef testActor)
+                {
+                    TestActor = testActor;
+                    Receive<string>(s => s == "go away", s => { throw new ArgumentException("Goodbye then!"); });
+                }
+            }
+
+            #endregion
+
+            #region Tests
+
+            [Fact]
+            public void Routers_must_use_provided_supervisor_strategy()
+            {
+                var router = Sys.ActorOf(Props.Create(() => new KillableActor(TestActor))
+                    .WithRouter(
+                        new RoundRobinPool(1, null, new AllForOneStrategy(
+                            exception =>
+                            {
+                                TestActor.Tell("supervised");
+                                return Directive.Stop;
+                            }),
+                            null)),
+                    "router1");
+
+                router.Tell("go away");
+
+                ExpectMsg("supervised", TimeSpan.FromSeconds(2));
+            }
+
+            #endregion
+        }
     }
 }
 

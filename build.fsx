@@ -218,7 +218,8 @@ Target "RunTests" <| fun _ ->
                                     "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll" -- 
                                     "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" --
                                     "src/**/bin/Release/Akka.Persistence.SqlServer.Tests.dll" --
-                                    "src/**/bin/Release/Akka.Persistence.PostgreSql.Tests.dll"
+                                    "src/**/bin/Release/Akka.Persistence.PostgreSql.Tests.dll" --
+                                    "src/**/bin/Release/Akka.Persistence.Cassandra.Tests.dll"
 
     mkdir testOutput
 
@@ -279,6 +280,14 @@ Target "RunPostgreSqlTests" <| fun _ ->
     xUnit2
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
         postgreSqlTests
+
+Target "RunCassandraTests" <| fun _ ->
+    let cassandraTests = !! "src/**/bin/Release/Akka.Persistence.Cassandra.Tests.dll"
+    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
+    printfn "Using XUnit runner: %s" xunitToolPath
+    xUnit2
+        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
+        cassandraTests
 
 //--------------------------------------------------------------------------------
 // Nuget targets 

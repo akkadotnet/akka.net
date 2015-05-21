@@ -18,7 +18,7 @@ namespace Akka.Routing
     /// </summary>
     internal class RouterPoolActor : RouterActor
     {
-   //     private SupervisorStrategy supervisorStrategy;
+        private readonly SupervisorStrategy _supervisorStrategy;
 
         protected Pool Pool
         {
@@ -42,7 +42,12 @@ namespace Akka.Routing
         /// <param name="supervisorStrategy">The supervisor strategy.</param>
         public RouterPoolActor(SupervisorStrategy supervisorStrategy)
         {
-            SupervisorStrategyInternal = supervisorStrategy;
+            _supervisorStrategy = supervisorStrategy;
+        }
+
+        protected override SupervisorStrategy SupervisorStrategy()
+        {
+            return _supervisorStrategy;
         }
 
         /// <summary>
