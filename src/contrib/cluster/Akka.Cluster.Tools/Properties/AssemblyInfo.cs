@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Akka.ClusterSingleton")]
+[assembly: AssemblyTitle("Akka.Cluster.Tools")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Akka.ClusterSingleton")]
+[assembly: AssemblyProduct("Akka.Cluster.Tools")]
 [assembly: AssemblyCopyright("Copyright ©  2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("6359a500-be06-4d83-a948-9e79bf8d32ac")]
+[assembly: Guid("7ae6de46-24a7-41eb-a18c-5c3ab748e81e")]
 
 // Version information for an assembly consists of the following four values:
 //

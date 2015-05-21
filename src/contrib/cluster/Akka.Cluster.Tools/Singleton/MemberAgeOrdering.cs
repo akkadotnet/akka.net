@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
-using Akka.Cluster;
 
-namespace Akka.ClusterSingleton
+namespace Akka.Cluster.Tools.Singleton
 {
     internal sealed class MemberAgeOrdering : IComparer<Member>
     {
