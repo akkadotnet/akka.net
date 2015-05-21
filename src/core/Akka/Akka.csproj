@@ -151,7 +151,6 @@
     <Compile Include="Actor\Stash\UntypedActorWithUnboundedStash.cs" />
     <Compile Include="Actor\Stash\IWithBoundedStash.cs" />
     <Compile Include="Actor\Stash\IWithUnboundedStash.cs" />
-    <Compile Include="Actor\Scheduler\TaskBasedScheduler.cs" />
     <Compile Include="Configuration\ConfigurationException.cs" />
     <Compile Include="Configuration\ConfigurationFactory.cs" />
     <Compile Include="Configuration\Config.cs" />
