@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Event;
@@ -195,7 +196,7 @@ namespace Akka.Cluster.Sharding
             bool rememberEntries,
             IdExtractor idExtractor,
             ShardResolver shardResolver,
-            ShardAllocationStrategy allocationStrategy)
+            IShardAllocationStrategy allocationStrategy)
         {
             //Not used in scala?
             var resolvedRole = roleOverride ?? Settings.Role;
@@ -277,7 +278,7 @@ namespace Akka.Cluster.Sharding
          */
 
         public IActorRef Start(string typeName, Props entryProps, string roleOverride, bool rememberEntries,
-            IMessageExtractor messageExtractor, ShardAllocationStrategy allocationStrategy)
+            IMessageExtractor messageExtractor, IShardAllocationStrategy allocationStrategy)
         {
             IdExtractor idExtractor = messageExtractor.ToIdExtractor();
             ShardResolver shardResolver = ShardResolvers.Default;
@@ -359,10 +360,10 @@ namespace Akka.Cluster.Sharding
         public bool RememberEntries { get; private set; }
         public IdExtractor IdExtractor { get; private set; }
         public ShardResolver ShardResolver { get; private set; }
-        public ShardAllocationStrategy AllocationStrategy { get; private set; }
+        public IShardAllocationStrategy AllocationStrategy { get; private set; }
 
         public Start(string typeName, Props entryProps, string roleOverride, bool rememberEntries,
-            IdExtractor idIdExtractor, ShardResolver shardResolver, ShardAllocationStrategy allocationStrategy)
+            IdExtractor idIdExtractor, ShardResolver shardResolver, IShardAllocationStrategy allocationStrategy)
         {
             TypeName = typeName;
             EntryProps = entryProps;
@@ -604,19 +605,69 @@ handOffTimeout = HandOffTimeout,
         }
     }
 
-
-
-
-
-    public class ShardAllocationStrategy
+    
+    /**
+     * Interface of the pluggable shard allocation and rebalancing logic used by the [[ShardCoordinator]].
+     *
+     * Java implementations should extend [[AbstractShardAllocationStrategy]].
+     */
+    public interface IShardAllocationStrategy
     {
+        /**
+         * Invoked when the location of a new shard is to be decided.
+         * @param requester actor reference to the [[ShardRegion]] that requested the location of the
+         *   shard, can be returned if preference should be given to the node where the shard was first accessed
+         * @param shardId the id of the shard to allocate
+         * @param currentShardAllocations all actor refs to `ShardRegion` and their current allocated shards,
+         *   in the order they were allocated
+         * @return a `Future` of the actor ref of the [[ShardRegion]] that is to be responsible for the shard, must be one of
+         *   the references included in the `currentShardAllocations` parameter
+         */
+        Task<IActorRef> AllocateShard(IActorRef requester, ShardId shardId, IDictionary<IActorRef, ShardId[]> currentShardAllocations);
+
+        /**
+         * Invoked periodically to decide which shards to rebalance to another location.
+         * @param currentShardAllocations all actor refs to `ShardRegion` and their current allocated shards,
+         *   in the order they were allocated
+         * @param rebalanceInProgress set of shards that are currently being rebalanced, i.e.
+         *   you should not include these in the returned set
+         * @return a `Future` of the shards to be migrated, may be empty to skip rebalance in this round
+         */
+        Task<ISet<ShardId>> Rebalance(IDictionary<IActorRef, ShardId[]> currentShardAllocations, ISet<ShardId> rebalanceInProgress);
     }
 
-    public class LeastShardAllocationStrategy : ShardAllocationStrategy
+    /**
+     * Java API: Java implementations of custom shard allocation and rebalancing logic used by the [[ShardCoordinator]]
+     * should extend this abstract class and implement the two methods.
+     */
+    public abstract class BaseShardAllocationStrategy : IShardAllocationStrategy
+    {
+        public Task<IActorRef> AllocateShard(IActorRef requester, string shardId, IDictionary<IActorRef, ShardId[]> currentShardAllocations)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ISet<string>> Rebalance(IDictionary<IActorRef, ShardId[]> currentShardAllocations, ISet<string> rebalanceInProgress)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class LeastShardAllocationStrategy : IShardAllocationStrategy
     {
         public LeastShardAllocationStrategy(int leastShardAllocationRebalanceThreshold,
             int leastShardAllocationMaxSimultaneousRebalance)
         {
+        }
+
+        public Task<IActorRef> AllocateShard(IActorRef requester, string shardId, IDictionary<IActorRef, ShardId[]> currentShardAllocations)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ISet<string>> Rebalance(IDictionary<IActorRef, ShardId[]> currentShardAllocations, ISet<string> rebalanceInProgress)
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -1131,293 +1182,6 @@ private[akka] class Shard(
         }
     }
 
-    /// <summary>
-    /// Singleton coordinator that decides where shards should be allocated.
-    /// </summary>
-    public class ShardCoordinator : PersistentActor
-    {
-        private readonly TimeSpan _shardStartTimeout;
-        private readonly ILoggingAdapter _log = Context.GetLogger();
-        private static readonly object RebalanceTick = new object();
-        private static readonly object SnapshotTick = new object();
-        private readonly ICancelable _rebalanceTask;
-        private ICancelable _snapshotTask;
-        private State _persistentState;
-        private Dictionary<string, ICancelable> _unAckedHostShards;
-
-        public ShardCoordinator(TimeSpan handOffTimeout, TimeSpan shardStartTimeout, TimeSpan rebalanceInterval, TimeSpan snapshotInterval, ShardAllocationStrategy allocationStrategy)
-        {
-            _shardStartTimeout = shardStartTimeout;
-            _persistentState = State.Empty;                              // = State.empty
-            var rebalanceInProgress = new HashSet<ShardId>();                  //  Set.empty[ShardId]
-            _unAckedHostShards = new Dictionary<string, ICancelable>();     // Map.empty[ShardId, Cancellable]
-
-            _rebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(rebalanceInterval, rebalanceInterval, Self, RebalanceTick, Self);
-            _snapshotTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(snapshotInterval, snapshotInterval, Self, SnapshotTick, Self);
-
-            Cluster.Get(Context.System).Subscribe(Self, new[] { typeof(object /* ClusterShuttingDown */) });
-        }
-
-        public override ShardId PersistenceId
-        {
-            get
-            {
-                return Self.Path.ToStringWithoutAddress();
-            }
-        }
-
-        protected override void PostStop()
-        {
-            base.PostStop();
-            _rebalanceTask.Cancel();
-            _snapshotTask.Cancel();
-            Cluster.Get(Context.System).Unsubscribe(Self);
-        }
-
-        protected override bool ReceiveRecover(Msg message)
-        {
-            if (message is IDomainEvent)
-            {
-                var evt = message as IDomainEvent;
-                _log.Debug("receiveRecover {0}", evt);
-
-                if (message is ShardRegionRegistered)
-                {
-                    _persistentState = _persistentState.Updated(evt);
-                }
-                else if (message is ShardRegionProxyRegistered)
-                {
-                    _persistentState = _persistentState.Updated(evt);
-                }
-                else if (message is ShardRegionTerminated)
-                {
-                    var regionTerminated = (ShardRegionTerminated)message;
-                    if (_persistentState.Regions.ContainsKey(regionTerminated.Region))
-                    {
-                        _persistentState = _persistentState.Updated(evt);
-                    }
-                    else
-                    {
-                        _log.Debug("ShardRegionTerminated but region {0} was not registered", regionTerminated.Region);
-                    }
-                }
-                else if (message is ShardRegionProxyTerminated)
-                {
-                    var proxyTerminated = (ShardRegionProxyTerminated) message;
-                    if (_persistentState.RegionProxies.Contains(proxyTerminated.RegionProxy))
-                        _persistentState = _persistentState.Updated(evt);
-                }
-                else if (message is ShardHomeAllocated)
-                {
-                    _persistentState = _persistentState.Updated(evt);
-                }
-                else if (message is ShardHomeDeallocated)
-                {
-                    _persistentState = _persistentState.Updated(evt);
-                }
-                else return false;
-                return true;
-            }
-            else if (message is SnapshotOffer)
-            {
-                var state = ((SnapshotOffer) message).Snapshot as State;
-                _log.Debug("ReceiveRecover SnapshotOffer {0}", state);
-                
-                //Old versions of the state object may not have unallocatedShard set,
-                // thus it will be null.
-                if (state.UnallocatedShards == null)
-                {
-                    _persistentState = _persistentState.Copy(unallocatedShards: new HashSet<string>());
-                }
-                else
-                {
-                    _persistentState = state;
-                }
-
-                return true;
-            }
-            else if (message is RecoveryCompleted)
-            {
-                foreach (var regionProxy in _persistentState.RegionProxies)
-                {
-                    Context.Watch(regionProxy);
-                }
-
-                foreach (var region in _persistentState.Regions)
-                {
-                    Context.Watch(region.Key);
-                }
-
-                foreach (var shard in _persistentState.Shards)
-                {
-                    SendHostShardMessage(shard.Key, shard.Value);
-                }
-
-                AllocateShardHomes();
-                return true;
-            }
-            return false; //TODO: ????
-        }
-
-        private void AllocateShardHomes()
-        {
-            foreach (var unallocatedShard in _persistentState.UnallocatedShards)
-            {
-                Self.Tell(new GetShardHome(unallocatedShard));
-            }
-        }
-
-        private void SendHostShardMessage(ShardId shard, IActorRef region)
-        {
-            region.Tell(new HostShard(shard));
-            var cancelable = new Cancelable(Context.System.Scheduler);
-            Context.System.Scheduler.ScheduleTellOnce(_shardStartTimeout, Self, new ResendShardHost(shard, region), Self, cancelable);
-            _unAckedHostShards.Add(shard, cancelable);
-        }
-
-        protected override bool ReceiveCommand(Msg message)
-        {
-            throw new NotImplementedException();
-        }
-
-        public static Props Props(TimeSpan handOffTimeout, TimeSpan shardStartTimeout, TimeSpan rebalanceInterval, TimeSpan snapshotInterval, ShardAllocationStrategy allocationStrategy)
-        {
-            return
-                Actor.Props.Create(
-                    () =>
-                        new ShardCoordinator(handOffTimeout, shardStartTimeout, rebalanceInterval, snapshotInterval,
-                            allocationStrategy));
-        }
-    }
-
-    /**
-     * Persistent state of the event sourced ShardCoordinator.
-     */
-    [Serializable]
-    public class State
-    {
-        public static readonly State Empty = new State();
-
-        /// <summary>
-        /// Region for each shard.
-        /// </summary>
-        public readonly IDictionary<ShardId, IActorRef> Shards;
-
-        /// <summary>
-        /// Shards for each region.
-        /// </summary>
-        public readonly IDictionary<IActorRef, ShardId[]> Regions;
-
-        public readonly ISet<IActorRef> RegionProxies;
-        public readonly ISet<ShardId> UnallocatedShards;
-
-        private State() : this(new Dictionary<string, IActorRef>(), new Dictionary<IActorRef, ShardId[]>(), new HashSet<IActorRef>(), new HashSet<string>()) { }
-
-        private State(IDictionary<ShardId, IActorRef> shards, IDictionary<IActorRef, ShardId[]> regions, ISet<IActorRef> regionProxies, ISet<ShardId> unallocatedShards)
-        {
-            Shards = shards;
-            Regions = regions;
-            RegionProxies = regionProxies;
-            UnallocatedShards = unallocatedShards;
-        }
-
-        public State Updated(IDomainEvent e)
-        {
-            if (e is ShardRegionRegistered)
-            {
-                var message = e as ShardRegionRegistered;
-                if (Regions.ContainsKey(message.Region)) throw new ArgumentException(string.Format("Region {0} is already registered", message.Region));
-
-                var regions = new Dictionary<IActorRef, ShardId[]>(Regions);
-                regions.Add(message.Region, new ShardId[0]);
-                return Copy(regions: regions);
-            }
-            else if (e is ShardRegionProxyRegistered)
-            {
-                var message = e as ShardRegionProxyRegistered;
-                if (RegionProxies.Contains(message.RegionProxy)) throw new ArgumentException(string.Format("Region proxy {0} is already registered", message.RegionProxy));
-
-                var proxies = new HashSet<IActorRef>(RegionProxies);
-                proxies.Add(message.RegionProxy);
-                return Copy(regionProxies: proxies);
-            }
-            else if (e is ShardRegionTerminated)
-            {
-                var message = e as ShardRegionTerminated;
-                if (!Regions.ContainsKey(message.Region)) throw new ArgumentException(string.Format("Region {0} not registered", message.Region));
-
-                var regions = new Dictionary<IActorRef, ShardId[]>(Regions);
-                regions.Remove(message.Region);
-                var shards = new Dictionary<ShardId, IActorRef>(Shards);
-                var toUnalloc = Regions[message.Region];
-                var unallocatedShards = new HashSet<ShardId>(UnallocatedShards);
-                foreach (var shard in toUnalloc)
-                {
-                    shards.Remove(shard);
-                    unallocatedShards.Remove(shard);
-                }
-
-                return Copy(regions: regions, shards: shards, unallocatedShards: unallocatedShards);
-            }
-            else if (e is ShardRegionProxyTerminated)
-            {
-                var message = e as ShardRegionProxyTerminated;
-                if (!RegionProxies.Contains(message.RegionProxy)) throw new ArgumentException(string.Format("Region proxy {0} not registered", message.RegionProxy));
-
-                var proxies = new HashSet<IActorRef>(RegionProxies);
-                proxies.Remove(message.RegionProxy);
-                return Copy(regionProxies: proxies);
-            }
-            else if (e is ShardHomeAllocated)
-            {
-                var message = e as ShardHomeAllocated;
-                if (!Regions.ContainsKey(message.Region)) throw new ArgumentException(string.Format("Region {0} not registered", message.Region));
-                if (Shards.ContainsKey(message.Shard)) throw new ArgumentException(string.Format("Shard {0} is already allocated", message.Shard));
-
-                var shards = new Dictionary<ShardId, IActorRef>(Shards);
-                shards.Add(message.Shard, message.Region);
-                var regions = new Dictionary<IActorRef, ShardId[]>(Regions);
-                var region = regions[message.Region];
-                // add shard at the end of the region list
-                var newRegion = new ShardId[region.Length + 1];
-                Array.Copy(region, newRegion, region.Length);
-                newRegion[region.Length] = message.Shard;
-                var unallocatedShards = new HashSet<ShardId>(UnallocatedShards);
-                unallocatedShards.Remove(message.Shard);
-
-                return Copy(shards: shards, regions: regions, unallocatedShards: unallocatedShards);
-            }
-            else if (e is ShardHomeDeallocated)
-            {
-                var message = e as ShardHomeDeallocated;
-                if (!Shards.ContainsKey(message.Shard)) throw new ArgumentException(string.Format("Shard {0} not allocated", message.Shard));
-                var region = Shards[message.Shard];
-                if (!Regions.ContainsKey(region)) throw new ArgumentException(string.Format("Region {0} for shard {1} not registered", region, message.Shard));
-
-                var shards = new Dictionary<ShardId, IActorRef>(Shards);
-                shards.Remove(message.Shard);
-                var regions = new Dictionary<IActorRef, ShardId[]>(Regions);
-                var toFilter = Regions[region];
-                regions[region] = toFilter.Where(x => x != message.Shard).ToArray();
-                var unallocatedShards = new HashSet<ShardId>(UnallocatedShards);
-                unallocatedShards.Add(message.Shard);
-
-                return Copy(shards: shards, regions: regions, unallocatedShards: unallocatedShards);
-            }
-            else return this;
-        }
-
-        public State Copy(IDictionary<ShardId, IActorRef> shards = null,
-            IDictionary<IActorRef, ShardId[]> regions = null,
-            ISet<IActorRef> regionProxies = null,
-            ISet<ShardId> unallocatedShards = null)
-        {
-            if (shards == null && regions == null && regionProxies == null && unallocatedShards == null) return this;
-
-            return new State(shards ?? Shards, regions ?? Regions, regionProxies ?? RegionProxies, unallocatedShards ?? UnallocatedShards);
-        }
-    }
-
     /**
      * Periodic message to trigger rebalance
      */
@@ -1452,9 +1216,9 @@ private[akka] class Shard(
      */
     public class RebalanceWorker : ActorBase
     {
-        public static Props CreateProps(string shard, IActorRef @from, TimeSpan handOffTimeout, ISet<IActorRef> regions)
+        public static Props Props(string shard, IActorRef @from, TimeSpan handOffTimeout, ISet<IActorRef> regions)
         {
-            return Props.Create(() => new RebalanceWorker(shard, @from, handOffTimeout, regions));
+            return Actor.Props.Create(() => new RebalanceWorker(shard, @from, handOffTimeout, regions));
         }
 
         private readonly ShardId _shard;
