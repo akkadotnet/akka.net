@@ -11,6 +11,7 @@ using Akka.TestKit;
 using Xunit;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Akka.Tests.Actor
 {
@@ -54,11 +55,10 @@ namespace Akka.Tests.Actor
         {
             var actorSystem = ActorSystem
                 .Create(Guid.NewGuid().ToString());
-            var startTime = DateTime.UtcNow;
+            var st = Stopwatch.StartNew();
             var asyncShutdownTask = Task.Delay(TimeSpan.FromSeconds(1)).ContinueWith(_ => actorSystem.Shutdown());
             actorSystem.AwaitTermination(TimeSpan.FromSeconds(2)).ShouldBeTrue();
-            var endTime = DateTime.UtcNow;
-            Assert.True((endTime - startTime).TotalSeconds >= .9);
+            Assert.True(st.Elapsed.TotalSeconds >= .9);
         }
 
         [Fact]
