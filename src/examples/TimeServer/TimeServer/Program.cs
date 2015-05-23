@@ -33,7 +33,7 @@ namespace TimeServer
             {
                 if (message.ToLowerInvariant() == "gettime")
                 {
-                    var time =DateTime.Now.ToLongTimeString();
+                    var time =DateTime.UtcNow.ToLongTimeString();
                     Sender.Tell(time, Self);
                 }
                 else
