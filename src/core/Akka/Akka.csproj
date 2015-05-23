@@ -232,7 +232,6 @@
     <Compile Include="Event\StandardOutLogger.cs" />
     <Compile Include="Helios.Concurrency.DedicatedThreadPool.cs" />
     <Compile Include="Routing\ConsistentHashRouter.cs" />
-    <Compile Include="Routing\TailChoppingPool.cs" />
     <Compile Include="Serialization\JavaSerializer.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
     <Compile Include="Util\Internal\Collections\EnumeratorExtensions.cs" />
