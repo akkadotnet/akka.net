@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="TaskBasedScheduler_TellScheduler_Schedule_Tests.cs" company="Akka.NET Project">
+// <copyright file="DedicatedThreadScheduler_TellScheduler_Schedule_Tests.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
 //     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -15,14 +15,14 @@ using Xunit.Extensions;
 namespace Akka.Tests.Actor.Scheduler
 {
     // ReSharper disable once InconsistentNaming
-    public class TaskBasedScheduler_TellScheduler_Schedule_Tests : AkkaSpec
+    public class DedicatedThreadScheduler_TellScheduler_Schedule_Tests : AkkaSpec
     {
-        [Theory(Skip = "Tests that messages are sent with the specified interval, however due to inaccuracy of Task.Dely this often fails. Run this manually if you've made changes to TaskBasedScheduler")]
+      //  [Theory(Skip = "Tests that messages are sent with the specified interval, however due to inaccuracy of Task.Dely this often fails. Run this manually if you've made changes to DedicatedThreadScheduler")]
         [InlineData(10, 1000)]
         public void ScheduleTellRepeatedly_in_milliseconds_Tests(int initialDelay, int interval)
         {
             // Prepare, set up actions to be fired
-            IScheduler scheduler = new TaskBasedScheduler();
+            IScheduler scheduler = new DedicatedThreadScheduler(Sys);
 
             var cancelable = new Cancelable(Sys.Scheduler);
             var receiver = ActorOf(dsl =>
@@ -67,7 +67,7 @@ namespace Akka.Tests.Actor.Scheduler
         public void ScheduleTellRepeatedly_TimeSpan_Tests(int initialDelay, int interval)
         {
             //Prepare, set up actions to be fired
-            IScheduler scheduler = new TaskBasedScheduler();
+            IScheduler scheduler = new DedicatedThreadScheduler(Sys);
 
             scheduler.ScheduleTellRepeatedly(TimeSpan.FromMilliseconds(initialDelay), TimeSpan.FromMilliseconds(interval), TestActor, "Test", ActorRefs.NoSender);
 
@@ -83,7 +83,7 @@ namespace Akka.Tests.Actor.Scheduler
         public void ScheduleTellOnceTests(int[] times)
         {
             // Prepare, set up messages to be sent
-            IScheduler scheduler = new TaskBasedScheduler();
+            IScheduler scheduler = new DedicatedThreadScheduler(Sys);
 
             foreach(var time in times)
             {
@@ -103,7 +103,7 @@ namespace Akka.Tests.Actor.Scheduler
         public void When_ScheduleTellOnce_many_at_the_same_time_Then_all_fires(int[] times)
         {
             // Prepare, set up actions to be fired
-            IScheduler scheduler = new TaskBasedScheduler();
+            IScheduler scheduler = new DedicatedThreadScheduler(Sys);
 
             foreach(var time in times)
             {
@@ -126,7 +126,7 @@ namespace Akka.Tests.Actor.Scheduler
         [InlineData(-4711)]
         public void When_ScheduleTellOnce_with_invalid_delay_Then_exception_is_thrown(int invalidTime)
         {
-            IScheduler scheduler = new TaskBasedScheduler();
+            IScheduler scheduler = new DedicatedThreadScheduler(Sys);
 
             XAssert.Throws<ArgumentOutOfRangeException>(() =>
                 scheduler.ScheduleTellOnce(invalidTime, TestActor, "Test", ActorRefs.NoSender)
@@ -139,7 +139,7 @@ namespace Akka.Tests.Actor.Scheduler
         [InlineData(-4711)]
         public void When_ScheduleTellRepeatedly_with_invalid_delay_Then_exception_is_thrown(int invalidTime)
         {
-            IScheduler scheduler = new TaskBasedScheduler();
+            IScheduler scheduler = new DedicatedThreadScheduler(Sys);
 
             XAssert.Throws<ArgumentOutOfRangeException>(() =>
                 scheduler.ScheduleTellRepeatedly(invalidTime, 100, TestActor, "Test", ActorRefs.NoSender)
@@ -153,7 +153,7 @@ namespace Akka.Tests.Actor.Scheduler
         [InlineData(-4711)]
         public void When_ScheduleTellRepeatedly_with_invalid_interval_Then_exception_is_thrown(int invalidInterval)
         {
-            IScheduler scheduler = new TaskBasedScheduler();
+            IScheduler scheduler = new DedicatedThreadScheduler(Sys);
 
             XAssert.Throws<ArgumentOutOfRangeException>(() =>
                 scheduler.ScheduleTellRepeatedly(42, invalidInterval, TestActor, "Test", ActorRefs.NoSender)
@@ -164,7 +164,7 @@ namespace Akka.Tests.Actor.Scheduler
         [Fact]
         public void When_ScheduleTellOnce_with_0_delay_Then_action_is_executed_immediately()
         {
-            IScheduler scheduler = new TaskBasedScheduler();
+            IScheduler scheduler = new DedicatedThreadScheduler(Sys);
             scheduler.ScheduleTellOnce(0, TestActor, "Test", ActorRefs.NoSender);
             ExpectMsg("Test");
         }
@@ -172,7 +172,7 @@ namespace Akka.Tests.Actor.Scheduler
         [Fact]
         public void When_ScheduleTellRepeatedly_with_0_delay_Then_action_is_executed_immediately()
         {
-            IScheduler scheduler = new TaskBasedScheduler();
+            IScheduler scheduler = new DedicatedThreadScheduler(Sys);
             scheduler.ScheduleTellRepeatedly(0, 60 * 1000, TestActor, "Test", ActorRefs.NoSender);
             ExpectMsg("Test");
         }

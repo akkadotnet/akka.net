@@ -2,12 +2,14 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using Akka.Event;
 
 namespace Akka.Actor
 {
     public class DedicatedThreadScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider
     {
-        private readonly ConcurrentQueue<ScheduledWork> _workQueue = new ConcurrentQueue<ScheduledWork>();  
+        private readonly ConcurrentQueue<ScheduledWork> _workQueue = new ConcurrentQueue<ScheduledWork>();
+        private ILoggingAdapter _log;
         protected override DateTimeOffset TimeNow { get { return DateTimeOffset.Now; } }
         public override TimeSpan MonotonicClock { get { return Util.MonotonicClock.Elapsed; } }
         public override TimeSpan HighResMonotonicClock { get { return Util.MonotonicClock.ElapsedHighRes; } }
@@ -15,6 +17,7 @@ namespace Akka.Actor
         //TODO: use some more efficient approach to handle future work
         public DedicatedThreadScheduler(ActorSystem system)
         {
+            _log = Logging.GetLogger(system, this);
             var precision = system.Settings.Config.GetTimeSpan("akka.scheduler.tick-duration");
             var thread = new Thread(_ =>
             {
@@ -105,7 +108,10 @@ namespace Akka.Actor
                     action();
                 }
                 catch (OperationCanceledException) { }
-                //TODO: Should we log other exceptions? /@hcanber
+                catch (Exception x)
+                {
+                    _log.Error(x, "DedicatedThreadScheduler faild to execute action");
+                }                
             };
             AddWork(initialDelay, executeAction, token);
 
@@ -123,15 +129,16 @@ namespace Akka.Actor
                 try
                 {
                     action();
+                    if (token.IsCancellationRequested)
+                        return;
+
+                    AddWork(interval, executeAction, token);
                 }
                 catch (OperationCanceledException) { }
-                //TODO: Should we log other exceptions? /@hcanber
-
-                if (token.IsCancellationRequested) 
-                    return;
-
-                AddWork(interval, executeAction,token);
-               
+                catch (Exception x)
+                {
+                    _log.Error(x,"DedicatedThreadScheduler faild to execute action");
+                }
             };
             AddWork(initialDelay, executeAction, token);
 

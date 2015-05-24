@@ -183,6 +183,15 @@ namespace Akka.Routing
             _within = within;
         }
 
+        /// <summary>
+        /// </summary>
+        /// <param name="nrOfInstances">The nr of instances.</param>
+        /// <param name="within">Expect a response within the given timespan</param>
+        public ScatterGatherFirstCompletedPool(int nrOfInstances, TimeSpan within) : this(nrOfInstances)
+        {
+            _within = within;
+        }
+
         public ScatterGatherFirstCompletedPool(Config config) : base(config)
         {
             _within = config.GetTimeSpan("within");
