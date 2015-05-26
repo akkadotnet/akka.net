@@ -21,12 +21,12 @@ namespace Akka.Remote
 
         public bool IsOverdue
         {
-            get { return DateTime.Now > When; }
+            get { return DateTime.UtcNow > When; }
         }
 
         public bool HasTimeLeft
         {
-            get { return DateTime.Now < When; }
+            get { return DateTime.UtcNow < When; }
         }
 
         public DateTime When { get; private set; }
@@ -34,7 +34,7 @@ namespace Akka.Remote
         /// <summary>
         /// Warning: creates a new <see cref="TimeSpan"/> instance each time it's used
         /// </summary>
-        public TimeSpan TimeLeft { get { return When - DateTime.Now; } }
+        public TimeSpan TimeLeft { get { return When - DateTime.UtcNow; } }
 
         #region Overrides
 
@@ -60,13 +60,13 @@ namespace Akka.Remote
         #region Static members
 
         /// <summary>
-        /// Returns a deadline that is due <see cref="DateTime.Now"/>
+        /// Returns a deadline that is due <see cref="DateTime.UtcNow"/>
         /// </summary>
         public static Deadline Now
         {
             get
             {
-                return new Deadline(DateTime.Now);
+                return new Deadline(DateTime.UtcNow);
             }
         }
 

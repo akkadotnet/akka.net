@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Akka.Util;
 
 namespace Akka.Actor.Internal
 {
@@ -79,7 +80,7 @@ namespace Akka.Actor.Internal
             // after a restart and if enough restarts happen during this time, it
             // denies. Otherwise window closes and the scheme starts over.
             var retriesDone = _maxNrOfRetriesCount + 1;
-            var now = DateTime.Now.Ticks;
+            var now = MonotonicClock.Elapsed.Ticks;
             long windowStart;
             if (_restartTimeWindowStartTicks == 0)
             {

@@ -209,7 +209,7 @@ namespace Akka.Persistence
             }
 
             var deliveryId = NextDeliverySequenceNr();
-            var now = IsRecovering ? DateTime.Now - RedeliverInterval : DateTime.Now;
+            var now = IsRecovering ? DateTime.UtcNow - RedeliverInterval : DateTime.UtcNow;
             var delivery = new Delivery(destination, deliveryMessageMapper(deliveryId), now, attempt: 0);
 
             if (IsRecovering)
@@ -254,7 +254,7 @@ namespace Akka.Persistence
         public void SetDeliverySnapshot(AtLeastOnceDeliverySnapshot snapshot)
         {
             _deliverySequenceNr = snapshot.DeliveryId;
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             var unconfirmedDeliveries = snapshot.UnconfirmedDeliveries
                 .Select(u => new KeyValuePair<long, Delivery>(u.DeliveryId, new Delivery(u.Destination, u.Message, now, 0)));
 
@@ -302,7 +302,7 @@ namespace Akka.Persistence
 
         private void RedeliverOverdue()
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             var deadline = now - RedeliverInterval;
             var warnings = new List<UnconfirmedDelivery>();
 
