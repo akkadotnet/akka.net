@@ -12,41 +12,30 @@ using System.Linq;
 namespace Akka.Configuration.Hocon
 {
     /// <summary>
-    ///     Class Parser.
+    /// This class contains methods used to parse HOCON (Human-Optimized Config Object Notation)
+    /// configuration strings.
     /// </summary>
     public class Parser
     {
-        /// <summary>
-        ///     The substitutions
-        /// </summary>
         private readonly List<HoconSubstitution> _substitutions = new List<HoconSubstitution>();
-
-        /// <summary>
-        ///     The reader
-        /// </summary>
         private HoconTokenizer _reader;
-
-        /// <summary>
-        ///     The root
-        /// </summary>
         private HoconValue _root;
 
         /// <summary>
-        ///     Parses the specified text.
+        /// Parses the supplied HOCON configuration string into a root element.
         /// </summary>
-        /// <param name="text">The text.</param>
-        /// <returns>HoconValue.</returns>
+        /// <param name="text">The string that contains a HOCON configuration string.</param>
+        /// <returns>The root element created from the supplied HOCON configuration string.</returns>
+        /// <exception cref="System.Exception">
+        /// This exception is thrown when an unresolved substitution is encountered.
+        /// It also occurs when the end of the file has been reached while trying
+        /// to read a value.
+        /// </exception>
         public static HoconRoot Parse(string text)
         {
             return new Parser().ParseText(text);
         }
 
-        /// <summary>
-        ///     Parses the text.
-        /// </summary>
-        /// <param name="text">The text.</param>
-        /// <returns>HoconValue.</returns>
-        /// <exception cref="System.Exception">Unresolved substitution: + sub.Path</exception>
         private HoconRoot ParseText(string text)
         {
             _root = new HoconValue();
@@ -65,11 +54,6 @@ namespace Akka.Configuration.Hocon
             return new HoconRoot(_root, _substitutions);
         }
 
-        /// <summary>
-        ///     Parses the object.
-        /// </summary>
-        /// <param name="owner">The owner.</param>
-        /// <param name="root">if set to <c>true</c> [root].</param>
         private void ParseObject(HoconValue owner, bool root)
         {
             if (owner.IsObject())
@@ -104,10 +88,6 @@ namespace Akka.Configuration.Hocon
             }
         }
 
-        /// <summary>
-        ///     Parses the content of the key.
-        /// </summary>
-        /// <param name="value">The value.</param>
         private void ParseKeyContent(HoconValue value)
         {
             while (!_reader.EoF)
@@ -136,9 +116,10 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        ///     Parses the value.
+        /// Retrieves the next value token from the tokenizer and appends it
+        /// to the supplied element <paramref name="owner"/>.
         /// </summary>
-        /// <param name="owner">The owner.</param>
+        /// <param name="owner">The element to append the next token.</param>
         /// <exception cref="System.Exception">End of file reached while trying to read a value</exception>
         public void ParseValue(HoconValue owner)
         {
@@ -189,10 +170,6 @@ namespace Akka.Configuration.Hocon
             IgnoreComma();
         }
 
-        /// <summary>
-        ///     Parses the trailing whitespace.
-        /// </summary>
-        /// <param name="owner">The owner.</param>
         private void ParseTrailingWhitespace(HoconValue owner)
         {
             Token ws = _reader.PullSpaceOrTab();
@@ -207,20 +184,15 @@ namespace Akka.Configuration.Hocon
             }
         }
 
-        /// <summary>
-        ///     Parses the substitution.
-        /// </summary>
-        /// <param name="value">The value.</param>
-        /// <returns>HoconSubstitution.</returns>
         private static HoconSubstitution ParseSubstitution(string value)
         {
             return new HoconSubstitution(value);
         }
 
         /// <summary>
-        ///     Parses the array.
+        /// Retrieves the next array token from the tokenizer.
         /// </summary>
-        /// <returns>HoconArray.</returns>
+        /// <returns>An array of elements retrieved from the token.</returns>
         public HoconArray ParseArray()
         {
             var arr = new HoconArray();
@@ -235,9 +207,6 @@ namespace Akka.Configuration.Hocon
             return arr;
         }
 
-        /// <summary>
-        ///     Ignores the comma.
-        /// </summary>
         private void IgnoreComma()
         {
             if (_reader.IsComma()) //optional end of value
