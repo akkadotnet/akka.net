@@ -127,7 +127,8 @@ namespace Akka.Actor.Internals
 
         private void ConfigureScheduler()
         {
-            _scheduler = new DedicatedThreadScheduler(this);;// new TaskBasedScheduler();
+            var schedulerType = Type.GetType(_settings.SchedulerClass, true);
+            _scheduler = (IScheduler) Activator.CreateInstance(schedulerType, this);
         }
 
         /// <summary>
