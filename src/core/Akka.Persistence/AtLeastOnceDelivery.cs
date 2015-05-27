@@ -129,7 +129,7 @@ namespace Akka.Persistence
     /// Use a <see cref="Deliver"/> method to send a message to a destination. Call the <see cref="ConfirmDelivery"/>
     /// method once destination has replied with a confirmation message. The interval between redelivery attempts
     /// can be defined with <see cref="RedeliverInterval"/>. After a number of delivery attempts an 
-    /// <see cref="UnconfirmedWarning"/> message will be sent to <see cref="Self"/>. The resending will continue,
+    /// <see cref="UnconfirmedWarning"/> message will be sent to <see cref="ActorBase.Self"/>. The resending will continue,
     /// but you may choose <see cref="ConfirmDelivery"/> to cancel resending.
     /// 
     /// This actor type has state consisting of unconfirmed messages and a sequence number. It doesn't store it by
@@ -170,7 +170,7 @@ namespace Akka.Persistence
         protected int DefaultRedeliveryBurstLimit { get { return Extension.Settings.AtLeastOnceDelivery.RedeliveryBurstLimit; } }
 
         /// <summary>
-        /// After this number of delivery attempts a <see cref="UnconfirmedWarning"/> message will be sent to <see cref="Self"/>.
+        /// After this number of delivery attempts a <see cref="UnconfirmedWarning"/> message will be sent to <see cref="ActorBase.Self"/>.
         /// The count is reset after restart.
         /// </summary>
         public virtual int UnconfirmedDeliveryAttemptsToWarn { get { return DefaultUnconfirmedDeliveryAttemptsToWarn; } }

@@ -42,7 +42,7 @@ namespace Akka.Actor
     /// RepointableActorRef (and potentially others) may change their locality at
     /// runtime, meaning that isLocal might not be stable. RepointableActorRef has
     /// the feature that it starts out “not fully started” (but you can send to it),
-    /// which is why <see cref="IsSt"/> features here; it is not improbable that cluster
+    /// which is why <see cref="IsStarted"/> features here; it is not improbable that cluster
     /// actor refs will have the same behavior.
     /// INTERNAL
     /// </summary>
