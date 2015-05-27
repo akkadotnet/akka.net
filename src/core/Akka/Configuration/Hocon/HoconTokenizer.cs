@@ -603,9 +603,9 @@ namespace Akka.Configuration.Hocon
         }
 
         /// <summary>
-        /// Retrieves a <see cref="TokenType.Substitution"/> token from the tokenizer's current position.
+        /// Retrieves a <see cref="TokenType.Substitute"/> token from the tokenizer's current position.
         /// </summary>
-        /// <returns>A <see cref="TokenType.Substitution"/> token from the tokenizer's current position.</returns>
+        /// <returns>A <see cref="TokenType.Substitute"/> token from the tokenizer's current position.</returns>
         public Token PullSubstitution()
         {
             var sb = new StringBuilder();
