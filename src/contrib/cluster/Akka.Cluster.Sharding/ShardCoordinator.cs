@@ -9,6 +9,114 @@ using Akka.Persistence;
 namespace Akka.Cluster.Sharding
 {
     using ShardId = String;
+
+    /**
+     * Interface of the pluggable shard allocation and rebalancing logic used by the [[ShardCoordinator]].
+     *
+     * Java implementations should extend [[AbstractShardAllocationStrategy]].
+     */
+    public interface IShardAllocationStrategy
+    {
+        /**
+         * Invoked when the location of a new shard is to be decided.
+         * @param requester actor reference to the [[ShardRegion]] that requested the location of the
+         *   shard, can be returned if preference should be given to the node where the shard was first accessed
+         * @param shardId the id of the shard to allocate
+         * @param currentShardAllocations all actor refs to `ShardRegion` and their current allocated shards,
+         *   in the order they were allocated
+         * @return a `Future` of the actor ref of the [[ShardRegion]] that is to be responsible for the shard, must be one of
+         *   the references included in the `currentShardAllocations` parameter
+         */
+        Task<IActorRef> AllocateShard(IActorRef requester, ShardId shardId, IDictionary<IActorRef, ShardId[]> currentShardAllocations);
+
+        /**
+         * Invoked periodically to decide which shards to rebalance to another location.
+         * @param currentShardAllocations all actor refs to `ShardRegion` and their current allocated shards,
+         *   in the order they were allocated
+         * @param rebalanceInProgress set of shards that are currently being rebalanced, i.e.
+         *   you should not include these in the returned set
+         * @return a `Future` of the shards to be migrated, may be empty to skip rebalance in this round
+         */
+        Task<ISet<ShardId>> Rebalance(IDictionary<IActorRef, ShardId[]> currentShardAllocations, ISet<ShardId> rebalanceInProgress);
+    }
+
+    /**
+     * The default implementation of [[ShardCoordinator.LeastShardAllocationStrategy]]
+     * allocates new shards to the `ShardRegion` with least number of previously allocated shards.
+     * It picks shards for rebalancing handoff from the `ShardRegion` with most number of previously allocated shards.
+     * They will then be allocated to the `ShardRegion` with least number of previously allocated shards,
+     * i.e. new members in the cluster. There is a configurable threshold of how large the difference
+     * must be to begin the rebalancing. The number of ongoing rebalancing processes can be limited.
+     */
+    [Serializable]
+    public class LeastShardAllocationStrategy : IShardAllocationStrategy
+    {
+        private readonly int _rebalanceThreshold;
+        private readonly int _maxSimultaneousRebalance;
+
+        public LeastShardAllocationStrategy(int rebalanceThreshold, int maxSimultaneousRebalance)
+        {
+            _rebalanceThreshold = rebalanceThreshold;
+            _maxSimultaneousRebalance = maxSimultaneousRebalance;
+        }
+
+        public Task<IActorRef> AllocateShard(IActorRef requester, string shardId, IDictionary<IActorRef, ShardId[]> currentShardAllocations)
+        {
+            var min = GetMinBy(currentShardAllocations, kv => kv.Value.Length);
+            return Task.FromResult(min.Key);
+        }
+
+        public Task<ISet<ShardId>> Rebalance(IDictionary<IActorRef, ShardId[]> currentShardAllocations, ISet<ShardId> rebalanceInProgress)
+        {
+            if (rebalanceInProgress.Count < _maxSimultaneousRebalance)
+            {
+                var leastShardsRegion = GetMinBy(currentShardAllocations, kv => kv.Value.Length);
+                var shards =
+                    currentShardAllocations.Select(kv => kv.Value.Where(s => !rebalanceInProgress.Contains(s)).ToArray());
+                var mostShards = GetMaxBy(shards, x => x.Length);
+
+                if (mostShards.Length - leastShardsRegion.Value.Length >= _rebalanceThreshold)
+                {
+                    return Task.FromResult(new HashSet<ShardId> {mostShards.First()} as ISet<ShardId>);
+                }
+            }
+
+            return Task.FromResult(new HashSet<ShardId>() as ISet<ShardId>);
+        }
+
+        private static T GetMinBy<T>(IEnumerable<T> collection, Func<T, int> extractor)
+        {
+            var minSize = int.MaxValue;
+            var result = default(T);
+            foreach (var value in collection)
+            {
+                var x = extractor(value);
+                if (x < minSize)
+                {
+                    minSize = x;
+                    result = value;
+                }
+            }
+            return result;
+        }
+
+        private static T GetMaxBy<T>(IEnumerable<T> collection, Func<T, int> extractor)
+        {
+            var minSize = int.MinValue;
+            var result = default(T);
+            foreach (var value in collection)
+            {
+                var x = extractor(value);
+                if (x > minSize)
+                {
+                    minSize = x;
+                    result = value;
+                }
+            }
+            return result;
+        }
+    }
+
     /// <summary>
     /// Singleton coordinator that decides where shards should be allocated.
     /// </summary>
@@ -439,6 +547,8 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     public class State
     {
+
+        //TODO: maybe we should switch this from immutable to concurrent-collections based?
         public static readonly State Empty = new State();
 
         /// <summary>
