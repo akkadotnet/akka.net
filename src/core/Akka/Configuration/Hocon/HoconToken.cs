@@ -121,7 +121,7 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         /// Creates a key token with a given <paramref name="key"/>.
         /// </summary>
-        /// <param name="value">The key to associate with this token.</param>
+        /// <param name="key">The key to associate with this token.</param>
         /// <returns>A key token with the given key.</returns>
         public static Token Key(string key)
         {
