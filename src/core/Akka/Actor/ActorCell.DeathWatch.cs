@@ -210,7 +210,8 @@ namespace Akka.Actor
             // cleanup watchedBy since we know they are dead
             MaintainAddressTerminatedSubscription(() =>
             {
-                foreach (var a in _state.GetWatchedBy().Where(a => a.Path.Address == address))
+                
+                foreach (var a in _state.GetWatchedBy().Where(a => a.Path.Address == address).ToList())
                 {
                     //_watchedBy.Remove(a);
                     _state = _state.RemoveWatchedBy(a);
