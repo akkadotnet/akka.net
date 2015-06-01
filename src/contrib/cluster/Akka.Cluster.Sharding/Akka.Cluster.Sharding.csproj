@@ -49,6 +49,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shard.cs" />
     <Compile Include="ShardCoordinator.cs" />
+    <Compile Include="ShardRegion.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
