@@ -15,4 +15,4 @@ open System.Runtime.InteropServices
 do ()
 
 module internal AssemblyVersionInformation =
-    let [<Literal>] Version = "1.0.4.0"
+let [<Literal>] Version = "1.0.4.0"
