@@ -146,7 +146,7 @@ namespace Akka.Cluster.Sharding
             _rebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(rebalanceInterval, rebalanceInterval, Self, RebalanceTick, Self);
             _snapshotTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(snapshotInterval, snapshotInterval, Self, SnapshotTick, Self);
 
-            Cluster.Get(Context.System).Subscribe(Self, new[] { typeof(object /* ClusterShuttingDown */) });
+            Cluster.Get(Context.System).Subscribe(Self, new[] { typeof(ClusterEvent.ClusterShuttingDown) });
         }
 
         public override String PersistenceId
@@ -464,7 +464,7 @@ namespace Akka.Cluster.Sharding
                 // On rebalance, we send ourselves a GetShardHome message to reallocate a
                 // shard. This recieve handles the "response" from that message. i.e. Ingores it.
             }
-            else if (message is int /*TODO: ClusterEvent.ClusterShuttingDown */)
+            else if (message is ClusterEvent.ClusterShuttingDown)
             {
                 _log.Debug("Shutting down shard coordinator");
                 // can't stop because supervisor will start it again,
