@@ -11,6 +11,18 @@ namespace Akka.Cluster.Sharding
     using ShardId = String;
     using EntryId = String;
 
+    internal struct BufferedMessage
+    {
+        public readonly object Message;
+        public readonly IActorRef ActorRef;
+
+        public BufferedMessage(object message, IActorRef actorRef)
+        {
+            Message = message;
+            ActorRef = actorRef;
+        }
+    }
+
     public class Shard : PersistentActor
     {
         #region Messages
@@ -97,18 +109,6 @@ namespace Akka.Cluster.Sharding
             public State(ISet<EntryId> entries)
             {
                 Entries = entries;
-            }
-        }
-
-        private struct BufferedMessage
-        {
-            public readonly object Message;
-            public readonly IActorRef ActorRef;
-
-            public BufferedMessage(object message, IActorRef actorRef)
-            {
-                Message = message;
-                ActorRef = actorRef;
             }
         }
 
@@ -232,9 +232,9 @@ namespace Akka.Cluster.Sharding
             {
                 ReceiveShardCommand(message as IShardCommand);
             }
-            else if (message is ShardRegion.ShardRegionCommand)
+            else if (message is IShardRegionCommand)
             {
-                ReceiveShardRegionCommand(message as ShardRegion.ShardRegionCommand);
+                ReceiveShardRegionCommand(message as IShardRegionCommand);
             }
             else if (message is PersistenceFailure)
             {
@@ -258,9 +258,9 @@ namespace Akka.Cluster.Sharding
             Context.System.Scheduler.ScheduleTellOnce(_shardFailureBackoff, Self, new RetryPersistence(payload), Self);
         }
 
-        private void ReceiveShardRegionCommand(ShardRegion.ShardRegionCommand command)
+        private void ReceiveShardRegionCommand(IShardRegionCommand command)
         {
-            if (command is ShardRegion.Passivate) Passivate(Sender, (command as ShardRegion.Passivate).StopMessage);
+            if (command is Passivate) Passivate(Sender, (command as Passivate).StopMessage);
             else Unhandled(command);
         }
 
