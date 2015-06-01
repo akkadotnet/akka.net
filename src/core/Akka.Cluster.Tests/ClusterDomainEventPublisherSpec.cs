@@ -183,13 +183,12 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ClusterDomainEventPublisherMustPublishRemovedWhenStopped()
+        public void ClusterDomainEventPublisherMustPublishClusterShuttingDownAndRemovedWhenStopped()
         {
             _publisher.Tell(PoisonPill.Instance);
             _memberSubscriber.ExpectMsg(ClusterEvent.ClusterShuttingDown.Instance);
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberRemoved(aRemoved, MemberStatus.Up));
         }
-
     }
 }
 
