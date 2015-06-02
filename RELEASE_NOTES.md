@@ -41,12 +41,12 @@ PM> Install-Package Akka.TestKit.XUnit2
 **Akka.Persistence.PostgreSql** and **Akka.Persistence.Cassandra**
 Akka.Persistence now has two additional concrete implementations for PostgreSQL and Cassandra! You can install either of the packages using the following commandline:
 
-PostgreSQL
+[Akka.Persistence.PostgreSql Configuration Docs](https://github.com/akkadotnet/akka.net/tree/dev/src/contrib/persistence/Akka.Persistence.PostgreSql)
 ```
 PM> Install-Package Akka.Persistence.PostgreSql
 ```
 
-Cassandra
+[Akka.Persistence.Cassandra Configuration Docs](https://github.com/akkadotnet/akka.net/tree/dev/src/contrib/persistence/Akka.Persistence.Cassandra)
 ```
 PM> Install-Package Akka.Persistence.Cassandra
 ```
