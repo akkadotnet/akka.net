@@ -206,7 +206,6 @@ namespace Akka.Remote
                                  path.Elements.ToArray()).
                         WithUid(path.Uid);
                     var remoteRef = new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, deployment);
-                    remoteRef.Start();
                     return remoteRef;
                 }
                 catch (Exception ex)
@@ -253,23 +252,6 @@ namespace Akka.Remote
                 ActorRefs.Nobody,
                 Props.None,
                 Deploy.None);
-        }
-
-        private IInternalActorRef RemoteActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor,
-            ActorPath path)
-        {
-            var scope = (RemoteScope)props.Deploy.Scope;
-            var d = props.Deploy;
-            var addr = scope.Address;
-
-            var localAddress = Transport.LocalAddressForRemote(addr);
-
-            var rpath = (new RootActorPath(addr) / "remote" / localAddress.Protocol / localAddress.HostPort() /
-                               path.Elements.ToArray()).
-                WithUid(path.Uid);
-            var remoteRef = new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, d);
-            remoteRef.Start();
-            return remoteRef;
         }
 
         private IInternalActorRef LocalActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor,
