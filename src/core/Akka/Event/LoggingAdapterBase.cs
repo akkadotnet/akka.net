@@ -99,6 +99,11 @@ namespace Akka.Event
             }
         }
 
+        public void Warn(string format, params object[] args)
+        {
+            Warning(format, args);
+        }
+
         public void Warning(string format, params object[] args)
         {
             if (!IsWarningEnabled) 
