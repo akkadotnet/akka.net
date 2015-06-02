@@ -443,6 +443,16 @@ namespace Akka.Cluster
         }
 
         /// <summary>
+        /// This event is published when the cluster node is shutting down,
+        /// before the final <see cref="MemberRemoved"/> events are published.
+        /// </summary>
+        public sealed class ClusterShuttingDown : IClusterDomainEvent
+        {
+            public static readonly ClusterShuttingDown Instance = new ClusterShuttingDown();
+            private ClusterShuttingDown() { }
+        }
+
+        /// <summary>
         /// The nodes that have seen current version of the Gossip.
         /// </summary>
         internal sealed class SeenChanged : IClusterDomainEvent
@@ -663,6 +673,7 @@ namespace Akka.Cluster
         protected override void PostStop()
         {
             // publish the final removed state before shutting down
+            Publish(ClusterEvent.ClusterShuttingDown.Instance);
             PublishChanges(Gossip.Empty);
         }
 

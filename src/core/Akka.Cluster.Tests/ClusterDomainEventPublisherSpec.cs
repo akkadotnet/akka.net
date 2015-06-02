@@ -45,6 +45,7 @@ namespace Akka.Cluster.Tests
             _memberSubscriber = CreateTestProbe();
             Sys.EventStream.Subscribe(_memberSubscriber.Ref, typeof(ClusterEvent.IMemberEvent));
             Sys.EventStream.Subscribe(_memberSubscriber.Ref, typeof(ClusterEvent.LeaderChanged));
+            Sys.EventStream.Subscribe(_memberSubscriber.Ref, typeof(ClusterEvent.ClusterShuttingDown));
 
             _publisher = Sys.ActorOf(Props.Create<ClusterDomainEventPublisher>());
             //TODO: If parent told of exception then test should fail (if not expected in some way)?
@@ -159,12 +160,12 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
-        public void ClusterDomainEventPublisherMustPublishRemovedWhenStopped()
+        public void ClusterDomainEventPublisherMustPublishClusterShuttingDownAndRemovedWhenStopped()
         {
             _publisher.Tell(PoisonPill.Instance);
+            _memberSubscriber.ExpectMsg(ClusterEvent.ClusterShuttingDown.Instance);
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberRemoved(aRemoved, MemberStatus.Up));
         }
-
     }
 }
 
