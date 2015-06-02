@@ -203,7 +203,7 @@ namespace Akka.TestKit
         /// </param>
         /// <param name="fail">Action that is called when the timeout expired. 
         /// The parameters conforms to <see cref="string.Format(string,object[])"/></param>
-        /// <param name="logger">If a <see cref="LoggingAdapter"/> is specified, debug messages will be logged using it. If <c>null</c> nothing will be logged</param>
+        /// <param name="logger">If a <see cref="ILoggingAdapter"/> is specified, debug messages will be logged using it. If <c>null</c> nothing will be logged</param>
         protected static bool InternalAwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan max, TimeSpan? interval, Action<string, object[]> fail, ILoggingAdapter logger)
         {
             max.EnsureIsPositiveFinite("max");
