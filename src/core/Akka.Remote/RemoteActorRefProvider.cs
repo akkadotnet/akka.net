@@ -206,7 +206,10 @@ namespace Akka.Remote
                                  path.Elements.ToArray()).
                         WithUid(path.Uid);
                     var remoteRef = new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, deployment);
-                    remoteRef.Start();
+              
+                    //TODO: investigate why actor was started here before
+                    //actors are started by consumers of this method.
+                    //remoteRef.Start();
                     return remoteRef;
                 }
                 catch (Exception ex)
