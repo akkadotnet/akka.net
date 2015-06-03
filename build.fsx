@@ -300,8 +300,7 @@ module Nuget =
         match project with
         | "Akka" -> []
         | "Akka.Cluster" -> ["Akka.Remote", release.NugetVersion]
-        | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion]
-        | "Akka.Persistence.FSharp" -> ["Akka.Persistence", preReleaseVersion]
+        | persistence when (persistence.StartsWith("Akka.Persistence.")) -> ["Akka.Persistence", preReleaseVersion]
         | di when (di.StartsWith("Akka.DI.") && not (di.EndsWith("Core"))) -> ["Akka.DI.Core", release.NugetVersion]
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
