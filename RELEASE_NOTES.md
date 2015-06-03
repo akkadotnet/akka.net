@@ -1,3 +1,5 @@
+#### 1.0.3 July 1 2015
+
 #### 1.0.2 June 2 2015
 **Bugfix release for Akka.NET v1.0.1.**
 
