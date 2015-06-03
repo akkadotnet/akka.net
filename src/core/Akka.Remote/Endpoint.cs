@@ -262,28 +262,35 @@ namespace Akka.Remote
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
         private AkkaProtocolHandle handleOrActive;
-        private Address localAddress;
-        private Address remoteAddress;
-        private int? refuseUid;
-        private AkkaProtocolTransport transport;
-        private RemoteSettings settings;
+        private readonly Address _localAddress;
+        private readonly Address _remoteAddress;
+        private readonly int? _refuseUid;
+        private readonly AkkaProtocolTransport _transport;
+        private readonly RemoteSettings _settings;
         private AkkaPduCodec codec;
-        private AkkaProtocolHandle currentHandle;
-        private ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers;
+        private AkkaProtocolHandle _currentHandle;
+        private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
         private EndpointRegistry _endpoints = new EndpointRegistry();
 
-        public ReliableDeliverySupervisor(AkkaProtocolHandle handleOrActive, Address localAddress, Address remoteAddress,
-            int? refuseUid, AkkaProtocolTransport transport, RemoteSettings settings, AkkaPduCodec codec, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers)
+        public ReliableDeliverySupervisor(
+            AkkaProtocolHandle handleOrActive, 
+            Address localAddress, 
+            Address remoteAddress,
+            int? refuseUid, 
+            AkkaProtocolTransport transport, 
+            RemoteSettings settings, 
+            AkkaPduCodec codec, 
+            ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers)
         {
             this.handleOrActive = handleOrActive;
-            this.localAddress = localAddress;
-            this.remoteAddress = remoteAddress;
-            this.refuseUid = refuseUid;
-            this.transport = transport;
-            this.settings = settings;
+            _localAddress = localAddress;
+            _remoteAddress = remoteAddress;
+            _refuseUid = refuseUid;
+            _transport = transport;
+            _settings = settings;
             this.codec = codec;
-            currentHandle = handleOrActive;
-            this.receiveBuffers = receiveBuffers;
+            _currentHandle = handleOrActive;
+            _receiveBuffers = receiveBuffers;
             Reset();
             _writer = CreateWriter();
             Uid = handleOrActive != null ? (int?)handleOrActive.HandshakeInfo.Uid : null;
@@ -305,20 +312,20 @@ namespace Akka.Remote
 
         public Deadline BailoutAt
         {
-            get { return Deadline.Now + settings.InitialSysMsgDeliveryTimeout; }
+            get { return Deadline.Now + _settings.InitialSysMsgDeliveryTimeout; }
         }
 
-        private ICancelable _autoResendTimer = null;
-        private AckedSendBuffer<EndpointManager.Send> _resendBuffer = null;
-        private SeqNo _lastCumulativeAck = null;
+        private ICancelable _autoResendTimer;
+        private AckedSendBuffer<EndpointManager.Send> _resendBuffer;
+        private SeqNo _lastCumulativeAck;
         private long _seqCounter;
-        private List<Ack> _pendingAcks = null;
+        private List<Ack> _pendingAcks;
 
         private IActorRef _writer;
 
         private void Reset()
         {
-            _resendBuffer = new AckedSendBuffer<EndpointManager.Send>(settings.SysMsgBufferSize);
+            _resendBuffer = new AckedSendBuffer<EndpointManager.Send>(_settings.SysMsgBufferSize);
             ScheduleAutoResend();
             _lastCumulativeAck = new SeqNo(-1);
             _seqCounter = 0L;
@@ -329,7 +336,7 @@ namespace Akka.Remote
         {
             if (_autoResendTimer == null)
             {
-                _autoResendTimer = Context.System.Scheduler.ScheduleTellOnceCancelable(settings.SysResendTimeout, Self, new AttemptSysMsgRedelivery(),
+                _autoResendTimer = Context.System.Scheduler.ScheduleTellOnceCancelable(_settings.SysResendTimeout, Self, new AttemptSysMsgRedelivery(),
                     Self);
             }
         }
@@ -365,10 +372,10 @@ namespace Akka.Remote
                     .With<IAssociationProblem>(problem => directive = Directive.Escalate)
                     .Default(e =>
                     {
-                        _log.Warning("Association with remote system {0} has failed; address is now gated for {1} ms. Reason is: [{2}]", remoteAddress, settings.RetryGateClosedFor.TotalMilliseconds, ex.Message);
+                        _log.Warning("Association with remote system {0} has failed; address is now gated for {1} ms. Reason is: [{2}]", _remoteAddress, _settings.RetryGateClosedFor.TotalMilliseconds, ex.Message);
                         UidConfirmed = false;
                         Context.Become(Gated);
-                        currentHandle = null;
+                        _currentHandle = null;
                         Context.Parent.Tell(new EndpointWriter.StoppedReading(Self));
                         directive = Directive.Stop;
                     });
@@ -384,7 +391,7 @@ namespace Akka.Remote
                 Context.System.DeadLetters.Tell(msg.Copy(opt: null));
             }
             EndpointManager.ResendState value;
-            receiveBuffers.TryRemove(new EndpointManager.Link(localAddress, remoteAddress), out value);
+            _receiveBuffers.TryRemove(new EndpointManager.Link(_localAddress, _remoteAddress), out value);
         }
 
         protected override void PostRestart(Exception reason)
@@ -442,10 +449,10 @@ namespace Akka.Remote
                 })
                 .With<Terminated>(terminated =>
                 {
-                    currentHandle = null;
+                    _currentHandle = null;
                     Context.Parent.Tell(new EndpointWriter.StoppedReading(Self));
                     if (_resendBuffer.NonAcked.Count > 0 || _resendBuffer.Nacked.Count > 0)
-                        Context.System.Scheduler.ScheduleTellOnce(settings.SysResendTimeout, Self, 
+                        Context.System.Scheduler.ScheduleTellOnce(_settings.SysResendTimeout, Self, 
                             new AttemptSysMsgRedelivery(), Self);
                     Context.Become(Idle);
                 })
@@ -456,7 +463,7 @@ namespace Akka.Remote
                     UidConfirmed = true;
                     if (Uid.HasValue && Uid.Value != g.Uid) Reset();
                     else UnstashAcks();
-                    Uid = refuseUid;
+                    Uid = _refuseUid;
                 })
                 .With<EndpointWriter.StopReading>(stopped =>
                 {
@@ -468,7 +475,7 @@ namespace Akka.Remote
         {
             message.Match()
                 .With<Terminated>(
-                    terminated => Context.System.Scheduler.ScheduleTellOnce(settings.RetryGateClosedFor, Self, new Ungate(), Self))
+                    terminated => Context.System.Scheduler.ScheduleTellOnce(_settings.RetryGateClosedFor, Self, new Ungate(), Self))
                 .With<Ungate>(ungate =>
                 {
                     if (_resendBuffer.NonAcked.Count > 0 || _resendBuffer.Nacked.Count > 0)
@@ -480,7 +487,7 @@ namespace Akka.Remote
                         // In other words, this action is safe.
                         if (!UidConfirmed && BailoutAt.IsOverdue)
                         {
-                            throw new InvalidAssociation(localAddress, remoteAddress,
+                            throw new InvalidAssociation(_localAddress, _remoteAddress,
                                 new TimeoutException("Delivery of system messages timed out and they were dropped"));
                         }
 
@@ -552,14 +559,23 @@ namespace Akka.Remote
             public int Uid { get; private set; }
         }
 
-        public static Props ReliableDeliverySupervisorProps(AkkaProtocolHandle handleOrActive, Address localAddress, Address remoteAddress,
-            int? refuseUid, AkkaProtocolTransport transport, RemoteSettings settings, AkkaPduCodec codec, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers)
+        public static Props ReliableDeliverySupervisorProps(
+            AkkaProtocolHandle handleOrActive, 
+            Address localAddress, 
+            Address remoteAddress,
+            int? refuseUid, 
+            AkkaProtocolTransport transport, 
+            RemoteSettings settings, 
+            AkkaPduCodec codec, 
+            ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
+            string dispatcher)
         {
             return
                 Props.Create(
                     () =>
                         new ReliableDeliverySupervisor(handleOrActive, localAddress, remoteAddress, refuseUid, transport,
-                            settings, codec, receiveBuffers));
+                            settings, codec, receiveBuffers))
+                            .WithDispatcher(dispatcher);
         }
 
         #endregion
@@ -611,7 +627,7 @@ namespace Akka.Remote
             }
             catch (Exception ex)
             {
-                throw new HopelessAssociation(localAddress, remoteAddress, Uid, ex);
+                throw new HopelessAssociation(_localAddress, _remoteAddress, Uid, ex);
             }
         }
 
@@ -620,9 +636,11 @@ namespace Akka.Remote
         private IActorRef CreateWriter()
         {
             var writer =
-                Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(
-                    EndpointWriter.EndpointWriterProps(currentHandle, localAddress, remoteAddress, refuseUid, transport,
-                        settings, new AkkaPduProtobuffCodec(), receiveBuffers, Self)).WithDeploy(Deploy.Local),
+                Context.ActorOf(RARP.For(Context.System)
+                .ConfigureDispatcher(
+                    EndpointWriter.EndpointWriterProps(_currentHandle, _localAddress, _remoteAddress, _refuseUid, _transport,
+                        _settings, new AkkaPduProtobuffCodec(), _receiveBuffers, Self)
+                        .WithDeploy(Deploy.Local)),
                     "endpointWriter");
             Context.Watch(writer);
             return writer;
@@ -703,7 +721,10 @@ namespace Akka.Remote
 
         protected bool Inbound { get; set; }
 
-        protected EndpointActor(Address localAddress, Address remoteAddress, AkkaProtocolTransport transport,
+        protected EndpointActor(
+            Address localAddress, 
+            Address remoteAddress, 
+            AkkaProtocolTransport transport,
             RemoteSettings settings)
         {
             EventPublisher = new EventPublisher(Context.System, _log, Logging.LogLevelFor(settings.RemoteLifecycleEventsLogLevel));
@@ -746,9 +767,15 @@ namespace Akka.Remote
     /// </summary>
     internal class EndpointWriter : EndpointActor
     {
-        public EndpointWriter(AkkaProtocolHandle handleOrActive, Address localAddress, Address remoteAddress,
-            int? refuseUid, AkkaProtocolTransport transport, RemoteSettings settings,
-            AkkaPduCodec codec, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
+        public EndpointWriter(
+            AkkaProtocolHandle handleOrActive, 
+            Address localAddress, 
+            Address remoteAddress,
+            int? refuseUid, 
+            AkkaProtocolTransport transport, 
+            RemoteSettings settings,
+            AkkaPduCodec codec, 
+            ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
             IActorRef reliableDeliverySupervisor = null) :
             base(localAddress, remoteAddress, transport, settings)
         {
@@ -824,7 +851,17 @@ namespace Akka.Remote
         {
             if (_handle == null)
             {
-                Transport.Associate(RemoteAddress, _refuseUid).ContinueWith(x => new Handle(x.Result),
+                Transport
+                    .Associate(RemoteAddress, _refuseUid)
+                    .ContinueWith(handle =>
+                    {
+                        if (handle.IsFaulted)
+                        {
+                            var inner = handle.Exception.Flatten().InnerException;
+                            return (object)new Status.Failure(new InvalidAssociationException("Association failure", inner));
+                        }
+                        return new Handle(handle.Result);
+                    },
                     TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
                     .PipeTo(Self);
             }
@@ -1047,10 +1084,11 @@ namespace Akka.Remote
         private IActorRef StartReadEndpoint(AkkaProtocolHandle handle)
         {
             var newReader =
-                Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(
+                Context.ActorOf(RARP.For(Context.System)
+                .ConfigureDispatcher(
                     EndpointReader.ReaderProps(LocalAddress, RemoteAddress, Transport, Settings, _codec, _msgDispatcher,
-                        Inbound, (int)handle.HandshakeInfo.Uid, _receiveBuffers, _reliableDeliverySupervisor))
-                        .WithDeploy(Deploy.Local),
+                        Inbound, (int)handle.HandshakeInfo.Uid, _receiveBuffers, _reliableDeliverySupervisor)
+                        .WithDeploy(Deploy.Local)),
                     string.Format("endpointReader-{0}-{1}", AddressUrlEncoder.Encode(RemoteAddress), _readerId.Next()));
             Context.Watch(newReader);
             handle.ReadHandlerSource.SetResult(new ActorHandleEventListener(newReader));
@@ -1460,9 +1498,16 @@ namespace Akka.Remote
     /// </summary>
     internal class EndpointReader : EndpointActor
     {
-        public EndpointReader(Address localAddress, Address remoteAddress, AkkaProtocolTransport transport,
-            RemoteSettings settings, AkkaPduCodec codec, IInboundMessageDispatcher msgDispatch, bool inbound,
-            int uid, ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
+        public EndpointReader(
+            Address localAddress, 
+            Address remoteAddress, 
+            AkkaProtocolTransport transport,
+            RemoteSettings settings, 
+            AkkaPduCodec codec, 
+            IInboundMessageDispatcher msgDispatch, 
+            bool inbound,
+            int uid, 
+            ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
             IActorRef reliableDeliverySupervisor = null) :
             base(localAddress, remoteAddress, transport, settings)
         {
@@ -1475,13 +1520,13 @@ namespace Akka.Remote
             _provider = RARP.For(Context.System).Provider;
         }
 
-        private AkkaPduCodec _codec;
-        private IActorRef _reliableDeliverySupervisor;
-        private ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
-        private int _uid;
-        private IInboundMessageDispatcher _msgDispatch;
+        private readonly AkkaPduCodec _codec;
+        private readonly IActorRef _reliableDeliverySupervisor;
+        private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
+        private readonly int _uid;
+        private readonly IInboundMessageDispatcher _msgDispatch;
 
-        private RemoteActorRefProvider _provider;
+        private readonly RemoteActorRefProvider _provider;
         private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new AckedReceiveBuffer<Message>();
 
         #region ActorBase overrides
@@ -1656,8 +1701,15 @@ namespace Akka.Remote
 
         #region Static members
 
-        public static Props ReaderProps(Address localAddress, Address remoteAddress, AkkaProtocolTransport transport,
-            RemoteSettings settings, AkkaPduCodec codec, IInboundMessageDispatcher dispatcher, bool inbound, int uid,
+        public static Props ReaderProps(
+            Address localAddress, 
+            Address remoteAddress, 
+            AkkaProtocolTransport transport,
+            RemoteSettings settings, 
+            AkkaPduCodec codec, 
+            IInboundMessageDispatcher dispatcher, 
+            bool inbound, 
+            int uid,
             ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
             IActorRef reliableDeliverySupervisor = null)
         {
@@ -1665,7 +1717,8 @@ namespace Akka.Remote
                 Props.Create(
                     () =>
                         new EndpointReader(localAddress, remoteAddress, transport, settings, codec, dispatcher, inbound,
-                            uid, receiveBuffers, reliableDeliverySupervisor));
+                            uid, receiveBuffers, reliableDeliverySupervisor))
+                            .WithDispatcher(settings.Dispatcher);
         }
 
         #endregion

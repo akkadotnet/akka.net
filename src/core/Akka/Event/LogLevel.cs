@@ -8,27 +8,27 @@
 namespace Akka.Event
 {
     /// <summary>
-    ///     Enum LogLevel
+    /// Enumeration representing the various log levels in the system.
     /// </summary>
     public enum LogLevel
     {
         /// <summary>
-        ///     The debug level
+        /// The debug log level.
         /// </summary>
         DebugLevel,
 
         /// <summary>
-        ///     The information level
+        /// The information log level.
         /// </summary>
         InfoLevel,
 
         /// <summary>
-        ///     The warning level
+        /// The warning log level.
         /// </summary>
         WarningLevel,
 
         /// <summary>
-        ///     The error level
+        /// The error log level.
         /// </summary>
         ErrorLevel,
     }

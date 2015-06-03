@@ -70,7 +70,7 @@ namespace Akka.MultiNodeTestRunner
             {
                 using (var discovery = new Discovery())
                 {
-                    controller.Find(false, discovery, new TestFrameworkOptions());
+                    controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
                     discovery.Finished.WaitOne();
 
                     foreach (var test in discovery.Tests.Reverse())

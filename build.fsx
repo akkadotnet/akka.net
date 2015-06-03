@@ -4,6 +4,7 @@
 
 open System
 open System.IO
+open System.Text
 open Fake
 open Fake.FileUtils
 open Fake.MSTest
@@ -35,14 +36,15 @@ let parsedRelease =
     File.ReadLines "RELEASE_NOTES.md"
     |> ReleaseNotesHelper.parseReleaseNotes
 
-//Fake.ReleaseNotesHelper.Parse assumes letters+int in PreRelease.TryParse. 
-//This means we cannot append the full date yyyMMddHHmmss to prerelease. 
-//See https://github.com/fsharp/FAKE/issues/522
-//TODO: When this has been fixed, switch to DateTime.UtcNow.ToString("yyyyMMddHHmmss")
-let preReleaseVersion = parsedRelease.AssemblyVersion + "-" + (getBuildParamOrDefault "nugetprerelease" "pre") + DateTime.UtcNow.ToString("yyMMddHHmm")
+let envBuildNumber = System.Environment.GetEnvironmentVariable("BUILD_NUMBER")
+let buildNumber = if String.IsNullOrWhiteSpace(envBuildNumber) then "0" else envBuildNumber
+
+let version = parsedRelease.AssemblyVersion + "." + buildNumber
+let preReleaseVersion = version + "-beta"
+
 let isUnstableDocs = hasBuildParam "unstable"
 let isPreRelease = hasBuildParam "nugetprerelease"
-let release = if isPreRelease then ReleaseNotesHelper.ReleaseNotes.New(parsedRelease.AssemblyVersion, preReleaseVersion, parsedRelease.Notes) else parsedRelease
+let release = if isPreRelease then ReleaseNotesHelper.ReleaseNotes.New(version, version + "-beta", parsedRelease.Notes) else parsedRelease
 
 printfn "Assembly version: %s\nNuget version; %s\n" release.AssemblyVersion release.NugetVersion
 //--------------------------------------------------------------------------------
@@ -57,6 +59,14 @@ let libDir = workingDir @@ @"lib\net45\"
 let nugetExe = FullName @"src\.nuget\NuGet.exe"
 let docDir = "bin" @@ "doc"
 
+open Fake.RestorePackageHelper
+Target "RestorePackages" (fun _ -> 
+     "./src/Akka.sln"
+     |> RestoreMSSolutionPackages (fun p ->
+         { p with
+             OutputPath = "./src/packages"
+             Retries = 4 })
+ )
 
 //--------------------------------------------------------------------------------
 // Clean build results
@@ -67,17 +77,22 @@ Target "Clean" <| fun _ ->
 //--------------------------------------------------------------------------------
 // Generate AssemblyInfo files with the version for release notes 
 
-
 open AssemblyInfoFile
+
 Target "AssemblyInfo" <| fun _ ->
+    CreateCSharpAssemblyInfoWithConfig "src/SharedAssemblyInfo.cs" [
+        Attribute.Company company
+        Attribute.Copyright copyright
+        Attribute.Trademark ""
+        Attribute.Version version
+        Attribute.FileVersion version ] <| AssemblyInfoFileConfig(false)
+
     for file in !! "src/**/AssemblyInfo.fs" do
         let title =
             file
             |> Path.GetDirectoryName
             |> Path.GetDirectoryName
             |> Path.GetFileName
-        
-        let version = release.AssemblyVersion + ".0"
 
         CreateFSharpAssemblyInfo file [ 
             Attribute.Title title
@@ -90,12 +105,6 @@ Target "AssemblyInfo" <| fun _ ->
             Attribute.Version version
             Attribute.FileVersion version ]
 
-        CreateCSharpAssemblyInfoWithConfig "src/SharedAssemblyInfo.cs" [
-            Attribute.Company company
-            Attribute.Copyright copyright
-            Attribute.Trademark ""
-            Attribute.Version version
-            Attribute.FileVersion version ] |> ignore
 
 //--------------------------------------------------------------------------------
 // Build the solution
@@ -182,6 +191,7 @@ Target "CopyOutput" <| fun _ ->
       "contrib/dependencyinjection/Akka.DI.Ninject"
       "contrib/testkits/Akka.TestKit.Xunit" 
       "contrib/testkits/Akka.TestKit.NUnit" 
+      "contrib/testkits/Akka.TestKit.Xunit2" 
       ]
     |> List.iter copyOutput
 
@@ -201,14 +211,16 @@ Target "CleanTests" <| fun _ ->
 //--------------------------------------------------------------------------------
 // Run tests
 
-open XUnitHelper
+open XUnit2Helper
 Target "RunTests" <| fun _ ->  
     let msTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll"
     let nunitTestAssemblies = !! "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll"
     let xunitTestAssemblies = !! "src/**/bin/Release/*.Tests.dll" -- 
                                     "src/**/bin/Release/Akka.TestKit.VsTest.Tests.dll" -- 
                                     "src/**/bin/Release/Akka.TestKit.NUnit.Tests.dll" --
-                                    "src/**/bin/Release/Akka.Persistence.SqlServer.Tests.dll"
+                                    "src/**/bin/Release/Akka.Persistence.SqlServer.Tests.dll" --
+                                    "src/**/bin/Release/Akka.Persistence.PostgreSql.Tests.dll" --
+                                    "src/**/bin/Release/Akka.Persistence.Cassandra.Tests.dll"
 
     mkdir testOutput
 
@@ -219,9 +231,9 @@ Target "RunTests" <| fun _ ->
             DisableShadowCopy = true; 
             OutputFile = testOutput + @"\NUnitTestResults.xml"})
 
-    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
+    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit
+    xUnit2
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
         xunitTestAssemblies
 
@@ -230,9 +242,9 @@ Target "RunTestsMono" <| fun _ ->
 
     mkdir testOutput
 
-    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
+    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit
+    xUnit2
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
         xunitTestAssemblies
 
@@ -240,8 +252,14 @@ Target "MultiNodeTests" <| fun _ ->
     let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" "bin/core/Akka.MultiNodeTestRunner*"
     printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
+    let spec = getBuildParam "spec"
 
-    let args = "Akka.Cluster.Tests.dll -Dmultinode.enable-filesink=on"
+    let args = new StringBuilder()
+                |> append "Akka.MultiNodeTests.dll"
+                |> append "-Dmultinode.enable-filesink=on"
+                |> appendIfNotNullOrEmpty spec "-Dmultinode.test-spec="
+                |> toText
+
     let result = ExecProcess(fun info -> 
         info.FileName <- multiNodeTestPath
         info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
@@ -256,6 +274,22 @@ Target "RunSqlServerTests" <| fun _ ->
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
         sqlServerTests
 
+Target "RunPostgreSqlTests" <| fun _ ->
+    let postgreSqlTests = !! "src/**/bin/Release/Akka.Persistence.PostgreSql.Tests.dll"
+    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
+    printfn "Using XUnit runner: %s" xunitToolPath
+    xUnit2
+        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
+        postgreSqlTests
+
+Target "RunCassandraTests" <| fun _ ->
+    let cassandraTests = !! "src/**/bin/Release/Akka.Persistence.Cassandra.Tests.dll"
+    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
+    printfn "Using XUnit runner: %s" xunitToolPath
+    xUnit2
+        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
+        cassandraTests
+
 //--------------------------------------------------------------------------------
 // Nuget targets 
 //--------------------------------------------------------------------------------
@@ -266,8 +300,7 @@ module Nuget =
         match project with
         | "Akka" -> []
         | "Akka.Cluster" -> ["Akka.Remote", release.NugetVersion]
-        | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion]
-        | "Akka.Persistence.FSharp" -> ["Akka.Persistence", preReleaseVersion]
+        | persistence when (persistence.StartsWith("Akka.Persistence.")) -> ["Akka.Persistence", preReleaseVersion]
         | di when (di.StartsWith("Akka.DI.") && not (di.EndsWith("Core"))) -> ["Akka.DI.Core", release.NugetVersion]
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
@@ -308,7 +341,7 @@ let createNugetPackages _ =
         let projectDir = Path.GetDirectoryName nuspec
         let projectFile = (!! (projectDir @@ project + ".*sproj")) |> Seq.head
         let releaseDir = projectDir @@ @"bin\Release"
-        let packages = projectDir @@ "packages.config"        
+        let packages = projectDir @@ "packages.config"
         let packageDependencies = if (fileExists packages) then (getDependencies packages) else []
         let dependencies = packageDependencies @ getAkkaDependency project
         let releaseVersion = getProjectVersion project
@@ -511,7 +544,7 @@ Target "HelpDocs" <| fun _ ->
 //--------------------------------------------------------------------------------
 
 // build dependencies
-"Clean" ==> "AssemblyInfo" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
+"Clean" ==> "AssemblyInfo" ==> "RestorePackages" ==> "Build" ==> "CopyOutput" ==> "BuildRelease"
 
 // tests dependencies
 "CleanTests" ==> "RunTests"

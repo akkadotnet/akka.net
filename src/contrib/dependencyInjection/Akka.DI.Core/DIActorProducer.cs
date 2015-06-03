@@ -35,7 +35,7 @@ namespace Akka.DI.Core
         /// </summary>
         public Type ActorType
         {
-            get { return this.dependencyResolver.GetType(); }
+            get { return this.actorType; }
         }
         /// <summary>
         /// Creates an instance of the Actor based on the Type specified in the constructor parameter actorName

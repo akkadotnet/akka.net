@@ -17,7 +17,7 @@ namespace Akka.Event
     public class DummyClassForStringSources { }
     
     /// <summary>
-    ///     Class Logging.
+    /// Provides the functionality for creating logger instances and helpers for converting to/from LogLevel values.
     /// </summary>
     public static class Logging
     {
@@ -25,14 +25,16 @@ namespace Akka.Event
         private const string Info = "INFO";
         private const string Warning = "WARNING";
         private const string Error = "ERROR";
+        private const string Off = "OFF";
+        private const LogLevel OffLogLevel = (LogLevel) int.MaxValue;
 
         /// <summary>
-        ///     The standard out logger
+        /// Returns an instance of the standard out logger.
         /// </summary>
         public static readonly StandardOutLogger StandardOutLogger = new StandardOutLogger();
 
         /// <summary>
-        ///     Classes for.
+        /// Classes for.
         /// </summary>
         /// <param name="logLevel">The log level.</param>
         /// <returns>Type.</returns>
@@ -54,9 +56,14 @@ namespace Akka.Event
             }
         }
 
+        /// <summary>
+        /// Returns the string representation for a particular LogLevel.
+        /// </summary>
+        /// <param name="logLevel">The log level to get the string representation for.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
         public static string StringFor(this LogLevel logLevel)
         {
-
             switch (logLevel)
             {
                 case LogLevel.DebugLevel:
@@ -67,17 +74,19 @@ namespace Akka.Event
                     return Warning;
                 case LogLevel.ErrorLevel:
                     return Error;
+                case OffLogLevel:
+                    return Off;
                 default:
                     throw new ArgumentException("Unknown LogLevel", "logLevel");
             }
         }
 
         /// <summary>
-        ///     Gets the logger.
+        /// Gets an instance of the logger.
         /// </summary>
-        /// <param name="context">The cell.</param>
+        /// <param name="context">The context.</param>
         /// <param name="logMessageFormatter">The log message formatter.</param>
-        /// <returns>ILoggingAdapter.</returns>
+        /// <returns>A logging adapter instance.</returns>
         public static ILoggingAdapter GetLogger(this IActorContext context, ILogMessageFormatter logMessageFormatter = null)
         {
             var logSource = context.Self.ToString();
@@ -87,17 +96,24 @@ namespace Akka.Event
         }
 
         /// <summary>
-        ///     Gets the logger.
+        /// Gets an instance of the logger.
         /// </summary>
-        /// <param name="system">The system.</param>
+        /// <param name="system">The actor system.</param>
         /// <param name="logSourceObj">The log source object.</param>
         /// <param name="logMessageFormatter">The log message formatter.</param>
-        /// <returns>ILoggingAdapter.</returns>
+        /// <returns>A logging adapter instance.</returns>
         public static ILoggingAdapter GetLogger(ActorSystem system, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
         {
             return GetLogger(system.EventStream, logSourceObj, logMessageFormatter);
         }
 
+        /// <summary>
+        /// Gets an instance of the logger.
+        /// </summary>
+        /// <param name="loggingBus">The logging bus this logger will write to.</param>
+        /// <param name="logSourceObj">The log source object.</param>
+        /// <param name="logMessageFormatter">The log message formatter.</param>
+        /// <returns>A logging adapter instance.</returns>
         public static ILoggingAdapter GetLogger(LoggingBus loggingBus, object logSourceObj, ILogMessageFormatter logMessageFormatter = null)
         {
             //TODO: refine this
@@ -120,10 +136,10 @@ namespace Akka.Event
         }
 
         /// <summary>
-        ///     Logs the level for.
+        /// Gets the LogLevel for a particular log level string.
         /// </summary>
-        /// <param name="logLevel">The log level.</param>
-        /// <returns>LogLevel.</returns>
+        /// <param name="logLevel">The log level string.</param>
+        /// <returns>The LogLevel mapping to the string based log level.</returns>
         /// <exception cref="System.ArgumentException">Unknown LogLevel;logLevel</exception>
         public static LogLevel LogLevelFor(string logLevel)
         {
@@ -137,6 +153,8 @@ namespace Akka.Event
                     return LogLevel.WarningLevel;
                 case Error:
                     return LogLevel.ErrorLevel;
+                case Off:
+                    return OffLogLevel;
                 default:
                     throw new ArgumentException(string.Format("Unknown LogLevel: \"{0}\". Valid values are: \"{1}\", \"{2}\", \"{3}\", \"{4}\"", logLevel, Debug, Info, Warning, Error), logLevel);
             }

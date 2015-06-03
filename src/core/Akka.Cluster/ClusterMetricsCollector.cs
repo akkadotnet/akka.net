@@ -623,7 +623,7 @@ namespace Akka.Cluster
 
         public static long NewTimestamp()
         {
-            return DateTime.Now.Ticks;
+            return DateTime.UtcNow.Ticks;
         }
 
         public sealed class SystemMemory
