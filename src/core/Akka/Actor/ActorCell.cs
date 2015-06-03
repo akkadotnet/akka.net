@@ -335,13 +335,13 @@ namespace Akka.Actor
         public static IActorRef GetCurrentSelfOrNoSender()
         {
             var current = Current;
-            return current != null ? current.Self : NoSender.Instance;
+            return current != null ? current.Self : ActorRefs.NoSender;
         }
 
         public static IActorRef GetCurrentSenderOrNoSender()
         {
             var current = Current;
-            return current != null ? current.Sender : NoSender.Instance;
+            return current != null ? current.Sender : ActorRefs.NoSender;
         }
     }
 }
