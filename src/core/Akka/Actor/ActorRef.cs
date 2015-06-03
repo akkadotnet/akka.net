@@ -154,7 +154,11 @@ namespace Akka.Actor
     public static class ActorRefs
     {
         public static readonly Nobody Nobody = Nobody.Instance;
-        public static readonly IActorRef NoSender = Actor.NoSender.Instance; //In Akka this is just null
+        /// <summary>
+        /// Use this value as an argument to <see cref="ICanTell.Tell"/> if there is not actor to
+        /// reply to (e.g. when sending from non-actor code).
+        /// </summary>
+        public static readonly IActorRef NoSender = null;
     }
 
     public abstract class ActorRefBase : IActorRef
@@ -349,20 +353,6 @@ namespace Akka.Actor
 
         public abstract IInternalActorRef GetSingleChild(string name);
 
-    }
-
-    public sealed class NoSender : ActorRefBase
-    {
-        public static readonly NoSender Instance = new NoSender();
-        private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/NoSender");
-
-        private NoSender() { }
-
-        public override ActorPath Path { get { return _path; } }
-
-        protected override void TellInternal(object message, IActorRef sender)
-        {
-        }
     }
 
     internal class VirtualPathContainer : MinimalActorRef

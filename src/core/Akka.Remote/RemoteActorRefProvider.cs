@@ -282,7 +282,7 @@ namespace Akka.Remote
 
         public IActorRef ResolveActorRef(string path)
         {
-            if (path == "")
+            if (path == String.Empty)
                 return ActorRefs.NoSender;
 
             ActorPath actorPath;
