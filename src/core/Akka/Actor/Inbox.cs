@@ -16,21 +16,21 @@ namespace Akka.Actor
 {
     internal interface IQuery
     {
-        DateTime Deadline { get; }
+        TimeSpan Deadline { get; }
         IActorRef Client { get; }
         IQuery WithClient(IActorRef client);
     }
 
     internal struct Get : IQuery
     {
-        public Get(DateTime deadline, IActorRef client = null)
+        public Get(TimeSpan deadline, IActorRef client = null)
             : this()
         {
             Deadline = deadline;
             Client = client;
         }
 
-        public DateTime Deadline { get; private set; }
+        public TimeSpan Deadline { get; private set; }
         public IActorRef Client { get; private set; }
         public IQuery WithClient(IActorRef client)
         {
@@ -40,7 +40,7 @@ namespace Akka.Actor
 
     internal struct Select : IQuery
     {
-        public Select(DateTime deadline, Predicate<object> predicate, IActorRef client = null)
+        public Select(TimeSpan deadline, Predicate<object> predicate, IActorRef client = null)
             : this()
         {
             Deadline = deadline;
@@ -48,7 +48,7 @@ namespace Akka.Actor
             Client = client;
         }
 
-        public DateTime Deadline { get; private set; }
+        public TimeSpan Deadline { get; private set; }
         public Predicate<object> Predicate { get; set; }
         public IActorRef Client { get; private set; }
         public IQuery WithClient(IActorRef client)
@@ -319,7 +319,7 @@ namespace Akka.Actor
 
         public object ReceiveWhere(Predicate<object> predicate, TimeSpan timeout)
         {
-            var task = Receiver.Ask(new Select(DateTime.Now + timeout, predicate), Timeout.InfiniteTimeSpan);
+            var task = Receiver.Ask(new Select(_system.Scheduler.MonotonicClock + timeout, predicate), Timeout.InfiniteTimeSpan);
             return AwaitResult(task, timeout);
         }
 
@@ -330,7 +330,7 @@ namespace Akka.Actor
 
         public Task<object> ReceiveAsync(TimeSpan timeout)
         {
-            return Receiver.Ask(new Get(DateTime.Now + timeout), Timeout.InfiniteTimeSpan);
+            return Receiver.Ask(new Get(_system.Scheduler.MonotonicClock + timeout), Timeout.InfiniteTimeSpan);
         }
 
         public void Dispose()

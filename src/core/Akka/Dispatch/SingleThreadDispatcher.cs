@@ -36,6 +36,7 @@ namespace Akka.Dispatch
             {
                 _settings = new DedicatedThreadPoolSettings(1,
                 DedicatedThreadPoolConfigHelpers.ConfigureThreadType(dtp.GetString("threadtype", ThreadType.Background.ToString())),
+                config.GetString("id"),
                 DedicatedThreadPoolConfigHelpers.GetSafeDeadlockTimeout(dtp));
             }
         }

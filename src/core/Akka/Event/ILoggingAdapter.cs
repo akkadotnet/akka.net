@@ -10,9 +10,8 @@ using System;
 namespace Akka.Event
 {
     /// <summary>
-    /// Capable of logging 
+    /// Provides a logging adapter used to log events within the system.
     /// </summary>
-    // ReSharper disable once InconsistentNaming
     public interface ILoggingAdapter
     {
         /// <summary>Returns <c>true</c> if Debug level is enabled.</summary>
@@ -30,7 +29,6 @@ namespace Akka.Event
         /// <summary>Returns <c>true</c> if the specified level is enabled.</summary>
         bool IsEnabled(LogLevel logLevel);
 
-
         /// <summary>Logs a message with the Debug level.</summary>
         /// <param name="format">The format.</param>
         /// <param name="args">The arguments.</param>
@@ -44,11 +42,13 @@ namespace Akka.Event
         /// <summary>Logs a message with the Warning level.</summary>
         /// <param name="format">The format.</param>
         /// <param name="args">The arguments.</param>
-        void Warning(string format, params object[] args);
-
         [Obsolete("Use Warning instead!")]
         void Warn(string format, params object[] args);
 
+        /// <summary>Logs a message with the Warning level.</summary>
+        /// <param name="format">The format.</param>
+        /// <param name="args">The arguments.</param>
+        void Warning(string format, params object[] args);
 
         /// <summary>Logs a message with the Error level.</summary>
         /// <param name="format">The format.</param>

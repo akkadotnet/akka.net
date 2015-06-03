@@ -20,7 +20,7 @@ namespace Akka.Routing
     /// <summary>
     /// Configuration for router actors
     /// </summary>
-    public abstract class RouterConfig : IEquatable<RouterConfig> , ISurrogated
+    public abstract class RouterConfig : IEquatable<RouterConfig>, ISurrogated
     {
         //  public abstract RoutingLogic GetLogic();
 
@@ -49,16 +49,17 @@ namespace Akka.Routing
         public virtual bool Equals(RouterConfig other)
         {
             if (other == null) return false;
-            return GetType() == other.GetType() 
-                && (GetType() == typeof(NoRouter) 
-                || String.Equals(RouterDispatcher, other.RouterDispatcher));
+            return GetType() == other.GetType()
+                   && (GetType() == typeof (NoRouter)
+                       || String.Equals(RouterDispatcher, other.RouterDispatcher));
         }
 
         public abstract ISurrogate ToSurrogate(ActorSystem system);
 
         protected RouterConfig()
-        {            
+        {
         }
+
         protected RouterConfig(string routerDispatcher)
         {
 // ReSharper disable once DoNotCallOverridableMethodsInConstructor
@@ -112,8 +113,8 @@ namespace Akka.Routing
         {
             return new NoRouterSurrogate();
         }
-        
-	public override RouterConfig WithFallback(RouterConfig routerConfig)
+
+        public override RouterConfig WithFallback(RouterConfig routerConfig)
         {
             return routerConfig;
         }
@@ -148,7 +149,7 @@ namespace Akka.Routing
 
         public string[] Paths
         {
-            get { return _paths; }            
+            get { return _paths; }
         }
 
         protected Group(IEnumerable<string> paths) : base(Dispatchers.DefaultDispatcherId)
@@ -156,7 +157,8 @@ namespace Akka.Routing
             _paths = paths.ToArray();
         }
 
-        protected Group(IEnumerable<string> paths, string routerDispatcher) : base(routerDispatcher ?? Dispatchers.DefaultDispatcherId)
+        protected Group(IEnumerable<string> paths, string routerDispatcher)
+            : base(routerDispatcher ?? Dispatchers.DefaultDispatcherId)
         {
             _paths = paths.ToArray();
         }
@@ -200,7 +202,9 @@ namespace Akka.Routing
         public override IEnumerable<Routee> GetRoutees(RoutedActorCell routedActorCell)
         {
             if (_paths == null) return new Routee[0];
-            return _paths.Select(((ActorSystemImpl)routedActorCell.System).ActorSelection).Select(actor => new ActorSelectionRoutee(actor));
+            return
+                _paths.Select(((ActorSystemImpl) routedActorCell.System).ActorSelection)
+                    .Select(actor => new ActorSelectionRoutee(actor));
         }
 
         public override bool Equals(RouterConfig other)
@@ -227,7 +231,8 @@ namespace Akka.Routing
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Equals(Resizer, other.Resizer) && UsePoolDispatcher.Equals(other.UsePoolDispatcher) && NrOfInstances == other.NrOfInstances;
+            return Equals(Resizer, other.Resizer) && UsePoolDispatcher.Equals(other.UsePoolDispatcher) &&
+                   NrOfInstances == other.NrOfInstances;
         }
 
         public override bool Equals(object obj)
@@ -249,7 +254,8 @@ namespace Akka.Routing
             }
         }
 
-        protected Pool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy, string routerDispatcher,
+        protected Pool(int nrOfInstances, Resizer resizer, SupervisorStrategy supervisorStrategy,
+            string routerDispatcher,
             bool usePoolDispatcher = false) : base(routerDispatcher ?? Dispatchers.DefaultDispatcherId)
         {
             // OMG, if every member in Java is virtual - you must never call any members in a constructor!!1!
@@ -267,6 +273,7 @@ namespace Akka.Routing
             _nrOfInstances = config.GetInt("nr-of-instances");
             _resizer = DefaultResizer.FromConfig(config);
             _usePoolDispatcher = config.HasPath("pool-dispatcher");
+            _supervisorStrategy = DefaultStrategy;
             // ReSharper restore DoNotCallOverridableMethodsInConstructor
         }
 
@@ -328,7 +335,8 @@ namespace Akka.Routing
             if (UsePoolDispatcher && routeeProps.Dispatcher == Dispatchers.DefaultDispatcherId)
             {
                 return
-                    routeeProps.WithDispatcher("akka.actor.deployment." + "/" + context.Self.Path.Elements.Drop(1).Join("/") +
+                    routeeProps.WithDispatcher("akka.actor.deployment." + "/" +
+                                               context.Self.Path.Elements.Drop(1).Join("/") +
                                                ".pool-dispatcher");
             }
             return routeeProps;
@@ -363,7 +371,7 @@ namespace Akka.Routing
                 Pool wssConf;
                 var p = other as Pool;
                 if (SupervisorStrategy == null || (SupervisorStrategy.Equals(Pool.DefaultStrategy) &&
-                    !p.SupervisorStrategy.Equals(Pool.DefaultStrategy)))
+                                                   !p.SupervisorStrategy.Equals(Pool.DefaultStrategy)))
                     wssConf = this.WithSupervisorStrategy(p.SupervisorStrategy);
                 else
                     wssConf = this;
@@ -476,4 +484,3 @@ namespace Akka.Routing
         }
     }
 }
-

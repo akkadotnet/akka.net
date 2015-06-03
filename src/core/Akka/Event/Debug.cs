@@ -10,12 +10,12 @@ using System;
 namespace Akka.Event
 {
     /// <summary>
-    ///     Class Debug.
+    /// Represents an Debug log event.
     /// </summary>
     public class Debug : LogEvent
     {
         /// <summary>
-        ///     Initializes a new instance of the <see cref="Debug" /> class.
+        /// Initializes a new instance of the <see cref="Debug" /> class.
         /// </summary>
         /// <param name="logSource">The log source.</param>
         /// <param name="logClass">The log class.</param>
@@ -27,10 +27,6 @@ namespace Akka.Event
             Message = message;
         }
 
-        /// <summary>
-        ///     Logs the level.
-        /// </summary>
-        /// <returns>LogLevel.</returns>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.DebugLevel;

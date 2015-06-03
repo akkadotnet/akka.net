@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 
@@ -115,12 +116,12 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
             Receive<RequestTestRunState>(state => Sender.Tell(TestRunData.Copy(TestRunPassed(TestRunData))));
             Receive<SubscribeFactCompletionMessages>(messages => AddSubscriber(messages));
             Receive<UnsubscribeFactCompletionMessages>(messages => RemoveSubscriber(messages));
-            Receive<EndTestRun>(run =>
+            Receive<EndTestRun>(async run =>
             {
                 //clean up the current spec, if it hasn't been done already
                 if (_currentSpecRunActor != null)
                 {
-                    ReceiveEndSpecRun(new EndSpec());
+                    await ReceiveEndSpecRun(new EndSpec());
                 }
 
                 //Mark the test run as finished
@@ -154,16 +155,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
                     Props.Create(() => new SpecRunCoordinator(spec.ClassName, spec.MethodName, spec.Nodes)));
         }
 
-        private void ReceiveEndSpecRun(EndSpec spec)
+        private async Task ReceiveEndSpecRun(EndSpec spec)
         {
             //Should receive a FactData in return
-            var specCompleteTask = _currentSpecRunActor.Ask<FactData>(spec, TimeSpan.FromSeconds(2));
+            var factData = await _currentSpecRunActor.Ask<FactData>(spec, TimeSpan.FromSeconds(2));
 
-            //Going to block so we can't accidentally start processing  messages for a new spec yet..
-            specCompleteTask.Wait();
-
-            //Got the result we needed
-            var factData = specCompleteTask.Result;
             TestRunData.AddSpec(factData);
 
             //Publish the FactData back to any subscribers who wanted it

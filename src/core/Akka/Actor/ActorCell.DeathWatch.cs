@@ -48,7 +48,7 @@ namespace Akka.Actor
 
         protected void ReceivedTerminated(Terminated t)
         {
-            if (!_state.ContainsTerminated(t.ActorRef)) 
+            if (!_state.ContainsTerminated(t.ActorRef))
                 return;
 
             _state = _state.RemoveTerminated(t.ActorRef); // here we know that it is the SAME ref which was put in
@@ -163,12 +163,12 @@ namespace Akka.Actor
             if (watcheeSelf && !watcherSelf)
             {
                 if (!_state.ContainsWatchedBy(watcher)) MaintainAddressTerminatedSubscription(() =>
-                 {
-                     //_watchedBy.Add(watcher);
-                     _state = _state.AddWatchedBy(watcher);
+                {
+                    //_watchedBy.Add(watcher);
+                    _state = _state.AddWatchedBy(watcher);
 
-                     if (System.Settings.DebugLifecycle) Publish(new Debug(Self.Path.ToString(), Actor.GetType(), string.Format("now watched by {0}", watcher)));
-                 }, watcher);
+                    if (System.Settings.DebugLifecycle) Publish(new Debug(Self.Path.ToString(), Actor.GetType(), string.Format("now watched by {0}", watcher)));
+                }, watcher);
             }
             else if (!watcheeSelf && watcherSelf)
             {
@@ -210,7 +210,8 @@ namespace Akka.Actor
             // cleanup watchedBy since we know they are dead
             MaintainAddressTerminatedSubscription(() =>
             {
-                foreach (var a in _state.GetWatchedBy().Where(a => a.Path.Address == address))
+                
+                foreach (var a in _state.GetWatchedBy().Where(a => a.Path.Address == address).ToList())
                 {
                     //_watchedBy.Remove(a);
                     _state = _state.RemoveWatchedBy(a);
@@ -243,9 +244,9 @@ namespace Akka.Actor
                 block();
                 var has = HasNonLocalAddress();
 
-                if (had && !has) 
+                if (had && !has)
                     UnsubscribeAddressTerminated();
-                else if (!had && has) 
+                else if (!had && has)
                     SubscribeAddressTerminated();
             }
             else
@@ -256,7 +257,7 @@ namespace Akka.Actor
 
         private static bool IsNonLocal(IActorRef @ref)
         {
-            if (@ref == null) 
+            if (@ref == null)
                 return true;
 
             var a = @ref as IInternalActorRef;

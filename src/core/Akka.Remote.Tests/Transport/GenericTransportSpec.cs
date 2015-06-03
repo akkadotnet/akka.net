@@ -5,13 +5,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Google.ProtocolBuffers;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Akka.Remote.Tests.Transport

@@ -66,16 +66,12 @@ namespace Akka.Tests.Routing
         [Fact]
         public void RoundRobin_should_not_throw_IndexOutOfRangeException_when_counter_wraps_to_be_negative()
         {
-            Assert.DoesNotThrow(
-                () =>
-                {
-                    var routees = new[] {Routee.NoRoutee, Routee.NoRoutee, Routee.NoRoutee};
-                    var routingLogic = new RoundRobinRoutingLogic(int.MaxValue - 5);
-                    for (var i = 0; i < 10; i++)
-                    {
-                        routingLogic.Select(i, routees);
-                    }
-                });
+            var routees = new[] {Routee.NoRoutee, Routee.NoRoutee, Routee.NoRoutee};
+            var routingLogic = new RoundRobinRoutingLogic(int.MaxValue - 5);
+            for (var i = 0; i < 10; i++)
+            {
+                routingLogic.Select(i, routees);
+            }
         }
     }
 }

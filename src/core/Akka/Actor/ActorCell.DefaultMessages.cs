@@ -174,8 +174,6 @@ namespace Akka.Actor
                 else if (m is Recreate) FaultRecreate((m as Recreate).Cause);
                 else if (m is Suspend) FaultSuspend();
                 else if (m is Resume) FaultResume((m as Resume).CausedByFailure);
-                else if (m is SuspendReentrancy) HandleSuspendReentrancy();
-                else if (m is ResumeReentrancy) HandleResumeReentrancy();
                 else if (m is Terminate) Terminate();
                 else if (m is Supervise)
                 {
@@ -191,16 +189,6 @@ namespace Akka.Actor
             {
                 HandleInvokeFailure(cause);
             }
-        }
-
-        private void HandleSuspendReentrancy()
-        {
-            Mailbox.Suspend(MailboxSuspendStatus.AwaitingTask);
-        }
-
-        private void HandleResumeReentrancy()
-        {
-            Mailbox.Resume(MailboxSuspendStatus.AwaitingTask);
         }
 
         private void HandleCompleteTask(CompleteTask task)
@@ -355,16 +343,6 @@ namespace Akka.Actor
         public void Suspend()
         {
             SendSystemMessage(Dispatch.SysMsg.Suspend.Instance);
-        }
-
-        public void SuspendReentrancy()
-        {
-            SendSystemMessage(Dispatch.SysMsg.SuspendReentrancy.Instance);
-        }
-
-        public void ResumeReentrancy()
-        {
-            SendSystemMessage(Dispatch.SysMsg.ResumeReentrancy.Instance);
         }
 
         private void SendSystemMessage(ISystemMessage systemMessage)

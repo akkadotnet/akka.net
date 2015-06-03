@@ -97,7 +97,7 @@ namespace Akka.Routing
         /// <param name="routees">The routees to route to.</param>
         /// <param name="within">The time within which at least one response is expected.</param>
         /// <param name="interval">The duration after which the next routee will be picked.</param>
-        /// <param name="scheduler">Access to a <see cref="Scheduler"/> instance, used to force deadlines.</param>
+        /// <param name="scheduler">Access to a <see cref="IScheduler"/> instance, used to force deadlines.</param>
         public TailChoppingRoutee(Routee[] routees, TimeSpan within, TimeSpan interval, IScheduler scheduler)
         {
             _routees = routees;

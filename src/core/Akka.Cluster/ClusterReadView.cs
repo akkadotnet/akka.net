@@ -147,7 +147,8 @@ namespace Akka.Cluster
                         .With<ClusterEvent.ClusterMetricsChanged>(changed =>
                         {
                             readView._clusterMetrics = changed.NodeMetrics;
-                        });
+                        })
+                        .With<ClusterEvent.ClusterShuttingDown>(_ => { });
                 });
 
                 Receive<ClusterEvent.CurrentClusterState>(state =>

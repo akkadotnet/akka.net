@@ -10,14 +10,10 @@ using Akka.Actor;
 namespace Akka.Event
 {
     /// <summary>
-    ///     Class DefaultLogger.
+    /// Default logger implementation that outputs logs to the Console.
     /// </summary>
     public class DefaultLogger : ActorBase
     {
-        /// <summary>
-        ///     Processor for user defined messages.
-        /// </summary>
-        /// <param name="message">The message.</param>
         protected override bool Receive(object message)
         {
             if(message is InitializeLogger)
@@ -26,14 +22,17 @@ namespace Akka.Event
                 return true;
             }
             var logEvent = message as LogEvent;
-            if(logEvent != null)
-            {
-                Print(logEvent);
-                return true;
-            }
-            return false;            
+            if (logEvent == null) 
+                return false;
+
+            Print(logEvent);
+            return true;
         }
 
+        /// <summary>
+        /// Print the specified log event.
+        /// </summary>
+        /// <param name="logEvent">The log event that is to be output.</param>
         protected virtual void Print(LogEvent logEvent)
         {
             StandardOutLogger.PrintLogEvent(logEvent);

@@ -37,18 +37,18 @@ namespace PersistenceExample
 
                 //ViewExample(system);
 
-                GuaranteedDelivery(system);
+                AtLeastOnceDelivery(system);
 
                 Console.ReadLine();
             }
         }
 
-        private static void GuaranteedDelivery(ActorSystem system)
+        private static void AtLeastOnceDelivery(ActorSystem system)
         {
-            Console.WriteLine("\n--- GUARANTEED DELIVERY EXAMPLE ---\n");
+            Console.WriteLine("\n--- AT LEAST ONCE DELIVERY EXAMPLE ---\n");
             var delivery = system.ActorOf(Props.Create(()=> new DeliveryActor()),"delivery");
 
-            var deliverer = system.ActorOf(Props.Create(() => new GuaranteedDeliveryExampleActor(delivery.Path)));
+            var deliverer = system.ActorOf(Props.Create(() => new AtLeastOnceDeliveryExampleActor(delivery.Path)));
             delivery.Tell("start");
             deliverer.Tell(new Message("foo"));
             
