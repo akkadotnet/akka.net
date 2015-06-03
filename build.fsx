@@ -40,6 +40,7 @@ let envBuildNumber = System.Environment.GetEnvironmentVariable("BUILD_NUMBER")
 let buildNumber = if String.IsNullOrWhiteSpace(envBuildNumber) then "0" else envBuildNumber
 
 let version = parsedRelease.AssemblyVersion + "." + buildNumber
+let preReleaseVersion = version + "-beta"
 
 let isUnstableDocs = hasBuildParam "unstable"
 let isPreRelease = hasBuildParam "nugetprerelease"
@@ -299,8 +300,8 @@ module Nuget =
         match project with
         | "Akka" -> []
         | "Akka.Cluster" -> ["Akka.Remote", release.NugetVersion]
-        | "Akka.Persistence.TestKit" -> ["Akka.Persistence", release.NugetVersion]
-        | "Akka.Persistence.FSharp" -> ["Akka.Persistence", release.NugetVersion]
+        | "Akka.Persistence.TestKit" -> ["Akka.Persistence", preReleaseVersion]
+        | "Akka.Persistence.FSharp" -> ["Akka.Persistence", preReleaseVersion]
         | di when (di.StartsWith("Akka.DI.") && not (di.EndsWith("Core"))) -> ["Akka.DI.Core", release.NugetVersion]
         | testkit when testkit.StartsWith("Akka.TestKit.") -> ["Akka.TestKit", release.NugetVersion]
         | _ -> ["Akka", release.NugetVersion]
@@ -308,8 +309,8 @@ module Nuget =
     // used to add -pre suffix to pre-release packages
     let getProjectVersion project =
       match project with
-      | "Akka.Cluster" -> release.NugetVersion
-      | persistence when persistence.StartsWith("Akka.Persistence") -> release.NugetVersion
+      | "Akka.Cluster" -> preReleaseVersion
+      | persistence when persistence.StartsWith("Akka.Persistence") -> preReleaseVersion
       | _ -> release.NugetVersion
 
 open Nuget
