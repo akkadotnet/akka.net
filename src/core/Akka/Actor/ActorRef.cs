@@ -354,7 +354,7 @@ namespace Akka.Actor
     public sealed class NoSender : ActorRefBase
     {
         public static readonly NoSender Instance = new NoSender();
-        private readonly ActorPath _path = new RootActorPath(Address.AllSystems) / "NoSender";
+        private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/NoSender");
 
         private NoSender() { }
 
