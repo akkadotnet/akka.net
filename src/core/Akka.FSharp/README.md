@@ -52,11 +52,11 @@ Example:
 
 Paragraph above already has shown, how actors may be created with help of the spawning function. There are several spawning function, which may be used to instantiate actors:
 
--   `spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : ActorRef` - spawns an actor using specified actor computation expression. The actor can only be used locally. 
--   `spawnOpt (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, with custom spawn option settings. The actor can only be used locally. 
--   `spawne (actorFactory : ActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, using an Expression AST. The actor code can be deployed remotely.
+-   `spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : ActorRef<'Message>` - spawns an actor using specified actor computation expression. The actor can only be used locally. 
+-   `spawnOpt (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) (options : SpawnOption list) : ActorRef<'Message>` - spawns an actor using specified actor computation expression, with custom spawn option settings. The actor can only be used locally. 
+-   `spawne (actorFactory : ActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) (options : SpawnOption list) : ActorRef<'Message>` - spawns an actor using specified actor computation expression, using an Expression AST. The actor code can be deployed remotely.
 -   `spawnObj (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : ActorRef` - spawns an actor using specified actor quotation. The actor can only be used locally.
--   `spawnObjOpt (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor quotation, with custom spawn option settings. The actor can only be used locally.
+-   `spawnObjOpt (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) (options : SpawnOption list) : ActorRef<'Message>` - spawns an actor using specified actor quotation, with custom spawn option settings. The actor can only be used locally.
 
 All of these functions may be used with either actor system or actor itself. In the first case spawned actor will be placed under */user* root guardian of the current actor system hierarchy. In second option spawned actor will become child of the actor used as [actorFactory] parameter of the spawning function.
 
@@ -97,7 +97,7 @@ Example (deploy actor remotely):
 
 ### Ask and tell operators
 
-While you may use traditional `ActorRef.Tell` and `ActorRef.Ask` methods, it's more convenient to use dedicated `<!` and `<?` operators to perform related operations.
+While you may use traditional `ActorRef.Tell` and `ActorRef.Ask` methods, it's more convenient to use dedicated `<!` and `<?` operators to perform related operations. Strongly typed actor refs will ensure at compile time, if passed messages are of unhandled type.
 
 Example:
 
@@ -108,7 +108,7 @@ Example:
 
 Actors may be referenced not only by `ActorRef`s, but also through actor path selection (see: [Addressing](http://akkadotnet.github.io/wiki/Addressing)). With F# API you may select an actor with known path using `select` function:
 
--   `select (path : string) (selector : ActorRefFactory) : ActorSelection` - where path is a valid URI string used to recognize actor path, and the selector is either actor system or actor itself.
+-   `select (path : string) (selector : ActorRefFactory) : TypedActorSelection<'Message>` - where path is a valid URI string used to recognize actor path, and the selector is either actor system or actor itself.
 
 Example:
 
@@ -177,8 +177,8 @@ Example:
 
 While you may use built-in set of the event stream methods (see: Event Streams), there is an option of using dedicated F# API functions:
 
--   `subscribe (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - subscribes an actor reference to target channel of the provided event stream. Channels are associated with specific types of a message emitted by the publishers.
--   `unsubscribe (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - unsubscribes an actor reference from target channel of the provided event stream.
+-   `subscribe (ref: ActorRef<'Message>) (eventStream: Akka.Event.EventStream) : bool` - subscribes an actor reference to target channel of the provided event stream. Channels are associated with specific types of a message emitted by the publishers.
+-   `unsubscribe (ref: ActorRef<'Message>) (eventStream: Akka.Event.EventStream) : bool` - unsubscribes an actor reference from target channel of the provided event stream.
 -   `publish (event: 'Event) (eventStream: Akka.Event.EventStream) : unit` - publishes an event on the provided event stream. Event channel is resolved from event's type.
 
 Example: 
@@ -186,7 +186,7 @@ Example:
     type Message = 
         | Subscribe 
         | Unsubscribe
-        | Msg of ActorRef * string
+        | Msg of ActorRef<Message> * string
 
     let subscriber = 
         spawn system "subscriber" 
@@ -194,8 +194,8 @@ Example:
                 let eventStream = mailbox.Context.System.EventStream
                 match msg with
                 | Msg (sender, content) -> printfn "%A says %s" (sender.Path) content
-                | Subscribe -> subscribe typeof<Message> mailbox.Self eventStream |> ignore
-                | Unsubscribe -> unsubscribe typeof<Message> mailbox.Self eventStream |> ignore ))
+                | Subscribe -> subscribe mailbox.Self eventStream |> ignore
+                | Unsubscribe -> unsubscribe mailbox.Self eventStream |> ignore ))
             
     let publisher = 
         spawn system "publisher" 
@@ -203,8 +203,12 @@ Example:
                 publish msg mailbox.Context.System.EventStream))
 
     subscriber <! Subscribe
+    // wait for subscriber to subscribe to event stream
+    System.Threading.Thread.Sleep 100
     publisher  <! Msg (publisher, "hello")
     subscriber <! Unsubscribe
+    // wait for subscriber to unsubscribe to event stream
+    System.Threading.Thread.Sleep 100
     publisher  <! Msg (publisher, "hello again")
 
 ### Logging

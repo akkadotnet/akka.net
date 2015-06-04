@@ -20,6 +20,7 @@ type Message =
     | Crash
 
 let main() =
+    printf "\n=== Supervisiors example ===\n"
     use system = System.create "system" (Configuration.defaultConfig())
     // create parent actor to watch over jobs delegated to it's child
     let parent = 
@@ -60,7 +61,7 @@ let main() =
                     match e with
                     | :? CustomException -> Directive.Restart 
                     | _ -> SupervisorStrategy.DefaultDecider(e)))  ]
-
+                        
     async {
         let! response = parent <? Echo "hello world"
         printfn "%s" response

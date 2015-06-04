@@ -48,8 +48,10 @@
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
-    <Compile Include="FsApi.fs" />
-    <None Include="Script.fsx" />
+    <Compile Include="PersistentActor.fs" />
+    <Compile Include="PersistentView.fs" />
+    <Compile Include="AtLeastOnceDelivery.fs" />
+    <Compile Include="Spawning.fs" />
     <None Include="Akka.Persistence.FSharp.nuspec" />
     <Content Include="app.config" />
   </ItemGroup>

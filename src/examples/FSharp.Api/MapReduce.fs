@@ -46,6 +46,7 @@ let master mapper (reducer:IActorRef) (mailbox: Actor<MRMsg>) = function
     | m         -> mailbox.Unhandled m
 
 let main() =
+    printf "\n=== Map Reduce example ===\n"
     let system = System.create "MapReduceSystem" <| ConfigurationFactory.Default()
     let dict = ConcurrentDictionary<string,int>()
 

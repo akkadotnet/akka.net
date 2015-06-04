@@ -59,3 +59,14 @@ let ``can serialize nested discriminated unions`` () =
     let des = serializer.FromBinary (bytes, typeof<TestUnion2>) :?> TestUnion2
     des
     |> equals x
+
+[<Fact>]
+let ``can serialize typed actor ref`` () =
+    use sys = System.create "system" (Configuration.defaultConfig())
+    let echo = spawn sys "echo" <| actorOf2 (fun mailbox msg -> mailbox.Sender() <! msg)
+
+    let serializer = sys.Serialization.FindSerializerFor echo
+    let bytes = serializer.ToBinary echo
+    let des = serializer.FromBinary (bytes, echo.GetType()) :?> IActorRef<string>
+    des
+    |> equals echo
