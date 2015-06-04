@@ -55,6 +55,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CustomShardAllocationSpec.cs" />
     <Compile Include="LeastShardAllocationStrategySpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -66,6 +67,10 @@
     <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj">
       <Project>{fca84dea-c118-424b-9eb8-34375dfef18a}</Project>
       <Name>Akka.Persistence</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj">
+      <Project>{E5957C3E-2B1E-469F-A680-7953B4DEA31B}</Project>
+      <Name>Akka.Remote.TestKit</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\..\core\Akka.Remote\Akka.Remote.csproj">
       <Project>{ea4ff8fd-7c53-49c8-b9aa-02e458b3e6a7}</Project>
