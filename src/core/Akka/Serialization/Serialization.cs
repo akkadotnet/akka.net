@@ -129,6 +129,8 @@ namespace Akka.Serialization
 
         public static string SerializedActorPath(IActorRef @ref)
         {
+            if (@ref == ActorRefs.NoSender) return String.Empty;
+
             /*
 val path = actorRef.path
     val originalSystem: ExtendedActorSystem = actorRef match {

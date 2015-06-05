@@ -28,7 +28,7 @@ namespace Akka.Actor
 
         public override string ToString()
         {
-            return "<" + (Message ?? "null") + "> from " + (Sender ?? NoSender.Instance);
+            return "<" + (Message ?? "null") + "> from " + (Sender == ActorRefs.NoSender ? "NoSender" : Sender.ToString());
         }
     }
 }

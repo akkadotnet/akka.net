@@ -14,7 +14,7 @@ namespace Akka.TestKit
     /// So when no sender is specified when sending messages, <see cref="TestKitBase.TestActor">TestActor</see>
     /// is used.
     /// When a a test class implements <see cref="INoImplicitSender"/> this behavior is removed and the normal
-    /// behavior is restored, i.e. <see cref="NoSender"/> is used as sender when no sender has been specified.
+    /// behavior is restored, i.e. <see cref="ActorRefs.NoSender"/> is used as sender when no sender has been specified.
     /// <example>
     /// <code>
     /// public class WithImplicitSender : TestKit
@@ -32,7 +32,7 @@ namespace Akka.TestKit
     ///    public void TheTestMethod()
     ///    {
     ///       ...
-    ///       someActor.Tell("message");    //NoSender is used as Sender
+    ///       someActor.Tell("message");    //ActorRefs.NoSender is used as Sender
     ///    }
     /// }
     /// </code>
