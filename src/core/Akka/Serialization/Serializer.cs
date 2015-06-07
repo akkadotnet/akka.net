@@ -71,5 +71,74 @@ namespace Akka.Serialization
         /// <returns>The object contained in the array</returns>
         public abstract object FromBinary(byte[] bytes, Type type);
     }
+
+    /**
+     * A Serializer represents a bimap between an object and an array of bytes representing that object.
+     *
+     * For serialization of data that need to evolve over time the `SerializerWithStringManifest` is recommended instead
+     * of [[Serializer]] because the manifest (type hint) is a `String` instead of a `Class`. That means
+     * that the class can be moved/removed and the serializer can still deserialize old data by matching
+     * on the `String`. This is especially useful for Akka Persistence.
+     *
+     * The manifest string can also encode a version number that can be used in [[#fromBinary]] to
+     * deserialize in different ways to migrate old data to new domain objects.
+     *
+     * If the data was originally serialized with [[Serializer]] and in a later version of the
+     * system you change to `SerializerWithStringManifest` the manifest string will be the full class name if
+     * you used `includeManifest=true`, otherwise it will be the empty string.
+     *
+     * Serializers are loaded using reflection during [[akka.actor.ActorSystem]]
+     * start-up, where two constructors are tried in order:
+     *
+     * <ul>
+     * <li>taking exactly one argument of type [[akka.actor.ExtendedActorSystem]];
+     * this should be the preferred one because all reflective loading of classes
+     * during deserialization should use ExtendedActorSystem.dynamicAccess (see
+     * [[akka.actor.DynamicAccess]]), and</li>
+     * <li>without arguments, which is only an option if the serializer does not
+     * load classes using reflection.</li>
+     * </ul>
+     *
+     * <b>Be sure to always use the [[akka.actor.DynamicAccess]] for loading classes!</b> This is necessary to
+     * avoid strange match errors and inequalities which arise from different class loaders loading
+     * the same class.
+     */
+    public abstract class SerializerWithStringManifest : Serializer
+    {
+        public override bool IncludeManifest { get { return true; } }
+        
+        protected SerializerWithStringManifest(ExtendedActorSystem system) : base(system)
+        {
+        }
+
+        public sealed override object FromBinary(byte[] bytes, Type type)
+        {
+            var manifestString = type == null ? string.Empty : type.Name;
+            return FromBinary(bytes, manifestString);
+        }
+
+        protected abstract object FromBinary(byte[] bytes, string manifestString);
+
+        public abstract string Manifest(object o);
+    }
+
+    public static class SerializerIdentifierHelper
+    {
+        /// <summary>
+        /// Configuration path of the serialization identifiers in HOCON config files.
+        /// </summary>
+        public const string SerializationIdentifiers = "akka.actor.serialization-identifiers";
+
+        public static int GetSerializerIdentifierFromConfig(Type serializerType, ActorSystem system)
+        {
+            return system.Settings.Config.GetInt(SerializationIdentifiers + "." + serializerType.Name);
+        }
+
+        public static int GetSerializerIdentifierFromConfig<TSerializer>(ActorSystem system)
+            where TSerializer : Serializer
+        {
+            return GetSerializerIdentifierFromConfig(typeof(TSerializer), system);
+        }
+    }
 }
 
