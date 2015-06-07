@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Akka.Util.Internal.Collections
 {
@@ -67,14 +69,17 @@ namespace Akka.Util.Internal.Collections
 			return AddOrUpdate(key, value);
 		}
 
-
-
 		IImmutableMap<TKey, TValue> IImmutableMap<TKey, TValue>.Remove(TKey key)
 		{
 			return Remove(key);
 		}
 
-		bool IImmutableMap<TKey, TValue>.TryRemove(TKey key, out IImmutableMap<TKey, TValue> newMap)
+	    public IImmutableMap<TKey, TValue> Remove(IEnumerable<TKey> keys)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    bool IImmutableMap<TKey, TValue>.TryRemove(TKey key, out IImmutableMap<TKey, TValue> newMap)
 		{
 			ImmutableTreeMap<TKey, TValue> newTreeMap;
 			var result = TryRemove(key, out newTreeMap);
@@ -99,6 +104,16 @@ namespace Akka.Util.Internal.Collections
 			newMap = this;
 			return false;
 		}
+
+        public IImmutableMap<TKey, TValue> Range(TKey from, TKey to)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public IImmutableMap<TKey, TValue> Concat(IEnumerable<IKeyValuePair<TKey, TValue>> other)
+	    {
+	        return other.Aggregate(this, (map, pair) => map.AddOrUpdate(pair.Key, pair.Value));
+	    }
 	}
 }
 

@@ -30,6 +30,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Google.ProtocolBuffers, Version=2.4.1.555, Culture=neutral, PublicKeyToken=55f7125234beb589, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Google.ProtocolBuffers.2.4.1.555\lib\net40\Google.ProtocolBuffers.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Google.ProtocolBuffers.Serialization, Version=2.4.1.555, Culture=neutral, PublicKeyToken=55f7125234beb589, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Google.ProtocolBuffers.2.4.1.555\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable, Version=1.0.34.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Bcl.Immutable.1.0.34\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
@@ -44,7 +52,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Client\ClusterClient.cs" />
+    <Compile Include="Client\ClusterClientReceptionist.cs" />
+    <Compile Include="Client\ClusterReceptionist.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PubSub\DistributedPubSub.cs" />
+    <Compile Include="PubSub\DistributedPubSubMediator.cs" />
+    <Compile Include="PubSub\DistributedPubSubSettings.cs" />
+    <Compile Include="PubSub\Internal\Messages.cs" />
+    <Compile Include="PubSub\Internal\Topics.cs" />
+    <Compile Include="PubSub\Serializers\DistributedPubSubMessageSerializer.cs" />
+    <Compile Include="PubSub\Serializers\Proto\DistributedPubSubMessages.cs" />
     <Compile Include="Singleton\ClusterSingletonManager.cs" />
     <Compile Include="Singleton\ClusterSingletonProxy.cs" />
     <Compile Include="Singleton\MemberAgeOrdering.cs" />
@@ -65,7 +83,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="reference.conf" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
