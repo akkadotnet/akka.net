@@ -16,8 +16,8 @@ akka.persistence.journal.sql-server.connection-string = "<database connection st
 Similar configuration may be used to setup a SQL Server snapshot store:
 
 ```
-akka.persistence.snasphot-store.plugin = "akka.persistence.snasphot-store.sql-server"
-akka.persistence.snasphot-store.sql-server.connection-string = "<database connection string>"
+akka.persistence.snapshot-store.plugin = "akka.persistence.snasphot-store.sql-server"
+akka.persistence.snapshot-store.sql-server.connection-string = "<database connection string>"
 ```
 
 Remember that connection string must be provided separately to Journal and Snapshot Store. To finish setup simply initialize plugin using: `SqlServerPersistence.Init(actorSystem);`
