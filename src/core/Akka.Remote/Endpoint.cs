@@ -1225,9 +1225,8 @@ namespace Akka.Remote
                         "Internal error: Endpoint is in state Writing, but no association handle is present.");
                 if (_provider.RemoteSettings.LogSend)
                 {
-                    var msgLog = string.Format("RemoteMessage: {0} to [{1}]<+[{2}] from [{3}]", send.Message,
+                    _log.Debug("RemoteMessage: {0} to [{1}]<+[{2}] from [{3}]", send.Message,
                         send.Recipient, send.Recipient.Path, send.SenderOption ?? _system.DeadLetters);
-                    _log.Debug(msgLog);
                 }
 
                 var pdu = _codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,

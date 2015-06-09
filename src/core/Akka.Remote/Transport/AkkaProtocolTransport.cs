@@ -609,7 +609,7 @@ namespace Akka.Remote.Transport
                                     })
                                     .Default(d =>
                                     {
-                                        _log.Debug(string.Format("Expected message of type Associate; instead received {0}", d));
+                                        _log.Debug("Expected message of type Associate; instead received {0}", d);
                                         //Expect handshake to be finished, dropping connection
                                         SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
                                         nextState = Stop();

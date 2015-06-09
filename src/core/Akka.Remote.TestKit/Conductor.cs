@@ -281,21 +281,21 @@ namespace Akka.Remote.TestKit
 
         public void OnMessage(object message, IConnection responseChannel)
         {
-            _log.Debug(string.Format("message from {0}: {1}", responseChannel.RemoteHost, message));
+            _log.Debug("message from {0}: {1}", responseChannel.RemoteHost, message);
             if (message is INetworkOp)
             {
                 _clients[responseChannel].Tell(message);
             }
             else
             {
-                _log.Debug(string.Format("client {0} sent garbage `{1}`, disconnecting", responseChannel.RemoteHost, message));
+                _log.Debug("client {0} sent garbage `{1}`, disconnecting", responseChannel.RemoteHost, message);
                 responseChannel.Close();
             }
         }
 
         public void OnException(Exception ex, IConnection erroredChannel)
         {
-            _log.Warning(string.Format("handled network error from {0}: {1}", erroredChannel.RemoteHost, ex.Message));
+            _log.Warning("handled network error from {0}: {1}", erroredChannel.RemoteHost, ex.Message);
         }
     }
 
