@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+#if !DNXCORE50
 using System.Runtime.Serialization;
+#endif
 
 namespace Akka.Actor
 {
@@ -31,11 +33,12 @@ namespace Akka.Actor
             : base(message, cause)
         {
         }
-
+#if !DNXCORE50
         protected AkkaException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
 
         protected Exception Cause { get { return InnerException; } }
     }
@@ -56,11 +59,12 @@ namespace Akka.Actor
         {
             //Intentionally left blank
         }
-
+#if !DNXCORE50
         protected InvalidActorNameException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -73,11 +77,12 @@ namespace Akka.Actor
         {
             //Intentionally left blank
         }
-
+#if !DNXCORE50
         protected AskTimeoutException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -94,11 +99,12 @@ namespace Akka.Actor
         {
             _actor = actor;
         }
-
+#if !DNXCORE50
         protected ActorInitializationException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
 
         public IActorRef Actor { get { return _actor; } }
 
@@ -120,10 +126,12 @@ namespace Akka.Actor
 
         public LoggerInitializationException(string message, Exception cause = null) : base(message, cause) { }
 
+#if !DNXCORE50
         protected LoggerInitializationException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
     }
 
 
@@ -140,11 +148,12 @@ namespace Akka.Actor
         public ActorKilledException(string message) : base(message)
         {
         }
-
+#if !DNXCORE50
         protected ActorKilledException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -154,11 +163,12 @@ namespace Akka.Actor
     public class IllegalActorStateException : AkkaException
     {
         public IllegalActorStateException(string msg) : base(msg) { }
-
+#if !DNXCORE50
         protected IllegalActorStateException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -167,11 +177,12 @@ namespace Akka.Actor
     public class IllegalActorNameException : AkkaException
     {
         public IllegalActorNameException(string msg) : base(msg) { }
-
+#if !DNXCORE50
         protected IllegalActorNameException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -187,11 +198,12 @@ namespace Akka.Actor
         {
             _deadActor = deadActor;
         }
-
+#if !DNXCORE50
         protected DeathPactException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
 
         public IActorRef DeadActor
         {
@@ -217,11 +229,12 @@ namespace Akka.Actor
             exception = cause;
             this.optionalMessage = optionalMessage;
         }
-
+#if !DNXCORE50
         protected PreRestartException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -246,11 +259,12 @@ namespace Akka.Actor
         {
             _originalCause = originalCause;
         }
-
+#if !DNXCORE50
         protected PostRestartException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
 
         public Exception OriginalCause { get { return _originalCause; } }
     }
@@ -262,11 +276,12 @@ namespace Akka.Actor
     public class ActorNotFoundException : AkkaException
     {
         public ActorNotFoundException() : base() { }
-        
+ #if !DNXCORE50
         protected ActorNotFoundException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
     }
 
     /// <summary>
@@ -282,11 +297,12 @@ namespace Akka.Actor
         public InvalidMessageException(string message):base(message)
         {
         }
-
+#if !DNXCORE50
         protected InvalidMessageException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
     }
 }
 

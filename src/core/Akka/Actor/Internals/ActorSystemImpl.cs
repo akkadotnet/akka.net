@@ -8,6 +8,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+#if DNXCORE50
+using System.Reflection;
+#endif
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,10 +41,12 @@ namespace Akka.Actor.Internals
         private IScheduler _scheduler;
         private ActorProducerPipelineResolver _actorProducerPipelineResolver;
 
+#if !DNXCORE50
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Load())
         {
         }
+#endif
         public ActorSystemImpl(string name, Config config)
         {
             if(!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
@@ -140,7 +145,12 @@ namespace Akka.Actor.Internals
             foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions"))
             {
                 var extensionType = Type.GetType(extensionFqn);
+#if DNXCORE50
+                if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.GetTypeInfo().IsAbstract || !extensionType.GetTypeInfo().IsClass)
+#else
+                    
                 if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.IsAbstract || !extensionType.IsClass)
+#endif
                 {
                     _log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
                     continue;

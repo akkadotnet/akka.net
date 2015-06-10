@@ -84,7 +84,9 @@ namespace Akka.Actor
     // LinkedList wrapper instead of Queue? While it's used for queueing, however I expect a lot of churn around 
     // adding-removing elements. Additionally we have to get a functionality of dequeueing element meeting
     // a specific predicate (even if it's in middle of queue), and current queue implementation won't provide that in easy way.
+#if !DNXCORE50
     [Serializable]
+#endif
     internal class InboxQueue<T> : ICollection<T>
     {
         private readonly LinkedList<T> _inner = new LinkedList<T>();

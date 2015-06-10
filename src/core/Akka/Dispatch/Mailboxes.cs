@@ -8,6 +8,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+#if DNXCORE50
+using System.Reflection;
+#endif
 using Akka.Actor;
 using Akka.Configuration;
 
@@ -78,7 +81,11 @@ namespace Akka.Dispatch
 
             var actortype = props.Type;
             var interfaces = actortype.GetInterfaces()
+#if DNXCORE50
+                .Where(i => i.GetTypeInfo().IsGenericType)
+# else
                 .Where(i => i.IsGenericType)
+#endif
                 .Where(i => i.GetGenericTypeDefinition() == typeof (IRequiresMessageQueue<>))
                 .Select(i => i.GetGenericArguments().First())
                 .ToList();

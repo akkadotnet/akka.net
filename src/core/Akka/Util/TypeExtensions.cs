@@ -6,6 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+#if DNXCORE50
+using System.Reflection;
+#endif
 
 namespace Akka.Util
 {

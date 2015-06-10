@@ -32,7 +32,7 @@ namespace Akka.Configuration
         public ConfigurationException(string message, Exception exception): base(message, exception)
         {
         }
-
+#if !DNXCORE50
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationException"/> class.
         /// </summary>
@@ -42,6 +42,7 @@ namespace Akka.Configuration
             : base(info, context)
         {
         }
+#endif
     }
 }
 

@@ -8,6 +8,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+#if DNXCORE50
+using System.Reflection;
+#endif
 using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Event;

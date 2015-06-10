@@ -16,11 +16,12 @@ namespace Akka.Actor
     public class StashOverflowException : AkkaException
     {
         public StashOverflowException(string message, Exception cause = null) : base(message, cause) { }
-
+#if !DNXCORE50
         protected StashOverflowException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
     }
 }
 

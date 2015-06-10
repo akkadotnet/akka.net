@@ -27,7 +27,7 @@ namespace Akka.Dispatch
 
         internal static ThreadType ConfigureThreadType(string threadType)
         {
-            return string.Compare(threadType, ThreadType.Foreground.ToString(), StringComparison.InvariantCultureIgnoreCase) == 0 ?
+            return string.Compare(threadType, ThreadType.Foreground.ToString(), StringComparison.OrdinalIgnoreCase) == 0 ?
                 ThreadType.Foreground : ThreadType.Background;
         }
 

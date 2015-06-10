@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+#if !DNXCORE50
 using System.Configuration;
+#endif
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -41,6 +43,7 @@ namespace Akka.Configuration
             return new Config(res);
         }
 
+#if !DNXCORE50
         /// <summary>
         /// Loads a configuration defined in the current application's
         /// configuration file, e.g. app.config or web.config
@@ -53,6 +56,7 @@ namespace Akka.Configuration
 
             return config;
         }
+#endif
 
         /// <summary>
         /// Retrieves the default configuration that Akka.NET uses
@@ -88,11 +92,11 @@ namespace Akka.Configuration
         {
             var type = instanceInAssembly as Type;
             if(type != null)
-                return FromResource(resourceName, type.Assembly);
+                return FromResource(resourceName, type.GetTypeInfo().Assembly);
             var assembly = instanceInAssembly as Assembly;
             if(assembly != null)
                 return FromResource(resourceName, assembly);
-            return FromResource(resourceName, instanceInAssembly.GetType().Assembly);
+            return FromResource(resourceName, instanceInAssembly.GetType().GetTypeInfo().Assembly);
         }
 
         /// <summary>
@@ -104,7 +108,7 @@ namespace Akka.Configuration
         /// <returns>The configuration defined in the assembly that contains the type <typeparamref name="TAssembly"/>.</returns>
         public static Config FromResource<TAssembly>(string resourceName)
         {
-            return FromResource(resourceName, typeof(TAssembly).Assembly);
+            return FromResource(resourceName, typeof(TAssembly).GetTypeInfo().Assembly);
         }
 
         /// <summary>
@@ -128,4 +132,3 @@ namespace Akka.Configuration
         }
     }
 }
-

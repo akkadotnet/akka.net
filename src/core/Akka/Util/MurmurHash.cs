@@ -242,7 +242,7 @@ namespace Akka.Util
         /// </summary>
         public static byte[] ToBytes(this BitArray arr)
         {
-            if (arr.Count != 8)
+            if (arr.Length != 8)
             {
                 throw new ArgumentException("Not enough bits to make a byte!");
             }

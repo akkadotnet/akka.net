@@ -63,10 +63,12 @@ namespace Akka.Dispatch
         public override void Schedule(Action run)
         {
             var wc = new WaitCallback(_ => run());
+#if !DNXCORE50
             // we use unsafe version if current application domain is FullTrusted
             if (_isFullTrusted)
                 ThreadPool.UnsafeQueueUserWorkItem(wc, null);
             else
+#endif
                 ThreadPool.QueueUserWorkItem(wc, null);
         }
     }

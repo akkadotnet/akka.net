@@ -128,7 +128,7 @@ namespace Akka.Serialization
                 if (j["Case"] != null)
                 {
                     var caseTypeName = j["Case"].Value<string>();
-                    var caseType = type.GetNestedType(caseTypeName);
+                    var caseType = type.GetNestedType(caseTypeName, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public);
                     var ctor = caseType.GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)[0];
                     var paramTypes = ctor.GetParameters().Select(p => p.ParameterType).ToArray();
                     var values =

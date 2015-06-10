@@ -9,6 +9,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+#if DNXCORE50
+using System.Reflection;
+#endif
 
 namespace Akka.Tools.MatchHandler
 {
@@ -59,7 +62,11 @@ namespace Akka.Tools.MatchHandler
                 }
                 else
                 {
-                    if(handlesType.IsValueType)
+#if DNXCORE50
+                    if (handlesType.GetTypeInfo().IsValueType)
+#else
+                    if (handlesType.IsValueType)
+#endif
                     {
                         //For value types we cannot use as-operator and check for nu, s0 we create the following code:
                         //  if(inputVariable is HandlesType)
