@@ -39,6 +39,14 @@ module Actors =
 
     /// Pipe operator which sends an output of asynchronous expression directly to the recipients mailbox
     let inline (<!|) (recipient : ICanTell) (computation : Async<'T>) = pipeTo computation recipient ActorRefs.NoSender
+    
+    type ICanTell with
+        
+        /// <summary>
+        /// Sends a message to an actor and asynchronously awaits for a response back until timeout occur.
+        /// </summary>
+        member this.Ask(msg: obj, timeout: TimeSpan): Async<'Response> =
+            this.Ask<'Response>(msg, Nullable(timeout)) |> Async.AwaitTask
 
     type IO<'T> =
         | Input
@@ -237,7 +245,10 @@ module Actors =
         member __.Unhandled msg = base.Unhandled msg
         override x.OnReceive msg = 
             match state with
-            | Func f -> state <- f (msg :?> 'Message)
+            | Func f -> 
+                match msg with
+                | :? 'Message as matched -> state <- f matched
+                | _ -> x.Unhandled msg
             | Return _ -> x.PostStop()
         override x.PostStop() =
             base.PostStop ()
