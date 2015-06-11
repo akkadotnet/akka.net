@@ -97,7 +97,7 @@ namespace Akka.Persistence.SqlServer.Snapshot
 
             if (maxTimestamp > DateTime.MinValue && maxTimestamp < DateTime.MaxValue)
             {
-                sb.Append(" AND SequenceNr <= @SequenceNr ");
+                sb.Append(" AND Timestamp <= @Timestamp ");
                 sqlCommand.Parameters.Add(new SqlParameter("@Timestamp", SqlDbType.DateTime2) { Value = maxTimestamp });
             }
 
