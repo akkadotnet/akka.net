@@ -46,8 +46,9 @@ namespace Akka.Dispatch
     /// </summary>
     public class ThreadPoolDispatcher : MessageDispatcher
     {
-
+#if !DNXCORE50
         private static readonly bool _isFullTrusted = AppDomain.CurrentDomain.IsFullyTrusted;
+#endif
 
         /// <summary>
         /// Takes a <see cref="MessageDispatcherConfigurator"/>

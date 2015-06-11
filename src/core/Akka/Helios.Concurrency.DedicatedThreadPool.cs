@@ -443,11 +443,13 @@ namespace Helios.Concurrency
             internal void ForceTermination()
             {
                 //TODO: abort is no guarantee for thread abortion
+#if !DNXCORE50
                 _thread.Abort();
+#endif
             }
         }
 
-        #endregion
+#endregion
     }
 }
 
