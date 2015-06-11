@@ -225,6 +225,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		global.json = global.json
 	EndProjectSection
 EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Akka.Tests.Shared.Internals", "core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.xproj", "{89ADBFD6-7D3B-4D10-B432-09234CE2F540}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug Mono|Any CPU = Debug Mono|Any CPU
@@ -830,6 +832,14 @@ Global
 		{49892267-6076-41E8-A374-D081FA909E1C}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{49892267-6076-41E8-A374-D081FA909E1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{49892267-6076-41E8-A374-D081FA909E1C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{89ADBFD6-7D3B-4D10-B432-09234CE2F540}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{89ADBFD6-7D3B-4D10-B432-09234CE2F540}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{89ADBFD6-7D3B-4D10-B432-09234CE2F540}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{89ADBFD6-7D3B-4D10-B432-09234CE2F540}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{89ADBFD6-7D3B-4D10-B432-09234CE2F540}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{89ADBFD6-7D3B-4D10-B432-09234CE2F540}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{89ADBFD6-7D3B-4D10-B432-09234CE2F540}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{89ADBFD6-7D3B-4D10-B432-09234CE2F540}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -928,5 +938,6 @@ Global
 		{81765631-AAD7-4BD2-8D93-2EAA3AC04CB3} = {048C1AB9-8904-44A9-B8E6-31B6C81FB53E}
 		{3F6E5FFC-4D4D-4A70-8D50-503A91BC6BA3} = {048C1AB9-8904-44A9-B8E6-31B6C81FB53E}
 		{49892267-6076-41E8-A374-D081FA909E1C} = {048C1AB9-8904-44A9-B8E6-31B6C81FB53E}
+		{89ADBFD6-7D3B-4D10-B432-09234CE2F540} = {048C1AB9-8904-44A9-B8E6-31B6C81FB53E}
 	EndGlobalSection
 EndGlobal

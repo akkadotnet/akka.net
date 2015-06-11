@@ -71,6 +71,9 @@ namespace Akka.TestKit
 
         private static string GetCallerName()
         {
+#if DNXCORE50
+            return null;
+#else
             var systemNumber = Interlocked.Increment(ref _systemNumber);
             var stackTrace = new StackTrace(0);
             var name = stackTrace.GetFrames().
@@ -80,6 +83,7 @@ namespace Akka.TestKit
                 Select(m => _nameReplaceRegex.Replace(m.DeclaringType.Name + "-" + systemNumber, "-")).
                 FirstOrDefault() ?? "test";
             return name;
+#endif
         }
 
         protected static Config AkkaSpecConfig { get { return _akkaSpecConfig; } }
@@ -96,7 +100,9 @@ namespace Akka.TestKit
             var message = envelope.Message;
             Assertions.AssertTrue(message != null, string.Format("expected {0} but got null message", hint));
             //TODO: Check next line. 
+#if !DNXCORE50
             Assertions.AssertTrue(function.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(message)), string.Format("expected {0} but got {1} instead", hint, message));
+#endif
             return function.Invoke(message);
         }
 
@@ -106,7 +112,9 @@ namespace Akka.TestKit
         {
             var t = ExpectMsg<T>();
             //TODO: Check if this really is needed:
+#if !DNXCORE50
             Assertions.AssertTrue(pf.Method.GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
+#endif
             return pf.Invoke(t);
         }
 
