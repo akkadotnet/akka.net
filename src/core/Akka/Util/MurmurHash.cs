@@ -247,7 +247,25 @@ namespace Akka.Util
                 throw new ArgumentException("Not enough bits to make a byte!");
             }
             var bytes = new byte[(arr.Length - 1) / 8 + 1];
+#if DNXCORE50
+            int bitIndex = 0;
+            int byteIndex = 0;
+            for (int i = 0; i < arr.Length; i++)
+            {
+                if (arr.Get(i))
+                {
+                    bytes[byteIndex] |= (byte)(((byte)1) << bitIndex);
+                }
+                bitIndex++;
+                if (bitIndex == 8)
+                {
+                    bitIndex = 0;
+                    byteIndex++;
+                }
+            }
+#else 
             arr.CopyTo(bytes, 0);
+#endif
             return bytes;
         }
     }
