@@ -686,7 +686,12 @@ namespace Akka.Actor
         protected override Props Copy()
         {
             Props initialCopy = base.Copy();
+#if DNXCORE50
+            //TODO: change this
+            var invokerCopy = invoker;
+#else
             var invokerCopy = (Func<TActor>)invoker.Clone();
+#endif
             return new DynamicProps<TActor>(initialCopy, invokerCopy);
         }
 
