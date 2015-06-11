@@ -251,7 +251,7 @@ namespace Akka.Dispatch.SysMsg
         /// </summary>
         /// <param name="state"></param>
         /// <param name="action">The action.</param>
-        public CompleteTask(AmbientState state, Action action)
+        public CompleteTask(AmbientState state, Action<AmbientState> action)
         {
             State = state;
             SetResult = action;
@@ -263,7 +263,7 @@ namespace Akka.Dispatch.SysMsg
         ///     Gets the set result.
         /// </summary>
         /// <value>The set result.</value>
-        public Action SetResult { get; private set; }
+        public Action<AmbientState> SetResult { get; private set; }
 
         public override string ToString()
         {

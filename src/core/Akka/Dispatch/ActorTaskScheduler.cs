@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -24,6 +23,8 @@ namespace Akka.Dispatch
 
     public class ActorTaskScheduler : TaskScheduler
     {
+        [ThreadStatic]
+        private static AmbientState state;
         public static readonly TaskScheduler Instance = new ActorTaskScheduler();
         public static readonly TaskFactory TaskFactory = new TaskFactory(Instance);
         public static readonly string StateKey = "akka.state";
@@ -32,12 +33,12 @@ namespace Akka.Dispatch
 
         public static void SetCurrentState(IActorRef self, IActorRef sender, object message)
         {
-            CallContext.LogicalSetData(StateKey, new AmbientState
+            state = new AmbientState
             {
                 Sender = sender,
                 Self = self,
                 Message = message
-            });
+            };
         }
 
         protected override IEnumerable<Task> GetScheduledTasks()
@@ -47,8 +48,7 @@ namespace Akka.Dispatch
 
         protected override void QueueTask(Task task)
         {
-            var s = CallContext.LogicalGetData(StateKey) as AmbientState;
-            if (task.AsyncState == Outer || s == null)
+            if (task.AsyncState == Outer || state == null)
             {
                 TryExecuteTask(task);
                 return;
@@ -56,11 +56,10 @@ namespace Akka.Dispatch
 
             //we get here if the task needs to be marshalled back to the mailbox
             //e.g. if previous task was an IO completion
-            s = CallContext.LogicalGetData(StateKey) as AmbientState;
 
-            s.Self.Tell(new CompleteTask(s, () =>
+            state.Self.Tell(new CompleteTask(state, x =>
             {
-                SetCurrentState(s.Self,s.Sender,s.Message);
+                SetCurrentState(x.Self, x.Sender, x.Message);
                 TryExecuteTask(task);
                 if (task.IsFaulted)
                     Rethrow(task, null);
@@ -72,16 +71,15 @@ namespace Akka.Dispatch
         {
             if (taskWasPreviouslyQueued)
                 return false;
-
-            var s = CallContext.LogicalGetData(StateKey) as AmbientState;
+            
             var cell = ActorCell.Current;
 
             //Is the current cell and the current state the same?
             if (cell != null &&
-                s != null &&
-                Equals(cell.Self, s.Self) &&
-                Equals(cell.Sender, s.Sender) &&
-                cell.CurrentMessage == s.Message)
+                state != null &&
+                Equals(cell.Self, state.Self) &&
+                Equals(cell.Sender, state.Sender) &&
+                cell.CurrentMessage == state.Message)
             {
                 var res = TryExecuteTask(task);
                 return res;

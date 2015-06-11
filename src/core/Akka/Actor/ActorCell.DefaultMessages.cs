@@ -195,7 +195,7 @@ namespace Akka.Actor
         {
             CurrentMessage = task.State.Message;
             Sender = task.State.Sender;
-            task.SetResult();
+            task.SetResult(task.State);
         }
         public void SwapMailbox(DeadLetterMailbox mailbox)
         {
