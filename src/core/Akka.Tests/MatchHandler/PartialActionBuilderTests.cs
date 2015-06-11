@@ -451,7 +451,7 @@ namespace Akka.Tests.MatchHandler
             for(int i = 0; i < delegateArguments.Length; i++)
             {
 #if DNXCORE50
-                if(delegateArguments[i].GetType().IsValueType())
+                if(delegateArguments[i].GetType().GetTypeInfo().IsValueType)
 #else
                 if (delegateArguments[i].GetType().IsValueType)
 #endif

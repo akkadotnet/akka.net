@@ -6,7 +6,11 @@
     "projectUrl": "",
     "licenseUrl": "",
 
-    "exclude": [ "Configuration\\ConfigurationSpec.cs" ],
+    "exclude": [
+        "Configuration\\ConfigurationSpec.cs",
+        "Routing\\ResizerSpec.cs",
+        "Util\\Internal\\Collections\\IteratorTests.cs"
+    ],
 
     "dependencies": {
         "Akka": "1.0.0-*",
