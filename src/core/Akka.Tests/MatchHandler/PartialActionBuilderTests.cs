@@ -6,6 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+#if DNXCORE50
+using System.Reflection;
+#endif
 using Akka.TestKit;
 using Akka.Tools.MatchHandler;
 using Xunit;
@@ -447,7 +450,11 @@ namespace Akka.Tests.MatchHandler
         {
             for(int i = 0; i < delegateArguments.Length; i++)
             {
-                if(delegateArguments[i].GetType().IsValueType)
+#if DNXCORE50
+                if(delegateArguments[i].GetType().IsValueType())
+#else
+                if (delegateArguments[i].GetType().IsValueType)
+#endif
                     Assert.Equal(delegateArguments[i], updatedArgs[i]);
                 else
                     Assert.Same(delegateArguments[i], updatedArgs[i]);

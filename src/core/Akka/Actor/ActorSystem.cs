@@ -87,7 +87,6 @@ namespace Akka.Actor
             return CreateAndStartSystem(name, config);
         }
 
-#if !DNXCORE50
         /// <summary>
         ///     Creates the specified name.
         /// </summary>
@@ -97,9 +96,12 @@ namespace Akka.Actor
         /// <returns>ActorSystem.</returns>
         public static ActorSystem Create(string name)
         {
+#if DNXCORE50
+            return CreateAndStartSystem(name, new Config());
+#else
             return CreateAndStartSystem(name,ConfigurationFactory.Load());
-        }
 #endif
+        }
 
         private static ActorSystem CreateAndStartSystem(string name, Config withFallback)
         {

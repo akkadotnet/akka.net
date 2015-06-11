@@ -41,7 +41,12 @@ namespace Akka.Actor.Internals
         private IScheduler _scheduler;
         private ActorProducerPipelineResolver _actorProducerPipelineResolver;
 
-#if !DNXCORE50
+#if DNXCORE50
+        public ActorSystemImpl(string name)
+            : this(name, new Config())
+        {
+        }
+#else
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Load())
         {

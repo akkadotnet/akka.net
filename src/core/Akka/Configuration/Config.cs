@@ -426,7 +426,7 @@ namespace Akka.Configuration
             HoconValue value = GetNode(path);
             return value != null;
         }
-#if !DNXCORE50
+
         /// <summary>
         /// Adds the supplied configuration string as a fallback to the supplied configuration.
         /// </summary>
@@ -461,7 +461,6 @@ namespace Akka.Configuration
             Config config = ConfigurationFactory.ParseString(str);
             return config;
         }
-#endif
 
         /// <summary>
         /// Retrieves an enumerable key value pair representation of the current configuration.
