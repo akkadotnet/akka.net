@@ -295,12 +295,12 @@ namespace Akka.Cluster
 
         public void LogInfo(string template, object arg1)
         {
-            _log.Info(String.Format("Cluster Node [{0}] - " + template, SelfAddress, arg1));
+            _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1);
         }
 
         public void LogInfo(string template, object arg1, object arg2)
         {
-            _log.Info(String.Format("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2));
+            _log.Info("Cluster Node [{0}] - " + template, SelfAddress, arg1, arg2);
         }
     }
 }
