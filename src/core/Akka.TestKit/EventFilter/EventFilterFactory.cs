@@ -7,6 +7,9 @@
 
 using System;
 using System.Collections.Generic;
+#if DNXCORE50
+using System.Reflection;
+#endif
 using System.Text.RegularExpressions;
 using Akka.Event;
 using Akka.TestKit.Internal;

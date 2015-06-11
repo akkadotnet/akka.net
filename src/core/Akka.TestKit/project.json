@@ -1,0 +1,41 @@
+{
+    "version": "1.0.0-*",
+    "description": "",
+    "authors": [ "" ],
+    "tags": [ "" ],
+    "projectUrl": "",
+    "licenseUrl": "",
+
+    "dependencies": {
+        "Akka": "1.0.0-*"
+    },
+
+    "frameworks": {
+        "dnxcore50": {
+            "dependencies": {
+                "System.Console": "4.0.0-beta-22816",
+                "System.Collections": "4.0.10-beta-22816",
+                "System.Collections.Concurrent": "4.0.10-beta-22816",
+                "System.Diagnostics.Contracts": "4.0.0-beta-22816",
+                "System.Diagnostics.Debug": "4.0.10-beta-22816",
+                "System.Globalization": "4.0.10-beta-22816",
+                "System.Linq": "4.0.0-beta-22816",
+                "System.Linq.Expressions": "4.0.10-beta-22816",
+                "System.Reflection": "4.0.10-beta-22816",
+                "System.Reflection.Extensions": "4.0.0-beta-22816",
+                "System.Reflection.TypeExtensions": "4.0.0-beta-22816",
+                "System.Reflection.Emit": "4.0.0-beta-22816",
+                "System.Runtime": "4.0.20-beta-22816",
+                "System.Runtime.Extensions": "4.0.10-beta-22816",
+                "System.Text.RegularExpressions": "4.0.10-beta-22816",
+                "System.Threading": "4.0.10-beta-22816",
+                "System.Threading.Tasks": "4.0.10-beta-22816",
+                "System.Threading.Thread": "4.0.0-beta-22816",
+                "System.Threading.ThreadPool": "4.0.10-beta-22816",
+                "System.Threading.Timer": "4.0.0-beta-22816",
+                "Microsoft.CSharp": "4.0.0-beta-22816",
+                "Newtonsoft.Json": "7.0.1-beta3"
+            }
+        }
+    }
+}

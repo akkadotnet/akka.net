@@ -21,7 +21,11 @@ namespace Akka.TestKit
 
         public override void Post(SendOrPostCallback d, object state)
         {
-            ThreadPool.UnsafeQueueUserWorkItem(_ =>
+#if DNXCORE50
+            ThreadPool.QueueUserWorkItem(_ =>
+#else
+            ThreadPool.UnsafeQueueUserWorkItem(_ =>            
+#endif
             {
                 var oldCell = InternalCurrentActorCellKeeper.Current;
 	            var oldContext = Current;
