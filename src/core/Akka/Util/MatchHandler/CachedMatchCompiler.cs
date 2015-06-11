@@ -51,7 +51,7 @@ namespace Akka.Tools.MatchHandler
             delegateArguments = result.Arguments;
             return compiledLambda;
         }
-
+#if !DNXCORE50
         public void CompileToMethod(IReadOnlyList<TypeHandler> handlers, IReadOnlyList<Argument> capturedArguments, MatchBuilderSignature signature, TypeBuilder typeBuilder, string methodName, MethodAttributes methodAttributes = MethodAttributes.Public | MethodAttributes.Static)
         {
             var result = _expressionBuilder.BuildLambdaExpression(handlers);
@@ -60,6 +60,7 @@ namespace Akka.Tools.MatchHandler
             var method = typeBuilder.DefineMethod(methodName, methodAttributes, typeof(bool), parameterTypes);
             _expressionCompiler.CompileToMethod(lambdaExpression, method);
         }
+#endif
     }
 }
 

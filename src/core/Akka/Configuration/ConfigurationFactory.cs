@@ -76,7 +76,11 @@ namespace Akka.Configuration
         /// <returns>The configuration defined in the current executing assembly.</returns>
         internal static Config FromResource(string resourceName)
         {
+#if !DNXCORE50
             Assembly assembly = Assembly.GetExecutingAssembly();
+#else
+            Assembly assembly = typeof(ConfigurationFactory).GetTypeInfo().Assembly;
+#endif
 
             return FromResource(resourceName, assembly);
         }

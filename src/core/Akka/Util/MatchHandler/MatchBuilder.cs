@@ -135,12 +135,14 @@ namespace Akka.Tools.MatchHandler
             return partialAction;
         }
 
+#if !DNXCORE50
         public void BuildToMethod(TypeBuilder typeBuilder, string methodName, MethodAttributes attributes = MethodAttributes.Public | MethodAttributes.Static)
         {
             _compiler.CompileToMethod(_typeHandlers, _arguments, new MatchBuilderSignature(_signature), typeBuilder, methodName, methodAttributes: attributes);
             _state = State.Built;
 
         }
+#endif
 
         private static void EnsureCanHandleType(Type handlesType)
         {

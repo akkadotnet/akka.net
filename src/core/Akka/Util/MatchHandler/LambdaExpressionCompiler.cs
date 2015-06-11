@@ -17,11 +17,12 @@ namespace Akka.Tools.MatchHandler
         {
             return expression.Compile();
         }
-
+#if !DNXCORE50
         public void CompileToMethod(LambdaExpression expression, MethodBuilder method)
         {
             expression.CompileToMethod(method);
         }
+#endif
     }
 }
 
