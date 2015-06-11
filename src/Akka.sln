@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.22823.1
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30723.0
+VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{69279534-1DBA-4115-BF8B-03F77FC8125E}"
 EndProject
@@ -221,7 +221,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.PostgreSql
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.DI.StructureMap", "contrib\dependencyInjection\Akka.DI.StructureMap\Akka.DI.StructureMap.csproj", "{34E5B4E5-0ED0-4A27-B53A-BFD812D45E1E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BasicStructureMapUses", "BasicStructureMapUses\BasicStructureMapUses.csproj", "{13BA1CC1-A431-441D-8B11-3969D2C68A6E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BasicStructureMapUses", "contrib\dependencyInjection\Examples\BasicStructureMapUses\BasicStructureMapUses.csproj", "{13BA1CC1-A431-441D-8B11-3969D2C68A6E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

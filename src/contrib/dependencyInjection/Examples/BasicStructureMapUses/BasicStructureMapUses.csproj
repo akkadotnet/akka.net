@@ -56,15 +56,15 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\contrib\dependencyInjection\Akka.DI.Core\Akka.DI.Core.csproj">
+    <ProjectReference Include="..\..\Akka.DI.Core\Akka.DI.Core.csproj">
       <Project>{fdf09d18-b68e-4b95-b1f6-b89d9c6c3ae9}</Project>
       <Name>Akka.DI.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\contrib\dependencyInjection\Akka.DI.StructureMap\Akka.DI.StructureMap.csproj">
+    <ProjectReference Include="..\..\Akka.DI.StructureMap\Akka.DI.StructureMap.csproj">
       <Project>{34e5b4e5-0ed0-4a27-b53a-bfd812d45e1e}</Project>
       <Name>Akka.DI.StructureMap</Name>
     </ProjectReference>
-    <ProjectReference Include="..\core\Akka\Akka.csproj">
+    <ProjectReference Include="..\..\..\..\core\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
     </ProjectReference>
