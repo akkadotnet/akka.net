@@ -29,6 +29,28 @@
     ]
   },
   "libraries": {
+    "Akka/1.0.0": {
+      "serviceable": false,
+      "sha": "8U2x+ac8X1Ql7EAljPql2opMlBifdOLSjDOB+890y1wNgKCgEnaCNtrVDnZx9WK5A7ZUtav1N5HAJqRnhJAUuQ==",
+      "frameworks": {
+        "DNXCore,Version=v5.0": {
+          "dependencies": {
+            "Newtonsoft.Json": "6.0.8"
+          },
+          "frameworkAssemblies": [],
+          "runtimeAssemblies": [],
+          "compileAssemblies": []
+        }
+      },
+      "files": [
+        "Akka.1.0.0.nupkg",
+        "Akka.1.0.0.nupkg.sha512",
+        "Akka.nuspec",
+        "lib/net45/Akka.dll",
+        "lib/net45/Akka.ExternalAnnotations.xml",
+        "lib/net45/Akka.xml"
+      ]
+    },
     "Microsoft.CSharp/4.0.0-beta-22816": {
       "serviceable": false,
       "sha": "FGnaYvmoVLd0QTnOyHfm+C79a9CGqQAoh76Ix9++a4SdeaAB8PgpB2Vi/Uc5jcp491QvPyPQjtXCuhRfqWvNkw==",

@@ -22,11 +22,12 @@ namespace Akka.TestKit.Xunit2.Internals
             _format = format;
             _args = args;
         }
-
+#if !DNXCORE50
         protected AkkaEqualException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#endif
 
         public override string Message
         {
