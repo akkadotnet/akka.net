@@ -95,7 +95,7 @@ namespace Akka.Serialization
         {
             Serialization.CurrentSystem = system;
             string data = JsonConvert.SerializeObject(obj, Formatting.None, _settings);
-            byte[] bytes = Encoding.Default.GetBytes(data);
+            byte[] bytes = Encoding.UTF8.GetBytes(data);
             return bytes;
         }
 
@@ -108,7 +108,7 @@ namespace Akka.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             Serialization.CurrentSystem = system;
-            string data = Encoding.Default.GetString(bytes);
+            string data = Encoding.UTF8.GetString(bytes);
 
             object res = JsonConvert.DeserializeObject(data, _settings);
             return TranslateSurrogate(res, system, type);
