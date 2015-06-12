@@ -48,8 +48,7 @@ namespace Akka.Serialization
                 var serializerType = Type.GetType(serializerTypeName);
                 if (serializerType == null)
                 {
-                    system.Log.Warning(string.Format("The type name for serializer '{0}' did not resolve to an actual Type: '{1}'",
-                            kvp.Key, serializerTypeName));
+                    system.Log.Warning("The type name for serializer '{0}' did not resolve to an actual Type: '{1}'",kvp.Key, serializerTypeName);
                     continue;
                 }
 
@@ -67,17 +66,14 @@ namespace Akka.Serialization
                 if (messageType == null)
                 {
 
-                    system.Log.Warning(string.Format(
-                            "The type name for message/serializer binding '{0}' did not resolve to an actual Type: '{1}'",
-                            serializerName, typename));
+                    system.Log.Warning("The type name for message/serializer binding '{0}' did not resolve to an actual Type: '{1}'",serializerName, typename);
                     continue;
                 }
 
                 var serializer = namedSerializers[serializerName];
                 if (serializer == null)
                 {
-                    system.Log.Warning(string.Format(
-                            "Serialization binding to non existing serializer: '{0}'", serializerName));
+                    system.Log.Warning("Serialization binding to non existing serializer: '{0}'", serializerName);
                     continue;
                 }
                 _serializerMap.Add(messageType,serializer);
