@@ -11,7 +11,7 @@ namespace Akka.IO
 {
     public class Inet
     {
-        public class SocketOption
+        public abstract class SocketOption
         {
             public virtual void BeforeDatagramBind(Socket ds) 
             { }
@@ -23,6 +23,24 @@ namespace Akka.IO
             { }
             public virtual void AfterConnect(Socket s)
             { }
+        }
+
+        public abstract class AbstractSocketOption : SocketOption { }
+
+        public abstract class SocketOptionV2 : SocketOption
+        {
+            public virtual void AfterBind(Socket s)
+            { }
+        }
+
+        public abstract class AbstractSocketOptionV2 : SocketOptionV2 { }
+
+        public class DatagramChannelCreator : SocketOption
+        {
+            public virtual DatagramChannel Create()
+            {
+                return DatagramChannel.Open();
+            }
         }
 
         public static class SO

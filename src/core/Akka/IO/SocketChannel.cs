@@ -52,7 +52,7 @@ namespace Akka.IO
         }
 
 
-        public bool IsOpen()
+        public virtual bool IsOpen()
         {
             return _connected;
         }

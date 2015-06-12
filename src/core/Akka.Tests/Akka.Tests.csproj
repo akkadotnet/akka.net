@@ -138,6 +138,8 @@
     <Compile Include="Event\EventStreamSpec.cs" />
     <Compile Include="IO\TcpConnectionSpec.cs" />
     <Compile Include="IO\TcpListenerSpec.cs" />
+    <Compile Include="IO\UdpConnectedIntegrationSpec.cs" />
+    <Compile Include="IO\UdpIntegrationSpec.cs" />
     <Compile Include="MatchHandler\CachedMatchCompilerTests.cs" />
     <Compile Include="MatchHandler\MatchBuilderSignatureTests.cs" />
     <Compile Include="MatchHandler\MatchExpressionBuilder_BuildLambdaExpression_Tests.cs" />
