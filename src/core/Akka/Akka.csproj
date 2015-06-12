@@ -231,6 +231,15 @@
     <Compile Include="Event\LogMessage.cs" />
     <Compile Include="Event\StandardOutLogger.cs" />
     <Compile Include="Helios.Concurrency.DedicatedThreadPool.cs" />
+    <Compile Include="IO\DatagramChannel.cs" />
+    <Compile Include="IO\Udp.cs" />
+    <Compile Include="IO\UdpConnected.cs" />
+    <Compile Include="IO\UdpConnectedManager.cs" />
+    <Compile Include="IO\UdpConnection.cs" />
+    <Compile Include="IO\UdpListener.cs" />
+    <Compile Include="IO\UdpManager.cs" />
+    <Compile Include="IO\UdpSender.cs" />
+    <Compile Include="IO\WithUdpSend.cs" />
     <Compile Include="Routing\ConsistentHashRouter.cs" />
     <Compile Include="Serialization\JavaSerializer.cs" />
     <Compile Include="IO\ByteBuffer.cs" />
