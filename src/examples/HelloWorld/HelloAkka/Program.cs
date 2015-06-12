@@ -7,6 +7,9 @@
 
 using System;
 using Akka.Actor;
+#if DNXCORE50
+using Akka.Configuration;
+#endif
 
 namespace HelloAkka
 {
@@ -15,7 +18,11 @@ namespace HelloAkka
         static void Main(string[] args)
         {
             // create a new actor system (a container for actors)
+#if DNXCORE50
+            var system = ActorSystem.Create("MySystem", ConfigurationFactory.Default());
+#else
             var system = ActorSystem.Create("MySystem");
+#endif
 
             // create actor and get a reference to it.
             // this will be an "ActorRef", which is not a 
