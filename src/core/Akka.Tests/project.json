@@ -16,9 +16,10 @@
         "Akka": "1.0.0-*",
         "Akka.TestKit": "1.0.0-*",
         "Akka.Tests.Shared.Internals": "1.0.0-*",
-        "Akka.TestKit.Xunit2": "1.0.0-*",
-        "xunit.runner.dnx": "2.1.0-beta2-build79"
+        "Akka.TestKit.Xunit2": "1.0.0-*"
     },
+    
+    "commands": { "test": "xunit.runner.aspnet" },
 
     "frameworks": {
         "dnxcore50": {
@@ -45,7 +46,7 @@
                 "System.Threading.Timer": "4.0.0-beta-23008",
                 "Microsoft.CSharp": "4.0.0-beta-23008",
                 "Newtonsoft.Json": "7.0.1-beta3",
-                "xunit": "2.1.0-beta2-build2981"
+                "xunit.runner.aspnet": "2.0.0-aspnet-*"
             }
         }
     }

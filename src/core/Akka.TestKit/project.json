@@ -10,6 +10,8 @@
         "Akka": "1.0.0-*"
     },
 
+    "resource": [ "Internal\\Reference.conf" ],
+
     "frameworks": {
         "dnxcore50": {
             "dependencies": {
