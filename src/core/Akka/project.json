@@ -9,6 +9,8 @@
     "dependencies": {
     },
 
+    "resource": [ "Configuration\\Pigeon.conf" ],
+
     "frameworks": {
         "dnxcore50": {
             "dependencies": {
