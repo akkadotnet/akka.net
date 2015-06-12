@@ -21,6 +21,13 @@ namespace Akka.IO
     {
         private readonly ConcurrentStack<ByteBuffer> _pool;
 
+        public DirectByteBufferPool(int bufferSize, int poolSize)
+        {
+            var items = Enumerable.Range(0, poolSize)
+                                  .Select(x => new ByteBuffer(new byte[bufferSize]));
+            _pool = new ConcurrentStack<ByteBuffer>(items);
+        }
+
         public DirectByteBufferPool()
         {
             var items = Enumerable.Range(0, PoolSize)
