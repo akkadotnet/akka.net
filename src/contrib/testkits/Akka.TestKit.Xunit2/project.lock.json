@@ -395,15 +395,21 @@
           "lib/aspnetcore50/System.Diagnostics.Tools.dll": {}
         }
       },
-      "System.Diagnostics.TraceSource/4.0.0-beta-22816": {
+      "System.Diagnostics.TraceSource/4.0.0-beta-23008": {
         "dependencies": {
-          "System.Runtime": "4.0.20-beta-22816"
+          "System.Runtime": "4.0.20-beta-23008",
+          "System.Resources.ResourceManager": "4.0.0-beta-23008",
+          "System.Collections": "4.0.10-beta-23008",
+          "System.Runtime.Extensions": "4.0.10-beta-23008",
+          "System.Diagnostics.Debug": "4.0.10-beta-23008",
+          "System.Threading": "4.0.10-beta-23008",
+          "System.Globalization": "4.0.10-beta-23008"
         },
         "compile": {
-          "lib/contract/System.Diagnostics.TraceSource.dll": {}
+          "ref/any/System.Diagnostics.TraceSource.dll": {}
         },
         "runtime": {
-          "lib/aspnetcore50/System.Diagnostics.TraceSource.dll": {}
+          "lib/DNXCore50/System.Diagnostics.TraceSource.dll": {}
         }
       },
       "System.Diagnostics.Tracing/4.0.20-beta-23008": {
@@ -1413,17 +1419,16 @@
         "lib/portable-wpa81+wp80+win80+net45+aspnetcore50/System.Diagnostics.Tools.dll"
       ]
     },
-    "System.Diagnostics.TraceSource/4.0.0-beta-22816": {
-      "sha512": "8ifv7iDyrKaoL60L6RLeKhMdvBs2sT14lUJoUJ919J4x54GRHZgQjz8qESKHvecjSXByOp+WBtP7OTYNoo3XDQ==",
+    "System.Diagnostics.TraceSource/4.0.0-beta-23008": {
+      "sha512": "ORrRo4eGpdx+R47ZY2ZTTIg5tHtybXzksMzIo/XIWZRaG/u/4ajzwvKYeT2n8hLIKsbEquhgyTwe/H8oTJK7hA==",
       "files": [
-        "License.rtf",
-        "System.Diagnostics.TraceSource.4.0.0-beta-22816.nupkg",
-        "System.Diagnostics.TraceSource.4.0.0-beta-22816.nupkg.sha512",
+        "System.Diagnostics.TraceSource.4.0.0-beta-23008.nupkg",
+        "System.Diagnostics.TraceSource.4.0.0-beta-23008.nupkg.sha512",
         "System.Diagnostics.TraceSource.nuspec",
-        "lib/aspnetcore50/System.Diagnostics.TraceSource.dll",
-        "lib/contract/System.Diagnostics.TraceSource.dll",
-        "lib/net45/System.Diagnostics.TraceSource.dll",
-        "lib/portable-wpa81+wp80+win80+net45+aspnetcore50/System.Diagnostics.TraceSource.dll"
+        "lib/DNXCore50/System.Diagnostics.TraceSource.dll",
+        "lib/net46/System.Diagnostics.TraceSource.dll",
+        "ref/any/System.Diagnostics.TraceSource.dll",
+        "ref/net46/System.Diagnostics.TraceSource.dll"
       ]
     },
     "System.Diagnostics.Tracing/4.0.20-beta-23008": {

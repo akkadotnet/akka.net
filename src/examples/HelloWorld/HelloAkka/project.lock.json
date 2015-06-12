@@ -113,6 +113,23 @@
           "lib/DNXCore50/System.Diagnostics.Debug.dll": {}
         }
       },
+      "System.Diagnostics.TraceSource/4.0.0-beta-23008": {
+        "dependencies": {
+          "System.Runtime": "4.0.20-beta-23008",
+          "System.Resources.ResourceManager": "4.0.0-beta-23008",
+          "System.Collections": "4.0.10-beta-23008",
+          "System.Runtime.Extensions": "4.0.10-beta-23008",
+          "System.Diagnostics.Debug": "4.0.10-beta-23008",
+          "System.Threading": "4.0.10-beta-23008",
+          "System.Globalization": "4.0.10-beta-23008"
+        },
+        "compile": {
+          "ref/any/System.Diagnostics.TraceSource.dll": {}
+        },
+        "runtime": {
+          "lib/DNXCore50/System.Diagnostics.TraceSource.dll": {}
+        }
+      },
       "System.Diagnostics.Tracing/4.0.20-beta-23008": {
         "dependencies": {
           "System.Runtime": "4.0.0-beta-23008"
@@ -578,6 +595,18 @@
         "ref/any/System.Diagnostics.Debug.dll",
         "ref/net46/_._",
         "runtimes/win8-aot/lib/netcore50/System.Diagnostics.Debug.dll"
+      ]
+    },
+    "System.Diagnostics.TraceSource/4.0.0-beta-23008": {
+      "sha512": "ORrRo4eGpdx+R47ZY2ZTTIg5tHtybXzksMzIo/XIWZRaG/u/4ajzwvKYeT2n8hLIKsbEquhgyTwe/H8oTJK7hA==",
+      "files": [
+        "System.Diagnostics.TraceSource.4.0.0-beta-23008.nupkg",
+        "System.Diagnostics.TraceSource.4.0.0-beta-23008.nupkg.sha512",
+        "System.Diagnostics.TraceSource.nuspec",
+        "lib/DNXCore50/System.Diagnostics.TraceSource.dll",
+        "lib/net46/System.Diagnostics.TraceSource.dll",
+        "ref/any/System.Diagnostics.TraceSource.dll",
+        "ref/net46/System.Diagnostics.TraceSource.dll"
       ]
     },
     "System.Diagnostics.Tracing/4.0.20-beta-23008": {

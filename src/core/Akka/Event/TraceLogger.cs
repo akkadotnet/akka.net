@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#if !DNXCORE50
 using System.Diagnostics;
 using Akka.Actor;
 
@@ -34,4 +33,3 @@ namespace Akka.Event
         }
     }
 }
-#endif
