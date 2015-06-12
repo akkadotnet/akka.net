@@ -1,3 +1,10 @@
+#### 1.0.3 June 12 2015 ####
+**Bugfix release for Akka.NET v1.0.2.**
+
+This release addresses an issue with Akka.Persistence.SqlServer and Akka.Persistence.PostgreSql where both packages were missing a reference to Akka.Persistence.Sql.Common. 
+
+In Akka.NET v1.0.3 we've packaged Akka.Persistence.Sql.Common into its own NuGet package and referenced it in the affected packages.
+
 #### 1.0.2 June 2 2015
 **Bugfix release for Akka.NET v1.0.1.**
 
