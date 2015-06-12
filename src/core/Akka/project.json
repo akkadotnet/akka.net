@@ -9,6 +9,12 @@
     "dependencies": {
     },
 
+    "exclude": [
+        "Configuration\\Hocon\\AkkaConfigurationSection.cs",
+        "Configuration\\Hocon\\CDataConfigurationElement.cs",
+        "Configuration\\Hocon\\HoconConfigurationElement.cs"
+    ],
+
     "resource": [ "Configuration\\Pigeon.conf" ],
 
     "frameworks": {
