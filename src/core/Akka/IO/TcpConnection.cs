@@ -346,8 +346,8 @@ namespace Akka.IO
             options.ForEach(x => x.AfterConnect(Channel.Socket));
 
             commander.Tell(new Tcp.Connected(
-                (IPEndPoint) Channel.Socket.RemoteEndPoint,
-                (IPEndPoint) Channel.Socket.LocalEndPoint));
+                Channel.Socket.RemoteEndPoint,
+                Channel.Socket.LocalEndPoint));
 
             Context.SetReceiveTimeout(_tcp.Settings.RegisterTimeout);
 

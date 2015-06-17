@@ -43,25 +43,45 @@ namespace Akka.IO
             return b2.IsEmpty ? 1 : 3;
         }
 
+        /// <summary>
+        /// Creates a new ByteString by copying a byte array.
+        /// </summary>
         public ByteString FromArray(byte[] array)
         {
             return new ByteString1C((byte[]) array.Clone());
         }
 
+        /// <summary>
+        /// Creates a new ByteString by copying length bytes starting at offset from
+        /// an Array.
+        /// </summary>
         public ByteString FromArray(byte[] array, int offset, int length)
         {
             return CompactByteString.FromArray(array, offset, length);
         }
 
+        /// <summary>
+        /// Creates a new ByteString which will contain the UTF-8 representation of the given String
+        /// </summary>
         public static ByteString FromString(string str)
         {
             return FromString(str, Encoding.UTF8);
         }
 
+        /// <summary>
+        /// Creates a new ByteString which will contain the representation of the given String in the given charset
+        /// </summary>
         public static ByteString FromString(string str, Encoding encoding)
         {
-            return CompactByteString.FromString(str, Encoding.UTF8);
+            return CompactByteString.FromString(str, encoding);
         }
+
+        public static ByteString FromByteBuffer(ByteBuffer buffer)
+        {
+            return Create(buffer);
+        }
+
+        public static readonly ByteString Empty = new ByteString1C(new byte[0]);
 
         public static ByteStringBuilder NewBuilder()
         {
@@ -89,7 +109,7 @@ namespace Akka.IO
                 get { return _bytes.Length; }
             }
 
-            internal override ByteIterator Iterator
+            public override ByteIterator Iterator
             {
                 get { return _iterator; }
             }
@@ -150,7 +170,7 @@ namespace Akka.IO
                 get { return _bytes[checkRangeConvert(idx)]; }
             }
 
-            internal override ByteIterator Iterator
+            public override ByteIterator Iterator
             {
                 get { return _iterator; }
             }
@@ -246,7 +266,7 @@ namespace Akka.IO
                 }
             }
 
-            internal override ByteIterator Iterator
+            public override ByteIterator Iterator
             {
                 get
                 {
@@ -288,6 +308,12 @@ namespace Akka.IO
         }
     }
 
+    /// <summary>
+    /// A rope-like immutable data structure containing bytes.
+    /// The goal of this structure is to reduce copying of arrays
+    /// when concatenating and slicing sequences of bytes,
+    /// and also providing a thread safe way of working with bytes.
+    /// </summary>
     public abstract partial class ByteString : IReadOnlyList<byte>
     {
         public abstract byte this[int index] { get; }
@@ -297,23 +323,21 @@ namespace Akka.IO
             return NewBuilder();
         }
 
-        public static readonly ByteString Empty = new ByteString1C(new byte[0]);
+
+        public abstract ByteIterator Iterator { get; }
 
         public Byte Head
         {
             get { return this[0]; }
         }
-
         public ByteString Tail()
         {
             return Drop(1);
         }
-
         public byte Last
         {
             get { return this[Count - 1]; }
         }
-
         public ByteString Init()
         {
             return DropRight(1);
@@ -329,17 +353,14 @@ namespace Akka.IO
         {
             return Slice(0, n);
         }
-
         public ByteString TakeRight(int n)
         {
             return Slice(Count - n, Count);
         }
-
         public ByteString Drop(int n)
         {
             return Slice(n, Count);
         }
-
         public ByteString DropRight(int n)
         {
             return Slice(0, Count - n);
@@ -383,8 +404,6 @@ namespace Akka.IO
 
         public abstract CompactByteString Compact();
         public abstract bool IsCompact();
-
-        internal abstract ByteIterator Iterator { get; }
 
         public virtual IEnumerator<byte> GetEnumerator()
         {
@@ -596,6 +615,36 @@ namespace Akka.IO
             return this;
         }
 
+        public ByteStringBuilder PutInt(int x, ByteOrder byteOrder)
+        {
+            return FillArray(4)((target, offset) =>
+            {
+                if (byteOrder == ByteOrder.BigEndian)
+                {
+                    target[offset + 0] = (byte) (x >> 24);
+                    target[offset + 1] = (byte) (x >> 16);
+                    target[offset + 2] = (byte) (x >>  8);
+                    target[offset + 3] = (byte) (x >>  0);
+                }
+                else
+                {
+                    target[offset + 0] = (byte)(x >>  0);
+                    target[offset + 1] = (byte)(x >>  8);
+                    target[offset + 2] = (byte)(x >> 16);
+                    target[offset + 3] = (byte)(x >> 24);
+                }
+            });
+        }
+
+        public ByteStringBuilder PutBytes(byte[] array)
+        {
+            return PutBytes(array, 0, array.Length);
+        }
+        public ByteStringBuilder PutBytes(byte[] array, int start, int len)
+        {
+            return FillArray(len)((target, targetOffset) => Array.Copy(array, start, target, targetOffset, len));
+        }
+
         public static ByteStringBuilder operator +(ByteStringBuilder lhs, byte rhs)
         {
             lhs.EnsureTempSize(lhs._tempLength + 1);
@@ -603,6 +652,16 @@ namespace Akka.IO
             lhs._tempLength += 1;
             lhs._length += 1;
             return lhs;
+        }
+
+        public ByteString Result()
+        {
+            if (_length == 0) return ByteString.Empty;
+            ClearTemp();
+            var bytestrings = _builder;
+            return bytestrings.Count == 1
+                ? bytestrings[0] as ByteString
+                : new ByteString.ByteStrings(bytestrings.ToArray());
         }
     }
 

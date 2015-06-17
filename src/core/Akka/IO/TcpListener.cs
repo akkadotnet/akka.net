@@ -92,7 +92,7 @@ namespace Akka.IO
             var registration = message as ChannelRegistration;
             if (registration != null)
             {
-                _bindCommander.Tell(new Tcp.Bound((IPEndPoint) _channel.Socket.LocalEndPoint));
+                _bindCommander.Tell(new Tcp.Bound(_channel.Socket.LocalEndPoint));
                 Context.Become(Bound(registration));
             }
 

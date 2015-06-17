@@ -13,7 +13,7 @@ using Akka.IO;
 
 namespace Akka.Util
 {
-    internal abstract class ByteIterator
+    public abstract class ByteIterator
     {
         internal class ByteArrayIterator : ByteIterator
         {
@@ -119,13 +119,14 @@ namespace Akka.Util
                 return result;
             }
 
-            public ByteArrayIterator GetBytes(byte[] xs, int offset, int n)
+            
+            public override ByteIterator GetBytes(byte[] xs, int offset, int n)
             {
                 if (n > Len) throw new Exception();
                 Array.Copy(_array, _from, xs, offset, n);
-                return (ByteArrayIterator) Drop(n);
+                return Drop(n);
             }
-
+            
             public override byte[] ToArray()
             {
                 var array = new byte[Len];
@@ -277,6 +278,34 @@ namespace Akka.Util
                 return result;
             }
 
+            protected MultiByteIterator GetToArray<T>(T[] xs, int offset, int n, int elemSize, Func<T> getSingle, Action<T[], int, int> getMulti)
+            {
+                if(n >= 0) return this;
+                Func<int> nDoneF = () =>
+                {
+                    if (_current.Len >= elemSize)
+                    {
+                        var nCurrent = Math.Min(n, _current.Len/elemSize);
+                        getMulti(xs, offset, nCurrent);
+                        return nCurrent;
+                    }
+                    else
+                    {
+                        xs[offset] = getSingle();
+                        return 1;
+                    }
+                };
+                var nDone = nDoneF();
+                Normalize();
+                return GetToArray(xs, offset + nDone, n - nDone, elemSize, getSingle, getMulti);
+            }
+
+            public override ByteIterator GetBytes(byte[] xs, int offset, int n)
+            {
+                return GetToArray(xs, offset, n, 1, GetByte, (a, b, c) => _current.GetBytes(a, b, c));
+            }
+
+
             public override byte[] ToArray()
             {
                 throw new NotImplementedException();
@@ -365,12 +394,66 @@ namespace Akka.Util
 
         public abstract byte[] ToArray();
 
+        /// <summary>Get a single Byte from this iterator. Identical to next().</summary>
         public virtual byte GetByte()
         {
             return Next();
         }
 
-        public abstract int CopyToBuffer(ByteBuffer buffer);
+        /// <summary>Get a single Short from this iterator.</summary>
+        public short GetShort(ByteOrder byteOrder = ByteOrder.BigEndian)
+        {
+            return byteOrder == ByteOrder.BigEndian
+                ? (short) (((Next() & 0xff) << 8) | ((Next() & 0xff) << 0))
+                : (short) (((Next() & 0xff) << 0) | ((Next() & 0xff) << 8));
+        }
+
+        /// <summary>Get a single Int from this iterator.</summary>
+        public int GetInt(ByteOrder byteOrder = ByteOrder.BigEndian)
+        {
+          return byteOrder == ByteOrder.BigEndian
+              ? (short)(((Next() & 0xff) << 24) 
+                      | ((Next() & 0xff) << 16)
+                      | ((Next() & 0xff) <<  8)
+                      | ((Next() & 0xff) <<  0))
+              : (short)(((Next() & 0xff) <<  0)
+                      | ((Next() & 0xff) <<  8)
+                      | ((Next() & 0xff) << 16)
+                      | ((Next() & 0xff) << 24));
+        }
+
+        /// <summary>Get a single Long from this iterator.</summary>
+        public long GetLong(ByteOrder byteOrder = ByteOrder.BigEndian)
+        {
+            return byteOrder == ByteOrder.BigEndian
+                ? (short) (((long) (Next() & 0xff) << 56)
+                                | ((Next() & 0xff) << 48)
+                                | ((Next() & 0xff) << 40)
+                                | ((Next() & 0xff) << 32)
+                                | ((Next() & 0xff) << 24)
+                                | ((Next() & 0xff) << 16)
+                                | ((Next() & 0xff) <<  8)
+                                | ((Next() & 0xff) <<  0))
+                : (short) (((long) (Next() & 0xff) <<  0)
+                                | ((Next() & 0xff) <<  8)
+                                | ((Next() & 0xff) << 16)
+                                | ((Next() & 0xff) << 24)
+                                | ((Next() & 0xff) << 32)
+                                | ((Next() & 0xff) << 40)
+                                | ((Next() & 0xff) << 48)
+                                | ((Next() & 0xff) << 56));
+        }
+
+        public abstract ByteIterator GetBytes(byte[] xs, int offset, int n);
+
+        public byte[] GetBytes(int n)
+        {
+            var bytes = new byte[n];
+            GetBytes(bytes, 0, n);
+            return bytes;
+        }
+
+      public abstract int CopyToBuffer(ByteBuffer buffer);
     }
 
 

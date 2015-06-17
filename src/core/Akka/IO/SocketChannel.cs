@@ -57,7 +57,7 @@ namespace Akka.IO
             return _connected;
         }
 
-        public bool Connect(IPEndPoint address)
+        public bool Connect(EndPoint address)
         {
             try
             {

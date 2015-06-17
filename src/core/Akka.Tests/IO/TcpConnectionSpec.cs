@@ -639,7 +639,7 @@ namespace Akka.Tests.IO
 
                     InterestCallReceiver.ExpectMsg((int)SocketAsyncOperation.Connect);
                     Selector.Send(ConnectionActor, SelectionHandler.ChannelConnectable.Instance);
-                    UserHandler.ExpectMsg<Tcp.Connected>(message => message.RemoteAddress.Port == ServerAddress.Port); //TODO: compare with JVM Akka
+                    UserHandler.ExpectMsg<Tcp.Connected>(message => ((IPEndPoint) message.RemoteAddress).Port.ShouldBe(ServerAddress.Port)); //TODO: compare full endpoint, not only port
  
                     UserHandler.Send(ConnectionActor,
                         new Tcp.Register(ConnectionHandler.Ref, KeepOpenOnPeerClosed, UseResumeWriting));
