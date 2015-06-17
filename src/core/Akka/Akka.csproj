@@ -232,6 +232,12 @@
     <Compile Include="Event\StandardOutLogger.cs" />
     <Compile Include="Helios.Concurrency.DedicatedThreadPool.cs" />
     <Compile Include="IO\DatagramChannel.cs" />
+    <Compile Include="IO\Dns.cs" />
+    <Compile Include="IO\DnsProvider.cs" />
+    <Compile Include="IO\InetAddressDnsProvider.cs" />
+    <Compile Include="IO\InetAddressDnsResolver.cs" />
+    <Compile Include="IO\SimpleDnsCache.cs" />
+    <Compile Include="IO\SimpleDnsManager.cs" />
     <Compile Include="IO\Udp.cs" />
     <Compile Include="IO\UdpConnected.cs" />
     <Compile Include="IO\UdpConnectedManager.cs" />

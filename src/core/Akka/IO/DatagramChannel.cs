@@ -1,3 +1,10 @@
+//-----------------------------------------------------------------------
+// <copyright file="IO.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -21,7 +28,7 @@ namespace Akka.IO
             return true;
         }
 
-        public int Send(ByteBuffer buffer, IPEndPoint target)
+        public int Send(ByteBuffer buffer, EndPoint target)
         {
             try
             {

@@ -1,4 +1,13 @@
-﻿using System.Net.Sockets;
+﻿//-----------------------------------------------------------------------
+// <copyright file="IO.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using System.Net;
+using System.Net.Sockets;
 using Akka.Actor;
 using Akka.Event;
 
@@ -42,10 +51,31 @@ namespace Akka.IO
                     _pendingSend = send;
                     _pendingCommander = Sender;
 
-                    //TODO: DNS resolve
-
-                    DoSend(registration);
-
+                    var dns = send.Target as DnsEndPoint;
+                    if (dns != null)
+                    {
+                        var resolved = Dns.ResolveName(dns.Host, Context.System, Self);
+                        if (resolved != null)
+                        {
+                            try
+                            {
+                                _pendingSend = new Udp.Send(_pendingSend.Payload, new IPEndPoint(resolved.Addr, dns.Port), _pendingSend.Ack);
+                                DoSend(registration);
+                            }
+                            catch (Exception ex)
+                            {
+                                Sender.Tell(new Udp.CommandFailed(send));
+                                _log.Debug("Failure while sending UDP datagram to remote address [{0}]: {1}", send.Target, ex);
+                                _retriedSend = false;
+                                _pendingSend = null;
+                                _pendingCommander = null;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        DoSend(registration);
+                    }
                     return true;
                 }
                 if (message is SelectionHandler.ChannelWritable && HasWritePending)

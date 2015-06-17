@@ -58,8 +58,8 @@ namespace Akka.IO
         /// </summary>
         public class Connect : Command
         {
-            public Connect(IPEndPoint remoteAddress,
-                IPEndPoint localAddress = null,
+            public Connect(EndPoint remoteAddress,
+                EndPoint localAddress = null,
                 IEnumerable<Inet.SocketOption> options = null,
                 TimeSpan? timeout = null,
                 bool pullMode = false)
@@ -71,8 +71,8 @@ namespace Akka.IO
                 PullMode = pullMode;
             }
 
-            public IPEndPoint RemoteAddress { get; private set; }
-            public IPEndPoint LocalAddress { get; private set; }
+            public EndPoint RemoteAddress { get; private set; }
+            public EndPoint LocalAddress { get; private set; }
             public IEnumerable<Inet.SocketOption> Options { get; private set; }
             public TimeSpan? Timeout { get; private set; }
             public bool PullMode { get; private set; }
@@ -89,7 +89,7 @@ namespace Akka.IO
         public class Bind : Command
         {
             public Bind(IActorRef handler,
-                IPEndPoint localAddress,
+                EndPoint localAddress,
                 int backlog = 100,
                 IEnumerable<Inet.SocketOption> options = null,
                 bool pullMode = false)
@@ -102,7 +102,7 @@ namespace Akka.IO
             }
 
             public IActorRef Handler { get; set; }
-            public IPEndPoint LocalAddress { get; set; }
+            public EndPoint LocalAddress { get; set; }
             public int Backlog { get; set; }
             public IEnumerable<Inet.SocketOption> Options { get; set; }
             public bool PullMode { get; set; }
@@ -462,14 +462,14 @@ namespace Akka.IO
         /// </summary>
         public sealed class Connected
         {
-            public Connected(IPEndPoint remoteAddress, IPEndPoint localAddress)
+            public Connected(EndPoint remoteAddress, EndPoint localAddress)
             {
                 RemoteAddress = remoteAddress;
                 LocalAddress = localAddress;
             }
 
-            public IPEndPoint RemoteAddress { get; private set; }
-            public IPEndPoint LocalAddress { get; private set; }
+            public EndPoint RemoteAddress { get; private set; }
+            public EndPoint LocalAddress { get; private set; }
         }
 
         /// <summary>
@@ -505,9 +505,9 @@ namespace Akka.IO
         /// </summary>
         public class Bound : Event
         {
-            public IPEndPoint LocalAddress { get; private set; }
+            public EndPoint LocalAddress { get; private set; }
 
-            public Bound(IPEndPoint localAddress)
+            public Bound(EndPoint localAddress)
             {
                 LocalAddress = localAddress;
             }
@@ -646,7 +646,7 @@ namespace Akka.IO
     {
         private readonly TcpSettings _settings;
         private readonly IActorRef _manager;
-        private readonly IBufferPool _bufferPool = new DirectByteBufferPool();
+        private readonly IBufferPool _bufferPool;
 
         public class TcpSettings : SelectionHandlerSettings
         {
@@ -680,6 +680,7 @@ namespace Akka.IO
         public TcpExt(ExtendedActorSystem system)
         {
             _settings = new TcpSettings(system.Settings.Config.GetConfig("akka.io.tcp"));
+            _bufferPool = new DirectByteBufferPool(_settings.DirectBufferSize, _settings.MaxDirectBufferPoolSize);
             _manager = system.SystemActorOf(
                 props: Props.Create(() => new TcpManager(this))
                                             .WithDispatcher(_settings.ManagementDispatcher)
@@ -710,8 +711,8 @@ namespace Akka.IO
 
     public class TcpMessage
     {
-        public static Tcp.Command Connect(IPEndPoint remoteAddress,
-            IPEndPoint localAddress,
+        public static Tcp.Command Connect(EndPoint remoteAddress,
+            EndPoint localAddress,
             IEnumerable<Inet.SocketOption> options,
             TimeSpan? timeout,
             bool pullMode)
@@ -719,13 +720,13 @@ namespace Akka.IO
             return new Tcp.Connect(remoteAddress, localAddress, options, timeout, pullMode);
         }
 
-        public static Tcp.Command Connect(IPEndPoint remoteAddress)
+        public static Tcp.Command Connect(EndPoint remoteAddress)
         {
             return Connect(remoteAddress, null, null, null, false);
         }
 
         public static Tcp.Command Bind(IActorRef handler,
-            IPEndPoint endpoint,
+            EndPoint endpoint,
             int backlog,
             IEnumerable<Inet.SocketOption> options,
             bool pullMode)
@@ -733,7 +734,7 @@ namespace Akka.IO
             return new Tcp.Bind(handler, endpoint, backlog, options, pullMode);
         }
 
-        public static Tcp.Command Bind(IActorRef handler, IPEndPoint endpoint, int backlog)
+        public static Tcp.Command Bind(IActorRef handler, EndPoint endpoint, int backlog)
         {
             return new Tcp.Bind(handler, endpoint, backlog);
         }

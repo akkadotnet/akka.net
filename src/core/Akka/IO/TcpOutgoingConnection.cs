@@ -62,17 +62,42 @@ namespace Akka.IO
             {
                 ReportConnectFailure(() =>
                 {
-                    //TODO: Port DNS
-                    Register(_connect.RemoteAddress, registration);
+                    var remoteAddress = _connect.RemoteAddress as DnsEndPoint;
+                    if (remoteAddress != null)
+                    {
+                        Log.Debug("Resolving {0} before connecting", remoteAddress.Host);
+                        var resolved = Dns.ResolveName(remoteAddress.Host, Context.System, Self);
+                        if(resolved == null) 
+                            Become(Resolving(remoteAddress, registration));
+                        else
+                            Register(new IPEndPoint(resolved.Addr, remoteAddress.Port), registration);
+                    }
+                    else
+                    {
+                        Register(_connect.RemoteAddress, registration);
+                    }
                 });
                 return true;
             }
             return false;
         }
 
-        //TODO: Port DNS
+        private Receive Resolving(DnsEndPoint remoteAddress, ChannelRegistration registration)
+        {
+            return message =>
+            {
+                var resolved = message as Dns.Resolved;
+                if (resolved != null)
+                {
+                    ReportConnectFailure(() => Register(new IPEndPoint(resolved.Addr, remoteAddress.Port), registration));
+                    return true;
+                }
+                return false;
+            };
+        }
 
-        private void Register(IPEndPoint address, ChannelRegistration registration)
+
+        private void Register(EndPoint address, ChannelRegistration registration)
         {
             ReportConnectFailure(() =>
             {

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="IO.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -107,8 +114,8 @@ namespace Akka.IO
         public sealed class Connect : Command
         {
             public Connect(IActorRef handler, 
-                           IPEndPoint remoteAddress,
-                           IPEndPoint localAddress = null, 
+                           EndPoint remoteAddress,
+                           EndPoint localAddress = null, 
                            IEnumerable<Inet.SocketOption> options = null)
             {
                 Handler = handler;
@@ -118,8 +125,8 @@ namespace Akka.IO
             }
 
             public IActorRef Handler { get; private set; }
-            public IPEndPoint RemoteAddress { get; private set; }
-            public IPEndPoint LocalAddress { get; private set; }
+            public EndPoint RemoteAddress { get; private set; }
+            public EndPoint LocalAddress { get; private set; }
             public IEnumerable<Inet.SocketOption> Options { get; private set; }
         }
 

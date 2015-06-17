@@ -5,10 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Collections.Concurrent;
-using System.Linq;
-
 namespace Akka.IO
 {
     public interface IBufferPool
@@ -17,48 +13,72 @@ namespace Akka.IO
         void Release(ByteBuffer buf);
     }
 
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// A buffer pool which keeps a free list of direct buffers of a specified default
+    /// size in a simple fixed size stack.
+    ///
+    /// If the stack is full the buffer is de-referenced and available to be
+    /// freed by normal garbage collection.
+    /// </summary>
     internal class DirectByteBufferPool : IBufferPool
     {
-        private readonly ConcurrentStack<ByteBuffer> _pool;
+        private readonly int _defaultBufferSize;
+        private readonly int _maxPoolEntries;
+        private readonly ByteBuffer[] _pool;
+        private int _buffersInPool;
 
-        public DirectByteBufferPool(int bufferSize, int poolSize)
+        public DirectByteBufferPool(int defaultBufferSize, int maxPoolEntries)
         {
-            var items = Enumerable.Range(0, poolSize)
-                                  .Select(x => new ByteBuffer(new byte[bufferSize]));
-            _pool = new ConcurrentStack<ByteBuffer>(items);
+            _defaultBufferSize = defaultBufferSize;
+            _maxPoolEntries = maxPoolEntries;
+            _pool = new ByteBuffer[maxPoolEntries];
         }
 
-        public DirectByteBufferPool()
-        {
-            var items = Enumerable.Range(0, PoolSize)
-                                  .Select(x => new ByteBuffer(new byte[BufferSize]));
-            _pool = new ConcurrentStack<ByteBuffer>(items);
-        }
-
-        public int BufferSize
-        {
-            get { return 128; }
-        }
-
-        public int PoolSize
-        {
-            get { return 128; }
-        }
 
         public ByteBuffer Acquire()
         {
-            ByteBuffer buffer;
-            if (_pool.TryPop(out buffer))
-            {
-                buffer.Clear();
-                return buffer;
-            }
-            throw new Exception(); // TODO: What do we do? throw proper exception?
+            return TakeBufferFromPool();
         }
 
         public void Release(ByteBuffer buf)
         {
-            _pool.Push(buf);
+            OfferBufferToPool(buf);
+        }
+
+        private ByteBuffer Allocate(int size)
+        {
+            return ByteBuffer.Allocate(size);
+        }
+
+        private ByteBuffer TakeBufferFromPool()
+        {
+            ByteBuffer buffer = null;
+            lock (_pool.SyncRoot)
+            {
+                if (_buffersInPool > 0)
+                {
+                    _buffersInPool -= 1;
+                    buffer = _pool[_buffersInPool];
+                }
+            }
+            if (buffer == null)
+                return Allocate(_defaultBufferSize);
+            buffer.Clear();
+            return buffer;
+        }
+
+        private void OfferBufferToPool(ByteBuffer buf)
+        {
+            lock (_pool.SyncRoot)
+            {
+                if (_buffersInPool < _maxPoolEntries)
+                {
+                    _pool[_buffersInPool] = buf;
+                    _buffersInPool += 1;
+                }  // else let the buffer be gc'd
+            }
         }
     }
 }
