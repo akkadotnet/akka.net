@@ -50,7 +50,7 @@ namespace Akka.Remote
                 return _internals ??
                        (_internals =
                            new Internals(new Remoting(_system, this), _system.Serialization,
-                               new RemoteDaemon(_system, RootPath / "remote", SystemGuardian, _log)));
+                               new RemoteSystemDaemon(_system, RootPath / "remote", SystemGuardian,this.DeadLetters /* TODO: should be RemoteTerminator*/, _log)));
             }
         }
 
