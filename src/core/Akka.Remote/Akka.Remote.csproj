@@ -86,7 +86,7 @@
     <Compile Include="Proto\Containerformats.cs" />
     <Compile Include="Proto\Wireformats.cs" />
     <Compile Include="RemoteActorRef.cs" />
-    <Compile Include="RemoteDaemon.cs" />
+    <Compile Include="RemoteSystemDaemon.cs" />
     <Compile Include="RemoteDeployer.cs" />
     <Compile Include="RemoteSettings.cs" />
     <Compile Include="RemoteTransport.cs" />
