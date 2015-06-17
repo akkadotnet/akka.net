@@ -115,6 +115,30 @@ namespace Akka.Remote
                     if(@ref.Parent.Path.Address == addressTerminated.Address) _system.Stop(@ref);
                 });
             }
+            else if (message is DeathWatchNotification)
+            {
+                var deathWatchNotification = message as DeathWatchNotification;
+
+    //case DeathWatchNotification(child: ActorRefWithCell with ActorRefScope, _, _) if child.isLocal ⇒
+    //  terminating.locked {
+    //    removeChild(child.path.elements.drop(1).mkString("/"), child)
+    //    val parent = child.getParent
+    //    if (removeChildParentNeedsUnwatch(parent, child)) parent.sendSystemMessage(Unwatch(parent, this))
+    //    terminationHookDoneWhenNoChildren()
+    //  }
+    //case DeathWatchNotification(parent: ActorRef with ActorRefScope, _, _) if !parent.isLocal ⇒
+    //  terminating.locked {
+    //    parent2children.remove(parent) match {
+    //      case null ⇒
+    //      case children ⇒
+    //        for (c ← children) {
+    //          system.stop(c)
+    //          removeChild(c.path.elements.drop(1).mkString("/"), c)
+    //        }
+    //        terminationHookDoneWhenNoChildren()
+    //    }
+    //  }
+            }
         }
 
         /// <summary>
