@@ -32,9 +32,19 @@ namespace Akka.IO
 
             Context.Watch(connect.Handler);
 
-            //TODO: DNS lookup
-
-            DoConnect(_connect.RemoteAddress);
+            var remoteAddress = connect.RemoteAddress as DnsEndPoint;
+            if (remoteAddress != null)
+            {
+                var resolved = Dns.ResolveName(remoteAddress.Host, Context.System, Self);
+                if (resolved != null)
+                    DoConnect(new IPEndPoint(resolved.Addr, remoteAddress.Port));
+                else
+                    Context.Become(Resolving(remoteAddress));
+            }
+            else
+            {
+                DoConnect(_connect.RemoteAddress);
+            }
         }
 
         private Tuple<UdpConnected.Send, IActorRef> _pendingSend;
@@ -43,7 +53,21 @@ namespace Akka.IO
             get { return _pendingSend != null; }
         }
 
-        private void DoConnect(IPEndPoint address)
+        private Receive Resolving(DnsEndPoint remoteAddress)
+        {
+            return message =>
+            {
+                var r = message as Dns.Resolved;
+                if (r != null)
+                {
+                    ReportConnectFailure(() => DoConnect(new IPEndPoint(r.Addr, remoteAddress.Port)));
+                    return true;
+                }
+                return false;
+            };
+        }
+
+        private void DoConnect(EndPoint address)
         {
             ReportConnectFailure(() =>
             {

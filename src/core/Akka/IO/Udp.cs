@@ -80,7 +80,7 @@ namespace Akka.IO
         /// </summary>
         public sealed class Send : Command
         {
-            public Send(ByteString payload, IPEndPoint target, Event ack)
+            public Send(ByteString payload, EndPoint target, Event ack)
             {
                 if (ack == null)
                     throw new ArgumentNullException("ack", "ack must be non-null. Use NoAck if you don't want acks.");
@@ -90,7 +90,7 @@ namespace Akka.IO
             }
 
             public ByteString Payload { get; private set; }
-            public IPEndPoint Target { get; private set; }
+            public EndPoint Target { get; private set; }
             public Event Ack { get; private set; }
 
             public bool WantsAck
@@ -98,7 +98,7 @@ namespace Akka.IO
                 get { return !(Ack is NoAck); }
             }
 
-            public static Send Create(ByteString data, IPEndPoint target)
+            public static Send Create(ByteString data, EndPoint target)
             {
                 return new Send(data, target, NoAck.Instance);
             }
@@ -112,7 +112,7 @@ namespace Akka.IO
         /// </summary>
         public sealed class Bind : Command
         {
-            public Bind(IActorRef handler, IPEndPoint localAddress, IEnumerable<Inet.SocketOption> options = null)
+            public Bind(IActorRef handler, EndPoint localAddress, IEnumerable<Inet.SocketOption> options = null)
             {
                 Handler = handler;
                 LocalAddress = localAddress;
@@ -120,7 +120,7 @@ namespace Akka.IO
             }
 
             public IActorRef Handler { get; private set; }
-            public IPEndPoint LocalAddress { get; private set; }
+            public EndPoint LocalAddress { get; private set; }
             public IEnumerable<Inet.SocketOption> Options { get; private set; }
         }
 
@@ -193,14 +193,14 @@ namespace Akka.IO
         /// </summary>
         public sealed class Received : Event
         {
-            public Received(ByteString data, IPEndPoint sender)
+            public Received(ByteString data, EndPoint sender)
             {
                 Data = data;
                 Sender = sender;
             }
 
             public ByteString Data { get; private set; }
-            public IPEndPoint Sender { get; private set; }
+            public EndPoint Sender { get; private set; }
         }
 
         /// <summary>
@@ -223,12 +223,12 @@ namespace Akka.IO
         /// </summary>
         public sealed class Bound : Event
         {
-            public Bound(IPEndPoint localAddress)
+            public Bound(EndPoint localAddress)
             {
                 LocalAddress = localAddress;
             }
 
-            public IPEndPoint LocalAddress { get; private set; }
+            public EndPoint LocalAddress { get; private set; }
         }
 
         /// <summary> The “simple sender” sends this message type in response to a <see cref="SimpleSender"/> query. </summary>
@@ -307,7 +307,7 @@ namespace Akka.IO
                 props: Props.Create(() => new UdpManager(this)).WithDeploy(Deploy.Local), 
                 name: "IO-UDP-FF");
 
-            BufferPool = new DirectByteBufferPool();
+            BufferPool = new DirectByteBufferPool(_settings.DirectBufferSize, _settings.MaxDirectBufferPoolSize);
         }
 
         public override IActorRef Manager

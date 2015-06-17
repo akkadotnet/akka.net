@@ -44,7 +44,7 @@ namespace Akka.IO
                     var socket = Channel.Socket;
                     bind.Options.ForEach(x => x.BeforeDatagramBind(socket));
                     socket.Bind(bind.LocalAddress);
-                    var ret = socket.LocalEndPoint as IPEndPoint;
+                    var ret = socket.LocalEndPoint;
                     if (ret == null)
                         throw new ArgumentException(string.Format("bound to unknown SocketAddress [{0}]", socket.LocalEndPoint));
                     channelRegistry.Register(Channel, SocketAsyncOperation.Receive, Self);
@@ -79,7 +79,7 @@ namespace Akka.IO
             var registration = message as ChannelRegistration;
             if (registration != null)
             {
-                _bindCommander.Tell(new Udp.Bound(Channel.Socket.LocalEndPoint as IPEndPoint));
+                _bindCommander.Tell(new Udp.Bound(Channel.Socket.LocalEndPoint));
                 Context.Become(m => ReadHandlers(registration)(m) || SendHandlers(registration)(m));
                 return true;
             }
@@ -133,7 +133,7 @@ namespace Akka.IO
                 buffer.Clear();
                 buffer.Limit(_udp.Setting.DirectBufferSize);
 
-                var sender = Channel.Receive(buffer) as IPEndPoint;
+                var sender = Channel.Receive(buffer);
                 if (sender != null)
                 {
                     buffer.Flip();

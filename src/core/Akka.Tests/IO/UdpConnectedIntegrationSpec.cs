@@ -84,7 +84,7 @@ namespace Akka.Tests.IO
                 if (received != null)
                 {
                     received.Data.ShouldBe(data1);
-                    received.Sender.Address.ShouldBe(clientAddress.Address);
+                    received.Sender.ShouldBe(clientAddress);
                     return received.Sender;
                 }
                 throw new Exception();

@@ -21,7 +21,7 @@ namespace Akka.IO
             return true;
         }
 
-        public int Send(ByteBuffer buffer, IPEndPoint target)
+        public int Send(ByteBuffer buffer, EndPoint target)
         {
             try
             {
