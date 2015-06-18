@@ -37,7 +37,7 @@ namespace Akka.IO
 
         protected override bool Receive(object message)
         {
-            var r = message as Dns.Resolved;
+            var r = message as Dns.Resolve;
             if (r != null)
             {
                 _log.Debug("Resolution request for {} from {}", r.Name, Sender);
