@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
@@ -76,7 +77,10 @@ namespace Akka.Remote
     internal class RemoteSystemDaemon : VirtualPathContainer
     {
         private readonly ActorSystemImpl _system;
-        private Switch _terminating = new Switch(false);
+        private readonly Switch _terminating = new Switch(false);
+        //private val parent2children = new ConcurrentHashMap[ActorRef, Set[ActorRef]]
+        private ConcurrentDictionary<IActorRef,HashSet<IActorRef>> _parent2children = new ConcurrentDictionary<IActorRef, HashSet<IActorRef>>();
+        private readonly IActorRef _terminator;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="RemoteSystemDaemon" /> class.
@@ -84,10 +88,12 @@ namespace Akka.Remote
         /// <param name="system">The system.</param>
         /// <param name="path">The path.</param>
         /// <param name="parent">The parent.</param>
+        /// <param name="terminator"></param>
         /// <param name="log"></param>
-        public RemoteSystemDaemon(ActorSystemImpl system, ActorPath path, IInternalActorRef parent, ILoggingAdapter log)
+        public RemoteSystemDaemon(ActorSystemImpl system, ActorPath path, IInternalActorRef parent,IActorRef terminator, ILoggingAdapter log)
             : base(system.Provider, path, parent, log)
         {
+            _terminator = terminator;
             _system = system;
             AddressTerminatedTopic.Get(system).Subscribe(this);
         }
@@ -120,28 +126,80 @@ namespace Akka.Remote
             else if (message is DeathWatchNotification)
             {
                 var deathWatchNotification = message as DeathWatchNotification;
+                var child = deathWatchNotification.Actor as ActorRefWithCell;
+                if (child != null)
+                {
+                    if (child.IsLocal)
+                    {
+                        //    removeChild(child.path.elements.drop(1).mkString("/"), child)
+                        //    val parent = child.getParent
+                        //    if (removeChildParentNeedsUnwatch(parent, child)) parent.sendSystemMessage(Unwatch(parent, this))
+                        //    terminationHookDoneWhenNoChildren()
 
-    //case DeathWatchNotification(child: ActorRefWithCell with ActorRefScope, _, _) if child.isLocal ⇒
-    //  terminating.locked {
-    //    removeChild(child.path.elements.drop(1).mkString("/"), child)
-    //    val parent = child.getParent
-    //    if (removeChildParentNeedsUnwatch(parent, child)) parent.sendSystemMessage(Unwatch(parent, this))
-    //    terminationHookDoneWhenNoChildren()
-    //  }
-    //case DeathWatchNotification(parent: ActorRef with ActorRefScope, _, _) if !parent.isLocal ⇒
-    //  terminating.locked {
-    //    parent2children.remove(parent) match {
-    //      case null ⇒
-    //      case children ⇒
-    //        for (c ← children) {
-    //          system.stop(c)
-    //          removeChild(c.path.elements.drop(1).mkString("/"), c)
-    //        }
-    //        terminationHookDoneWhenNoChildren()
-    //    }
-    //  }
+                        _terminating.WhileOff(() =>
+                        {
+                            var name = child.Path.Elements.Drop(1).Join("/");
+                            RemoveChild(name);
+                            var parent = child.Parent;
+                            if (RemoveChildParentNeedsUnwatch(parent, child))
+                            {
+                                parent.Tell(new Unwatch(parent, this));
+                            }
+                            TerminationHookDoneWhenNoChildren();
+                        });
+                    }
+                }
+                else
+                {
+                    //case DeathWatchNotification(parent: ActorRef with ActorRefScope, _, _) if !parent.isLocal ⇒
+                    //  terminating.locked {
+                    //    parent2children.remove(parent) match {
+                    //      case null ⇒
+                    //      case children ⇒
+                    //        for (c ← children) {
+                    //          system.stop(c)
+                    //          removeChild(c.path.elements.drop(1).mkString("/"), c)
+                    //        }
+                    //        terminationHookDoneWhenNoChildren()
+                    //    }
+                    //  }
+                    var parent = deathWatchNotification.Actor;
+                    var parentWithScope = parent as IActorRefScope;
+                    if (parentWithScope != null && !parentWithScope.IsLocal)
+                    {
+                        _terminating.WhileOff(() =>
+                        {
+                            HashSet<IActorRef> children;
+                            if (_parent2children.TryRemove(parent,out children))
+                            {
+                                foreach (var c in children)
+                                {
+                                    _system.Stop(c);
+                                    var name = c.Path.Elements.Drop(1).Join("/");
+                                    RemoveChild(name);
+                                }
+                                TerminationHookDoneWhenNoChildren();
+                            }
+                        });
+                    }
+                }               
             }
         }
+
+        private void TerminationHookDoneWhenNoChildren()
+        {
+            _terminating.WhileOn(() =>
+            {
+                if (!HasChildren)
+                {
+                    _terminator.Tell(TerminationHookDone.Instance, this);
+                }
+            });
+        }
+
+  //      def terminationHookDoneWhenNoChildren(): Unit = terminating.whileOn {
+  //  if (!hasChildren) terminator.tell(TerminationHookDone, this)
+  //}
 
         /// <summary>
         ///     Tells the internal.
