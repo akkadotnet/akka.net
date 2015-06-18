@@ -137,16 +137,17 @@ namespace Akka.Remote
                         //    if (removeChildParentNeedsUnwatch(parent, child)) parent.sendSystemMessage(Unwatch(parent, this))
                         //    terminationHookDoneWhenNoChildren()
 
-                        _terminating.WhileOff(() =>
+                        _terminating.Locked(() =>
                         {
                             var name = child.Path.Elements.Drop(1).Join("/");
-                            RemoveChild(name);
+                            RemoveChild(name,child);
                             var parent = child.Parent;
                             if (RemoveChildParentNeedsUnwatch(parent, child))
                             {
                                 parent.Tell(new Unwatch(parent, this));
                             }
                             TerminationHookDoneWhenNoChildren();
+
                         });
                     }
                 }
@@ -168,7 +169,7 @@ namespace Akka.Remote
                     var parentWithScope = parent as IActorRefScope;
                     if (parentWithScope != null && !parentWithScope.IsLocal)
                     {
-                        _terminating.WhileOff(() =>
+                        _terminating.Locked(() =>
                         {
                             IImmutableSet<IActorRef> children;
                             if (_parent2Children.TryRemove(parent,out children))
@@ -177,7 +178,7 @@ namespace Akka.Remote
                                 {
                                     _system.Stop(c);
                                     var name = c.Path.Elements.Drop(1).Join("/");
-                                    RemoveChild(name);
+                                    RemoveChild(name,c);
                                 }
                                 TerminationHookDoneWhenNoChildren();
                             }
@@ -226,12 +227,21 @@ namespace Akka.Remote
                 IEnumerable<string> subPath = childPath.Elements.Drop(1); //drop the /remote
                 ActorPath path = Path/subPath;
                 var localProps = props; //.WithDeploy(new Deploy(Scope.Local));
-                IInternalActorRef actor = _system.Provider.ActorOf(_system, localProps, supervisor, path, false,
+
+                bool isTerminating = !_terminating.WhileOff(() =>
+                {
+                    IInternalActorRef actor = _system.Provider.ActorOf(_system, localProps, supervisor, path, false,
                     message.Deploy, true, false);
-                string childName = subPath.Join("/");
-                AddChild(childName, actor);
-                actor.Tell(new Watch(actor, this));
-                actor.Start();
+                    string childName = subPath.Join("/");
+                    AddChild(childName, actor);
+                    actor.Tell(new Watch(actor, this));
+                    actor.Start();
+                });
+                if (isTerminating)
+                {
+                    Log.Error("Skipping [{0}] to RemoteSystemDaemon on [{1}] while terminating", message, path.Address);
+                }
+                
             }
             else
             {
