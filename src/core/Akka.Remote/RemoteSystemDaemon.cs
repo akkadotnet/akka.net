@@ -286,17 +286,17 @@ namespace Akka.Remote
             }
         }
 
-        private void RemoveChildParentNeedsUnwatch(IActorRef parent, IActorRef child)
+        private bool RemoveChildParentNeedsUnwatch(IActorRef parent, IActorRef child)
         {
             const bool weDontHaveTailRecursion = true;
             while (weDontHaveTailRecursion)
             {
                 IImmutableSet<IActorRef> children;
                 if (!_parent2Children.TryGetValue(parent, out children)) 
-                    return; //parent is missing, so child does not need to be removed
+                    return false; //parent is missing, so child does not need to be removed
 
                 if (_parent2Children.TryUpdate(parent, children.Remove(child), children))
-                    return; //child was removed
+                    return true; //child was removed
             }
         }
     }
