@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Actor.Internals;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Remote
@@ -72,18 +73,19 @@ namespace Akka.Remote
     /// 
     /// It acts as the brain of the remote that response to system remote messages and executes actions accordingly.
     /// </summary>
-    internal class RemoteDaemon : VirtualPathContainer
+    internal class RemoteSystemDaemon : VirtualPathContainer
     {
         private readonly ActorSystemImpl _system;
+        private Switch _terminating = new Switch(false);
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="RemoteDaemon" /> class.
+        ///     Initializes a new instance of the <see cref="RemoteSystemDaemon" /> class.
         /// </summary>
         /// <param name="system">The system.</param>
         /// <param name="path">The path.</param>
         /// <param name="parent">The parent.</param>
         /// <param name="log"></param>
-        public RemoteDaemon(ActorSystemImpl system, ActorPath path, IInternalActorRef parent, ILoggingAdapter log)
+        public RemoteSystemDaemon(ActorSystemImpl system, ActorPath path, IInternalActorRef parent, ILoggingAdapter log)
             : base(system.Provider, path, parent, log)
         {
             _system = system;
