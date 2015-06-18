@@ -14,6 +14,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
+using Akka.Util.Internal.Collections;
 
 namespace Akka.Remote
 {
@@ -79,7 +80,7 @@ namespace Akka.Remote
         private readonly ActorSystemImpl _system;
         private readonly Switch _terminating = new Switch(false);
         //private val parent2children = new ConcurrentHashMap[ActorRef, Set[ActorRef]]
-        private ConcurrentDictionary<IActorRef,HashSet<IActorRef>> _parent2children = new ConcurrentDictionary<IActorRef, HashSet<IActorRef>>();
+        private readonly ConcurrentDictionary<IActorRef, IImmutableSet<IActorRef>> _parent2Children = new ConcurrentDictionary<IActorRef, IImmutableSet<IActorRef>>();
         private readonly IActorRef _terminator;
 
         /// <summary>
@@ -169,8 +170,8 @@ namespace Akka.Remote
                     {
                         _terminating.WhileOff(() =>
                         {
-                            HashSet<IActorRef> children;
-                            if (_parent2children.TryRemove(parent,out children))
+                            IImmutableSet<IActorRef> children;
+                            if (_parent2Children.TryRemove(parent,out children))
                             {
                                 foreach (var c in children)
                                 {
@@ -266,6 +267,37 @@ namespace Akka.Remote
                 }
             }
             return ActorRefs.Nobody;
+        }
+
+        private void AddChildParentNeedsWatch(IActorRef parent, IActorRef child)
+        {
+            const bool weDontHaveTailRecursion = true;
+            while (weDontHaveTailRecursion)
+            {
+                if (_parent2Children.TryAdd(parent, ImmutableTreeSet<IActorRef>.Create(child)))
+                    return; //child was successfully added
+
+                IImmutableSet<IActorRef> children;
+                if (_parent2Children.TryGetValue(parent, out children))
+                {
+                    if (_parent2Children.TryUpdate(parent, children.Add(child), children))
+                        return; //child successfully added
+                }
+            }
+        }
+
+        private void RemoveChildParentNeedsUnwatch(IActorRef parent, IActorRef child)
+        {
+            const bool weDontHaveTailRecursion = true;
+            while (weDontHaveTailRecursion)
+            {
+                IImmutableSet<IActorRef> children;
+                if (!_parent2Children.TryGetValue(parent, out children)) 
+                    return; //parent is missing, so child does not need to be removed
+
+                if (_parent2Children.TryUpdate(parent, children.Remove(child), children))
+                    return; //child was removed
+            }
         }
     }
 }
