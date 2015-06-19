@@ -220,6 +220,7 @@ namespace Akka.Remote
         private void HandleDaemonMsgCreate(DaemonMsgCreate message)
         {
             var supervisor = (IInternalActorRef) message.Supervisor;
+            var parent = supervisor;
             Props props = message.Props;
             ActorPath childPath;
             if(ActorPath.TryParse(message.Path, out childPath))
@@ -236,6 +237,7 @@ namespace Akka.Remote
                     AddChild(childName, actor);
                     actor.Tell(new Watch(actor, this));
                     actor.Start();
+                    if (AddChildParentNeedsWatch(parent, actor)) parent.Tell(new Watch(parent, this));
                 });
                 if (isTerminating)
                 {
@@ -279,19 +281,19 @@ namespace Akka.Remote
             return ActorRefs.Nobody;
         }
 
-        private void AddChildParentNeedsWatch(IActorRef parent, IActorRef child)
+        private bool AddChildParentNeedsWatch(IActorRef parent, IActorRef child)
         {
             const bool weDontHaveTailRecursion = true;
             while (weDontHaveTailRecursion)
             {
                 if (_parent2Children.TryAdd(parent, ImmutableTreeSet<IActorRef>.Create(child)))
-                    return; //child was successfully added
+                    return true; //child was successfully added
 
                 IImmutableSet<IActorRef> children;
                 if (_parent2Children.TryGetValue(parent, out children))
                 {
                     if (_parent2Children.TryUpdate(parent, children.Add(child), children))
-                        return; //child successfully added
+                        return false; //child successfully added
                 }
             }
         }
