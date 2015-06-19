@@ -97,7 +97,7 @@ namespace Akka.IO
                 Handler = handler;
                 LocalAddress = localAddress;
                 Backlog = backlog;
-                Options = options;
+                Options = options ?? Enumerable.Empty<Inet.SocketOption>();
                 PullMode = pullMode;
             }
 
