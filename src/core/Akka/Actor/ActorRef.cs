@@ -402,7 +402,7 @@ namespace Akka.Actor
         {
             _children.AddOrUpdate(name, actor, (k, v) =>
             {
-                //TODO:  log.debug("{} replacing child {} ({} -> {})", path, name, old, ref)
+                Log.Warning("{0} replacing child {1} ({2} -> {3})", name, actor, v, actor);
                 return v;
             });
         }
@@ -412,7 +412,16 @@ namespace Akka.Actor
             IInternalActorRef tmp;
             if (!_children.TryRemove(name, out tmp))
             {
-                //TODO: log.warning("{} trying to remove non-child {}", path, name)
+                Log.Warning("{0} trying to remove non-child {1}", Path, name);
+            }
+        }
+
+        public void RemoveChild(string name,IActorRef child)
+        {
+            IInternalActorRef tmp;
+            if (!_children.TryRemove(name, out tmp))
+            {
+                Log.Warning("{0} trying to remove non-child {1}",Path,name);
             }
         }
 

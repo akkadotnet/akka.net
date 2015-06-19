@@ -177,6 +177,14 @@ namespace Akka.Util
         {
             get { return !_switch.Value; }
         }
+
+        public void Locked(Action action)
+        {
+            lock (_lock)
+            {
+                action();
+            }
+        }
     }
 }
 
