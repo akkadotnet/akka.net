@@ -140,7 +140,7 @@ namespace Akka.Util
                 if (copyLength > 0)
                 {
                     buffer.Put(_array, _from, copyLength);
-                    //Drop(copyLength);
+                    Drop(copyLength);
                 }
                 return copyLength;
             }
