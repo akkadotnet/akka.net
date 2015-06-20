@@ -131,11 +131,18 @@ namespace Akka.Persistence.Serialization
                     WriteInt(output, headerBinary.Length);
                     output.Write(headerBinary, 0, headerBinary.Length);
 
-                    var snapshotBytes = serializer.ToBinaryWithAddress(TransportInformation.Address, snapshot);
+                    if (TransportInformation != null)
+                    {
+                        var snapshotBytes = serializer.ToBinaryWithAddress(TransportInformation.Address, snapshot);
+                        output.Write(snapshotBytes, 0, snapshotBytes.Length);
+                    }
+                    else
+                    {
+                        var snapshotBytes = serializer.ToBinary(snapshot);
+                        output.Write(snapshotBytes, 0, snapshotBytes.Length);
+                    }
 
-                    output.Write(snapshotBytes, 0, snapshotBytes.Length);
-
-                return output.ToArray();
+                    return output.ToArray();
                 }
             }
         }
