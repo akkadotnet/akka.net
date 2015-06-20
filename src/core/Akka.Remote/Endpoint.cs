@@ -1102,8 +1102,7 @@ namespace Akka.Remote
                 throw new EndpointException("Internal error: No handle was present during serialization of outbound message.");
             }
 
-            Akka.Serialization.Serialization.CurrentTransportInformation = new Information() { Address = _handle.LocalAddress, System = _system };
-            return MessageSerializer.Serialize(_system, msg);
+            return MessageSerializer.Serialize(_system, _handle.LocalAddress, msg);
         }
 
         private int _writeCount = 0;
