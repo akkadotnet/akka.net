@@ -290,7 +290,7 @@ namespace Akka.Remote
 
         public const string EndpointManagerName = "endpointManager";
 
-        internal static Address LocalAddressForRemote(
+        internal Address LocalAddressForRemote(
             IDictionary<string, HashSet<ProtocolTransportAddressPair>> transportMapping, Address remote)
         {
             HashSet<ProtocolTransportAddressPair> transports;

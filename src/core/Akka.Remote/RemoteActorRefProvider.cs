@@ -350,11 +350,6 @@ namespace Akka.Remote
 
         public void UseActorOnNode(RemoteActorRef actor, Props props, Deploy deploy, IInternalActorRef supervisor)
         {
-            Akka.Serialization.Serialization.CurrentTransportInformation = new Information
-            {
-                System = _system,
-                Address = actor.LocalAddressToUse,
-            };
             _log.Debug("[{0}] Instantiating Remote Actor [{1}]", RootPath, actor.Path);
             IActorRef remoteNode = ResolveActorRef(new RootActorPath(actor.Path.Address) / "remote");
             remoteNode.Tell(new DaemonMsgCreate(props, deploy, actor.Path.ToSerializationFormat(), supervisor));

@@ -23,7 +23,6 @@ namespace Akka.Serialization
     {
         [ThreadStatic] public static Information CurrentTransportInformation;
 
-        [ThreadStatic] public static ActorSystem CurrentSystem;
         private readonly Serializer _nullSerializer;
 
         private readonly Dictionary<Type, Serializer> _serializerMap = new Dictionary<Type, Serializer>();
