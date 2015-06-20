@@ -22,7 +22,19 @@ namespace Akka.Serialization
 
     public class Serialization
     {
-        [ThreadStatic] public static Information CurrentTransportInformation;
+        [ThreadStatic] private static Information _currentTransportInformation;
+
+        public static T SerializeWithTransport<T>(ActorSystem system, Address address, Func<T> action)
+        {
+            _currentTransportInformation = new Information()
+            {
+                System = system,
+                Address = address
+            };
+            var res = action();
+            _currentTransportInformation = null;
+            return res;
+        }
 
         private readonly Serializer _nullSerializer;
 
@@ -135,7 +147,7 @@ namespace Akka.Serialization
                 originalSystem = actorRef.AsInstanceOf<ActorRefWithCell>().Underlying.System.AsInstanceOf<ExtendedActorSystem>();
             }
 
-            if (CurrentTransportInformation == null)
+            if (_currentTransportInformation == null)
             {
                 if (originalSystem == null)
                 {
@@ -151,8 +163,8 @@ namespace Akka.Serialization
             }
 
             //CurrentTransportInformation exists
-            var system = CurrentTransportInformation.System;
-            var address = CurrentTransportInformation.Address;
+            var system = _currentTransportInformation.System;
+            var address = _currentTransportInformation.Address;
             if (originalSystem == null || originalSystem == system)
             {
                 var res = path.ToStringWithAddress(address);

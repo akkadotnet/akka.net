@@ -39,8 +39,6 @@ namespace Akka.Remote.Tests.Serialization
             }        
         ")
         {
-            Akka.Serialization.Serialization.CurrentTransportInformation = null;
-
             _ser = Sys.Serialization;
             _supervisor = Sys.ActorOf(Props.Create<MyActor>(), "supervisor");
         }
