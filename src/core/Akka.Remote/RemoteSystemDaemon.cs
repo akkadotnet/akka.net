@@ -237,7 +237,11 @@ namespace Akka.Remote
                     AddChild(childName, actor);
                     actor.Tell(new Watch(actor, this));
                     actor.Start();
-                    if (AddChildParentNeedsWatch(parent, actor)) parent.Tell(new Watch(parent, this));
+                    if (AddChildParentNeedsWatch(parent, actor))
+                    {
+                        //TODO: figure out why current transport is not set when this message is sent
+                        //parent.Tell(new Watch(parent, this),this);
+                    }
                 });
                 if (isTerminating)
                 {
