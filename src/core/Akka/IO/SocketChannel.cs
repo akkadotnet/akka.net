@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using Akka.Actor;
@@ -24,6 +23,7 @@ namespace Akka.IO
         private readonly Socket _socket;
         private IActorRef _connection;
         private bool _connected;
+        private IAsyncResult _connectResult;
             
         public SocketChannel(Socket socket) 
         {
@@ -59,74 +59,54 @@ namespace Akka.IO
 
         public bool Connect(EndPoint address)
         {
-            try
+            _connectResult = _socket.BeginConnect(address, ar => { }, null);
+            if (_connectResult.CompletedSynchronously)
             {
-                _socket.Connect(address);
+                _socket.EndConnect(_connectResult);
+                _connected = true;
+                return true;
             }
-            catch (SocketException ex)
-            {
-                if (ex.SocketErrorCode == SocketError.WouldBlock)
-                    return false;
-                throw;
-            }
-            return _socket.Connected;
+            return false;
         }
         public bool FinishConnect()
         {
-            _connected = _socket.Connected;
-            return _socket.Connected;
+            if (_connectResult.CompletedSynchronously)
+                return true;
+            if (_connectResult.IsCompleted)
+            {
+                _socket.EndConnect(_connectResult);
+                _connected = true;
+            }
+            return _connected;
         }
 
         public SocketChannel Accept()
         {
-            _socket.Blocking = false;
-            try
-            {
-                var s = _socket.Accept();
-                return new SocketChannel(s) {_connected = true};
-            }
-            catch (Exception)
-            {
-                return null;
-            }
+            //TODO: Investigate. If we dont wait 1ms we get intermittent test failure in TcpListnerSpec.  
+            return _socket.Poll(1, SelectMode.SelectRead)
+                ? new SocketChannel(_socket.Accept()) {_connected = true}
+                : null;
         }
 
         public int Read(ByteBuffer buffer)
         {
-            try
-            {
-                var data = new byte[buffer.Remaining];
-                var length = _socket.Receive(data);
-                if (length == 0)
-                    return -1;
-                buffer.Put(data, 0, length);
-                return length;
-            }
-            catch (SocketException ex)
-            {
-                if (ex.SocketErrorCode == SocketError.WouldBlock)
-                    return 0;
-                throw new IOException(ex.Message, ex);
-            }
+            if (!_socket.Poll(0, SelectMode.SelectRead))
+                return 0;
+            var data = new byte[buffer.Remaining];
+            var length = _socket.Receive(data);
+            if (length == 0)
+                return -1;
+            buffer.Put(data, 0, length);
+            return length;
         }
 
         public int Write(ByteBuffer buffer)
         {
-            try
-            {
-                var data = new byte[buffer.Remaining];
-                buffer.Get(data);
-                return _socket.Send(data);
-            }
-            catch (SocketException ex)
-            {
-                if (ex.SocketErrorCode == SocketError.WouldBlock)
-                {
-                    buffer.Flip();
-                    return 0;
-                }
-                throw new IOException(ex.Message, ex);
-            }
+            if (!_socket.Poll(0, SelectMode.SelectWrite))
+                return 0;
+            var data = new byte[buffer.Remaining];
+            buffer.Get(data);
+            return _socket.Send(data);
         }
 
         public void Close()

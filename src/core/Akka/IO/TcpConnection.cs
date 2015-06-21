@@ -430,7 +430,7 @@ namespace Akka.IO
                         HandleClose(info, closeCommander, IO.Tcp.PeerClosed.Instance);
                     }
                 }
-                catch (IOException e)
+                catch (SocketException e)
                 {
                     HandleError(info.Handler, e);
                 }
@@ -500,7 +500,7 @@ namespace Akka.IO
             StopWith(new CloseInformation(new HashSet<IActorRef>(new[] { handler, closeCommander }.Where(x => x != null)), closedEvent));
         }
 
-        private void HandleError(IActorRef handler, IOException exception)
+        private void HandleError(IActorRef handler, SocketException exception)
         {
             _log.Debug("Closing connection due to IO error {0}", exception);
             StopWith(new CloseInformation(new HashSet<IActorRef>(new[] {handler}), new Tcp.ErrorClosed(exception.Message)));
@@ -593,7 +593,7 @@ namespace Akka.IO
                 if (w != null)  // empty write with either an ACK or a non-standard NoACK
                 {
                     if (w.WantsAck) commander.Tell(w.Ack);
-                    create(tail, IO.Tcp.Write.Empty);
+                    return create(tail, IO.Tcp.Write.Empty);
                 }
                 throw new Exception("Non reachable code");
             };
@@ -678,7 +678,7 @@ namespace Akka.IO
                         info.Registration.EnableInterest(SocketAsyncOperation.Send);
                     return next;
                 }
-                catch (IOException e)
+                catch (SocketException e)
                 {
                     _connection.HandleError(info.Handler, e);
                     return this;
@@ -769,9 +769,9 @@ namespace Akka.IO
 
         private class WriteFileFailed
         {
-            public IOException E { get; private set; }
+            public SocketException E { get; private set; }
 
-            public WriteFileFailed(IOException e)
+            public WriteFileFailed(SocketException e)
             {
                 E = e;
             }

@@ -9,7 +9,7 @@ using Akka.Actor;
 
 namespace Akka.IO
 {
-    public abstract class Extension : IExtension
+    public abstract class IOExtension : IExtension
     {
         public abstract IActorRef Manager { get; }
     }

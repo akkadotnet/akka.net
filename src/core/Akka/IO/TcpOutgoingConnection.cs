@@ -132,7 +132,8 @@ namespace Akka.IO
                         {
                             if (remainingFinishConnectRetries > 0)
                             {
-                                Context.System.Scheduler.Advanced.ScheduleOnce(1, () => _channelRegistry.Register(Channel, SocketAsyncOperation.Connect, Self));
+                                var self = Self;
+                                Context.System.Scheduler.Advanced.ScheduleOnce(1, () => _channelRegistry.Register(Channel, SocketAsyncOperation.Connect, self));
                                 Context.Become(Connecting(registration, remainingFinishConnectRetries - 1));
                             }
                             else
