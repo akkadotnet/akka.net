@@ -29,6 +29,11 @@ namespace Akka.IO
     {
         public static readonly Udp Instance = new Udp();
 
+        public static IActorRef Manager(ActorSystem system)
+        {
+            return Instance.Apply(system).Manager;
+        }
+
         public override UdpExt CreateExtension(ExtendedActorSystem system)
         {
             return new UdpExt(system);
@@ -302,7 +307,7 @@ namespace Akka.IO
         }
     }
 
-    public class UdpExt : Extension
+    public class UdpExt : IOExtension
     {
         private readonly Udp.UdpSettings _settings;
         private readonly IActorRef _manager;
@@ -326,4 +331,13 @@ namespace Akka.IO
 
         internal DirectByteBufferPool BufferPool { get; private set; }
     }
+
+    public static class UdpExtensions
+    {
+        public static IActorRef Udp(this ActorSystem system)
+        {
+            return IO.Udp.Manager(system);
+        }
+    }
+
 }

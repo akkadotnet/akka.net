@@ -101,7 +101,7 @@ namespace Akka.IO
         }
     }
 
-    public class DnsExt : Extension
+    public class DnsExt : IOExtension
     {
         public class DnsSettings
         {

@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -186,47 +187,50 @@ namespace Akka.IO
         private class ChannelRegistryImpl : IChannelRegistry
         {
             private readonly ILoggingAdapter _log;
-            private readonly SocketAsyncEventArgsPool _pool;
+            private readonly SingleThreadExecutionContext _executionContext;
+            private readonly IDictionary<Socket, SocketChannel> _read = new Dictionary<Socket, SocketChannel>();
+            private readonly IDictionary<Socket, SocketChannel> _write = new Dictionary<Socket, SocketChannel>();
+            private readonly IList _error = new List<Socket>();
 
             public ChannelRegistryImpl(ILoggingAdapter log)
             {
                 _log = log;
-                //_pool = new SocketAsyncEventArgsPool(1000, SocketChannel.Select);
-
-                Task.Run(() => Select());
+                _executionContext = new SingleThreadExecutionContext();
+                Execute(Select);
             }
 
-            private readonly IDictionary<Socket, SocketChannel> read = new Dictionary<Socket, SocketChannel>();
-            private readonly IDictionary<Socket, SocketChannel> write = new Dictionary<Socket, SocketChannel>();
-            private readonly IList error = new List<Socket>();
+            private void Execute(Action action)
+            {
+                _executionContext.Execute(action);
+            }
 
             private void Select()
             {
-                if (read.Count > 0 || write.Count > 0)
+                if (_read.Count > 0 || _write.Count > 0)
                 {
-                    var readable = read.Keys.ToList();
-                    var writeable = write.Keys.ToList();
-                    Socket.Select(readable, writeable, error, 100);
+                    var readable = _read.Keys.ToList();
+                    var writeable = _write.Keys.ToList();
+                    Socket.Select(readable, writeable, _error, 0);
                     foreach (var socket in readable)
                     {
-                        var channel = read[socket];
+                        var channel = _read[socket];
                         if (channel.IsOpen())
                             channel.Connection.Tell(ChannelReadable.Instance);
                         else
                             channel.Connection.Tell(ChannelAcceptable.Instance);
-                        read.Remove(socket);
+                        _read.Remove(socket);
                     }
                     foreach (var socket in writeable)
                     {
-                        var channel = write[socket];
+                        var channel = _write[socket];
                         if (channel.IsOpen())
                             channel.Connection.Tell(ChannelWritable.Instance);
                         else
                             channel.Connection.Tell(ChannelConnectable.Instance);
-                        write.Remove(socket);
+                        _write.Remove(socket);
                     }
                 }
-                Task.Run(() => Select());
+               Execute(Select);
             }
 
             public void Register(SocketChannel channel, SocketAsyncOperation? initialOps, IActorRef channelActor)
@@ -248,11 +252,11 @@ namespace Akka.IO
                 {
                         case SocketAsyncOperation.Accept:
                         case SocketAsyncOperation.Receive:
-                            read.Add(channel.Socket, channel);
+                            Execute(() => _read.Add(channel.Socket, channel));                            
                             break;
                         case SocketAsyncOperation.Connect:
                         case SocketAsyncOperation.Send:
-                            write.Add(channel.Socket, channel);
+                            Execute(() => _write.Add(channel.Socket, channel));
                             break;
                 }
             }
@@ -262,18 +266,18 @@ namespace Akka.IO
                 {
                     case SocketAsyncOperation.Accept:
                     case SocketAsyncOperation.Receive:
-                        read.Remove(channel.Socket);
+                        Execute(() => _read.Remove(channel.Socket));
                         break;
                     case SocketAsyncOperation.Connect:
                     case SocketAsyncOperation.Send:
-                        write.Remove(channel.Socket);
+                        Execute(() => _write.Remove(channel.Socket));
                         break;
                 }
             }
 
             public void Shutdown()
             {
-                //TODO: ??
+                _executionContext.Stop();
             }
         }
 
@@ -372,6 +376,38 @@ namespace Akka.IO
                     cmd.Commander.Tell(cmd.ApiCommand.FailureMessage);
                 }
             }
+        }
+    }
+
+    class SingleThreadExecutionContext
+    {
+        private readonly BlockingCollection<Action> _queue = new BlockingCollection<Action>();
+
+        public SingleThreadExecutionContext()
+        {
+            Task.Factory.StartNew(() =>
+            {
+                foreach (var action in _queue.GetConsumingEnumerable())
+                    action();
+            }, TaskCreationOptions.LongRunning);
+        }
+
+        public void Execute(Action action)
+        {
+            try
+            {
+                if (!_queue.IsAddingCompleted)
+                    _queue.Add(action);
+            }
+            catch 
+            {
+                //ignore adding completed
+            }
+        }
+
+        public void Stop()
+        {
+            _queue.CompleteAdding();
         }
     }
 }

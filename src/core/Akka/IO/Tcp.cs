@@ -12,12 +12,17 @@ using System.Linq;
 using System.Net;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 
 namespace Akka.IO
 {
     public class Tcp : ExtensionIdProvider<TcpExt>
     {
         public static readonly Tcp Instance = new Tcp();
+        public static IActorRef Manager(ActorSystem system)
+        {
+            return Instance.Apply(system).Manager;
+        }
 
         public override TcpExt CreateExtension(ExtendedActorSystem system)
         {
@@ -297,7 +302,7 @@ namespace Akka.IO
                 get { return _ack; }
             }
 
-            public Write(ByteString data, Event ack)
+            private Write(ByteString data, Event ack)
             {
                 _ack = ack;
                 Data = data;
@@ -314,6 +319,41 @@ namespace Akka.IO
             }
 
             public static readonly Write Empty = new Write(ByteString.Empty, NoAck.Instance);
+        }
+
+        /// <summary>
+        /// Write `count` bytes starting at `position` from file at `filePath` to the connection.
+        /// The count must be &gt; 0. The connection actor will reply with a <see cref="CommandFailed"/>
+        /// message if the write could not be enqueued. If <see cref="SimpleWriteCommand.WantsAck"/>
+        /// returns true, the connection actor will reply with the supplied <see cref="SimpleWriteCommand.Ack"/>
+        /// token once the write has been successfully enqueued to the O/S kernel.
+        /// <b>Note that this does not in any way guarantee that the data will be
+        /// or have been sent!</b> Unfortunately there is no way to determine whether
+        /// a particular write has been sent by the O/S.
+        /// </summary>
+        public class WriteFile : SimpleWriteCommand
+        {
+            private readonly Event _ack;
+
+            public WriteFile(string filePath, long position, long count, Event ack)
+            {
+                if (position < 0) throw new ArgumentException("WriteFile.position must be >= 0");
+                if (count <= 0) throw new ArgumentException("WriteFile.count must be > 0");
+
+                _ack = ack;
+                FilePath = filePath;
+                Position = position;
+                Count = count;
+            }
+
+            public string FilePath { get; private set; }
+            public long Position { get; private set; }
+            public long Count { get; private set; }
+
+            public override Event Ack
+            {
+                get { return _ack; }
+            }
         }
 
         /// <summary>
@@ -642,11 +682,12 @@ namespace Akka.IO
         }
     }
 
-    public class TcpExt : Extension
+    public class TcpExt : IOExtension
     {
         private readonly TcpSettings _settings;
         private readonly IActorRef _manager;
         private readonly IBufferPool _bufferPool;
+        private readonly MessageDispatcher _fileIoDispatcher;
 
         public class TcpSettings : SelectionHandlerSettings
         {
@@ -663,6 +704,10 @@ namespace Akka.IO
                     ? int.MaxValue
                     : config.GetInt("max-received-message-size");
                 ManagementDispatcher = config.GetString("management-dispatcher");
+                FileIODispatcher = config.GetString("file-io-dispatcher");
+                TransferToLimit = config.GetString("file-io-transferTo-limit") == "unlimited"
+                    ? int.MaxValue
+                    : config.GetInt("file-io-transferTo-limit");
                 MaxChannelsPerSelector = MaxChannels == -1 ? -1 : Math.Max(MaxChannels/NrOfSelectors, 1);
                 FinishConnectRetries = config.GetInt("finish-connect-retries", 3);
             }
@@ -674,6 +719,8 @@ namespace Akka.IO
             public TimeSpan? RegisterTimeout { get; private set; }
             public int ReceivedMessageSizeLimit { get; private set; }
             public string ManagementDispatcher { get; private set; }
+            public string FileIODispatcher { get; private set; }
+            public int TransferToLimit { get; set; }
             public int FinishConnectRetries { get; private set; }
         }
 
@@ -681,6 +728,7 @@ namespace Akka.IO
         {
             _settings = new TcpSettings(system.Settings.Config.GetConfig("akka.io.tcp"));
             _bufferPool = new DirectByteBufferPool(_settings.DirectBufferSize, _settings.MaxDirectBufferPoolSize);
+            //_fileIoDispatcher = system.Dispatchers.Lookup(_settings.FileIODispatcher);
             _manager = system.SystemActorOf(
                 props: Props.Create(() => new TcpManager(this))
                                             .WithDispatcher(_settings.ManagementDispatcher)
@@ -706,6 +754,11 @@ namespace Akka.IO
         internal IBufferPool BufferPool
         {
             get { return _bufferPool; }
+        }
+
+        internal MessageDispatcher FileIoDispatcher
+        {
+            get { return _fileIoDispatcher; }
         }
     }
 
@@ -772,7 +825,7 @@ namespace Akka.IO
 
         public static Tcp.Command Write(ByteString data, Tcp.Event ack = null)
         {
-            return new Tcp.Write(data, ack);
+            return Tcp.Write.Create(data, ack);
         }
 
         public static Tcp.Command ResumeWriting()
@@ -793,6 +846,14 @@ namespace Akka.IO
         public static Tcp.Command ResumeAccepting(int batchSize)
         {
             return new Tcp.ResumeAccepting(batchSize);
+        }
+    }
+
+    public static class TcpExtensions
+    {
+        public static IActorRef Tcp(this ActorSystem system)
+        {
+            return IO.Tcp.Manager(system);
         }
     }
 }

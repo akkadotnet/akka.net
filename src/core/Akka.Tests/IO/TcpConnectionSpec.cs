@@ -179,7 +179,7 @@ namespace Akka.Tests.IO
             {
                 var writer = CreateTestProbe();
 
-                var ackedWrite = new Tcp.Write(ByteString.FromString("testdata"), Ack.Instance);
+                var ackedWrite = Tcp.Write.Create(ByteString.FromString("testdata"), Ack.Instance);
                 var buffer = ByteBuffer.Allocate(100);
 
                 Assert.Equal(0, x.ServerSideChannel.Read(buffer));
@@ -191,7 +191,7 @@ namespace Akka.Tests.IO
                 //TODO: Buffer.limit
                 //Assert.Equal(8, buffer.Limit); 
 
-                var unackedWrite = new Tcp.Write(ByteString.FromString("morestuff!"), Tcp.NoAck.Instance);
+                var unackedWrite = Tcp.Write.Create(ByteString.FromString("morestuff!"), Tcp.NoAck.Instance);
                 buffer.Clear();
                 Assert.Equal(0, x.ServerSideChannel.Read(buffer));
                 writer.Send(x.ConnectionActor, unackedWrite);
@@ -215,7 +215,7 @@ namespace Akka.Tests.IO
 
                 var writer = CreateTestProbe();
 
-                var write = new Tcp.Write(testData, Ack.Instance);
+                var write = Tcp.Write.Create(testData, Ack.Instance);
                 var buffer = ByteBuffer.Allocate(bufferSize);
                 x.ServerSideChannel.Read(buffer).ShouldBe(0);
                 writer.Send(x.ConnectionActor, write);
@@ -236,7 +236,7 @@ namespace Akka.Tests.IO
             {
                 var writer = CreateTestProbe();
                 writer.Send(x.ConnectionActor,
-                    new Tcp.Write(ByteString.Create(new byte[] {42}, 0, 1), Tcp.NoAck.Instance));
+                    Tcp.Write.Create(ByteString.Create(new byte[] {42}, 0, 1), Tcp.NoAck.Instance));
                 writer.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             });
         }
@@ -247,7 +247,7 @@ namespace Akka.Tests.IO
             new EstablishedConnectionTest(this).Run(x =>
             {
                 var writer = CreateTestProbe();
-                writer.Send(x.ConnectionActor, new Tcp.Write(ByteString.Empty, Ack.Instance));
+                writer.Send(x.ConnectionActor, Tcp.Write.Create(ByteString.Empty, Ack.Instance));
                 writer.ExpectMsg(Ack.Instance);
             });
         }
@@ -258,9 +258,9 @@ namespace Akka.Tests.IO
             new EstablishedConnectionTest(this).Run(x =>
             {
                 var writer = CreateTestProbe();
-                writer.Send(x.ConnectionActor, new Tcp.Write(ByteString.Empty, Tcp.NoAck.Instance));
+                writer.Send(x.ConnectionActor, Tcp.Write.Create(ByteString.Empty, Tcp.NoAck.Instance));
                 writer.ExpectNoMsg(TimeSpan.FromMilliseconds(250));
-                writer.Send(x.ConnectionActor, new Tcp.Write(ByteString.Empty, new Tcp.NoAck(42)));
+                writer.Send(x.ConnectionActor, Tcp.Write.Create(ByteString.Empty, new Tcp.NoAck(42)));
                 writer.ExpectNoMsg(TimeSpan.FromMilliseconds(250));
             });
         }
@@ -368,7 +368,7 @@ namespace Akka.Tests.IO
                 x.AssertThisConnectionActorTerminated();
 
                 var buffer = ByteBuffer.Allocate(1);
-                var thrown = Assert.Throws<IOException>(() =>
+                var thrown = Assert.Throws<SocketException>(() =>
                 {
                     x.ServerSideChannel.Read(buffer);
                 });
@@ -435,7 +435,7 @@ namespace Akka.Tests.IO
                 var writer = CreateTestProbe();
 
                 x.AbortClose(x.ServerSideChannel);
-                writer.Send(x.ConnectionActor, new Tcp.Write(ByteString.FromString("testdata"), Ack.Instance));
+                writer.Send(x.ConnectionActor, Tcp.Write.Create(ByteString.FromString("testdata"), Ack.Instance));
                 writer.ExpectMsg<Tcp.ErrorClosed>();
                 x.ConnectionHandler.ExpectMsg<Tcp.ErrorClosed>();
 
@@ -660,7 +660,7 @@ namespace Akka.Tests.IO
 
         public Tcp.Write WriteCmd(Tcp.Event ack)
         {
-            return new Tcp.Write(ByteString.Create(new byte[TestSize]), ack);
+            return Tcp.Write.Create(ByteString.Create(new byte[TestSize]), ack);
         }
 
         public void CloseServerSideAndWaitForClientReadable(bool fullClose = true)
