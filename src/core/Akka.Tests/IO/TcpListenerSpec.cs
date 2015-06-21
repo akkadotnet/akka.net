@@ -237,7 +237,7 @@ namespace Akka.Tests.IO
 
             public SocketChannel ExpectWorkerForCommand()
             {
-                var message = _selectorRouter.ExpectMsg<SelectionHandler.WorkerForCommand>(TimeSpan.FromSeconds(10));
+                var message = _selectorRouter.ExpectMsg<SelectionHandler.WorkerForCommand>();
                 var command = (TcpListener.RegisterIncoming) message.ApiCommand;
                 command.Channel.IsOpen().ShouldBeTrue();
                 message.Commander.ShouldBe(Listner);

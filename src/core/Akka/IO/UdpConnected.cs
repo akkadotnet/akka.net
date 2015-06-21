@@ -231,7 +231,7 @@ namespace Akka.IO
 
     }
 
-    public class UdpConnectedExt : Extension
+    public class UdpConnectedExt : IOExtension
     {
         private readonly IActorRef _manager;
 

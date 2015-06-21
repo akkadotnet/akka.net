@@ -78,9 +78,6 @@ namespace Akka.IO
             get { return _udp; }
         }
 
-      
-
-
         protected override bool Receive(object message)
         {
             var registration = message as ChannelRegistration;

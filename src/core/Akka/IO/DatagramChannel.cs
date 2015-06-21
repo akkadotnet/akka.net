@@ -4,8 +4,6 @@
 //     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 
@@ -30,40 +28,22 @@ namespace Akka.IO
 
         public int Send(ByteBuffer buffer, EndPoint target)
         {
-            try
-            {
-                var data = new byte[buffer.Remaining];
-                buffer.Get(data);
-                return Socket.SendTo(data, target);
-            }
-            catch (SocketException ex)
-            {
-                if (ex.SocketErrorCode == SocketError.WouldBlock)
-                {
-                    buffer.Flip();
-                    return 0;
-                }
-                throw new IOException(ex.Message, ex);
-            }
+            if (!Socket.Poll(0, SelectMode.SelectWrite))
+                return 0;
+            var data = new byte[buffer.Remaining];
+            buffer.Get(data);
+            return Socket.SendTo(data, target);
         }
 
         public EndPoint Receive(ByteBuffer buffer)
         {
-            try
-            {
-                var ep = Socket.LocalEndPoint;
-                var data = new byte[buffer.Remaining];
-                var length = Socket.ReceiveFrom(data, ref ep);
-                buffer.Put(data, 0, length);
-                return ep;
-            }
-            catch (SocketException ex)
-            {
-                if (ex.SocketErrorCode == SocketError.WouldBlock)
-                    return null;
-                throw new IOException(ex.Message, ex);
-            }
-            
+            if (!Socket.Poll(0, SelectMode.SelectRead))
+                return null;
+            var ep = Socket.LocalEndPoint;
+            var data = new byte[buffer.Remaining];
+            var length = Socket.ReceiveFrom(data, ref ep);
+            buffer.Put(data, 0, length);
+            return ep;
         }
     }
 }

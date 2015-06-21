@@ -64,7 +64,7 @@ namespace Akka.IO
 
             Context.Watch(bind.Handler);
 
-            _channel = SocketChannel.Open();
+            _channel = SocketChannel.Open().ConfigureBlocking(false);
 
             acceptLimit = bind.PullMode ? 0 : _tcp.Settings.BatchAcceptLimit;
 
@@ -94,8 +94,8 @@ namespace Akka.IO
             {
                 _bindCommander.Tell(new Tcp.Bound(_channel.Socket.LocalEndPoint));
                 Context.Become(Bound(registration));
+                return true;
             }
-
             return false;
         }
 
