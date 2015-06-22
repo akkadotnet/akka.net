@@ -5,77 +5,74 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-﻿using System.Linq;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
-using Akka.TestKit.TestActors;
-using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Remote.Tests
 {
-    public class RemoteDeploySpec : AkkaSpec
+    public class RemoteDeploySpec : DualNodeSpec
     {
-        private ActorSystem _remoteSystem;
-        private Address _remoteAddress;
+        public class DummyMessage
+        {
+            
+        }
+
+        public class RemoteEchoActor : ReceiveActor
+        {
+            public RemoteEchoActor()
+            {
+                ReceiveAny(msg =>
+                {
+                    Sender.Tell(msg,Self);
+                });
+            }
+        }
 
         public RemoteDeploySpec()
-            : base(@"
-            akka {
-                loglevel = INFO 
-                log-dead-letters-during-shutdown = false
-              //  actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                remote.helios.tcp = {
-                    hostname = localhost
-                    port = 0
-                }
-
-                actor.deployment {
-                  /router1 {
-                    router = round-robin-pool
-                    nr-of-instances = 3
-                  }
-                  /router2 {
-                    router = round-robin-pool
-                    nr-of-instances = 3
-                  }
-                  /router3 {
-                    router = round-robin-pool
-                    nr-of-instances = 0
-                  }
-                }
-            }
-")
+            : base(
+system1Config:@"",
+system2Confg: @"
+akka {
+    actor.deployment {
+        /echo {
+            remote = ""akka.tcp://${sys1Name}@localhost:${port}""
+        }
+        /echorouter {
+            router = round-robin-pool
+            nr-of-instances = 3
+            remote = ""akka.tcp://${sys1Name}@localhost:${port}""
+        }        
+    }
+}")
         {
-            _remoteSystem = ActorSystem.Create("RemoteSystem", Sys.Settings.Config);
-            _remoteAddress = _remoteSystem.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
-            var remoteAddressUid = AddressUidExtension.Uid(_remoteSystem);
-
-
         }
 
-
         [Fact]
-        public void Router_in_general_must_use_configured_nr_of_instances_when_FromConfig()
+        public void Remote_deployed_actor_can_reply()
         {
-            var router = Sys.ActorOf(Props.Create<BlackHoleActor>().WithRouter(FromConfig.Instance), "router1");
-
-            router.Tell(new GetRoutees(), TestActor);
-            ExpectMsg<Routees>().Members.Count().ShouldBe(3);
-            Watch(router);
-            Sys.Stop(router);
-            ExpectTerminated(router);
+            var echo = Sys2.ActorOf(Props.Create<RemoteEchoActor>(), "echo");
+            echo.Tell(123, Sys2Probe);
+            Sys2Probe.ExpectMsg<int>().ShouldBe(123);
         }
 
-
         [Fact]
-        public void Router_in_general_must_not_use_configured_nr_of_instances_when_not_FromConfig()
+        public void Remote_deployed_router_can_reply()
         {
-            var router = Sys.ActorOf(Props.Create<BlackHoleActor>(), "router1");
+            var echo = Sys2.ActorOf(Props.Create<RemoteEchoActor>().WithRouter(FromConfig.Instance), "echorouter");
+            echo.Tell(123, Sys2Probe);
+            Sys2Probe.ExpectMsg<int>().ShouldBe(123);
+        }
 
-            router.Tell(new GetRoutees(), TestActor);
-            ExpectNoMsg();
+        [Fact(Skip = "Remote deployed actors does not yet cause termination messages when stopped")]
+        public void Remote_deployed_actor_sends_Terminated_when_stopped()
+        {
+            var echo = Sys2.ActorOf(Props.Create<RemoteEchoActor>(), "echo");
+
+            Sys2Probe.Watch(echo);
+            Sys2.Stop(echo);
+            Sys2Probe.ExpectTerminated(echo);
         }
     }
 }
