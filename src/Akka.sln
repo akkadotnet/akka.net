@@ -202,6 +202,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Tools", "contr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Sharding.Tests", "contrib\cluster\Akka.Cluster.Sharding.Tests\Akka.Cluster.Sharding.Tests.csproj", "{AD74F85A-B641-4C70-9427-1B822209A8DC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Cluster.Tools.Tests", "Akka.Cluster.Tools.Tests\Akka.Cluster.Tools.Tests.csproj", "{9AF354E8-3DBA-4702-9BB8-5877524CEA67}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug Mono|Any CPU = Debug Mono|Any CPU
@@ -735,6 +737,14 @@ Global
 		{AD74F85A-B641-4C70-9427-1B822209A8DC}.Release Mono|Any CPU.Build.0 = Release|Any CPU
 		{AD74F85A-B641-4C70-9427-1B822209A8DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AD74F85A-B641-4C70-9427-1B822209A8DC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9AF354E8-3DBA-4702-9BB8-5877524CEA67}.Debug Mono|Any CPU.ActiveCfg = Debug|Any CPU
+		{9AF354E8-3DBA-4702-9BB8-5877524CEA67}.Debug Mono|Any CPU.Build.0 = Debug|Any CPU
+		{9AF354E8-3DBA-4702-9BB8-5877524CEA67}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9AF354E8-3DBA-4702-9BB8-5877524CEA67}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9AF354E8-3DBA-4702-9BB8-5877524CEA67}.Release Mono|Any CPU.ActiveCfg = Release|Any CPU
+		{9AF354E8-3DBA-4702-9BB8-5877524CEA67}.Release Mono|Any CPU.Build.0 = Release|Any CPU
+		{9AF354E8-3DBA-4702-9BB8-5877524CEA67}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9AF354E8-3DBA-4702-9BB8-5877524CEA67}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -825,5 +835,6 @@ Global
 		{2CB7BC70-DEEB-4DA2-9F61-3F9ED6373421} = {52999BCC-7C31-4D38-92E9-B564077294A9}
 		{7AE6DE46-24A7-41EB-A18C-5C3AB748E81E} = {52999BCC-7C31-4D38-92E9-B564077294A9}
 		{AD74F85A-B641-4C70-9427-1B822209A8DC} = {52999BCC-7C31-4D38-92E9-B564077294A9}
+		{9AF354E8-3DBA-4702-9BB8-5877524CEA67} = {52999BCC-7C31-4D38-92E9-B564077294A9}
 	EndGlobalSection
 EndGlobal
