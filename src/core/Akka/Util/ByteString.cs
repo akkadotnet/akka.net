@@ -91,12 +91,10 @@ namespace Akka.IO
         internal class ByteString1C : CompactByteString
         {
             private readonly byte[] _bytes;
-            private readonly ByteIterator.ByteArrayIterator _iterator;
 
             public ByteString1C(byte[] bytes)
             {
                 _bytes = bytes;
-                _iterator = new ByteIterator.ByteArrayIterator(bytes, 0, bytes.Length);
             }
 
             public override byte this[int idx]
@@ -109,9 +107,9 @@ namespace Akka.IO
                 get { return _bytes.Length; }
             }
 
-            public override ByteIterator Iterator
+            public override ByteIterator Iterator()
             {
-                get { return _iterator; }
+                return new ByteIterator.ByteArrayIterator(_bytes, 0, _bytes.Length);
             }
 
             public override IEnumerator<byte> GetEnumerator()
@@ -150,14 +148,12 @@ namespace Akka.IO
             private readonly byte[] _bytes;
             private readonly int _startIndex;
             private readonly int _length;
-            private readonly ByteIterator.ByteArrayIterator _iterator;
 
             public ByteString1(byte[] bytes, int startIndex, int length)
             {
                 _bytes = bytes;
                 _startIndex = startIndex;
                 _length = length;
-                _iterator = new ByteIterator.ByteArrayIterator(bytes, startIndex, startIndex + length);
             }
 
             public ByteString1(byte[] bytes)
@@ -170,9 +166,9 @@ namespace Akka.IO
                 get { return _bytes[checkRangeConvert(idx)]; }
             }
 
-            public override ByteIterator Iterator
+            public override ByteIterator Iterator()
             {
-                get { return _iterator; }
+                return new ByteIterator.ByteArrayIterator(_bytes, _startIndex, _startIndex + _length);
             }
 
             private int checkRangeConvert(int index)
@@ -266,14 +262,10 @@ namespace Akka.IO
                 }
             }
 
-            public override ByteIterator Iterator
+            public override ByteIterator Iterator()
             {
-                get
-                {
-                    return
-                        new ByteIterator.MultiByteIterator(
-                            _byteStrings.Select(x => (ByteIterator.ByteArrayIterator) x.Iterator).ToArray());
-                }
+                return new ByteIterator.MultiByteIterator(
+                        _byteStrings.Select(x => (ByteIterator.ByteArrayIterator) x.Iterator()).ToArray());
             }
 
             public override ByteString Concat(ByteString that)
@@ -324,7 +316,7 @@ namespace Akka.IO
         }
 
 
-        public abstract ByteIterator Iterator { get; }
+        public abstract ByteIterator Iterator();
 
         public Byte Head
         {
@@ -346,7 +338,7 @@ namespace Akka.IO
         public virtual ByteString Slice(int @from, int until)
         {
             if (@from == 0 && until == Count) return this;
-            return Iterator.Slice(@from, until).ToByteString();
+            return Iterator().Slice(@from, until).ToByteString();
         }
 
         public ByteString Take(int n)
@@ -368,17 +360,17 @@ namespace Akka.IO
 
         public ByteString TakeWhile(Func<byte, bool> p)
         {
-            return Iterator.TakeWhile(p).ToByteString();
+            return Iterator().TakeWhile(p).ToByteString();
         }
 
         public ByteString DropWhile(Func<byte, bool> p)
         {
-            return Iterator.DropWhile(p).ToByteString();
+            return Iterator().DropWhile(p).ToByteString();
         }
 
         public Tuple<ByteString, ByteString> Span(Func<byte, bool> p)
         {
-            var span = Iterator.Span(p);
+            var span = Iterator().Span(p);
             return Tuple.Create(span.Item1.ToByteString(), span.Item2.ToByteString());
         }
 
@@ -389,17 +381,17 @@ namespace Akka.IO
 
         public int IndexWhere(Func<byte, bool> p)
         {
-            return Iterator.IndexWhere(p);
+            return Iterator().IndexWhere(p);
         }
 
         public int IndexOf(byte elem)
         {
-            return Iterator.IndexOf(elem);
+            return Iterator().IndexOf(elem);
         }
 
         public byte[] ToArray()
         {
-            return Iterator.ToArray();
+            return Iterator().ToArray();
         }
 
         public abstract CompactByteString Compact();
@@ -441,7 +433,7 @@ namespace Akka.IO
 
         public int CopyToBuffer(ByteBuffer buffer)
         {
-            return Iterator.CopyToBuffer(buffer);
+            return Iterator().CopyToBuffer(buffer);
         }
 
         public static ByteString Create(ByteBuffer buffer)
