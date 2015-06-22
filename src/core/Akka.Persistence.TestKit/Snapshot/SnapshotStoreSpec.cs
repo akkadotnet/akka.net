@@ -21,10 +21,8 @@ namespace Akka.Persistence.TestKit.Snapshot
     /// </summary>
     public abstract class SnapshotStoreSpec : PluginSpec
     {
-        protected static readonly Config Config =
-            ConfigurationFactory.ParseString("akka.persistence.publish-plugin-commands = on");
-
         private static readonly string _specConfigTemplate = @"
+            akka.persistence.publish-plugin-commands = on
             akka.persistence.snapshot-store {
                 plugin = ""akka.persistence.snapshot-store.my""
                 my {
@@ -32,6 +30,9 @@ namespace Akka.Persistence.TestKit.Snapshot
                     plugin-dispatcher = ""akka.persistence.dispatchers.default-plugin-dispatcher""
                 }
             }";
+
+        protected static readonly Config Config =
+            ConfigurationFactory.ParseString(_specConfigTemplate);
 
         private readonly TestProbe _senderProbe;
         protected List<SnapshotMetadata> Metadata;
