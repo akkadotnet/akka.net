@@ -92,7 +92,6 @@
     <Compile Include="RemoteDaemonSpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RemoteDeployerSpec.cs" />
-    <Compile Include="RemoteDeploySpec.cs" />
     <Compile Include="RemoteRouterSpec.cs" />
     <Compile Include="RemoteWatcherSpec.cs" />
     <Compile Include="RemotingSpec.cs" />
