@@ -559,7 +559,7 @@ Target "HelpDocs" <| fun _ ->
 Target "All" DoNothing
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
-"BuildRelease" ==> "MultiNodeTests" //Invovles a lot of BIN copying.
+"MultiNodeTests" ==> "All"
 "Nuget" ==> "All"
 
 RunTargetOrDefault "Help"
