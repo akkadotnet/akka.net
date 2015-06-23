@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="AssertionsTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestKitTestFixtureTest.cs" />
     <Compile Include="TestKitTests.cs" />
   </ItemGroup>
   <ItemGroup>
