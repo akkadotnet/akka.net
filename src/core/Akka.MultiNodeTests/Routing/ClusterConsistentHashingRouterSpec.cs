@@ -127,7 +127,7 @@ namespace Akka.MultiNodeTests.Routing
             ExpectMsg(destinationA);
         }
 
-        [MultiNodeFact(Skip = "Race conditions - needs debugging")]
+        //[MultiNodeFact(Skip = "Race conditions - needs debugging")]
         public void ClusterConsistentHashingRouterSpecs()
         {
             AClusterRouterWithConsistentHashingPoolMustStartClusterWith2Nodes();
