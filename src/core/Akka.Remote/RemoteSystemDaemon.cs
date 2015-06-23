@@ -240,7 +240,7 @@ namespace Akka.Remote
                     if (AddChildParentNeedsWatch(parent, actor))
                     {
                         //TODO: figure out why current transport is not set when this message is sent
-                        //parent.Tell(new Watch(parent, this),this);
+                        parent.Tell(new Watch(parent, this),this);
                     }
                 });
                 if (isTerminating)
