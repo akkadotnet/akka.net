@@ -268,7 +268,7 @@ Target "MultiNodeTests" <| fun _ ->
 
 Target "RunSqlServerTests" <| fun _ ->
     let sqlServerTests = !! "src/**/bin/Release/Akka.Persistence.SqlServer.Tests.dll"
-    let xunitToolPath = findToolInSubPath "xunit.console.clr4.exe" "src/packages/xunit.runners*"
+    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
     xUnit
         (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
@@ -561,5 +561,14 @@ Target "All" DoNothing
 "RunTests" ==> "All"
 "MultiNodeTests" ==> "All"
 "Nuget" ==> "All"
+
+Target "AllTests" DoNothing //used for Mono builds, due to Mono 4.0 bug with FAKE / NuGet https://github.com/fsharp/fsharp/issues/427
+"BuildRelease" ==> "AllTests"
+"RunTests" ==> "AllTests"
+"MultiNodeTests" ==> "AllTests"
+
+"BuildRelease" ==> "RunSqlServerTests"
+"BuildRelease" ==> "RunPostgreSqlTests"
+"BuildRelease" ==> "RunCassandraTests"
 
 RunTargetOrDefault "Help"
