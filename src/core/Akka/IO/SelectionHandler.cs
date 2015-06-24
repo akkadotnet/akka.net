@@ -18,6 +18,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Routing;
+using Akka.Util.Internal;
 
 namespace Akka.IO
 {
@@ -190,7 +191,6 @@ namespace Akka.IO
             private readonly SingleThreadExecutionContext _executionContext;
             private readonly IDictionary<Socket, SocketChannel> _read = new Dictionary<Socket, SocketChannel>();
             private readonly IDictionary<Socket, SocketChannel> _write = new Dictionary<Socket, SocketChannel>();
-            private readonly IList _error = new List<Socket>();
 
             public ChannelRegistryImpl(ILoggingAdapter log)
             {
@@ -210,27 +210,39 @@ namespace Akka.IO
                 {
                     var readable = _read.Keys.ToList();
                     var writeable = _write.Keys.ToList();
-                    Socket.Select(readable, writeable, _error, 0);
-                    foreach (var socket in readable)
+                    try
                     {
-                        var channel = _read[socket];
-                        if (channel.IsOpen())
-                            channel.Connection.Tell(ChannelReadable.Instance);
-                        else
-                            channel.Connection.Tell(ChannelAcceptable.Instance);
-                        _read.Remove(socket);
+                        Socket.Select(readable, writeable, null, 0);
+                        foreach (var socket in readable)
+                        {
+                            var channel = _read[socket];
+                            if (channel.IsOpen())
+                                channel.Connection.Tell(ChannelReadable.Instance);
+                            else
+                                channel.Connection.Tell(ChannelAcceptable.Instance);
+                            _read.Remove(socket);
+                        }
+                        foreach (var socket in writeable)
+                        {
+                            var channel = _write[socket];
+                            if (channel.IsOpen())
+                                channel.Connection.Tell(ChannelWritable.Instance);
+                            else
+                                channel.Connection.Tell(ChannelConnectable.Instance);
+                            _write.Remove(socket);
+                        }
                     }
-                    foreach (var socket in writeable)
+                    catch (SocketException ex)
                     {
-                        var channel = _write[socket];
-                        if (channel.IsOpen())
-                            channel.Connection.Tell(ChannelWritable.Instance);
-                        else
-                            channel.Connection.Tell(ChannelConnectable.Instance);
-                        _write.Remove(socket);
+                        if (ex.SocketErrorCode == SocketError.NotSocket)
+                        {
+                            // One of the sockets has been closed
+                            readable.Where(x => !x.Connected).ForEach(x =>_read.Remove(x));
+                            writeable.Where(x => !x.Connected).ForEach(x => _write.Remove(x));
+                        }
                     }
                 }
-               Execute(Select);
+                Execute(Select);
             }
 
             public void Register(SocketChannel channel, SocketAsyncOperation? initialOps, IActorRef channelActor)

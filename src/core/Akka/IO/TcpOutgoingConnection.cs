@@ -51,7 +51,7 @@ namespace Akka.IO
             catch (Exception e)
             {
                 Log.Debug("Could not establish connection to [{0}] due to {1}", _connect.RemoteAddress, e);
-                Context.Stop(Self);
+                Stop();
             }
         }
 

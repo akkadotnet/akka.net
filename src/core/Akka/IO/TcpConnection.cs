@@ -7,9 +7,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Sockets;
 using Akka.Actor;
 using Akka.Dispatch;
@@ -263,7 +261,7 @@ namespace Akka.IO
                     if (WritePending())
                     {
                         DoWrite(info);
-                        if (WritePending() && _interestedInResume != null)
+                        if (!WritePending() && _interestedInResume != null)
                         {
                             _interestedInResume.Tell(IO.Tcp.WritingResumed.Instance);
                             _interestedInResume = null;
