@@ -404,6 +404,26 @@ namespace Akka.Tests.IO
                 x.ConnectionHandler.Send(x.ConnectionActor, x.WriteCmd(Ack.Instance));
                 x.PullFromServerSide(x.TestSize);
                 x.ConnectionHandler.ExpectMsg(Ack.Instance);
+                x.ConnectionHandler.Send(x.ConnectionActor, Tcp.Close.Instance);
+                x.ConnectionHandler.ExpectMsg(Tcp.Closed.Instance);
+
+                x.AssertThisConnectionActorTerminated();
+            });
+        }
+
+        [Fact]
+        public void An_Outgoing_Connection_Must_Report_When_Peer_Closed_The_Connection_But_Allow_Further_Writes_And_Acknowledge_Confirmed_Close()
+        {
+            new EstablishedConnectionTest(this, keepOpenOnPeerClosed: true).Run(x =>
+            {
+                x.CloseServerSideAndWaitForClientReadable(fullClose: false);
+
+                x.Selector.Send(x.ConnectionActor, SelectionHandler.ChannelReadable.Instance);
+                x.ConnectionHandler.ExpectMsg(Tcp.PeerClosed.Instance);
+
+                x.ConnectionHandler.Send(x.ConnectionActor, x.WriteCmd(Ack.Instance));
+                x.PullFromServerSide(x.TestSize);
+                x.ConnectionHandler.ExpectMsg(Ack.Instance);
                 x.ConnectionHandler.Send(x.ConnectionActor, Tcp.ConfirmedClose.Instance);
                 x.ConnectionHandler.ExpectMsg(Tcp.ConfirmedClosed.Instance);
 
@@ -441,6 +461,259 @@ namespace Akka.Tests.IO
 
                 x.AssertThisConnectionActorTerminated();
             });            
+        }
+
+        [Fact]
+        public void An_Outgoing_Connection_Must_Report_Failed_connection_attempt_when_target_is_unreachable()
+        {
+            var unboundAddress = TestUtils.TemporaryServerAddress();
+            var test = new UnacceptedConnectionTest(this);
+            test.ConnectionActor = test.CreateConnectionActor(serverAddress: unboundAddress);
+            test.Run(x =>
+            {
+                //x.ClientSideChannel.Socket.Poll(3000, SelectMode.SelectWrite).ShouldBe(true);  // In .NET we cant select on 'Connectable' (I think)
+
+                Thread.Sleep(3000);
+                x.Selector.Send(x.ConnectionActor, SelectionHandler.ChannelConnectable.Instance);
+                x.UserHandler.ExpectMsg<Tcp.CommandFailed>();
+
+                Watch(x.ConnectionActor);
+                ExpectTerminated(x.ConnectionActor);
+            });
+        }
+
+        [Fact]
+        public void An_Outgoing_Connection_Must_Report_Failed_connection_attempt_when_target_cannot_be_resolved()
+        {
+            var test = new UnacceptedConnectionTest(this);
+            var address = new DnsEndPoint("notthere.local", 666);
+            test.ConnectionActor = test.CreateConnectionActorWithoutRegistration(address);
+            test.Run(x =>
+            {
+                x.ConnectionActor.Tell(x.NewChannelRegistration());
+                x.UserHandler.ExpectMsg<Tcp.CommandFailed>(TimeSpan.FromSeconds(30));
+            });
+        }
+
+        [Fact]
+        public void An_Outgoing_Connection_Must_Report_Failed_connection_attempt_when_timing_out()
+        {
+            var unboundAddress = TestUtils.TemporaryServerAddress();
+            var test = new UnacceptedConnectionTest(this);
+            test.ConnectionActor = test.CreateConnectionActor(serverAddress: unboundAddress, timeout:TimeSpan.FromMilliseconds(100));
+            test.Run(x =>
+            {   
+                x.UserHandler.ExpectMsg<Tcp.CommandFailed>();
+                Watch(x.ConnectionActor);
+                ExpectTerminated(x.ConnectionActor);
+            });
+        }
+
+        [Fact]
+        public void An_Outgoing_Connection_Must_time_out_when_Connected_isnt_answered_with_Register()
+        {
+            new UnacceptedConnectionTest(this).Run(x =>
+            {
+                x.LocalServerChannel.Socket.BeginAccept(ar => x.LocalServerChannel.Socket.EndAccept(ar), null);
+
+                x.Selector.Send(x.ConnectionActor, SelectionHandler.ChannelConnectable.Instance);
+                x.UserHandler.ExpectMsg<Tcp.Connected>();
+
+                Watch(x.ConnectionActor.Ref);
+                ExpectTerminated(x.ConnectionActor.Ref);
+            });        
+        }
+
+        [Fact]
+        public void An_Outgoing_Connection_Must_close_the_connection_when_user_handler_dies_while_connecting()
+        {
+            new UnacceptedConnectionTest(this).Run(x => EventFilter.Exception<DeathPactException>().ExpectOne(() =>
+            {
+                x.UserHandler.Ref.Tell(PoisonPill.Instance);
+            
+                Watch(x.ConnectionActor.Ref);
+                ExpectTerminated(x.ConnectionActor.Ref);
+            }));
+        }
+
+        [Fact]
+        public void An_Outgoing_Connection_Must_close_the_connection_when_connection_handler_dies_while_connected()
+        {
+            new EstablishedConnectionTest(this).Run(x =>
+            {
+                {
+                    Watch(x.ConnectionHandler.Ref);
+                    Watch(x.ConnectionActor);
+                    EventFilter.Exception<DeathPactException>().ExpectOne(() =>
+                    {
+                        Sys.Stop(x.ConnectionHandler.Ref);
+                        var deaths = new[] {ExpectMsg<Terminated>().ActorRef, ExpectMsg<Terminated>().ActorRef};
+                        deaths.ShouldOnlyContainInOrder(x.ConnectionHandler.Ref, x.ConnectionActor);
+                    });
+                }
+            });
+        }
+
+        class Works : Tcp.Event {public static readonly Works Instance = new Works();}
+        [Fact]
+        public void An_Outgoing_Connection_Must_support_ResumeWriting_backed_up()
+        {
+            new EstablishedConnectionTest(this).Run(x =>
+            {
+                var writer = CreateTestProbe();
+                var write = x.WriteCmd(Tcp.NoAck.Instance);
+
+                var written = 0;
+                while (!writer.HasMessages)
+                {
+                    writer.Send(x.ConnectionActor, write);
+                    written += 1;
+                }
+                writer.ReceiveWhile(message =>
+                {
+                    if (message is Tcp.CommandFailed)
+                        written -= 1;
+                    return message;
+                }, TimeSpan.FromSeconds(1));
+                writer.HasMessages.ShouldBeFalse();
+
+                writer.Send(x.ConnectionActor, write);
+                writer.ExpectMsg<Tcp.CommandFailed>();
+                writer.Send(x.ConnectionActor, Tcp.Write.Empty);
+                writer.ExpectMsg<Tcp.CommandFailed>();
+
+                writer.Send(x.ConnectionActor, Tcp.ResumeWriting.Instance);
+                writer.ExpectNoMsg(TimeSpan.FromSeconds(1));
+
+                while (!writer.HasMessages) 
+                    x.PullFromServerSide(x.TestSize);
+                writer.ExpectMsg(Tcp.WritingResumed.Instance, TimeSpan.Zero);
+
+                writer.Send(x.ConnectionActor, x.WriteCmd(Works.Instance));
+                writer.ExpectMsg(Works.Instance);
+            });
+        }
+
+        [Fact]
+        public void An_Outgoing_Connection_Must_support_ResumeWriting_queue_flushed()
+        {
+            new EstablishedConnectionTest(this).Run(x =>
+            {
+                var writer = CreateTestProbe();
+                var write = x.WriteCmd(Tcp.NoAck.Instance);
+
+                var written = 0;
+                while (!writer.HasMessages)
+                {
+                    writer.Send(x.ConnectionActor, write);
+                    written += 1;
+                }
+                writer.ReceiveWhile(message =>
+                {
+                    if (message is Tcp.CommandFailed)
+                        written -= 1;
+                    return message;
+                }, TimeSpan.FromSeconds(1));
+             
+                x.PullFromServerSide(x.TestSize * written);
+
+                writer.Send(x.ConnectionActor, write);
+                writer.ExpectMsg<Tcp.CommandFailed>();
+                writer.Send(x.ConnectionActor, Tcp.Write.Empty);
+                writer.ExpectMsg<Tcp.CommandFailed>();
+
+                writer.Send(x.ConnectionActor, Tcp.ResumeWriting.Instance);
+                writer.ExpectMsg(Tcp.WritingResumed.Instance, TimeSpan.FromSeconds(1));
+
+                writer.Send(x.ConnectionActor, x.WriteCmd(Works.Instance));
+                writer.ExpectMsg(Works.Instance);
+            });
+        }
+
+        [Fact]
+        public void An_Outgoing_Connection_Must_support_useResumeWriting_false_backed_up()
+        {
+            new EstablishedConnectionTest(this, useResumeWriting: false).Run(x =>
+            {
+                var writer = CreateTestProbe();
+                var write = x.WriteCmd(Tcp.NoAck.Instance);
+
+                var written = 0;
+                while (!writer.HasMessages)
+                {
+                    writer.Send(x.ConnectionActor, write);
+                    written += 1;
+                }
+                writer.ReceiveWhile(message =>
+                {
+                    if (message is Tcp.CommandFailed)
+                        written -= 1;
+                    return message;
+                }, TimeSpan.FromSeconds(1));
+                writer.HasMessages.ShouldBeFalse();
+
+                writer.Send(x.ConnectionActor, write);
+                writer.ExpectMsg<Tcp.CommandFailed>();
+                writer.Send(x.ConnectionActor, Tcp.Write.Empty);
+                writer.ExpectMsg<Tcp.CommandFailed>();
+
+                x.PullFromServerSide(x.TestSize * written);
+
+                writer.Send(x.ConnectionActor, x.WriteCmd(Works.Instance));
+                writer.ExpectMsg(Works.Instance);
+            });
+        }
+
+        [Fact]
+        public void An_Outgoing_Connection_Must_support_useResumeWriting_false_queue_flushed()
+        {
+            new EstablishedConnectionTest(this, useResumeWriting: false).Run(x =>
+            {
+                var writer = CreateTestProbe();
+                var write = x.WriteCmd(Tcp.NoAck.Instance);
+
+                var written = 0;
+                while (!writer.HasMessages)
+                {
+                    writer.Send(x.ConnectionActor, write);
+                    written += 1;
+                }
+                writer.ReceiveWhile(message =>
+                {
+                    if (message is Tcp.CommandFailed)
+                        written -= 1;
+                    return message;
+                }, TimeSpan.FromSeconds(1));
+
+                x.PullFromServerSide(x.TestSize * written);
+
+                writer.Send(x.ConnectionActor, x.WriteCmd(Works.Instance));
+                writer.ExpectMsg(Works.Instance);
+            });
+        }
+
+        [Fact]
+        public void An_Outgoing_Connection_Must_report_abort_before_handler_is_registered()
+        {
+            var bindAddress = new IPEndPoint(IPAddress.Loopback, 23402);
+            var serverSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            serverSocket.Bind(bindAddress);
+            serverSocket.Listen(100);
+
+            var connectionProbe = CreateTestProbe();
+            connectionProbe.Send(Sys.Tcp(), new Tcp.Connect(bindAddress));
+
+            Sys.Tcp().Tell(new Tcp.Connect(bindAddress));
+            ExpectMsg<Tcp.Connected>();     //TODO: Investigate why this is not reuired in JVM Akka
+
+            var socket = serverSocket.Accept();
+            connectionProbe.ExpectMsg<Tcp.Connected>();
+            var connectionActor = connectionProbe.Sender;
+            connectionActor.Tell(PoisonPill.Instance);
+            Watch(connectionActor);
+            ExpectTerminated(connectionActor);
+
+            Assert.Throws<SocketException>(() => socket.Receive(new byte[200]));
         }
     }
 
@@ -480,6 +753,7 @@ namespace Akka.Tests.IO
                 SetServerSocketOptions();
                 LocalServerChannel.Socket.Bind(ServerAddress);
                 LocalServerChannel.Socket.Blocking = false;
+                LocalServerChannel.Socket.Listen(100);
                 body(this);
             }
             finally
@@ -505,15 +779,15 @@ namespace Akka.Tests.IO
             return CreateConnectionActor(ServerAddress, options);
         }
 
-        public TestActorRef<TcpOutgoingConnection> CreateConnectionActor(IPEndPoint serverAddress, IEnumerable<Inet.SocketOption> options = null, bool pullMode = false)
+        public TestActorRef<TcpOutgoingConnection> CreateConnectionActor(IPEndPoint serverAddress, IEnumerable<Inet.SocketOption> options = null, TimeSpan? timeout =null, bool pullMode = false)
         {
-            var @ref = CreateConnectionActorWithoutRegistration(serverAddress, options, pullMode: pullMode);
-            @ref.Tell(NewChannelRegistration(@ref));
+            var @ref = CreateConnectionActorWithoutRegistration(serverAddress, options, timeout: timeout, pullMode: pullMode);
+            @ref.Tell(NewChannelRegistration());
             return @ref;
         }
 
         
-        public ChannelRegistration NewChannelRegistration(TestActorRef<TcpOutgoingConnection> @ref)
+        public ChannelRegistration NewChannelRegistration()
         {
             return new ChannelRegistration(
                 enableInterest: op => InterestCallReceiver.Ref.Tell((int) op),
@@ -531,12 +805,12 @@ namespace Akka.Tests.IO
                 Context.Stop(Self);
             }
         }
-        public TestActorRef<TcpOutgoingConnection> CreateConnectionActorWithoutRegistration(IPEndPoint serverAddress, IEnumerable<Inet.SocketOption> options, TimeSpan? timeout = null, bool pullMode = false)
+        public TestActorRef<TcpOutgoingConnection> CreateConnectionActorWithoutRegistration(EndPoint serverAddress, IEnumerable<Inet.SocketOption> options = null, TimeSpan? timeout = null, bool pullMode = false)
         {
             var tcp = Tcp.Instance.Apply(_system);
 
             return new TestActorRef<TcpOutgoingConnection>(_system, Props.Create(() =>
-                        new TestTcpOutgoingConnection(tcp, this, UserHandler, new Tcp.Connect(serverAddress, null, options, timeout, pullMode))));
+                        new TestTcpOutgoingConnection(tcp, this, UserHandler.Ref, new Tcp.Connect(serverAddress, null, options, timeout, pullMode))));
         }
     }
 
@@ -559,9 +833,10 @@ namespace Akka.Tests.IO
                 return _connectionActor ??
                        (_connectionActor = CreateConnectionActor(ServerAddress, pullMode: _pullMode));
             }
+            set { _connectionActor = value; }
         }
 
-        protected SocketChannel ClientSideChannel
+        internal SocketChannel ClientSideChannel
         {
             get { return _clientSideChannel ?? (_clientSideChannel = ConnectionActor.UnderlyingActor.Channel); }
         }
@@ -605,12 +880,12 @@ namespace Akka.Tests.IO
         private SocketChannel _serverSideChannel;
         private TestProbe _connectionHandler;
 
-        public EstablishedConnectionTest(TestKitBase kit, bool keepOpenOnPeerClosed = false, bool useResumeWriting = false, bool pullMode = false) 
+        public EstablishedConnectionTest(TestKitBase kit, bool keepOpenOnPeerClosed = false, bool useResumeWriting = true, bool pullMode = false) 
             : base(kit, pullMode)
         {
             _kit = kit;
             KeepOpenOnPeerClosed = keepOpenOnPeerClosed;
-            UseResumeWriting = UseResumeWriting;
+            UseResumeWriting = useResumeWriting;
             PullMode = pullMode;
         }
 
@@ -677,7 +952,7 @@ namespace Akka.Tests.IO
 
         public void PullFromServerSide(int remaining)
         {
-            PullFromServerSide(remaining, 1000, new ByteBuffer(new byte[TestSize]));
+            PullFromServerSide(remaining, 1000, new ByteBuffer(new byte[remaining]));
         }
 
         public void PullFromServerSide(int remaining, int remainingRetries, ByteBuffer into)
