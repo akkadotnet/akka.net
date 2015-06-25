@@ -36,7 +36,7 @@ namespace Akka.Cluster
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class ClusterHeartbeatSender : ReceiveActor
+    public sealed class ClusterHeartbeatSender : ReceiveActor
     {
         private readonly ICancelable _heartbeatTask;
 

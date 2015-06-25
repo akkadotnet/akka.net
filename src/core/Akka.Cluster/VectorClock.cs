@@ -26,7 +26,7 @@ namespace Akka.Cluster
     /// 
     /// Based on code from the 'vlock' VectorClock library by Coda Hale.
     /// </summary>
-    class VectorClock
+    public class VectorClock
     {
         /**
          * Hash representation of a versioned node name.
