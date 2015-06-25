@@ -138,6 +138,7 @@
     <Compile Include="Event\EventStreamSpec.cs" />
     <Compile Include="IO\SimpleDnsCacheSpec.cs" />
     <Compile Include="IO\TcpConnectionSpec.cs" />
+    <Compile Include="IO\TcpIntegrationSpec.cs" />
     <Compile Include="IO\TcpListenerSpec.cs" />
     <Compile Include="IO\UdpConnectedIntegrationSpec.cs" />
     <Compile Include="IO\UdpIntegrationSpec.cs" />
