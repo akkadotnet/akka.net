@@ -231,6 +231,7 @@
     <Compile Include="Event\LogMessage.cs" />
     <Compile Include="Event\StandardOutLogger.cs" />
     <Compile Include="Helios.Concurrency.DedicatedThreadPool.cs" />
+    <Compile Include="Pattern\BackoffSupervisor.cs" />
     <Compile Include="Routing\ConsistentHashRouter.cs" />
     <Compile Include="Serialization\JavaSerializer.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
