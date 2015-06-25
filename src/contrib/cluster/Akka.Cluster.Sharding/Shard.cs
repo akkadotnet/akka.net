@@ -114,14 +114,12 @@ namespace Akka.Cluster.Sharding
 
         private readonly string _typeName;
         private readonly string _shardId;
+
         private readonly Props _entryProps;
-        private readonly TimeSpan _shardFailureBackoff;
-        private readonly TimeSpan _entryRestartBackoff;
-        private readonly TimeSpan _snapshotInterval;
-        private readonly int _bufferSize;
-        private readonly bool _canRememberEntries;
+        private readonly ClusterShardingSettings _settings;
         private readonly IdExtractor _idExtractor;
         private readonly ShardResolver _shardResolver;
+        private readonly object _handOffStopMessage;
 
         private readonly ICancelable _snapshotCancel;
         private readonly ILoggingAdapter _log;
@@ -132,31 +130,56 @@ namespace Akka.Cluster.Sharding
         private ISet<IActorRef> _passivating = new HashSet<IActorRef>();
         private ConcurrentDictionary<EntryId, ICollection<BufferedMessage>> _messageBuffers = new ConcurrentDictionary<string, ICollection<BufferedMessage>>();
 
+        private readonly Cluster _cluster;
+        private readonly string _persistenceId;
+
+        private int _persistCount = 0;
         private IActorRef _handOffStopper = null;
 
-        public Shard(string typeName, ShardId shardId, Props entryProps, TimeSpan shardFailureBackoff, TimeSpan entryRestartBackoff, TimeSpan snapshotInterval, int bufferSize, bool canRememberEntries, IdExtractor idExtractor, ShardResolver shardResolver)
+        public Shard(string typeName, string shardId, Props entryProps, ClusterShardingSettings settings, IdExtractor idExtractor, ShardResolver shardResolver, object handOffStopMessage)
         {
             _typeName = typeName;
             _shardId = shardId;
             _entryProps = entryProps;
-            _shardFailureBackoff = shardFailureBackoff;
-            _entryRestartBackoff = entryRestartBackoff;
-            _snapshotInterval = snapshotInterval;
-            _bufferSize = bufferSize;
-            _canRememberEntries = canRememberEntries;
+            _settings = settings;
             _idExtractor = idExtractor;
             _shardResolver = shardResolver;
+            _handOffStopMessage = handOffStopMessage;
+
+            _cluster = Cluster.Get(Context.System);
+            _persistenceId = "/sharding/" + _typeName + "Shard/" + _shardId;
+
+            JournalPluginId = _settings.JournalPluginId;
+            SnapshotPluginId = _settings.SnapshotPluginId;
 
             _log = Context.GetLogger();
-            _snapshotCancel = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_snapshotInterval,
-                _snapshotInterval, Self, SnapshotTick.Instance, Self);
         }
 
-        public override ShardId PersistenceId { get { return "/sharding/" + _typeName + "Shard/" + _shardId; } }
+        public override ShardId PersistenceId { get { return _persistenceId; } }
 
         public int TotalBufferSize
         {
             get { return _messageBuffers.Aggregate(0, (acc, entry) => acc + entry.Value.Count); }
+        }
+
+        private void ProcessChange<T>(T @event, Action<T> handler)
+        {
+            if (_settings.RememberEntities)
+            {
+                SaveSnapshotIfNeeded();
+                Persist(@event, handler);
+            }
+            else handler(@event);
+        }
+
+        private void SaveSnapshotIfNeeded()
+        {
+            _persistCount++;
+            if (_persistCount%_settings.TunningParameters.SnapshotAfter == 0)
+            {
+                _log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
+                SaveSnapshot(_state);
+            }
         }
 
         protected override void PostStop()
@@ -164,21 +187,15 @@ namespace Akka.Cluster.Sharding
             base.PostStop();
             _snapshotCancel.Cancel();
         }
-
-        protected void ProcessChange<T>(T evt, Action<T> handler)
-        {
-            if (_canRememberEntries) Persist(evt, handler);
-            else handler(evt);
-        }
-
+        
         protected override bool ReceiveRecover(object message)
         {
-            if (message is EntryStarted && _canRememberEntries)
+            if (message is EntryStarted && _settings.RememberEntities)
             {
                 var started = (EntryStarted)message;
                 _state.Entries.Add(started.EntryId);
             }
-            else if (message is EntryStopped && _canRememberEntries)
+            else if (message is EntryStopped && _settings.RememberEntities)
             {
                 var stopped = (EntryStopped)message;
                 _state.Entries.Remove(stopped.EntryId);
@@ -202,8 +219,7 @@ namespace Akka.Cluster.Sharding
 
         private IActorRef GetEntry(EntryId id)
         {
-            // val name = URLEncoder.encode(id, "utf-8")
-            var name = id;
+            var name = Uri.EscapeDataString(id);
             var child = Context.Child(name);
             if (child == null)
             {
@@ -236,26 +252,12 @@ namespace Akka.Cluster.Sharding
             {
                 ReceiveShardRegionCommand(message as IShardRegionCommand);
             }
-            else if (message is PersistenceFailure)
+            else if (_idExtractor(message) != null)
             {
-                ReceivePersistenceFailure(message as PersistenceFailure);
-            }
-            else if (false)
-            {
-                //case msg if idExtractor.isDefinedAt(msg)            ⇒ deliverMessage(msg, sender())
-                return true;
+                DeliverMessage(message, Sender);
             }
             else return false;
             return true;
-        }
-
-        private void ReceivePersistenceFailure(PersistenceFailure persistenceFailure)
-        {
-            var payload = (StateChange)persistenceFailure.Payload;
-            _log.Debug("Persistence of [{0}] failed, will backoff and retry", persistenceFailure.Payload);
-            _messageBuffers.TryAdd(payload.EntryId, new LinkedList<BufferedMessage>());
-
-            Context.System.Scheduler.ScheduleTellOnce(_shardFailureBackoff, Self, new RetryPersistence(payload), Self);
         }
 
         private void ReceiveShardRegionCommand(IShardRegionCommand command)
@@ -266,9 +268,7 @@ namespace Akka.Cluster.Sharding
 
         private void ReceiveShardCommand(IShardCommand message)
         {
-            if (message is SnapshotTick) SaveSnapshot(_state);
-            else if (message is RetryPersistence) HandleRetryPersistence(((RetryPersistence)message).Payload);
-            else if (message is RestartEntry) GetEntry(((RestartEntry)message).EntryId);
+            if (message is RestartEntry) GetEntry(((RestartEntry)message).EntryId);
         }
 
         private void ReceiveCoordinatorMessage(ICoordinatorMessage coordinatorMessage)
@@ -300,10 +300,10 @@ namespace Akka.Cluster.Sharding
                 }
                 else
                 {
-                    if (_canRememberEntries && !_passivating.Contains(terminated.ActorRef))
+                    if (_settings.RememberEntities && !_passivating.Contains(terminated.ActorRef))
                     {
                         _log.Debug("Entry [{0}] stopped without passivating, will restart after backoff", id);
-                        Context.System.Scheduler.ScheduleTellOnce(_entryRestartBackoff, Self, new RestartEntry(id), Self);
+                        Context.System.Scheduler.ScheduleTellOnce(_settings.TunningParameters.EntityRestartBackoff, Self, new RestartEntry(id), Self);
                     }
                     else
                     {
@@ -413,7 +413,7 @@ namespace Akka.Cluster.Sharding
                 ICollection<BufferedMessage> messages;
                 if (_messageBuffers.TryGetValue(id, out messages))
                 {
-                    if (TotalBufferSize >= _bufferSize)
+                    if (TotalBufferSize >= _settings.TunningParameters.BufferSize)
                     {
                         _log.Debug("Buffer is full, dropping message for entry [{0}]", id);
                         Context.System.DeadLetters.Tell(message);
@@ -433,20 +433,20 @@ namespace Akka.Cluster.Sharding
 
         private void DeliverTo(EntryId id, object message, object payload, IActorRef sender)
         {
-            // val name = URLEncoder.encode(id, "utf-8")
-            var name = id;
+            var name = Uri.EscapeDataString(id);
             var child = Context.Child(name);
             if (child != null)
             {
                 child.Tell(payload, sender);
             }
-            else if (_canRememberEntries)
+            else if (_settings.RememberEntities)
             {
                 //Note; we only do this if remembering, otherwise the buffer is an overhead
                 var vec = new LinkedList<BufferedMessage>();
                 vec.AddLast(new BufferedMessage(message, sender));
                 if (_messageBuffers.TryAdd(id, vec))
                 {
+                    SaveSnapshotIfNeeded();
                     Persist(new EntryStarted(id), SendMessageBuffer);
                 }
             }

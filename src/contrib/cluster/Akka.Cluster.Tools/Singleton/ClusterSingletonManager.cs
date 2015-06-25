@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
 
@@ -138,10 +139,10 @@ namespace Akka.Cluster.Tools.Singleton
             _membersByAge = state.Members.Where(m => (m.Status == MemberStatus.Up || m.Status == MemberStatus.Leaving) && MatchingRole(m)).ToImmutableSortedSet(MemberAgeOrdering.Descending);
             var safeToBeOldest = !state.Members.Any(m => m.Status == MemberStatus.Down || m.Status == MemberStatus.Exiting);
             var initial = new InitialOldestState()
-                          {
-                              Oldest = MemberAddressOrDefault(_membersByAge.FirstOrDefault()),
-                              SafeToBeOldest = safeToBeOldest
-                          };
+            {
+                Oldest = MemberAddressOrDefault(_membersByAge.FirstOrDefault()),
+                SafeToBeOldest = safeToBeOldest
+            };
             _changes = _changes.Enqueue(initial);
         }
 
@@ -217,12 +218,17 @@ namespace Akka.Cluster.Tools.Singleton
     public sealed class ClusterSingletonManagerIsStuck : AkkaException
     {
         public ClusterSingletonManagerIsStuck(string message)
-            : base(message) { }
+            : base(message)
+        { }
     }
 
 
     internal sealed class ClusterSingletonManagerActor : FSM<ClusterSingletonState, IClusterSingletonData>
     {
+        private readonly Props _singletonProps;
+        private readonly object _terminationMessage;
+        private readonly ClusterSingletonManagerSettings _settings;
+
         private const string HandOverRetryTimer = "hand-over-retry";
         private const string TakeOverRetryTimer = "take-over-retry";
         private const string CleanupTimer = "cleanup";
@@ -231,44 +237,57 @@ namespace Akka.Cluster.Tools.Singleton
         private bool _selfExited;
         private IActorRef _oldestChangedBuffer;
         private ImmutableDictionary<Address, Deadline> _removed = ImmutableDictionary<Address, Deadline>.Empty;
-        private readonly string _role;
-        private readonly Props _singletonProps;
-        private readonly TimeSpan _retryInterval;
-        private readonly string _singletonName;
+        //private readonly string _role;
+        //private readonly Props _singletonProps;
+        //private readonly TimeSpan _retryInterval;
+        //private readonly string _singletonName;
         private readonly int _maxHandOverRetries;
         private readonly int _maxTakeOverRetries;
-        private readonly object _terminationMessage;
+        //private readonly object _terminationMessage;
         private readonly Akka.Cluster.Cluster _cluster = Akka.Cluster.Cluster.Get(Context.System);
         private readonly ILoggingAdapter _log = Logging.GetLogger(Context.System, "ClusterSingletonManager");
 
-        public ClusterSingletonManagerActor(
-                Props singletonProps,
-                string singletonName,
-                object terminationMessage,
-                string role,
-                int maxHandOverRetries,
-                int maxTakeOverRetries,
-                TimeSpan retryInterval
-            )
+        //public ClusterSingletonManagerActor(
+        //        Props singletonProps,
+        //        string singletonName,
+        //        object terminationMessage,
+        //        string role,
+        //        int maxHandOverRetries,
+        //        int maxTakeOverRetries,
+        //        TimeSpan retryInterval
+        //    )
+        //{
+        //    //Guard.Assert(
+        //    //    maxTakeOverRetries < maxHandOverRetries,
+        //    //    String.Format(
+        //    //        "maxTakeOverRetries [{0}]must be < maxHandOverRetries [{1}]",
+        //    //        maxTakeOverRetries,
+        //    //        maxHandOverRetries));
+
+        //    //Guard.Assert(
+        //    //    string.IsNullOrEmpty(role) || _cluster.SelfRoles.Contains(role),
+        //    //    String.Format("This cluster member [{0}] doesn't have the role [{1}]", _cluster.SelfAddress, role));
+
+        //    _singletonProps = singletonProps;
+        //    _singletonName = singletonName;
+        //    _role = role;
+        //    _maxHandOverRetries = maxHandOverRetries;
+        //    _maxTakeOverRetries = maxTakeOverRetries;
+        //    _retryInterval = retryInterval;
+        //    _terminationMessage = terminationMessage;
+        //    InitializeFSM();
+        //}
+
+        public ClusterSingletonManagerActor(Props singletonProps, object terminationMessage, ClusterSingletonManagerSettings settings)
         {
-            //Guard.Assert(
-            //    maxTakeOverRetries < maxHandOverRetries,
-            //    String.Format(
-            //        "maxTakeOverRetries [{0}]must be < maxHandOverRetries [{1}]",
-            //        maxTakeOverRetries,
-            //        maxHandOverRetries));
-
-            //Guard.Assert(
-            //    string.IsNullOrEmpty(role) || _cluster.SelfRoles.Contains(role),
-            //    String.Format("This cluster member [{0}] doesn't have the role [{1}]", _cluster.SelfAddress, role));
-
             _singletonProps = singletonProps;
-            _singletonName = singletonName;
-            _role = role;
-            _maxHandOverRetries = maxHandOverRetries;
-            _maxTakeOverRetries = maxTakeOverRetries;
-            _retryInterval = retryInterval;
             _terminationMessage = terminationMessage;
+            _settings = settings;
+
+            var n = (int)(_settings.RemovalMargin.TotalMilliseconds / _settings.HandOverRetryInterval.TotalMilliseconds);
+            _maxHandOverRetries = n + 3;
+            _maxTakeOverRetries = Math.Max(1, n - 3);
+
             InitializeFSM();
         }
 
@@ -315,7 +334,7 @@ namespace Akka.Cluster.Tools.Singleton
         private State<ClusterSingletonState, IClusterSingletonData> GoToOldest()
         {
             LogInfo("Singleton manager [{0}] starting singleton actor", _cluster.SelfAddress);
-            var singleton = Context.Watch(Context.ActorOf(_singletonProps, _singletonName));
+            var singleton = Context.Watch(Context.ActorOf(_singletonProps, _settings.SingletonName));
             return
                 GoTo(ClusterSingletonState.Oldest)
                     .Using(new OldestData() { Singleton = singleton, SingletonTerminated = false });
@@ -372,7 +391,7 @@ namespace Akka.Cluster.Tools.Singleton
                         {
                             _oldestChangedBuffer =
                                 Context.ActorOf(
-                                    Actor.Props.Create<OldestChangedBuffer>(_role)
+                                    Actor.Props.Create<OldestChangedBuffer>(_settings.Role)
                                         .WithDispatcher(Context.Props.Dispatcher));
                             GetNextOldestChange();
                             nextState = Stay();
@@ -544,7 +563,7 @@ namespace Akka.Cluster.Tools.Singleton
                                                         SetTimer(
                                                             HandOverRetryTimer,
                                                             new HandOverRetry { Count = handOverRetry.Count + 1 },
-                                                            _retryInterval,
+                                                            _settings.HandOverRetryInterval,
                                                             repeat: false);
                                                         nextState = Stay();
                                                     }
@@ -606,7 +625,7 @@ namespace Akka.Cluster.Tools.Singleton
                                             SetTimer(
                                                 TakeOverRetryTimer,
                                                 new TakeOverRetry { Count = 1 },
-                                                _retryInterval);
+                                                _settings.HandOverRetryInterval);
                                             nextState =
                                                 GoTo(ClusterSingletonState.WasOldest)
                                                     .Using(
@@ -621,7 +640,7 @@ namespace Akka.Cluster.Tools.Singleton
                                     }
                                     else
                                     {
-                                        SetTimer(TakeOverRetryTimer, new TakeOverRetry { Count = 1 }, _retryInterval);
+                                        SetTimer(TakeOverRetryTimer, new TakeOverRetry { Count = 1 }, _settings.HandOverRetryInterval);
                                         nextState =
                                             GoTo(ClusterSingletonState.WasOldest)
                                                 .Using(
@@ -691,7 +710,7 @@ namespace Akka.Cluster.Tools.Singleton
                                         SetTimer(
                                             TakeOverRetryTimer,
                                             new TakeOverRetry { Count = takeOverRetry.Count + 1 },
-                                            _retryInterval);
+                                            _settings.HandOverRetryInterval);
                                         nextState = Stay();
                                     }
                                     else
@@ -850,7 +869,7 @@ namespace Akka.Cluster.Tools.Singleton
                 {
                     LogInfo("ClusterSingletonManager state change [{0} -> {1}] {2}", from, to, StateData.ToString());
 
-                    if (to == ClusterSingletonState.BecomingOldest) SetTimer(HandOverRetryTimer, new HandOverRetry { Count = 1 }, _retryInterval);
+                    if (to == ClusterSingletonState.BecomingOldest) SetTimer(HandOverRetryTimer, new HandOverRetry { Count = 1 }, _settings.HandOverRetryInterval);
                     if (from == ClusterSingletonState.BecomingOldest) CancelTimer(HandOverRetryTimer);
                     if (from == ClusterSingletonState.WasOldest) CancelTimer(TakeOverRetryTimer);
                     if (to == ClusterSingletonState.Younger || to == ClusterSingletonState.Oldest) GetNextOldestChange();
@@ -881,42 +900,107 @@ namespace Akka.Cluster.Tools.Singleton
 
     public static class ClusterSingletonManager
     {
-        public static Props Props(
-            Props singletonProps,
-            string singletonName,
-            object terminationMessage,
-            string role,
-            int maxHandOverRetries,
-            int maxTakeOverRetries,
-            TimeSpan retryInterval)
+        public static Props Props(Props singletonProps, object terminationMessage,
+            ClusterSingletonManagerSettings settings)
         {
-            return
-                Actor.Props.Create<ClusterSingletonManagerActor>(
-                    singletonProps,
-                    singletonName,
-                    terminationMessage,
-                    role,
-                    maxHandOverRetries,
-                    maxTakeOverRetries,
-                    retryInterval).WithDeploy(Deploy.Local);
+            return Actor.Props.Create(() => new ClusterSingletonManagerActor(singletonProps, terminationMessage, settings)).WithDeploy(Deploy.Local);
+        }
+    }
+
+    /**
+     * @param singletonName The actor name of the child singleton actor.
+     *
+     * @param role Singleton among the nodes tagged with specified role.
+     *   If the role is not specified it's a singleton among all nodes in
+     *   the cluster.
+     *
+     * @param removalMargin Margin until the singleton instance that belonged to
+     *   a downed/removed partition is created in surviving partition. The purpose of
+     *   this margin is that in case of a network partition the singleton actors
+     *   in the non-surviving partitions must be stopped before corresponding actors
+     *   are started somewhere else. This is especially important for persistent
+     *   actors.
+     *
+     * @param handOverRetryInterval When a node is becoming oldest it sends hand-over
+     *   request to previous oldest, that might be leaving the cluster. This is
+     *   retried with this interval until the previous oldest confirms that the hand
+     *   over has started or the previous oldest member is removed from the cluster
+     *   (+ `removalMargin`).
+     */
+    public sealed class ClusterSingletonManagerSettings : INoSerializationVerificationNeeded
+    {
+        public static ClusterSingletonManagerSettings Create(ActorSystem system)
+        {
+            var config = system.Settings.Config.GetConfig("akka.cluster.singleton");
+            if(config == null)
+                throw new ConfigurationException(string.Format("Cannot initialize {0}: akka.cluster.singleton configuration node was not provided", typeof(ClusterSingletonManagerSettings)));
+
+            return Create(config).WithRemovalMargin(Cluster.Get(system).Settings.DownRemovalMargin);
         }
 
-        public static Props Props(
-            Props singletonProps,
-            string singletonName,
-            object terminationMessage,
-            string role)
+        public static ClusterSingletonManagerSettings Create(Config config)
         {
-            return
-                ClusterSingletonManager.Props(
-                    singletonProps,
-                    singletonName,
-                    terminationMessage,
-                    role,
-                    maxHandOverRetries: 10,
-                    maxTakeOverRetries: 5,
-                    retryInterval: TimeSpan.FromSeconds(1.0));
+            var role = config.GetString("role");
+            if (role == string.Empty) role = null;
+            return new ClusterSingletonManagerSettings(
+                singletonName: config.GetString("singleton-name"),
+                role: role,
+                removalMargin: TimeSpan.MinValue, 
+                handOverRetryInterval: config.GetTimeSpan("hand-over-retry-interval"));
         }
 
+        public readonly string SingletonName;
+        public readonly string Role;
+        public readonly TimeSpan RemovalMargin;
+        public readonly TimeSpan HandOverRetryInterval;
+
+        public ClusterSingletonManagerSettings(string singletonName, string role, TimeSpan removalMargin, TimeSpan handOverRetryInterval)
+        {
+            if(string.IsNullOrWhiteSpace(singletonName)) 
+                throw new ArgumentNullException("singletonName");
+            if(removalMargin == TimeSpan.Zero)
+                throw new ArgumentException("ClusterSingletonManagerSettings.RemovalMargin must be positive", "removalMargin");
+            if(handOverRetryInterval == TimeSpan.Zero)
+                throw new ArgumentException("ClusterSingletonManagerSettings.HandOverRetryInterval must be positive", "handOverRetryInterval");
+
+            SingletonName = singletonName;
+            Role = role;
+            RemovalMargin = removalMargin;
+            HandOverRetryInterval = handOverRetryInterval;
+        }
+
+        public ClusterSingletonManagerSettings WithSingletonName(string singletonName)
+        {
+            return Copy(singletonName: singletonName);
+        }
+
+        public ClusterSingletonManagerSettings WithRole(string role)
+        {
+            return new ClusterSingletonManagerSettings(
+                singletonName: SingletonName,
+                role: role,
+                removalMargin: RemovalMargin,
+                handOverRetryInterval: HandOverRetryInterval);
+        }
+
+        public ClusterSingletonManagerSettings WithRemovalMargin(TimeSpan removalMargin)
+        {
+            return Copy(removalMargin: removalMargin);
+        }
+
+        public ClusterSingletonManagerSettings WithHandOverRetryInterval(TimeSpan handOverRetryInterval)
+        {
+            return Copy(handOverRetryInterval: handOverRetryInterval);
+        }
+
+        private ClusterSingletonManagerSettings Copy(string singletonName = null, string role = null, TimeSpan? removalMargin = null,
+            TimeSpan? handOverRetryInterval = null)
+        {
+            return new ClusterSingletonManagerSettings(
+                singletonName: singletonName ?? SingletonName,
+                role: role ?? Role,
+                removalMargin: removalMargin ?? RemovalMargin,
+                handOverRetryInterval: handOverRetryInterval ?? HandOverRetryInterval);
+        }
     }
 }

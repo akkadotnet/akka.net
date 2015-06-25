@@ -15,28 +15,23 @@ using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
 {
+    public sealed class EchoStarted
+    {
+        public static readonly EchoStarted Instance = new EchoStarted();
+
+        private EchoStarted() { }
+    }
+
+    public class Echo : ReceiveActor
+    {
+        public Echo(IActorRef testActor)
+        {
+            testActor.Tell(EchoStarted.Instance);
+            ReceiveAny(_ => Sender.Tell(Self));
+        }
+    }
     public class ClusterSingletonManagerChaosConfig : MultiNodeConfig
     {
-        #region Classes
-
-        public sealed class EchoStarted
-        {
-            public static readonly EchoStarted Instance = new EchoStarted();
-
-            private EchoStarted() { }
-        }
-
-        public class Echo : ReceiveActor
-        {
-            public Echo(IActorRef testActor)
-            {
-                testActor.Tell(EchoStarted.Instance);
-                ReceiveAny(_ => Sender.Tell(Self));
-            }
-        }
-
-        #endregion
-
         public readonly RoleName Controller;
         public readonly RoleName First;
         public readonly RoleName Second;
@@ -57,7 +52,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
             CommonConfig = ConfigurationFactory.ParseString(@"
             akka.loglevel = INFO
-            akka.actor.provider = ""akka.cluster.ClusterActorRefProvider""
+            akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             akka.remote.log - remote - lifecycle - events = off
             akka.cluster.auto - down - unreachable - after = 0s
             ");
@@ -100,7 +95,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 AwaitMemberUp(memberProbe, first);
                 RunOn(() =>
                 {
-                    ExpectMsg<ClusterSingletonManagerChaosConfig.EchoStarted>();
+                    ExpectMsg<EchoStarted>();
                 }, first);
                 EnterBarrier("first-started");
 
@@ -148,7 +143,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 EnterBarrier("after-crash");
                 RunOn(() =>
                 {
-                    ExpectMsg<ClusterSingletonManagerChaosConfig.EchoStarted>();
+                    ExpectMsg<EchoStarted>();
                 }, fourth);
                 EnterBarrier("fourth-active");
 
@@ -186,10 +181,10 @@ namespace Akka.Cluster.Tools.Tests.Singleton
               name = "echo")
             */
             return Sys.ActorOf(ClusterSingletonManager.Props(
-                singletonProps: Props.Create(() => new ClusterSingletonManagerChaosConfig.Echo(TestActor)),
-                singletonName: "echo",
+                singletonProps: Props.Create(() => new Echo(TestActor)),
                 terminationMessage: PoisonPill.Instance,
-                role: "echo"));
+                settings: ClusterSingletonManagerSettings.Create(Sys)),
+                name: "echo");
         }
 
         private void Crash(params RoleName[] roles)

@@ -3,13 +3,14 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
+using Akka.Configuration;
 
 namespace Akka.Cluster.Tools.Singleton
 {
-        
+
     internal sealed class ClusterSingletonProxyActor : UntypedActor, IWithUnboundedStash
     {
-        internal sealed class TryToIdentifySingleton 
+        internal sealed class TryToIdentifySingleton
         {
             private TryToIdentifySingleton() { }
             static TryToIdentifySingleton() { }
@@ -17,9 +18,9 @@ namespace Akka.Cluster.Tools.Singleton
             private static readonly TryToIdentifySingleton _instance = new TryToIdentifySingleton();
             public static TryToIdentifySingleton Instance { get { return _instance; } }
         }
-  
+
         private ImmutableSortedSet<Member> _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(MemberAgeOrdering.Descending);
-    
+
         private readonly string[] _singletonPath;
         private readonly Akka.Cluster.Cluster _cluster = Akka.Cluster.Cluster.Get(Context.System);
         private int _identityCounter = 0;
@@ -31,15 +32,20 @@ namespace Akka.Cluster.Tools.Singleton
 
         public ClusterSingletonProxyActor(string singletonPathString, string role, TimeSpan singletonIdentificationInterval)
         {
-            _singletonPath = singletonPathString.Split(new [] {'/'}, StringSplitOptions.RemoveEmptyEntries);
+            _singletonPath = singletonPathString.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             _identityId = CreateIdentifyId(_identityCounter);
             _role = role;
+        }
+
+        public ClusterSingletonProxyActor(string singletonManagerPath, ClusterSingletonProxySettings settings)
+        {
+            throw new NotImplementedException();
         }
 
         private bool MatchingRole(Member member)
         {
             if (String.IsNullOrEmpty(_role)) return true;
-            
+
             return member.HasRole(_role);
         }
 
@@ -148,7 +154,7 @@ namespace Akka.Cluster.Tools.Singleton
                         var singletonAddress = new RootActorPath(oldest.Address) / _singletonPath;
                         Context.ActorSelection(singletonAddress).Tell(new Identify(_identityId));
                     }
-                 })
+                })
                  .Default(msg =>
                   {
                       if (_singleton != null)
@@ -171,6 +177,98 @@ namespace Akka.Cluster.Tools.Singleton
         public static Props Props(string singletonPath, string role, TimeSpan singletonIdentificationInterval)
         {
             return Actor.Props.Create<ClusterSingletonProxyActor>(singletonPath, role, singletonIdentificationInterval);
+        }
+
+        public static Props Props(string singletonManagerPath, ClusterSingletonProxySettings settings)
+        {
+            return Actor.Props.Create(() => new ClusterSingletonProxyActor(singletonManagerPath, settings)).WithDeploy(Deploy.Local);
+        }
+    }
+
+    /**
+     * @param singletonName The actor name of the singleton actor that is started by the [[ClusterSingletonManager]].
+     * @param role The role of the cluster nodes where the singleton can be deployed. If None, then any node will do.
+     * @param singletonIdentificationInterval Interval at which the proxy will try to resolve the singleton instance.
+     * @param bufferSize If the location of the singleton is unknown the proxy will buffer this number of messages
+     *   and deliver them when the singleton is identified. When the buffer is full old messages will be dropped
+     *   when new messages are sent viea the proxy. Use 0 to disable buffering, i.e. messages will be dropped
+     *   immediately if the location of the singleton is unknown.
+     */
+    public sealed class ClusterSingletonProxySettings
+    {
+        public static ClusterSingletonProxySettings Create(ActorSystem system)
+        {
+            var config = system.Settings.Config.GetConfig("akka.cluster.singleton-proxy");
+            if(config == null)
+                throw new ConfigurationException(string.Format("Cannot create {0}: akka.cluster.singleton-proxy configuration node not found", typeof(ClusterSingletonProxySettings)));
+
+            return Create(config);
+        }
+
+        public static ClusterSingletonProxySettings Create(Config config)
+        {
+            var role = config.GetString("role");
+            if (role == string.Empty) role = null;
+
+            return new ClusterSingletonProxySettings(
+                singletonName: config.GetString("singleton-name"),
+                role: role, 
+                singletonIdentificationInterval: config.GetTimeSpan("singleton-identification-interval"),
+                bufferSize: config.GetInt("buffer-size"));
+        }
+
+        public readonly string SingletonName;
+        public readonly string Role;
+        public readonly TimeSpan SingletonIdentificationInterval;
+        public readonly int BufferSize;
+
+        public ClusterSingletonProxySettings(string singletonName, string role, TimeSpan singletonIdentificationInterval, int bufferSize)
+        {
+            if (string.IsNullOrEmpty(singletonName))
+                throw new ArgumentNullException("singletonName");
+            if (singletonIdentificationInterval == TimeSpan.Zero)
+                throw new ArgumentException("ClusterSingletonProxySettings.SingletonIdentificationInterval must be positive", "singletonIdentificationInterval");
+            if (bufferSize <= 0)
+                throw new ArgumentException("ClusterSingletonProxySettings.BufferSize must be positive", "bufferSize");
+
+            SingletonName = singletonName;
+            Role = role;
+            SingletonIdentificationInterval = singletonIdentificationInterval;
+            BufferSize = bufferSize;
+        }
+
+        public ClusterSingletonProxySettings WithSingletonName(string singletonName)
+        {
+            return Copy(singletonName: singletonName);
+        }
+
+        public ClusterSingletonProxySettings WithRole(string role)
+        {
+            return new ClusterSingletonProxySettings(
+                singletonName: SingletonName,
+                role: role,
+                singletonIdentificationInterval: SingletonIdentificationInterval,
+                bufferSize: BufferSize);
+        }
+
+        public ClusterSingletonProxySettings WithSingletonIdentificationInterval(string singletonIdentificationInterval)
+        {
+            return Copy(singletonIdentificationInterval: SingletonIdentificationInterval);
+        }
+
+        public ClusterSingletonProxySettings WithBufferSize(int bufferSize)
+        {
+            return Copy(bufferSize: bufferSize);
+        }
+
+        public ClusterSingletonProxySettings Copy(string singletonName = null, string role = null,
+            TimeSpan? singletonIdentificationInterval = null, int? bufferSize = null)
+        {
+            return new ClusterSingletonProxySettings(
+                singletonName: singletonName ?? SingletonName,
+                role: role ?? Role,
+                singletonIdentificationInterval: singletonIdentificationInterval ?? SingletonIdentificationInterval,
+                bufferSize: bufferSize ?? BufferSize);
         }
     }
 }

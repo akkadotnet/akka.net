@@ -26,6 +26,7 @@ namespace Akka.Cluster.Sharding
     *
     * [[akka.actor.PoisonPill]] is a perfectly fine `stopMessage`.
     */
+    [Serializable]
     public sealed class Passivate : IShardRegionCommand
     {
         public Passivate(object stopMessage)
@@ -36,10 +37,68 @@ namespace Akka.Cluster.Sharding
         public object StopMessage { get; private set; }
     }
 
+    /*
+     * Send this message to the `ShardRegion` actor to handoff all shards that are hosted by
+     * the `ShardRegion` and then the `ShardRegion` actor will be stopped. You can `watch`
+     * it to know when it is completed.
+     */
+    [Serializable]
+    public sealed class GracefulShutdown : IShardRegionCommand
+    {
+        public static readonly GracefulShutdown Instance = new GracefulShutdown();
+
+        private GracefulShutdown()
+        {
+        }
+    }
+
+    /*
+     * Send this message to the `ShardRegion` actor to request for [[CurrentRegions]],
+     * which contains the addresses of all registered regions.
+     * Intended for testing purpose to see when cluster sharding is "ready".
+     */
+    [Serializable]
+    public sealed class GetCurrentRegions : IShardRegionCommand
+    {
+        public static readonly GetCurrentRegions Instance = new GetCurrentRegions();
+
+        private GetCurrentRegions()
+        {
+        }
+    }
+
+    /**
+     * Reply to `GetCurrentRegions`
+     */
+    [Serializable]
+    public sealed class CurrentRegions
+    {
+        public readonly Address[] Regions;
+        public CurrentRegions(Address[] regions)
+        {
+            Regions = regions;
+        }
+    }
+
+    [Serializable]
     public sealed class Retry : IShardRegionCommand
     {
         public static readonly Retry Instance = new Retry();
         private Retry() { }
+    }
+
+    /**
+     * When an remembering entities and the shard stops unexpected (e.g. persist failure), we
+     * restart it after a back off using this message.
+     */
+    [Serializable]
+    public sealed class RestartShard
+    {
+        public readonly ShardId ShardId;
+        public RestartShard(string shardId)
+        {
+            ShardId = shardId;
+        }
     }
 
     /**
@@ -65,6 +124,7 @@ namespace Akka.Cluster.Sharding
 
         private readonly string _typeName;
         private readonly Props _entryProps;
+        private readonly ClusterShardingSettings _settings;
         private readonly string _role;
         private readonly string _coordinatorPath;
         private readonly TimeSpan _retryInterval;
@@ -75,6 +135,7 @@ namespace Akka.Cluster.Sharding
         private readonly bool _rememberEntries;
         private readonly IdExtractor _idExtractor;
         private readonly ShardResolver _shardResolver;
+        private readonly object _handOffStopMessage;
 
         private readonly Cluster _cluster;
         private readonly IComparer<Member> _ageOrdering;
@@ -90,24 +151,17 @@ namespace Akka.Cluster.Sharding
 
         private readonly ICancelable _retryTask;
         private readonly ILoggingAdapter _log;
+        private bool _gracefulShutdownInProgres;
 
-        public ShardRegion(string typeName, Props entryProps, string role, string coordinatorPath,
-            TimeSpan retryInterval, TimeSpan shardFailureBackoff, TimeSpan entryRestartBackoff,
-            TimeSpan snapshotInterval, int bufferSize, bool rememberEntries, IdExtractor idExtractor,
-            ShardResolver shardResolver)
+        public ShardRegion(string typeName, Props entryProps, ClusterShardingSettings settings, string coordinatorPath, IdExtractor extractEntityId, ShardResolver extractShardId, object handOffStopMessage)
         {
             _typeName = typeName;
             _entryProps = entryProps;
-            _role = role;
+            _settings = settings;
             _coordinatorPath = coordinatorPath;
-            _retryInterval = retryInterval;
-            _shardFailureBackoff = shardFailureBackoff;
-            _entryRestartBackoff = entryRestartBackoff;
-            _snapshotInterval = snapshotInterval;
-            _bufferSize = bufferSize;
-            _rememberEntries = rememberEntries;
-            _idExtractor = idExtractor;
-            _shardResolver = shardResolver;
+            _idExtractor = extractEntityId;
+            _shardResolver = extractShardId;
+            _handOffStopMessage = handOffStopMessage;
 
             _cluster = Cluster.Get(Context.System);
 
@@ -121,9 +175,10 @@ namespace Akka.Cluster.Sharding
             _shards = new ConcurrentDictionary<string, IActorRef>();
             _shardsByRef = new ConcurrentDictionary<IActorRef, string>();
             _handingOff = new HashSet<IActorRef>();
+            _gracefulShutdownInProgres = false;
 
             _log = Context.GetLogger();
-            _retryTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(retryInterval, retryInterval, Self, Retry.Instance, Self);
+            _retryTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.TunningParameters.RetryInterval, _settings.TunningParameters.RetryInterval, Self, Retry.Instance, Self);
         }
 
         public int TotalBufferSize
@@ -188,87 +243,6 @@ namespace Akka.Cluster.Sharding
                 coordinator.Tell(RegistrationMessage);
         }
 
-        /**
-        * Scala API: Factory method for the [[akka.actor.Props]] of the [[ShardRegion]] actor.
-        */
-        public static Props Props(
-            string typeName,
-            Props entryProps,
-            string role,
-            string coordinatorPath,
-            TimeSpan retryInterval,
-            TimeSpan shardFailureBackoff,
-            TimeSpan entryRestartBackoff,
-            TimeSpan snapshotInterval,
-            int bufferSize,
-            bool rememberEntries,
-            IdExtractor idExtractor,
-            ShardResolver shardResolver)
-        {
-            return
-                Actor.Props.Create(
-                    () =>
-                        new ShardRegion(typeName, entryProps, role, coordinatorPath, retryInterval, shardFailureBackoff,
-                            entryRestartBackoff, snapshotInterval, bufferSize, rememberEntries, idExtractor,
-                            shardResolver));
-        }
-
-        public static Props Props(
-            string typeName,
-            Props entryProps,
-            string role,
-            string coordinatorPath,
-            TimeSpan retryInterval,
-            TimeSpan shardFailureBackoff,
-            TimeSpan entryRestartBackoff,
-            TimeSpan snapshotInterval,
-            int bufferSize,
-            bool rememberEntries,
-            IMessageExtractor messageExtractor)
-        {
-            IdExtractor idExtractor = messageExtractor.ToIdExtractor();
-            ShardResolver shardResolver = ShardResolvers.Default;
-
-            return
-                Actor.Props.Create(
-                    () =>
-                        new ShardRegion(typeName, entryProps, role, coordinatorPath, retryInterval, shardFailureBackoff,
-                            entryRestartBackoff, snapshotInterval, bufferSize, rememberEntries, idExtractor,
-                            shardResolver));
-        }
-
-
-        /**
-        * Scala API: Factory method for the [[akka.actor.Props]] of the [[ShardRegion]] actor
-        * when using it in proxy only mode.
-        */
-        public static Props ProxyProps(string typeName, string role, string coordinatorPath, TimeSpan retryInterval,
-            int bufferSize, IdExtractor idExtractor, ShardResolver shardResolver)
-        {
-            return
-                Actor.Props.Create(
-                    () =>
-                        new ShardRegion(typeName, null, role, coordinatorPath, retryInterval, TimeSpan.Zero,
-                            TimeSpan.Zero, TimeSpan.Zero, bufferSize, false, idExtractor, shardResolver));
-        }
-
-        /**
-        * Java API: : Factory method for the [[akka.actor.Props]] of the [[ShardRegion]] actor
-        * when using it in proxy only mode.
-        */
-        public static Props ProxyProps(string typeName, string role, string coordinatorPath, TimeSpan retryInterval,
-            int bufferSize, IMessageExtractor messageExtractor)
-        {
-            IdExtractor idExtractor = messageExtractor.ToIdExtractor();
-            ShardResolver shardResolver = ShardResolvers.Default;
-
-            return
-                Actor.Props.Create(
-                    () =>
-                        new ShardRegion(typeName, null, role, coordinatorPath, retryInterval, TimeSpan.Zero,
-                            TimeSpan.Zero, TimeSpan.Zero, bufferSize, false, idExtractor, shardResolver));
-        }
-
         protected override bool Receive(object message)
         {
             Tuple<string, object> extracted;
@@ -284,50 +258,76 @@ namespace Akka.Cluster.Sharding
 
         private void DeliverMessage(object message, IActorRef sender)
         {
-            var shard = _shardResolver(message);
-            IActorRef region;
-            if (_regionByShard.TryGetValue(shard, out region))
+            var restart = message as RestartShard;
+            if (restart != null)
             {
-                if (region.Equals(Self))
+                var shardId = restart.ShardId;
+                IActorRef regionRef;
+                if (_regionByShard.TryGetValue(shardId, out regionRef))
                 {
-                    GetShard(shard).Tell(message, sender);
+                    if (Self.Equals(regionRef)) GetShard(shardId);
                 }
                 else
                 {
-                    _log.Debug("Forwarding request for shard [{0}] to [{1}]", shard, region);
-                    region.Tell(message, sender);
+                    ICollection<BufferedMessage> buffer;
+                    if (!_shardBuffers.TryGetValue(shardId, out buffer))
+                    {
+                        buffer = new List<BufferedMessage>();
+                        _shardBuffers.Add(shardId, buffer);
+                        _log.Debug("Request shard [{0}] home", shardId);
+                        if(_coordinator != null) _coordinator.Tell(new GetShardHome(shardId));
+                    }
+
+                    buffer.Add(new BufferedMessage(message, sender));
                 }
             }
             else
             {
-                if (string.IsNullOrEmpty(shard))
+                var shard = _shardResolver(message);
+                IActorRef region;
+                if (_regionByShard.TryGetValue(shard, out region))
                 {
-                    _log.Warning("Shard must not be empty, dropping message [{0}]", message.GetType());
-                    Context.System.DeadLetters.Tell(message);
+                    if (region.Equals(Self))
+                    {
+                        GetShard(shard).Tell(message, sender);
+                    }
+                    else
+                    {
+                        _log.Debug("Forwarding request for shard [{0}] to [{1}]", shard, region);
+                        region.Tell(message, sender);
+                    }
                 }
                 else
                 {
-                    if (!_shardBuffers.ContainsKey(shard))
+                    if (string.IsNullOrEmpty(shard))
                     {
-                        _log.Debug("Request shard [{0}] home", shard);
-                        if (_coordinator != null) _coordinator.Tell(new GetShardHome(shard));
-                    }
-
-                    if (TotalBufferSize >= _bufferSize)
-                    {
-                        _log.Debug("Buffer is full, dropping message for shard [{0}]", shard);
+                        _log.Warning("Shard must not be empty, dropping message [{0}]", message.GetType());
                         Context.System.DeadLetters.Tell(message);
                     }
                     else
                     {
-                        ICollection<BufferedMessage> buffer;
-                        if (_shardBuffers.TryGetValue(shard, out buffer))
+                        if (!_shardBuffers.ContainsKey(shard))
                         {
-                            buffer.Add(new BufferedMessage(message, sender));
+                            _log.Debug("Request shard [{0}] home", shard);
+                            if (_coordinator != null) _coordinator.Tell(new GetShardHome(shard));
+                        }
+
+                        if (TotalBufferSize >= _bufferSize)
+                        {
+                            _log.Debug("Buffer is full, dropping message for shard [{0}]", shard);
+                            Context.System.DeadLetters.Tell(message);
                         }
                         else
                         {
-                            _shardBuffers.Add(shard, new List<BufferedMessage> { new BufferedMessage(message, sender) });
+                            ICollection<BufferedMessage> buffer;
+                            if (_shardBuffers.TryGetValue(shard, out buffer))
+                            {
+                                buffer.Add(new BufferedMessage(message, sender));
+                            }
+                            else
+                            {
+                                _shardBuffers.Add(shard, new List<BufferedMessage> { new BufferedMessage(message, sender) });
+                            }
                         }
                     }
                 }
@@ -339,9 +339,30 @@ namespace Akka.Cluster.Sharding
             if (command is Retry)
             {
                 if (_coordinator == null) Register();
-                else RequestShardBufferHomes();
+                else
+                {
+                    SendGracefulShutdownToCoordinator();
+                    RequestShardBufferHomes();
+                }
+            }
+            else if (command is GracefulShutdown)
+            {
+                _log.Debug("Starting graceful shutdown of region and all its shards");
+                _gracefulShutdownInProgres = true;
+                SendGracefulShutdownToCoordinator();
+            }
+            else if (command is GetCurrentRegions)
+            {
+                if (_coordinator != null) _coordinator.Forward(command);
+                else Sender.Tell(new CurrentRegions(new Address[0]));
             }
             else Unhandled(command);
+        }
+
+        private void SendGracefulShutdownToCoordinator()
+        {
+            if (_gracefulShutdownInProgres && _coordinator != null)
+                _coordinator.Tell(new GracefulShutdownRequest(Self));
         }
 
         private void HandleCoordinatorMessage(ICoordinatorMessage message)
@@ -387,23 +408,16 @@ namespace Akka.Cluster.Sharding
                 Context.Watch(_coordinator);
                 RequestShardBufferHomes();
             }
-            else if (message is SnapshotTick)
-            {
-                foreach (var child in Context.GetChildren())
-                {
-                    child.Tell(message);
-                }
-            }
             else if (message is BeginHandOff)
             {
                 var shard = ((BeginHandOff)message).Shard;
                 _log.Debug("Begin hand off shard [{0}]", shard);
-                IActorRef region;
-                if (_regionByShard.TryGetValue(shard, out region))
+                IActorRef regionRef;
+                if (_regionByShard.TryGetValue(shard, out regionRef))
                 {
-                    var updatedShards = _regions[region];
+                    var updatedShards = _regions[regionRef];
                     updatedShards.Remove(shard);
-                    if (updatedShards.Count == 0) _regions.Remove(region);
+                    if (updatedShards.Count == 0) _regions.Remove(regionRef);
 
                     _regionByShard.Remove(shard);
                 }
@@ -492,13 +506,10 @@ namespace Akka.Cluster.Sharding
                         new Shard(_typeName,
                         shard,
                         _entryProps,
-                        _shardFailureBackoff,
-                        _entryRestartBackoff,
-                        _snapshotInterval,
-                        _bufferSize,
-                        _rememberEntries,
+                        _settings,
                         _idExtractor,
-                        _shardResolver)), name));
+                        _shardResolver,
+                        _handOffStopMessage)), name));
 
                     _shards.Add(shard, shardRef);
                     _shardsByRef.Add(shardRef, shard);
@@ -575,9 +586,27 @@ namespace Akka.Cluster.Sharding
                 }
                 else
                 {
-                    throw new IllegalStateException(string.Format("Shard [{0}] terminated while not being handed off", shard));
+                    // if persist fails it will stop
+                    _log.Debug("Shard {0} terminated while not being handed off", shard);
+                    if (_rememberEntries)
+                    {
+                        Context.System.Scheduler.ScheduleTellOnce(_settings.TunningParameters.ShardFailureBackoff, Self, new RestartShard(shard), Self);
+                    }
                 }
+
+                if (_gracefulShutdownInProgres && _shards.Count == 0 && _shardBuffers.Count == 0)
+                    Context.Stop(Self); // all shards have been rebalanced, complete graceful shutdown
             }
+        }
+
+        internal static Props Props(string typeName, Props entryProps, ClusterShardingSettings settings, string coordinatorPath, IdExtractor extractEntityId, ShardResolver extractShardId, object handOffStopMessage)
+        {
+            return Actor.Props.Create(() => new ShardRegion(typeName, entryProps, settings, coordinatorPath, extractEntityId, extractShardId, handOffStopMessage)).WithDeploy(Deploy.Local);
+        }
+
+        internal static Props ProxyProps(string typeName, ClusterShardingSettings settings, string coordinatorPath, IdExtractor extractEntityId, ShardResolver extractShardId)
+        {
+            return Actor.Props.Create(() => new ShardRegion(typeName, null, settings, coordinatorPath, extractEntityId, extractShardId, PoisonPill.Instance)).WithDeploy(Deploy.Local);
         }
     }
 

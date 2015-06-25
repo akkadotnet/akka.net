@@ -357,12 +357,7 @@ namespace Akka.Cluster
                     ((_leader == null && other._leader == null) || (_leader != null && _leader.Equals(other._leader)));
             }
         }
-
-        public sealed class ClusterShuttingDown : IClusterDomainEvent
-        {
-            public static readonly IClusterDomainEvent Instance = new ClusterShuttingDown();
-        }
-
+        
         //TODO: xml doc
         /// <summary>
         /// Marker interface to facilitate subscription of
@@ -460,7 +455,7 @@ namespace Akka.Cluster
         /// <summary>
         /// The nodes that have seen current version of the Gossip.
         /// </summary>
-        internal sealed class SeenChanged : IClusterDomainEvent
+        public sealed class SeenChanged : IClusterDomainEvent
         {
             private readonly bool _convergence;
             private readonly ImmutableHashSet<Address> _seenBy;
@@ -491,7 +486,7 @@ namespace Akka.Cluster
             //TODO: Override GetHashCode? What to do about collection?
         }
 
-        internal sealed class ReachabilityChanged : IClusterDomainEvent
+        public sealed class ReachabilityChanged : IClusterDomainEvent
         {
             private readonly Reachability _reachability;
 
@@ -641,7 +636,7 @@ namespace Akka.Cluster
             }
         }
 
-        internal static ImmutableList<SeenChanged> DiffSeen(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddres)
+        public static ImmutableList<SeenChanged> DiffSeen(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddres)
         {
             if (newGossip.Equals(oldGossip)) 
                 return ImmutableList.Create<SeenChanged>();
@@ -654,7 +649,7 @@ namespace Akka.Cluster
             return ImmutableList.Create<SeenChanged>();
         }
 
-        internal static ImmutableList<ReachabilityChanged> DiffReachability(Gossip oldGossip, Gossip newGossip)
+        public static ImmutableList<ReachabilityChanged> DiffReachability(Gossip oldGossip, Gossip newGossip)
         {
             if (newGossip.Overview.Reachability.Equals(oldGossip.Overview.Reachability))
                 return ImmutableList.Create<ReachabilityChanged>();

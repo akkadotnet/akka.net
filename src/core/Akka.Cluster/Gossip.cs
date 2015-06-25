@@ -44,7 +44,7 @@ namespace Akka.Cluster
     /// `Removed` by removing it from the `members` set and sending a `Removed` command to the
     /// removed node telling it to shut itself down.
     /// </summary>
-    class Gossip
+    public class Gossip
     {
         public static readonly ImmutableSortedSet<Member> EmptyMembers = ImmutableSortedSet.Create<Member>();
         public static readonly Gossip Empty = new Gossip(EmptyMembers);
@@ -306,7 +306,7 @@ namespace Akka.Cluster
     /// <summary>
     /// Represents the overview of the cluster, holds the cluster convergence table and set with unreachable nodes.
     /// </summary>
-    class GossipOverview
+    public class GossipOverview
     {
         readonly ImmutableHashSet<UniqueAddress> _seen;
         readonly Reachability _reachability;

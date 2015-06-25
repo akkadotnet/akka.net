@@ -45,6 +45,7 @@ namespace Akka.Cluster
         readonly TimeSpan _metricsMovingAverageHalfLife;
         readonly int _minNrOfMembers;
         readonly ImmutableDictionary<string, int> _minNrOfMembersOfRole;
+        private TimeSpan _downRemovalMargin;
 
         public ClusterSettings(Config config, string systemName)
         {
@@ -85,6 +86,7 @@ namespace Akka.Cluster
             _metricsInterval = cc.GetTimeSpan("metrics.collect-interval");
             _metricsGossipInterval = cc.GetTimeSpan("metrics.gossip-interval");
             _metricsMovingAverageHalfLife = cc.GetTimeSpan("metrics.moving-average-half-life");
+            _downRemovalMargin = cc.GetTimeSpan("down-removal-margin");
 
             _minNrOfMembersOfRole = cc.GetConfig("role").Root.GetObject().Items
                 .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetKey("min-nr-of-members").GetInt());
@@ -233,6 +235,11 @@ namespace Akka.Cluster
         public ImmutableDictionary<string, int> MinNrOfMembersOfRole
         {
             get { return _minNrOfMembersOfRole; }
+        }
+
+        public TimeSpan DownRemovalMargin
+        {
+            get { return _downRemovalMargin; }
         }
     }
 }
