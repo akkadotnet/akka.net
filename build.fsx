@@ -110,16 +110,11 @@ Target "AssemblyInfo" <| fun _ ->
 // Build the solution
 
 Target "Build" <| fun _ ->
+    let config = if isMono then "Release Mono" else "Release"
 
     !!"src/Akka.sln"
-    |> MSBuildRelease "" "Rebuild"
-    |> ignore
-
-Target "BuildMono" <| fun _ ->
-
-    !!"src/Akka.sln"
-    |> MSBuild "" "Rebuild" [("Configuration","Release Mono")]
-    |> ignore
+        |> MSBuild "" "Rebuild" [("Configuration", config)]
+        |> ignore
 
 //--------------------------------------------------------------------------------
 // Build the docs
@@ -185,10 +180,10 @@ Target "CopyOutput" <| fun _ ->
       "contrib/loggers/Akka.Logger.slf4net"
       "contrib/loggers/Akka.Logger.NLog" 
       "contrib/loggers/Akka.Logger.Serilog" 
-      "contrib/dependencyinjection/Akka.DI.Core"
-      "contrib/dependencyinjection/Akka.DI.AutoFac"
-      "contrib/dependencyinjection/Akka.DI.CastleWindsor"
-      "contrib/dependencyinjection/Akka.DI.Ninject"
+      "contrib/dependencyInjection/Akka.DI.Core"
+      "contrib/dependencyInjection/Akka.DI.AutoFac"
+      "contrib/dependencyInjection/Akka.DI.CastleWindsor"
+      "contrib/dependencyInjection/Akka.DI.Ninject"
       "contrib/testkits/Akka.TestKit.Xunit" 
       "contrib/testkits/Akka.TestKit.NUnit" 
       "contrib/testkits/Akka.TestKit.Xunit2" 
@@ -224,23 +219,14 @@ Target "RunTests" <| fun _ ->
 
     mkdir testOutput
 
-    MSTest (fun p -> p) msTestAssemblies
+    if isMono = false then
+        MSTest (fun p -> p) msTestAssemblies
+    
     nunitTestAssemblies
     |> NUnit (fun p -> 
         {p with
             DisableShadowCopy = true; 
             OutputFile = testOutput + @"\NUnitTestResults.xml"})
-
-    let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
-    printfn "Using XUnit runner: %s" xunitToolPath
-    xUnit2
-        (fun p -> { p with OutputDir = testOutput; ToolPath = xunitToolPath })
-        xunitTestAssemblies
-
-Target "RunTestsMono" <| fun _ ->  
-    let xunitTestAssemblies = !! "src/**/bin/Release Mono/*.Tests.dll"
-
-    mkdir testOutput
 
     let xunitToolPath = findToolInSubPath "xunit.console.exe" "src/packages/xunit.runner.console*/tools"
     printfn "Using XUnit runner: %s" xunitToolPath
@@ -566,7 +552,6 @@ Target "All" DoNothing
 Target "AllTests" DoNothing //used for Mono builds, due to Mono 4.0 bug with FAKE / NuGet https://github.com/fsharp/fsharp/issues/427
 "BuildRelease" ==> "AllTests"
 "RunTests" ==> "AllTests"
-"MultiNodeTests" ==> "AllTests"
 
 "BuildRelease" ==> "RunSqlServerTests"
 "BuildRelease" ==> "RunPostgreSqlTests"
