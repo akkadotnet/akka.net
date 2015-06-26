@@ -13,7 +13,7 @@ mono $SCRIPT_PATH/src/.nuget/NuGet.exe update -self
 
 mono $SCRIPT_PATH/src/.nuget/NuGet.exe install FAKE -OutputDirectory $SCRIPT_PATH/src/packages -ExcludeVersion -Version 3.28.8
 
-mono $SCRIPT_PATH/src/.nuget/NuGet.exe install xunit.runners -OutputDirectory $SCRIPT_PATH/src/packages/FAKE -ExcludeVersion -Version 1.9.2
+mono $SCRIPT_PATH/src/.nuget/NuGet.exe install xunit.runners -OutputDirectory $SCRIPT_PATH/src/packages/FAKE -ExcludeVersion -Version 2.0.0
 mono $SCRIPT_PATH/src/.nuget/NuGet.exe install nunit.runners -OutputDirectory $SCRIPT_PATH/src/packages/FAKE -ExcludeVersion -Version 2.6.4
 
 if ! [ -e $SCRIPT_PATH/src/packages/SourceLink.Fake/tools/SourceLink.fsx ] ; then
