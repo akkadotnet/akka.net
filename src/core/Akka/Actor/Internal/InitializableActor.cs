@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-namespace Akka.Actor.Internals
+namespace Akka.Actor.Internal
 {
     /// <summary>
     /// Marks that the actor needs to be initialized directly after it has been created.

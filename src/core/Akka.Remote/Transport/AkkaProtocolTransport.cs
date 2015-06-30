@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Event;
 using Akka.Util.Internal;
 using Google.ProtocolBuffers;

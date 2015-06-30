@@ -104,10 +104,6 @@
         The Akka.Actor.Internal namespace contains classes used to create and manage actors within the system. These classes are part
         of an internal API. As such, these classes may break without warning. Use at your own risk.
       </NamespaceSummaryItem>
-      <NamespaceSummaryItem name="Akka.Actor.Internals" isDocumented="True">
-        The Akka.Actor.Internals namespace contains classes used to create and manage actors within the system. These classes are part
-        of an internal API. As such, these classes may break without warning. Use at your own risk.
-      </NamespaceSummaryItem>
       <NamespaceSummaryItem name="Akka.Cluster" isDocumented="True">
         The Akka.Cluster namespace contains classes that provide cluster services including membership, gossip protocols and fault-tolerance.
       </NamespaceSummaryItem>
