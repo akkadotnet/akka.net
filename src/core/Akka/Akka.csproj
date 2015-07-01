@@ -85,9 +85,9 @@
     <Compile Include="Actor\Dsl\Act.cs" />
     <Compile Include="Actor\Cancellation\ICancellable.cs" />
     <Compile Include="Actor\Inbox.Actor.cs" />
-    <Compile Include="Actor\Internals\InternalCurrentActorCellKeeper.cs" />
-    <Compile Include="Actor\Internals\InternalSupportsTestFSMRef.cs" />
-    <Compile Include="Actor\Internals\InitializableActor.cs" />
+    <Compile Include="Actor\Internal\InternalCurrentActorCellKeeper.cs" />
+    <Compile Include="Actor\Internal\InternalSupportsTestFSMRef.cs" />
+    <Compile Include="Actor\Internal\InitializableActor.cs" />
     <Compile Include="Actor\Scheduler\DateTimeNowTimeProvider.cs" />
     <Compile Include="Actor\Scheduler\DedicatedThreadScheduler.cs" />
     <Compile Include="Actor\Scheduler\IDateTimeNowTimeProvider.cs" />
@@ -119,7 +119,7 @@
     <Compile Include="Actor\EmptyLocalActorRef.cs" />
     <Compile Include="Actor\ICanTell.cs" />
     <Compile Include="Actor\Inbox.cs" />
-    <Compile Include="Actor\Internals\ActorSystemImpl.cs" />
+    <Compile Include="Actor\Internal\ActorSystemImpl.cs" />
     <Compile Include="Actor\LocalScope.cs" />
     <Compile Include="Actor\NameAndUid.cs" />
     <Compile Include="Actor\ReceiveTimeout.cs" />

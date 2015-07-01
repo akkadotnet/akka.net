@@ -8,7 +8,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Dispatch;
 using Akka.TestKit;
 using Xunit;

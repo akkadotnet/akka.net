@@ -17,7 +17,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 
 
-namespace Akka.Actor.Internals
+namespace Akka.Actor.Internal
 {
     /// <summary>
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
