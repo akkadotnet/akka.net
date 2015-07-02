@@ -99,7 +99,7 @@ namespace Akka.IO
 
             public override byte this[int idx]
             {
-                get { return _bytes[0]; }
+                get { return _bytes[idx]; }
             }
 
             public override int Count
