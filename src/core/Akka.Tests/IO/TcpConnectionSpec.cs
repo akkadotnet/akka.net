@@ -19,6 +19,7 @@ using Akka.IO;
 using Akka.Pattern;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using FluentAssertions;
 using FluentAssertions.Execution;
 using Xunit;
 
@@ -912,7 +913,12 @@ namespace Akka.Tests.IO
                 {
                     ServerSideChannel.Socket.Blocking = false;
 
-                    InterestCallReceiver.ExpectMsg((int)SocketAsyncOperation.Connect);
+                    // JVM Akka always excpect CONNECT, which seems incorrect
+                    // We will not receive a CONNECT if Socket.BeginConnect completed synchronously
+                    // We therfore just igenore the CONNECT if it is in the queue
+                    InterestCallReceiver.ReceiveWhile<object>(m => m is int && (int)m == (int)SocketAsyncOperation.Connect, TimeSpan.Zero, TimeSpan.Zero, 1);
+                    //What JVM Akka does:  InterestCallReceiver.ExpectMsg((int)SocketAsyncOperation.Connect); 
+
                     Selector.Send(ConnectionActor, SelectionHandler.ChannelConnectable.Instance);
                     UserHandler.ExpectMsg<Tcp.Connected>(message => ((IPEndPoint) message.RemoteAddress).Port.ShouldBe(ServerAddress.Port)); //TODO: compare full endpoint, not only port
  
