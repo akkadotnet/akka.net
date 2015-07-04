@@ -20,10 +20,22 @@ namespace Akka.DI.Core
             this.context = context;
             this.producer = context.System.GetExtension<DIExt>();
         }
+
+        [Obsolete("Use Props methods for actor creation. This method will be removed in future versions")]
         public IActorRef ActorOf<TActor>(string name = null) where TActor : ActorBase
         {
             return context.ActorOf(producer.Props(typeof(TActor)), name);
         }
-    }
+
+        public Props Props(Type actorType) 
+        {
+            return producer.Props(actorType);
+        }
+
+        public Props Props<TActor>() where TActor : ActorBase
+        {
+            return Props(typeof(TActor));
+        }
+     }
 }
 

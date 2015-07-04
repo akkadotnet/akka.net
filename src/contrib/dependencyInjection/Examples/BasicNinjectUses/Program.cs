@@ -7,6 +7,7 @@
 
 using Akka.Actor;
 using Akka.DI.Ninject;
+using Akka.DI.Core;
 using Akka.Routing;
 using System;
 using System.Threading.Tasks;
@@ -31,7 +32,7 @@ namespace BasicNinjectUses
                 var propsResolver =
                     new NinjectDependencyResolver(container, system);
 
-                var router = system.ActorOf(propsResolver.Create<TypedWorker>().WithRouter(FromConfig.Instance), "router1");
+                var router = system.ActorOf(system.DI().Props<TypedWorker>().WithRouter(FromConfig.Instance), "router1");
 
                 Task.Delay(500).Wait();
                 Console.WriteLine("Sending Messages");

@@ -26,44 +26,44 @@ namespace Akka.NodeTestRunner
 
             using (var controller = new XunitFrontController(assemblyName))
             {
-                using (var sink = new Sink(nodeIndex))
+                using (var discovery = new Discovery(assemblyName, typeName))
                 {
-                    Thread.Sleep(10000);
-                    try
+                    using (var sink = new Sink(nodeIndex))
                     {
-                        controller.RunTests(
-                            new[]
-                            {
-                                new Xunit1TestCase(assemblyName, null, typeName, testName, displayName, null,
-                                    "MultiNodeTest")
-                            }, sink, new TestFrameworkOptions());
-                    }
-                    catch (AggregateException ex)
-                    {
-                        var specFail = new SpecFail(nodeIndex, displayName);
-                        specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
-                        specFail.FailureMessages.Add(ex.Message);
-                        specFail.FailureStackTraces.Add(ex.StackTrace);
-                        foreach (var innerEx in ex.Flatten().InnerExceptions)
+                        Thread.Sleep(10000);
+                        try
                         {
-                            specFail.FailureExceptionTypes.Add(innerEx.GetType().ToString());
-                            specFail.FailureMessages.Add(innerEx.Message);
-                            specFail.FailureStackTraces.Add(innerEx.StackTrace);
+                            controller.Find(true, discovery, TestFrameworkOptions.ForDiscovery());
+                            discovery.Finished.WaitOne();
+                            controller.RunTests(discovery.TestCases, sink, TestFrameworkOptions.ForExecution());
                         }
-                        Console.WriteLine(specFail);
-                        Environment.Exit(1); //signal failure
+                        catch (AggregateException ex)
+                        {
+                            var specFail = new SpecFail(nodeIndex, displayName);
+                            specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
+                            specFail.FailureMessages.Add(ex.Message);
+                            specFail.FailureStackTraces.Add(ex.StackTrace);
+                            foreach (var innerEx in ex.Flatten().InnerExceptions)
+                            {
+                                specFail.FailureExceptionTypes.Add(innerEx.GetType().ToString());
+                                specFail.FailureMessages.Add(innerEx.Message);
+                                specFail.FailureStackTraces.Add(innerEx.StackTrace);
+                            }
+                            Console.WriteLine(specFail);
+                            Environment.Exit(1); //signal failure
+                        }
+                        catch (Exception ex)
+                        {
+                            var specFail = new SpecFail(nodeIndex, displayName);
+                            specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
+                            specFail.FailureMessages.Add(ex.Message);
+                            specFail.FailureStackTraces.Add(ex.StackTrace);
+                            Console.WriteLine(specFail);
+                            Environment.Exit(1); //signal failure
+                        }
+                        sink.Finished.WaitOne();
+                        Environment.Exit(sink.Passed ? 0 : 1);
                     }
-                    catch (Exception ex)
-                    {
-                        var specFail = new SpecFail(nodeIndex, displayName);
-                        specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
-                        specFail.FailureMessages.Add(ex.Message);
-                        specFail.FailureStackTraces.Add(ex.StackTrace);
-                        Console.WriteLine(specFail);
-                        Environment.Exit(1); //signal failure
-                    }
-                    sink.Finished.WaitOne();
-                    Environment.Exit(sink.Passed ? 0 : 1);
                 }
             }
         }

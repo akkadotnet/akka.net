@@ -118,8 +118,7 @@ namespace Akka.Remote.Transport
 
             manager.Tell(new AssociateUnderlyingRefuseUid(SchemeAugmenter.RemoveScheme(remoteAddress), statusPromise, refuseUid));
 
-            return statusPromise.Task.ContinueWith(result => ((AkkaProtocolHandle) result.Result),
-                TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+            return statusPromise.Task.CastTask<AssociationHandle, AkkaProtocolHandle>();
         }
 
         #region Static properties
@@ -610,7 +609,7 @@ namespace Akka.Remote.Transport
                                     })
                                     .Default(d =>
                                     {
-                                        _log.Debug(string.Format("Expected message of type Associate; instead received {0}", d));
+                                        _log.Debug("Expected message of type Associate; instead received {0}", d);
                                         //Expect handshake to be finished, dropping connection
                                         SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
                                         nextState = Stop();

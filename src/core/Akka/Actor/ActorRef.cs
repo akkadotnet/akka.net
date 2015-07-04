@@ -42,7 +42,7 @@ namespace Akka.Actor
     /// RepointableActorRef (and potentially others) may change their locality at
     /// runtime, meaning that isLocal might not be stable. RepointableActorRef has
     /// the feature that it starts out “not fully started” (but you can send to it),
-    /// which is why <see cref="IsSt"/> features here; it is not improbable that cluster
+    /// which is why <see cref="IsStarted"/> features here; it is not improbable that cluster
     /// actor refs will have the same behavior.
     /// INTERNAL
     /// </summary>
@@ -154,7 +154,11 @@ namespace Akka.Actor
     public static class ActorRefs
     {
         public static readonly Nobody Nobody = Nobody.Instance;
-        public static readonly IActorRef NoSender = Actor.NoSender.Instance; //In Akka this is just null
+        /// <summary>
+        /// Use this value as an argument to <see cref="ICanTell.Tell"/> if there is not actor to
+        /// reply to (e.g. when sending from non-actor code).
+        /// </summary>
+        public static readonly IActorRef NoSender = null;
     }
 
     public abstract class ActorRefBase : IActorRef
@@ -178,7 +182,10 @@ namespace Akka.Actor
 
         public void Tell(object message, IActorRef sender)
         {
-            if (sender == null) throw new ArgumentNullException("sender", "A sender must be specified");
+            if (sender == null)
+            {
+                sender = ActorRefs.NoSender;
+            }
 
             TellInternal(message, sender);
         }
@@ -348,20 +355,6 @@ namespace Akka.Actor
 
     }
 
-    public sealed class NoSender : ActorRefBase
-    {
-        public static readonly NoSender Instance = new NoSender();
-        private readonly ActorPath _path = new RootActorPath(Address.AllSystems, "/NoSender");
-
-        private NoSender() { }
-
-        public override ActorPath Path { get { return _path; } }
-
-        protected override void TellInternal(object message, IActorRef sender)
-        {
-        }
-    }
-
     internal class VirtualPathContainer : MinimalActorRef
     {
         private readonly IInternalActorRef _parent;
@@ -409,7 +402,7 @@ namespace Akka.Actor
         {
             _children.AddOrUpdate(name, actor, (k, v) =>
             {
-                //TODO:  log.debug("{} replacing child {} ({} -> {})", path, name, old, ref)
+                Log.Warning("{0} replacing child {1} ({2} -> {3})", name, actor, v, actor);
                 return v;
             });
         }
@@ -419,7 +412,16 @@ namespace Akka.Actor
             IInternalActorRef tmp;
             if (!_children.TryRemove(name, out tmp))
             {
-                //TODO: log.warning("{} trying to remove non-child {}", path, name)
+                Log.Warning("{0} trying to remove non-child {1}", Path, name);
+            }
+        }
+
+        public void RemoveChild(string name,IActorRef child)
+        {
+            IInternalActorRef tmp;
+            if (!_children.TryRemove(name, out tmp))
+            {
+                Log.Warning("{0} trying to remove non-child {1}",Path,name);
             }
         }
 

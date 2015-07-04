@@ -107,6 +107,8 @@ namespace Akka.Actor
             DebugRouterMisconfiguration = Config.GetBoolean("akka.actor.debug.router-misconfiguration");
             Home = Config.GetString("akka.home") ?? "";
             DefaultVirtualNodesFactor = Config.GetInt("akka.actor.deployment.default.virtual-nodes-factor");
+
+            SchedulerClass = Config.GetString("akka.scheduler.implementation");
             //TODO: dunno.. we dont have FiniteStateMachines, dont know what the rest is
             /*              
                 final val SchedulerClass: String = getString("akka.scheduler.implementation")
@@ -259,6 +261,11 @@ namespace Akka.Actor
         /// The number of default virtual nodes to use with <see cref="ConsistentHashingRoutingLogic"/>.
         /// </summary>
         public int DefaultVirtualNodesFactor { get; private set; }
+
+        /// <summary>
+        /// Gets the scheduler implementation used by this system.
+        /// </summary>
+        public string SchedulerClass { get; private set; }
 
         /// <summary>
         ///     Returns a <see cref="string" /> that represents this instance.

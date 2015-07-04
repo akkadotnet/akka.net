@@ -40,6 +40,10 @@ namespace Akka.Cluster
         public UniqueAddress UniqueAddress { get { return _uniqueAddress; } }
 
         readonly int _upNumber;
+
+        /// <summary>
+        /// TODO: explain what this does
+        /// </summary>
         internal int UpNumber { get { return _upNumber; } }
 
         readonly MemberStatus _status;

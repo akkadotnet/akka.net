@@ -22,7 +22,7 @@ namespace Akka.Actor
 
         private object _currentMessage;
         private Select? _currentSelect;
-        private Tuple<DateTime, ICancelable> _currentDeadline;
+        private Tuple<TimeSpan, ICancelable> _currentDeadline;
 
         private int _size;
         private ILoggingAdapter _log = Context.GetLogger();
@@ -120,7 +120,7 @@ namespace Akka.Actor
                 .With<StopWatch>(sw => Context.Unwatch(sw.Target))
                 .With<Kick>(() =>
                 {
-                    var now = DateTime.Now;
+                    var now = Context.System.Scheduler.MonotonicClock;
                     var overdue = _clientsByTimeout.TakeWhile(q => q.Deadline < now);
                     foreach (var query in overdue)
                     {
@@ -169,7 +169,7 @@ namespace Akka.Actor
                     {
                         _currentDeadline.Item2.Cancel();
                     }
-                    var cancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(next.Deadline - DateTime.Now, Self, new Kick(), Self);
+                    var cancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(next.Deadline - Context.System.Scheduler.MonotonicClock, Self, new Kick(), Self);
 
                     _currentDeadline = Tuple.Create(next.Deadline, cancelable);
                 }

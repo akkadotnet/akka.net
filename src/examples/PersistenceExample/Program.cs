@@ -9,7 +9,6 @@ using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence;
-using Akka.Persistence.SqlServer;
 
 namespace PersistenceExample
 {
@@ -17,14 +16,7 @@ namespace PersistenceExample
     {
         static void Main(string[] args)
         {
-            var sqlServerConfig = ConfigurationFactory.ParseString(@"
-                akka.persistence.journal.plugin = ""akka.persistence.journal.sql-server""
-                akka.persistence.journal.sql-server.connection-string = ""Data Source=.\\SQLEXPRESS;Initial Catalog=ExampleDb;Integrated Security=True""
-                akka.persistence.journal.sql-server.auto-initialize = on
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.sql-server""
-                akka.persistence.snapshot-store.sql-server.connection-string = ""Data Source=.\\SQLEXPRESS;Initial Catalog=ExampleDb;Integrated Security=True""
-                akka.persistence.snapshot-store.sql-server.auto-initialize = on
-            ");
+           
 
             using (var system = ActorSystem.Create("example"))
             {
@@ -37,18 +29,18 @@ namespace PersistenceExample
 
                 //ViewExample(system);
 
-                GuaranteedDelivery(system);
+                AtLeastOnceDelivery(system);
 
                 Console.ReadLine();
             }
         }
 
-        private static void GuaranteedDelivery(ActorSystem system)
+        private static void AtLeastOnceDelivery(ActorSystem system)
         {
-            Console.WriteLine("\n--- GUARANTEED DELIVERY EXAMPLE ---\n");
+            Console.WriteLine("\n--- AT LEAST ONCE DELIVERY EXAMPLE ---\n");
             var delivery = system.ActorOf(Props.Create(()=> new DeliveryActor()),"delivery");
 
-            var deliverer = system.ActorOf(Props.Create(() => new GuaranteedDeliveryExampleActor(delivery.Path)));
+            var deliverer = system.ActorOf(Props.Create(() => new AtLeastOnceDeliveryExampleActor(delivery.Path)));
             delivery.Tell("start");
             deliverer.Tell(new Message("foo"));
             

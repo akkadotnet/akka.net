@@ -357,7 +357,7 @@ namespace Akka.Cluster
                     ((_leader == null && other._leader == null) || (_leader != null && _leader.Equals(other._leader)));
             }
         }
-
+        
         //TODO: xml doc
         /// <summary>
         /// Marker interface to facilitate subscription of
@@ -455,7 +455,7 @@ namespace Akka.Cluster
         /// <summary>
         /// The nodes that have seen current version of the Gossip.
         /// </summary>
-        internal sealed class SeenChanged : IClusterDomainEvent
+        public sealed class SeenChanged : IClusterDomainEvent
         {
             private readonly bool _convergence;
             private readonly ImmutableHashSet<Address> _seenBy;
@@ -486,7 +486,7 @@ namespace Akka.Cluster
             //TODO: Override GetHashCode? What to do about collection?
         }
 
-        internal sealed class ReachabilityChanged : IClusterDomainEvent
+        public sealed class ReachabilityChanged : IClusterDomainEvent
         {
             private readonly Reachability _reachability;
 
@@ -607,44 +607,49 @@ namespace Akka.Cluster
             }
         }
 
-        internal static ImmutableList<LeaderChanged> DiffLeader(Gossip oldGossip, Gossip newGossip)
+        internal static ImmutableList<LeaderChanged> DiffLeader(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
         {
-            var newLeader = newGossip.Leader;
-            if ((newLeader == null && oldGossip.Leader == null) || newLeader != null && newLeader.Equals(oldGossip.Leader)) return ImmutableList.Create<LeaderChanged>();
-            if (newLeader == null) return ImmutableList.Create(new LeaderChanged(null));
-            return ImmutableList.Create(new LeaderChanged(newLeader.Address));
+            var newLeader = newGossip.Leader(selfUniqueAddress);
+            if ((newLeader == null && oldGossip.Leader(selfUniqueAddress) == null) 
+                || newLeader != null && newLeader.Equals(oldGossip.Leader(selfUniqueAddress))) 
+                return ImmutableList.Create<LeaderChanged>();
+
+            return ImmutableList.Create(newLeader == null 
+                ? new LeaderChanged(null) 
+                : new LeaderChanged(newLeader.Address));
         }
 
-        internal static ImmutableHashSet<RoleLeaderChanged> DiffRolesLeader(Gossip oldGossip, Gossip newGossip)
+        internal static ImmutableHashSet<RoleLeaderChanged> DiffRolesLeader(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
         {
-            return InternalDiffRolesLeader(oldGossip, newGossip).ToImmutableHashSet();
+            return InternalDiffRolesLeader(oldGossip, newGossip, selfUniqueAddress).ToImmutableHashSet();
         }
 
-        private static IEnumerable<RoleLeaderChanged> InternalDiffRolesLeader(Gossip oldGossip, Gossip newGossip)
+        private static IEnumerable<RoleLeaderChanged> InternalDiffRolesLeader(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddress)
         {
             foreach (var role in oldGossip.AllRoles.Union(newGossip.AllRoles))
             {
-                var newLeader = newGossip.RoleLeader(role);
-                if(newLeader == null && oldGossip.RoleLeader(role) != null)
+                var newLeader = newGossip.RoleLeader(role, selfUniqueAddress);
+                if(newLeader == null && oldGossip.RoleLeader(role, selfUniqueAddress) != null)
                     yield return new RoleLeaderChanged(role, null);
-                if(newLeader != null && !newLeader.Equals(oldGossip.RoleLeader(role))) 
+                if(newLeader != null && !newLeader.Equals(oldGossip.RoleLeader(role, selfUniqueAddress))) 
                     yield return new RoleLeaderChanged(role, newLeader.Address);
             }
         }
 
-        internal static ImmutableList<SeenChanged> DiffSeen(Gossip oldGossip, Gossip newGossip)
+        public static ImmutableList<SeenChanged> DiffSeen(Gossip oldGossip, Gossip newGossip, UniqueAddress selfUniqueAddres)
         {
-            if (newGossip.Equals(oldGossip)) return ImmutableList.Create<SeenChanged>();
+            if (newGossip.Equals(oldGossip)) 
+                return ImmutableList.Create<SeenChanged>();
 
-            var newConvergence = newGossip.Convergence;
+            var newConvergence = newGossip.Convergence(selfUniqueAddres);
             var newSeenBy = newGossip.SeenBy;
-            if (newConvergence != oldGossip.Convergence || newSeenBy != oldGossip.SeenBy)
+            if (newConvergence != oldGossip.Convergence(selfUniqueAddres) || newSeenBy != oldGossip.SeenBy)
                 return ImmutableList.Create(new SeenChanged(newConvergence,
                         newSeenBy.Select(s => s.Address).ToImmutableHashSet()));
             return ImmutableList.Create<SeenChanged>();
         }
 
-        internal static ImmutableList<ReachabilityChanged> DiffReachability(Gossip oldGossip, Gossip newGossip)
+        public static ImmutableList<ReachabilityChanged> DiffReachability(Gossip oldGossip, Gossip newGossip)
         {
             if (newGossip.Overview.Reachability.Equals(oldGossip.Overview.Reachability))
                 return ImmutableList.Create<ReachabilityChanged>();
@@ -658,10 +663,11 @@ namespace Akka.Cluster
     sealed class ClusterDomainEventPublisher : UntypedActor
     {
         Gossip _latestGossip;
-       
+        private readonly UniqueAddress _selfUniqueAddress = Cluster.Get(Context.System).SelfUniqueAddress;
+
         public ClusterDomainEventPublisher()
         {
-            _latestGossip = Gossip.Empty;            
+            _latestGossip = Gossip.Empty;
             _eventStream = Context.System.EventStream;
         }
 
@@ -723,15 +729,19 @@ namespace Akka.Cluster
         /// </summary>
         private void SendCurrentClusterState(IActorRef receiver)
         {
+            var unreachable = _latestGossip.Overview.Reachability.AllUnreachableOrTerminated
+                .Where(node => node != _selfUniqueAddress)
+                .Select(_latestGossip.GetMember)
+                .ToImmutableHashSet();
+
             var state = new ClusterEvent.CurrentClusterState(
                 _latestGossip.Members,
-                _latestGossip.Overview.Reachability.AllUnreachableOrTerminated.Select(_latestGossip.GetMember)
-                    .ToImmutableHashSet(),
+                unreachable,
                 _latestGossip.SeenBy.Select(s => s.Address).ToImmutableHashSet(),
-                _latestGossip.Leader == null ? null : _latestGossip.Leader.Address,
+                _latestGossip.Leader(_selfUniqueAddress) == null ? null : _latestGossip.Leader(_selfUniqueAddress).Address,
                 _latestGossip.AllRoles.ToImmutableDictionary(r => r, r =>
                 {
-                    var leader = _latestGossip.RoleLeader(r);
+                    var leader = _latestGossip.RoleLeader(r, _selfUniqueAddress);
                     return leader == null ? null : leader.Address;
                 }));
             receiver.Tell(state);
@@ -777,10 +787,10 @@ namespace Akka.Cluster
             foreach (var @event in ClusterEvent.DiffMemberEvents(oldGossip, newGossip)) pub(@event);
             foreach (var @event in ClusterEvent.DiffUnreachable(oldGossip, newGossip)) pub(@event);
             foreach (var @event in ClusterEvent.DiffReachable(oldGossip, newGossip)) pub(@event);
-            foreach (var @event in ClusterEvent.DiffLeader(oldGossip, newGossip)) pub(@event);
-            foreach (var @event in ClusterEvent.DiffRolesLeader(oldGossip, newGossip)) pub(@event);
+            foreach (var @event in ClusterEvent.DiffLeader(oldGossip, newGossip, _selfUniqueAddress)) pub(@event);
+            foreach (var @event in ClusterEvent.DiffRolesLeader(oldGossip, newGossip, _selfUniqueAddress)) pub(@event);
             // publish internal SeenState for testing purposes
-            foreach (var @event in ClusterEvent.DiffSeen(oldGossip, newGossip)) pub(@event);
+            foreach (var @event in ClusterEvent.DiffSeen(oldGossip, newGossip, _selfUniqueAddress)) pub(@event);
             foreach (var @event in ClusterEvent.DiffReachability(oldGossip, newGossip)) pub(@event);
         }
 

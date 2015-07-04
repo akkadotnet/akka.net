@@ -63,10 +63,11 @@ namespace Akka.Persistence.Journal
 
         private void HandleDeleteMessagesTo(DeleteMessagesTo message)
         {
+            var eventStream = Context.System.EventStream;
             DeleteMessagesToAsync(message.PersistenceId, message.ToSequenceNr, message.IsPermanent)
                 .ContinueWith(t =>
                 {
-                    if (!t.IsFaulted && CanPublish) Context.System.EventStream.Publish(message);
+                    if (!t.IsFaulted && CanPublish) eventStream.Publish(message);
                 }, _continuationOptions);
         }
 

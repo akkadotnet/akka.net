@@ -14,7 +14,7 @@ using Xunit.Abstractions;
 
 namespace Akka.MultiNodeTestRunner
 {
-    class Discovery : IMessageSink, IDisposable
+    internal class Discovery : MarshalByRefObject, IMessageSink, IDisposable
     {
         public Dictionary<string, List<NodeTest>> Tests { get; set; }
 
@@ -34,7 +34,7 @@ namespace Akka.MultiNodeTestRunner
             if (testCaseDiscoveryMessage != null)
             {
                 //TODO: Improve this
-                if(Regex.IsMatch(testCaseDiscoveryMessage.TestClass.Class.Name, @"\d+$"))
+                if (Regex.IsMatch(testCaseDiscoveryMessage.TestClass.Class.Name, @"\d+$"))
                 {
                     var details = GetTestDetails(testCaseDiscoveryMessage);
                     List<NodeTest> tests;
@@ -44,9 +44,9 @@ namespace Akka.MultiNodeTestRunner
                     }
                     else
                     {
-                        tests = new List<NodeTest>(new[] { details });
+                        tests = new List<NodeTest>(new[] {details});
                     }
-                    Tests[details.TestName] = tests;                    
+                    Tests[details.TestName] = tests;
                 }
             }
 
@@ -75,4 +75,3 @@ namespace Akka.MultiNodeTestRunner
         }
     }
 }
-

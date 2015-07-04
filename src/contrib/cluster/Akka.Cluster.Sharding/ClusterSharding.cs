@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Event;
+using Akka.Pattern;
 using Akka.Persistence;
 
 namespace Akka.Cluster.Sharding
@@ -123,14 +124,14 @@ namespace Akka.Cluster.Sharding
     * are thereafter delivered to a new incarnation of the entry.
     *
     */
-    
+
     using Msg = Object;
     using EntryId = String;
     using ShardId = String;
 
     public class ClusterSharding : IExtension
     {
-        private readonly IActorRef _guardian;
+        private readonly Lazy<IActorRef> _guardian;
 
         private readonly ConcurrentDictionary<string, IActorRef> _regions =
             new ConcurrentDictionary<string, IActorRef>();
@@ -141,58 +142,54 @@ namespace Akka.Cluster.Sharding
         public ClusterSharding(ExtendedActorSystem system)
         {
             _system = system;
-            Settings = new ClusterShardingSettings(system);
+            Settings = ClusterShardingSettings.Create(system);
 
-            //TODO: scala is lazy 
-            _guardian = system.ActorOf<ClusterShardingGuardian>(Settings.GuardianName);
+            _guardian = new Lazy<IActorRef>(() =>
+            {
+                var guardianName = system.Settings.Config.GetString("akka.cluster.sharding.guardian-name");
+                return system.ActorOf(Props.Create(() => new ClusterShardingGuardian()), guardianName);
+            });
         }
 
         public ClusterShardingSettings Settings { get; private set; }
 
         /**
-        * Scala API: Register a named entry type by defining the [[akka.actor.Props]] of the entry actor
-        * and functions to extract entry and shard identifier from messages. The [[ShardRegion]] actor
-        * for this type can later be retrieved with the [[#shardRegion]] method.
-        *
-        * Some settings can be configured as described in the `akka.contrib.cluster.sharding` section
-        * of the `reference.conf`.
-        *
-        * @param typeName the name of the entry type
-        * @param entryProps the `Props` of the entry actors that will be created by the `ShardRegion`,
-        *   if not defined (None) the `ShardRegion` on this node will run in proxy only mode, i.e.
-        *   it will delegate messages to other `ShardRegion` actors on other nodes, but not host any
-        *   entry actors itself
-        * @param roleOverride specifies that this entry type requires cluster nodes with a specific role.
-        *   if not defined (None), then defaults to standard behavior of using Role (if any) from configuration
-        * @param rememberEntries true if entry actors shall created be automatically restarted upon `Shard`
-        *   restart. i.e. if the `Shard` is started on a different `ShardRegion` due to rebalance or crash.
-        * @param idExtractor partial function to extract the entry id and the message to send to the
-        *   entry from the incoming message, if the partial function does not match the message will
-        *   be `unhandled`, i.e. posted as `Unhandled` messages on the event stream
-        * @param shardResolver function to determine the shard id for an incoming message, only messages
-        *   that passed the `idExtractor` will be used
-        * @param allocationStrategy possibility to use a custom shard allocation and
-        *   rebalancing logic
-        * @return the actor ref of the [[ShardRegion]] that is to be responsible for the shard
-        */
-
+         * Scala API: Register a named entity type by defining the [[akka.actor.Props]] of the entity actor
+         * and functions to extract entity and shard identifier from messages. The [[ShardRegion]] actor
+         * for this type can later be retrieved with the [[#shardRegion]] method.
+         *
+         * Some settings can be configured as described in the `akka.cluster.sharding` section
+         * of the `reference.conf`.
+         *
+         * @param typeName the name of the entity type
+         * @param entityProps the `Props` of the entity actors that will be created by the `ShardRegion`
+         * @param settings configuration settings, see [[ClusterShardingSettings]]
+         * @param extractEntityId partial function to extract the entity id and the message to send to the
+         *   entity from the incoming message, if the partial function does not match the message will
+         *   be `unhandled`, i.e. posted as `Unhandled` messages on the event stream
+         * @param extractShardId function to determine the shard id for an incoming message, only messages
+         *   that passed the `extractEntityId` will be used
+         * @param allocationStrategy possibility to use a custom shard allocation and
+         *   rebalancing logic
+         * @param handOffStopMessage the message that will be sent to entities when they are to be stopped
+         *   for a rebalance or graceful shutdown of a `ShardRegion`, e.g. `PoisonPill`.
+         * @return the actor ref of the [[ShardRegion]] that is to be responsible for the shard
+         */
         public IActorRef Start(
             string typeName,
             Props entryProps,
-            string roleOverride,
-            bool rememberEntries,
+            ClusterShardingSettings settings,
             IdExtractor idExtractor,
             ShardResolver shardResolver,
-            IShardAllocationStrategy allocationStrategy)
+            IShardAllocationStrategy allocationStrategy,
+            object handOffStopMessage)
         {
-            //Not used in scala?
-            var resolvedRole = roleOverride ?? Settings.Role;
+            RequireClusterRole(settings.Role);
 
             var timeout = _system.Settings.CreationTimeout;
-            var startMsg = new Start(typeName, entryProps, roleOverride, rememberEntries, idExtractor, shardResolver,
-                allocationStrategy);
+            var startMsg = new Start(typeName, entryProps, settings, idExtractor, shardResolver, allocationStrategy, handOffStopMessage);
 
-            var started = _guardian.Ask<Started>(startMsg, timeout).Result;
+            var started = _guardian.Value.Ask<Started>(startMsg, timeout).Result;
             var shardRegion = started.ShardRegion;
             _regions.TryAdd(typeName, shardRegion);
             return shardRegion;
@@ -229,15 +226,14 @@ namespace Akka.Cluster.Sharding
         public IActorRef Start(
             string typeName,
             Props entryProps,
-            string roleOverride,
-            bool rememberEntries,
+            ClusterShardingSettings settings,
             IdExtractor idExtractor,
             ShardResolver shardResolver)
         {
-            return Start(typeName, entryProps, roleOverride, rememberEntries, idExtractor, shardResolver,
-                new LeastShardAllocationStrategy(
-                    Settings.LeastShardAllocationRebalanceThreshold,
-                    Settings.LeastShardAllocationMaxSimultaneousRebalance));
+            var allocationStrategy = new LeastShardAllocationStrategy(
+                Settings.TunningParameters.LeastShardAllocationRebalanceThreshold,
+                Settings.TunningParameters.LeastShardAllocationMaxSimultaneousRebalance);
+            return Start(typeName, entryProps, settings, idExtractor, shardResolver, allocationStrategy, PoisonPill.Instance);
         }
 
         /**
@@ -264,14 +260,13 @@ namespace Akka.Cluster.Sharding
          * @return the actor ref of the [[ShardRegion]] that is to be responsible for the shard
          */
 
-        public IActorRef Start(string typeName, Props entryProps, string roleOverride, bool rememberEntries,
-            IMessageExtractor messageExtractor, IShardAllocationStrategy allocationStrategy)
+        public IActorRef Start(string typeName, Props entryProps, ClusterShardingSettings settings,
+            IMessageExtractor messageExtractor, IShardAllocationStrategy allocationStrategy, object handOffMessage)
         {
             IdExtractor idExtractor = messageExtractor.ToIdExtractor();
-            ShardResolver shardResolver = ShardResolvers.Default;
+            ShardResolver shardResolver = messageExtractor.ShardId;
 
-            return Start(typeName, entryProps, roleOverride, rememberEntries, idExtractor, shardResolver,
-                allocationStrategy);
+            return Start(typeName, entryProps, settings, idExtractor, shardResolver, allocationStrategy, handOffMessage);
         }
 
         /**
@@ -299,12 +294,39 @@ namespace Akka.Cluster.Sharding
         * @return the actor ref of the [[ShardRegion]] that is to be responsible for the shard
         */
 
-        public IActorRef Start(string typeName, Props entryProps, string roleOverride, bool rememberEntries,
+        public IActorRef Start(string typeName, Props entryProps, ClusterShardingSettings settings,
             IMessageExtractor messageExtractor)
         {
-            return Start(typeName, entryProps, roleOverride, rememberEntries, messageExtractor,
-                new LeastShardAllocationStrategy(Settings.LeastShardAllocationRebalanceThreshold,
-                    Settings.LeastShardAllocationMaxSimultaneousRebalance));
+            return Start(typeName,
+                entryProps,
+                settings,
+                messageExtractor,
+                new LeastShardAllocationStrategy(
+                    Settings.TunningParameters.LeastShardAllocationRebalanceThreshold,
+                    Settings.TunningParameters.LeastShardAllocationMaxSimultaneousRebalance),
+                PoisonPill.Instance);
+        }
+
+        public IActorRef StartProxy(string typeName, string role, IdExtractor idExtractor, ShardResolver shardResolver)
+        {
+            var timeout = _system.Settings.CreationTimeout;
+            var settings = ClusterShardingSettings.Create(_system).WithRole(role);
+            var startMsg = new StartProxy(typeName, settings, idExtractor, shardResolver);
+            var started = _guardian.Value.Ask<Started>(startMsg, timeout).Result;
+            _regions.TryAdd(typeName, started.ShardRegion);
+            return started.ShardRegion;
+        }
+
+        private IActorRef StartProxy(string typeName, string role, IMessageExtractor messageExtractor)
+        {
+            IdExtractor extractEntityId = msg =>
+            {
+                var entityId = messageExtractor.EntryId(msg);
+                var entityMessage = messageExtractor.EntryMessage(msg);
+                return Tuple.Create(entityId, entityMessage);
+            };
+
+            return StartProxy(typeName, role, extractEntityId, messageExtractor.ShardId);
         }
 
         /**
@@ -322,14 +344,22 @@ namespace Akka.Cluster.Sharding
             }
             throw new ArgumentException(string.Format("Shard type {0} must be started first", typeName));
         }
+
+        private void RequireClusterRole(string role)
+        {
+            if (!(string.IsNullOrEmpty(role) || _cluster.SelfRoles.Contains(role)))
+            {
+                throw new IllegalStateException(string.Format("This cluster member [{0}] doesn't have the role [{1}]", _cluster.SelfAddress, role));
+            }
+        }
     }
 
 
     /**
     * INTERNAL API.
     */
-
-    public class Started : INoSerializationVerificationNeeded
+    [Serializable]
+    public sealed class Started : INoSerializationVerificationNeeded
     {
         public IActorRef ShardRegion { get; private set; }
 
@@ -339,28 +369,48 @@ namespace Akka.Cluster.Sharding
         }
     }
 
-    public class Start
+    [Serializable]
+    public sealed class Start
     {
         public string TypeName { get; private set; }
         public Props EntryProps { get; private set; }
-        public string RoleOverride { get; private set; }
-        public bool RememberEntries { get; private set; }
+        public ClusterShardingSettings Settings { get; private set; }
         public IdExtractor IdExtractor { get; private set; }
         public ShardResolver ShardResolver { get; private set; }
         public IShardAllocationStrategy AllocationStrategy { get; private set; }
+        public object HandOffStopMessage { get; private set; }
 
-        public Start(string typeName, Props entryProps, string roleOverride, bool rememberEntries,
-            IdExtractor idIdExtractor, ShardResolver shardResolver, IShardAllocationStrategy allocationStrategy)
+        public Start(string typeName, Props entryProps, ClusterShardingSettings settings,
+            IdExtractor idIdExtractor, ShardResolver shardResolver, IShardAllocationStrategy allocationStrategy, object handOffStopMessage)
         {
             TypeName = typeName;
             EntryProps = entryProps;
-            RoleOverride = roleOverride;
-            RememberEntries = rememberEntries;
+            Settings = settings;
             IdExtractor = idIdExtractor;
             ShardResolver = shardResolver;
             AllocationStrategy = allocationStrategy;
+            HandOffStopMessage = handOffStopMessage;
         }
     }
+
+    [Serializable]
+    public sealed class StartProxy
+    {
+        public readonly string TypeName;
+        public readonly ClusterShardingSettings Settings;
+        public readonly IdExtractor ExtractEntityId;
+        public readonly ShardResolver ExtractShardId;
+
+        public StartProxy(string typeName, ClusterShardingSettings settings, IdExtractor extractEntityId, ShardResolver extractShardId)
+        {
+            TypeName = typeName;
+            Settings = settings;
+            ExtractEntityId = extractEntityId;
+            ExtractShardId = extractShardId;
+        }
+    }
+
+
 
     /**
     * INTERNAL API. [[ShardRegion]] and [[ShardCoordinator]] actors are createad as children
@@ -371,13 +421,9 @@ namespace Akka.Cluster.Sharding
     {
         public ClusterShardingGuardian()
         {
-            var cluster = Context.System.GetExtension<Akka.Cluster.Cluster>();
-            var clusterSharding = Context.System.GetExtension<ClusterSharding>();
-            var settings = clusterSharding.Settings;
-
             Receive<Start>(start =>
             {
-                //TODO: escape data string or escape uri string?
+                var settings = start.Settings;
                 var encName = Uri.EscapeDataString(start.TypeName);
                 var coordinatorSingletonManagerName = encName + "Coordinator";
                 var coordinatorPath =
@@ -387,101 +433,47 @@ namespace Akka.Cluster.Sharding
 
                 if (shardRegion.Equals(ActorRefs.Nobody))
                 {
-                    var hasRequiredRole = settings.HasNecessaryClusterRole(start.RoleOverride);
-                    if (hasRequiredRole && Context.Child(coordinatorSingletonManagerName).Equals(ActorRefs.Nobody))
-                    {
-                        /*
-handOffTimeout = HandOffTimeout, 
-            shardStartTimeout = ShardStartTimeout,
-            rebalanceInterval = RebalanceInterval, 
-            snapshotInterval = SnapshotInterval, 
-            allocationStrategy)
-                         */
-                        var coordinatorProps = ShardCoordinator.Props(
-                            handOffTimeout: settings.HandOffTimeout,
-                            shardStartTimeout: settings.ShardStartTimeout,
-                            rebalanceInterval: settings.RebalanceInterval,
-                            snapshotInterval: settings.SnapshotInterval,
-                            allocationStrategy: start.AllocationStrategy);
+                    var minBackoff = settings.TunningParameters.CoordinatorFailureBackoff;
+                    var maxBackoff = new TimeSpan(minBackoff.Ticks * 5);
+                    var coordinatorProps = ShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy);
+                    var singletonProps = Actor.Props.Create(() => new BackoffSupervisor(coordinatorProps, "coordinator", minBackoff, maxBackoff, 0.2)).WithDeploy(Deploy.Local);
+                    var singletonSettings = settings.CoordinatorSingletonSettings.WithSingletonName("singleton").WithRole(settings.Role);
 
-                        var singletonProps = ShardCoordinatorSupervisor.Props(settings.CoordinatorFailureBackoff, coordinatorProps);
-
-                        Context.ActorOf(ClusterSingletonManager.Props(
-                            singletonProps,
-                            singletonName: "singleton",
-                            terminationMessage: PoisonPill.Instance,
-                            role: settings.Role),
-                            name: coordinatorSingletonManagerName);
-                    }
-
-                    shardRegion = Context.ActorOf(ShardRegion.Props(
-                        typeName: start.TypeName,
-                        entryProps: hasRequiredRole ? start.EntryProps : Props.Empty,
-                        role: settings.Role,
-                        coordinatorPath: coordinatorPath,
-                        retryInterval: settings.RetryInterval,
-                        snapshotInterval: settings.SnapshotInterval,
-                        shardFailureBackoff: settings.ShardFailureBackoff,
-                        entryRestartBackoff: settings.EntryRestartBackoff,
-                        bufferSize: settings.BufferSize,
-                        rememberEntries: start.RememberEntries,
-                        idExtractor: start.IdExtractor,
-                        shardResolver: start.ShardResolver),
-                        name: encName);
+                    Context.ActorOf(ClusterSingletonManager.Props(
+                        singletonProps,
+                        PoisonPill.Instance,
+                        singletonSettings), encName);
                 }
+
+                shardRegion = Context.ActorOf(ShardRegion.Props(
+                    typeName: start.TypeName,
+                    entryProps: start.EntryProps,
+                    settings: settings,
+                    coordinatorPath: coordinatorPath,
+                    extractEntityId: start.IdExtractor,
+                    extractShardId: start.ShardResolver,
+                    handOffStopMessage: start.HandOffStopMessage), coordinatorSingletonManagerName);
+
+                Sender.Tell(new Started(shardRegion));
+            });
+
+            Receive<StartProxy>(startProxy =>
+            {
+                var settings = startProxy.Settings;
+                var encName = Uri.EscapeDataString(startProxy.TypeName);
+                var coordinatorSingletonManagerName = encName + "Coordinator";
+                var coordinatorPath = (Self.Path / coordinatorSingletonManagerName / "singleton" / "coordinator").ToStringWithoutAddress();
+
+                var shardRegion = Context.ActorOf(ShardRegion.ProxyProps(
+                    typeName: startProxy.TypeName,
+                    settings: settings,
+                    coordinatorPath: coordinatorPath,
+                    extractEntityId: startProxy.ExtractEntityId,
+                    extractShardId: startProxy.ExtractShardId), encName);
 
                 Sender.Tell(new Started(shardRegion));
             });
         }
-    }
-
-    /**
-    * @see [[ClusterSharding$ ClusterSharding extension]]
-    */
-    public class ClusterShardingSettings
-    {
-        private Akka.Cluster.Cluster _cluster;
-
-        public ClusterShardingSettings(ActorSystem system)
-        {
-            var config = system.Settings.Config.GetConfig("akka.contrib.cluster.sharding");
-            Role = config.GetString("role");
-            GuardianName = config.GetString("guardian-name");
-            CoordinatorFailureBackoff = config.GetTimeSpan("coordinator-failure-backoff");
-            RetryInterval = config.GetTimeSpan("retry-interval");
-            BufferSize = config.GetInt("buffer-size");
-            HandOffTimeout = config.GetTimeSpan("handoff-timeout");
-            ShardStartTimeout = config.GetTimeSpan("shard-start-timeout");
-            ShardFailureBackoff = config.GetTimeSpan("shard-failure-backoff");
-            EntryRestartBackoff = config.GetTimeSpan("entry-restart-backoff");
-            RebalanceInterval = config.GetTimeSpan("rebalance-interval");
-            SnapshotInterval = config.GetTimeSpan("snapshot-interval");
-            LeastShardAllocationRebalanceThreshold =
-                config.GetInt("least-shard-allocation-strategy.rebalance-threshold");
-            LeastShardAllocationMaxSimultaneousRebalance =
-                config.GetInt("least-shard-allocation-strategy.max-simultaneous-rebalance");
-        }
-
-        public string Role { get; private set; }
-        public string GuardianName { get; private set; }
-        public TimeSpan CoordinatorFailureBackoff { get; private set; }
-        public TimeSpan RetryInterval { get; private set; }
-        public int BufferSize { get; private set; }
-        public TimeSpan HandOffTimeout { get; private set; }
-        public TimeSpan ShardStartTimeout { get; private set; }
-        public TimeSpan ShardFailureBackoff { get; private set; }
-        public TimeSpan EntryRestartBackoff { get; private set; }
-        public TimeSpan RebalanceInterval { get; private set; }
-        public TimeSpan SnapshotInterval { get; private set; }
-        public int LeastShardAllocationRebalanceThreshold { get; private set; }
-        public int LeastShardAllocationMaxSimultaneousRebalance { get; private set; }
-
-        public bool HasNecessaryClusterRole(string role)
-        {
-            return _cluster.SelfRoles.Any(s => s == role);
-        }
-
-
     }
 
     /**
@@ -690,7 +682,8 @@ handOffTimeout = HandOffTimeout,
     /**
      * Check if we've received a shard start request
      */
-    internal sealed class ResendShardHost
+    [Serializable]
+    public sealed class ResendShardHost
     {
         public readonly ShardId Shard;
         public readonly IActorRef Region;
@@ -698,6 +691,17 @@ handOffTimeout = HandOffTimeout,
         public ResendShardHost(string shard, IActorRef region)
         {
             Shard = shard;
+            Region = region;
+        }
+    }
+
+    [Serializable]
+    public sealed class DelayedShardRegionTerminated
+    {
+        public readonly IActorRef Region;
+
+        public DelayedShardRegionTerminated(IActorRef region)
+        {
             Region = region;
         }
     }
@@ -745,16 +749,6 @@ handOffTimeout = HandOffTimeout,
         {
             Coordinator = coordinator;
         }
-    }
-
-    /**
-     * Periodic message to trigger persistent snapshot
-     */
-    public sealed class SnapshotTick : ICoordinatorMessage
-    {
-        public static readonly SnapshotTick Instance = new SnapshotTick();
-
-        private SnapshotTick() { }
     }
 
     /**
@@ -909,6 +903,19 @@ handOffTimeout = HandOffTimeout,
         public RebalanceResult(IEnumerable<string> shards)
         {
             Shards = shards;
+        }
+    }
+
+    /**
+     * `ShardRegion` requests full handoff to be able to shutdown gracefully.
+     */
+    [Serializable]
+    public sealed class GracefulShutdownRequest : ICoordinatorCommand
+    {
+        public readonly IActorRef ShardRegion;
+        public GracefulShutdownRequest(IActorRef shardRegion)
+        {
+            ShardRegion = shardRegion;
         }
     }
 

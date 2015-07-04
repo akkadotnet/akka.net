@@ -21,7 +21,7 @@ namespace Akka.Event
         /// </summary>
         protected LogEvent()
         {
-            Timestamp = DateTime.Now;
+            Timestamp = DateTime.UtcNow;
             Thread = Thread.CurrentThread;
         }
 

@@ -52,7 +52,7 @@ namespace Akka.Actor
         /// Gets a reference to the <see cref="ActorSystem"/> to which this actor belongs.
         /// 
         /// <remarks>
-        /// This property is how you can get access to the <see cref="Scheduler"/> and other parts
+        /// This property is how you can get access to the <see cref="IScheduler"/> and other parts
         /// of Akka.NET from within an actor instance.
         /// </remarks>
         /// </summary>

@@ -42,7 +42,7 @@ namespace Akka.Persistence.Snapshot
             else if (message is SaveSnapshot)
             {
                 var msg = (SaveSnapshot)message;
-                var metadata = new SnapshotMetadata(msg.Metadata.PersistenceId, msg.Metadata.SequenceNr, DateTime.Now);
+                var metadata = new SnapshotMetadata(msg.Metadata.PersistenceId, msg.Metadata.SequenceNr, DateTime.UtcNow);
 
                 SaveAsync(metadata, msg.Snapshot).ContinueWith(t => !t.IsFaulted
                         ? (object)new SaveSnapshotSuccess(metadata)

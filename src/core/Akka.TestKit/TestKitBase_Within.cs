@@ -64,14 +64,14 @@ namespace Akka.TestKit
             min.EnsureIsPositiveFinite("max");
             max = Dilated(max);
             var start = Now;
-            var rem = _end.HasValue ? _end.Value - start : Timeout.InfiniteTimeSpan;
+            var rem = _testState.End.HasValue ? _testState.End.Value - start : Timeout.InfiniteTimeSpan;
             _assertions.AssertTrue(rem.IsInfiniteTimeout() || rem >= min, "Required min time {0} not possible, only {1} left. {2}", min, rem, hint ?? "");
 
-            _lastWasNoMsg = false;
+            _testState.LastWasNoMsg = false;
 
             var maxDiff = max.Min(rem);
-            var prevEnd = _end;
-            _end = start + maxDiff;
+            var prevEnd = _testState.End;
+            _testState.End = start + maxDiff;
 
             T ret;
             try
@@ -80,7 +80,7 @@ namespace Akka.TestKit
             }
             finally
             {
-                _end = prevEnd;
+                _testState.End = prevEnd;
             }
 
             var elapsed = Now - start;
@@ -91,7 +91,7 @@ namespace Akka.TestKit
                 ConditionalLog(failMessage, elapsed, min, hint ?? "");
                 _assertions.Fail(failMessage, elapsed, min, hint ?? "");
             }
-            if(!_lastWasNoMsg)
+            if (!_testState.LastWasNoMsg)
             {
                 var tookTooLong = elapsed > maxDiff;
                 if(tookTooLong)

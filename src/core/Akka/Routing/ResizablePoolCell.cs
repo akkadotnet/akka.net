@@ -83,7 +83,11 @@ namespace Akka.Routing
                     {
                         var currentRoutees = Router.Routees;
                         var enumerable = currentRoutees as Routee[] ?? currentRoutees.ToArray();
-                        var routeesToAbandon = enumerable.Drop(enumerable.Count() + requestedCapacity);
+
+                        var routeesToAbandon = enumerable
+                            .Drop(enumerable.Count() + requestedCapacity)
+                            .ToList();
+
                         RemoveRoutees(routeesToAbandon, true);
                     }
                 }

@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Remote;
@@ -45,7 +44,7 @@ namespace Akka.Cluster
     /// `Removed` by removing it from the `members` set and sending a `Removed` command to the
     /// removed node telling it to shut itself down.
     /// </summary>
-    class Gossip
+    public class Gossip
     {
         public static readonly ImmutableSortedSet<Member> EmptyMembers = ImmutableSortedSet.Create<Member>();
         public static readonly Gossip Empty = new Gossip(EmptyMembers);
@@ -71,10 +70,12 @@ namespace Akka.Cluster
         readonly ImmutableSortedSet<Member> _members;
         readonly GossipOverview _overview;
         readonly VectorClock _version;
+        private readonly Lazy<Reachability> _reachability;
 
         public ImmutableSortedSet<Member> Members { get { return _members; } }
         public GossipOverview Overview { get { return _overview; } }
         public VectorClock Version { get { return _version; } }
+        public Reachability ReachabilityExcludingDownedObservers { get { return _reachability.Value; } }
 
         public Gossip(ImmutableSortedSet<Member> members) : this(members, new GossipOverview(), VectorClock.Create() ) {}
 
@@ -88,6 +89,15 @@ namespace Akka.Cluster
 
             _membersMap = new Lazy<ImmutableDictionary<UniqueAddress, Member>>(
                 () => members.ToImmutableDictionary(m => m.UniqueAddress, m => m));
+
+            _reachability = new Lazy<Reachability>(() =>
+            {
+                var downed = _members
+                    .Where(m => m.Status == MemberStatus.Down)
+                    .Select(m=>m.UniqueAddress);
+
+                return overview.Reachability.Remove(downed);
+            });
 
             if (Cluster.IsAssertInvariantsEnabled) AssertInvariants();
         }
@@ -204,39 +214,53 @@ namespace Akka.Cluster
         // status is in the seen table and has the latest vector clock
         // version
         /// </summary>
-        public bool Convergence
+        public bool Convergence(UniqueAddress selfUniqueAddress)
         {
-            get
-            {
-                var unreachable = _overview.Reachability.AllUnreachableOrTerminated.Select(GetMember);
-                return unreachable.All(m => ConvergenceSkipUnreachableWithMemberStatus.Contains(m.Status)) &&
-                    !_members.Any(m => Gossip.ConvergenceMemberStatus.Contains(m.Status) && !SeenByNode(m.UniqueAddress));
-            }
+            var unreachable = _overview.Reachability.AllUnreachableOrTerminated
+                .Where(node => node != selfUniqueAddress)
+                .Select(GetMember);
+
+            var convergedUnreachable = unreachable
+                .All(m => ConvergenceSkipUnreachableWithMemberStatus.Contains(m.Status));
+
+            var convergedSeen =
+                !_members.Any(m => ConvergenceMemberStatus.Contains(m.Status) && !SeenByNode(m.UniqueAddress));
+
+            return convergedUnreachable && convergedSeen;
         }
 
-        public bool IsLeader(UniqueAddress node)
+        public bool IsLeader(UniqueAddress node, UniqueAddress selfUniqueAddress)
         {
-            return Leader.Equals(node);
+            return Leader(selfUniqueAddress) == node && node != null;
         }
 
-        public UniqueAddress Leader
+        public UniqueAddress Leader(UniqueAddress selfUniqueAddress)
         {
-            get { return LeaderOf(_members); }
+           return LeaderOf(_members, selfUniqueAddress);
         }
 
-        public UniqueAddress RoleLeader(string role)
+        public UniqueAddress RoleLeader(string role, UniqueAddress selfUniqueAddress)
         {
-            return LeaderOf(_members.Where(m => m.HasRole(role)));
+            var roleMembers = _members
+                .Where(m => m.HasRole(role))
+                .ToImmutableSortedSet();
+
+            return LeaderOf(roleMembers, selfUniqueAddress);
         }
 
-        private UniqueAddress LeaderOf(IEnumerable<Member> mbrs)
+        private UniqueAddress LeaderOf(ImmutableSortedSet<Member> mbrs, UniqueAddress selfUniqueAddress)
         {
             var reachableMembers = _overview.Reachability.IsAllReachable
                 ? mbrs
-                : mbrs.Where(m => _overview.Reachability.IsReachable(m.UniqueAddress));
+                : mbrs
+                    .Where(m => _overview.Reachability.IsReachable(m.UniqueAddress) || m.UniqueAddress == selfUniqueAddress)
+                    .ToImmutableSortedSet();
+
             if (!reachableMembers.Any()) return null;
-            var member = reachableMembers.FirstOrDefault(m => Gossip.LeaderMemberStatus.Contains(m.Status)) ??
+
+            var member = reachableMembers.FirstOrDefault(m => LeaderMemberStatus.Contains(m.Status)) ??
                          reachableMembers.Min(Member.LeaderStatusOrdering);
+
             return member.UniqueAddress;
         }
 
@@ -282,7 +306,7 @@ namespace Akka.Cluster
     /// <summary>
     /// Represents the overview of the cluster, holds the cluster convergence table and set with unreachable nodes.
     /// </summary>
-    class GossipOverview
+    public class GossipOverview
     {
         readonly ImmutableHashSet<UniqueAddress> _seen;
         readonly Reachability _reachability;

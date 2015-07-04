@@ -77,7 +77,7 @@ namespace Akka.Cluster.Sharding
 
                 if (mostShards.Length - leastShardsRegion.Value.Length >= _rebalanceThreshold)
                 {
-                    return Task.FromResult(new HashSet<ShardId> {mostShards.First()} as ISet<ShardId>);
+                    return Task.FromResult(new HashSet<ShardId> { mostShards.First() } as ISet<ShardId>);
                 }
             }
 
@@ -122,46 +122,52 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     public class ShardCoordinator : PersistentActor
     {
-        private readonly TimeSpan _handOffTimeout;
-        private readonly TimeSpan _shardStartTimeout;
         private readonly IShardAllocationStrategy _allocationStrategy;
         private readonly ILoggingAdapter _log = Context.GetLogger();
         private static readonly object RebalanceTick = new object();
-        private static readonly object SnapshotTick = new object();
         private readonly ICancelable _rebalanceTask;
-        private ICancelable _snapshotTask;
         private State _persistentState;
-        private Dictionary<string, ICancelable> _unAckedHostShards;
-        private HashSet<string> _rebalanceInProgress;
+        private readonly Dictionary<string, ICancelable> _unAckedHostShards;
+        private readonly HashSet<string> _rebalanceInProgress;
+        private string _typeName;
+        private readonly ClusterShardingSettings _settings;
+        private readonly Cluster _cluster;
+        private readonly TimeSpan _removalMargin;
+        private readonly ISet<IActorRef> _gracefullShutdownInProgress;
+        private readonly ISet<IActorRef> _aliveRegions;
+        private int _persistCount;
 
-        public ShardCoordinator(TimeSpan handOffTimeout, TimeSpan shardStartTimeout, TimeSpan rebalanceInterval, TimeSpan snapshotInterval, IShardAllocationStrategy allocationStrategy)
+        public ShardCoordinator(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy)
         {
-            _handOffTimeout = handOffTimeout;
-            _shardStartTimeout = shardStartTimeout;
+            _cluster = Cluster.Get(Context.System);
+
+            _typeName = typeName;
+            _settings = settings;
             _allocationStrategy = allocationStrategy;
+            _removalMargin = _cluster.Settings.DownRemovalMargin;
+
+            JournalPluginId = _settings.JournalPluginId;
+            SnapshotPluginId = _settings.SnapshotPluginId;
+
             _persistentState = State.Empty;                              // = State.empty
             _rebalanceInProgress = new HashSet<String>();                  //  Set.empty[ShardId]
             _unAckedHostShards = new Dictionary<string, ICancelable>();     // Map.empty[ShardId, Cancellable]
 
-            _rebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(rebalanceInterval, rebalanceInterval, Self, RebalanceTick, Self);
-            _snapshotTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(snapshotInterval, snapshotInterval, Self, SnapshotTick, Self);
+            // regions that have requested handoff, for graceful shutdown
+            _gracefullShutdownInProgress = new HashSet<IActorRef>();
+            _aliveRegions = new HashSet<IActorRef>();
+            _persistCount = 0;
 
-            Cluster.Get(Context.System).Subscribe(Self, new[] { typeof(ClusterEvent.ClusterShuttingDown) });
+            _rebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(_settings.TunningParameters.RebalanceInterval, _settings.TunningParameters.RebalanceInterval, Self, RebalanceTick, Self);
+            _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.ClusterShuttingDown) });
         }
 
-        public override String PersistenceId
-        {
-            get
-            {
-                return Self.Path.ToStringWithoutAddress();
-            }
-        }
+        public override String PersistenceId { get { return Self.Path.ToStringWithoutAddress(); } }
 
         protected override void PostStop()
         {
             base.PostStop();
             _rebalanceTask.Cancel();
-            _snapshotTask.Cancel();
             Cluster.Get(Context.System).Unsubscribe(Self);
         }
 
@@ -212,37 +218,34 @@ namespace Akka.Cluster.Sharding
             else if (message is SnapshotOffer)
             {
                 var state = ((SnapshotOffer)message).Snapshot as State;
-                _log.Debug("ReceiveRecover SnapshotOffer {0}", state);
-
-                //Old versions of the state object may not have unallocatedShard set,
-                // thus it will be null.
-                if (state.UnallocatedShards == null)
+                if (state != null)
                 {
-                    _persistentState = _persistentState.Copy(unallocatedShards: new HashSet<ShardId>());
-                }
-                else
-                {
-                    _persistentState = state;
-                }
+                    _log.Debug("ReceiveRecover SnapshotOffer {0}", state);
 
-                return true;
+                    //Old versions of the state object may not have unallocatedShard set,
+                    // thus it will be null.
+                    if (state.UnallocatedShards == null)
+                    {
+                        _persistentState = _persistentState.Copy(unallocatedShards: new HashSet<ShardId>());
+                    }
+                    else
+                    {
+                        _persistentState = state;
+                    }
+
+                    return true;
+                }
             }
             else if (message is RecoveryCompleted)
             {
                 foreach (var regionProxy in _persistentState.RegionProxies)
-                {
                     Context.Watch(regionProxy);
-                }
 
                 foreach (var region in _persistentState.Regions)
-                {
                     Context.Watch(region.Key);
-                }
 
                 foreach (var shard in _persistentState.Shards)
-                {
                     SendHostShardMessage(shard.Key, shard.Value);
-                }
 
                 AllocateShardHomes();
                 return true;
@@ -262,203 +265,32 @@ namespace Akka.Cluster.Sharding
         {
             region.Tell(new HostShard(shard));
             var cancelable = new Cancelable(Context.System.Scheduler);
-            Context.System.Scheduler.ScheduleTellOnce(_shardStartTimeout, Self, new ResendShardHost(shard, region), Self, cancelable);
+            Context.System.Scheduler.ScheduleTellOnce(_settings.TunningParameters.ShardStartTimeout, Self, new ResendShardHost(shard, region), Self, cancelable);
             _unAckedHostShards.Add(shard, cancelable);
         }
 
         protected override bool ReceiveCommand(object message)
         {
-            if (message is Register)
-            {
-                var region = ((Register)message).ShardRegion;
-                _log.Debug("Shard region registered: [{0}]", region);
-                if (_persistentState.Regions.ContainsKey(region))
-                {
-                    Sender.Tell(new RegisterAck(Self));
-                }
-                else
-                {
-                    var self = Self;
-                    Persist(new ShardRegionRegistered(region), registered =>
-                    {
-                        var isFirstRegion = _persistentState.Regions.Count == 0;
-                        _persistentState = _persistentState.Updated(registered);
-                        Context.Watch(region);
-                        Sender.Tell(new RegisterAck(self));
-
-                        if (isFirstRegion)
-                        {
-                            AllocateShardHomes();
-                        }
-                    });
-                }
-            }
-            else if (message is RegisterProxy)
-            {
-                var proxy = ((RegisterProxy)message).ShardRegionProxy;
-                _log.Debug("Shard region proxy registered: [{0}]", proxy);
-                if (_persistentState.RegionProxies.Contains(proxy))
-                {
-                    Sender.Tell(new RegisterAck(Self));
-                }
-                else
-                {
-                    var self = Self;
-                    Persist(new ShardRegionProxyRegistered(proxy), registered =>
-                    {
-                        _persistentState = _persistentState.Updated(registered);
-                        Context.Watch(proxy);
-                        Sender.Tell(new RegisterAck(self));
-                    });
-                }
-            }
-            else if (message is Terminated)
-            {
-                var terminated = (Terminated)message;
-                if (_persistentState.Regions.ContainsKey(terminated.ActorRef))
-                {
-                    _log.Debug("Shard region terminated: [{0}]", terminated.ActorRef);
-
-                    string[] shards;
-                    if (!_persistentState.Regions.TryGetValue(terminated.ActorRef, out shards))
-                        throw new InvalidOperationException(string.Format("Terminated region {0} is not registered", terminated.ActorRef));
-
-                    foreach (var shard in shards)
-                    {
-                        Self.Tell(new GetShardHome(shard));
-                    }
-
-                    Persist(new ShardRegionTerminated(terminated.ActorRef), regionTerminated =>
-                    {
-                        _persistentState = _persistentState.Updated(regionTerminated);
-                        AllocateShardHomes();
-                    });
-                }
-                else if (_persistentState.RegionProxies.Contains(terminated.ActorRef))
-                {
-                    _log.Debug("Shard region proxy terminated: [{0}]", terminated.ActorRef);
-                    Persist(new ShardRegionProxyTerminated(terminated.ActorRef), proxyTerminated =>
-                    {
-                        _persistentState = _persistentState.Updated(proxyTerminated);
-                    });
-                }
-            }
-            else if (message is GetShardHome)
-            {
-                var shard = ((GetShardHome)message).Shard;
-                if (!_rebalanceInProgress.Contains(shard))
-                {
-                    IActorRef region;
-                    if (_persistentState.Shards.TryGetValue(shard, out region))
-                    {
-                        Sender.Tell(new ShardHome(shard, region));
-                    }
-                    else
-                    {
-                        if (_persistentState.Regions.Count != 0)
-                        {
-                            var getShardHomeSender = Sender;
-                            var regionTask = _allocationStrategy.AllocateShard(getShardHomeSender, shard, new Dictionary<IActorRef, ShardId[]>(_persistentState.Regions));
-                            if (regionTask.IsCompleted && !regionTask.IsFaulted)
-                            {
-                                ContinueGetShardHome(shard, regionTask.Result, getShardHomeSender);
-                            }
-
-                            regionTask.ContinueWith(t =>
-                                !(t.IsFaulted || t.IsCanceled)
-                                    ? new AllocateShardResult(shard, t.Result, getShardHomeSender)
-                                    : new AllocateShardResult(shard, null, getShardHomeSender),
-                                TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously)
-                                .PipeTo(Self);
-                        }
-                    }
-                }
-            }
-            else if (message is AllocateShardResult)
-            {
-                var allocateResult = (AllocateShardResult)message;
-                if (allocateResult.ShardRegion == null)
-                {
-                    _log.Debug("Shard [{0}] allocation failed. It will be retried", allocateResult.Shard);
-                }
-                else
-                {
-                    ContinueGetShardHome(allocateResult.Shard, allocateResult.ShardRegion, allocateResult.GetShardHomeSender);
-                }
-            }
-            else if (message is ShardStarted)
-            {
-                var shard = ((ShardStarted)message).Shard;
-                ICancelable cancel;
-                if (_unAckedHostShards.TryGetValue(shard, out cancel))
-                {
-                    cancel.Cancel();
-                    _unAckedHostShards.Remove(shard);
-                }
-            }
-            else if (message is ResendShardHost)
-            {
-                var resend = (ResendShardHost)message;
-                IActorRef region;
-                if (_persistentState.Shards.TryGetValue(resend.Shard, out region) && region.Equals(resend.Region))
-                {
-                    SendHostShardMessage(resend.Shard, region);
-                }
-            }
-            else if (message is RebalanceTick)
-            {
-                if (_persistentState.Shards.Count != 0)
-                {
-                    var shardsTask = _allocationStrategy.Rebalance(new Dictionary<IActorRef, ShardId[]>(_persistentState.Regions), new HashSet<string>(_rebalanceInProgress));
-                    if (shardsTask.IsCompleted && !shardsTask.IsFaulted)
-                    {
-                        ContinueRebalance(shardsTask.Result);
-                    }
-
-                    shardsTask.ContinueWith(
-                        t =>
-                            !(t.IsFaulted || t.IsCanceled)
-                                ? new RebalanceResult(t.Result)
-                                : new RebalanceResult(Enumerable.Empty<ShardId>()),
-                        TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously)
-                        .PipeTo(Self);
-                }
-            }
+            if (message is Register)                            HandleRegister(message as Register);
+            else if (message is RegisterProxy)                  HandleRegisterProxy(message as RegisterProxy);
+            else if (message is Terminated)                     HandleTerminated(message as Terminated);
+            else if (message is DelayedShardRegionTerminated)   RegionTerminated((message as DelayedShardRegionTerminated).Region);
+            else if (message is GetShardHome)                   HandleGetShardHome(message as GetShardHome);
+            else if (message is AllocateShardResult)            HandleAllocateShardResult(message as AllocateShardResult);
+            else if (message is ShardStarted)                   HandleShardStated(message as ShardStarted);
+            else if (message is ResendShardHost)                HandleResendShardHost(message as ResendShardHost);
+            else if (message is RebalanceTick)                  HandleRebalanceTick();
             else if (message is RebalanceResult)
             {
-                var result = (RebalanceResult)message;
+                var result = (RebalanceResult) message;
                 ContinueRebalance(result.Shards);
             }
-            else if (message is RebalanceDone)
-            {
-                var done = (RebalanceDone)message;
-                _rebalanceInProgress.Remove(done.Shard);
-                _log.Debug("Rebalance shard [{0}] done [{1}]", done.Shard, done.Ok);
-
-                // The shard could have been removed by ShardRegionTerminated
-                if (done.Ok && _persistentState.Shards.ContainsKey(done.Shard))
-                {
-                    Persist(new ShardHomeDeallocated(done.Shard), deallocated =>
-                    {
-                        _persistentState = _persistentState.Updated(deallocated);
-                        _log.Debug("Shard [{0}] deallocated", deallocated.Shard);
-                        AllocateShardHomes();
-                    });
-                }
-            }
-            else if (message is SnapshotTick)
-            {
-                _log.Debug("Saving persistent snapshot");
-                SaveSnapshot(_persistentState);
-            }
+            else if (message is RebalanceDone)                  HandleRebalanceDone(message as RebalanceDone);
+            else if (message is GracefulShutdownRequest)        HandleGracefulShutdownRequest(message as GracefulShutdownRequest);
             else if (message is SaveSnapshotSuccess)
-            {
                 _log.Debug("Persistent snapshot saved successfully");
-            }
             else if (message is SaveSnapshotFailure)
-            {
-                _log.Warning("Persistent snapshot failure: " + ((SaveSnapshotFailure)message).Cause.Message);
-            }
+                _log.Warning("Persistent snapshot failure: " + ((SaveSnapshotFailure) message).Cause.Message);
             else if (message is ShardHome)
             {
                 // On rebalance, we send ourselves a GetShardHome message to reallocate a
@@ -471,9 +303,246 @@ namespace Akka.Cluster.Sharding
                 // it will soon be stopped when singleton is stopped
                 Context.Become(ShuttingDown);
             }
-            else if (message is ClusterEvent.CurrentClusterState) { /* ignore */ }
+            else if (message is GetCurrentRegions)
+            {
+                var regions = _persistentState.Regions.Keys
+                    .Select(region => string.IsNullOrEmpty(region.Path.Address.Host) ? _cluster.SelfAddress : region.Path.Address)
+                    .ToArray();
+                Sender.Tell(new CurrentRegions(regions));
+            }
+            else if (message is ClusterEvent.CurrentClusterState)
+            {
+                /* ignore */
+            }
             else return false;
             return true;
+        }
+
+        private void HandleGracefulShutdownRequest(GracefulShutdownRequest request)
+        {
+            if (!_gracefullShutdownInProgress.Contains(request.ShardRegion))
+            {
+                ShardId[] shards;
+                if (_persistentState.Regions.TryGetValue(request.ShardRegion, out shards))
+                {
+                    _log.Debug("Graceful shutdown of region [{0}] with shards [{1}]", request.ShardRegion, string.Join(", ", shards));
+                    _gracefullShutdownInProgress.Add(request.ShardRegion);
+                    ContinueRebalance(shards.ToArray());
+                }
+            }
+        }
+
+        private void HandleRebalanceDone(RebalanceDone done)
+        {
+            _rebalanceInProgress.Remove(done.Shard);
+            _log.Debug("Rebalance shard [{0}] done [{1}]", done.Shard, done.Ok);
+
+            // The shard could have been removed by ShardRegionTerminated
+            if (_persistentState.Shards.ContainsKey(done.Shard))
+            {
+                if (done.Ok)
+                {
+                    SaveSnapshotIfNeeded();
+                    Persist(new ShardHomeDeallocated(done.Shard), deallocated =>
+                    {
+                        _persistentState = _persistentState.Updated(deallocated);
+                        _log.Debug("Shard [{0}] deallocated", deallocated.Shard);
+                        AllocateShardHomes();
+                    });
+                }
+                else // rebalance not completed, graceful shutdown will be retried
+                    _gracefullShutdownInProgress.Remove(_persistentState.Shards[done.Shard]);
+            }
+        }
+
+        private void HandleRebalanceTick()
+        {
+            if (_persistentState.Regions.Count != 0)
+            {
+                var shardsTask =
+                    _allocationStrategy.Rebalance(new Dictionary<IActorRef, ShardId[]>(_persistentState.Regions),
+                        new HashSet<string>(_rebalanceInProgress));
+                if (shardsTask.IsCompleted && !shardsTask.IsFaulted)
+                {
+                    ContinueRebalance(shardsTask.Result);
+                }
+
+                shardsTask.ContinueWith(
+                    t =>
+                        !(t.IsFaulted || t.IsCanceled)
+                            ? new RebalanceResult(t.Result)
+                            : new RebalanceResult(Enumerable.Empty<ShardId>()),
+                    TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously)
+                    .PipeTo(Self);
+            }
+        }
+
+        private void HandleResendShardHost(ResendShardHost resend)
+        {
+            IActorRef region;
+            if (_persistentState.Shards.TryGetValue(resend.Shard, out region) && region.Equals(resend.Region))
+            {
+                SendHostShardMessage(resend.Shard, region);
+            }
+        }
+
+        private void HandleShardStated(ShardStarted message)
+        {
+            var shard = message.Shard;
+            ICancelable cancel;
+            if (_unAckedHostShards.TryGetValue(shard, out cancel))
+            {
+                cancel.Cancel();
+                _unAckedHostShards.Remove(shard);
+            }
+        }
+
+        private void HandleAllocateShardResult(AllocateShardResult allocateResult)
+        {
+            if (allocateResult.ShardRegion == null)
+            {
+                _log.Debug("Shard [{0}] allocation failed. It will be retried", allocateResult.Shard);
+            }
+            else
+            {
+                ContinueGetShardHome(allocateResult.Shard, allocateResult.ShardRegion,
+                    allocateResult.GetShardHomeSender);
+            }
+        }
+
+        private void HandleGetShardHome(GetShardHome getShardHome)
+        {
+            var shard = getShardHome.Shard;
+            if (!_rebalanceInProgress.Contains(shard))
+            {
+                IActorRef region;
+                if (_persistentState.Shards.TryGetValue(shard, out region))
+                {
+                    Sender.Tell(new ShardHome(shard, region));
+                }
+                else
+                {
+                    var activeRegions = _persistentState.Regions.Where(kv => !_gracefullShutdownInProgress.Contains(kv.Key))
+                        .ToDictionary(kv => kv.Key, kv => kv.Value);
+                    if (activeRegions.Count != 0)
+                    {
+                        var getShardHomeSender = Sender;
+                        var regionTask = _allocationStrategy.AllocateShard(getShardHomeSender, shard, activeRegions);
+
+                        // if task completed immediately, just continue
+                        if (regionTask.IsCompleted && !regionTask.IsFaulted)
+                        {
+                            ContinueGetShardHome(shard, regionTask.Result, getShardHomeSender);
+                        }
+
+                        regionTask.ContinueWith(t =>
+                            !(t.IsFaulted || t.IsCanceled)
+                                ? new AllocateShardResult(shard, t.Result, getShardHomeSender)
+                                : new AllocateShardResult(shard, null, getShardHomeSender),
+                            TaskContinuationOptions.AttachedToParent | TaskContinuationOptions.ExecuteSynchronously)
+                            .PipeTo(Self);
+                    }
+                }
+            }
+        }
+
+        private void HandleTerminated(Terminated terminated)
+        {
+            if (_persistentState.Regions.ContainsKey(terminated.ActorRef))
+            {
+                if (_removalMargin != TimeSpan.Zero && terminated.AddressTerminated &&
+                    _aliveRegions.Contains(terminated.ActorRef))
+                    Context.System.Scheduler.ScheduleTellOnce(_removalMargin, Self,
+                        new DelayedShardRegionTerminated(terminated.ActorRef), Self);
+                else
+                    RegionTerminated(terminated.ActorRef);
+            }
+            else if (_persistentState.RegionProxies.Contains(terminated.ActorRef))
+            {
+                _log.Debug("Shard region proxy terminated: [{0}]", terminated.ActorRef);
+                Persist(new ShardRegionProxyTerminated(terminated.ActorRef),
+                    proxyTerminated => { _persistentState = _persistentState.Updated(proxyTerminated); });
+            }
+        }
+
+        private void RegionTerminated(IActorRef terminatedRef)
+        {
+            ShardId[] shards;
+            if (_persistentState.Regions.TryGetValue(terminatedRef, out shards))
+            {
+                _log.Debug("Shard region terminated: [{0}]", terminatedRef);
+                foreach (var shard in shards)
+                {
+                    Self.Tell(new GetShardHome(shard));
+                }
+                _gracefullShutdownInProgress.Remove(terminatedRef);
+                SaveSnapshotIfNeeded();
+                Persist(new ShardRegionTerminated(terminatedRef), e =>
+                {
+                    _persistentState = _persistentState.Updated(e);
+                    AllocateShardHomes();
+                });
+            }
+        }
+
+        private void HandleRegisterProxy(RegisterProxy registerProxy)
+        {
+            var proxy = registerProxy.ShardRegionProxy;
+            _log.Debug("Shard region proxy registered: [{0}]", proxy);
+            if (_persistentState.RegionProxies.Contains(proxy))
+            {
+                Sender.Tell(new RegisterAck(Self));
+            }
+            else
+            {
+                SaveSnapshotIfNeeded();
+                var self = Self;
+                Persist(new ShardRegionProxyRegistered(proxy), registered =>
+                {
+                    _persistentState = _persistentState.Updated(registered);
+                    Context.Watch(proxy);
+                    Sender.Tell(new RegisterAck(self));
+                });
+            }
+        }
+
+        private void HandleRegister(Register message)
+        {
+            var region = message.ShardRegion;
+            _log.Debug("Shard region registered: [{0}]", region);
+            _aliveRegions.Add(region);
+            if (_persistentState.Regions.ContainsKey(region))
+            {
+                Sender.Tell(new RegisterAck(Self));
+            }
+            else
+            {
+                _gracefullShutdownInProgress.Remove(region);
+                SaveSnapshotIfNeeded();
+                var self = Self;
+                Persist(new ShardRegionRegistered(region), registered =>
+                {
+                    var isFirstRegion = _persistentState.Regions.Count == 0;
+                    _persistentState = _persistentState.Updated(registered);
+                    Context.Watch(region);
+                    Sender.Tell(new RegisterAck(self));
+
+                    if (isFirstRegion)
+                    {
+                        AllocateShardHomes();
+                    }
+                });
+            }
+        }
+
+        private void SaveSnapshotIfNeeded()
+        {
+            _persistCount++;
+            if (_persistCount % _settings.TunningParameters.SnapshotAfter == 0)
+            {
+                _log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
+                SaveSnapshot(_persistentState);
+            }
         }
 
         private bool ShuttingDown(object message)
@@ -495,7 +564,7 @@ namespace Akka.Cluster.Sharding
                         _log.Debug("Rebalance shard [{0}] from [{1}]", shard, rebalanceFromRegion);
 
                         var regions = new HashSet<IActorRef>(_persistentState.Regions.Keys.Union(_persistentState.RegionProxies));
-                        Context.ActorOf(RebalanceWorker.Props(shard, rebalanceFromRegion, _handOffTimeout, regions));
+                        Context.ActorOf(RebalanceWorker.Props(shard, rebalanceFromRegion, _settings.TunningParameters.HandOffTimeout, regions));
                     }
                     else
                     {
@@ -516,8 +585,9 @@ namespace Akka.Cluster.Sharding
                 }
                 else
                 {
-                    if (_persistentState.Regions.ContainsKey(region))
+                    if (_persistentState.Regions.ContainsKey(region) && !_gracefullShutdownInProgress.Contains(region))
                     {
+                        SaveSnapshotIfNeeded();
                         Persist(new ShardHomeAllocated(shard, region), allocated =>
                         {
                             _persistentState = _persistentState.Updated(allocated);
@@ -535,9 +605,9 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        public static Props Props(TimeSpan handOffTimeout, TimeSpan shardStartTimeout, TimeSpan rebalanceInterval, TimeSpan snapshotInterval, IShardAllocationStrategy allocationStrategy)
+        public static Props Props(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy)
         {
-            return Actor.Props.Create(() => new ShardCoordinator(handOffTimeout, shardStartTimeout, rebalanceInterval, snapshotInterval, allocationStrategy));
+            return Actor.Props.Create(() => new ShardCoordinator(typeName, settings, allocationStrategy)).WithDeploy(Deploy.Local);
         }
     }
 

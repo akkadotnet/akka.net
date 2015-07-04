@@ -89,6 +89,7 @@
     <Compile Include="Actor\Internals\InternalSupportsTestFSMRef.cs" />
     <Compile Include="Actor\Internals\InitializableActor.cs" />
     <Compile Include="Actor\Scheduler\DateTimeNowTimeProvider.cs" />
+    <Compile Include="Actor\Scheduler\DedicatedThreadScheduler.cs" />
     <Compile Include="Actor\Scheduler\IDateTimeNowTimeProvider.cs" />
     <Compile Include="Actor\Scheduler\ITimeProvider.cs" />
     <Compile Include="Actor\Scheduler\DeprecatedSchedulerExtensions.cs" />
@@ -150,7 +151,6 @@
     <Compile Include="Actor\Stash\UntypedActorWithUnboundedStash.cs" />
     <Compile Include="Actor\Stash\IWithBoundedStash.cs" />
     <Compile Include="Actor\Stash\IWithUnboundedStash.cs" />
-    <Compile Include="Actor\Scheduler\TaskBasedScheduler.cs" />
     <Compile Include="Configuration\ConfigurationException.cs" />
     <Compile Include="Configuration\ConfigurationFactory.cs" />
     <Compile Include="Configuration\Config.cs" />
@@ -217,6 +217,7 @@
     <Compile Include="Event\Error.cs" />
     <Compile Include="Event\EventBus.cs" />
     <Compile Include="Event\EventStream.cs" />
+    <Compile Include="Event\EventStreamExtensions.cs" />
     <Compile Include="Event\ILogMessageFormatter.cs" />
     <Compile Include="Event\Info.cs" />
     <Compile Include="Event\InitializeLogger.cs" />
@@ -230,10 +231,12 @@
     <Compile Include="Event\LogMessage.cs" />
     <Compile Include="Event\StandardOutLogger.cs" />
     <Compile Include="Helios.Concurrency.DedicatedThreadPool.cs" />
+    <Compile Include="Pattern\BackoffSupervisor.cs" />
     <Compile Include="Routing\ConsistentHashRouter.cs" />
-    <Compile Include="Routing\TailChoppingPool.cs" />
     <Compile Include="Serialization\JavaSerializer.cs" />
     <Compile Include="Util\ContinuousEnumerator.cs" />
+    <Compile Include="Util\Internal\Collections\EnumeratorExtensions.cs" />
+    <Compile Include="Util\Internal\Collections\Iterator.cs" />
     <Compile Include="Util\Internal\ImmutabilityUtils.cs" />
     <Compile Include="Util\Internal\InterlockedSpin.cs" />
     <Compile Include="Util\Internal\Collections\EmptyReadOnlyCollections.cs" />
@@ -297,6 +300,7 @@
     <Compile Include="PatternMatch.cs" />
     <Compile Include="Util\Resolver.cs" />
     <Compile Include="Util\ThreadLocalRandom.cs" />
+    <Compile Include="Util\Vector.cs" />
     <Compile Include="Util\WildcardTree.cs" />
     <Compile Include="Util\MatchHandler\Argument.cs" />
     <Compile Include="Util\MatchHandler\CachedMatchCompiler.cs" />
