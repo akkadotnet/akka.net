@@ -1,16 +1,21 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterSingletonManagerChaosSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.MultiNodeTests;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
-using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
-using TCP;
 using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
@@ -75,7 +80,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         protected override int InitialParticipantsValueFactory { get { return Roles.Count; } }
 
-        [Fact(Skip = "TODO")]
+        [MultiNodeFact]
         public void ClusterSingletonManager_in_chaotic_cluster_should_startup_6_node_cluster()
         {
             Within(TimeSpan.FromMinutes(1), () =>
@@ -124,7 +129,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
         }
 
-        [Fact(Skip = "TODO")]
+        [MultiNodeFact]
         public void ClusterSingletonManager_in_chaotic_cluster_should_take_over_when_tree_oldest_nodes_crash_in_6_nodes_cluster()
         {
             Within(TimeSpan.FromSeconds(90), () =>
@@ -215,7 +220,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
             RunOn(() =>
             {
-                var addresses = new HashSet<Akka.Actor.Address>(memberProbe.ReceiveN(nodes.Length, TimeSpan.FromSeconds(15))
+                var addresses = new HashSet<Address>(memberProbe.ReceiveN(nodes.Length, TimeSpan.FromSeconds(15))
                     .Where(x => x is ClusterEvent.MemberUp)
                     .Select(x => (x as ClusterEvent.MemberUp).Member.Address));
 
