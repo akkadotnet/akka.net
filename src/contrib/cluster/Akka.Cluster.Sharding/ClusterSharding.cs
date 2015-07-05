@@ -1,13 +1,16 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterSharding.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
-using Akka.Event;
 using Akka.Pattern;
-using Akka.Persistence;
 
 namespace Akka.Cluster.Sharding
 {
@@ -137,7 +140,7 @@ namespace Akka.Cluster.Sharding
             new ConcurrentDictionary<string, IActorRef>();
 
         private readonly ExtendedActorSystem _system;
-        private Akka.Cluster.Cluster _cluster;
+        private Cluster _cluster;
 
         public ClusterSharding(ExtendedActorSystem system)
         {
@@ -436,7 +439,7 @@ namespace Akka.Cluster.Sharding
                     var minBackoff = settings.TunningParameters.CoordinatorFailureBackoff;
                     var maxBackoff = new TimeSpan(minBackoff.Ticks * 5);
                     var coordinatorProps = ShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy);
-                    var singletonProps = Actor.Props.Create(() => new BackoffSupervisor(coordinatorProps, "coordinator", minBackoff, maxBackoff, 0.2)).WithDeploy(Deploy.Local);
+                    var singletonProps = Props.Create(() => new BackoffSupervisor(coordinatorProps, "coordinator", minBackoff, maxBackoff, 0.2)).WithDeploy(Deploy.Local);
                     var singletonSettings = settings.CoordinatorSingletonSettings.WithSingletonName("singleton").WithRole(settings.Role);
 
                     Context.ActorOf(ClusterSingletonManager.Props(

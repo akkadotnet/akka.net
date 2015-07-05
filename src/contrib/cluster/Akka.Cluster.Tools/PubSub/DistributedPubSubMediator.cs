@@ -1,8 +1,13 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DistributedPubSubMediator.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2015 Typesafe Inc. <http://www.typesafe.com>
+//     Copyright (C) 2013-2015 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.PubSub.Internal;
 using Akka.Event;
@@ -10,6 +15,7 @@ using Akka.Pattern;
 using Akka.Routing;
 using Akka.Util;
 using Akka.Util.Internal.Collections;
+using Status = Akka.Cluster.Tools.PubSub.Internal.Status;
 
 namespace Akka.Cluster.Tools.PubSub
 {
@@ -374,7 +380,7 @@ namespace Akka.Cluster.Tools.PubSub
             {
                 unsubscribed.Subscriber.Tell(unsubscribed.Ack);
             });
-            Receive<Internal.Status>(status =>
+            Receive<Status>(status =>
             {
                 // gossip chat starts with a Status message, containing the bucket versions of the other node
                 var delta = CollectDelta(status.Versions).ToArray();
@@ -385,7 +391,7 @@ namespace Akka.Cluster.Tools.PubSub
 
                 if (OtherHasNewerVersions(status.Versions))
                 {
-                    Sender.Tell(new Internal.Status(OwnVersions));
+                    Sender.Tell(new Status(OwnVersions));
                 }
             });
             Receive<Delta>(delta =>
@@ -606,7 +612,7 @@ namespace Akka.Cluster.Tools.PubSub
 
         private void GossipTo(Address address)
         {
-            Context.ActorSelection(Self.Path.ToStringWithAddress(address)).Tell(new Internal.Status(OwnVersions));
+            Context.ActorSelection(Self.Path.ToStringWithAddress(address)).Tell(new Status(OwnVersions));
         }
 
         private Address SelectRandomNode(IList<Address> addresses)
