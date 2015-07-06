@@ -270,7 +270,36 @@ namespace Akka.IO
 
             public override ByteString Concat(ByteString that)
             {
-                throw new NotImplementedException();
+                if (that.IsEmpty)
+                {
+                    return this;
+                }
+                else if (this.IsEmpty)
+                {
+                    return that;
+                }
+                else
+                {
+                    var b1c = that as ByteString1C;
+                    if (b1c != null)
+                    {
+                        return new ByteStrings(Items.Concat(b1c.ToByteString1()).ToArray());
+                    }
+
+                    var b1 = that as ByteString1;
+                    if (b1 != null)
+                    {
+                        return new ByteStrings(Items.Concat(b1).ToArray());
+                    }
+
+                    var bs = that as ByteStrings;
+                    if (bs != null)
+                    {
+                        return new ByteStrings(Items.Concat(bs.Items).ToArray());
+                    }
+
+                    throw new InvalidOperationException("No suitable implementation found for concatenatenating ByteString of type " + that.GetType());
+                }
             }
 
             public override bool IsCompact()
@@ -280,7 +309,18 @@ namespace Akka.IO
 
             public override CompactByteString Compact()
             {
-                throw new NotImplementedException();
+                if (IsCompact())
+                {
+                    return _byteStrings.Head().Compact();
+                }
+
+                var bb = ByteBuffer.Allocate(Count);
+                foreach (var item in Items)
+                {
+                    bb.Put(item.ToArray());
+                }
+
+                return new ByteString1C(bb.Array());
             }
 
             public override int Count
