@@ -309,7 +309,18 @@ namespace Akka.IO
 
             public override CompactByteString Compact()
             {
-                throw new NotImplementedException();
+                if (IsCompact())
+                {
+                    return _byteStrings.Head().Compact();
+                }
+
+                var bb = ByteBuffer.Allocate(Count);
+                foreach (var item in Items)
+                {
+                    bb.Put(item.ToArray());
+                }
+
+                return new ByteString1C(bb.Array());
             }
 
             public override int Count
