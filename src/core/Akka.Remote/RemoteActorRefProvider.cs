@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -50,7 +50,7 @@ namespace Akka.Remote
                 return _internals ??
                        (_internals =
                            new Internals(new Remoting(_system, this), _system.Serialization,
-                               new RemoteDaemon(_system, RootPath / "remote", SystemGuardian, _log)));
+                               new RemoteSystemDaemon(_system, RootPath / "remote", SystemGuardian,this.DeadLetters /* TODO: should be RemoteTerminator*/, _log)));
             }
         }
 
@@ -350,11 +350,6 @@ namespace Akka.Remote
 
         public void UseActorOnNode(RemoteActorRef actor, Props props, Deploy deploy, IInternalActorRef supervisor)
         {
-            Akka.Serialization.Serialization.CurrentTransportInformation = new Information
-            {
-                System = _system,
-                Address = actor.LocalAddressToUse,
-            };
             _log.Debug("[{0}] Instantiating Remote Actor [{1}]", RootPath, actor.Path);
             IActorRef remoteNode = ResolveActorRef(new RootActorPath(actor.Path.Address) / "remote");
             remoteNode.Tell(new DaemonMsgCreate(props, deploy, actor.Path.ToSerializationFormat(), supervisor));

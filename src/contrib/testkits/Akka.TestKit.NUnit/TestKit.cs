@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Configuration;
+using NUnit.Framework;
 
 namespace Akka.TestKit.NUnit
 {
@@ -17,6 +18,9 @@ namespace Akka.TestKit.NUnit
     public class TestKit : TestKitBase, IDisposable
     {
         private static readonly NUnitAssertions _assertions = new NUnitAssertions();
+        private readonly Config _config;
+        private readonly string _actorSystemName;
+        private bool _isFirstRun = true;
         private bool _isDisposed; //Automatically initialized to false;
 
         /// <summary>
@@ -28,7 +32,8 @@ namespace Akka.TestKit.NUnit
         public TestKit(ActorSystem system = null)
             : base(_assertions, system)
         {
-            //Intentionally left blank
+            if(system != null)
+                throw new NotSupportedException("Due to the way NUnit works, providing an ActorSystem is not supported.  For further details please see https://github.com/akkadotnet/akka.net/pull/1092");
         }
 
         /// <summary>
@@ -40,7 +45,8 @@ namespace Akka.TestKit.NUnit
         public TestKit(Config config, string actorSystemName = null)
             : base(_assertions, config, actorSystemName)
         {
-            //Intentionally left blank
+            _config = config;
+            _actorSystemName = actorSystemName;
         }
 
 
@@ -52,7 +58,7 @@ namespace Akka.TestKit.NUnit
         public TestKit(string config)
             : base(_assertions, ConfigurationFactory.ParseString(config))
         {
-            //Intentionally left blank
+            _config = ConfigurationFactory.ParseString(config);
         }
 
         public new static Config DefaultConfig { get { return TestKitBase.DefaultConfig; } }
@@ -60,6 +66,27 @@ namespace Akka.TestKit.NUnit
 
         protected static NUnitAssertions Assertions { get { return _assertions; } }
 
+        /// <summary>
+        /// This method is called before each test run, it initializes the test including
+        /// creating and setting up the ActorSystem.
+        /// </summary>
+        [SetUp]
+        public void InitializeActorSystemOnSetUp()
+        {
+            if (!_isFirstRun)
+                InitializeTest(null, _config, _actorSystemName, null);
+        }
+
+        /// <summary>
+        /// This method is called after each test finishes, which calls
+        /// into the AfterAll method.
+        /// </summary>
+        [TearDown]
+        public void ShutDownActorSystemOnTearDown()
+        {
+            _isFirstRun = false;
+            AfterAll();
+        }
 
         /// <summary>
         /// This method is called when a test ends. 
@@ -73,16 +100,6 @@ namespace Akka.TestKit.NUnit
             Shutdown();
         }
 
-
-        // Dispose ------------------------------------------------------------
-
-        //Destructor:
-        //~TestKit() 
-        //{
-        //    // Finalizer calls Dispose(false)
-        //    Dispose(false);
-        //}
-
         /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
         public void Dispose()
         {
@@ -91,7 +108,6 @@ namespace Akka.TestKit.NUnit
             //from executing a second time.
             GC.SuppressFinalize(this);
         }
-
 
         /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
         /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a 
@@ -104,22 +120,15 @@ namespace Akka.TestKit.NUnit
             // runtime from inside the finalizer and you should not reference
             // other objects. Only unmanaged resources can be disposed.
 
-            try
+            //Make sure Dispose does not get called more than once, by checking the disposed field
+            if (!_isDisposed)
             {
-                //Make sure Dispose does not get called more than once, by checking the disposed field
-                if (!_isDisposed)
+                if (disposing)
                 {
-                    if (disposing)
-                    {
-                        AfterAll();
-                    }
+                    AfterAll();
                 }
-                _isDisposed = true;
             }
-            finally
-            {
-                // base.dispose(disposing);
-            }
+            _isDisposed = true;
         }
     }
 }

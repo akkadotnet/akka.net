@@ -64,6 +64,17 @@ namespace Akka.Serialization
         public abstract byte[] ToBinary(object obj);
 
         /// <summary>
+        /// Serializes the given object into a byte array and uses the given address to decorate serialized ActorRef's
+        /// </summary>
+        /// <param name="address">The address to use when serializing local ActorRef´s</param>
+        /// <param name="obj">The object to serialize</param>
+        /// <returns></returns>
+        public byte[] ToBinaryWithAddress(Address address, object obj)
+        {
+            return Serialization.SerializeWithTransport(system, address, () => ToBinary(obj));
+        }
+
+        /// <summary>
         /// Deserializes a byte array into an object of type <paramref name="type"/>.
         /// </summary>
         /// <param name="bytes">The array containing the serialized object</param>

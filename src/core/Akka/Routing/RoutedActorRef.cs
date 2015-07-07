@@ -7,7 +7,7 @@
 
 using System;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Dispatch;
 
 namespace Akka.Routing

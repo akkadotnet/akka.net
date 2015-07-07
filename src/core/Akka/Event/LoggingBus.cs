@@ -11,7 +11,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Configuration;
 
 namespace Akka.Event

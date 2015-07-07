@@ -37,12 +37,13 @@ namespace Akka.Remote
         /// Serializes the specified message.
         /// </summary>
         /// <param name="system">The system.</param>
+        /// <param name="address"></param>
         /// <param name="message">The message.</param>
         /// <returns>SerializedMessage.</returns>
-        public static SerializedMessage Serialize(ActorSystem system, object message)
+        public static SerializedMessage Serialize(ActorSystem system,Address address, object message)
         {
             Serializer serializer = system.Serialization.FindSerializerFor(message);
-            byte[] messageBytes = serializer.ToBinary(message);
+            byte[] messageBytes = serializer.ToBinaryWithAddress(address,message);
             SerializedMessage.Builder messageBuilder = new SerializedMessage.Builder()
                 .SetSerializerId(serializer.Identifier);
             if (serializer.IncludeManifest)

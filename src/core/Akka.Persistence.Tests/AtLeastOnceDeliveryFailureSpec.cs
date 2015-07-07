@@ -259,18 +259,18 @@ namespace Akka.Persistence.Tests
                 {
                     if (ChaosSupportExtensions.ShouldFail(_confirmFailureRate))
                     {
-                        Log.Error(string.Format("[destination] confirm message failed (message = {0}, {1})", m.DeliveryId, m.I));
+                        Log.Error("[destination] confirm message failed (message = {0}, {1})", m.DeliveryId, m.I);
                     }
                     else if (State.Contains(m.I))
                     {
-                        Log.Debug(string.Format("[destination] ignored duplicate (message = {0}, {1})", m.DeliveryId, m.I));
+                        Log.Debug("[destination] ignored duplicate (message = {0}, {1})", m.DeliveryId, m.I);
                         Sender.Tell(new Confirm(m.DeliveryId, m.I));
                     }
                     else
                     {
                         this.Add(m.I);
                         Sender.Tell(new Confirm(m.DeliveryId, m.I));
-                        Log.Debug(string.Format("[destination] received and confirmed (message = {0}, {1})", m.DeliveryId, m.I));
+                        Log.Debug("[destination] received and confirmed (message = {0}, {1})", m.DeliveryId, m.I);
                     }
                 });
             }

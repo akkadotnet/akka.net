@@ -83,11 +83,6 @@ akka {
                 remote.Tell("Remote message 3", reply);
                 remote.Tell("Remote message 4", reply);
                 remote.Tell("Remote message 5", reply);
-                Console.ReadLine();
-                for (var i = 0; i < 10000; i++)
-                {
-                    remote.Tell(i);
-                }
 
                 Console.ReadLine();
             }

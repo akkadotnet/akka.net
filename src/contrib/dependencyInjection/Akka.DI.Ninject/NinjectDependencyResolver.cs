@@ -49,9 +49,7 @@ namespace Akka.DI.Ninject
         /// <returns>The type with the specified actor name</returns>
         public Type GetType(string actorName)
         {
-            typeCache.TryAdd(actorName, actorName.GetTypeValue());
-
-            return typeCache[actorName];
+            return typeCache.GetOrAdd(actorName, key => key.GetTypeValue());
         }
 
         /// <summary>

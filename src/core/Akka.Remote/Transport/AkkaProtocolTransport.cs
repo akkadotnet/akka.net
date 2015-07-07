@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internals;
+using Akka.Actor.Internal;
 using Akka.Event;
 using Akka.Util.Internal;
 using Google.ProtocolBuffers;
@@ -609,7 +609,7 @@ namespace Akka.Remote.Transport
                                     })
                                     .Default(d =>
                                     {
-                                        _log.Debug(string.Format("Expected message of type Associate; instead received {0}", d));
+                                        _log.Debug("Expected message of type Associate; instead received {0}", d);
                                         //Expect handshake to be finished, dropping connection
                                         SendDisassociate(wrappedHandle, DisassociateInfo.Unknown);
                                         nextState = Stop();
