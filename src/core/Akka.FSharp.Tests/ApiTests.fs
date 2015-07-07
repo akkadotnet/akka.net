@@ -61,14 +61,14 @@ let ``can serialize nested discriminated unions`` () =
     |> equals x
 
 type testType1 = 
-    string * string
+    string * int
 
 type testType2 = 
     | V2 of testType1
 
 [<Fact>]
 let MyTest () =
-    let x = V2("hello!","world")
+    let x = V2("hello!",123)
     use sys = System.create "system" (Configuration.defaultConfig())
     let serializer = sys.Serialization.FindSerializerFor x
     let bytes = serializer.ToBinary x
