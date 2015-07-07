@@ -117,16 +117,18 @@ namespace Akka.Serialization
             var j = deserializedValue as JObject;
             if (j != null)
             {
+                //The JObject represents a special akka.net wrapper for primitives (int,float,decimal) to preserve correct type when deserializing
                 if (j["$"] != null)
                 {
                     var value = j["$"].Value<string>();
                     return GetValue(value);
                 }
 
+                //The JObject represents a discriminated union
                 if (j["Case"] != null)
                 {
                     var caseTypeName = j["Case"].Value<string>();
-                    var caseType = type.GetNestedType(caseTypeName);
+                    var caseType = type.GetNestedType(caseTypeName) ?? type;
                     var ctor = caseType.GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance)[0];
                     var paramTypes = ctor.GetParameters().Select(p => p.ParameterType).ToArray();
                     var values =
@@ -135,6 +137,13 @@ namespace Akka.Serialization
                             .ToArray();
                     var res = ctor.Invoke(values.ToArray());
                     return res;
+                }
+
+                //The JObject represents a tuple
+                if (j["Item1"] != null)
+                {
+                    var tuple = j.ToObject(type);
+                    return tuple;
                 }
             }
             var surrogate = deserializedValue as ISurrogate;
