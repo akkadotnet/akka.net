@@ -606,12 +606,12 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        internal static Props Props(string typeName, Props entryProps, ClusterShardingSettings settings, string coordinatorPath, IdExtractor extractEntityId, ShardResolver extractShardId, object handOffStopMessage)
+        public static Props Props(string typeName, Props entryProps, ClusterShardingSettings settings, string coordinatorPath, IdExtractor extractEntityId, ShardResolver extractShardId, object handOffStopMessage)
         {
             return Actor.Props.Create(() => new ShardRegion(typeName, entryProps, settings, coordinatorPath, extractEntityId, extractShardId, handOffStopMessage)).WithDeploy(Deploy.Local);
         }
 
-        internal static Props ProxyProps(string typeName, ClusterShardingSettings settings, string coordinatorPath, IdExtractor extractEntityId, ShardResolver extractShardId)
+        public static Props ProxyProps(string typeName, ClusterShardingSettings settings, string coordinatorPath, IdExtractor extractEntityId, ShardResolver extractShardId)
         {
             return Actor.Props.Create(() => new ShardRegion(typeName, null, settings, coordinatorPath, extractEntityId, extractShardId, PoisonPill.Instance)).WithDeploy(Deploy.Local);
         }

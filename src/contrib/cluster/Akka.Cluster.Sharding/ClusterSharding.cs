@@ -131,7 +131,7 @@ namespace Akka.Cluster.Sharding
     using Msg = Object;
     using EntryId = String;
     using ShardId = String;
-
+    
     public class ClusterSharding : IExtension
     {
         private readonly Lazy<IActorRef> _guardian;
@@ -141,6 +141,11 @@ namespace Akka.Cluster.Sharding
 
         private readonly ExtendedActorSystem _system;
         private Cluster _cluster;
+
+        public static ClusterSharding Get(ActorSystem system)
+        {
+            return system.WithExtension<ClusterSharding, ClusterShardingExtension>();
+        }
 
         public ClusterSharding(ExtendedActorSystem system)
         {

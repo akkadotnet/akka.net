@@ -19,6 +19,9 @@ using Akka.Cluster.Tools.Singleton;
 using Akka.MultiNodeTests;
 using Akka.Pattern;
 using Akka.Persistence.Journal;
+using Akka.TestKit;
+using Akka.TestKit.Internal.StringMatcher;
+using Akka.TestKit.TestEvent;
 using Xunit;
 
 namespace Akka.Cluster.Sharding.Tests
@@ -466,73 +469,586 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_support_proxy_only_mode()
         {
-            throw new NotImplementedException();
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                RunOn(() =>
+                {
+                    var cfg = ConfigurationFactory.ParseString(@"
+                        retry-interval = 1s
+                        buffer-size = 1000")
+                        .WithFallback(Sys.Settings.Config.GetConfig("akka.cluster.sharding"));
+
+                    var settings = ClusterShardingSettings.Create(cfg);
+                    var proxy = Sys.ActorOf(ShardRegion.ProxyProps(
+                        typeName: "counter",
+                        settings: settings,
+                        coordinatorPath: "/user/counterCoordinator/singleton/coordinator",
+                        extractEntityId: Counter.ExtractEntityId,
+                        extractShardId: Counter.ExtractShardId));
+
+                    proxy.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance));
+                    proxy.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance));
+                    proxy.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
+                    proxy.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
+                    proxy.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
+                    proxy.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
+
+                    proxy.Tell(new Counter.Get(1));
+                    ExpectMsg(2);
+                    proxy.Tell(new Counter.Get(2));
+                    ExpectMsg(4);
+                }, _second);
+                EnterBarrier("after-5");
+            });
         }
 
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_failover_shards_on_crashed_node()
         {
-            throw new NotImplementedException();
+            Within(TimeSpan.FromSeconds(30), () =>
+            {
+                // mute logging of deadLetters during shutdown of systems
+                if (!Log.IsDebugEnabled) Sys.EventStream.Publish(new Mute(new DeadLettersFilter(new PredicateMatcher(x => true), new PredicateMatcher(x => true))));
+                EnterBarrier("logs-muted");
+
+                RunOn(() =>
+                {
+                    TestConductor.Exit(_second, 0).Wait();
+                }, _controller);
+                EnterBarrier("crash-second");
+
+                RunOn(() =>
+                {
+                    var probe1 = CreateTestProbe();
+                    AwaitAssert(() =>
+                    {
+                        Within(TimeSpan.FromSeconds(1), () =>
+                        {
+                            var r = _region.Value;
+                            r.Tell(new Counter.Get(2), probe1.Ref);
+                            probe1.ExpectMsg(4);
+                            Assert.Equal(r.Path / "2" / "2", probe1.LastSender.Path);
+                        });
+                    });
+
+                    var probe2 = CreateTestProbe();
+                    AwaitAssert(() =>
+                    {
+                        Within(TimeSpan.FromSeconds(1), () =>
+                        {
+                            var r = _region.Value;
+                            r.Tell(new Counter.Get(12), probe2.Ref);
+                            probe2.ExpectMsg(1);
+                            Assert.Equal(r.Path / "0" / "12", probe2.LastSender.Path);
+                        });
+                    });
+                }, _first);
+                EnterBarrier("after-6");
+            });
         }
 
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_use_third_and_fourth_node()
         {
-            throw new NotImplementedException();
+            Within(TimeSpan.FromSeconds(15), () =>
+            {
+                Join(_third, _first);
+                Join(_fourth, _first);
+
+                RunOn(() =>
+                {
+                    var r = _region.Value;
+                    for (int i = 0; i < 10; i++)
+                        r.Tell(new Counter.EntityEnvelope(3, Counter.Increment.Instance));
+
+                    r.Tell(new Counter.Get(3));
+                    ExpectMsg(10);
+                    Assert.Equal(r.Path / "3" / "3", LastSender.Path);
+                }, _third);
+                EnterBarrier("third-update");
+
+                RunOn(() =>
+                {
+                    var r = _region.Value;
+                    for (int i = 0; i < 20; i++)
+                        r.Tell(new Counter.EntityEnvelope(4, Counter.Increment.Instance));
+
+                    r.Tell(new Counter.Get(4));
+                    ExpectMsg(20);
+                    Assert.Equal(r.Path / "4" / "4", LastSender.Path);
+                }, _fourth);
+                EnterBarrier("fourth-update");
+                
+                RunOn(() =>
+                {
+                    var r = _region.Value;
+                    r.Tell(new Counter.EntityEnvelope(3, Counter.Increment.Instance));
+                    r.Tell(new Counter.Get(3));
+                    ExpectMsg(11);
+                    Assert.Equal(Node(_third) / "user" / "counterRegion" / "3" / "3", LastSender.Path);
+
+                    r.Tell(new Counter.EntityEnvelope(4, Counter.Increment.Instance));
+                    r.Tell(new Counter.Get(4));
+                    ExpectMsg(21);
+                    Assert.Equal(Node(_third) / "user" / "counterRegion" / "4" / "4", LastSender.Path);
+                }, _first);
+                EnterBarrier("first-update");
+
+                RunOn(() =>
+                {
+                    var r = _region.Value;
+                    r.Tell(new Counter.Get(3));
+                    ExpectMsg(11);
+                    Assert.Equal(r.Path / "3" / "3", LastSender.Path);
+                }, _third);
+
+                RunOn(() =>
+                {
+                    var r = _region.Value;
+                    r.Tell(new Counter.Get(4));
+                    ExpectMsg(21);
+                    Assert.Equal(r.Path / "4" / "4", LastSender.Path);
+                }, _fourth);
+                EnterBarrier("after-7");
+            });
         }
 
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_recover_coordinator_state_after_coordinator_crash()
         {
-            throw new NotImplementedException();
+            Within(TimeSpan.FromSeconds(60), () =>
+            {
+                Join(_fifth, _fourth);
+                RunOn(() =>
+                {
+                    TestConductor.Exit(_first, 0).Wait();
+                }, _controller);
+                EnterBarrier("crash-first");
+
+                RunOn(() =>
+                {
+                    var probe3 = CreateTestProbe();
+                    AwaitAssert(() =>
+                    {
+                        Within(TimeSpan.FromSeconds(1), () =>
+                        {
+                            _region.Value.Tell(new Counter.Get(3), probe3.Ref);
+                            probe3.ExpectMsg(11);
+                            Assert.Equal(Node(_third) / "user" / "counterRegion" / "3" / "3", probe3.LastSender.Path);
+                        });
+                    });
+
+                    var probe4 = CreateTestProbe();
+                    AwaitAssert(() =>
+                    {
+                        Within(TimeSpan.FromSeconds(1), () =>
+                        {
+                            _region.Value.Tell(new Counter.Get(4), probe4.Ref);
+                            probe4.ExpectMsg(21);
+                            Assert.Equal(Node(_fourth) / "user" / "counterRegion" / "4" / "4", probe4.LastSender.Path);
+                        });
+                    });
+                }, _fifth);
+                EnterBarrier("after-8");
+            });
         }
 
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_rebalance_to_nodes_with_less_shards()
         {
-            throw new NotImplementedException();
+            Within(TimeSpan.FromSeconds(60), () =>
+            {
+                RunOn(() =>
+                {
+                    for (int i = 1; i <= 10; i++)
+                    {
+                        var rebalancingRegion = _rebalancingRegion.Value;
+                        rebalancingRegion.Tell(new Counter.EntityEnvelope(i, Counter.Increment.Instance));
+                        rebalancingRegion.Tell(new Counter.Get(i));
+                        ExpectMsg(1);
+                    }
+                }, _fourth);
+                EnterBarrier("rebalancing-shards-allocated");
+
+                Join(_sixth, _third);
+
+                RunOn(() =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        var probe = CreateTestProbe();
+                        Within(TimeSpan.FromSeconds(3), () =>
+                        {
+                            var count = 0;
+                            for (int i = 1; i <= 10; i++)
+                            {
+                                var rebalancingRegion = _rebalancingRegion.Value;
+                                rebalancingRegion.Tell(new Counter.Get(i), probe.Ref);
+                                probe.ExpectMsg<int>();
+                                if (probe.LastSender.Path.Equals(rebalancingRegion.Path/(i%12).ToString()/i.ToString()))
+                                    count++;
+                            }
+
+                            Assert.True(count >= 2);
+                        });
+                    });
+                }, _sixth);
+                EnterBarrier("after-9");
+            });
         }
 
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_be_easy_to_use_with_extensions()
         {
-            throw new NotImplementedException();
+            Within(TimeSpan.FromSeconds(50), () =>
+            {
+                RunOn(() =>
+                {
+                    //#counter-start
+                    ClusterSharding.Get(Sys).Start(
+                        typeName: "Counter",
+                        entryProps: Props.Create<Counter>(),
+                        settings: ClusterShardingSettings.Create(Sys),
+                        idExtractor: Counter.ExtractEntityId,
+                        shardResolver: Counter.ExtractShardId);
+
+                    //#counter-start
+                    ClusterSharding.Get(Sys).Start(
+                        typeName: "AnotherCounter",
+                        entryProps: Props.Create<Counter>(),
+                        settings: ClusterShardingSettings.Create(Sys),
+                        idExtractor: Counter.ExtractEntityId,
+                        shardResolver: Counter.ExtractShardId);
+                }, _third, _fourth, _fifth, _sixth);
+                EnterBarrier("extension-started");
+
+                RunOn(() =>
+                {
+                    //#counter-usage
+                    var counterRegion = ClusterSharding.Get(Sys).ShardingRegion("Counter");
+                    counterRegion.Tell(new Counter.Get(123));
+                    ExpectMsg(0);
+
+                    counterRegion.Tell(new Counter.EntityEnvelope(123, Counter.Increment.Instance));
+                    counterRegion.Tell(new Counter.Get(123));
+                    ExpectMsg(1);
+
+                    //#counter-usage
+                    var anotherCounterRegion = ClusterSharding.Get(Sys).ShardingRegion("AnotherCounter");
+                    anotherCounterRegion.Tell(new Counter.EntityEnvelope(123, Counter.Decrement.Instance));
+                    anotherCounterRegion.Tell(new Counter.Get(123));
+                    ExpectMsg(-1);
+                }, _fifth);
+                EnterBarrier("extension-used");
+
+                // sixth is a frontend node, i.e. proxy only
+                RunOn(() =>
+                {
+                    for (int i = 1000; i <= 1010; i++)
+                    {
+                        ClusterSharding.Get(Sys).ShardingRegion("Counter").Tell(new Counter.EntityEnvelope(i, Counter.Increment.Instance));
+                        ClusterSharding.Get(Sys).ShardingRegion("Counter").Tell(new Counter.Get(i));
+                        ExpectMsg(1);
+                        Assert.NotEqual(Cluster.SelfAddress, LastSender.Path.Address);
+                    }
+                }, _sixth);
+                EnterBarrier("after-10");
+            });
         }
 
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_be_easy_API_for_starting()
         {
-            throw new NotImplementedException();
+            Within(TimeSpan.FromSeconds(50), () =>
+            {
+                RunOn(() =>
+                {
+                    var counterRegionViaStart = ClusterSharding.Get(Sys).Start(
+                        typeName: "ApiTest",
+                        entryProps: Props.Create<Counter>(),
+                        settings: ClusterShardingSettings.Create(Sys),
+                        idExtractor: Counter.ExtractEntityId,
+                        shardResolver: Counter.ExtractShardId);
+
+                    var counterRegionViaGet = ClusterSharding.Get(Sys).ShardingRegion("ApiTest");
+
+                    Assert.Equal(counterRegionViaGet, counterRegionViaStart);
+                }, _first);
+                EnterBarrier("after-11");
+            });
         }
 
         [MultiNodeFact(Skip = "TODO")]
         public void Persistent_cluster_shards_should_recover_entities_upon_restart()
         {
-            throw new NotImplementedException();
+            Within(TimeSpan.FromSeconds(50), () =>
+            {
+                RunOn(() =>
+                {
+                    var x = _persistentEntitiesRegion.Value;
+                    var y = _anotherPersistentRegion.Value;
+                }, _third, _fourth, _fifth);
+                EnterBarrier("persistent-start");
+
+                RunOn(() =>
+                {
+                    //Create an increment counter 1
+                    _persistentEntitiesRegion.Value.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance));
+                    _persistentEntitiesRegion.Value.Tell(new Counter.EntityEnvelope(1, new Counter.Get(1)));
+                    ExpectMsg(1);
+
+                    //Shut down the shard and confirm it's dead
+                    var shard = Sys.ActorSelection(LastSender.Path.Parent);
+                    var region = Sys.ActorSelection(LastSender.Path.Parent.Parent);
+
+                    // stop shard
+                    region.Tell(new HandOff("1"));
+                    ExpectMsg<ShardStopped>(s => s.Shard == "1", TimeSpan.FromSeconds(10));
+
+                    var probe = CreateTestProbe();
+                    AwaitAssert(() =>
+                    {
+                        shard.Tell(new Identify(1), probe.Ref);
+                        probe.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(1) && i.Subject == null, TimeSpan.FromSeconds(1));
+                    }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
+
+                    //Get the path to where the shard now resides
+                    _persistentEntitiesRegion.Value.Tell(new Counter.Get(13));
+                    ExpectMsg(0);
+
+                    //Check that counter 1 is now alive again, even though we have
+                    // not sent a message to it via the ShardRegion
+                    var counter1 = Sys.ActorSelection(LastSender.Path.Parent/"1");
+                    counter1.Tell(new Identify(2));
+                    Assert.NotNull(ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(3)).Subject);
+
+                    counter1.Tell(new Counter.Get(1));
+                    ExpectMsg(1);
+                }, _third);
+                EnterBarrier("after-shard-restart");
+
+                RunOn(() =>
+                {
+                    //Check a second region does not share the same persistent shards
+
+                    //Create a separate 13 counter
+                    _anotherPersistentRegion.Value.Tell(new Counter.EntityEnvelope(13, Counter.Increment.Instance));
+                    _anotherPersistentRegion.Value.Tell(new Counter.Get(13));
+                    ExpectMsg(1);
+
+                    //Check that no counter "1" exists in this shard
+                    var secondCounter1 = Sys.ActorSelection(LastSender.Path.Parent/"1");
+                    secondCounter1.Tell(new Identify(3));
+                    ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(3) && i.Subject == null, TimeSpan.FromSeconds(3));
+                }, _fourth);
+                EnterBarrier("after-12");
+            });
         }
 
         [MultiNodeFact(Skip = "TODO")]
         public void Persistent_cluster_shards_should_permanently_stop_entities_which_passivate()
         {
-            throw new NotImplementedException();
+            Within(TimeSpan.FromSeconds(15), () =>
+            {
+                RunOn(() =>
+                {
+                    var x = _persistentRegion.Value;
+                }, _third, _fourth, _fifth);
+                EnterBarrier("cluster-started-12");
+
+                RunOn(() =>
+                {
+                    //create and increment counter 1
+                    _persistentRegion.Value.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance));
+                    _persistentRegion.Value.Tell(new Counter.Get(1));
+                    ExpectMsg(1);
+
+                    var counter1 = LastSender;
+                    var shard = Sys.ActorSelection(counter1.Path.Parent);
+                    var region = Sys.ActorSelection(counter1.Path.Parent.Parent);
+
+                    //create and increment counter 13
+                    _persistentRegion.Value.Tell(new Counter.EntityEnvelope(13, Counter.Increment.Instance));
+                    _persistentRegion.Value.Tell(new Counter.Get(13));
+                    ExpectMsg(1);
+
+                    var counter13 = LastSender;
+                    
+                    Assert.Equal(counter1.Path.Parent, counter13.Path.Parent);
+
+                    //Send the shard the passivate message from the counter
+                    Watch(counter1);
+                    shard.Tell(new Passivate(Counter.Stop.Instance), counter1);
+
+                    // watch for the Terminated message
+                    ExpectTerminated(counter1, TimeSpan.FromSeconds(5));
+
+                    var probe1 = CreateTestProbe();
+                    AwaitAssert(() =>
+                    {
+                        // check counter 1 is dead
+                        counter1.Tell(new Identify(1), probe1.Ref);
+                        probe1.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(1) && i.Subject == null, TimeSpan.FromSeconds(1));
+                    }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
+
+                    // stop shard cleanly
+                    region.Tell(new HandOff("1"));
+                    ExpectMsg<ShardStopped>(s => s.Shard == "1", TimeSpan.FromSeconds(10));
+
+                    var probe2 = CreateTestProbe();
+                    AwaitAssert(() =>
+                    {
+                        shard.Tell(new Identify(2), probe2.Ref);
+                        probe1.ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(1) && i.Subject == null, TimeSpan.FromSeconds(1));
+                    }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
+
+                }, _third);
+                EnterBarrier("shard-shutdonw-12");
+
+                RunOn(() =>
+                {
+                    // force shard backup
+                    _persistentRegion.Value.Tell(new Counter.Get(25));
+                    ExpectMsg(0);
+
+                    var shard = LastSender.Path.Parent;
+
+                    // check counter 1 is still dead
+                    Sys.ActorSelection(shard / "1").Tell(new Identify(3));
+                    ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(3) && i.Subject == null);
+
+                    // check counter 13 is alive again
+                    Sys.ActorSelection(shard / "13").Tell(new Identify(4));
+                    ExpectMsg<ActorIdentity>(i => i.MessageId.Equals(4) && i.Subject != null);
+
+                }, _fourth);
+                EnterBarrier("after-13");
+            });
         }
 
         [MultiNodeFact(Skip = "TODO")]
         public void Persistent_cluster_shards_should_restart_entities_which_stop_without_passivation()
         {
-            throw new NotImplementedException();
+            Within(TimeSpan.FromSeconds(50), () =>
+            {
+                RunOn(() =>
+                {
+                    var x= _persistentRegion.Value;
+                }, _third, _fourth);
+                EnterBarrier("cluster-started-12");
+
+                RunOn(() =>
+                {
+                    //create and increment counter 1
+                    _persistentRegion.Value.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance));
+                    _persistentRegion.Value.Tell(new Counter.Get(1));
+                    ExpectMsg(2);
+
+                    var counter1 = Sys.ActorSelection(LastSender.Path);
+                    counter1.Tell(Counter.Stop.Instance);
+
+                    var probe = CreateTestProbe();
+                    AwaitAssert(() =>
+                    {
+                        counter1.Tell(new Identify(1), probe.Ref);
+                        Assert.NotNull(probe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(1)).Subject);
+                    }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
+                }, _third);
+                EnterBarrier("after-14");
+            });
         }
 
         [MultiNodeFact(Skip = "TODO")]
         public void Persistent_cluster_shards_should_be_migrated_to_new_regions_upon_region_failure()
         {
-            throw new NotImplementedException();
+            Within(TimeSpan.FromSeconds(15), () =>
+            {
+                //Start only one region, and force an entity onto that region
+                RunOn(() =>
+                {
+                    _autoMigrateRegion.Value.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance));
+                    _autoMigrateRegion.Value.Tell(new Counter.Get(1));
+                    ExpectMsg(1);
+                }, _third);
+                EnterBarrier("shard1-region3");
+
+                //Start another region and test it talks to node 3
+                RunOn(() =>
+                {
+                    _autoMigrateRegion.Value.Tell(new Counter.EntityEnvelope(1, Counter.Increment.Instance));
+                    _autoMigrateRegion.Value.Tell(new Counter.Get(1));
+                    ExpectMsg(2);
+
+                    Assert.Equal(Node(_third) / "user" / "AutoMigrateRegionTestRegion" / "1" / "1", LastSender.Path);
+
+                    // kill region 3
+                    Sys.ActorSelection(LastSender.Path.Parent.Parent).Tell(PoisonPill.Instance);
+                }, _fourth);
+                EnterBarrier("region4-up");
+
+                // Wait for migration to happen
+                //Test the shard, thus counter was moved onto node 4 and started.
+                RunOn(() =>
+                {
+                    var counter1 = Sys.ActorSelection(ActorPath.Parse("user")/"AutoMigrateRegionTestRegion"/"1"/"1");
+                    var probe = CreateTestProbe();
+                    AwaitAssert(() =>
+                    {
+                        counter1.Tell(new Identify(1), probe.Ref);
+                        Assert.NotNull(probe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(1)).Subject);
+                    }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
+
+                    counter1.Tell(new Counter.Get(1));
+                    ExpectMsg(2);
+                }, _fourth);
+                EnterBarrier("after-15");
+            });
         }
 
         [MultiNodeFact(Skip = "TODO")]
         public void Persistent_cluster_shards_should_ensure_rebalance_restarts_shards()
         {
-            throw new NotImplementedException();
+            Within(TimeSpan.FromSeconds(50), () =>
+            {
+                RunOn(() =>
+                {
+                    for (int i = 1; i <= 12; i++)
+                        _rebalancingPersistentRegion.Value.Tell(new Counter.EntityEnvelope(i, Counter.Increment.Instance));
+
+                    for (int i = 1; i <= 12; i++)
+                    {
+                        _rebalancingPersistentRegion.Value.Tell(new Counter.Get(i));
+                        ExpectMsg(1);
+                    }
+                }, _fourth);
+                EnterBarrier("entities-started");
+
+                RunOn(() =>
+                {
+                    var r =_rebalancingPersistentRegion.Value;
+                }, _fifth);
+                EnterBarrier("fifth-joined-shard");
+
+                RunOn(() =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        var count = 0;
+                        for (int i = 2; i <= 12; i++)
+                        {
+                            var entity = Sys.ActorSelection(_rebalancingPersistentRegion.Value.Path / (i%12).ToString() / i.ToString());
+                            entity.Tell(new Identify(i));
+
+                            var msg = ReceiveOne(TimeSpan.FromSeconds(3)) as ActorIdentity;
+                            if (msg != null && msg.Subject != null)
+                                count++;
+                        }
+
+                        Assert.True(count >= 2);
+                    });
+                }, _fifth);
+                EnterBarrier("after-16");
+            });
         }
     }
 }
