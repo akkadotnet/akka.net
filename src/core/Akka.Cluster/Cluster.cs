@@ -229,6 +229,20 @@ namespace Akka.Cluster
         }
 
         /// <summary>
+        /// The supplied thunk will be run, once, when current cluster member is removed 
+        /// and if the cluster have been shutdown, that thunk will run on the caller thread immediately.  
+        /// Typically used together <see cref="Cluster.Leave"/> and then <see cref="System.Shutdown"/>.
+        /// </summary>
+        /// <param name="callback"></param>
+        public void RegisterOnMemberRemoved(Action callback)
+        {
+            if (_isTerminated.Value)
+                callback();
+            else
+                _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(callback));
+        }
+
+        /// <summary>
         /// The address of this cluster member.
         /// </summary>
         public Address SelfAddress

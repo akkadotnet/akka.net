@@ -725,7 +725,7 @@ namespace Akka.Cluster.Sharding.Tests
                 RunOn(() =>
                 {
                     //#counter-usage
-                    var counterRegion = ClusterSharding.Get(Sys).ShardingRegion("Counter");
+                    var counterRegion = ClusterSharding.Get(Sys).ShardRegion("Counter");
                     counterRegion.Tell(new Counter.Get(123));
                     ExpectMsg(0);
 
@@ -734,7 +734,7 @@ namespace Akka.Cluster.Sharding.Tests
                     ExpectMsg(1);
 
                     //#counter-usage
-                    var anotherCounterRegion = ClusterSharding.Get(Sys).ShardingRegion("AnotherCounter");
+                    var anotherCounterRegion = ClusterSharding.Get(Sys).ShardRegion("AnotherCounter");
                     anotherCounterRegion.Tell(new Counter.EntityEnvelope(123, Counter.Decrement.Instance));
                     anotherCounterRegion.Tell(new Counter.Get(123));
                     ExpectMsg(-1);
@@ -746,8 +746,8 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     for (int i = 1000; i <= 1010; i++)
                     {
-                        ClusterSharding.Get(Sys).ShardingRegion("Counter").Tell(new Counter.EntityEnvelope(i, Counter.Increment.Instance));
-                        ClusterSharding.Get(Sys).ShardingRegion("Counter").Tell(new Counter.Get(i));
+                        ClusterSharding.Get(Sys).ShardRegion("Counter").Tell(new Counter.EntityEnvelope(i, Counter.Increment.Instance));
+                        ClusterSharding.Get(Sys).ShardRegion("Counter").Tell(new Counter.Get(i));
                         ExpectMsg(1);
                         Assert.NotEqual(Cluster.SelfAddress, LastSender.Path.Address);
                     }
@@ -770,7 +770,7 @@ namespace Akka.Cluster.Sharding.Tests
                         idExtractor: Counter.ExtractEntityId,
                         shardResolver: Counter.ExtractShardId);
 
-                    var counterRegionViaGet = ClusterSharding.Get(Sys).ShardingRegion("ApiTest");
+                    var counterRegionViaGet = ClusterSharding.Get(Sys).ShardRegion("ApiTest");
 
                     Assert.Equal(counterRegionViaGet, counterRegionViaStart);
                 }, _first);
