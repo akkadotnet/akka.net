@@ -31,12 +31,12 @@ namespace Helios.Concurrency
         /// </summary>
         public const ThreadType DefaultThreadType = ThreadType.Background;
 
-        public DedicatedThreadPoolSettings(int numThreads, string name, TimeSpan? deadlockTimeout = null, ApartmentState apartmentState = ApartmentState.Unknown) 
+        public DedicatedThreadPoolSettings(int numThreads, string name = null, TimeSpan? deadlockTimeout = null, ApartmentState apartmentState = ApartmentState.Unknown) 
             : this(numThreads, DefaultThreadType, name, deadlockTimeout, apartmentState) { }
 
-        public DedicatedThreadPoolSettings(int numThreads, ThreadType threadType, string name, TimeSpan? deadlockTimeout = null, ApartmentState apartmentState = ApartmentState.Unknown)
+        public DedicatedThreadPoolSettings(int numThreads, ThreadType threadType, string name = null, TimeSpan? deadlockTimeout = null, ApartmentState apartmentState = ApartmentState.Unknown)
         {
-            Name = name;
+            Name = name ?? ("DedicatedThreadPool-" + Guid.NewGuid());
             ThreadType = threadType;
             NumThreads = numThreads;
             DeadlockTimeout = deadlockTimeout;
