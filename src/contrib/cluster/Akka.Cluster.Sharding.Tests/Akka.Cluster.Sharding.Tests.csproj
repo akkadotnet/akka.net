@@ -34,6 +34,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Collections.Immutable, Version=1.1.36.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\System.Collections.Immutable.1.1.36\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -55,6 +59,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClusterShardingSpec.cs" />
     <Compile Include="CustomShardAllocationSpec.cs" />
     <Compile Include="LeastShardAllocationStrategySpec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -63,6 +68,10 @@
     <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj">
       <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
       <Name>Akka.Cluster</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\core\Akka.MultiNodeTests\Akka.MultiNodeTests.csproj">
+      <Project>{f0781bea-5ba0-4af0-bb15-e3f209b681f5}</Project>
+      <Name>Akka.MultiNodeTests</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj">
       <Project>{fca84dea-c118-424b-9eb8-34375dfef18a}</Project>
