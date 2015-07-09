@@ -343,7 +343,7 @@ namespace Akka.Cluster.Sharding
         * Messages to the entry is always sent via the `ShardRegion`.
         */
 
-        public IActorRef ShardingRegion(string typeName)
+        public IActorRef ShardRegion(string typeName)
         {
             IActorRef region;
             if (_regions.TryGetValue(typeName, out region))

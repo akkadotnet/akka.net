@@ -59,6 +59,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClusterShardingFailureSpec.cs" />
+    <Compile Include="ClusterShardingGracefulShutdownSpec.cs" />
+    <Compile Include="ClusterShardingLeavingSpec.cs" />
     <Compile Include="ClusterShardingSpec.cs" />
     <Compile Include="CustomShardAllocationSpec.cs" />
     <Compile Include="LeastShardAllocationStrategySpec.cs" />
