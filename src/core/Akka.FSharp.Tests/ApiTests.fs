@@ -59,3 +59,19 @@ let ``can serialize nested discriminated unions`` () =
     let des = serializer.FromBinary (bytes, typeof<TestUnion2>) :?> TestUnion2
     des
     |> equals x
+
+type testType1 = 
+    string * int
+
+type testType2 = 
+    | V2 of testType1
+
+[<Fact>]
+let MyTest () =
+    let x = V2("hello!",123)
+    use sys = System.create "system" (Configuration.defaultConfig())
+    let serializer = sys.Serialization.FindSerializerFor x
+    let bytes = serializer.ToBinary x
+    let des = serializer.FromBinary (bytes, typeof<testType2>) :?> testType2
+    des
+    |> equals x
