@@ -133,6 +133,7 @@
     <Compile Include="TestKitSettings.cs" />
     <Compile Include="TestLatch.cs" />
     <Compile Include="TestProbe.cs" />
+    <Compile Include="TestScheduler.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Akka\Akka.csproj">
@@ -149,6 +150,7 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>EventFilterFactory_Generated.cs</LastGenOutput>
     </None>
+    <EmbeddedResource Include="Internal\TestScheduler.conf" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
