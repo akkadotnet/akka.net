@@ -1,0 +1,8 @@
+diff a/src/examples/Stocks/SymbolLookup/packages.config b/src/examples/Stocks/SymbolLookup/packages.config	(rejected hunks)
+@@ -1,6 +1,10 @@
+  ﻿<?xml version="1.0" encoding="utf-8"?>
+  <packages>
+    <package id="fastJSON" version="2.0.27.1" targetFramework="net45" />
++   <package id="System.Collections.Immutable" version="1.1.36" targetFramework="net45" />
+    <package id="qdfeed" version="1.1.0" targetFramework="net45" />
+  </packages>
