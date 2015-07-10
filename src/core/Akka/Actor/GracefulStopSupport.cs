@@ -63,19 +63,26 @@ namespace Akka.Actor
             return promise.Task.ContinueWith(t =>
             {
                 var returnResult = false;
-                PatternMatch.Match(t.Result)
-                    .With<Terminated>(terminated =>
-                    {
-                        returnResult = (terminated.ActorRef.Path.Equals(target.Path));
-                    })
-                    .Default(m =>
-                    {
-                        returnResult = false;
-                    });
-
-                internalTarget.Tell(new Unwatch(target, fref));
+                if (t.IsCanceled || t.IsFaulted) //need to Unwatch in the event of a timeout or failure
+                {
+                    internalTarget.Tell(new Unwatch(target, fref));
+                }
+                else 
+                {
+                    PatternMatch.Match(t.Result)
+                       .With<Terminated>(terminated =>
+                       {
+                           returnResult = (terminated.ActorRef.Path.Equals(target.Path));
+                       })
+                       .Default(m =>
+                       {
+                           internalTarget.Tell(new Unwatch(target, fref));
+                           returnResult = false;
+                       });
+                    
+                }
                 return returnResult;
-            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+            }, TaskContinuationOptions.ExecuteSynchronously);
         }
     }
 }
