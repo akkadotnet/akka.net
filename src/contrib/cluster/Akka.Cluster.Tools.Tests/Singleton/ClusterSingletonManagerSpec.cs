@@ -272,8 +272,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             _queue.Tell(PointToPointChannel.RegisterConsumer.Instance);
         }
     }
-
-    public class ClusterSingletonManagerSpec : MultiNodeClusterSpec
+    
+    public abstract class ClusterSingletonManagerSpec : MultiNodeClusterSpec
     {
         #region Setup
 
@@ -301,12 +301,12 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 return _identifyProbe.ExpectMsg<ActorIdentity>().Subject;
             }
         }
-
-        public ClusterSingletonManagerSpec() : base(new ClusterSingletonManagerSpecConfig())
+        
+        protected ClusterSingletonManagerSpec() : base(new ClusterSingletonManagerSpecConfig())
         {
         }
 
-        public ClusterSingletonManagerSpec(ClusterSingletonManagerSpecConfig config) : base(config)
+        protected ClusterSingletonManagerSpec(ClusterSingletonManagerSpecConfig config) : base(config)
         {
             _controller = config.Controller;
             _observer = config.Observer;
@@ -517,6 +517,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_should_let_the_proxy_messages_to_the_singleton_in_a_6_node_cluster()
         {
+            ClusterSingletonManager_should_startup_6_node_cluster();
             Within(TimeSpan.FromSeconds(60), () =>
             {
                 VerifyProxyMsg(_first, _first, Msg);
@@ -531,6 +532,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_should_handover_when_oldest_leaves_in_6_node_cluster()
         {
+            ClusterSingletonManager_should_let_the_proxy_messages_to_the_singleton_in_a_6_node_cluster();
+            
             Within(TimeSpan.FromSeconds(30), () =>
             {
                 var leaveNode = _first;
@@ -568,6 +571,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_should_takeover_when_oldest_crashes_in_5_node_cluster()
         {
+            ClusterSingletonManager_should_handover_when_oldest_leaves_in_6_node_cluster();
+            
             Within(TimeSpan.FromSeconds(60), () =>
             {
                 // mute logging of deadLetters during shutdown of systems
@@ -588,6 +593,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_should_takeover_when_two_oldest_crash_in_3_node_cluster()
         {
+            ClusterSingletonManager_should_takeover_when_oldest_crashes_in_5_node_cluster();
             Within(TimeSpan.FromSeconds(60), () =>
             {
                 Crash(_third, _fourth);
@@ -601,6 +607,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_should_takeover_when_oldest_crashes_in_2_node_cluster()
         {
+            ClusterSingletonManager_should_takeover_when_two_oldest_crash_in_3_node_cluster();
+            
             Within(TimeSpan.FromSeconds(60), () =>
             {
                 Crash(_fifth);

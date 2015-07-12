@@ -564,25 +564,27 @@ namespace Akka.Cluster.Tools.PubSub
         {
             var prefix = path + "/";
             var lastKey = path + "0";   // '0' is the next char of '/'
+            
+            var groups = ExtractGroups(prefix, lastKey).GroupBy(kv => kv.Key);
+            var wrappedMessage = new SendToOneSubscriber(message);
 
-            /*
-            val groups = (for {
-              (_, bucket) ← registry.toSeq
-              key ← bucket.content.range(prefix, lastKey).keys
-              valueHolder ← bucket.content.get(key)
-              ref ← valueHolder.routee
-            } yield (key, ref)).groupBy(_._1).values
-
-            val wrappedMsg = SendToOneSubscriber(msg)
-            groups foreach {
-              group ⇒
-                val routees = group.map(_._2).toVector
-                if (routees.nonEmpty)
-                  Router(routingLogic, routees).route(wrappedMsg, sender())
+            foreach (var g in groups)
+            {
+                var routees = g.Select(r => r.Value).ToArray();
+                if(routees.Length != 0)
+                    new Router(_settings.RoutingLogic, routees).Route(wrappedMessage, Sender);
             }
-            */
+        }
 
-            throw new NotImplementedException();
+        private IEnumerable<KeyValuePair<string, Routee>> ExtractGroups(string prefix, string lastKey)
+        {
+            foreach (var bucket in _registry.Values)
+            {
+                foreach (var keyVal in bucket.Content.Range(prefix, lastKey))
+                {
+                    yield return new KeyValuePair<string, Routee>(keyVal.Key, keyVal.Value.Routee);
+                }
+            }
         }
 
         private void HandlePrune()

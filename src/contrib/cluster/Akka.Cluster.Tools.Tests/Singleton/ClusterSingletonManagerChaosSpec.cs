@@ -72,9 +72,9 @@ namespace Akka.Cluster.Tools.Tests.Singleton
     public class ClusterSingletonManagerChaosNode6 : ClusterSingletonManagerChaosConfig { }
     public class ClusterSingletonManagerChaosNode7 : ClusterSingletonManagerChaosConfig { }
 
-    public class ClusterSingletonManagerChaosSpec : MultiNodeSpec
+    public abstract class ClusterSingletonManagerChaosSpec : MultiNodeSpec
     {
-        public ClusterSingletonManagerChaosSpec() : base(new ClusterSingletonManagerChaosConfig())
+        protected ClusterSingletonManagerChaosSpec() : base(new ClusterSingletonManagerChaosConfig())
         {
         }
 
@@ -132,6 +132,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_in_chaotic_cluster_should_take_over_when_tree_oldest_nodes_crash_in_6_nodes_cluster()
         {
+            ClusterSingletonManager_in_chaotic_cluster_should_startup_6_node_cluster();
+
             Within(TimeSpan.FromSeconds(90), () =>
             {
                 // mute logging of deadLetters during shutdown of systems

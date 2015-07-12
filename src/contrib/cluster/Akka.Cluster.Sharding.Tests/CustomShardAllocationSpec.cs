@@ -44,7 +44,10 @@ namespace Akka.Cluster.Sharding.Tests
         }
     }
 
-    public class CustomShardAllocationSpec : MultiNodeClusterSpec
+    public class CustomShardAllocationSpecNode1 : CustomShardAllocationSpec { }
+    public class CustomShardAllocationSpecNode2 : CustomShardAllocationSpec { }
+
+    public abstract class CustomShardAllocationSpec : MultiNodeClusterSpec
     {
         #region messages
 
@@ -164,11 +167,11 @@ namespace Akka.Cluster.Sharding.Tests
 
         private readonly RoleName _first;
         private readonly RoleName _second;
-        private DirectoryInfo[] _storageLocations;
-        private Lazy<IActorRef> _region;
-        private Lazy<IActorRef> _allocator;
+        private readonly DirectoryInfo[] _storageLocations;
+        private readonly Lazy<IActorRef> _region;
+        private readonly Lazy<IActorRef> _allocator;
 
-        public CustomShardAllocationSpec() : base(new CustomShardAllocationSpecConfig())
+        protected CustomShardAllocationSpec() : base(new CustomShardAllocationSpecConfig())
         {
             _storageLocations = new[]
             {
@@ -248,6 +251,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_with_custom_allocation_strategy_should_use_specified_region()
         {
+            ClusterSharding_with_custom_allocation_strategy_should_setup_shared_journal();
+
             Within(TimeSpan.FromSeconds(20), () =>
             {
                 Join(_first, _first);
@@ -305,6 +310,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_with_custom_allocation_strategy_should_rebalance_specified_shards()
         {
+            ClusterSharding_with_custom_allocation_strategy_should_use_specified_region();
+
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 RunOn(() =>

@@ -321,5 +321,10 @@ namespace Akka.Cluster.Tools.Client
                 contact.Tell(ClusterReceptionist.GetContacts.Instance);
             }
         }
+
+        public static Props Props(ClusterClientSettings settings)
+        {
+            return Actor.Props.Create(() => new ClusterClient(settings)).WithDeploy(Deploy.Local);
+        }
     }
 }

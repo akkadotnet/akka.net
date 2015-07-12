@@ -377,7 +377,7 @@ namespace Akka.Remote.TestKit
 
         readonly RoleName _myself;
         public RoleName Myself { get { return _myself; } }
-        readonly ILoggingAdapter _log;
+        protected ILoggingAdapter _log;
         readonly ImmutableList<RoleName> _roles;
         readonly Func<RoleName, ImmutableList<string>> _deployments;
         readonly ImmutableDictionary<RoleName, Replacement> _replacements;

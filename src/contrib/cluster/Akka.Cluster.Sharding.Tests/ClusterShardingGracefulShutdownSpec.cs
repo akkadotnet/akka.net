@@ -38,7 +38,7 @@ namespace Akka.Cluster.Sharding.Tests
     public class ClusterShardingGracefulShutdownNode1 : ClusterShardingGracefulShutdownSpec { }
     public class ClusterShardingGracefulShutdownNode2 : ClusterShardingGracefulShutdownSpec { }
 
-    public class ClusterShardingGracefulShutdownSpec : MultiNodeClusterSpec
+    public abstract class ClusterShardingGracefulShutdownSpec : MultiNodeClusterSpec
     {
         #region setup
 
@@ -93,11 +93,11 @@ namespace Akka.Cluster.Sharding.Tests
 
         private readonly Lazy<IActorRef> _region;
 
-        private DirectoryInfo[] _storageLocations;
-        private RoleName _first;
-        private RoleName _second;
+        private readonly DirectoryInfo[] _storageLocations;
+        private readonly RoleName _first;
+        private readonly RoleName _second;
 
-        public ClusterShardingGracefulShutdownSpec() : base(new ClusterShardingGracefulShutdownSpecConfig())
+        protected ClusterShardingGracefulShutdownSpec() : base(new ClusterShardingGracefulShutdownSpecConfig())
         {
             _storageLocations = new[]
             {
@@ -178,6 +178,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_start_some_shards_in_both_regions()
         {
+            ClusterSharding_should_setup_shared_journal();
+
             Join(_first, _first);
             Join(_second, _first);
 
@@ -201,6 +203,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_gracefully_shutdown_a_region()
         {
+            ClusterSharding_should_start_some_shards_in_both_regions();
+
             RunOn(() =>
             {
                 _region.Value.Tell(GracefulShutdown.Instance);

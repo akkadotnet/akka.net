@@ -203,18 +203,18 @@ namespace Akka.Cluster.Sharding.Tests
     public class ClusterShardingNode2 : ClusterShardingSpec { }
     public class ClusterShardingNode3 : ClusterShardingSpec { }
 
-    public class ClusterShardingSpec : MultiNodeClusterSpec
+    public abstract class ClusterShardingSpec : MultiNodeClusterSpec
     {
         #region Setup
 
         private readonly DirectoryInfo[] _storageLocations;
-        private RoleName _controller;
-        private RoleName _second;
-        private RoleName _first;
-        private RoleName _third;
-        private RoleName _fourth;
-        private RoleName _sixth;
-        private RoleName _fifth;
+        private readonly RoleName _controller;
+        private readonly RoleName _second;
+        private readonly RoleName _first;
+        private readonly RoleName _third;
+        private readonly RoleName _fourth;
+        private readonly RoleName _sixth;
+        private readonly RoleName _fifth;
 
         private readonly Lazy<IActorRef> _region;
         private readonly Lazy<IActorRef> _rebalancingRegion;
@@ -224,7 +224,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly Lazy<IActorRef> _rebalancingPersistentRegion;
         private readonly Lazy<IActorRef> _autoMigrateRegion;
 
-        public ClusterShardingSpec() : base(new ClusterShardingSpecConfig())
+        protected ClusterShardingSpec() : base(new ClusterShardingSpecConfig())
         {
             _storageLocations = new[]
             {
@@ -344,7 +344,9 @@ namespace Akka.Cluster.Sharding.Tests
 
         #endregion
 
-        [MultiNodeFact]
+        #region Cluster shardings specs
+
+        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_setup_shared_journal()
         {
             // start the Persistence extension
@@ -362,9 +364,11 @@ namespace Akka.Cluster.Sharding.Tests
             EnterBarrier("after-1");
         }
 
-        [MultiNodeFact]
+        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_work_in_single_node_cluster()
         {
+            ClusterSharding_should_setup_shared_journal();
+
             Within(TimeSpan.FromSeconds(20), () =>
             {
                 Join(_first, _first);
@@ -387,9 +391,11 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        [MultiNodeFact]
+        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_use_second_node()
         {
+            ClusterSharding_should_work_in_single_node_cluster();
+
             Within(TimeSpan.FromSeconds(20), () =>
             {
                 Join(_second, _first);
@@ -448,9 +454,11 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        [MultiNodeFact]
+        [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_support_passivation_and_activation_of_entities()
         {
+            ClusterSharding_should_use_second_node();
+
             RunOn(() =>
             {
                 var r = _region.Value;
@@ -469,6 +477,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_support_proxy_only_mode()
         {
+            ClusterSharding_should_support_passivation_and_activation_of_entities();
+
             Within(TimeSpan.FromSeconds(10), () =>
             {
                 RunOn(() =>
@@ -505,6 +515,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_failover_shards_on_crashed_node()
         {
+            ClusterSharding_should_support_proxy_only_mode();
+
             Within(TimeSpan.FromSeconds(30), () =>
             {
                 // mute logging of deadLetters during shutdown of systems
@@ -550,6 +562,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_use_third_and_fourth_node()
         {
+            ClusterSharding_should_failover_shards_on_crashed_node();
+
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 Join(_third, _first);
@@ -616,6 +630,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_recover_coordinator_state_after_coordinator_crash()
         {
+            ClusterSharding_should_use_third_and_fourth_node();
+
             Within(TimeSpan.FromSeconds(60), () =>
             {
                 Join(_fifth, _fourth);
@@ -656,6 +672,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_rebalance_to_nodes_with_less_shards()
         {
+            ClusterSharding_should_recover_coordinator_state_after_coordinator_crash();
+
             Within(TimeSpan.FromSeconds(60), () =>
             {
                 RunOn(() =>
@@ -700,6 +718,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_be_easy_to_use_with_extensions()
         {
+            ClusterSharding_should_rebalance_to_nodes_with_less_shards();
+
             Within(TimeSpan.FromSeconds(50), () =>
             {
                 RunOn(() =>
@@ -759,6 +779,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_should_be_easy_API_for_starting()
         {
+            ClusterSharding_should_be_easy_to_use_with_extensions();
+
             Within(TimeSpan.FromSeconds(50), () =>
             {
                 RunOn(() =>
@@ -777,6 +799,10 @@ namespace Akka.Cluster.Sharding.Tests
                 EnterBarrier("after-11");
             });
         }
+
+        #endregion
+
+        #region Persistent cluster shards specs
 
         [MultiNodeFact(Skip = "TODO")]
         public void Persistent_cluster_shards_should_recover_entities_upon_restart()
@@ -848,6 +874,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void Persistent_cluster_shards_should_permanently_stop_entities_which_passivate()
         {
+            Persistent_cluster_shards_should_recover_entities_upon_restart();
+
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 RunOn(() =>
@@ -929,6 +957,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void Persistent_cluster_shards_should_restart_entities_which_stop_without_passivation()
         {
+            Persistent_cluster_shards_should_permanently_stop_entities_which_passivate();
+
             Within(TimeSpan.FromSeconds(50), () =>
             {
                 RunOn(() =>
@@ -961,6 +991,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void Persistent_cluster_shards_should_be_migrated_to_new_regions_upon_region_failure()
         {
+            Persistent_cluster_shards_should_restart_entities_which_stop_without_passivation();
+
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 //Start only one region, and force an entity onto that region
@@ -1008,6 +1040,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void Persistent_cluster_shards_should_ensure_rebalance_restarts_shards()
         {
+            Persistent_cluster_shards_should_be_migrated_to_new_regions_upon_region_failure();
+
             Within(TimeSpan.FromSeconds(50), () =>
             {
                 RunOn(() =>
@@ -1050,5 +1084,7 @@ namespace Akka.Cluster.Sharding.Tests
                 EnterBarrier("after-16");
             });
         }
+
+        #endregion
     }
 }

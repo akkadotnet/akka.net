@@ -45,7 +45,7 @@ namespace Akka.Cluster.Sharding.Tests
     public class ClusterShardingLeavingNode3 : ClusterShardinLeavingSpec { }
     public class ClusterShardingLeavingNode4 : ClusterShardinLeavingSpec { }
 
-    public class ClusterShardinLeavingSpec : MultiNodeClusterSpec
+    public abstract class ClusterShardinLeavingSpec : MultiNodeClusterSpec
     {
         #region setup
 
@@ -105,12 +105,12 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly DirectoryInfo[] _storageLocations;
         private readonly Lazy<IActorRef> _region;
 
-        private RoleName _first;
-        private RoleName _second;
-        private RoleName _third;
-        private RoleName _fourth;
+        private readonly RoleName _first;
+        private readonly RoleName _second;
+        private readonly RoleName _third;
+        private readonly RoleName _fourth;
 
-        public ClusterShardinLeavingSpec() : base(new ClusterShardingLeavingSpecConfig())
+        protected ClusterShardinLeavingSpec() : base(new ClusterShardingLeavingSpecConfig())
         {
             _storageLocations = new[]
             {
@@ -194,6 +194,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_with_leaving_member_should_join_cluster()
         {
+            ClusterSharding_with_leaving_member_should_setup_shared_journal();
+
             Within(TimeSpan.FromSeconds(20), () =>
             {
                 Join(_first, _first);
@@ -208,6 +210,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_with_leaving_member_should_initialize_shards()
         {
+            ClusterSharding_with_leaving_member_should_join_cluster();
+
             RunOn(() =>
             {
                 var shardLocations = Sys.ActorOf(Props.Create<ShardLocations>(), "shardLocations");
@@ -228,6 +232,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip="TODO")]
         public void ClusterSharding_with_leaving_member_should_recover_after_leaving_coordinator_node()
         {
+            ClusterSharding_with_leaving_member_should_initialize_shards();
+
             Within(TimeSpan.FromSeconds(30), () =>
             {
                 RunOn(() =>

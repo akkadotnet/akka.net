@@ -48,7 +48,7 @@ namespace Akka.Cluster.Sharding.Tests
     public class ClusterShardingFailureNode2 : ClusterShardingFailureSpec { }
     public class ClusterShardingFailureNode3 : ClusterShardingFailureSpec { }
 
-    public class ClusterShardingFailureSpec : MultiNodeClusterSpec
+    public abstract class ClusterShardingFailureSpec : MultiNodeClusterSpec
     {
         #region setup
 
@@ -117,7 +117,7 @@ namespace Akka.Cluster.Sharding.Tests
         private RoleName _second;
         private RoleName _controller;
 
-        public ClusterShardingFailureSpec() : base(new ClusterShardingFailureSpecConfig())
+        protected ClusterShardingFailureSpec() : base(new ClusterShardingFailureSpecConfig())
         {
             _storageLocations = new[]
             {
@@ -197,6 +197,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_with_flaky_journal_should_join_cluster()
         {
+            ClusterSharding_with_flaky_journal_should_setup_shared_journal();
+
             Within(TimeSpan.FromSeconds(20), () =>
             {
                 Join(_first, _first);
@@ -222,6 +224,8 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact(Skip = "TODO")]
         public void ClusterSharding_with_flaky_journal_should_recover_after_journal_failure()
         {
+            ClusterSharding_with_flaky_journal_should_join_cluster();
+
             Within(TimeSpan.FromSeconds(20), () =>
             {
                 RunOn(() =>

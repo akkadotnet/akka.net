@@ -46,7 +46,8 @@ namespace Akka.Cluster.Tools.Singleton
 
         public ClusterSingletonProxyActor(string singletonManagerPath, ClusterSingletonProxySettings settings)
         {
-            throw new NotImplementedException();
+            _singletonPath = (singletonManagerPath + "/" + settings.SingletonName).Split('/');
+            _identityId = CreateIdentifyId(_identityCounter);
         }
 
         private bool MatchingRole(Member member)
