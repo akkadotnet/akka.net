@@ -61,6 +61,8 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Singleton\ClusterSingletonManagerChaosSpec.cs" />
+    <Compile Include="Singleton\ClusterSingletonManagerLeaveSpec.cs" />
+    <Compile Include="Singleton\ClusterSingletonManagerSpec.cs" />
     <Compile Include="Singleton\ClusterSingletonManagerStartupSpec.cs" />
   </ItemGroup>
   <ItemGroup>

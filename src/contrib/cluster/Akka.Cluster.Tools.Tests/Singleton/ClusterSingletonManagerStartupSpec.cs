@@ -10,6 +10,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.MultiNodeTests;
 using Akka.Remote.TestKit;
 using Xunit;
 
@@ -49,7 +50,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         protected Lazy<IActorRef> EchoProxy;
 
-        [Fact]
+        [MultiNodeFact(Skip = "TODO")]
         public void Startup_of_ClusterSingleton_should_be_quick()
         {
             var first = GetRole("first");
