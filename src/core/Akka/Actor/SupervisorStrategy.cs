@@ -185,6 +185,12 @@ namespace Akka.Actor
         public static readonly SupervisorStrategy DefaultStrategy = new OneForOneStrategy(DefaultDecider);    
 
         /// <summary>
+        ///     This strategy resembles Erlang in that failing children are always
+        ///     terminated (one-for-one).
+        /// </summary>
+        public static readonly OneForOneStrategy StoppingStrategy = new OneForOneStrategy(ex => Directive.Stop);
+
+        /// <summary>
         /// This method is called after the child has been removed from the set of children.
         /// It does not need to do anything special. Exceptions thrown from this method
         /// do NOT make the actor fail if this happens during termination.
