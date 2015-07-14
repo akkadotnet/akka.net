@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using Akka.Configuration;
 using Akka.Persistence.TestKit.Snapshot;
+using Xunit;
 
 namespace Akka.Persistence.TestKit.Tests
 {
@@ -32,6 +33,20 @@ namespace Akka.Persistence.TestKit.Tests
         {
             base.Dispose(disposing);
             Sys.DeleteStorageLocations(_path);
+        }
+
+        [Fact]
+        public void LocalSnapshotStore_can_snapshot_actors_with_PersistenceId_containing_invalid_path_characters()
+        {
+            var pid = @"p\/:*?-1";
+            SnapshotStore.Tell(new SaveSnapshot(new SnapshotMetadata(pid, 1), "sample data"), TestActor);
+            ExpectMsg<SaveSnapshotSuccess>();
+
+            SnapshotStore.Tell(new LoadSnapshot(pid, SnapshotSelectionCriteria.Latest, long.MaxValue), TestActor);
+            ExpectMsg<LoadSnapshotResult>(res => 
+                res.Snapshot.Snapshot.Equals("sample data") 
+                && res.Snapshot.Metadata.PersistenceId == pid
+                && res.Snapshot.Metadata.SequenceNr == 1);
         }
     }
 }
