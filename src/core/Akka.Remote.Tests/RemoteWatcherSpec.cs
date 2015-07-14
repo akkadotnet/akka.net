@@ -99,22 +99,35 @@ namespace Akka.Remote.Tests
                     get { return _uid; }
                 }
 
+                protected bool Equals(Quarantined other)
+                {
+                    return Equals(_address, other._address) && _uid == other._uid;
+                }
+
                 public override bool Equals(object obj)
                 {
-                    var other = obj as Quarantined;
-                    if (other == null) return false;
-                    return _address.Equals(other._address); //TODO: Ignoring uid? /&& _uid == other._uid;
+                    if (ReferenceEquals(null, obj)) return false;
+                    if (ReferenceEquals(this, obj)) return true;
+                    if (obj.GetType() != this.GetType()) return false;
+                    return Equals((Quarantined) obj);
                 }
 
                 public override int GetHashCode()
                 {
                     unchecked
                     {
-                        var hash = 17;
-                        hash = hash*23 + _address.GetHashCode();
-                        //TODO: Ignoring uid hash = hash*23 + _uid.GetHashCode();
-                        return hash;
+                        return ((_address != null ? _address.GetHashCode() : 0)*397) ^ _uid.GetHashCode();
                     }
+                }
+
+                public static bool operator ==(Quarantined left, Quarantined right)
+                {
+                    return Equals(left, right);
+                }
+
+                public static bool operator !=(Quarantined left, Quarantined right)
+                {
+                    return !Equals(left, right);
                 }
             }
 
