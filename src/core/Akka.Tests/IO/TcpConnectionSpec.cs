@@ -926,7 +926,6 @@ namespace Akka.Tests.IO
                     if (InterestCallReceiver.ReceiveWhile<object>(m => m is int && (int)m == (int)SocketAsyncOperation.Connect, TimeSpan.Zero, TimeSpan.Zero, 1).Any())
                         Selector.Send(ConnectionActor, SelectionHandler.ChannelConnectable.Instance);   // Only send ChannelConnectable if we did not complete synchronously 
 
-                    Selector.Send(ConnectionActor, SelectionHandler.ChannelConnectable.Instance);
                     UserHandler.ExpectMsg<Tcp.Connected>(message => ((IPEndPoint) message.RemoteAddress).Port.ShouldBe(ServerAddress.Port)); //TODO: compare full endpoint, not only port
  
                     UserHandler.Send(ConnectionActor,
