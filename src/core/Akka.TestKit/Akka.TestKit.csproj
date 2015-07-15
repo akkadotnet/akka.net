@@ -70,6 +70,7 @@
     </Compile>
     <Compile Include="ActorCellKeepingSynchronizationContext.cs" />
     <Compile Include="CallingThreadDispatcher.cs" />
+    <Compile Include="Configs\TestConfigs.cs" />
     <Compile Include="EventFilter\IEventFilterApplier.cs" />
     <Compile Include="EventFilter\Internal\CustomEventFilter.cs" />
     <Compile Include="EventFilter\DeadLettersFilter.cs" />
@@ -150,7 +151,7 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>EventFilterFactory_Generated.cs</LastGenOutput>
     </None>
-    <EmbeddedResource Include="Internal\TestScheduler.conf" />
+    <EmbeddedResource Include="Configs\TestScheduler.conf" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
