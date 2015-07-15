@@ -102,7 +102,7 @@ namespace Akka.Remote.AkkaIOTransport
         {
             if (message is Associate || message is Listen)
             {
-                // We only process one connect at a time, if we receive more associate or listner 
+                // We only process one connect at a time, if we receive more associate or listener 
                 // requests during this time we just queue them. 
                 Stash.Stash();
                 return true;
