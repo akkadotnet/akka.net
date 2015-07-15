@@ -7,7 +7,7 @@
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
+using Akka.TestKit.Configs;
 using Xunit;
 
 namespace Akka.TestKit.Tests
@@ -17,9 +17,10 @@ namespace Akka.TestKit.Tests
         private IActorRef _testReceiveActor;
 
         public TestSchedulerTests()
-            : base(ConfigurationFactory.FromResource<TestKitBase>("Akka.TestKit.Internal.TestScheduler.conf"))
+            : base(TestConfigs.TestSchedulerConfig)
         {
-            _testReceiveActor = Sys.ActorOf(Props.Create(() => new TestReceiveActor()).WithDispatcher("akka.test.calling-thread-dispatcher"));
+            _testReceiveActor = Sys.ActorOf(Props.Create(() => new TestReceiveActor())
+                .WithDispatcher(CallingThreadDispatcher.Id));
         }
         
         [Fact]
