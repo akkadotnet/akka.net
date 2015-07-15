@@ -117,7 +117,7 @@ namespace Akka.Actor
                 catch (OperationCanceledException) { }
                 catch (Exception x)
                 {
-                    _log.Error(x, "DedicatedThreadScheduler faild to execute action");
+                    _log.Error(x, "DedicatedThreadScheduler failed to execute action");
                 }                
             };
             AddWork(initialDelay, executeAction, token);
@@ -144,7 +144,7 @@ namespace Akka.Actor
                 catch (OperationCanceledException) { }
                 catch (Exception x)
                 {
-                    _log.Error(x,"DedicatedThreadScheduler faild to execute action");
+                    _log.Error(x,"DedicatedThreadScheduler failed to execute action");
                 }
             };
             AddWork(initialDelay, executeAction, token);

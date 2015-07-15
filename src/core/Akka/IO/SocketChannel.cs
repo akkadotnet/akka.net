@@ -13,10 +13,10 @@ using Akka.Actor;
 namespace Akka.IO
 {
     /* 
-     * SocketChannel does not exists in the .NET BCL - This class is an adapter to hide the diffirences in CLR & JVM IO.
-     * This implimentation uses blocking IO calls, and then catch SocketExceptions if the socket is set to non bloking. 
+     * SocketChannel does not exists in the .NET BCL - This class is an adapter to hide the differences in CLR & JVM IO.
+     * This implementation uses blocking IO calls, and then catch SocketExceptions if the socket is set to non blocking. 
      * This might introduce performance issues, with lots of thrown exceptions
-     * TODO: Impliments this class with .NET Async calls
+     * TODO: Implements this class with .NET Async calls
      */
     public class SocketChannel 
     {
@@ -82,7 +82,7 @@ namespace Akka.IO
 
         public SocketChannel Accept()
         {
-            //TODO: Investigate. If we dont wait 1ms we get intermittent test failure in TcpListnerSpec.  
+            //TODO: Investigate. If we don't wait 1ms we get intermittent test failure in TcpListenerSpec.  
             return _socket.Poll(1, SelectMode.SelectRead)
                 ? new SocketChannel(_socket.Accept()) {_connected = true}
                 : null;

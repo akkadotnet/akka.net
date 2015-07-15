@@ -15,7 +15,7 @@ using Akka.Util.Internal;
 
 namespace Akka.IO
 {
-    // TODO: Move to Akka.Util namespace - this will require changes as name clashes with PotoBuf class
+    // TODO: Move to Akka.Util namespace - this will require changes as name clashes with ProtoBuf class
 
     partial /*object*/ class ByteString
     {
@@ -298,7 +298,7 @@ namespace Akka.IO
                         return new ByteStrings(Items.Concat(bs.Items).ToArray());
                     }
 
-                    throw new InvalidOperationException("No suitable implementation found for concatenatenating ByteString of type " + that.GetType());
+                    throw new InvalidOperationException("No suitable implementation found for concatenating ByteString of type " + that.GetType());
                 }
             }
 
