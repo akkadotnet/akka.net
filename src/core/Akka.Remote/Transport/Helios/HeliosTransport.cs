@@ -292,8 +292,7 @@ namespace Akka.Remote.Transport.Helios
             var addr = NodeToAddress(publicAddress, SchemeIdentifier, System.Name, Settings.PublicHostname);
             if(addr == null) throw new HeliosNodeException("Unknown local address type {0}", newServerChannel.Local);
             LocalAddress = addr;
-            AssociationListenerPromise.Task.ContinueWith(result => ServerChannel.BeginReceive(),
-                TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+            AssociationListenerPromise.Task.ContinueWith(result => ServerChannel.BeginReceive(), TaskContinuationOptions.ExecuteSynchronously);
 
             return Task.Run(() => Tuple.Create(addr, AssociationListenerPromise));
         }
@@ -310,11 +309,20 @@ namespace Akka.Remote.Transport.Helios
         {
             return Task.Run(() =>
             {
-                foreach (var channel in ConnectionGroup)
+                try
                 {
-                    channel.StopReceive();
-                    channel.Dispose();
+                    foreach (var channel in ConnectionGroup)
+                    {
+                        channel.StopReceive();
+                        channel.Dispose();
+                    }
                 }
+                finally
+                {
+                    // free all of the connection objects we were holding onto
+                    ConnectionGroup.Clear();
+                }
+                
                 return true;
             });
 

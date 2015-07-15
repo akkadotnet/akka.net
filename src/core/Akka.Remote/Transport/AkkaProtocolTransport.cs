@@ -158,8 +158,8 @@ namespace Akka.Remote.Transport
                 .With<InboundAssociation>(ia => //need to create an Inbound ProtocolStateActor
                 {
                     var handle = ia.Association;
-                    var stateActorLocalAddress = localAddress;
-                    var stateActorAssociationListener = associationListener;
+                    var stateActorLocalAddress = LocalAddress;
+                    var stateActorAssociationListener = AssociationListener;
                     var stateActorSettings = _settings;
                     var failureDetector = CreateTransportFailureDetector();
                     Context.ActorOf(RARP.For(Context.System).ConfigureDispatcher(ProtocolStateActor.InboundProps(
@@ -180,13 +180,13 @@ namespace Akka.Remote.Transport
 
         private string ActorNameFor(Address remoteAddress)
         {
-            return string.Format("akkaProtocol-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress), nextId());
+            return string.Format("akkaProtocol-{0}-{1}", AddressUrlEncoder.Encode(remoteAddress), NextId());
         }
 
         private void CreateOutboundStateActor(Address remoteAddress,
             TaskCompletionSource<AssociationHandle> statusPromise, int? refuseUid)
         {
-            var stateActorLocalAddress = localAddress;
+            var stateActorLocalAddress = LocalAddress;
             var stateActorSettings = _settings;
             var stateActorWrappedTransport = _wrappedTransport;
             var failureDetector = CreateTransportFailureDetector();
@@ -784,7 +784,7 @@ namespace Akka.Remote.Transport
                         disassociateNotification = new Disassociated(DisassociateInfo.Unknown);
                     }
                     awh.HandlerListener.ContinueWith(result => result.Result.Notify(disassociateNotification),
-                        TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+                        TaskContinuationOptions.ExecuteSynchronously);
                 })
                 .With<ListenerReady>(lr =>
                 {

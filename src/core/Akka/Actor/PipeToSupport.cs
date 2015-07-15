@@ -28,7 +28,7 @@ namespace Akka.Actor
                     recipient.Tell(new Status.Failure(tresult.Exception), sender);
                 else if (tresult.IsCompleted)
                     recipient.Tell(tresult.Result, sender);
-            }, TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent);
+            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
         }
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace Akka.Actor
             {
                 if (tresult.IsCanceled || tresult.IsFaulted)
                     recipient.Tell(new Status.Failure(tresult.Exception), sender);
-            }, TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent);
+            }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
         }
     }
 }

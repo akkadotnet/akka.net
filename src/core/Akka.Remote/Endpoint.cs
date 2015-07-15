@@ -862,7 +862,7 @@ namespace Akka.Remote
                         }
                         return new Handle(handle.Result);
                     },
-                    TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
+                    TaskContinuationOptions.ExecuteSynchronously)
                     .PipeTo(Self);
             }
             else

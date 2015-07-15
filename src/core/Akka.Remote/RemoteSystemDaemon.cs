@@ -79,7 +79,6 @@ namespace Akka.Remote
     {
         private readonly ActorSystemImpl _system;
         private readonly Switch _terminating = new Switch(false);
-        //private val parent2children = new ConcurrentHashMap[ActorRef, Set[ActorRef]]
         private readonly ConcurrentDictionary<IActorRef, IImmutableSet<IActorRef>> _parent2Children = new ConcurrentDictionary<IActorRef, IImmutableSet<IActorRef>>();
         private readonly IActorRef _terminator;
 
@@ -104,7 +103,7 @@ namespace Akka.Remote
         ///     Called when [receive].
         /// </summary>
         /// <param name="message">The message.</param>
-        protected void OnReceive(object message)
+        protected void OnReceive(object message, IActorRef sender)
         {
             //note: RemoteDaemon does not handle ActorSelection messages - those are handled directly by the RemoteActorRefProvider.
             if (message is IDaemonMsg)
@@ -122,6 +121,19 @@ namespace Akka.Remote
                 ForEachChild(@ref =>
                 {
                     if(@ref.Parent.Path.Address == addressTerminated.Address) _system.Stop(@ref);
+                });
+            }
+            else if (message is Identify)
+            {
+                var identify = message as Identify;
+                sender.Tell(new ActorIdentity(identify.MessageId, this));
+            }
+            else if (message is TerminationHook)
+            {
+                _terminating.SwitchOn(() =>
+                {
+                    TerminationHookDoneWhenNoChildren();
+                    ForEachChild(c => _system.Stop(c));
                 });
             }
             else if (message is DeathWatchNotification)
@@ -210,7 +222,7 @@ namespace Akka.Remote
         /// <param name="sender">The sender.</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            OnReceive(message);
+            OnReceive(message, sender);
         }
 
         /// <summary>
