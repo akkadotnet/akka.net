@@ -36,7 +36,7 @@ PM> Install-Package Akka.FSharp
 ```
 
 ### Contribute
-If you are interested in helping porting Akka to .NET please take a look at [Contributing to Akka.NET](http://akkadotnet.github.io/wiki/Contributing to Akka.NET).
+If you are interested in helping porting Akka to .NET please take a look at [Contributing to Akka.NET](http://getakka.net/docs/Contributing%20to%20Akka).
 
 Also, please see [Building Akka.NET](http://getakka.net/docs/Building%20and%20Distributing%20Akka).
 
