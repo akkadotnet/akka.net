@@ -303,6 +303,7 @@ namespace Akka.Actor
                     }
                 }
 
+                ReleaseActor(actor);
                 actor.Clear(_systemImpl.DeadLetters);
             }
             _actorHasBeenCleared = true;
@@ -310,6 +311,11 @@ namespace Akka.Actor
 
             //TODO: semantics here? should all "_state" be cleared? or just behavior?
             _state = _state.ClearBehaviorStack();
+        }
+
+        private void ReleaseActor(ActorBase a)
+        {
+            _props.Release(a);
         }
 
         protected void PrepareForNewActor()

@@ -95,7 +95,7 @@ namespace Akka.DI.StructureMap
 
             if (references.TryGetValue(actor, out nestedContainer))
             {
-                container.Dispose();
+                nestedContainer.Dispose();
                 references.Remove(actor);
             }
         }
