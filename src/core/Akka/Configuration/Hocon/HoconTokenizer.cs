@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -19,6 +20,17 @@ namespace Akka.Configuration.Hocon
     {
         private readonly string _text;
         private int _index;
+        private readonly Stack<int> _indexStack = new Stack<int>();
+
+        public void Push()
+        {
+            _indexStack.Push(_index);
+        }
+
+        public void Pop()
+        {
+            _index = _indexStack.Pop();
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Tokenizer"/> class.
@@ -211,6 +223,10 @@ namespace Akka.Configuration.Hocon
             if (IsAssignment())
             {
                 return PullAssignment();
+            }
+            if (IsInclude())
+            {
+                return PullInclude();
             }
             if (IsStartOfQuotedKey())
             {
@@ -434,9 +450,14 @@ namespace Akka.Configuration.Hocon
             return (!EoF && !IsWhitespace() && !IsStartOfComment() && !NotInUnquotedKey.Contains(Peek()));
         }
 
-        private bool IsWhitespace()
+        public bool IsWhitespace()
         {
             return char.IsWhiteSpace(Peek());
+        }
+
+        public bool IsWhitespaceOrComment()
+        {
+            return IsWhitespace() || IsStartOfComment();
         }
 
         /// <summary>
@@ -511,6 +532,15 @@ namespace Akka.Configuration.Hocon
             return Token.Key(sb.ToString());
         }
 
+        public Token PullInclude()
+        {
+            Take("include".Length);
+            PullWhitespaceAndComments();
+            var rest = PullQuotedText();
+            var unQuote = rest.Value;
+            return Token.Include(unQuote);
+        }
+
         private string PullEscapeSequence()
         {
             Take(); //consume "\"
@@ -542,7 +572,7 @@ namespace Akka.Configuration.Hocon
             }
         }
 
-        private bool IsStartOfComment()
+        public bool IsStartOfComment()
         {
             return (Matches("#", "//"));
         }
@@ -600,6 +630,34 @@ namespace Akka.Configuration.Hocon
         public bool IsSubstitutionStart()
         {
             return Matches("${");
+        }
+
+        public bool IsInclude()
+        {
+            Push();
+            try
+            {
+                if (Matches("include"))
+                {
+                    Take("include".Length);
+
+                    if (IsWhitespaceOrComment())
+                    {
+                        PullWhitespaceAndComments();
+
+                        if (IsStartOfQuotedText())
+                        {
+                            PullQuotedText();
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            finally
+            {
+                Pop();
+            }
         }
 
         /// <summary>
