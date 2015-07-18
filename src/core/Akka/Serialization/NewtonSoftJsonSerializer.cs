@@ -110,7 +110,6 @@ namespace Akka.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             string data = Encoding.Default.GetString(bytes);
-            JsonConvert.DefaultSettings =  () => _settings;
             object res = JsonConvert.DeserializeObject(data, _settings);
             return TranslateSurrogate(res, this, type);
         }
