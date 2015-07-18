@@ -68,6 +68,7 @@ namespace Akka.Actor
             
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy");
 
+            AskTimeout = Config.GetTimeSpan("akka.actor.ask-timeout", allowInfinite: true);
             CreationTimeout = Config.GetTimeSpan("akka.actor.creation-timeout");
             UnstartedPushTimeout = Config.GetTimeSpan("akka.actor.unstarted-push-timeout");
 
@@ -158,6 +159,12 @@ namespace Akka.Actor
         /// </summary>
         /// <value><c>true</c> if [serialize all creators]; otherwise, <c>false</c>.</value>
         public bool SerializeAllCreators { get; private set; }
+
+        /// <summary>
+        ///     Gets the default timeout for <see cref="Futures.Ask" /> calls.
+        /// </summary>
+        /// <value>The ask timeout.</value>
+        public TimeSpan AskTimeout { get; private set; }
 
         /// <summary>
         ///     Gets the creation timeout.
