@@ -6,6 +6,7 @@
 [![Issue Stats](http://www.issuestats.com/github/akkadotnet/akka.net/badge/pr)](http://www.issuestats.com/github/akkadotnet/akka.net)
 [![Issue Stats](http://www.issuestats.com/github/akkadotnet/akka.net/badge/issue)](http://www.issuestats.com/github/akkadotnet/akka.net)
 
+***[Issues for Next Release (v1.1)](https://waffle.io/akkadotnet/akka.net?milestone=Akka.NET%20v1.1)***<br>
 [![Critical Issues](https://badge.waffle.io/akkadotnet/akka.net.svg?label=help%20wanted&title=Issues Needing Help Now!)](http://waffle.io/akkadotnet/akka.net)
 <br>
 [![Stories Up For Grabs](https://badge.waffle.io/akkadotnet/akka.net.svg?label=up%20for%20grabs&title=General Issues Up For Grabs)](http://waffle.io/akkadotnet/akka.net)
@@ -42,10 +43,13 @@ PM> Install-Package Akka.FSharp
 
 ### Contributing
 #### Where Can I Contribute?
+***[Issues for the Next Release (v1.1)](https://waffle.io/akkadotnet/akka.net?milestone=Akka.NET%20v1.1)***
+
 [![Critical Issues](https://badge.waffle.io/akkadotnet/akka.net.svg?label=help%20wanted&title=Issues Needing Help Now!)](http://waffle.io/akkadotnet/akka.net)
+<br>
 [![Stories Up For Grabs](https://badge.waffle.io/akkadotnet/akka.net.svg?label=up%20for%20grabs&title=General Issues Up For Grabs)](http://waffle.io/akkadotnet/akka.net)
-> #### [We are actively seeking contributions! We maintain a Waffle.IO Board for the project here.](https://waffle.io/akkadotnet/akka.net)
-> *All contributions are welcome! Please consider the issues categorized in the `Help!` column first, as they are areas we could really use your help :)*
+
+> *All contributions are welcome! Please consider the [issues categorized in the `Help!` column](http://waffle.io/akkadotnet/akka.net) first, as they are areas we could really use your help :)*
 
 #### Contribution Guidelines
 If you are interested in helping porting Akka to .NET please take a look at [Contributing to Akka.NET](http://getakka.net/docs/Contributing%20to%20Akka).
