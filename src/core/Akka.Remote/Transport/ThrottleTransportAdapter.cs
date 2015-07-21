@@ -688,7 +688,7 @@ namespace Akka.Remote.Transport
             Func<ThrottleMode, bool> tryConsume = null; 
             tryConsume = currentBucket =>
             {
-                var timeOfSend = SystemNanoTime.GetNanos();
+                var timeOfSend = MonotonicClock.GetNanos();
                 var res = currentBucket.TryConsumeTokens(timeOfSend, tokens);
                 var newBucket = res.Item1;
                 var allow = res.Item2;
@@ -945,7 +945,7 @@ namespace Akka.Remote.Transport
                     if(mode is Blackhole) ThrottledMessages = new Queue<ByteString>();
                     CancelTimer(DequeueTimerName);
                     if(ThrottledMessages.Any())
-                        ScheduleDequeue(InboundThrottleMode.TimeToAvailable(SystemNanoTime.GetNanos(), ThrottledMessages.Peek().Length));
+                        ScheduleDequeue(InboundThrottleMode.TimeToAvailable(MonotonicClock.GetNanos(), ThrottledMessages.Peek().Length));
                     Sender.Tell(SetThrottleAck.Instance);
                     return Stay();
                 }
@@ -962,10 +962,10 @@ namespace Akka.Remote.Transport
                     {
                         var payload = ThrottledMessages.Dequeue();
                         UpstreamListener.Notify(new InboundPayload(payload));
-                        InboundThrottleMode = InboundThrottleMode.TryConsumeTokens(SystemNanoTime.GetNanos(),
+                        InboundThrottleMode = InboundThrottleMode.TryConsumeTokens(MonotonicClock.GetNanos(),
                             payload.Length).Item1;
                         if(ThrottledMessages.Any())
-                            ScheduleDequeue(InboundThrottleMode.TimeToAvailable(SystemNanoTime.GetNanos(), ThrottledMessages.Peek().Length));
+                            ScheduleDequeue(InboundThrottleMode.TimeToAvailable(MonotonicClock.GetNanos(), ThrottledMessages.Peek().Length));
                     }
                     return Stay();
                 }
@@ -1052,7 +1052,7 @@ namespace Akka.Remote.Transport
                 if (!ThrottledMessages.Any())
                 {
                     var tokens = payload.Length;
-                    var res = InboundThrottleMode.TryConsumeTokens(SystemNanoTime.GetNanos(), tokens);
+                    var res = InboundThrottleMode.TryConsumeTokens(MonotonicClock.GetNanos(), tokens);
                     var newBucket = res.Item1;
                     var success = res.Item2;
                     if (success)
@@ -1063,7 +1063,7 @@ namespace Akka.Remote.Transport
                     else
                     {
                         ThrottledMessages.Enqueue(payload);
-                        ScheduleDequeue(InboundThrottleMode.TimeToAvailable(SystemNanoTime.GetNanos(), tokens));
+                        ScheduleDequeue(InboundThrottleMode.TimeToAvailable(MonotonicClock.GetNanos(), tokens));
                     }
                 }
                 else
