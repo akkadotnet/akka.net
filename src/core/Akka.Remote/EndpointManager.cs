@@ -284,6 +284,11 @@ namespace Akka.Remote
         private EventPublisher eventPublisher;
 
         /// <summary>
+        /// Used to indicate when an abrupt shutdown occurs
+        /// </summary>
+        private bool _normalShutdown = false;
+
+        /// <summary>
         /// Mapping between transports and the local addresses they listen to
         /// </summary>
         private Dictionary<Address, AkkaProtocolTransport> _transportMapping =
@@ -393,6 +398,19 @@ namespace Akka.Remote
         {
             if(PruneTimerCancelleable != null)
                 _pruneTimeCancelable.Cancel();
+            foreach(var h in pendingReadHandoffs.Values)
+                h.Disassociate(DisassociateInfo.Shutdown);
+
+            if (!_normalShutdown)
+            {
+                // Remaining running endpoints are children, so they will clean up themselves.
+                // We still need to clean up any remaining transports because handles might be in mailboxes, and for example
+                // Netty is not part of the actor hierarchy, so its handles will not be cleaned up if no actor is taking
+                // responsibility of them (because they are sitting in a mailbox).
+                log.Error("Remoting system has been terminated abrubtly. Attempting to shut down transports");
+                foreach (var t in _transportMapping.Values)
+                    t.Shutdown();
+            }
         }
 
         protected override void OnReceive(object message)
@@ -415,7 +433,7 @@ namespace Akka.Remote
                     {
                         return new ListensResult(listen.AddressesPromise, listens.Result);
                     }
-                }, TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
+                }, TaskContinuationOptions.ExecuteSynchronously)
                     .PipeTo(Self))
                 .With<ListensResult>(listens =>
                 {
@@ -478,7 +496,7 @@ namespace Akka.Remote
                         {
                             return new ManagementCommandAck(x.Result.All(y => y));
                         },
-                            TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
+                            TaskContinuationOptions.ExecuteSynchronously)
                         .PipeTo(sender);
                 })
                 .With<Quarantine>(quarantine =>
@@ -555,6 +573,7 @@ namespace Akka.Remote
                 .With<ShutdownAndFlush>(shutdown =>
                 {
                     //Shutdown all endpoints and signal to Sender when ready (and whether all endpoints were shutdown gracefully)
+                    var sender = Sender;
 
                     // The construction of the Task for shutdownStatus has to happen after the flushStatus future has been finished
                     // so that endpoints are shut down before transports.
@@ -562,31 +581,27 @@ namespace Akka.Remote
                             x => x.GracefulStop(settings.FlushWait, EndpointWriter.FlushAndStop.Instance))).ContinueWith(
                                 result =>
                                 {
-                                    if (result.IsFaulted)
-                                    {
-                                        if(result.Exception != null)
-                                            result.Exception.Handle(e => true);
-                                        return false;
-                                    }
-                                    return result.Result.All(x => x);
-                                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
-
-                    var flushStatus = Task.WhenAll(_transportMapping.Values.Select(x => x.Shutdown())).ContinueWith(
-                                result =>
-                                {
-                                    if (result.IsFaulted)
+                                    if (result.IsFaulted || result.IsCanceled)
                                     {
                                         if (result.Exception != null)
                                             result.Exception.Handle(e => true);
                                         return false;
                                     }
                                     return result.Result.All(x => x);
-                                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+                                }, TaskContinuationOptions.ExecuteSynchronously);
 
-                    Task.WhenAll(shutdownStatus, flushStatus)
-                        .ContinueWith(x => x.Result.All(y => y),
-                            TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent)
-                        .PipeTo(Sender);
+                    shutdownStatus.ContinueWith(tr => Task.WhenAll(_transportMapping.Values.Select(x => x.Shutdown())).ContinueWith(
+                              result =>
+                              {
+                                  if (result.IsFaulted || result.IsCanceled)
+                                  {
+                                      if (result.Exception != null)
+                                          result.Exception.Handle(e => true);
+                                      return false;
+                                  }
+                                  return result.Result.All(x => x) && tr.Result;
+                              }, TaskContinuationOptions.ExecuteSynchronously)).Unwrap().PipeTo(sender);
+
 
                     foreach (var handoff in pendingReadHandoffs.Values)
                     {
@@ -594,6 +609,7 @@ namespace Akka.Remote
                     }
                     
                     //Ignore all other writes
+                    _normalShutdown = true;
                     Context.Become(Flushing);
                 });
         }
@@ -740,8 +756,8 @@ namespace Akka.Remote
 
                     // Collect all transports, listen addresses, and listener promises in one Task
                     var tasks = transports.Select(x => x.Listen().ContinueWith(
-                        result => Tuple.Create(new ProtocolTransportAddressPair(x, result.Result.Item1), result.Result.Item2), TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent));
-                    _listens = Task.WhenAll(tasks).ContinueWith(transportResults => transportResults.Result.ToList(), TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent);
+                        result => Tuple.Create(new ProtocolTransportAddressPair(x, result.Result.Item1), result.Result.Item2), TaskContinuationOptions.ExecuteSynchronously));
+                    _listens = Task.WhenAll(tasks).ContinueWith(transportResults => transportResults.Result.ToList(), TaskContinuationOptions.ExecuteSynchronously);
                 }
                 return _listens;
             }

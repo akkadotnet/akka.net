@@ -40,7 +40,7 @@ namespace Akka.Remote
         }
 
         private readonly LocalActorRefProvider _local;
-        private Internals _internals;
+        private volatile Internals _internals;
         private ActorSystemImpl _system;
 
         private Internals RemoteInternals
@@ -50,7 +50,7 @@ namespace Akka.Remote
                 return _internals ??
                        (_internals =
                            new Internals(new Remoting(_system, this), _system.Serialization,
-                               new RemoteSystemDaemon(_system, RootPath / "remote", SystemGuardian,this.DeadLetters /* TODO: should be RemoteTerminator*/, _log)));
+                               new RemoteSystemDaemon(_system, RootPath / "remote", SystemGuardian, _remotingTerminator, _log)));
             }
         }
 
@@ -93,8 +93,8 @@ namespace Akka.Remote
             _local.UnregisterTempActor(path);
         }
 
-        //TODO: Why volatile?
-        private IActorRef _remoteWatcher;
+        private volatile IActorRef _remotingTerminator;
+        private volatile IActorRef _remoteWatcher;
 
         public virtual void Init(ActorSystemImpl system)
         {
@@ -102,7 +102,12 @@ namespace Akka.Remote
 
             _local.Init(system);
 
-            //TODO: RemotingTerminator
+            _remotingTerminator =
+                _system.SystemActorOf(
+                    RemoteSettings.ConfigureDispatcher(Props.Create(() => new RemotingTerminator(_local.SystemGuardian))),
+                    "remoting-terminator");
+
+            _remotingTerminator.Tell(RemoteInternals);
 
             Transport.Start();
             _remoteWatcher = CreateRemoteWatcher(system);
@@ -165,7 +170,7 @@ namespace Akka.Remote
 
             //merge all of the fallbacks together
             var deployment = new List<Deploy>() { deploy, configDeploy }.Where(x => x != null).Aggregate(Deploy.None, (deploy1, deploy2) => deploy2.WithFallback(deploy1));
-            var propsDeploy = new List<Deploy>() {props.Deploy, deployment}.Where(x => x != null)
+            var propsDeploy = new List<Deploy>() { props.Deploy, deployment }.Where(x => x != null)
                 .Aggregate(Deploy.None, (deploy1, deploy2) => deploy2.WithFallback(deploy1));
 
             //match for remote scope
@@ -202,7 +207,7 @@ namespace Akka.Remote
                                 props.Dispatcher, props.Mailbox), ex);
                     }
                     var localAddress = Transport.LocalAddressForRemote(addr);
-                    var rpath = (new RootActorPath(addr)/"remote"/localAddress.Protocol/localAddress.HostPort()/
+                    var rpath = (new RootActorPath(addr) / "remote" / localAddress.Protocol / localAddress.HostPort() /
                                  path.Elements.ToArray()).
                         WithUid(path.Uid);
                     var remoteRef = new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, deployment);
@@ -407,6 +412,9 @@ namespace Akka.Remote
 
         #region RemotingTerminator
 
+        /// <summary>
+        /// Describes the FSM states of the <see cref="RemotingTerminator"/>
+        /// </summary>
         enum TerminatorState
         {
             Uninitialized,
@@ -416,31 +424,88 @@ namespace Akka.Remote
             Finished
         }
 
+        /// <summary>
+        /// Responsible for shutting down the <see cref="RemoteDaemon"/> and all transports
+        /// when the <see cref="ActorSystem"/> is being shutdown.
+        /// </summary>
         private class RemotingTerminator : FSM<TerminatorState, Internals>
         {
             private readonly IActorRef _systemGuardian;
+            private readonly ILoggingAdapter _log;
 
             public RemotingTerminator(IActorRef systemGuardian)
             {
                 _systemGuardian = systemGuardian;
+                _log = Context.GetLogger();
                 InitFSM();
             }
 
             private void InitFSM()
             {
-
                 When(TerminatorState.Uninitialized, @event =>
                 {
-                    var internals = @event.StateData;
+                    var internals = @event.FsmEvent as Internals;
                     if (internals != null)
                     {
-                        //TODO: add a termination hook to the system guardian
+                        _systemGuardian.Tell(RegisterTerminationHook.Instance);
                         return GoTo(TerminatorState.Idle).Using(internals);
                     }
                     return null;
                 });
 
+                When(TerminatorState.Idle, @event =>
+                {
+                    if (@event.StateData != null && @event.FsmEvent is TerminationHook)
+                    {
+                        _log.Info("Shutting down remote daemon.");
+                        @event.StateData.RemoteDaemon.Tell(TerminationHook.Instance);
+                        return GoTo(TerminatorState.WaitDaemonShutdown);
+                    }
+                    return null;
+                });
+
+                // TODO: state timeout
+                When(TerminatorState.WaitDaemonShutdown, @event =>
+                {
+                    if (@event.StateData != null && @event.FsmEvent is TerminationHookDone)
+                    {
+                        _log.Info("Remote daemon shut down; proceeding with flushing remote transports.");
+                        @event.StateData.Transport.Shutdown()
+                            .ContinueWith(t => TransportShutdown.Instance,
+                                TaskContinuationOptions.ExecuteSynchronously)
+                            .PipeTo(Self);
+                        return GoTo(TerminatorState.WaitTransportShutdown);
+                    }
+
+                    return null;
+                });
+
+                When(TerminatorState.WaitTransportShutdown, @event =>
+                {
+                    _log.Info("Remoting shut down.");
+                    _systemGuardian.Tell(TerminationHookDone.Instance);
+                    return Stop();
+                });
+
                 StartWith(TerminatorState.Uninitialized, null);
+            }
+
+            public sealed class TransportShutdown
+            {
+                private TransportShutdown() { }
+                private static readonly TransportShutdown _instance = new TransportShutdown();
+                public static TransportShutdown Instance
+                {
+                    get
+                    {
+                        return _instance;
+                    }
+                }
+
+                public override string ToString()
+                {
+                    return "<TransportShutdown>";
+                }
             }
         }
 

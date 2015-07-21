@@ -227,7 +227,7 @@ namespace Akka.Remote
                         }
                         finalize();
                     }
-                }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.AttachedToParent);
+                }, TaskContinuationOptions.ExecuteSynchronously);
             }
         }
 
@@ -255,9 +255,10 @@ namespace Akka.Remote
                     Provider.RemoteSettings.CommandAckTimeout)
                     .ContinueWith(result =>
                     {
+                        if (result.IsCanceled || result.IsFaulted)
+                            return false;
                         return result.Result.Status;
-                    },
-                        TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent);
+                    }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
         public override Address LocalAddressForRemote(Address remote)

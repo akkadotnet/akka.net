@@ -44,6 +44,11 @@ namespace Akka.Actor
         }
     }
 
+    /// <summary>
+    /// System guardian. 
+    /// 
+    /// Root actor for all actors under the /system path.
+    /// </summary>
     public class SystemGuardianActor : ActorBase
     {
         private readonly IActorRef _userGuardian;
