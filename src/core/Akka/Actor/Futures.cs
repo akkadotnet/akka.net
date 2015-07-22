@@ -206,7 +206,7 @@ namespace Akka.Actor
                 {
                     c.Cancel(false);
                 }
-            }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+            }, TaskContinuationOptions.ExecuteSynchronously);
 
             return a;
         }

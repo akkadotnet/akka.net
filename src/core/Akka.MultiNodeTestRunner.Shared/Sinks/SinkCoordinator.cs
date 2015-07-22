@@ -147,7 +147,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                     sink.RequestExitCode(Self);
                     sink.Close(Context.System)
                         .ContinueWith(r => new SinkClosed(),
-                        TaskContinuationOptions.ExecuteSynchronously & TaskContinuationOptions.AttachedToParent)
+                        TaskContinuationOptions.ExecuteSynchronously)
                         .PipeTo(Self);
                 }
             });
