@@ -38,6 +38,10 @@ namespace RoslynWorkspace
                 if (semanticClass.Name == "Program")
                     continue;
 
+                //HACK: ignore tests/specs
+                if (semanticClass.Name.Contains("Spec") || semanticClass.BaseType != null && semanticClass.BaseType.Name.Contains("Spec"))
+                    continue;
+
                 var references = await SymbolFinder.FindReferencesAsync(semanticClass, document.Project.Solution);
 
                 var referenceCount = (from reference in references
