@@ -15,7 +15,7 @@ namespace Akka.Remote.TestKit.Proto
     /// <summary>
     /// Encodes a generic object into a <see cref="IByteBuf"/> using Google protobufs
     /// </summary>
-    public class ProtobufEncoder 
+    /*TODO: this class is not used*/public class ProtobufEncoder 
     {
         public void Encode(IConnection connection, object message, out List<IByteBuf> encoded)
         {

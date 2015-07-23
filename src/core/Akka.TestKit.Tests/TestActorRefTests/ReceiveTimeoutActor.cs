@@ -12,7 +12,7 @@ using Akka.Actor;
 
 namespace Akka.TestKit.Tests.TestActorRefTests
 {
-    public class ReceiveTimeoutActor : ActorBase
+    /*TODO: this class is not used*/public class ReceiveTimeoutActor : ActorBase
     {
         private readonly IActorRef _target;
         private CancellationTokenSource _cancellationTokenSource;
@@ -24,7 +24,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
             _cancellationTokenSource = new CancellationTokenSource();
             Task.Delay(TimeSpan.FromSeconds(1), _cancellationTokenSource.Token).ContinueWith(t =>
             {
-                if(t.IsCompleted) Self.Tell("tasktimeout");
+                if(t.IsCompleted) /*TODO: this needs to be closed over*/Self.Tell("tasktimeout");
             });
         }
 

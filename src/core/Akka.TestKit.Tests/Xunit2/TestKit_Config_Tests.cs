@@ -11,7 +11,7 @@ using Xunit;
 namespace Akka.TestKit.Tests.Xunit2
 {
     // ReSharper disable once InconsistentNaming
-    public class TestKit_Config_Tests : TestKit.Xunit2.TestKit
+    /*TODO: this class is not used*/public class TestKit_Config_Tests : TestKit.Xunit2.TestKit
     {
         [Fact]
         public void DefaultValues_should_be_correct()

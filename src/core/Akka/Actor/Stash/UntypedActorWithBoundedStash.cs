@@ -13,7 +13,7 @@ namespace Akka.Actor
     /// <summary>
     /// An UntypedActor with bounded Stash capabilities
     /// </summary>
-    [Obsolete("Inherit from UntypedActor and IWithBoundedStash instead. This class will be removed in a future release.")]
+    /*TODO: this class is not used*/[Obsolete("Inherit from UntypedActor and IWithBoundedStash instead. This class will be removed in a future release.")]
     public abstract class UntypedActorWithBoundedStash : UntypedActor, IWithBoundedStash
     {
 

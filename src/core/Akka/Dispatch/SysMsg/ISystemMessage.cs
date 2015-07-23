@@ -27,7 +27,7 @@ namespace Akka.Dispatch.SysMsg
     /// <summary>
     ///     Class NoMessage.
     /// </summary>
-    public sealed class NoMessage : ISystemMessage
+    /*TODO: this class is not used*/public sealed class NoMessage : ISystemMessage
     {
         public override string ToString()
         {

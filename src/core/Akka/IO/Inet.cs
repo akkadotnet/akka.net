@@ -25,7 +25,7 @@ namespace Akka.IO
             { }
         }
 
-        public abstract class AbstractSocketOption : SocketOption { }
+        /*TODO: this class is not used*/public abstract class AbstractSocketOption : SocketOption { }
 
         public abstract class SocketOptionV2 : SocketOption
         {
@@ -33,7 +33,7 @@ namespace Akka.IO
             { }
         }
 
-        public abstract class AbstractSocketOptionV2 : SocketOptionV2 { }
+        /*TODO: this class is not used*/public abstract class AbstractSocketOptionV2 : SocketOptionV2 { }
 
         public class DatagramChannelCreator : SocketOption
         {
@@ -45,7 +45,7 @@ namespace Akka.IO
 
         public static class SO
         {
-            public class ReceiveBufferSize : SocketOption
+            /*TODO: this class is not used*/public class ReceiveBufferSize : SocketOption
             {
                 private readonly int _size;
 
@@ -106,7 +106,7 @@ namespace Akka.IO
                 }
             }
 
-            public class TrafficClass : SocketOption
+            /*TODO: this class is not used*/public class TrafficClass : SocketOption
             {
                 private readonly int _tc;
 

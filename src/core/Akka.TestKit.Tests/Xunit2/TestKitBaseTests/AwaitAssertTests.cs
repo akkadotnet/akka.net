@@ -11,7 +11,7 @@ using Xunit.Sdk;
 
 namespace Akka.TestKit.Tests.Xunit2.TestKitBaseTests
 {
-    public class AwaitAssertTests : TestKit.Xunit2.TestKit
+    /*TODO: this class is not used*/public class AwaitAssertTests : TestKit.Xunit2.TestKit
     {
         public AwaitAssertTests() : base("akka.test.timefactor=2")
         {

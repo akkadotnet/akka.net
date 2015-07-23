@@ -13,7 +13,7 @@ using Google.ProtocolBuffers;
 
 namespace Akka.Remote.Serialization
 {
-    public class MessageContainerSerializer : Serializer
+    /*TODO: this class is not used*/public class MessageContainerSerializer : Serializer
     {
         public MessageContainerSerializer(ExtendedActorSystem system) : base(system)
         {

@@ -17,7 +17,7 @@ using Akka.Event;
 
 namespace Akka.Persistence.Snapshot
 {
-    public class LocalSnapshotStore : SnapshotStore
+    /*TODO: this class is not used*/public class LocalSnapshotStore : SnapshotStore
     {
         #region settings class
 

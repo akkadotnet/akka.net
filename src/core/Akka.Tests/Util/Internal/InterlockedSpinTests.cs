@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Akka.Tests.Util.Internal
 {
-    public class InterlockedSpinTests
+    /*TODO: this class is not used*/public class InterlockedSpinTests
     {
         [Fact]
         public void When_a_shared_variable_is_updated_on_another_thread_Then_the_update_method_is_rerun()

@@ -195,7 +195,7 @@ namespace Akka.Tests.Dispatch
                 RunTask(() =>
                 {
                     Task.Delay(TimeSpan.FromSeconds(1))
-                        .ContinueWith(t => { Sender.Tell("done"); });
+                        .ContinueWith(t => { /*TODO: this needs to be closed over*/Sender.Tell("done"); });
                 });
             });
         }

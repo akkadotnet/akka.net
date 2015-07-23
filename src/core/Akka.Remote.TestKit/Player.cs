@@ -451,7 +451,7 @@ namespace Akka.Remote.TestKit
                             if (t.IsFaulted)
                                 throw new Exception("Throttle was requested from the TestConductor, but no transport " +
                                                     "adapters available that support throttling. Specify 'testTransport(on=true)' in your MultiNodeConfig");
-                            Self.Tell(new ToServer<Done>(Done.Instance));
+                            /*TODO: this needs to be closed over*/Self.Tell(new ToServer<Done>(Done.Instance));
                         });
                         return Stay();
                     }

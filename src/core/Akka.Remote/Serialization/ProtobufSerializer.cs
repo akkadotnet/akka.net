@@ -11,7 +11,7 @@ using Akka.Serialization;
 
 namespace Akka.Remote.Serialization
 {
-    public class ProtobufSerializer : Serializer
+    /*TODO: this class is not used*/public class ProtobufSerializer : Serializer
     {
         public ProtobufSerializer(ExtendedActorSystem system) : base(system)
         {

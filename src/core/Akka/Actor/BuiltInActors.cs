@@ -15,7 +15,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Class EventStreamActor.
     /// </summary>
-    public class EventStreamActor : ActorBase
+    /*TODO: this class is not used*/public class EventStreamActor : ActorBase
     {
         /// <summary>
         ///     Processor for user defined messages.

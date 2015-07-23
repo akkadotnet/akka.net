@@ -369,7 +369,7 @@ namespace Akka.MultiNodeTests
             }
         }
 
-        class DumbObserver : ReceiveActor
+        /*TODO: this class is not used*/class DumbObserver : ReceiveActor
         {
             private readonly IActorRef _testActorRef;
 

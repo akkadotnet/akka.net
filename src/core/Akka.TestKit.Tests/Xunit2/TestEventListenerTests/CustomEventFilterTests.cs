@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 {
-    public class CustomEventFilterTests : EventFilterTestBase
+    /*TODO: this class is not used*/public class CustomEventFilterTests : EventFilterTestBase
     {
         // ReSharper disable ConvertToLambdaExpression
         public CustomEventFilterTests() : base("akka.loglevel=ERROR") { }

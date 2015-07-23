@@ -327,7 +327,7 @@ namespace Akka.Remote.Transport
 
     internal class HeartbeatTimer : INoSerializationVerificationNeeded { }
 
-    internal sealed class HandleMsg : INoSerializationVerificationNeeded
+    /*TODO: this class is not used*/internal sealed class HandleMsg : INoSerializationVerificationNeeded
     {
         public HandleMsg(AssociationHandle handle)
         {

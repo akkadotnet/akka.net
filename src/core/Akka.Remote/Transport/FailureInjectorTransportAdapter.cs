@@ -20,7 +20,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Provider implementation for creating <see cref="FailureInjectorTransportAdapter"/> instances.
     /// </summary>
-    public class FailureInjectorProvider : ITransportAdapterProvider
+    /*TODO: this class is not used*/public class FailureInjectorProvider : ITransportAdapterProvider
     {
         public Transport Create(Transport wrappedTransport, ExtendedActorSystem system)
         {

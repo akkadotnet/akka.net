@@ -74,7 +74,7 @@ namespace Akka.Tests.Actor
             ";
         }
 
-        class RecipeActor : UntypedActor
+        /*TODO: this class is not used*/class RecipeActor : UntypedActor
         {
             protected override void OnReceive(object message)
             {

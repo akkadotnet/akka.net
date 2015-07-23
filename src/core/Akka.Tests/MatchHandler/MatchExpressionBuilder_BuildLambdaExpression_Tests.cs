@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Akka.Tests.MatchHandler
 {
-    public class MatchExpressionBuilder_BuildLambdaExpression_Tests
+    /*TODO: this class is not used*/public class MatchExpressionBuilder_BuildLambdaExpression_Tests
     {
         [Fact]
         public void Build_one_action()

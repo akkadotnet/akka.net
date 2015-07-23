@@ -9,7 +9,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Akka.TestKit.VsTest.Tests
 {
-    [TestClass]
+    /*TODO: this class is not used*/[TestClass]
     public class AssertionsTests
     {
         private VsTestAssertions _assertions;

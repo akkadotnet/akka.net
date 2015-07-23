@@ -15,7 +15,7 @@ using Xunit;
 namespace Akka.Persistence.Tests
 {
 
-    internal class FailingMemoryJournal : AsyncWriteProxy
+    /*TODO: this class is not used*/internal class FailingMemoryJournal : AsyncWriteProxy
     {
         private readonly TimeSpan _timeout = TimeSpan.FromSeconds(5);
 

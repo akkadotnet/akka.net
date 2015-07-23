@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Akka.Tests.Configuration
 {
-    public class HoconTests
+    /*TODO: this class is not used*/public class HoconTests
     {
         //Added tests to conform to the HOCON spec https://github.com/typesafehub/config/blob/master/HOCON.md
         [Fact]

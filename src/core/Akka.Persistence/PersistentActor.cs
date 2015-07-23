@@ -186,7 +186,7 @@ namespace Akka.Persistence
         protected static new IUntypedActorContext Context { get { return (IUntypedActorContext)ActorBase.Context; } }
     }
 
-    public abstract class ReceivePersistentActor : UntypedPersistentActor, IInitializableActor
+    /*TODO: this class is not used*/public abstract class ReceivePersistentActor : UntypedPersistentActor, IInitializableActor
     {
         
         private bool _shouldUnhandle = true;

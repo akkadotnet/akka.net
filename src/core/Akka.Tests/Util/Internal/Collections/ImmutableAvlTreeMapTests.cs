@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Akka.Tests.Util.Internal.Collections
 {
-    public class ImmutableAvlTreeMapTests
+    /*TODO: this class is not used*/public class ImmutableAvlTreeMapTests
     {
         [Fact]
         public void AddingSamekeyTwiceAreNotAllowed()

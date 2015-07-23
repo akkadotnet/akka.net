@@ -134,7 +134,7 @@ namespace Akka.Routing
             get { return !_nodes.Any(); }
         }
         
-        public class ConsistentHashingGroupSurrogate : ISurrogate
+        /*TODO: this class is not used*/public class ConsistentHashingGroupSurrogate : ISurrogate
         {
             public ISurrogated FromSurrogate(ActorSystem system)
             {
@@ -212,7 +212,7 @@ namespace Akka.Routing
             }
         }
         
-        public class ConsistentHashingPoolSurrogate : ISurrogate
+        /*TODO: this class is not used*/public class ConsistentHashingPoolSurrogate : ISurrogate
         {
             public ISurrogated FromSurrogate(ActorSystem system)
             {

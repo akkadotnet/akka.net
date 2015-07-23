@@ -10,7 +10,7 @@ using NUnit.Framework;
 
 namespace Akka.TestKit.NUnit.Tests
 {
-    [TestFixture]
+    /*TODO: this class is not used*/[TestFixture]
     public class TestKitTests : TestKit
     {
         [TearDown]

@@ -9,7 +9,7 @@ using Akka.Event;
 
 namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 {
-    public class EventFilterDebugTests : AllTestForEventFilterBase<Debug>
+    /*TODO: this class is not used*/public class EventFilterDebugTests : AllTestForEventFilterBase<Debug>
     {
         public EventFilterDebugTests() : base("akka.loglevel=DEBUG"){}
 
@@ -19,7 +19,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         }
     }
 
-    public class EventFilterInfoTests : AllTestForEventFilterBase<Info>
+    /*TODO: this class is not used*/public class EventFilterInfoTests : AllTestForEventFilterBase<Info>
     {
         public EventFilterInfoTests() : base("akka.loglevel=INFO") { }
 
@@ -29,7 +29,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         }
     }
 
-    public class EventFilterWarningTests : AllTestForEventFilterBase<Warning>
+    /*TODO: this class is not used*/public class EventFilterWarningTests : AllTestForEventFilterBase<Warning>
     {
         public EventFilterWarningTests() : base("akka.loglevel=WARNING") { }
 
@@ -39,7 +39,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         }
     }
 
-    public class EventFilterErrorTests : AllTestForEventFilterBase<Error>
+    /*TODO: this class is not used*/public class EventFilterErrorTests : AllTestForEventFilterBase<Error>
     {
         public EventFilterErrorTests() : base("akka.loglevel=ERROR") { }
 

@@ -27,7 +27,7 @@ namespace Akka.Persistence.Journal
     /// <summary>
     /// In-memory journal for testing purposes.
     /// </summary>
-    public class MemoryJournal : AsyncWriteProxy
+    /*TODO: this class is not used*/public class MemoryJournal : AsyncWriteProxy
     {
         private readonly TimeSpan _timeout = TimeSpan.FromSeconds(5);
 

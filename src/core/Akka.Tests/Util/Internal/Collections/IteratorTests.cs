@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Akka.Tests.Util.Internal.Collections
 {
-    public class IteratorTests
+    /*TODO: this class is not used*/public class IteratorTests
     {
         [Fact]
         public void Should_provide_next_for_elements()

@@ -47,7 +47,7 @@ namespace ChatMessages
     {
     }
 
-    public class ChannelsResponse 
+    /*TODO: this class is not used*/public class ChannelsResponse 
     {
         public IActorRef[] channels { get; set; }
     }

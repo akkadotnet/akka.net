@@ -16,7 +16,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
     /// <summary>
     /// Abstract snapshot store implementation, customized to work with SQL-based persistence providers.
     /// </summary>
-    public abstract class DbSnapshotStore : SnapshotStore
+    /*TODO: this class is not used*/public abstract class DbSnapshotStore : SnapshotStore
     {
         /// <summary>
         /// List of cancellation tokens for all pending asynchronous database operations.

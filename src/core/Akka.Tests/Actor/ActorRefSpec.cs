@@ -451,7 +451,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        private class FailingChildInnerActor : FailingInnerActor
+        /*TODO: this class is not used*/private class FailingChildInnerActor : FailingInnerActor
         {
             public FailingChildInnerActor(ActorBase fail)
                 : base(fail)
@@ -507,7 +507,7 @@ namespace Akka.Tests.Actor
             }
         }
 
-        private class FailingChildOuterActor : FailingOuterActor
+        /*TODO: this class is not used*/private class FailingChildOuterActor : FailingOuterActor
         {
             public FailingChildOuterActor(IActorRef inner)
                 : base(inner)

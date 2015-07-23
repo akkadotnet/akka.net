@@ -43,7 +43,7 @@ namespace PersistenceExample
 
         public long DeliveryId { get; private set; }
     }
-    [Serializable]
+    /*TODO: this class is not used*/[Serializable]
     public class Snap
     {
         public Snap(Akka.Persistence.AtLeastOnceDeliverySnapshot snapshot)

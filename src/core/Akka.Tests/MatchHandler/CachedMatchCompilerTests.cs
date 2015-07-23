@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Akka.Tests.MatchHandler
 {
-    public class CachedMatchCompilerTests
+    /*TODO: this class is not used*/public class CachedMatchCompilerTests
     {
         [Fact]
         public void When_compiling_first_time_correct_calls_are_made_to_MatchExpressionBuilder_and_PartialActionBuilder()
