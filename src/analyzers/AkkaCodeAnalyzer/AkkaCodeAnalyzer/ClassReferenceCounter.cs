@@ -30,6 +30,9 @@ namespace RoslynWorkspace
             {
                 var semanticClass = semanticModel.GetDeclaredSymbol(@class) as ITypeSymbol;
 
+                //ignore static classes for now, they can yield 0 references even though they are used, if the usage is via extension methods.
+                if (semanticClass.IsStatic)
+                    continue;
 
                 var references = await SymbolFinder.FindReferencesAsync(semanticClass, document.Project.Solution);
 
