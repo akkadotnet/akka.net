@@ -49,7 +49,15 @@ namespace RoslynWorkspace
                 }
             }
 
-            return editor.GetChangedDocument();
+            //HACK: no idea why this fails in some cases. just ignore the changes to the current file and return the original doc.
+            try
+            {
+                return editor.GetChangedDocument();
+            }
+            catch
+            {
+                return document;
+            }
         }
     }
 }
