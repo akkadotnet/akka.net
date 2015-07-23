@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.FindSymbols;
 
 namespace RoslynWorkspace
 {
@@ -24,9 +25,11 @@ namespace RoslynWorkspace
                 .OfType<ClassDeclarationSyntax>()
                 .ToList();
 
+
             foreach (var @class in classes)
             {
                 var semanticClass = semanticModel.GetDeclaredSymbol(@class) as ITypeSymbol;
+
                 var current = semanticClass;
                 while (current.BaseType != null && current.BaseType.SpecialType == SpecialType.None)
                 {
@@ -54,8 +57,6 @@ namespace RoslynWorkspace
                         return false;
                     })
                     .ToList();
-
-
 
                 if (invocations.Any())
                 {

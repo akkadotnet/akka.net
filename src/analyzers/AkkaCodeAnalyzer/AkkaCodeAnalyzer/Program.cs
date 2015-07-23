@@ -11,7 +11,8 @@ namespace RoslynWorkspace
 
         private static readonly Rewriter[] rewriters =
         {
-            new ContinueWithBody()
+            new ContinueWithBody(),
+            new ClassReferenceCounter()
         };
 
         private static void Main(string[] args)
