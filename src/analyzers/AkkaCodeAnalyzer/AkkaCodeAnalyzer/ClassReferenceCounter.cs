@@ -34,6 +34,10 @@ namespace RoslynWorkspace
                 if (semanticClass.IsStatic)
                     continue;
 
+                //ignore console app start programs
+                if (semanticClass.Name == "Program")
+                    continue;
+
                 var references = await SymbolFinder.FindReferencesAsync(semanticClass, document.Project.Solution);
 
                 var referenceCount = (from reference in references
