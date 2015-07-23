@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Akka.Tests.MatchHandler
 {
-    public class MatchBuilderSignatureTests
+    /*TODO: this class is not used*/public class MatchBuilderSignatureTests
     {
         [Fact]
         public void GetHashCode_should_return_same_value_for_empty_and_null_signatures()

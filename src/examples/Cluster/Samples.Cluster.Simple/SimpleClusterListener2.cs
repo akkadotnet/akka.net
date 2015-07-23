@@ -11,7 +11,7 @@ using Akka.Event;
 
 namespace Samples.Cluster.Simple
 {
-    public class SimpleClusterListener2 : UntypedActor
+    /*TODO: this class is not used*/public class SimpleClusterListener2 : UntypedActor
     {
         protected ILoggingAdapter Log = Context.GetLogger();
         protected Akka.Cluster.Cluster Cluster = Akka.Cluster.Cluster.Get(Context.System);

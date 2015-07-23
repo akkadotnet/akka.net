@@ -13,7 +13,7 @@ using Xunit;
 namespace Akka.Tests
 {
     
-    public class ActorSystemTests
+    /*TODO: this class is not used*/public class ActorSystemTests
     {
         public class TestActor : UntypedActor
         {

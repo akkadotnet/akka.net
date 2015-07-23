@@ -25,7 +25,7 @@ namespace Akka.Persistence
         public IActorRef Requestor { get; private set; }
     }
 
-    public sealed class DeleteMessagesSuccess
+    /*TODO: this class is not used*/public sealed class DeleteMessagesSuccess
     {
         public DeleteMessagesSuccess(IEnumerable<IPersistentEnvelope> messageIds)
         {
@@ -38,7 +38,7 @@ namespace Akka.Persistence
     /// <summary>
     /// Reply message to failed <see cref="DeleteMessages"/> request.
     /// </summary>
-    public sealed class DeleteMessagesFailure
+    /*TODO: this class is not used*/public sealed class DeleteMessagesFailure
     {
         public DeleteMessagesFailure(Exception cause)
         {
@@ -81,7 +81,7 @@ namespace Akka.Persistence
         }
     }
 
-    internal sealed class WriteConfirmationsFailure
+    /*TODO: this class is not used*/internal sealed class WriteConfirmationsFailure
     {
         public WriteConfirmationsFailure(Exception cause)
         {
@@ -192,7 +192,7 @@ namespace Akka.Persistence
         public int ActorInstanceId { get; private set; }
     }
 
-    public sealed class LoopMessage
+    /*TODO: this class is not used*/public sealed class LoopMessage
     {
         public LoopMessage(object message, IActorRef persistentActor, int actorInstanceId)
         {

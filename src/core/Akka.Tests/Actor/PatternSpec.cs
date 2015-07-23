@@ -68,7 +68,7 @@ namespace Akka.Tests.Actor
 
         #region Actors
 
-        public sealed class Work
+        /*TODO: this class is not used*/public sealed class Work
         {
             public Work(TimeSpan duration)
             {

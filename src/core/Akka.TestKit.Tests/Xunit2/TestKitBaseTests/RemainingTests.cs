@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Akka.TestKit.Tests.Xunit2.TestKitBaseTests
 {
-    public class RemainingTests : TestKit.Xunit2.TestKit
+    /*TODO: this class is not used*/public class RemainingTests : TestKit.Xunit2.TestKit
     {
         [Fact]
         public void Throw_if_remaining_is_called_outside_Within()

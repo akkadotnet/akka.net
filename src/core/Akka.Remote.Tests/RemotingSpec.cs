@@ -436,7 +436,7 @@ namespace Akka.Remote.Tests
             }
         }
 
-        class Proxy : UntypedActor
+        /*TODO: this class is not used*/class Proxy : UntypedActor
         {
             private IActorRef _one;
             private IActorRef _another;

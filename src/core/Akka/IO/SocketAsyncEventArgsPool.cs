@@ -12,7 +12,7 @@ using System.Net.Sockets;
 
 namespace Akka.IO
 {
-    public class SocketAsyncEventArgsPool
+    /*TODO: this class is not used*/public class SocketAsyncEventArgsPool
     {
         private readonly ConcurrentStack<SocketAsyncEventArgs> _pool;
         private readonly byte[] _buffer;

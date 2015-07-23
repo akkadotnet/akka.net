@@ -567,7 +567,7 @@ namespace Akka.Actor
             }
         }
 
-        private class FactoryConsumer<TActor> : IIndirectActorProducer where TActor : ActorBase
+        /*TODO: this class is not used*/private class FactoryConsumer<TActor> : IIndirectActorProducer where TActor : ActorBase
         {
             private readonly Func<TActor> _factory;
 

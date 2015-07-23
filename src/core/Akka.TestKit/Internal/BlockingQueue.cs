@@ -92,7 +92,7 @@ namespace Akka.TestKit.Internal
             public bool First { get { return _first; } }
         }
 
-        private class QueueWithAddFirst : IProducerConsumerCollection<Positioned>
+        /*TODO: this class is not used*/private class QueueWithAddFirst : IProducerConsumerCollection<Positioned>
         {
             private readonly LinkedList<Positioned> _list = new LinkedList<Positioned>();
             private readonly object _lock = new object();

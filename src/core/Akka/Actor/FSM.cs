@@ -208,7 +208,7 @@ namespace Akka.Actor
         /// </summary>
         /// <typeparam name="TS">The name of the state</typeparam>
         /// <typeparam name="TD">The data of the state</typeparam>
-        public class LogEntry<TS, TD>
+        /*TODO: this class is not used*/public class LogEntry<TS, TD>
         {
             public LogEntry(TS stateName, TD stateData, object fsmEvent)
             {

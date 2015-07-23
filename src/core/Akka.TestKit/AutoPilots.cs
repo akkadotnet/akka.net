@@ -91,7 +91,7 @@ namespace Akka.TestKit
     /// or return <see cref="AutoPilot.KeepRunning"/>.</para>
     /// <para>Return <see cref="AutoPilot.NoAutoPilot"/> to stop handling messages.</para>
     /// </summary>
-    public sealed class DelegateAutoPilot : AutoPilot
+    /*TODO: this class is not used*/public sealed class DelegateAutoPilot : AutoPilot
     {
         private readonly AutoPilotDelegate _autoPilotDelegate;
 

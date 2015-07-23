@@ -14,7 +14,7 @@ using Xunit;
 namespace Akka.Tests.Util
 {
     
-    public class TypeExtensionsTests
+    /*TODO: this class is not used*/public class TypeExtensionsTests
     {
         [Fact]
         public void TestGenericImplements()

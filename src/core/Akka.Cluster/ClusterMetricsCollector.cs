@@ -30,7 +30,7 @@ namespace Akka.Cluster
     /// Smoothing of the data for each monitored process is delegated to the
     /// <see cref="EWMA"/> for exponential weighted moving average.
     /// </summary>
-    internal class ClusterMetricsCollector : ReceiveActor
+    /*TODO: this class is not used*/internal class ClusterMetricsCollector : ReceiveActor
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
 

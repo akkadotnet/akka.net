@@ -57,7 +57,7 @@ public class TypedWorker : TypedActor, IHandle<TypedActorMessage>, IHandle<Anoth
         Console.WriteLine("TypedWorker - {0} received other {1}", Self.Path.Name, message);
     }
 }
-public class TypedParentWorker : TypedActor, IHandle<TypedActorMessage>, IHandle<AnotherMessage>
+/*TODO: this class is not used*/public class TypedParentWorker : TypedActor, IHandle<TypedActorMessage>, IHandle<AnotherMessage>
 {
     public TypedParentWorker()
     {

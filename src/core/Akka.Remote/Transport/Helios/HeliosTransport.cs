@@ -43,7 +43,7 @@ namespace Akka.Remote.Transport.Helios
         }
     }
 
-    class TcpTransportException : RemoteTransportException
+    /*TODO: this class is not used*/class TcpTransportException : RemoteTransportException
     {
         public TcpTransportException(string message, Exception cause = null) : base(message, cause)
         {

@@ -233,7 +233,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class OversizedPayloadException : EndpointException
+    /*TODO: this class is not used*/internal sealed class OversizedPayloadException : EndpointException
     {
         public OversizedPayloadException(string msg)
             : base(msg)
@@ -709,7 +709,7 @@ namespace Akka.Remote
     /// 
     /// Abstract base class for Endpoint writers that require a <see cref="FSM{TS,TD}"/> implementation.
     /// </summary>
-    internal abstract class EndpointActor<TS, TD> : FSM<TS, TD>
+    /*TODO: this class is not used*/internal abstract class EndpointActor<TS, TD> : FSM<TS, TD>
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
 

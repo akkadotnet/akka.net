@@ -331,7 +331,7 @@ namespace Akka.IO
         /// or have been sent!</b> Unfortunately there is no way to determine whether
         /// a particular write has been sent by the O/S.
         /// </summary>
-        public class WriteFile : SimpleWriteCommand
+        /*TODO: this class is not used*/public class WriteFile : SimpleWriteCommand
         {
             private readonly Event _ack;
 
@@ -762,7 +762,7 @@ namespace Akka.IO
         }
     }
 
-    public class TcpMessage
+    /*TODO: this class is not used*/public class TcpMessage
     {
         public static Tcp.Command Connect(EndPoint remoteAddress,
             EndPoint localAddress,

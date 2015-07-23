@@ -123,7 +123,7 @@ namespace Akka.Tests.Actor
         public ActorSystem System { get; private set; }
     }
 
-    public class TestExtension : ExtensionIdProvider<TestExtensionImpl>
+    /*TODO: this class is not used*/public class TestExtension : ExtensionIdProvider<TestExtensionImpl>
     {
         public override TestExtensionImpl CreateExtension(ExtendedActorSystem system)
         {

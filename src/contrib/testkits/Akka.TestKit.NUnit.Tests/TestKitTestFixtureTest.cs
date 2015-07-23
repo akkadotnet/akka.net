@@ -12,7 +12,7 @@ using NUnit.Framework;
 
 namespace Akka.TestKit.NUnit.Tests
 {
-    [TestFixture]
+    /*TODO: this class is not used*/[TestFixture]
     public class TestKitTestFixtureTest : TestKit
     {
         [Test]

@@ -15,7 +15,7 @@ namespace Akka.Event
     /// 
     /// To activate the TraceLogger, add loggers = [""Akka.Event.TraceLogger, Akka""] to your config
     /// </summary>
-    public class TraceLogger : UntypedActor
+    /*TODO: this class is not used*/public class TraceLogger : UntypedActor
     {
         protected override void OnReceive(object message)
         {

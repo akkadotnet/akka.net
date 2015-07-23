@@ -12,7 +12,7 @@ using Akka.Actor;
 
 namespace Akka.TestKit.Tests.TestActorRefTests
 {
-    public class ReceiveTimeoutActor : ActorBase
+    /*TODO: this class is not used*/public class ReceiveTimeoutActor : ActorBase
     {
         private readonly IActorRef _target;
         private CancellationTokenSource _cancellationTokenSource;

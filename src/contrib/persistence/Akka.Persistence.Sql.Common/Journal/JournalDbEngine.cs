@@ -41,7 +41,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// <summary>
     /// Class used to abstract SQL persistence capabilities for concrete implementation of actor journal.
     /// </summary>
-    public abstract class JournalDbEngine : IDisposable
+    /*TODO: this class is not used*/public abstract class JournalDbEngine : IDisposable
     {
         /// <summary>
         /// Settings applied to journal mapped from HOCON config file.

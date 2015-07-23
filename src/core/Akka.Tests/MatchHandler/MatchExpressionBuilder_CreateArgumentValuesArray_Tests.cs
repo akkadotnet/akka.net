@@ -15,7 +15,7 @@ using Xunit;
 namespace Akka.Tests.MatchHandler
 {
     // ReSharper disable once InconsistentNaming
-    public class MatchExpressionBuilder_CreateArgumentValuesArray_Tests
+    /*TODO: this class is not used*/public class MatchExpressionBuilder_CreateArgumentValuesArray_Tests
     {
 
         [Fact]

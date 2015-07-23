@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
 {
-    public class DeadLettersEventFilterTests : EventFilterTestBase
+    /*TODO: this class is not used*/public class DeadLettersEventFilterTests : EventFilterTestBase
     {
         private readonly IActorRef _deadActor;
         // ReSharper disable ConvertToLambdaExpression

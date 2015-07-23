@@ -19,7 +19,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// Used to provide throttling controls for remote <see cref="Transport"/> instances.
     /// </summary>
-    public class ThrottlerProvider : ITransportAdapterProvider
+    /*TODO: this class is not used*/public class ThrottlerProvider : ITransportAdapterProvider
     {
         public Transport Create(Transport wrappedTransport, ExtendedActorSystem system)
         {

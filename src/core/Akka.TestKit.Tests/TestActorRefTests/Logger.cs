@@ -10,7 +10,7 @@ using Akka.Event;
 
 namespace Akka.TestKit.Tests.TestActorRefTests
 {
-    public class Logger : ActorBase
+    /*TODO: this class is not used*/public class Logger : ActorBase
     {
         private int _count;
         private string _msg;

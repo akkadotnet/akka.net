@@ -76,7 +76,7 @@ namespace Helios.Concurrency
     /// <summary>
     /// TaskScheduler for working with a <see cref="DedicatedThreadPool"/> instance
     /// </summary>
-    internal class DedicatedThreadPoolTaskScheduler : TaskScheduler
+    /*TODO: this class is not used*/internal class DedicatedThreadPoolTaskScheduler : TaskScheduler
     {
         // Indicates whether the current thread is processing work items.
         [ThreadStatic]

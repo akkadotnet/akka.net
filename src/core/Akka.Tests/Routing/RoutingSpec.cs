@@ -146,7 +146,7 @@ namespace Akka.Tests.Routing
             public int Id { get; set; }
         }
 
-        public class TestRunActor : UntypedActor
+        /*TODO: this class is not used*/public class TestRunActor : UntypedActor
         {
 
             protected override void OnReceive(object message)

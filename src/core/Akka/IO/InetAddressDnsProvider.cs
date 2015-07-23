@@ -9,7 +9,7 @@ using System;
 
 namespace Akka.IO
 {
-    public class InetAddressDnsProvider : IDnsProvider
+    /*TODO: this class is not used*/public class InetAddressDnsProvider : IDnsProvider
     {
         private readonly DnsBase _cache = new SimpleDnsCache();
 

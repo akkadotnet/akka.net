@@ -13,7 +13,7 @@ using Xunit;
 namespace Akka.Tests.Actor.Scheduler
 {
     // ReSharper disable once InconsistentNaming
-    public class DedicatedThreadScheduler_Verify_TimeProvider
+    /*TODO: this class is not used*/public class DedicatedThreadScheduler_Verify_TimeProvider
     {
         [Fact]
         public void Now_Should_be_accurate()
