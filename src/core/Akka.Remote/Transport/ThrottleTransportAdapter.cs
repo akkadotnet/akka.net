@@ -552,7 +552,9 @@ namespace Akka.Remote.Transport
 
         int TokensGenerated(long nanoTimeOfSend)
         {
-            return Convert.ToInt32(((double)(nanoTimeOfSend - _nanoTimeOfLastSend) / TimeSpan.TicksPerMillisecond) * _tokensPerSecond / 1000);
+            var milliSecondsSinceLastSend = ((nanoTimeOfSend - _nanoTimeOfLastSend).ToTicks()/TimeSpan.TicksPerMillisecond);
+            var tokensGenerated = milliSecondsSinceLastSend*_tokensPerSecond/1000;
+            return Convert.ToInt32(tokensGenerated);
         }
 
         TokenBucket Copy(int? capacity = null, double? tokensPerSecond = null, long? nanoTimeOfLastSend = null, int? availableTokens = null)
