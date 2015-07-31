@@ -60,7 +60,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             akka.remote.log - remote - lifecycle - events = off
             akka.cluster.auto - down - unreachable - after = 0s
-            ");
+            ").WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
 
@@ -80,7 +80,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         protected override int InitialParticipantsValueFactory { get { return Roles.Count; } }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_in_chaotic_cluster_should_startup_6_node_cluster()
         {
             Within(TimeSpan.FromMinutes(1), () =>

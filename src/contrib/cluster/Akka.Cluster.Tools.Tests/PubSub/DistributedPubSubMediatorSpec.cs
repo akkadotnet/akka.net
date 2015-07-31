@@ -29,7 +29,7 @@ namespace Akka.Cluster.Tools.Tests.PubSub
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider""
+                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.pub-sub.max-delta-elements = 500
@@ -245,7 +245,7 @@ namespace Akka.Cluster.Tools.Tests.PubSub
 
         #endregion
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void DistributedPubSubMediator_should_startup_2_nodes_cluster()
         {
             Within(TimeSpan.FromSeconds(15), () =>
@@ -256,7 +256,7 @@ namespace Akka.Cluster.Tools.Tests.PubSub
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void DistributedPubSubMediator_should_keep_track_of_added_users()
         {
             DistributedPubSubMediator_should_startup_2_nodes_cluster();
@@ -317,7 +317,7 @@ namespace Akka.Cluster.Tools.Tests.PubSub
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void DistributedPubSubMediator_should_replicate_users_to_new_node()
         {
             DistributedPubSubMediator_should_keep_track_of_added_users();
@@ -348,7 +348,7 @@ namespace Akka.Cluster.Tools.Tests.PubSub
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void DistributedPubSubMediator_should_keep_track_of_removed_users()
         {
             DistributedPubSubMediator_should_replicate_users_to_new_node();
@@ -369,7 +369,7 @@ namespace Akka.Cluster.Tools.Tests.PubSub
             EnterBarrier("after-4");
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void DistributedPubSubMediator_should_remove_terminated_users()
         {
             DistributedPubSubMediator_should_keep_track_of_removed_users();
@@ -386,7 +386,7 @@ namespace Akka.Cluster.Tools.Tests.PubSub
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void DistributedPubSubMediator_should_publish()
         {
             DistributedPubSubMediator_should_remove_terminated_users();
@@ -420,7 +420,7 @@ namespace Akka.Cluster.Tools.Tests.PubSub
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void DistributedPubSubMediator_should_publish_to_topic()
         {
             DistributedPubSubMediator_should_publish();
@@ -473,7 +473,7 @@ namespace Akka.Cluster.Tools.Tests.PubSub
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void DistributedPubSubMediator_should_demonstrate_usage()
         {
             DistributedPubSubMediator_should_publish_to_topic();
@@ -502,7 +502,7 @@ namespace Akka.Cluster.Tools.Tests.PubSub
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void DistributedPubSubMediator_should_SendAll_to_all_other_nodes()
         {
             DistributedPubSubMediator_should_demonstrate_usage();
@@ -536,7 +536,7 @@ namespace Akka.Cluster.Tools.Tests.PubSub
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void DistributedPubSubMediator_should_send_one_message_to_each_group()
         {
             DistributedPubSubMediator_should_SendAll_to_all_other_nodes();
@@ -608,7 +608,7 @@ namespace Akka.Cluster.Tools.Tests.PubSub
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void DistributedPubSubMediator_should_transfer_delta_correctly()
         {
             DistributedPubSubMediator_should_send_one_message_to_each_group();
@@ -659,7 +659,7 @@ namespace Akka.Cluster.Tools.Tests.PubSub
             EnterBarrier("after-13");
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void DistributedPubSubMediator_should_remove_entries_when_node_is_removed()
         {
             DistributedPubSubMediator_should_transfer_delta_correctly();
@@ -684,7 +684,7 @@ namespace Akka.Cluster.Tools.Tests.PubSub
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void DistributedPubSubMediator_should_receive_proper_UnsubscribeAck_message()
         {
             DistributedPubSubMediator_should_remove_entries_when_node_is_removed();

@@ -53,10 +53,6 @@
     <Compile Include="ShardRegion.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj">
-      <Project>{7ae6de46-24a7-41eb-a18c-5c3ab748e81e}</Project>
-      <Name>Akka.Cluster.Tools</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj">
       <Project>{6ab00f61-269a-4501-b06a-026707f000a7}</Project>
       <Name>Akka.Cluster</Name>
@@ -72,6 +68,10 @@
     <ProjectReference Include="..\..\..\core\Akka\Akka.csproj">
       <Project>{5deddf90-37f0-48d3-a0b0-a5cbd8a7e377}</Project>
       <Name>Akka</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj">
+      <Project>{7ae6de46-24a7-41eb-a18c-5c3ab748e81e}</Project>
+      <Name>Akka.Cluster.Tools</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

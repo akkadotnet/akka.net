@@ -28,7 +28,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             akka.loglevel = INFO
             akka.actor.provider = ""Akka.Aluster.ClusterActorRefProvider, Akka.Cluster""
             akka.remote.log-remote-lifecycle-events = off
-            akka.cluster.auto-down-unreachable-after = 0s");
+            akka.cluster.auto-down-unreachable-after = 0s").WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
 

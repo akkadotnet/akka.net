@@ -34,7 +34,7 @@ namespace Akka.Cluster.Tools.Tests.Client
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider""
+                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.client.heartbeat-interval = 1s
@@ -137,7 +137,7 @@ namespace Akka.Cluster.Tools.Tests.Client
 
         #endregion
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterClient_should_startup_cluster()
         {
             Within(TimeSpan.FromSeconds(30), () =>
@@ -161,7 +161,7 @@ namespace Akka.Cluster.Tools.Tests.Client
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterClient_should_communicate_to_any_node_in_cluster()
         {
             ClusterClient_should_startup_cluster();
@@ -185,7 +185,7 @@ namespace Akka.Cluster.Tools.Tests.Client
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterClient_should_demonstrate_usage()
         {
             ClusterClient_should_communicate_to_any_node_in_cluster();
@@ -230,7 +230,7 @@ namespace Akka.Cluster.Tools.Tests.Client
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterClient_should_reestablish_connection_to_another_receptionist_when_server_is_shutdown()
         {
             ClusterClient_should_demonstrate_usage();

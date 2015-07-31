@@ -33,7 +33,10 @@ namespace Akka.Remote.TestKit
             {
                 if (!arg.StartsWith("-D")) continue;
                 var tokens = arg.Substring(2).Split('=');
-                dictionary.Add(tokens[0], tokens[1]);
+                if (tokens.Length != 2)
+                {
+                    Console.WriteLine("Couldn't parse " + arg);
+                }else dictionary.Add(tokens[0], tokens[1]);
             }
             return dictionary;
         });

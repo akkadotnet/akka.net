@@ -38,7 +38,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider""
+                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
             ").WithFallback(MultiNodeClusterSpec.ClusterConfig());
@@ -353,7 +353,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             EnterBarrier(nodes[0].Name + "-up");
         }
 
-        private void CreateSingletonProxy()
+        private void CreateSingleton()
         {
             Sys.ActorOf(ClusterSingletonManager.Props(
                 singletonProps: Props.Create(() => new Consumer(Queue, TestActor)),
@@ -362,7 +362,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 "consumer");
         }
 
-        private void CreateSingleton()
+        private void CreateSingletonProxy()
         {
             Sys.ActorOf(ClusterSingletonProxy.Props(
                 singletonManagerPath: "/user/consumer",
@@ -461,7 +461,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         #endregion
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_should_startup_6_node_cluster()
         {
             Within(TimeSpan.FromSeconds(60), () =>
@@ -514,7 +514,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_should_let_the_proxy_messages_to_the_singleton_in_a_6_node_cluster()
         {
             ClusterSingletonManager_should_startup_6_node_cluster();
@@ -529,7 +529,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_should_handover_when_oldest_leaves_in_6_node_cluster()
         {
             ClusterSingletonManager_should_let_the_proxy_messages_to_the_singleton_in_a_6_node_cluster();
@@ -568,7 +568,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_should_takeover_when_oldest_crashes_in_5_node_cluster()
         {
             ClusterSingletonManager_should_handover_when_oldest_leaves_in_6_node_cluster();
@@ -590,7 +590,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             });
         }
 
-        [MultiNodeFact(Skip = "TODO")]
+        //[MultiNodeFact(Skip = "TODO")]
         public void ClusterSingletonManager_should_takeover_when_two_oldest_crash_in_3_node_cluster()
         {
             ClusterSingletonManager_should_takeover_when_oldest_crashes_in_5_node_cluster();
