@@ -349,7 +349,7 @@ namespace Akka.TestKit
             {
                 const string msg = "Failed to stop [{0}] within [{1}] \n{2}";
                 if(verifySystemShutdown)
-                    throw new Exception(string.Format(msg, system.Name, durationValue, ""));
+                    throw new TimeoutException(string.Format(msg, system.Name, durationValue, ""));
                 //TODO: replace "" with system.PrintTree()
                 system.Log.Warning(msg, system.Name, durationValue, ""); //TODO: replace "" with system.PrintTree()
             }

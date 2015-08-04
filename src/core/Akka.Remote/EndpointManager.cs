@@ -715,14 +715,14 @@ namespace Akka.Remote
                         {
                             var driverType = Type.GetType(transportSettings.TransportClass);
                             if(driverType==null)
-                                throw new Exception(string.Format("Cannot instantiate transport [{0}]. Cannot find the type.",transportSettings.TransportClass));
+                                throw new TypeLoadException(string.Format("Cannot instantiate transport [{0}]. Cannot find the type.",transportSettings.TransportClass));
 
                             if(!typeof(Transport.Transport).IsAssignableFrom(driverType))
-                                throw new Exception(string.Format("Cannot instantiate transport [{0}]. It does not implement [{1}].",transportSettings.TransportClass,typeof(Transport.Transport).FullName));
+                                throw new TypeLoadException(string.Format("Cannot instantiate transport [{0}]. It does not implement [{1}].",transportSettings.TransportClass,typeof(Transport.Transport).FullName));
 
                             var constructorInfo = driverType.GetConstructor(new []{typeof(ActorSystem),typeof(Config)});
                             if(constructorInfo==null)
-                                throw new Exception(string.Format("Cannot instantiate transport [{0}]. " +
+                                throw new TypeLoadException(string.Format("Cannot instantiate transport [{0}]. " +
                                                                           "It has no public constructor with " +
                                                                           "[{1}] and [{2}] parameters",transportSettings.TransportClass,typeof(ActorSystem).FullName,typeof(Config).FullName));
 

@@ -51,7 +51,7 @@ namespace Akka.Configuration.Hocon
             {
                 HoconValue res = c.GetValue(sub.Path);
                 if (res == null)
-                    throw new Exception("Unresolved substitution:" + sub.Path);
+                    throw new FormatException("Unresolved substitution:" + sub.Path);
                 sub.ResolvedValue = res;
             }
             return new HoconRoot(_root, _substitutions);

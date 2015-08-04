@@ -202,7 +202,7 @@ namespace Akka.Configuration.Hocon
         /// Retrieves the next token from the string.
         /// </summary>
         /// <returns>The next token contained in the string.</returns>
-        /// <exception cref="System.Exception">
+        /// <exception cref="System.FormatException">
         /// This exception is thrown when an unknown token is encountered.
         /// </exception>
         public Token PullNext()
@@ -248,7 +248,7 @@ namespace Akka.Configuration.Hocon
             {
                 return new Token(TokenType.EoF);
             }
-            throw new Exception("unknown token");
+            throw new FormatException("unknown token");
         }
 
         private bool IsStartOfQuotedKey()
@@ -581,7 +581,7 @@ namespace Akka.Configuration.Hocon
         /// Retrieves a value token from the tokenizer's current position.
         /// </summary>
         /// <returns>A value token from the tokenizer's current position.</returns>
-        /// <exception cref="System.Exception">
+        /// <exception cref="System.FormatException">
         /// Expected value: Null literal, Array, Quoted Text, Unquoted Text,
         ///     Triple quoted Text, Object or End of array
         /// </exception>
@@ -619,7 +619,7 @@ namespace Akka.Configuration.Hocon
                 return PullSubstitution();
             }
 
-            throw new Exception(
+            throw new FormatException(
                 "Expected value: Null literal, Array, Quoted Text, Unquoted Text, Triple quoted Text, Object or End of array");
         }
 
@@ -734,7 +734,7 @@ namespace Akka.Configuration.Hocon
         /// Retrieves the current token as a string literal token.
         /// </summary>
         /// <returns>A token that contains the string literal value.</returns>
-        /// <exception cref="System.Exception">
+        /// <exception cref="System.FormatException">
         /// This exception is thrown when the tokenizer cannot find
         /// a string literal value from the current token.
         /// </exception>
@@ -745,7 +745,7 @@ namespace Akka.Configuration.Hocon
             if (IsUnquotedText())
                 return PullUnquotedText();
 
-            throw new Exception("No simple value found");
+            throw new FormatException("No simple value found");
         }
 
         /// <summary>

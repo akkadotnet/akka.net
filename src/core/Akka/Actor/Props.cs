@@ -493,7 +493,7 @@ namespace Akka.Actor
             try {
                 return producer.Produce();
             } catch (Exception e) {
-                throw new Exception("Error while creating actor instance of type " + type + " with " + arguments.Length + " args: (" + StringFormat.SafeJoin(",", arguments) + ")", e);
+                throw new TypeLoadException("Error while creating actor instance of type " + type + " with " + arguments.Length + " args: (" + StringFormat.SafeJoin(",", arguments) + ")", e);
             }
         }
 

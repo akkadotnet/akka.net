@@ -76,7 +76,7 @@ namespace Akka.IO
                     var commander = Sender;
                     return registry => Props.Create(() => new UdpSender(_udp, registry, commander, s.Options));
                 }
-                throw new Exception();
+                throw new ArgumentException("The supplied message type is invalid. Only Bind and SimpleSender messages are supported.");
             })(m);
         }
     }
