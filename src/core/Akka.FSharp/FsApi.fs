@@ -342,14 +342,9 @@ module Serialization =
     open Nessos.FsPickler
     open Akka.Serialization
 
-    let internal serializeToBinary (fsp:BinarySerializer) o = 
-            use stream = new System.IO.MemoryStream()
-            fsp.Serialize(o.GetType(), stream, o)
-            stream.ToArray()
+    let internal serializeToBinary (fsp:BinarySerializer) o = fsp.Pickle o
 
-    let internal deserializeFromBinary (fsp:BinarySerializer) (bytes: byte array) (t: Type) =
-            use stream = new System.IO.MemoryStream(bytes)
-            fsp.Deserialize(t, stream)
+    let internal deserializeFromBinary (fsp:BinarySerializer) (bytes: byte array) = fsp.UnPickle bytes
     
     // used for top level serialization
     type ExprSerializer(system) = 
@@ -358,7 +353,7 @@ module Serialization =
         override __.Identifier = 9
         override __.IncludeManifest = true        
         override __.ToBinary(o) = serializeToBinary fsp o        
-        override __.FromBinary(bytes, t) = deserializeFromBinary fsp bytes t
+        override __.FromBinary(bytes, t) = deserializeFromBinary fsp bytes
         
                         
     let internal exprSerializationSupport (system: ActorSystem) =
@@ -390,7 +385,7 @@ type ExprDeciderSurrogate(serializedExpr: byte array) =
     interface ISurrogate with
         member this.FromSurrogate _ = 
             let fsp = Nessos.FsPickler.FsPickler.CreateBinary()
-            let expr = (Serialization.deserializeFromBinary fsp (this.SerializedExpr) typeof<Expr<(exn->Directive)>>) :?> Expr<(exn->Directive)>
+            let expr : Expr<(exn->Directive)> = Serialization.deserializeFromBinary fsp (this.SerializedExpr)
             ExprDecider(expr) :> ISurrogated
 
 and ExprDecider (expr: Expr<(exn->Directive)>) =
