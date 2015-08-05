@@ -593,7 +593,7 @@ namespace Akka.IO
                     if (w.WantsAck) commander.Tell(w.Ack);
                     return create(tail, IO.Tcp.Write.Empty);
                 }
-                throw new Exception("Non reachable code");
+                throw new InvalidOperationException("Non reachable code");
             };
             return create(write, IO.Tcp.Write.Empty);
         }

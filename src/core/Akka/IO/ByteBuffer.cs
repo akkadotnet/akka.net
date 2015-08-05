@@ -96,7 +96,7 @@ namespace Akka.IO
         public void Get(byte[] ar, int offset, int length)
         {
             if (length > Remaining)
-                throw new Exception(); //TODO: throw proper exception
+                throw new IndexOutOfRangeException();
             System.Array.Copy(_array, _position, ar, offset, length);
             _position += length;
         }

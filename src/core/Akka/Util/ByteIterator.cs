@@ -122,7 +122,7 @@ namespace Akka.Util
             
             public override ByteIterator GetBytes(byte[] xs, int offset, int n)
             {
-                if (n > Len) throw new Exception();
+                if (n > Len) throw new IndexOutOfRangeException();
                 Array.Copy(_array, _from, xs, offset, n);
                 return Drop(n);
             }

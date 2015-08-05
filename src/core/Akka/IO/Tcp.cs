@@ -252,7 +252,7 @@ namespace Akka.IO
                     if (compound != null)
                         return b.Prepend(compound);
 
-                    throw new Exception();
+                    throw new ArgumentException("The supplied WriteCommand is invalid. Only SimpleWriteCommand and CompoundWrite WriteCommands are supported.");
                 });
             }
 

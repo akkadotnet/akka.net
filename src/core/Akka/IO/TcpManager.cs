@@ -36,7 +36,7 @@ namespace Akka.IO
                     var commander = Sender;
                     return registry => Props.Create(() => new TcpListener(SelectorPool, _tcp, registry, commander, b));
                 }
-                throw new Exception();
+                throw new ArgumentException("The supplied message type is invalid. Only Connect and Bind messages are supported.");
             })(m);
         }
     }
