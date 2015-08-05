@@ -264,7 +264,8 @@
       <NamespaceSummaryItem name="TCP" isDocumented="True">
         The TCP namespace contains classes used to interact with Google ProtocolBuffers.
       </NamespaceSummaryItem>
-    </NamespaceSummaries>   
+    </NamespaceSummaries>
+    <HeaderText>&amp;lt%3bscript&amp;gt%3b!function%28e,a,t,n,c,o,s%29{e.GoogleAnalyticsObject=c,e[c]=e[c]||function%28%29{%28e[c].q=e[c].q||[]%29.push%28arguments%29},e[c].l=1%2anew Date,o=a.createElement%28t%29,s=a.getElementsByTagName%28t%29[0],o.async=1,o.src=n,s.parentNode.insertBefore%28o,s%29}%28window,document,&amp;quot%3bscript&amp;quot%3b,&amp;quot%3b//www.google-analytics.com/analytics.js&amp;quot%3b,&amp;quot%3bga&amp;quot%3b%29,ga%28&amp;quot%3bcreate&amp;quot%3b,&amp;quot%3bUA-59199804-1&amp;quot%3b,&amp;quot%3bauto&amp;quot%3b%29,ga%28&amp;quot%3bsend&amp;quot%3b,&amp;quot%3bpageview&amp;quot%3b%29%3b&amp;lt%3b/script&amp;gt%3b</HeaderText>
   </PropertyGroup>
   <!-- There are no properties for these groups.  AnyCPU needs to appear in order for Visual Studio to perform
              the build.  The others are optional common platform types that may appear. -->
