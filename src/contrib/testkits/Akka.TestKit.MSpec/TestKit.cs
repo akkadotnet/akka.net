@@ -21,7 +21,7 @@ namespace Akka.TestKit.MSpec
         /// <summary>
         /// Create a new instance of the <see cref="TestKit"/> for MSpec class.
         /// If no <paramref name="system"/> is passed in, a new system 
-        /// with <see cref="DefaultConfig"/> will be created.
+        /// with <see cref="TestKitBase.DefaultConfig"/> will be created.
         /// </summary>
         /// <param name="system">Optional: The actor system.</param>
         public TestKit(ActorSystem system = null)
