@@ -15,6 +15,10 @@ namespace Akka.DistributedData
             get { return _enabled; }
         }
 
+        public Flag()
+            : this(false)
+        { }
+
         public Flag(bool enabled)
         {
             _enabled = enabled;
