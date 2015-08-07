@@ -29,6 +29,7 @@ namespace Akka.Serialization
         private readonly JsonSerializer _serializer;
 
         public JsonSerializerSettings Settings { get { return _settings; } }
+        public object Serializer { get { return _serializer; } }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NewtonSoftJsonSerializer" /> class.
